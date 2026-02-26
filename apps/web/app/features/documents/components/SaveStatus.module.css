@@ -1,0 +1,20 @@
+.status {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.saved {
+  color: var(--color-success);
+}
+
+.dirty {
+  color: var(--color-muted);
+}
+
+.saving {
+  color: var(--color-muted);
+}
+
+.error {
+  color: var(--color-danger);
+}

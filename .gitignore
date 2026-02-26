@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.output/
+.vinxi/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+drizzle/meta/
+backups/
+
+# Editor
+.DS_Store
+.vscode/settings.json
+.idea/
+
+# Testing
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Logs
+*.log
+.playwright-mcp/

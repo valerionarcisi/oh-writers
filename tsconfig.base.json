@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@oh-writers/db": ["packages/db/src/index.ts"],
+      "@oh-writers/db/schema": ["packages/db/src/schema/index.ts"],
+      "@oh-writers/shared": ["packages/shared/src/index.ts"],
+      "@oh-writers/ui": ["packages/ui/src/index.ts"]
+    }
+  }
+}

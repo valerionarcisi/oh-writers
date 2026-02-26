@@ -1,0 +1,30 @@
+{
+  "name": "@oh-writers/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "migrate": "drizzle-kit migrate",
+    "migrate:create": "drizzle-kit generate",
+    "migrate:status": "drizzle-kit status",
+    "migrate:rollback": "echo 'Use drizzle-kit drop to rollback'",
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/seed/index.ts",
+    "seed:reset": "tsx src/seed/reset.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.1",
+    "postgres": "3.4.8"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.0",
+    "drizzle-kit": "0.31.9",
+    "tsx": "4.19.2",
+    "typescript": "5.9.3"
+  }
+}

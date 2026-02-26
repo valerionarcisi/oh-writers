@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "source ~/.zshrc 2>/dev/null; PORT=3002 pnpm --filter @oh-writers/web dev"
+      ],
+      "env": {},
+      "port": 3002
+    },
+    {
+      "name": "ws-server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@oh-writers/ws-server", "dev"],
+      "port": 1234
+    }
+  ]
+}

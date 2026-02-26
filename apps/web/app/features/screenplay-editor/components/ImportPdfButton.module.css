@@ -1,0 +1,127 @@
+.hiddenInput {
+  display: none;
+}
+
+.importBtn {
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--color-fg);
+    border-color: var(--color-muted);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* ─── Error banner ─────────────────────────────────────── */
+
+.errorBanner {
+  position: fixed;
+  inset-block-end: var(--space-6);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-error, #b91c1c);
+  color: var(--color-error, #e07070);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  z-index: 100;
+}
+
+.dismissBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: var(--color-fg);
+  }
+}
+
+/* ─── Confirm dialog ───────────────────────────────────── */
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.confirmBox {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: var(--space-6);
+  max-width: 400px;
+  width: 90%;
+}
+
+.confirmText {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg);
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.confirmBtn {
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.cancelBtn {
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-fg);
+    border-color: var(--color-muted);
+  }
+}

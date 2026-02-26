@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./app/*"],
+      "@oh-writers/db": ["../../packages/db/src/index.ts"],
+      "@oh-writers/db/schema": ["../../packages/db/src/schema/index.ts"],
+      "@oh-writers/shared": ["../../packages/shared/src/index.ts"],
+      "@oh-writers/ui": ["../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["app", "app.config.ts"]
+}

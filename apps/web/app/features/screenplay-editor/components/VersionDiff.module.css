@@ -1,0 +1,149 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* ─── Toolbar ───────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: var(--border);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.backLink {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--color-fg);
+  }
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-4);
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.statAdded {
+  color: var(--color-diff-insert-text);
+}
+
+.statRemoved {
+  color: var(--color-diff-delete-text);
+}
+
+/* ─── Column headers ────────────────────────────────────────── */
+
+.header {
+  display: grid;
+  grid-template-columns: 1fr 4px 1fr;
+  border-bottom: var(--border-strong);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.headerOld,
+.headerNew {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.headerLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-fg);
+}
+
+.headerDate {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-placeholder);
+}
+
+/* ─── Diff area ─────────────────────────────────────────────── */
+
+.diffArea {
+  display: grid;
+  grid-template-columns: 1fr 4px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.column {
+  overflow-y: auto;
+  padding-block: var(--space-4);
+}
+
+.divider {
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ─── Lines ─────────────────────────────────────────────────── */
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  min-height: 20px;
+}
+
+.lineDelete {
+  background: var(--color-diff-delete);
+}
+
+.lineInsert {
+  background: var(--color-diff-insert);
+}
+
+.lineGutter {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  min-width: var(--space-3);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.lineText {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-fg);
+}
+
+.lineDelete .lineText {
+  color: var(--color-diff-delete-text);
+}
+
+.lineInsert .lineText {
+  color: var(--color-diff-insert-text);
+}

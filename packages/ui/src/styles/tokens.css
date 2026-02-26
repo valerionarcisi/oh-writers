@@ -1,0 +1,102 @@
+:root {
+  /* ─── Backgrounds ─────────────────────────────────────────── */
+  --color-bg: #0e0e0c; /* main app — warm near-black   */
+  --color-surface: #1a1917; /* cards, panels                */
+  --color-elevated: #242320; /* modals, dropdowns            */
+  --color-subtle: #2e2d2a; /* hover states, input bg       */
+
+  /* ─── Text ────────────────────────────────────────────────── */
+  --color-fg: #f0ede6; /* primary — warm white         */
+  --color-muted: #9e9b94; /* secondary, metadata          */
+  --color-placeholder: #5c5a55; /* placeholders, disabled       */
+  --color-inverse: #0e0e0c; /* text on light/accent bg      */
+
+  /* ─── Semantic ────────────────────────────────────────────── */
+  --color-accent: #d4a843; /* amber — primary actions          */
+  --color-danger: #c94040;
+  --color-warning: #c97a30;
+  --color-success: #5a8a5a;
+
+  /* ─── Legacy aliases (keep existing components compiling) ─── */
+  --color-black: #0e0e0c;
+  --color-white: #f0ede6;
+  --color-gray-100: #2e2d2a;
+  --color-gray-200: #4a4845;
+  --color-gray-500: #9e9b94;
+  --color-gray-700: #c8c5be;
+  --color-gray-900: #f0ede6;
+
+  /* ─── Typography ──────────────────────────────────────────── */
+  --font-serif: "Lora", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Courier Prime", "Courier New", Courier, monospace;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-3xl: 48px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-loose: 1.75;
+
+  /* ─── Spacing ─────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* ─── Borders ─────────────────────────────────────────────── */
+  --color-border: #2e2d2a;
+  --color-border-strong: #4a4845;
+  --color-border-focus: #f0ede6;
+
+  --border-width: 1px;
+  --border: var(--border-width) solid var(--color-border);
+  --border-muted: var(--border-width) solid var(--color-border);
+  --border-strong: var(--border-width) solid var(--color-border-strong);
+  --border-focus: var(--border-width) solid var(--color-border-focus);
+  --radius: 0;
+
+  /* ─── Shadows — flat in Editorial Dark ───────────────────── */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  /* ─── Layout ──────────────────────────────────────────────── */
+  --max-width-content: 720px;
+  --max-width-wide: 1200px;
+  --sidebar-width: 280px;
+
+  /* ─── Z-index ─────────────────────────────────────────────── */
+  --z-base: 0;
+  --z-above: 10;
+  --z-overlay: 100;
+  --z-modal: 1000;
+  --z-toast: 2000;
+
+  /* ─── Transitions ─────────────────────────────────────────── */
+  --transition-fast: 100ms ease;
+  --transition-normal: 200ms ease;
+
+  /* ─── Diff colors ─────────────────────────────────────────── */
+  --color-diff-insert: color-mix(in srgb, #2d7a3a 20%, transparent);
+  --color-diff-insert-text: #7aba87;
+  --color-diff-delete: color-mix(in srgb, #b91c1c 20%, transparent);
+  --color-diff-delete-text: #e07070;
+}

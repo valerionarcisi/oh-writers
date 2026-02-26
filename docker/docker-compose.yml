@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oh-writers
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: oh-writers
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U oh-writers -d oh-writers']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: web
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://oh-writers:${POSTGRES_PASSWORD}@postgres:5432/oh-writers
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ws-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: ws-server
+    ports:
+      - '1234:1234'
+    environment:
+      DATABASE_URL: postgresql://oh-writers:${POSTGRES_PASSWORD}@postgres:5432/oh-writers
+      REDIS_URL: redis://redis:6379
+      WS_PORT: 1234
+      WS_SECRET: ${WS_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

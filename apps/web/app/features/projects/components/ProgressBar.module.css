@@ -1,0 +1,24 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+}
+
+.track {
+  height: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-gray-200);
+}
+
+.fill {
+  height: 100%;
+  background: var(--color-black);
+  transition: width var(--transition-normal);
+}

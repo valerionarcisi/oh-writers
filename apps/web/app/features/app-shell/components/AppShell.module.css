@@ -1,0 +1,10 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100vh;
+}
+
+.main {
+  overflow: auto;
+  min-width: 0;
+}

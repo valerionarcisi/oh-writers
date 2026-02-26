@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+# Installed by: pnpm hooks:install  (or automatically by pnpm dev:up)
+set -euo pipefail
+
+BOLD='\033[1m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+step() { echo -e "${CYAN}${BOLD}▶ $1${RESET}"; }
+ok()   { echo -e "${GREEN}✓ $1${RESET}"; }
+fail() { echo -e "${RED}✗ $1${RESET}"; }
+
+echo ""
+echo -e "${BOLD}Pre-commit checks${RESET} ${DIM}(skip: git commit --no-verify)${RESET}"
+echo ""
+
+errors=0
+
+# ── 1. lint-staged (eslint --fix + prettier on staged files) ─────────────────
+
+step "Lint + format staged files"
+if ! pnpm exec lint-staged; then
+  fail "lint-staged failed — fix the errors above."
+  errors=$((errors + 1))
+else
+  ok "Lint + format"
+fi
+
+# ── 2. Typecheck (full project — must run after lint-staged restages files) ───
+
+step "Typecheck"
+if ! pnpm typecheck; then
+  fail "Typecheck failed — fix the errors above."
+  errors=$((errors + 1))
+else
+  ok "Typecheck"
+fi
+
+# ── 3. No console.log in staged files ────────────────────────────────────────
+
+step "No debug leftovers"
+
+staged_ts=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' || true)
+console_hits=""
+
+if [[ -n "$staged_ts" ]]; then
+  console_hits=$(echo "$staged_ts" | xargs grep -n 'console\.log' 2>/dev/null || true)
+fi
+
+if [[ -n "$console_hits" ]]; then
+  fail "console.log found in staged files — remove before committing:"
+  echo "$console_hits" | while IFS= read -r line; do
+    echo -e "  ${DIM}$line${RESET}"
+  done
+  errors=$((errors + 1))
+else
+  ok "No console.log"
+fi
+
+# ── Result ────────────────────────────────────────────────────────────────────
+
+echo ""
+if [[ $errors -gt 0 ]]; then
+  echo -e "${RED}${BOLD}  $errors check(s) failed. Commit blocked.${RESET}"
+  echo -e "  ${DIM}To skip: git commit --no-verify${RESET}"
+  echo ""
+  exit 1
+fi
+
+echo -e "${GREEN}${BOLD}  All checks passed — committing.${RESET}"
+echo ""

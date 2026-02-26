@@ -1,0 +1,22 @@
+.page {
+  padding: var(--space-8);
+  max-width: 480px;
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-8);
+}
+
+.formWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.error {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}

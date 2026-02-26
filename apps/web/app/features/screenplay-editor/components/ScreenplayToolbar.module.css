@@ -1,0 +1,122 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: var(--border);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+/* ─── Sections ─────────────────────────────────────────────────── */
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ─── Left items ───────────────────────────────────────────────── */
+
+.backLink {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.backLink:hover {
+  color: var(--color-fg);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* ─── Center items ─────────────────────────────────────────────── */
+
+.pageCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Right buttons ────────────────────────────────────────────── */
+
+.focusBtn {
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.focusBtn:hover {
+  color: var(--color-fg);
+  background: var(--color-surface);
+}
+
+.focusBtnActive {
+  background: var(--color-fg);
+  color: var(--color-bg);
+}
+
+.focusBtnActive:hover {
+  background: var(--color-fg);
+  color: var(--color-bg);
+}
+
+.versionsBtn {
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.versionsBtn:hover {
+  color: var(--color-fg);
+  background: var(--color-surface);
+}
+
+.exportBtn {
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: not-allowed;
+  opacity: 0.4;
+}

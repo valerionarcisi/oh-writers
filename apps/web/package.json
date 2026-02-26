@@ -1,0 +1,41 @@
+{
+  "name": "@oh-writers/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "4.7.0",
+    "@oh-writers/db": "workspace:*",
+    "@oh-writers/shared": "workspace:*",
+    "@oh-writers/ui": "workspace:*",
+    "@tanstack/react-query": "5.90.21",
+    "@tanstack/react-router": "1.120.20",
+    "@tanstack/start": "1.120.20",
+    "@types/diff-match-patch": "1.0.36",
+    "better-auth": "1.4.19",
+    "diff-match-patch": "1.0.5",
+    "drizzle-orm": "0.45.1",
+    "neverthrow": "8.2.0",
+    "pdf-parse": "1.1.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "ts-pattern": "5.5.0",
+    "zod": "3.24.4"
+  },
+  "devDependencies": {
+    "@tanstack/router-plugin": "1.120.20",
+    "@types/pdf-parse": "1.1.4",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "vinxi": "0.5.3",
+    "vite": "6.4.1",
+    "vite-tsconfig-paths": "5.1.4"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "oh-writers",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "dev:up": "bash scripts/dev-up.sh",
+    "dev:down": "bash scripts/dev-down.sh",
+    "dev:reset": "bash scripts/dev-reset.sh",
+    "dev:nuke": "bash scripts/dev-nuke.sh",
+    "dev:check": "bash scripts/dev-check.sh",
+    "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
+    "typecheck": "pnpm --recursive typecheck",
+    "lint": "pnpm --recursive lint",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "db:migrate": "pnpm --filter @oh-writers/db migrate",
+    "db:migrate:create": "pnpm --filter @oh-writers/db migrate:create",
+    "db:migrate:status": "pnpm --filter @oh-writers/db migrate:status",
+    "db:seed": "pnpm --filter @oh-writers/db seed",
+    "db:studio": "pnpm --filter @oh-writers/db studio",
+    "db:psql": "docker compose -f docker/docker-compose.dev.yml exec postgres psql -U oh-writers oh-writers_dev"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "eslint": "10.0.2",
+    "lint-staged": "15.5.2",
+    "prettier": "3.8.1",
+    "tsx": "4.19.2",
+    "typescript": "5.9.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,css,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "zod"
+      ]
+    }
+  }
+}

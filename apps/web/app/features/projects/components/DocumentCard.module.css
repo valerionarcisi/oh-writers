@@ -1,0 +1,59 @@
+.card {
+  border: var(--border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  cursor: pointer;
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+  background: var(--color-bg);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translate(-1px, -1px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.type {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+}
+
+.completedDot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-success);
+}
+
+.emptyDot {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--color-gray-200);
+}
+
+.preview {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-gray-700);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  font-style: italic;
+}
