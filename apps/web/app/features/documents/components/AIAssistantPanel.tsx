@@ -1,5 +1,5 @@
-import type { DocumentType } from "@oh-writers/shared";
-import { DocumentTypes } from "@oh-writers/shared";
+import type { DocumentType } from "@oh-writers/domain";
+import { DocumentTypes } from "@oh-writers/domain";
 import styles from "./AIAssistantPanel.module.css";
 
 interface AIAssistantPanelProps {

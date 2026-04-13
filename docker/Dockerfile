@@ -6,7 +6,8 @@ WORKDIR /app
 FROM base AS deps
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY packages/db/package.json packages/db/
-COPY packages/shared/package.json packages/shared/
+COPY packages/domain/package.json packages/domain/
+COPY packages/utils/package.json packages/utils/
 COPY packages/ui/package.json packages/ui/
 COPY apps/web/package.json apps/web/
 COPY apps/ws-server/package.json apps/ws-server/
@@ -15,7 +16,8 @@ RUN pnpm install --frozen-lockfile
 # Build packages
 FROM deps AS builder
 COPY . .
-RUN pnpm --filter @oh-writers/shared build
+RUN pnpm --filter @oh-writers/domain build
+RUN pnpm --filter @oh-writers/utils build
 RUN pnpm --filter @oh-writers/db build
 RUN pnpm --filter @oh-writers/ui build
 

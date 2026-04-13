@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err } from "neverthrow";
-import type { Result } from "neverthrow";
 import { z } from "zod";
-import { getUser } from "~/server/context";
-import type { ResultShape } from "./screenplay.server";
+import { toShape } from "@oh-writers/utils";
+import type { ResultShape } from "@oh-writers/utils";
+import { requireUser } from "~/server/context";
 import {
   InvalidPdfError,
   EncryptedPdfError,
@@ -14,25 +14,12 @@ import type { ImportPdfError } from "../pdf-import.errors";
 import { fountainFromPdf } from "../lib/fountain-from-pdf";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-// base64 is ~1.37× larger than binary; add headroom for JSON framing
 const MAX_BASE64_LENGTH = Math.ceil(MAX_FILE_BYTES * 1.4);
 
-// File travels as base64 so it survives JSON serialization through createServerFn.
 const ImportPdfInput = z.object({
   fileName: z.string().max(255),
   base64: z.string().max(MAX_BASE64_LENGTH),
 });
-
-const requireUser = async () => {
-  const user = await getUser();
-  if (!user) throw new Error("Unauthenticated");
-  return user;
-};
-
-const toShape = <T, E>(result: Result<T, E>): ResultShape<T, E> =>
-  result.isOk()
-    ? { isOk: true as const, value: result.value }
-    : { isOk: false as const, error: result.error };
 
 /**
  * Accepts a PDF as a base64-encoded string, extracts its text server-side using

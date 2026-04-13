@@ -1,11 +1,14 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
-import type { Result } from "neverthrow";
 import { eq, and, desc, asc, count } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { screenplayVersions, screenplays } from "@oh-writers/db/schema";
 import type { ScreenplayVersion } from "@oh-writers/db";
-import { getUser } from "~/server/context";
+import { toShape } from "@oh-writers/utils";
+import type { ResultShape } from "@oh-writers/utils";
+import { requireUser } from "~/server/context";
+import { getDb } from "~/server/db";
+import { stripYjsSnapshot } from "~/server/helpers";
 import {
   ListVersionsInput,
   GetVersionInput,
@@ -14,48 +17,16 @@ import {
   DeleteVersionInput,
 } from "../screenplay-versions.schema";
 import type { VersionView } from "../screenplay-versions.schema";
+import type { ScreenplayView } from "./screenplay.server";
 import {
   VersionNotFoundError,
   CannotDeleteLastManualError,
   ForbiddenError,
   DbError,
 } from "../screenplay-versions.errors";
-import type {
-  OkShape,
-  ErrShape,
-  ResultShape,
-  ScreenplayView,
-} from "./screenplay.server";
 
 export type { VersionView };
 
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-const requireUser = async () => {
-  const user = await getUser();
-  if (!user) throw new Error("Unauthenticated");
-  return user;
-};
-
-// ─── DB helper ────────────────────────────────────────────────────────────────
-
-const getDb = async () => {
-  const { db } = await import("@oh-writers/db");
-  return db;
-};
-
-// Strip binary yjsSnapshot before sending to client
-const stripYjsSnapshot = ({
-  yjsSnapshot: _,
-  ...rest
-}: ScreenplayVersion): VersionView => rest as VersionView;
-
-const toShape = <T, E>(result: Result<T, E>): ResultShape<T, E> =>
-  result.isOk()
-    ? { isOk: true as const, value: result.value }
-    : { isOk: false as const, error: result.error };
-
-// Maximum number of auto-snapshots to retain per screenplay (FIFO)
 const MAX_AUTO_SNAPSHOTS = 50;
 
 // ─── List versions ────────────────────────────────────────────────────────────
@@ -208,7 +179,6 @@ export const restoreVersion = createServerFn({ method: "POST" })
       return toShape(
         await ResultAsync.fromPromise(
           db.transaction(async (tx) => {
-            // Safety auto-save: snapshot current state before restoring
             await tx.insert(screenplayVersions).values({
               screenplayId: screenplay.id,
               label: null,
@@ -270,7 +240,6 @@ export const deleteVersion = createServerFn({ method: "POST" })
       if (!version)
         return toShape(err(new VersionNotFoundError(data.versionId)));
 
-      // Guard: cannot delete the only manual version
       if (!version.isAuto) {
         const countResult = await ResultAsync.fromPromise(
           db
@@ -303,11 +272,6 @@ export const deleteVersion = createServerFn({ method: "POST" })
 
 // ─── Auto-versioning helper (used by saveScreenplay) ─────────────────────────
 
-/**
- * Creates an auto-snapshot if ≥5 minutes have elapsed since the last one.
- * Enforces the FIFO limit of MAX_AUTO_SNAPSHOTS per screenplay.
- * Called inside the same DB transaction as saveScreenplay.
- */
 export const maybeCreateAutoVersion = async (
   tx: Awaited<ReturnType<typeof getDb>>,
   screenplayId: string,
@@ -331,7 +295,6 @@ export const maybeCreateAutoVersion = async (
 
   if (!needsSnapshot) return;
 
-  // Count current auto-snapshots; delete oldest if at the limit
   const autoCount = await tx
     .select({ value: count() })
     .from(screenplayVersions)

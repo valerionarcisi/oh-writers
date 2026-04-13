@@ -12,7 +12,8 @@
   "dependencies": {
     "@monaco-editor/react": "4.7.0",
     "@oh-writers/db": "workspace:*",
-    "@oh-writers/shared": "workspace:*",
+    "@oh-writers/domain": "workspace:*",
+    "@oh-writers/utils": "workspace:*",
     "@oh-writers/ui": "workspace:*",
     "@tanstack/react-query": "5.90.21",
     "@tanstack/react-router": "1.120.20",

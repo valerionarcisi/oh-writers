@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Formats, Genres } from "@oh-writers/shared";
+import { Formats, Genres } from "@oh-writers/domain";
 
 type FormatValue = (typeof Formats)[keyof typeof Formats];
 type GenreValue = (typeof Genres)[keyof typeof Genres];

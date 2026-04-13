@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
-import type { Result } from "neverthrow";
 import { eq, and, isNull } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { DocumentTypes, TeamRoles } from "@oh-writers/shared";
+import { DocumentTypes, TeamRoles } from "@oh-writers/domain";
+import { toShape } from "@oh-writers/utils";
+import type { ResultShape } from "@oh-writers/utils";
 import {
   projects,
   documents,
@@ -13,7 +14,10 @@ import {
 } from "@oh-writers/db/schema";
 import type { TeamMember } from "@oh-writers/db/schema";
 import type { Project, Document, Screenplay } from "@oh-writers/db";
-import { getUser } from "~/server/context";
+import { requireUser } from "~/server/context";
+import { getDb } from "~/server/db";
+import type { Db } from "~/server/db";
+import { stripYjsState } from "~/server/helpers";
 import { CreateProjectInput, UpdateProjectInput } from "../projects.schema";
 import {
   ProjectNotFoundError,
@@ -21,43 +25,14 @@ import {
   DbError,
 } from "../projects.errors";
 
-// ─── Serializable result shape ────────────────────────────────────────────────
-// createServerFn requires JSON-serializable return types. Neverthrow's Result
-// has methods (isOk(), map(), etc.) which fail that check. We convert at the
-// server function boundary to a plain discriminated union that survives JSON.
-
-export type OkShape<T> = { readonly isOk: true; readonly value: T };
-export type ErrShape<E> = { readonly isOk: false; readonly error: E };
-export type ResultShape<T, E> = OkShape<T> | ErrShape<E>;
-
-const toShape = <T, E>(result: Result<T, E>): ResultShape<T, E> =>
-  result.isOk()
-    ? { isOk: true as const, value: result.value }
-    : { isOk: false as const, error: result.error };
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// yjsState is a binary Buffer (bytea column) — it doesn't survive JSON serialization
-// in a meaningful way and is not needed for the UI. Strip it at the server boundary.
 export type DocumentView = Omit<Document, "yjsState">;
 export type ScreenplayView = Omit<Screenplay, "yjsState">;
 
 export type ProjectWithDocuments = Project & {
   documents: DocumentView[];
   screenplay: ScreenplayView | null;
-};
-
-const stripYjsState = <T extends { yjsState?: unknown }>({
-  yjsState: _,
-  ...rest
-}: T): Omit<T, "yjsState"> => rest as Omit<T, "yjsState">;
-
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-const requireUser = async () => {
-  const user = await getUser();
-  if (!user) throw new Error("Unauthenticated");
-  return user;
 };
 
 // ─── Permission helpers ───────────────────────────────────────────────────────
@@ -90,13 +65,6 @@ const isOwner = (
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
-const getDb = async () => {
-  const { db } = await import("@oh-writers/db");
-  return db;
-};
-
-type Db = Awaited<ReturnType<typeof getDb>>;
-
 const getMembership = (
   db: Db,
   teamId: string,
@@ -113,8 +81,6 @@ const getMembership = (
       .then((row) => row ?? null),
     (e) => new DbError("getMembership", e),
   );
-
-// ─── Slug ─────────────────────────────────────────────────────────────────────
 
 const toSlug = (title: string): string =>
   title

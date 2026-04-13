@@ -223,7 +223,7 @@ const formatSceneHeader = (scene: Scene, index: number): string => {
 | Styling        | CSS Modules — zero Tailwind, zero CSS-in-JS              |
 | Validation     | Zod — single source of truth for all types               |
 | Error handling | neverthrow — `Result` and `ResultAsync`                  |
-| Testing        | Playwright only                                          |
+| Testing        | Vitest (unit) + Playwright (E2E)                         |
 
 ---
 
@@ -238,7 +238,7 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never write TypeScript types by hand** when they can be inferred from Zod or Drizzle
 - **Never use Tailwind**, utility classes, or CSS-in-JS of any kind
 - **Never hardcode** hex colors, arbitrary `px` values, or magic numbers in CSS
-- **Never use `border-radius`** — brutalist style, all corners are sharp
+- **Never use hardcoded border-radius** — use `--radius-*` tokens (`--radius-md` default, `--radius-none` for screenplay page only)
 - **Never mix `null` and `undefined`** in the same type — use `null` for intentional absence
 - **Never expose the Anthropic API key** to the client
 - **Never log** tokens, passwords, or API keys
@@ -251,19 +251,24 @@ Hard stops. If you are about to do any of these, stop and ask.
 Every client→server interaction goes through `createServerFn`. No tRPC, no raw fetch to internal endpoints.
 
 ```typescript
-// Good — co-located with the feature, validated with Zod
 import { createServerFn } from "@tanstack/start";
-import { z } from "zod";
+import { ok, err, ResultAsync } from "neverthrow";
+import { toShape } from "@oh-writers/utils";
+import type { ResultShape } from "@oh-writers/utils";
+import { requireUser } from "~/server/context";
+import { getDb } from "~/server/db";
 
 export const getProject = createServerFn({ method: "GET" })
   .validator(z.object({ id: z.string().uuid() }))
-  .handler(async ({ data }) => {
-    // auth check here
-    // permission check here
-    return db.select().from(projects).where(eq(projects.id, data.id));
-  });
+  .handler(
+    async ({ data }): Promise<ResultShape<Project, NotFoundError | DbError>> => {
+      await requireUser();
+      const db = await getDb();
+      // ... domain logic using ResultAsync ...
+      return toShape(result);
+    },
+  );
 
-// Pair with queryOptions for TanStack Query integration
 export const projectQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["projects", id],
@@ -274,8 +279,9 @@ export const projectQueryOptions = (id: string) =>
 Every server function that mutates data needs:
 
 - Zod input validation via `.validator()`
-- Auth check (user is authenticated)
+- Auth check via `requireUser()` (from `~/server/context`)
 - Permission check (user can perform this action on this resource)
+- `toShape()` at the return boundary (converts neverthrow Result to JSON-safe `ResultShape`)
 
 ---
 
@@ -399,44 +405,41 @@ const findProject = (
 
 ### Domain error types
 
-Every domain has its own typed errors. Define them in `feature.errors.ts`, co-located with the feature.
+Shared errors (`ForbiddenError`, `DbError`) live in `packages/utils/src/errors.ts`. Domain-specific errors live in `feature.errors.ts`, co-located with the feature.
+
+Error classes are **plain value objects** (not extending `Error`) so they serialize cleanly over the JSON wire. `Error` methods (message, stack) are non-enumerable and lost in JSON round-trips; own properties survive.
 
 ```typescript
-// features/projects/projects.errors.ts
-export class NotFoundError extends Error {
-  readonly _tag = "NotFoundError";
-  constructor(
-    readonly resource: string,
-    readonly id: string,
-  ) {
-    super(`${resource} not found: ${id}`);
-  }
-}
-
-export class ForbiddenError extends Error {
-  readonly _tag = "ForbiddenError";
+// packages/utils/src/errors.ts — shared across all features
+export class ForbiddenError {
+  readonly _tag = "ForbiddenError" as const;
+  readonly message: string;
   constructor(readonly action: string) {
-    super(`Forbidden: cannot ${action}`);
+    this.message = `Forbidden: ${action}`;
   }
 }
 
-export class ValidationError extends Error {
-  readonly _tag = "ValidationError";
-  constructor(
-    readonly field: string,
-    readonly reason: string,
-  ) {
-    super(`Validation failed on ${field}: ${reason}`);
+export class DbError {
+  readonly _tag = "DbError" as const;
+  readonly message: string;
+  readonly dbCause: string | null;
+  constructor(readonly operation: string, cause: unknown) {
+    this.message = `DB error in ${operation}`;
+    this.dbCause = cause instanceof Error ? cause.message : String(cause ?? null);
   }
 }
+```
 
-export class DbError extends Error {
-  readonly _tag = "DbError";
-  constructor(
-    readonly operation: string,
-    readonly cause: unknown,
-  ) {
-    super(`DB error in ${operation}`);
+```typescript
+// features/projects/projects.errors.ts — domain-specific + re-exports shared
+import { ForbiddenError, DbError } from "@oh-writers/utils";
+export { ForbiddenError, DbError };
+
+export class ProjectNotFoundError {
+  readonly _tag = "ProjectNotFoundError" as const;
+  readonly message: string;
+  constructor(readonly id: string) {
+    this.message = `Project not found: ${id}`;
   }
 }
 ```
@@ -496,38 +499,42 @@ match(result)
   .exhaustive();
 ```
 
-### In server functions
+### The server/client boundary — ResultShape
 
-Server functions return the Result to the client. The client always handles both cases.
+neverthrow's `Result` has methods (`.isOk()`, `.map()`) that don't survive JSON serialization. At the server function boundary, convert to `ResultShape` using `toShape()`. On the client, use `unwrapResult()` to convert back for TanStack Query mutations.
 
 ```typescript
-// server
+// packages/utils/src/result.ts — centralized, one copy
+import type { Result } from "neverthrow";
+
+export type ResultShape<T, E> =
+  | { readonly isOk: true; readonly value: T }
+  | { readonly isOk: false; readonly error: E };
+
+export const toShape = <T, E>(result: Result<T, E>): ResultShape<T, E> => ...;
+export const unwrapResult = <T>(result: { isOk: boolean; ... }): T => ...;
+```
+
+```typescript
+// server — returns ResultShape
 export const getProject = createServerFn({ method: "GET" })
   .validator(z.object({ id: z.string().uuid() }))
-  .handler(
-    async ({
-      data,
-    }): Promise<Result<Project, NotFoundError | ForbiddenError>> => {
-      return findProject(data.id as ProjectId).andThen((project) =>
-        canUserAccess(project, currentUser())
-          ? ok(project)
-          : err(new ForbiddenError("read project")),
-      );
-    },
-  );
+  .handler(async ({ data }): Promise<ResultShape<Project, ...>> => {
+    await requireUser();
+    const db = await getDb();
+    return toShape(await findProject(db, data.id));
+  });
 
-// client
-const result = await getProject({ data: { id } });
+// client hook — unwraps for TanStack Query
+import { unwrapResult } from "@oh-writers/utils";
 
-match(result)
-  .with({ isOk: true }, ({ value }) => setProject(value))
-  .with({ isErr: true, error: { _tag: "NotFoundError" } }, () =>
-    navigate("/404"),
-  )
-  .with({ isErr: true, error: { _tag: "ForbiddenError" } }, () =>
-    navigate("/403"),
-  )
-  .exhaustive();
+export const useCreateProject = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input) => unwrapResult(await createProject({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["projects"] }),
+  });
+};
 ```
 
 ### When to use throw
@@ -586,6 +593,21 @@ features/screenplay-editor/
 
 ---
 
+## Shared Infrastructure
+
+Centralized utilities — never duplicate these in feature files.
+
+| What | Where | Used by |
+|------|-------|---------|
+| `ResultShape`, `toShape`, `unwrapResult` | `packages/utils/src/result.ts` | Every server file + every hook |
+| `ForbiddenError`, `DbError` | `packages/utils/src/errors.ts` | Every feature's errors file (re-exported) |
+| `requireUser` | `apps/web/app/server/context.ts` | Every server function handler |
+| `getDb`, `Db` | `apps/web/app/server/db.ts` | Every server function handler |
+| `stripYjsState`, `stripYjsSnapshot` | `apps/web/app/server/helpers.ts` | Server files that return DB rows with binary fields |
+| Branded types, constants, Zod schemas | `packages/domain/src/` | Everywhere |
+
+---
+
 ## Database
 
 - Schema files in `packages/db/schema/` — one file per entity
@@ -597,16 +619,17 @@ features/screenplay-editor/
 
 ## CSS
 
-Brutalist style — sharp, typographic, no decoration. Modern CSS only, no preprocessors, no JS for visuals.
+Dark modern SaaS — clean, warm, with depth and polish. Content-first. Modern CSS only, no preprocessors, no JS for visuals.
 
 ### Hard rules
 
 - CSS Modules only — one `.module.css` per component
 - Custom properties for every value — never hardcode hex, px, or magic numbers
-- `border-radius: 0` everywhere — no exceptions, ever
+- `--radius-md` (8px) as default border-radius. `--radius-none` only for screenplay page representation
 - Class names in camelCase
 - No Tailwind, no CSS-in-JS, no styled-components
-- No Framer Motion or JS animations — CSS only
+- No Framer Motion or JS animations — CSS transitions only, always behind `prefers-reduced-motion`
+- Shadows via `--shadow-*` tokens for elevation hierarchy
 
 ### Layout — flexbox first
 
@@ -804,20 +827,37 @@ const accessible = users.filter(
 
 ## Testing
 
-All tests use Playwright exclusively — no Vitest, no Cypress.
+Two test runners, each for its strengths. No Cypress, no Jest.
 
-- **Unit-style**: pure functions, parsers, reducers — Playwright Node runner
-- **Component**: UI via Playwright component testing
-- **E2E**: auth, project creation, editing, collaboration flows
+### Vitest — fast logic tests
+
+Pure functions, parsers, reducers, transformers, schema validation, error handling. Anything that doesn't need a browser.
+
+- Co-locate test files with the code: `feature.server.test.ts` next to `feature.server.ts`
+- Run with `pnpm test:unit` (or `pnpm vitest` directly)
+- Use `describe` / `it` / `expect` — keep tests flat, no deep nesting
+
+### Playwright — browser and E2E tests
+
+Auth flows, page navigation, editor interactions, collaboration, anything that needs a real browser.
+
+- Test files in `tests/` directory
+- Run with `pnpm test` or `pnpm test:e2e`
 - Tag format: `[OHW-001]`
-- Every mutation must have at least one test
+
+### Rules
+
+- Every mutation must have at least one test (Vitest for logic, Playwright for UI)
+- Pure functions get Vitest tests — don't spin up a browser to test a parser
+- UI interactions and flows get Playwright tests — don't mock the DOM
+- Run unit tests first (fast feedback), then E2E
 
 ---
 
 ## Mock Mode
 
 - `MOCK_AI=true` → AI responses from `mocks/ai-responses.ts`, no Anthropic API calls
-- `MOCK_API` has been removed — all server functions require a real PostgreSQL database. The mock state files (`mocks/state.ts`, `mocks/data/`) are kept for reference but are no longer wired to any server function.
+- All server functions require a real PostgreSQL database — no mock API layer
 
 ---
 

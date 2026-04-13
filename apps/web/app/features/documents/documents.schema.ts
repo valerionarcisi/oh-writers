@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DocumentTypes } from "@oh-writers/shared";
+import { DocumentTypes } from "@oh-writers/domain";
 
 export const SaveDocumentInput = z.object({
   documentId: z.string().uuid(),

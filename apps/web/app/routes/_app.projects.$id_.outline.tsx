@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DocumentTypes } from "@oh-writers/shared";
+import { DocumentTypes } from "@oh-writers/domain";
 import { NarrativeEditor, useDocument } from "~/features/documents";
 import styles from "./_app.projects.$id_.editor.module.css";
 

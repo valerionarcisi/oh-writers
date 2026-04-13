@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { unwrapResult } from "@oh-writers/utils";
 import {
   getScreenplay,
   saveScreenplay,
@@ -14,25 +15,11 @@ export { screenplayQueryOptions };
 export const useScreenplay = (projectId: string) =>
   useQuery(screenplayQueryOptions(projectId));
 
-// ─── Mutations ────────────────────────────────────────────────────────────────
-
-const throwOnErr = <T>(result: {
-  isOk: boolean;
-  value?: T;
-  error?: { message: string };
-}): T => {
-  if (!result.isOk) {
-    const domainError = result.error!;
-    throw Object.assign(new Error(domainError.message), domainError);
-  }
-  return result.value as T;
-};
-
 export const useSaveScreenplay = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: SaveScreenplayData) =>
-      throwOnErr(await saveScreenplay({ data: input })),
+      unwrapResult(await saveScreenplay({ data: input })),
     onSuccess: (saved) => {
       void queryClient.invalidateQueries({
         queryKey: ["screenplays", saved.projectId],

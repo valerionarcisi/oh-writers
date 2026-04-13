@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { DocumentTypes } from "@oh-writers/shared";
-import type { DocumentType } from "@oh-writers/shared";
+import { DocumentTypes } from "@oh-writers/domain";
+import type { DocumentType } from "@oh-writers/domain";
 import type { DocumentView } from "../server/documents.server";
 import { useAutoSave, useSaveDocument } from "../hooks/useDocument";
 import { parseOutline, serializeOutline } from "../documents.schema";

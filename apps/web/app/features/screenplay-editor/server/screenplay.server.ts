@@ -1,11 +1,14 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
-import type { Result } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { Screenplay } from "@oh-writers/db";
-import { getUser } from "~/server/context";
+import { toShape } from "@oh-writers/utils";
+import type { ResultShape } from "@oh-writers/utils";
+import { requireUser } from "~/server/context";
+import { getDb } from "~/server/db";
+import { stripYjsState } from "~/server/helpers";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
@@ -16,44 +19,9 @@ import {
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const MAX_AUTO_SNAPSHOTS = 50;
 
-// ─── Serializable result shape ────────────────────────────────────────────────
-// createServerFn requires JSON-serializable return types. Neverthrow's Result
-// has methods (isOk(), map(), etc.) which fail that check. We convert at the
-// server function boundary to a plain discriminated union that survives JSON.
-
-export type OkShape<T> = { readonly isOk: true; readonly value: T };
-export type ErrShape<E> = { readonly isOk: false; readonly error: E };
-export type ResultShape<T, E> = OkShape<T> | ErrShape<E>;
-
-const toShape = <T, E>(result: Result<T, E>): ResultShape<T, E> =>
-  result.isOk()
-    ? { isOk: true as const, value: result.value }
-    : { isOk: false as const, error: result.error };
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// yjsState is a binary Buffer (bytea column) — strip it before sending to client.
 export type ScreenplayView = Omit<Screenplay, "yjsState">;
-
-const stripYjsState = <T extends { yjsState?: unknown }>({
-  yjsState: _,
-  ...rest
-}: T): Omit<T, "yjsState"> => rest as Omit<T, "yjsState">;
-
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-const requireUser = async () => {
-  const user = await getUser();
-  if (!user) throw new Error("Unauthenticated");
-  return user;
-};
-
-// ─── DB helper ────────────────────────────────────────────────────────────────
-
-const getDb = async () => {
-  const { db } = await import("@oh-writers/db");
-  return db;
-};
 
 const estimatePageCount = (content: string): number =>
   Math.max(0, Math.ceil(content.split("\n").length / 55));
@@ -149,7 +117,6 @@ export const saveScreenplay = createServerFn({ method: "POST" })
 
             if (!updated) throw new Error("Save returned no rows");
 
-            // Auto-version: snapshot every 5 min if content changed
             if (s.content !== data.content) {
               const {
                 and,

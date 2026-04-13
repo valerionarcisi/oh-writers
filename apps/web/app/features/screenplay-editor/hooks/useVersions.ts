@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { unwrapResult } from "@oh-writers/utils";
 import {
   listVersions,
   getVersion,
@@ -16,20 +17,6 @@ import type {
 
 export { versionsQueryOptions, versionQueryOptions };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const throwOnErr = <T>(result: {
-  isOk: boolean;
-  value?: T;
-  error?: { message: string };
-}): T => {
-  if (!result.isOk) {
-    const domainError = result.error!;
-    throw Object.assign(new Error(domainError.message), domainError);
-  }
-  return result.value as T;
-};
-
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 export const useVersions = (screenplayId: string) =>
@@ -44,7 +31,7 @@ export const useCreateManualVersion = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateManualVersionData) =>
-      throwOnErr(await createManualVersion({ data: input })),
+      unwrapResult(await createManualVersion({ data: input })),
     onSuccess: (version) => {
       void queryClient.invalidateQueries({
         queryKey: ["versions", version.screenplayId],
@@ -57,7 +44,7 @@ export const useRestoreVersion = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: RestoreVersionData) =>
-      throwOnErr(await restoreVersion({ data: input })),
+      unwrapResult(await restoreVersion({ data: input })),
     onSuccess: (screenplay) => {
       // Invalidate screenplay so the editor reloads with restored content
       void queryClient.invalidateQueries({
@@ -75,7 +62,7 @@ export const useDeleteVersion = (screenplayId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: DeleteVersionData) =>
-      throwOnErr(await deleteVersion({ data: input })),
+      unwrapResult(await deleteVersion({ data: input })),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["versions", screenplayId],

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { DocumentType } from "@oh-writers/shared";
+import type { DocumentType } from "@oh-writers/domain";
+import { unwrapResult } from "@oh-writers/utils";
 import {
   getDocument,
   saveDocument,
@@ -15,25 +16,11 @@ export { documentQueryOptions };
 export const useDocument = (projectId: string, type: DocumentType) =>
   useQuery(documentQueryOptions(projectId, type));
 
-// ─── Mutations ────────────────────────────────────────────────────────────────
-
-const throwOnErr = <T>(result: {
-  isOk: boolean;
-  value?: T;
-  error?: { message: string };
-}): T => {
-  if (!result.isOk) {
-    const domainError = result.error!;
-    throw Object.assign(new Error(domainError.message), domainError);
-  }
-  return result.value as T;
-};
-
 export const useSaveDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: SaveDocumentData) =>
-      throwOnErr(await saveDocument({ data: input })),
+      unwrapResult(await saveDocument({ data: input })),
     onSuccess: (saved) => {
       void queryClient.invalidateQueries({
         queryKey: ["documents", saved.projectId, saved.type],

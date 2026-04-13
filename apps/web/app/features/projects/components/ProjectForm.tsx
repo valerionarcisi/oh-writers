@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@oh-writers/ui";
-import { Formats, Genres } from "@oh-writers/shared";
+import { Formats, Genres } from "@oh-writers/domain";
 import styles from "./ProjectForm.module.css";
 
 type FormatValue = (typeof Formats)[keyof typeof Formats];

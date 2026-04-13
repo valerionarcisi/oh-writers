@@ -1,12 +1,15 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
-import type { Result } from "neverthrow";
 import { eq, and } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { documents } from "@oh-writers/db/schema";
 import type { Document } from "@oh-writers/db";
-import type { DocumentType } from "@oh-writers/shared";
-import { getUser } from "~/server/context";
+import type { DocumentType } from "@oh-writers/domain";
+import { toShape } from "@oh-writers/utils";
+import type { ResultShape } from "@oh-writers/utils";
+import { requireUser } from "~/server/context";
+import { getDb } from "~/server/db";
+import { stripYjsState } from "~/server/helpers";
 import { SaveDocumentInput, GetDocumentInput } from "../documents.schema";
 import {
   DocumentNotFoundError,
@@ -14,44 +17,9 @@ import {
   DbError,
 } from "../documents.errors";
 
-// ─── Serializable result shape ────────────────────────────────────────────────
-// createServerFn requires JSON-serializable return types. Neverthrow's Result
-// has methods (isOk(), map(), etc.) which fail that check. We convert at the
-// server function boundary to a plain discriminated union that survives JSON.
-
-export type OkShape<T> = { readonly isOk: true; readonly value: T };
-export type ErrShape<E> = { readonly isOk: false; readonly error: E };
-export type ResultShape<T, E> = OkShape<T> | ErrShape<E>;
-
-const toShape = <T, E>(result: Result<T, E>): ResultShape<T, E> =>
-  result.isOk()
-    ? { isOk: true as const, value: result.value }
-    : { isOk: false as const, error: result.error };
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// yjsState is a binary Buffer (bytea column) — strip it before sending to client.
 export type DocumentView = Omit<Document, "yjsState">;
-
-const stripYjsState = <T extends { yjsState?: unknown }>({
-  yjsState: _,
-  ...rest
-}: T): Omit<T, "yjsState"> => rest as Omit<T, "yjsState">;
-
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-const requireUser = async () => {
-  const user = await getUser();
-  if (!user) throw new Error("Unauthenticated");
-  return user;
-};
-
-// ─── DB helper ────────────────────────────────────────────────────────────────
-
-const getDb = async () => {
-  const { db } = await import("@oh-writers/db");
-  return db;
-};
 
 // ─── Get document ─────────────────────────────────────────────────────────────
 
@@ -122,7 +90,6 @@ export const saveDocument = createServerFn({ method: "POST" })
       const doc = docResult.value;
       if (!doc) return toShape(err(new DocumentNotFoundError(data.documentId)));
 
-      // Permission: check the parent project is not archived
       const { projects: projectsTable } = await import("@oh-writers/db/schema");
       const projectResult = await ResultAsync.fromPromise(
         db.query.projects
