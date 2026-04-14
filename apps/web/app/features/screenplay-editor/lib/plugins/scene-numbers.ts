@@ -1,50 +1,48 @@
 import { Plugin, PluginKey } from "prosemirror-state";
+import { Decoration, DecorationSet } from "prosemirror-view";
 
 const pluginKey = new PluginKey("sceneNumbers");
 
 /**
  * Scene-numbers plugin.
  *
- * Keeps the `number` attr on every `heading` node in sync with its position
- * in the document (1-based, recomputed on every transaction where the order
- * changes). The attr is written to the DOM as `data-number` by the schema's
- * `toDOM`, and the gutter numbers are rendered via CSS `::before` / `::after`
- * pseudo-elements — no widget decorations, no DOM insertion, no selection
- * side-effects.
+ * Uses Decoration.node to stamp a `data-number` attribute onto every heading
+ * element on every transaction. Node decorations are re-applied by PM on every
+ * render, so the attribute is always present — including on first mount.
  *
- * CSS rules live in prosemirror-styles.ts under `.pm-heading[data-number]`.
+ * The numbers are rendered via CSS ::before / ::after pseudo-elements in
+ * prosemirror-styles.ts. No widget decorations, no DOM insertion into the text
+ * flow, no selection side-effects.
  */
 export const sceneNumbersPlugin = new Plugin({
   key: pluginKey,
 
-  appendTransaction(transactions, _oldState, newState) {
-    // Only recompute when the document actually changed.
-    const docChanged = transactions.some((tr) => tr.docChanged);
-    if (!docChanged) return null;
+  props: {
+    decorations(state) {
+      const decos: Decoration[] = [];
+      let sceneIndex = 0;
 
-    const tr = newState.tr;
-    let changed = false;
-    let sceneIndex = 0;
+      state.doc.descendants((node, pos) => {
+        if (node.type.name !== "heading") return true;
 
-    newState.doc.descendants((node, pos) => {
-      if (node.type.name !== "heading") return true;
+        sceneIndex += 1;
 
-      sceneIndex += 1;
-      if (node.attrs.number !== sceneIndex) {
-        tr.setNodeMarkup(pos, undefined, {
-          ...node.attrs,
-          number: sceneIndex,
-        });
-        changed = true;
-      }
+        // Decoration.node stamps extra attrs onto the rendered DOM element
+        // without modifying the document model. PM re-applies these on every
+        // render, so data-number is always present from the first paint.
+        decos.push(
+          Decoration.node(pos, pos + node.nodeSize, {
+            "data-number": String(sceneIndex),
+          }),
+        );
 
-      return false; // don't descend into heading children
-    });
+        return false;
+      });
 
-    return changed ? tr : null;
+      return DecorationSet.create(state.doc, decos);
+    },
   },
 });
 
-// No styles to inject — scene number rendering is handled entirely by
-// CSS pseudo-elements in prosemirror-styles.ts.
+// No DOM injection needed — styles live in prosemirror-styles.ts.
 export const injectSceneNumberStyles = (): void => {};

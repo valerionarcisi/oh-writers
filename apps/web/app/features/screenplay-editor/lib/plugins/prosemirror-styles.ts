@@ -62,27 +62,35 @@ export const injectProseMirrorStyles = (): void => {
     }
 
     /* ─── Scene numbers — CSS pseudo-elements on data-number attr ── */
-    /* Rendered via ::before (left gutter) and ::after (right gutter).
-       No widget decorations needed — the attr is written by schema toDOM. */
+    /*
+     * Decoration.node stamps data-number on the <h2> element.
+     * ::before = left gutter, ::after = right gutter.
+     * Positioned relative to .pm-heading which is position:relative.
+     * Offsets are tuned to the .ProseMirror padding-inline (1.5in left / 1in right):
+     *   left gutter  sits ~0.5in from page edge → left: -1in from text start
+     *   right gutter sits ~0.5in from right edge → right: -0.75in from text end
+     */
 
     .pm-heading[data-number]::before,
     .pm-heading[data-number]::after {
       content: attr(data-number);
       position: absolute;
       top: 0;
+      font-family: "Courier Prime", "Courier New", Courier, monospace;
       font-weight: 700;
       font-size: 12pt;
-      color: #333;
+      line-height: inherit;
+      color: #555;
       user-select: none;
       pointer-events: none;
     }
 
     .pm-heading[data-number]::before {
-      left: -1.2in;
+      left: -1in;
     }
 
     .pm-heading[data-number]::after {
-      right: -0.8in;
+      right: -0.75in;
     }
 
     /* ─── Action — full width ───────────────────────────────── */
