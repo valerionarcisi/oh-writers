@@ -7,6 +7,11 @@ import {
 } from "../fountain-autocomplete";
 import { FOUNTAIN_TRANSITIONS, SCENE_HEADING_RE } from "../fountain-constants";
 import { docToFountain } from "../doc-to-fountain";
+import {
+  reducer,
+  initialState,
+  type AutocompleteState,
+} from "./autocomplete-reducer";
 
 const pluginKey = new PluginKey<null>("autocomplete");
 
@@ -47,8 +52,7 @@ const computeSuggestions = (state: EditorState): string[] => {
 
 class AutocompleteDropdown {
   private el: HTMLUListElement;
-  private suggestions: string[] = [];
-  private selectedIndex = 0;
+  private state: AutocompleteState = initialState;
 
   constructor(private readonly view: EditorView) {
     this.el = document.createElement("ul");
@@ -82,22 +86,26 @@ class AutocompleteDropdown {
     document.body.appendChild(this.el);
   }
 
-  update(state: EditorState) {
-    const next = computeSuggestions(state);
-    if (JSON.stringify(next) === JSON.stringify(this.suggestions)) return;
-    this.suggestions = next;
-    this.selectedIndex = 0;
-    this.render(state);
+  update(editorState: EditorState) {
+    const suggestions = computeSuggestions(editorState);
+    const next = reducer(this.state, {
+      type: "suggestions/compute",
+      suggestions,
+    });
+    if (next === this.state) return;
+    this.state = next;
+    this.render(editorState);
   }
 
-  private render(state: EditorState) {
-    if (this.suggestions.length === 0) {
+  private render(editorState: EditorState) {
+    if (this.state.tag === "hidden") {
       this.el.style.display = "none";
       return;
     }
 
+    const { suggestions } = this.state;
     this.el.innerHTML = "";
-    this.suggestions.forEach((s, i) => {
+    suggestions.forEach((s, i) => {
       const li = document.createElement("li");
       li.textContent = s;
       li.dataset.index = String(i);
@@ -105,26 +113,27 @@ class AutocompleteDropdown {
       li.style.cssText =
         "padding:4px 12px;cursor:pointer;color:#d4d0cc;white-space:nowrap";
       li.addEventListener("mouseover", () => {
-        this.selectedIndex = i;
+        this.state = reducer(this.state, { type: "nav/set", index: i });
         this.highlightSelected();
       });
       this.el.appendChild(li);
     });
 
     this.highlightSelected();
-    this.reposition(state);
+    this.reposition(editorState);
     this.el.style.display = "block";
   }
 
   private highlightSelected() {
+    const idx = this.state.tag === "visible" ? this.state.selectedIndex : -1;
     this.el.querySelectorAll("li").forEach((li, i) => {
       (li as HTMLElement).style.background =
-        i === this.selectedIndex ? "#2e2b29" : "transparent";
+        i === idx ? "#2e2b29" : "transparent";
     });
   }
 
-  private reposition(state: EditorState) {
-    const { from } = state.selection;
+  private reposition(editorState: EditorState) {
+    const { from } = editorState.selection;
     const coords = this.view.coordsAtPos(from);
     const dropH = this.el.offsetHeight || 200;
     const spaceBelow = window.innerHeight - coords.bottom;
@@ -134,34 +143,34 @@ class AutocompleteDropdown {
   }
 
   isVisible(): boolean {
-    return this.el.style.display === "block" && this.suggestions.length > 0;
+    return this.state.tag === "visible";
   }
 
   moveBy(delta: number) {
-    if (!this.isVisible()) return;
-    this.selectedIndex =
-      (this.selectedIndex + delta + this.suggestions.length) %
-      this.suggestions.length;
+    if (this.state.tag !== "visible") return;
+    this.state = reducer(this.state, { type: "nav/move", delta });
     this.highlightSelected();
   }
 
   applySelected() {
-    this.applyAt(this.selectedIndex);
+    if (this.state.tag !== "visible") return;
+    this.applyAt(this.state.selectedIndex);
   }
 
   private applyAt(index: number) {
-    const suggestion = this.suggestions[index];
+    if (this.state.tag !== "visible") return;
+    const suggestion = this.state.suggestions[index];
     if (!suggestion) return;
 
     const { state, dispatch } = this.view;
     const { $from } = state.selection;
     const tr = state.tr.insertText(suggestion, $from.start(), $from.end());
     dispatch(tr);
-    this.hide();
+    this.dismiss();
   }
 
-  hide() {
-    this.suggestions = [];
+  dismiss() {
+    this.state = reducer(this.state, { type: "action/dismiss" });
     this.el.style.display = "none";
   }
 
@@ -208,7 +217,7 @@ export const buildAutocompletePlugin = () => {
           return true;
         }
         if (event.key === "Escape") {
-          dropdown.hide();
+          dropdown.dismiss();
           return true;
         }
         return false;
