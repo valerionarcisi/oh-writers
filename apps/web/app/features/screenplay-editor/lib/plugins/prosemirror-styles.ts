@@ -50,7 +50,7 @@ export const injectProseMirrorStyles = (): void => {
 
     .pm-heading {
       display: block;
-      position: relative; /* scene-number widgets use absolute positioning relative to this */
+      position: relative; /* anchors ::before / ::after pseudo-elements */
       font-weight: 700;
       text-transform: uppercase;
       margin-block-start: 2em;
@@ -59,6 +59,30 @@ export const injectProseMirrorStyles = (): void => {
 
     .pm-scene:first-child .pm-heading {
       margin-block-start: 0;
+    }
+
+    /* ─── Scene numbers — CSS pseudo-elements on data-number attr ── */
+    /* Rendered via ::before (left gutter) and ::after (right gutter).
+       No widget decorations needed — the attr is written by schema toDOM. */
+
+    .pm-heading[data-number]::before,
+    .pm-heading[data-number]::after {
+      content: attr(data-number);
+      position: absolute;
+      top: 0;
+      font-weight: 700;
+      font-size: 12pt;
+      color: #333;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .pm-heading[data-number]::before {
+      left: -1.2in;
+    }
+
+    .pm-heading[data-number]::after {
+      right: -0.8in;
     }
 
     /* ─── Action — full width ───────────────────────────────── */
