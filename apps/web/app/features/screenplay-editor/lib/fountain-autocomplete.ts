@@ -15,25 +15,49 @@ const FOUNTAIN_TRANSITIONS = [
 
 /**
  * Extracts all unique character names from screenplay content.
- * A character cue is a line starting with CHARACTER_INDENT (but not DIALOGUE_INDENT),
- * consisting of UPPERCASE text. Parenthetical extensions like (V.O.) are stripped.
+ *
+ * Recognises two formats:
+ *   1. Tab-indented lines (CHARACTER_INDENT but not DIALOGUE_INDENT) — produced
+ *      by the Fountain keybinding Tab cycle when the user types in the editor.
+ *   2. Standard Fountain character cues — an ALL-CAPS line at column 0 that is
+ *      not a scene heading and not a known transition.  This covers imported /
+ *      seeded Fountain files that don't use the editor's indentation scheme.
+ *
+ * Parenthetical extensions like (V.O.) are stripped before collecting.
  */
+
+const SCENE_HEADING_RE = /^(?:INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s/;
+const TRANSITION_SET = new Set(FOUNTAIN_TRANSITIONS);
+
 export const extractCharacterNames = (content: string): string[] => {
   const names = new Set<string>();
-  for (const line of content.split("\n")) {
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+
+    const isIndentedCue =
+      line.startsWith(CHARACTER_INDENT) && !line.startsWith(DIALOGUE_INDENT);
+
+    // Standard Fountain cue: all-caps at column 0, preceded by a blank line
+    const isPlainCue =
+      !isIndentedCue &&
+      line === line.trimStart() &&
+      !SCENE_HEADING_RE.test(line) &&
+      (i === 0 || lines[i - 1]!.trim() === "");
+
+    if (!isIndentedCue && !isPlainCue) continue;
+
+    const trimmed = line.trim();
+    const name = trimmed.replace(/\s*\(.*\)\s*$/, "").trim();
     if (
-      line.startsWith(CHARACTER_INDENT) &&
-      !line.startsWith(DIALOGUE_INDENT)
+      name.length > 0 &&
+      name === name.toUpperCase() &&
+      /[A-Z]/.test(name) &&
+      !TRANSITION_SET.has(name) &&
+      !TRANSITION_SET.has(trimmed)
     ) {
-      const trimmed = line.trim();
-      const name = trimmed.replace(/\s*\(.*\)\s*$/, "").trim();
-      if (
-        name.length > 0 &&
-        name === name.toUpperCase() &&
-        /[A-Z]/.test(name)
-      ) {
-        names.add(name);
-      }
+      names.add(name);
     }
   }
   return [...names].sort();

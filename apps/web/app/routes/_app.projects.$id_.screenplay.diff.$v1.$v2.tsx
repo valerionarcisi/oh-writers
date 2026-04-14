@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { VersionDiff } from "~/features/screenplay-editor/components/VersionDiff";
 import { useVersion } from "~/features/screenplay-editor/hooks/useVersions";
-import { useScreenplay } from "~/features/screenplay-editor";
+import { screenplayQueryOptions } from "~/features/screenplay-editor";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute(
@@ -17,11 +18,18 @@ function DiffPage() {
   // v2 can be 'current' (compare vs live screenplay) or a version UUID
   const isV2Version = v2 !== "current";
   const newVersionQuery = useVersion(v2, isV2Version);
-  const screenplayQuery = useScreenplay(id);
+  // Always refetch on mount so the diff reflects the truly current screenplay,
+  // not a stale cache entry (auto-save may have just updated the screenplay).
+  const screenplayQuery = useQuery({
+    ...screenplayQueryOptions(id),
+    refetchOnMount: "always",
+  });
 
   const isLoading =
     oldVersionQuery.isLoading ||
-    (v2 === "current" ? screenplayQuery.isLoading : newVersionQuery.isLoading);
+    (v2 === "current"
+      ? screenplayQuery.isLoading || screenplayQuery.isFetching
+      : newVersionQuery.isLoading);
 
   if (isLoading) return <div className={styles.status}>Loading diff…</div>;
 
