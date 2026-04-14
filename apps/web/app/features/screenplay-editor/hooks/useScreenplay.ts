@@ -44,6 +44,7 @@ export const useAutoSave = (
   screenplayId: string,
   content: string,
   savedContent: string,
+  pmDoc: Record<string, unknown> | null,
 ): { isDirty: boolean; isSaving: boolean; isError: boolean } => {
   const save = useSaveScreenplay();
   const isDirty = content !== savedContent;
@@ -51,7 +52,7 @@ export const useAutoSave = (
   useEffect(() => {
     if (!isDirty) return;
     const handle = setTimeout(() => {
-      save.mutate({ screenplayId, content });
+      save.mutate({ screenplayId, content, pmDoc });
     }, AUTO_SAVE_DELAY_MS);
     return () => clearTimeout(handle);
     // Re-schedule whenever content or dirty state changes (not save — stable mutation)

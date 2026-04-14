@@ -14,6 +14,9 @@ interface ScreenplayEditorProps {
 
 export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [content, setContent] = useState(screenplay.content);
+  const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
+    (screenplay.pmDoc as Record<string, unknown> | null) ?? null,
+  );
   const [isFocusMode, setFocusMode] = useState(false);
   const [cursorLine, setCursorLine] = useState(1);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
@@ -28,6 +31,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     screenplay.id,
     content,
     screenplay.content,
+    pmDoc,
   );
 
   // Ctrl/Cmd+Shift+F keybinding dispatches this event from within Monaco
@@ -71,7 +75,12 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           className={`${styles.pageShell} ${isEditorV2 ? styles.pageShellV2 : ""}`}
         >
           {isEditorV2 ? (
-            <ProseMirrorView value={content} onChange={setContent} />
+            <ProseMirrorView
+              value={content}
+              initialDoc={pmDoc}
+              onChange={setContent}
+              onDocChange={setPmDoc}
+            />
           ) : (
             <MonacoWrapper
               value={content}

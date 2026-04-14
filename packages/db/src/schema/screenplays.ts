@@ -5,6 +5,7 @@ import {
   integer,
   boolean,
   timestamp,
+  jsonb,
   customType,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
@@ -25,6 +26,8 @@ export const screenplays = pgTable("screenplays", {
   title: text("title").notNull(),
   pageCount: integer("page_count").notNull().default(0),
   yjsState: bytea("yjs_state"),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pmDoc: jsonb("pm_doc").$type<Record<string, any> | null>(),
   content: text("content").notNull().default(""),
   createdBy: uuid("created_by")
     .notNull()

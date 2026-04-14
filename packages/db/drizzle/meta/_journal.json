@@ -15,6 +15,13 @@
       "when": 1771930200000,
       "tag": "0001_fix_accounts_for_better_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744632000000,
+      "tag": "0002_add_pm_doc",
+      "breakpoints": true
     }
   ]
 }

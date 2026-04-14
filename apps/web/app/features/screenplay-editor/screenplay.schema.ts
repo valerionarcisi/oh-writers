@@ -7,6 +7,7 @@ export const GetScreenplayInput = z.object({
 export const SaveScreenplayInput = z.object({
   screenplayId: z.string().uuid(),
   content: z.string(),
+  pmDoc: z.record(z.unknown()).nullable(),
 });
 
 export type GetScreenplayData = z.infer<typeof GetScreenplayInput>;

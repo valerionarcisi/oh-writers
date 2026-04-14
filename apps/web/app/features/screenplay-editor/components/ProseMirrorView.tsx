@@ -19,13 +19,17 @@ import { fountainToDoc } from "../lib/fountain-to-doc";
 
 interface ProseMirrorViewProps {
   value: string;
+  initialDoc?: Record<string, unknown> | null;
   onChange: (fountain: string) => void;
+  onDocChange?: (doc: Record<string, unknown>) => void;
   readOnly?: boolean;
 }
 
 export function ProseMirrorView({
   value,
+  initialDoc,
   onChange,
+  onDocChange,
   readOnly = false,
 }: ProseMirrorViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -41,8 +45,13 @@ export function ProseMirrorView({
     injectSceneNumberStyles();
     injectPaginatorStyles();
 
+    // Prefer pm_doc JSON from DB (faster, no re-parse); fall back to Fountain text
+    const initialPmDoc = initialDoc
+      ? schema.nodeFromJSON(initialDoc)
+      : fountainToDoc(value);
+
     const state = EditorState.create({
-      doc: fountainToDoc(value),
+      doc: initialPmDoc,
       plugins: [
         history(),
         fountainKeymap,
@@ -69,6 +78,7 @@ export function ProseMirrorView({
             const fountain = docToFountain(newState.doc);
             lastValueRef.current = fountain;
             onChange(fountain);
+            onDocChange?.(newState.doc.toJSON() as Record<string, unknown>);
           });
         }
       },

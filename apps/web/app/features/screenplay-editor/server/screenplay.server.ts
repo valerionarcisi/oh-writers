@@ -111,7 +111,12 @@ export const saveScreenplay = createServerFn({ method: "POST" })
           db.transaction(async (tx) => {
             const [updated] = await tx
               .update(screenplays)
-              .set({ content: data.content, pageCount, updatedAt: new Date() })
+              .set({
+                content: data.content,
+                pmDoc: data.pmDoc,
+                pageCount,
+                updatedAt: new Date(),
+              })
               .where(eq(screenplays.id, data.screenplayId))
               .returning();
 
