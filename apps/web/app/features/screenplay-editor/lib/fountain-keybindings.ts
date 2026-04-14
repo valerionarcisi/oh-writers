@@ -5,6 +5,7 @@ import {
   nextElementOnEnter,
   nextElementOnTab,
 } from "./fountain-element-transforms";
+import { registerFountainElementPicker } from "./fountain-element-picker";
 
 /**
  * Registers Fountain-specific keybindings on an editor instance.
@@ -68,6 +69,8 @@ export const registerFountainKeybindings = (
         runForceElement(ed, monaco, target),
     });
   }
+
+  registerFountainElementPicker(editor, monaco);
 };
 
 const runTab = (
