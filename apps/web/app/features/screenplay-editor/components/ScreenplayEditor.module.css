@@ -58,34 +58,48 @@
 /* ─── Editor area ────────────────────────────────────────── */
 
 /*
- * Scroll container — dark canvas behind the page.
- * Monaco's own scrollbar handles vertical scroll; this container just
- * provides the dark backdrop and centres the page card horizontally.
+ * Scroll container — dark canvas behind the pages.
+ * Vertical scroll is handled here (not Monaco) so the page card can grow
+ * with content and we get true page separation feel.
+ * Monaco height is set to auto / content-height via the scrollBeyondLastLine:false
+ * option, so the pageShell grows naturally.
  */
 .editorArea {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-block-size: 0;
-  background: #1c1c1a; /* slightly lighter than --color-bg for contrast with page */
+  background: #2a2927;
   display: flex;
-  justify-content: center;
-  /* Horizontal padding so the page card has breathing room */
-  padding-inline: var(--space-8);
+  flex-direction: column;
+  align-items: center;
+  padding-block: var(--space-8);
+  padding-inline: var(--space-6);
+  gap: var(
+    --space-6
+  ); /* gap between page cards (unused for now — single card) */
 }
 
 /*
- * The screenplay "page" — warm-white card at industry-standard width.
- * 740px ≈ a US letter sheet with 1.5" left / 1" right margins at 13px Courier.
- * Monaco fills this 100%; its own vertical scroll handles long scripts.
+ * The screenplay "page" — US Letter proportions at screen resolution.
+ * 816px = 8.5" × 96dpi. Padding simulates the physical margins:
+ *   - left: 1.5" ≈ 144px
+ *   - right: 1.0" ≈ 96px
+ *   - top / bottom handled by Monaco padding option
+ *
+ * Monaco sits inside and fills the remaining width, giving Courier text
+ * the correct line length (~60 chars) automatically.
  */
 .pageShell {
   inline-size: 100%;
-  max-inline-size: 740px;
-  block-size: 100%;
-  background: #f8f6f0;
+  max-inline-size: 816px;
+  /* height grows with Monaco content — no fixed block-size */
+  background: #ffffff;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    0 16px 48px rgba(0, 0, 0, 0.2);
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 6px 24px rgba(0, 0, 0, 0.35),
+    0 24px 64px rgba(0, 0, 0, 0.25);
   position: relative;
   flex-shrink: 0;
+  padding-inline-start: 144px; /* 1.5" left margin */
+  padding-inline-end: 96px; /* 1.0" right margin */
 }

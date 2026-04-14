@@ -13,8 +13,8 @@ const COLORS = {
   transition: "#6b6860", // grey — same as parenthetical
   action: "#2a2825", // warm dark — body text
   comment: "#a09d97", // light grey — boneyards barely visible
-  bg: "#f8f6f0", // warm white — the paper
-  bgSurface: "#f8f6f0",
+  bg: "#ffffff", // pure white — matches pageShell background
+  bgSurface: "#ffffff",
   selection: "#d4e4f7", // light blue selection
   cursor: "#111111",
   lineNumber: "#c5c2bb",
@@ -126,7 +126,7 @@ export const registerFountainLanguage = (monaco: Monaco): void => {
       "editor.background": COLORS.bgSurface,
       "editor.foreground": COLORS.action,
       "editor.selectionBackground": COLORS.selection,
-      "editor.lineHighlightBackground": "#f0ede4",
+      "editor.lineHighlightBackground": "#f5f3ef",
       "editorCursor.foreground": COLORS.cursor,
       "editorLineNumber.foreground": COLORS.lineNumber,
       "editorLineNumber.activeForeground": COLORS.action,

@@ -48,6 +48,8 @@ export function MonacoWrapper({
     return <div className={styles.placeholder} aria-hidden="true" />;
   }
 
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
   const handleMount = (
     editor: Monaco["editor"]["IStandaloneCodeEditor"],
     monaco: Monaco,
@@ -72,48 +74,67 @@ export function MonacoWrapper({
         }
       },
     );
+
+    // Grow the editor container to match content height so the page card
+    // expands naturally and the outer scroll container handles scrolling.
+    const MIN_HEIGHT = 1056; // 11" × 96dpi
+    const updateHeight = (): void => {
+      const contentHeight = Math.max(MIN_HEIGHT, editor.getContentHeight());
+      if (editorContainerRef.current) {
+        editorContainerRef.current.style.height = `${contentHeight}px`;
+      }
+      editor.layout();
+    };
+    editor.onDidContentSizeChange(updateHeight);
+    updateHeight();
+
     editor.focus();
   };
 
   return (
-    <Suspense fallback={<div className={styles.loading}>Loading editor…</div>}>
-      <MonacoEditor
-        language="fountain-screenplay"
-        theme="fountain-dark"
-        value={value}
-        onChange={(v) => onChange(v ?? "")}
-        onMount={handleMount}
-        options={{
-          fontFamily: "'Courier Prime', 'Courier New', Courier, monospace",
-          fontSize: 13,
-          lineHeight: 22,
-          wordWrap: "on",
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          renderLineHighlight: "line",
-          padding: { top: 56, bottom: 96 },
-          lineNumbers: "off",
-          glyphMargin: false,
-          folding: false,
-          lineDecorationsWidth: 0,
-          lineNumbersMinChars: 0,
-          overviewRulerBorder: false,
-          hideCursorInOverviewRuler: true,
-          guides: { indentation: false },
-          readOnly,
-          domReadOnly: readOnly,
-          scrollbar: {
-            vertical: "auto",
-            horizontal: "hidden",
-            verticalScrollbarSize: 6,
-          },
-          tabCompletion: "on",
-          suggestSelection: "first",
-          wordBasedSuggestions: "off",
-          suggest: { showIcons: false },
-        }}
-        className={styles.editor}
-      />
-    </Suspense>
+    <div ref={editorContainerRef} className={styles.editorContainer}>
+      <Suspense
+        fallback={<div className={styles.loading}>Loading editor…</div>}
+      >
+        <MonacoEditor
+          language="fountain-screenplay"
+          theme="fountain-dark"
+          value={value}
+          onChange={(v) => onChange(v ?? "")}
+          onMount={handleMount}
+          options={{
+            fontFamily: "'Courier Prime', 'Courier New', Courier, monospace",
+            fontSize: 14,
+            lineHeight: 24,
+            wordWrap: "on",
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            renderLineHighlight: "line",
+            // top/bottom padding only — left/right margins are in pageShell CSS
+            padding: { top: 72, bottom: 120 },
+            lineNumbers: "off",
+            glyphMargin: false,
+            folding: false,
+            lineDecorationsWidth: 0,
+            lineNumbersMinChars: 0,
+            overviewRulerBorder: false,
+            hideCursorInOverviewRuler: true,
+            guides: { indentation: false },
+            readOnly,
+            domReadOnly: readOnly,
+            scrollbar: {
+              vertical: "auto",
+              horizontal: "hidden",
+              verticalScrollbarSize: 6,
+            },
+            tabCompletion: "on",
+            suggestSelection: "first",
+            wordBasedSuggestions: "off",
+            suggest: { showIcons: false },
+          }}
+          className={styles.editor}
+        />
+      </Suspense>
+    </div>
   );
 }

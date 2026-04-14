@@ -2,7 +2,7 @@
 .loading {
   inline-size: 100%;
   block-size: 100%;
-  background: var(--color-surface);
+  background: transparent;
 }
 
 .loading {
@@ -12,6 +12,15 @@
   font-size: var(--text-sm);
   color: var(--color-fg-secondary);
   font-family: var(--font-mono);
+}
+
+/*
+ * editorContainer: height is set dynamically via JS (onDidContentSizeChange).
+ * Width fills the available space inside pageShell (after its padding).
+ */
+.editorContainer {
+  inline-size: 100%;
+  min-block-size: 1056px; /* fallback before JS kicks in */
 }
 
 .editor {
