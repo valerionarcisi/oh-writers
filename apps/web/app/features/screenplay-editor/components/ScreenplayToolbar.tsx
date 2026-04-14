@@ -68,7 +68,6 @@ export function ScreenplayToolbar({
         >
           ← Back
         </Link>
-        <span className={styles.title}>Screenplay</span>
       </div>
 
       {/* Element indicator strip */}

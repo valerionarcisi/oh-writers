@@ -50,6 +50,7 @@ export const injectProseMirrorStyles = (): void => {
 
     .pm-heading {
       display: block;
+      position: relative; /* scene-number widgets use absolute positioning relative to this */
       font-weight: 700;
       text-transform: uppercase;
       margin-block-start: 2em;

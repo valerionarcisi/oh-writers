@@ -80,6 +80,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
               initialDoc={pmDoc}
               onChange={setContent}
               onDocChange={setPmDoc}
+              onElementChange={setCurrentElement}
             />
           ) : (
             <MonacoWrapper

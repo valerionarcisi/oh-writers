@@ -16,6 +16,7 @@ import {
 } from "../lib/plugins/paginator";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
+import type { ElementType } from "../lib/fountain-element-detector";
 
 interface ProseMirrorViewProps {
   /** Fountain text — source of truth for version restore and external imports. */
@@ -34,15 +35,33 @@ interface ProseMirrorViewProps {
    * so pm_doc is kept in sync with the DB without a second round-trip.
    */
   onDocChange?: (doc: Record<string, unknown>) => void;
+  /**
+   * Emits the block type at the cursor on every selection change.
+   * Drives the active-element pill in the toolbar.
+   * "scene" is emitted when the cursor is in a heading node.
+   */
+  onElementChange?: (element: ElementType) => void;
   /** When true the editor is non-editable — used by the version viewer. */
   readOnly?: boolean;
 }
+
+// Maps PM node type names to the ElementType the toolbar understands.
+// "heading" → "scene" because from the writer's POV a heading IS a scene line.
+const NODE_TO_ELEMENT: Record<string, ElementType> = {
+  heading: "scene",
+  action: "action",
+  character: "character",
+  dialogue: "dialogue",
+  parenthetical: "parenthetical",
+  transition: "transition",
+};
 
 export function ProseMirrorView({
   value,
   initialDoc,
   onChange,
   onDocChange,
+  onElementChange,
   readOnly = false,
 }: ProseMirrorViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -85,6 +104,13 @@ export function ProseMirrorView({
       dispatchTransaction(tr) {
         const newState = view.state.apply(tr);
         view.updateState(newState);
+
+        // Emit the block type at cursor on every transaction (doc or selection change).
+        if (onElementChange) {
+          const blockType = newState.selection.$from.parent.type.name;
+          const element = NODE_TO_ELEMENT[blockType] ?? "action";
+          onElementChange(element);
+        }
 
         if (tr.docChanged) {
           import("../lib/doc-to-fountain").then(({ docToFountain }) => {
