@@ -31,3 +31,6 @@ playwright/.cache/
 # Logs
 *.log
 .playwright-mcp/
+
+# Local scratch / brainstorm
+.superpowers/
