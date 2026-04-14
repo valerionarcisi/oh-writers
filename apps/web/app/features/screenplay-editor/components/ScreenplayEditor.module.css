@@ -92,7 +92,7 @@
 .pageShell {
   inline-size: 100%;
   max-inline-size: 816px;
-  /* height grows with Monaco content — no fixed block-size */
+  /* height grows with content — no fixed block-size */
   background: #ffffff;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.4),
@@ -102,4 +102,14 @@
   flex-shrink: 0;
   padding-inline-start: 144px; /* 1.5" left margin */
   padding-inline-end: 96px; /* 1.0" right margin */
+}
+
+/*
+ * ProseMirror variant — margins are handled inside the PM editor root
+ * via `in` units on individual element classes. The page shell is a neutral
+ * container: white background + shadow, no extra padding.
+ */
+.pageShellV2 {
+  padding-inline-start: 0;
+  padding-inline-end: 0;
 }

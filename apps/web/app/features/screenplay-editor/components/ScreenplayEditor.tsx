@@ -67,7 +67,9 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
         />
       )}
       <div className={styles.editorArea}>
-        <div className={styles.pageShell}>
+        <div
+          className={`${styles.pageShell} ${isEditorV2 ? styles.pageShellV2 : ""}`}
+        >
           {isEditorV2 ? (
             <ProseMirrorView value={content} onChange={setContent} />
           ) : (

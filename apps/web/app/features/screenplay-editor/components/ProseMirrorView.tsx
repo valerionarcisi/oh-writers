@@ -4,9 +4,13 @@ import { EditorView } from "prosemirror-view";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { fountainKeymap } from "../lib/plugins/keymap";
+import {
+  sceneNumbersPlugin,
+  injectSceneNumberStyles,
+} from "../lib/plugins/scene-numbers";
+import { injectProseMirrorStyles } from "../lib/plugins/prosemirror-styles";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
-import styles from "../styles/prosemirror.module.css";
 
 interface ProseMirrorViewProps {
   value: string;
@@ -28,6 +32,9 @@ export function ProseMirrorView({
   useEffect(() => {
     if (!mountRef.current) return;
 
+    injectProseMirrorStyles();
+    injectSceneNumberStyles();
+
     const state = EditorState.create({
       doc: fountainToDoc(value),
       plugins: [
@@ -38,6 +45,7 @@ export function ProseMirrorView({
           "Mod-y": redo,
           "Mod-Shift-z": redo,
         }),
+        sceneNumbersPlugin,
       ],
     });
 
@@ -86,11 +94,5 @@ export function ProseMirrorView({
     });
   }, [value]);
 
-  return (
-    <div
-      ref={mountRef}
-      className={styles.editorRoot}
-      data-testid="prosemirror-view"
-    />
-  );
+  return <div ref={mountRef} data-testid="prosemirror-view" />;
 }
