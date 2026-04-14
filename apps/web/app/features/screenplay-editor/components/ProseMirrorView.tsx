@@ -10,6 +10,10 @@ import {
 } from "../lib/plugins/scene-numbers";
 import { injectProseMirrorStyles } from "../lib/plugins/prosemirror-styles";
 import { buildAutocompletePlugin } from "../lib/plugins/autocomplete";
+import {
+  buildPaginatorPlugin,
+  injectPaginatorStyles,
+} from "../lib/plugins/paginator";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
 
@@ -35,6 +39,7 @@ export function ProseMirrorView({
 
     injectProseMirrorStyles();
     injectSceneNumberStyles();
+    injectPaginatorStyles();
 
     const state = EditorState.create({
       doc: fountainToDoc(value),
@@ -47,6 +52,7 @@ export function ProseMirrorView({
           "Mod-Shift-z": redo,
         }),
         sceneNumbersPlugin,
+        buildPaginatorPlugin(),
         buildAutocompletePlugin(),
       ],
     });
