@@ -18,10 +18,23 @@ import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
 
 interface ProseMirrorViewProps {
+  /** Fountain text — source of truth for version restore and external imports. */
   value: string;
+  /**
+   * PM doc JSON from the DB (pm_doc column). When present the editor loads
+   * directly from JSON, skipping the Fountain re-parse on every mount.
+   * Null on first open (before the first save fills the column).
+   */
   initialDoc?: Record<string, unknown> | null;
+  /** Emits the Fountain serialisation of the doc on every content change. */
   onChange: (fountain: string) => void;
+  /**
+   * Emits the raw PM doc JSON on every content change.
+   * Used by ScreenplayEditor to forward the doc to the auto-save mutation
+   * so pm_doc is kept in sync with the DB without a second round-trip.
+   */
   onDocChange?: (doc: Record<string, unknown>) => void;
+  /** When true the editor is non-editable — used by the version viewer. */
   readOnly?: boolean;
 }
 
