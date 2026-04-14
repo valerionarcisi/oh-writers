@@ -7,7 +7,7 @@
 - **TanStack Start** — full-stack framework, SSR, file-based routing
 - **TanStack Router** — type-safe routing with Zod-validated search params
 - **TanStack Query** — server state, caching, optimistic updates
-- **Monaco Editor** — screenplay editor with custom language extension
+- **Monaco Editor** — screenplay editor with custom language extension (desktop). Planned migration to CodeMirror 6 for mobile. Fountain domain logic (`fountain-element-detector`, `fountain-element-transforms`, `fountain-constants`) is editor-agnostic; only the glue files (`fountain-keybindings`, `fountain-autocomplete`, `fountain-language`) are Monaco-specific.
 - **Yjs** — CRDT for real-time collaboration (online only)
 - **y-websocket** — WebSocket provider for Yjs sync between clients
 - **CSS Modules** — styling with custom properties, zero runtime overhead
@@ -41,6 +41,26 @@
 - **Docker Compose** — PostgreSQL, Redis, app, ws-server
 - **Node.js 22** — runtime
 - **pnpm workspaces** — monorepo
+
+---
+
+## Runtime Targets
+
+Oh Writers runs on three different surfaces that share the same backend. Priority order:
+
+1. **Web app (desktop)** — primary product. Full feature set: editing, breakdown, budget, schedule, AI, locations.
+2. **PWA (tablet, especially iPad)** — same codebase as web. Installable via browser. Targets the iPad-with-keyboard scenario where the editor experience is close to desktop.
+3. **Expo companion app (iOS / Android)** — not a clone of the web, a purposeful companion. Read mode, quick capture via dictation, comments, mentions, approvals, push notifications, location scouting (camera + GPS + photo upload for Spec 13), strip board read-only. The full screenplay editor is intentionally out of scope for mobile because no production-grade Fountain editor exists for React Native.
+
+### What this implies for the codebase
+
+- **Shared packages (`packages/domain`, `packages/utils`)** must remain framework-agnostic — no React, no Monaco, no browser-only APIs. They will be consumed by the Expo app as well.
+- **Editor layer is split** between pure Fountain logic (portable) and Monaco-specific glue. When CodeMirror 6 is introduced for mobile browsers, the glue is replaced; the logic stays.
+- **Better Auth** must issue both cookie sessions (web) and bearer tokens (mobile). Server functions and middleware must not assume cookies.
+- **An API client abstraction** (to be introduced when the Expo app starts) will wrap `createServerFn` on the web and typed `fetch` on mobile. Both use the same Zod schemas from `packages/domain`, so a schema change breaks both at compile time.
+- **Real-time events** (comments, mentions, team updates) flow through a channel that both the web (Yjs / WebSocket) and a future Expo app (Expo Push Notifications) can subscribe to. The event source of truth is the backend, not the web client.
+
+The Expo app does not exist yet. The rule is: **don't close doors**. No mobile-specific work happens now.
 
 ---
 
