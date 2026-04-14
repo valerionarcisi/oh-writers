@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState, useCallback } from "react";
 import type { AppUser } from "~/server/context";
 import { Sidebar } from "./Sidebar";
+import { TopBar } from "./TopBar";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -8,11 +9,31 @@ interface AppShellProps {
   children: ReactNode;
 }
 
+const STORAGE_KEY = "ohw-sidebar-collapsed";
+
+const getInitialCollapsed = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(STORAGE_KEY) === "true";
+};
+
 export function AppShell({ user, children }: AppShellProps) {
+  const [isCollapsed, setIsCollapsed] = useState(getInitialCollapsed);
+
+  const toggleSidebar = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  }, []);
+
   return (
-    <div className={styles.shell}>
-      <Sidebar user={user} />
-      <main className={styles.main}>{children}</main>
+    <div className={styles.shell} data-collapsed={isCollapsed || undefined}>
+      <Sidebar user={user} isCollapsed={isCollapsed} onToggle={toggleSidebar} />
+      <div className={styles.content}>
+        <TopBar />
+        <main className={styles.main}>{children}</main>
+      </div>
     </div>
   );
 }

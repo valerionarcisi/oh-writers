@@ -1,10 +1,27 @@
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  min-height: 100vh;
+  min-block-size: 100vh;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell {
+    transition: grid-template-columns var(--duration-slow) var(--ease-default);
+  }
+}
+
+.shell[data-collapsed] {
+  grid-template-columns: var(--sidebar-width-collapsed) 1fr;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
 }
 
 .main {
+  flex: 1;
   overflow: auto;
-  min-width: 0;
+  background: var(--color-bg);
 }

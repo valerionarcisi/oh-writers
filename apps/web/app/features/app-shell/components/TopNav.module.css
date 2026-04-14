@@ -1,0 +1,119 @@
+.topNav {
+  display: flex;
+  align-items: center;
+  block-size: var(--topnav-height);
+  padding-inline: var(--space-5);
+  background: var(--color-surface);
+  border-block-end: var(--border);
+  gap: var(--space-1);
+}
+
+.logo {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-fg);
+  text-decoration: none;
+  margin-inline-end: var(--space-2);
+  white-space: nowrap;
+}
+
+.logoAccent {
+  color: var(--color-accent);
+}
+
+.divider {
+  inline-size: 1px;
+  block-size: 20px;
+  background: var(--color-border-strong);
+  margin-inline: var(--space-2);
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  block-size: 44px;
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .navLink {
+    transition:
+      color var(--duration-fast) var(--ease-default),
+      background var(--duration-fast) var(--ease-default);
+  }
+}
+
+.navLink:hover {
+  color: var(--color-fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navLink.active {
+  color: var(--color-fg);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.newBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  block-size: 32px;
+  padding-inline: var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .newBtn {
+    transition: background var(--duration-fast) var(--ease-default);
+  }
+}
+
+.newBtn:hover {
+  background: var(--color-accent-hover);
+}
+
+.newBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.avatar {
+  inline-size: 30px;
+  block-size: 30px;
+  margin-inline-start: var(--space-2);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.avatar:hover {
+  background: rgba(20, 184, 166, 0.18);
+}
+
+.avatar:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
