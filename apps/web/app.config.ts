@@ -37,5 +37,14 @@ export default defineConfig({
         },
       },
     },
+    api: {
+      vite: {
+        plugins: [
+          tsConfigPaths({
+            projects: ["./tsconfig.json"],
+          }),
+        ],
+      },
+    },
   },
 });

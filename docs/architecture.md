@@ -218,15 +218,16 @@ Every Yjs message → room access checked against team membership
 
 ## CSS Architecture
 
-### Design Philosophy — Editorial Dark
+### Design Philosophy — Dark Modern SaaS
 
-The visual language is inspired by print editorial design — screenplay pages, production call sheets, cinema journals. Dark-first, typographic, zero decoration.
+Clean, warm dark aesthetic with depth and polish. Content-first — the editor area is the hero.
 
-- Dark warm backgrounds (not pure black — closer to aged paper in dark)
-- Two font families: serif for creative content, monospace for production data
-- Color used semantically, not decoratively (breakdown category colors, status indicators)
-- `border-radius: 0` everywhere — sharp, precise, no softening
-- No gradients, no shadows (except functional elevation), no illustrations
+- Dark warm backgrounds (not pure black — warm undertones `#0f0f0d`)
+- Three font families: sans (Inter) for UI, serif (Lora) for content headings, mono (Courier Prime) for screenplay
+- Color used semantically (breakdown categories, status indicators) with subtle background variants
+- `--radius-md` (8px) default — soft edges everywhere except the screenplay page itself (`--radius-none`)
+- Layered elevation via `--shadow-*` tokens — surfaces feel stacked, not flat
+- Micro-animations for state changes, always behind `prefers-reduced-motion`
 
 ### Design Tokens
 
@@ -299,7 +300,12 @@ The visual language is inspired by print editorial design — screenplay pages, 
   --border-width: 1px;
   --border: var(--border-width) solid var(--color-border);
   --border-strong: var(--border-width) solid var(--color-border-strong);
-  --radius: 0; /* no border radius, ever */
+  --radius-sm: 4px;
+  --radius-md: 8px; /* default */
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  --radius-none: 0; /* screenplay page only */
 }
 ```
 
