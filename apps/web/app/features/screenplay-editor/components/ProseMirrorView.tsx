@@ -9,6 +9,7 @@ import {
   injectSceneNumberStyles,
 } from "../lib/plugins/scene-numbers";
 import { injectProseMirrorStyles } from "../lib/plugins/prosemirror-styles";
+import { buildAutocompletePlugin } from "../lib/plugins/autocomplete";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
 
@@ -46,6 +47,7 @@ export function ProseMirrorView({
           "Mod-Shift-z": redo,
         }),
         sceneNumbersPlugin,
+        buildAutocompletePlugin(),
       ],
     });
 
