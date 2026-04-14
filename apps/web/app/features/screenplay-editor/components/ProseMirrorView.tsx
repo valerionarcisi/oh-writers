@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import { history, undo, redo } from "prosemirror-history";
+import { keymap } from "prosemirror-keymap";
+import { fountainKeymap } from "../lib/plugins/keymap";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
 import styles from "../styles/prosemirror.module.css";
@@ -27,6 +30,15 @@ export function ProseMirrorView({
 
     const state = EditorState.create({
       doc: fountainToDoc(value),
+      plugins: [
+        history(),
+        fountainKeymap,
+        keymap({
+          "Mod-z": undo,
+          "Mod-y": redo,
+          "Mod-Shift-z": redo,
+        }),
+      ],
     });
 
     const view = new EditorView(mountRef.current, {
@@ -37,7 +49,6 @@ export function ProseMirrorView({
         view.updateState(newState);
 
         if (tr.docChanged) {
-          // Lazy import to avoid circular dep at module level
           import("../lib/doc-to-fountain").then(({ docToFountain }) => {
             const fountain = docToFountain(newState.doc);
             lastValueRef.current = fountain;
@@ -54,11 +65,9 @@ export function ProseMirrorView({
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // Intentionally only runs once — external value changes handled below
   }, [readOnly]);
 
-  // Sync external value changes (e.g. version restore, import) without
-  // destroying the editor or losing cursor position when possible.
+  // Sync external value changes (e.g. version restore, import)
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
