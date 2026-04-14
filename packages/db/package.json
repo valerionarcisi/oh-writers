@@ -4,10 +4,17 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema/index.js",
+      "types": "./dist/schema/index.d.ts"
+    }
   },
   "scripts": {
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
     "migrate": "drizzle-kit migrate",
     "migrate:create": "drizzle-kit generate",
@@ -22,8 +29,10 @@
     "postgres": "3.4.8"
   },
   "devDependencies": {
+    "@noble/hashes": "^2.2.0",
     "@types/node": "22.14.0",
     "drizzle-kit": "0.31.9",
+    "tsup": "^8.5.1",
     "tsx": "4.19.2",
     "typescript": "5.9.3"
   }

@@ -8,6 +8,13 @@
       "when": 1771930142016,
       "tag": "0000_flaky_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771930200000,
+      "tag": "0001_fix_accounts_for_better_auth",
+      "breakpoints": true
     }
   ]
 }
