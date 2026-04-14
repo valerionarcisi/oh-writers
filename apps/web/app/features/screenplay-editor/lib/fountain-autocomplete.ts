@@ -55,6 +55,22 @@ export const extractCharacterNames = (content: string): string[] => {
 };
 
 /**
+ * Counts the number of scene headings that appear before a given line number (1-based).
+ * Used to suggest the next scene number when the user starts a new scene heading.
+ */
+export const sceneNumberBefore = (
+  content: string,
+  lineNumber: number,
+): number => {
+  const lines = content.split("\n");
+  let count = 0;
+  for (let i = 0; i < lineNumber - 1 && i < lines.length; i++) {
+    if (SCENE_HEADING_RE.test(lines[i]!.trimStart())) count++;
+  }
+  return count;
+};
+
+/**
  * Extracts all unique locations from scene headings.
  * Captures the part between the INT./EXT. prefix and the optional " - TIME" suffix.
  * e.g. "INT. COFFEE SHOP - DAY" → "COFFEE SHOP"
@@ -129,6 +145,8 @@ export const registerFountainAutocomplete = (
       const trimmed = lineContent.trimStart();
       if (/^(?:INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s/.test(trimmed)) {
         const locations = extractLocations(content);
+        const nextSceneNum =
+          sceneNumberBefore(content, position.lineNumber) + 1;
         const prefixLen = trimmed.search(/\s/) + 1; // length of "INT. " including space
         const startCol = lineContent.length - trimmed.length + prefixLen + 1;
         const range = {
@@ -138,13 +156,33 @@ export const registerFountainAutocomplete = (
           endColumn: position.column,
         };
 
+        // Scene number hint — always first in the list
+        const sceneNumSuggestion = {
+          label: `${nextSceneNum}.`,
+          detail: `Scene ${nextSceneNum}`,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: "",
+          sortText: "0",
+          range: {
+            startLineNumber: position.lineNumber,
+            startColumn: position.column,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+          },
+        };
+
         return {
-          suggestions: locations.map((loc) => ({
-            label: loc,
-            kind: monaco.languages.CompletionItemKind.Value,
-            insertText: loc,
-            range,
-          })),
+          suggestions: [
+            sceneNumSuggestion,
+            ...locations.map((loc) => ({
+              label: loc,
+              detail: `Scene ${nextSceneNum}`,
+              kind: monaco.languages.CompletionItemKind.Value,
+              insertText: loc,
+              sortText: "1" + loc,
+              range,
+            })),
+          ],
         };
       }
 

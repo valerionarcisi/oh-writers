@@ -57,7 +57,35 @@
 
 /* ─── Editor area ────────────────────────────────────────── */
 
+/*
+ * Scroll container — dark canvas behind the page.
+ * Monaco's own scrollbar handles vertical scroll; this container just
+ * provides the dark backdrop and centres the page card horizontally.
+ */
 .editorArea {
   overflow: hidden;
   min-block-size: 0;
+  background: #1c1c1a; /* slightly lighter than --color-bg for contrast with page */
+  display: flex;
+  justify-content: center;
+  /* Horizontal padding so the page card has breathing room */
+  padding-inline: var(--space-8);
+}
+
+/*
+ * The screenplay "page" — warm-white card at industry-standard width.
+ * 740px ≈ a US letter sheet with 1.5" left / 1" right margins at 13px Courier.
+ * Monaco fills this 100%; its own vertical scroll handles long scripts.
+ */
+.pageShell {
+  inline-size: 100%;
+  max-inline-size: 740px;
+  block-size: 100%;
+  background: #f8f6f0;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 16px 48px rgba(0, 0, 0, 0.2);
+  position: relative;
+  flex-shrink: 0;
 }

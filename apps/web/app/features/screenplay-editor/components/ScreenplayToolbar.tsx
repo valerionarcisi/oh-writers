@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { SaveStatus } from "~/features/documents";
 import { ImportPdfButton } from "./ImportPdfButton";
+import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
 interface ScreenplayToolbarProps {
@@ -12,9 +13,37 @@ interface ScreenplayToolbarProps {
   isError: boolean;
   isFocusMode: boolean;
   hasContent: boolean;
+  currentElement: ElementType;
   onToggleFocusMode: () => void;
   onImport: (fountain: string) => void;
 }
+
+const ELEMENT_LABELS: Record<ElementType, string> = {
+  scene: "Scene",
+  action: "Action",
+  character: "Character",
+  dialogue: "Dialogue",
+  parenthetical: "Paren",
+  transition: "Transition",
+};
+
+const ELEMENT_SHORTCUTS: Record<ElementType, string> = {
+  scene: "⌥S",
+  action: "⌥A",
+  character: "⌥C",
+  dialogue: "⌥D",
+  parenthetical: "⌥P",
+  transition: "⌥T",
+};
+
+const ELEMENT_ORDER: ElementType[] = [
+  "scene",
+  "action",
+  "character",
+  "dialogue",
+  "parenthetical",
+  "transition",
+];
 
 export function ScreenplayToolbar({
   projectId,
@@ -25,6 +54,7 @@ export function ScreenplayToolbar({
   isError,
   isFocusMode,
   hasContent,
+  currentElement,
   onToggleFocusMode,
   onImport,
 }: ScreenplayToolbarProps) {
@@ -41,13 +71,27 @@ export function ScreenplayToolbar({
         <span className={styles.title}>Screenplay</span>
       </div>
 
-      <div className={styles.center}>
-        <span className={styles.pageCount} data-testid="page-indicator">
-          Page {currentPage} of {totalPages} (~{totalPages} min)
-        </span>
+      {/* Element indicator strip */}
+      <div
+        className={styles.elementStrip}
+        role="status"
+        aria-label="Current element type"
+      >
+        {ELEMENT_ORDER.map((el) => (
+          <span
+            key={el}
+            className={`${styles.elementPill} ${currentElement === el ? styles.elementPillActive : ""}`}
+            title={`${ELEMENT_LABELS[el]} (${ELEMENT_SHORTCUTS[el]})`}
+          >
+            {ELEMENT_LABELS[el]}
+          </span>
+        ))}
       </div>
 
       <div className={styles.right}>
+        <span className={styles.pageCount} data-testid="page-indicator">
+          p.{currentPage}/{totalPages}
+        </span>
         <SaveStatus isDirty={isDirty} isSaving={isSaving} isError={isError} />
         <Link
           to="/projects/$id/screenplay/versions"

@@ -1,90 +1,96 @@
 import type { Monaco } from "@monaco-editor/react";
 
-// Editorial Dark palette — mirrors tokens.css values directly
+/*
+ * Screenplay page palette — light theme to match the physical page aesthetic.
+ * The editor sits inside a white "paper" card; text is near-black for
+ * print-like legibility.
+ */
 const COLORS = {
-  sceneHeading: "#d4a843", // --color-accent (amber)
-  character: "#f0ede6", // --color-fg (warm white, bold)
-  parenthetical: "#9e9b94", // --color-muted
-  dialogue: "#f0ede6", // --color-fg
-  transition: "#9e9b94", // --color-muted
-  action: "#c8c5be", // --color-gray-700
-  comment: "#5c5a55", // --color-placeholder
-  bg: "#0e0e0c", // --color-bg
-  bgSurface: "#1a1917", // --color-surface
-  selection: "#2e2d2a", // --color-subtle
-  cursor: "#f0ede6", // --color-fg
-  lineNumber: "#5c5a55", // --color-placeholder
+  sceneHeading: "#1a1100", // near-black warm — bold scene headings stand out
+  character: "#111111", // true black for character cues
+  parenthetical: "#6b6860", // grey — recedes from the dialogue
+  dialogue: "#1c1c1a", // near-black for readable dialogue
+  transition: "#6b6860", // grey — same as parenthetical
+  action: "#2a2825", // warm dark — body text
+  comment: "#a09d97", // light grey — boneyards barely visible
+  bg: "#f8f6f0", // warm white — the paper
+  bgSurface: "#f8f6f0",
+  selection: "#d4e4f7", // light blue selection
+  cursor: "#111111",
+  lineNumber: "#c5c2bb",
 };
 
-let registered = false;
+let languageRegistered = false;
 
 /**
  * Registers the fountain-screenplay language and fountain-dark theme with Monaco.
- * Safe to call multiple times — guards against double registration.
+ * Language + tokenizer are registered once (Monaco throws on duplicate).
+ * Theme is always re-defined so HMR picks up palette changes immediately.
  */
 export const registerFountainLanguage = (monaco: Monaco): void => {
-  if (registered) return;
-  registered = true;
+  if (!languageRegistered) {
+    languageRegistered = true;
 
-  monaco.languages.register({ id: "fountain-screenplay" });
+    monaco.languages.register({ id: "fountain-screenplay" });
 
-  // Tokenizer — order matters: more specific rules first
-  monaco.languages.setMonarchTokensProvider("fountain-screenplay", {
-    tokenizer: {
-      root: [
-        // Scene headings: INT. / EXT. / INT./EXT. / I/E at start of line
-        [/^(INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E).*$/, "scene-heading"],
+    // Tokenizer — order matters: more specific rules first
+    monaco.languages.setMonarchTokensProvider("fountain-screenplay", {
+      tokenizer: {
+        root: [
+          // Scene headings: INT. / EXT. / INT./EXT. / I/E at start of line
+          [/^(INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E).*$/, "scene-heading"],
 
-        // Forced scene heading with leading dot (.SCENE)
-        [/^\.[A-Z].*$/, "scene-heading"],
+          // Forced scene heading with leading dot (.SCENE)
+          [/^\.[A-Z].*$/, "scene-heading"],
 
-        // Transitions: ALL CAPS ending with TO: or FADE IN/FADE OUT/SMASH CUT etc.
-        [
-          /^[A-Z][A-Z\s]+(?:TO:|IN\.|OUT\.)?\s*$/,
-          { token: "transition", next: "@transition" },
+          // Transitions: ALL CAPS ending with TO: or FADE IN/FADE OUT/SMASH CUT etc.
+          [
+            /^[A-Z][A-Z\s]+(?:TO:|IN\.|OUT\.)?\s*$/,
+            { token: "transition", next: "@transition" },
+          ],
+
+          // Character cues: ALL CAPS, possibly with extension like (V.O.) or (O.S.)
+          [
+            /^[ \t]{3,}[A-Z][A-Z0-9 ]+(?:\s*\(.*\))?\s*$/,
+            { token: "character", next: "@dialogue" },
+          ],
+
+          // Parenthetical at start of dialogue block
+          [/^[ \t]*\(.*\)\s*$/, "parenthetical"],
+
+          // Boneyard (block comment)
+          [/\/\*/, "comment", "@boneyard"],
+
+          // Note: [[text]]
+          [/\[\[.*\]\]/, "comment"],
+
+          // Everything else is action
+          [/.+/, "action"],
         ],
 
-        // Character cues: ALL CAPS, possibly with extension like (V.O.) or (O.S.)
-        // Must be preceded by a blank line in real Fountain, but tokenizer works line-by-line
-        [
-          /^[ \t]{3,}[A-Z][A-Z0-9 ]+(?:\s*\(.*\))?\s*$/,
-          { token: "character", next: "@dialogue" },
+        dialogue: [
+          // Parenthetical within dialogue
+          [/^[ \t]*\(.*\)\s*$/, "parenthetical"],
+          // Blank line ends dialogue block
+          [/^\s*$/, { token: "", next: "@root" }],
+          // Dialogue text
+          [/.+/, "dialogue"],
         ],
 
-        // Parenthetical at start of dialogue block
-        [/^[ \t]*\(.*\)\s*$/, "parenthetical"],
+        transition: [[/.*/, { token: "transition", next: "@root" }]],
 
-        // Boneyard (block comment)
-        [/\/\*/, "comment", "@boneyard"],
+        boneyard: [
+          [/\*\//, "comment", "@pop"],
+          [/[^*]+/, "comment"],
+          [/\*/, "comment"],
+        ],
+      },
+    });
+  }
 
-        // Note: [[text]]
-        [/\[\[.*\]\]/, "comment"],
-
-        // Everything else is action
-        [/.+/, "action"],
-      ],
-
-      dialogue: [
-        // Parenthetical within dialogue
-        [/^[ \t]*\(.*\)\s*$/, "parenthetical"],
-        // Blank line ends dialogue block
-        [/^\s*$/, { token: "", next: "@root" }],
-        // Dialogue text
-        [/.+/, "dialogue"],
-      ],
-
-      transition: [[/.*/, { token: "transition", next: "@root" }]],
-
-      boneyard: [
-        [/\*\//, "comment", "@pop"],
-        [/[^*]+/, "comment"],
-        [/\*/, "comment"],
-      ],
-    },
-  });
-
+  // Theme is always re-defined — safe to call on every mount / HMR cycle
   monaco.editor.defineTheme("fountain-dark", {
-    base: "vs-dark",
+    base: "vs", // light base — rendering on a white page
     inherit: true,
     rules: [
       {
@@ -120,26 +126,28 @@ export const registerFountainLanguage = (monaco: Monaco): void => {
       "editor.background": COLORS.bgSurface,
       "editor.foreground": COLORS.action,
       "editor.selectionBackground": COLORS.selection,
-      "editor.lineHighlightBackground": COLORS.bg,
+      "editor.lineHighlightBackground": "#f0ede4",
       "editorCursor.foreground": COLORS.cursor,
       "editorLineNumber.foreground": COLORS.lineNumber,
       "editorLineNumber.activeForeground": COLORS.action,
-      "editor.inactiveSelectionBackground": COLORS.selection,
-      "scrollbarSlider.background": COLORS.selection,
-      "scrollbarSlider.hoverBackground": COLORS.selection,
-      // Suggest widget
-      "editorSuggestWidget.background": COLORS.bgSurface,
-      "editorSuggestWidget.border": COLORS.selection,
+      "editor.inactiveSelectionBackground": "#dde8f4",
+      "scrollbarSlider.background": "#d0cdc6",
+      "scrollbarSlider.hoverBackground": "#b8b5ae",
+      "editorSuggestWidget.background": "#ffffff",
+      "editorSuggestWidget.border": "#d0cdc6",
       "editorSuggestWidget.foreground": COLORS.action,
-      "editorSuggestWidget.selectedBackground": COLORS.selection,
+      "editorSuggestWidget.selectedBackground": "#e8e4dc",
       "editorSuggestWidget.selectedForeground": COLORS.character,
-      "editorSuggestWidget.highlightForeground": COLORS.sceneHeading,
-      "editorSuggestWidget.focusHighlightForeground": COLORS.sceneHeading,
-      "list.activeSelectionBackground": COLORS.selection,
+      "editorSuggestWidget.highlightForeground": "#b87a00",
+      "editorSuggestWidget.focusHighlightForeground": "#b87a00",
+      "list.activeSelectionBackground": "#e8e4dc",
       "list.activeSelectionForeground": COLORS.character,
-      "list.hoverBackground": COLORS.bg,
-      "list.focusBackground": COLORS.selection,
-      "list.highlightForeground": COLORS.sceneHeading,
+      "list.hoverBackground": "#f0ede4",
+      "list.focusBackground": "#e8e4dc",
+      "list.highlightForeground": "#b87a00",
     },
   });
+
+  // Force Monaco to apply the freshly-defined theme
+  monaco.editor.setTheme("fountain-dark");
 };

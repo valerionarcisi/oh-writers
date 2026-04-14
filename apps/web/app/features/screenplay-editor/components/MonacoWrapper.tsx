@@ -3,6 +3,8 @@ import type { Monaco } from "@monaco-editor/react";
 import { registerFountainLanguage } from "../lib/fountain-language";
 import { registerFountainKeybindings } from "../lib/fountain-keybindings";
 import { registerFountainAutocomplete } from "../lib/fountain-autocomplete";
+import { detectElement } from "../lib/fountain-element-detector";
+import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./MonacoWrapper.module.css";
 
 // Lazy import — Monaco editor WebWorkers require a browser environment.
@@ -15,6 +17,7 @@ interface MonacoWrapperProps {
   value: string;
   onChange: (value: string) => void;
   onCursorChange?: (lineNumber: number) => void;
+  onElementChange?: (element: ElementType) => void;
   readOnly?: boolean;
 }
 
@@ -26,6 +29,7 @@ export function MonacoWrapper({
   value,
   onChange,
   onCursorChange,
+  onElementChange,
   readOnly = false,
 }: MonacoWrapperProps) {
   const [isMounted, setIsMounted] = useState(false);
@@ -57,6 +61,15 @@ export function MonacoWrapper({
     editor.onDidChangeCursorPosition(
       (e: { position: { lineNumber: number } }) => {
         onCursorChange?.(e.position.lineNumber);
+        if (onElementChange) {
+          const model = editor.getModel();
+          if (model) {
+            const lineNum = e.position.lineNumber;
+            const line = model.getLineContent(lineNum);
+            const prev = lineNum > 1 ? model.getLineContent(lineNum - 1) : null;
+            onElementChange(detectElement(line, prev));
+          }
+        }
       },
     );
     editor.focus();
@@ -72,13 +85,13 @@ export function MonacoWrapper({
         onMount={handleMount}
         options={{
           fontFamily: "'Courier Prime', 'Courier New', Courier, monospace",
-          fontSize: 12,
-          lineHeight: 20,
+          fontSize: 13,
+          lineHeight: 22,
           wordWrap: "on",
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
-          renderLineHighlight: "none",
-          padding: { top: 48, bottom: 48 },
+          renderLineHighlight: "line",
+          padding: { top: 56, bottom: 96 },
           lineNumbers: "off",
           glyphMargin: false,
           folding: false,
