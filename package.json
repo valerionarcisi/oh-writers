@@ -14,6 +14,7 @@
     "lint": "pnpm --recursive lint",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
+    "test:unit": "pnpm --filter @oh-writers/web test:unit",
     "db:migrate": "pnpm --filter @oh-writers/db migrate",
     "db:migrate:create": "pnpm --filter @oh-writers/db migrate:create",
     "db:migrate:status": "pnpm --filter @oh-writers/db migrate:status",
