@@ -35,6 +35,7 @@ export function MonacoWrapper({
   const [isMounted, setIsMounted] = useState(false);
   // Ref so the autocomplete provider always reads the latest content without re-registration
   const contentRef = useRef(value);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -47,8 +48,6 @@ export function MonacoWrapper({
   if (!isMounted) {
     return <div className={styles.placeholder} aria-hidden="true" />;
   }
-
-  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const handleMount = (
     editor: Monaco["editor"]["IStandaloneCodeEditor"],
