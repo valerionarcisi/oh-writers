@@ -1,7 +1,7 @@
 /* Shared layout for public auth pages (login, register) */
 
 .page {
-  min-height: 100vh;
+  min-block-size: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;

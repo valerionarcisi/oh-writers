@@ -1,6 +1,6 @@
 .page {
   padding: var(--space-8);
-  max-width: var(--max-width-wide);
+  max-inline-size: var(--max-width-wide);
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
@@ -8,14 +8,14 @@
 
 .status {
   padding: var(--space-8);
-  color: var(--color-muted);
-  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+  font-size: var(--text-sm);
 }
 
 .statusError {
   padding: var(--space-8);
   color: var(--color-danger);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
 }
 
 .header {
@@ -32,9 +32,9 @@
 }
 
 .title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-black);
-  letter-spacing: -0.02em;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .meta {
@@ -58,11 +58,11 @@
 }
 
 .sectionTitle {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-fg-secondary);
 }
 
 .documentGrid {
@@ -71,7 +71,7 @@
   gap: var(--space-4);
 }
 
-@media (max-width: 1000px) {
+@container (max-width: 1000px) {
   .documentGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -79,11 +79,13 @@
 
 .screenplayCard {
   border: var(--border);
+  border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  background: var(--color-surface);
 }
 
 .screenplayMeta {
@@ -93,15 +95,15 @@
 }
 
 .pageCount {
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--weight-medium);
 }
 
 .screenplayDate {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
+  font-size: var(--text-sm);
+  color: var(--color-fg-secondary);
 }
 
 .teamPlaceholder {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
+  font-size: var(--text-sm);
+  color: var(--color-fg-secondary);
 }

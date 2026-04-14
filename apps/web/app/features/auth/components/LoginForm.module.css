@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  width: 100%;
-  max-width: 400px;
+  inline-size: 100%;
+  max-inline-size: 400px;
 }
 
 .header {
@@ -13,18 +13,18 @@
 }
 
 .logo {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-black);
-  letter-spacing: 0.05em;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--color-fg-muted);
 }
 
 .heading {
   font-family: var(--font-sans);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-black);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
   color: var(--color-fg);
   margin: 0;
 }
@@ -38,8 +38,10 @@
 .apiError {
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-danger);
-  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   color: var(--color-danger);
+  background: var(--color-danger-subtle);
   margin: 0;
 }
 
@@ -50,8 +52,8 @@
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--color-fg);
 }
 
@@ -61,22 +63,29 @@
 }
 
 .input {
-  width: 100%;
+  inline-size: 100%;
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-sans);
-  font-size: var(--font-size-base);
+  font-size: var(--text-base);
   color: var(--color-fg);
   background: var(--color-bg);
   border: var(--border);
+  border-radius: var(--radius-md);
   outline: none;
-  transition: border-color var(--transition-fast);
 
   &:focus {
-    border-color: var(--color-fg);
+    border-color: var(--color-accent);
+    box-shadow: var(--ring-focus);
   }
 
   &::placeholder {
-    color: var(--color-placeholder);
+    color: var(--color-fg-muted);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .input {
+    transition: border-color var(--duration-fast) var(--ease-default);
   }
 }
 
@@ -85,11 +94,11 @@
 }
 
 .fieldError {
-  font-size: var(--font-size-xs);
+  font-size: var(--text-xs);
   color: var(--color-danger);
 }
 
-/* ─── OAuth section ─────────────────────────────────────────────────────────── */
+/* ─── OAuth section ──────────────────────────────────────── */
 
 .oauth {
   display: flex;
@@ -106,14 +115,14 @@
   &::after {
     content: "";
     flex: 1;
-    height: 1px;
-    background: var(--color-subtle);
+    block-size: 1px;
+    background: var(--color-border);
   }
 }
 
 .dividerLabel {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted);
+  font-size: var(--text-xs);
+  color: var(--color-fg-muted);
   white-space: nowrap;
 }
 
@@ -126,32 +135,43 @@
   flex: 1;
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--color-fg);
   background: var(--color-surface);
   border: var(--border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast);
 
   &:hover {
     background: var(--color-elevated);
-    border-color: var(--color-fg);
+    border-color: var(--color-border-strong);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
   }
 }
 
-/* ─── Footer ─────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .oauthBtn {
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+  }
+}
+
+/* ─── Footer ─────────────────────────────────────────────── */
 
 .footer {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
+  font-size: var(--text-sm);
+  color: var(--color-fg-secondary);
   margin: 0;
 }
 
 .link {
-  color: var(--color-fg);
+  color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

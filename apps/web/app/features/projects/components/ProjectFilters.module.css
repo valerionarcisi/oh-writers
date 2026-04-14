@@ -8,61 +8,84 @@
 .tabs {
   display: flex;
   border: var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .tab {
   padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  background: var(--color-bg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  background: var(--color-surface);
   border: none;
-  border-right: var(--border);
+  border-inline-end: var(--border);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  color: var(--color-fg-secondary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tab {
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
 }
 
 .tab:last-child {
-  border-right: none;
+  border-inline-end: none;
 }
 
 .tab:hover {
-  background: var(--color-surface);
+  background: var(--color-elevated);
+  color: var(--color-fg);
 }
 
 .tab.active {
   background: var(--color-accent);
-  color: var(--color-inverse);
+  color: var(--color-accent-fg);
 }
 
 .search {
   flex: 1;
-  min-width: 180px;
-  max-width: 280px;
+  min-inline-size: 180px;
+  max-inline-size: 280px;
 }
 
 .searchInput {
-  width: 100%;
+  inline-size: 100%;
   padding: var(--space-2) var(--space-3);
   font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
   border: var(--border);
-  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-fg);
   outline: none;
-  transition: border-color var(--transition-fast);
 
   &:focus {
-    border-color: var(--color-border-focus);
+    border-color: var(--color-accent);
+    box-shadow: var(--ring-focus);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .searchInput {
+    transition: border-color var(--duration-fast) var(--ease-default);
   }
 }
 
 .sort {
   padding: var(--space-2) var(--space-3);
   font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
   border: var(--border);
-  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-fg);
   cursor: pointer;
   outline: none;
+
+  &:focus-visible {
+    box-shadow: var(--ring-focus);
+  }
 }

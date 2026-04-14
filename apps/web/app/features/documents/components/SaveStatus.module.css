@@ -1,6 +1,6 @@
 .status {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
 }
 
 .saved {
@@ -8,11 +8,11 @@
 }
 
 .dirty {
-  color: var(--color-muted);
+  color: var(--color-fg-secondary);
 }
 
 .saving {
-  color: var(--color-muted);
+  color: var(--color-fg-muted);
 }
 
 .error {

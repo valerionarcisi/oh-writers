@@ -1,18 +1,25 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/start";
 import { LoginForm } from "~/features/auth/components/LoginForm";
-import { getUser } from "~/server/context";
 import styles from "./_auth.module.css";
+
+const fetchLoginData = createServerFn({ method: "GET" }).handler(async () => {
+  const { getUser } = await import("~/server/context");
+  const user = await getUser();
+  return {
+    isAuthenticated: !!user,
+    availableProviders: [
+      ...(process.env["GOOGLE_CLIENT_ID"] ? ["google"] : []),
+      ...(process.env["GITHUB_CLIENT_ID"] ? ["github"] : []),
+    ],
+  };
+});
 
 export const Route = createFileRoute("/login")({
   loader: async () => {
-    const user = await getUser();
-    if (user) throw redirect({ to: "/dashboard" });
-    return {
-      availableProviders: [
-        ...(process.env["GOOGLE_CLIENT_ID"] ? ["google"] : []),
-        ...(process.env["GITHUB_CLIENT_ID"] ? ["github"] : []),
-      ],
-    };
+    const data = await fetchLoginData();
+    if (data.isAuthenticated) throw redirect({ to: "/dashboard" });
+    return { availableProviders: data.availableProviders };
   },
   component: LoginPage,
 });

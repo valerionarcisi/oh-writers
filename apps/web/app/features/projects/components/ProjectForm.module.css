@@ -11,32 +11,40 @@
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--color-fg);
 }
 
 .required {
   color: var(--color-danger);
-  margin-left: var(--space-1);
+  margin-inline-start: var(--space-1);
 }
 
 .input,
 .select {
-  width: 100%;
+  inline-size: 100%;
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-sans);
-  font-size: var(--font-size-base);
+  font-size: var(--text-base);
   color: var(--color-fg);
   border: var(--border);
-  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   outline: none;
-  transition: box-shadow var(--transition-fast);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .input,
+  .select {
+    transition: border-color var(--duration-fast) var(--ease-default);
+  }
 }
 
 .input:focus,
 .select:focus {
-  box-shadow: var(--shadow-sm);
+  border-color: var(--color-accent);
+  box-shadow: var(--ring-focus);
 }
 
 .input.error,
@@ -45,18 +53,18 @@
 }
 
 .fieldError {
-  font-size: var(--font-size-xs);
+  font-size: var(--text-xs);
   color: var(--color-danger);
 }
 
 .optional {
-  color: var(--color-text-muted);
-  font-weight: 400;
-  margin-left: var(--space-1);
+  color: var(--color-fg-muted);
+  font-weight: var(--weight-normal);
+  margin-inline-start: var(--space-1);
 }
 
 .actions {
   display: flex;
   gap: var(--space-3);
-  padding-top: var(--space-2);
+  padding-block-start: var(--space-2);
 }

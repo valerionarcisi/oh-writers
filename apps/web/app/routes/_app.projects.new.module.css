@@ -1,13 +1,13 @@
 .page {
   padding: var(--space-8);
-  max-width: 480px;
+  max-inline-size: 480px;
 }
 
 .title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-black);
-  letter-spacing: -0.02em;
-  margin-bottom: var(--space-8);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  margin-block-end: var(--space-8);
 }
 
 .formWrapper {
@@ -17,6 +17,6 @@
 }
 
 .error {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
   color: var(--color-danger);
 }

@@ -1,34 +1,40 @@
 .page {
   padding: var(--space-8);
-  max-width: 560px;
+  max-inline-size: 560px;
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
 }
 
 .breadcrumb {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
 }
 
 .back {
-  color: var(--color-muted);
+  color: var(--color-fg-secondary);
   text-decoration: none;
-}
+  border-radius: var(--radius-sm);
 
-.back:hover {
-  color: var(--color-fg);
+  &:hover {
+    color: var(--color-fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+  }
 }
 
 .title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-black);
-  letter-spacing: -0.02em;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .status,
 .statusError {
   padding: var(--space-8);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
 }
 
 .statusError {
@@ -42,28 +48,30 @@
 }
 
 .sectionTitle {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-fg-secondary);
 }
 
 .readOnly {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
+  font-size: var(--text-sm);
+  color: var(--color-fg-secondary);
   padding: var(--space-4);
-  border: var(--border-muted);
+  border: var(--border);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
 .formError {
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
   color: var(--color-danger);
 }
 
 .dangerZone {
   border: 2px solid var(--color-danger);
+  border-radius: var(--radius-md);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;
@@ -71,10 +79,10 @@
 }
 
 .dangerTitle {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   color: var(--color-danger);
 }
 
@@ -92,7 +100,7 @@
 }
 
 .dangerDesc {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
-  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-fg-secondary);
+  margin-block-start: var(--space-1);
 }

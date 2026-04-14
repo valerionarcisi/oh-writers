@@ -10,7 +10,7 @@
 
 html {
   color-scheme: dark;
-  font-size: var(--font-size-base);
+  font-size: var(--text-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -19,7 +19,7 @@ body {
   font-family: var(--font-sans);
   background-color: var(--color-bg);
   color: var(--color-fg);
-  line-height: var(--line-height-normal);
+  line-height: var(--leading-normal);
 }
 
 a {
@@ -32,32 +32,36 @@ button {
   font-family: inherit;
 }
 
-/* ─── Monaco suggest widget — brutalist override ─────────────────────────── */
-/* Monaco resolves widget colours from CSS variables (--vscode-*) that are   */
-/* set on .monaco-editor. We override them here rather than through           */
-/* defineTheme, because Monaco does not update an already-registered theme.   */
+/* ─── Monaco suggest widget override ─────────────────────── */
 
 .monaco-editor {
-  --vscode-editorSuggestWidget-background: #1a1917 !important;
-  --vscode-editorSuggestWidget-border: #2e2d2a !important;
-  --vscode-editorSuggestWidget-foreground: #c8c5be !important;
-  --vscode-editorSuggestWidget-selectedBackground: #2e2d2a !important;
-  --vscode-editorSuggestWidget-selectedForeground: #f0ede6 !important;
-  --vscode-editorSuggestWidget-highlightForeground: #d4a843 !important;
-  --vscode-editorSuggestWidget-focusHighlightForeground: #d4a843 !important;
-  --vscode-list-activeSelectionBackground: #2e2d2a !important;
-  --vscode-list-activeSelectionForeground: #f0ede6 !important;
-  --vscode-list-hoverBackground: #0e0e0c !important;
-  --vscode-list-focusBackground: #2e2d2a !important;
-  --vscode-list-highlightForeground: #d4a843 !important;
+  --vscode-editorSuggestWidget-background: var(--color-elevated) !important;
+  --vscode-editorSuggestWidget-border: var(--color-border-strong) !important;
+  --vscode-editorSuggestWidget-foreground: var(--color-fg-secondary) !important;
+  --vscode-editorSuggestWidget-selectedBackground: var(
+    --color-overlay
+  ) !important;
+  --vscode-editorSuggestWidget-selectedForeground: var(--color-fg) !important;
+  --vscode-editorSuggestWidget-highlightForeground: var(
+    --color-accent
+  ) !important;
+  --vscode-editorSuggestWidget-focusHighlightForeground: var(
+    --color-accent
+  ) !important;
+  --vscode-list-activeSelectionBackground: var(--color-overlay) !important;
+  --vscode-list-activeSelectionForeground: var(--color-fg) !important;
+  --vscode-list-hoverBackground: var(--color-surface) !important;
+  --vscode-list-focusBackground: var(--color-overlay) !important;
+  --vscode-list-highlightForeground: var(--color-accent) !important;
 }
 
 .monaco-editor .suggest-widget {
-  border-radius: 0 !important;
+  border-radius: var(--radius-md) !important;
   font-family: var(--font-sans) !important;
-  font-size: var(--font-size-sm) !important;
+  font-size: var(--text-sm) !important;
+  overflow: hidden !important;
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row {
-  border-radius: 0 !important;
+  border-radius: var(--radius-sm) !important;
 }
