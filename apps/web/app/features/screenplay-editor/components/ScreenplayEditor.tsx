@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
 import { estimatePageCount, currentPageFromLine } from "../lib/page-counter";
-import { detectElement } from "../lib/fountain-element-detector";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { MonacoWrapper } from "./MonacoWrapper";
+import { ProseMirrorView } from "./ProseMirrorView";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import styles from "./ScreenplayEditor.module.css";
 
@@ -17,6 +17,11 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [isFocusMode, setFocusMode] = useState(false);
   const [cursorLine, setCursorLine] = useState(1);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
+  const [isEditorV2] = useState(
+    () =>
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("screenplay_editor_v2") === "true",
+  );
   const totalPages = estimatePageCount(content);
   const currentPage = currentPageFromLine(cursorLine);
   const { isDirty, isSaving, isError } = useAutoSave(
@@ -63,12 +68,16 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       )}
       <div className={styles.editorArea}>
         <div className={styles.pageShell}>
-          <MonacoWrapper
-            value={content}
-            onChange={setContent}
-            onCursorChange={setCursorLine}
-            onElementChange={setCurrentElement}
-          />
+          {isEditorV2 ? (
+            <ProseMirrorView />
+          ) : (
+            <MonacoWrapper
+              value={content}
+              onChange={setContent}
+              onCursorChange={setCursorLine}
+              onElementChange={setCurrentElement}
+            />
+          )}
         </div>
       </div>
     </div>

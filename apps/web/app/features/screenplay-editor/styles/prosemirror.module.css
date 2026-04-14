@@ -1,0 +1,116 @@
+/*
+ * ProseMirror screenplay editor — physical page layout.
+ * All margin values in `in` units: they map 1:1 to the industry-standard
+ * screenplay format specification. Never replace with variables — these
+ * numbers must not drift.
+ */
+
+.editorRoot {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-size: 12pt;
+  line-height: 1;
+  color: #111;
+  caret-color: #111;
+  outline: none;
+  padding-block-start: 1in;
+  padding-block-end: 1in;
+}
+
+.editorRoot
+  :is(
+    .pmHeading,
+    .pmAction,
+    .pmCharacter,
+    .pmDialogue,
+    .pmParenthetical,
+    .pmTransition
+  ) {
+  margin: 0;
+}
+
+/* ─── Scene heading — bold, uppercase ────────────────────── */
+
+.pmHeading {
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-block-start: 2em;
+  margin-block-end: 1em;
+}
+
+.pmHeading:first-child {
+  margin-block-start: 0;
+}
+
+/* ─── Action — full width ─────────────────────────────────── */
+
+.pmAction {
+  margin-block-end: 1em;
+}
+
+/* ─── Character cue — offset to ~3.7" from page left ─────── */
+
+.pmCharacter {
+  text-transform: uppercase;
+  margin-inline-start: 2.2in;
+  margin-block-start: 1em;
+}
+
+/* ─── Parenthetical — italic, indented ────────────────────── */
+
+.pmParenthetical {
+  font-style: italic;
+  margin-inline-start: 1.6in;
+  max-inline-size: 2in;
+}
+
+/* ─── Dialogue — narrow column ────────────────────────────── */
+
+.pmDialogue {
+  margin-inline-start: 1in;
+  max-inline-size: 3.5in;
+}
+
+/* ─── Transition — flush right ────────────────────────────── */
+
+.pmTransition {
+  text-transform: uppercase;
+  text-align: end;
+  margin-block: 1em;
+}
+
+/* ─── Scene number gutters (absolute, set by plugin) ─────── */
+
+.pmSceneNumberLeft,
+.pmSceneNumberRight {
+  position: absolute;
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-size: 10pt;
+  color: #999;
+  user-select: none;
+  pointer-events: none;
+}
+
+.pmSceneNumberLeft {
+  inset-inline-start: 0.5in;
+}
+
+.pmSceneNumberRight {
+  inset-inline-end: 0.5in;
+}
+
+/* ─── Empty block placeholder ─────────────────────────────── */
+
+.editorRoot .ProseMirror-selectednode {
+  outline: none;
+}
+
+.editorRoot p.pm-action:empty::before,
+.editorRoot p.pm-character:empty::before,
+.editorRoot p.pm-dialogue:empty::before,
+.editorRoot p.pm-parenthetical:empty::before,
+.editorRoot p.pm-transition:empty::before,
+.editorRoot h2.pm-heading:empty::before {
+  content: attr(data-placeholder);
+  color: #bbb;
+  pointer-events: none;
+}
