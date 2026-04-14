@@ -1,17 +1,11 @@
 import type { Monaco } from "@monaco-editor/react";
-
-const CHARACTER_INDENT = "      "; // 6 spaces — matches fountain-keybindings.ts
-const DIALOGUE_INDENT = "          "; // 10 spaces
-
-const FOUNTAIN_TRANSITIONS = [
-  "FADE IN:",
-  "FADE OUT:",
-  "CUT TO:",
-  "SMASH CUT TO:",
-  "DISSOLVE TO:",
-  "MATCH CUT TO:",
-  "JUMP CUT TO:",
-];
+import {
+  CHARACTER_INDENT,
+  DIALOGUE_INDENT,
+  FOUNTAIN_TRANSITIONS,
+  SCENE_HEADING_RE,
+  TRANSITION_SET,
+} from "./fountain-constants";
 
 /**
  * Extracts all unique character names from screenplay content.
@@ -25,9 +19,6 @@ const FOUNTAIN_TRANSITIONS = [
  *
  * Parenthetical extensions like (V.O.) are stripped before collecting.
  */
-
-const SCENE_HEADING_RE = /^(?:INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s/;
-const TRANSITION_SET = new Set(FOUNTAIN_TRANSITIONS);
 
 export const extractCharacterNames = (content: string): string[] => {
   const names = new Set<string>();

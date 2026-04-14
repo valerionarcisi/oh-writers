@@ -284,6 +284,52 @@ Versions are accessed from the **left sidebar** as a sub-menu under each documen
 
 ---
 
+## StudioBinder — observed behaviours (screenshot reference)
+
+Captured 2026-04-14 from app.studiobinder.com while editing a sample screenplay. These are the concrete behaviours the Oh Writers editor must match.
+
+### Scene-heading prefix completion
+
+On a scene-heading line, as soon as the writer types the first letters, an **inline dropdown** appears directly under the cursor (inside the white page, not in a toolbar) with the scene-prefix options:
+
+- `INT.`
+- `EXT.`
+- `INT/EXT`
+- `EXT/INT`
+
+The dropdown has a compact header ("List"), white background, and the first item is highlighted blue. This is the same visual widget reused across all autocomplete categories (characters, scene prefixes, transitions, extensions) — only the header label changes.
+
+Implication: the element detector must recognise scene-heading context early enough to trigger prefix completion **before** the user finishes typing, not only after a full `INT.` is present.
+
+### Transition right-alignment
+
+Transitions (`FADE IN:`, `CUT TO:`, `DISSOLVE TO:`, custom `FILL...`, etc.) are rendered **right-aligned** inside the page width, sitting in the rightmost column of the screenplay template. They are visually distinct from character cues (centered) and from scene headings (left-aligned).
+
+Implication: in a Monaco plain-text buffer, right-alignment must be produced by **leading spaces up to the transition column** (Courier is monospace, so column math is deterministic), or by Monaco view-zones / decorations if leading-space padding breaks wordWrap. To verify during implementation.
+
+### Dialogue re-alignment after a right-aligned element
+
+Leaving a transition line and switching to dialogue (either via Tab/Enter flow or direct shortcut) snaps the cursor back to the **dialogue column** (~2.9" from the page left edge). The re-alignment is automatic — the writer does not need to delete the trailing whitespace of the previous line.
+
+Implication: `applyElement(line, target)` must be authoritative about indent. Previous-line right-padding should never leak into the next line. The Enter handler already inserts `"\n" + prefix` — same contract holds for the new targets.
+
+### Character autocomplete with ranked suggestions
+
+Typing in a character-cue position opens the dropdown with previously-used character names, ranked. Observed for a screenplay with multiple `NONNO` cues:
+
+- `NONNO` (first, highlighted blue — the most likely completion)
+- `NONNO` (same name, greyer — possibly an "exact match already present" indicator)
+- `NONNO 1`
+- `NONNO 3`
+
+This matches our existing `fountain-autocomplete.ts` extraction logic (we already collect character names from both indented and plain-Fountain cues). The pending work is cosmetic: restyle the suggest widget to match the StudioBinder look (white bg, "List" header). Pure CSS on Monaco's suggest theme — no logic change.
+
+### Widget styling — deferred
+
+The StudioBinder suggest widget is visually distinct from Monaco's default (white, inline-feeling, tagged by category). Mapping this onto Monaco's `editorSuggestWidget.*` theme tokens is doable but non-essential for the Tab/Enter flow matrix. Flagged for a later polish pass, not blocking priority item #1.
+
+---
+
 ## Sources
 
 - [StudioBinder Keyboard Shortcuts](https://support.studiobinder.com/en/articles/2922070-screenwriting-keyboard-shortcuts)
