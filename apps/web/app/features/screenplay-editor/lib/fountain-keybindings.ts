@@ -47,6 +47,27 @@ export const registerFountainKeybindings = (
       window.dispatchEvent(new CustomEvent("screenplay:toggleFocusMode"));
     },
   );
+
+  const altForceBindings: Array<[number, Parameters<typeof applyElement>[1]]> =
+    [
+      [monaco.KeyCode.KeyS, "scene"],
+      [monaco.KeyCode.KeyA, "action"],
+      [monaco.KeyCode.KeyC, "character"],
+      [monaco.KeyCode.KeyD, "dialogue"],
+      [monaco.KeyCode.KeyP, "parenthetical"],
+      [monaco.KeyCode.KeyT, "transition"],
+    ];
+
+  for (const [keyCode, target] of altForceBindings) {
+    editor.addAction({
+      id: `fountain.force.${target}`,
+      label: `Fountain: Force ${target}`,
+      keybindings: [monaco.KeyMod.Alt | keyCode],
+      keybindingContext: "!suggestWidgetVisible && !inSnippetMode",
+      run: (ed: Monaco["editor"]["IStandaloneCodeEditor"]) =>
+        runForceElement(ed, monaco, target),
+    });
+  }
 };
 
 const runTab = (
@@ -120,6 +141,36 @@ const runEnter = (
   ed.setPosition({
     lineNumber: position.lineNumber + 1,
     column: caretColumnFor(target, newPrefix),
+  });
+};
+
+const runForceElement = (
+  ed: Monaco["editor"]["IStandaloneCodeEditor"],
+  monaco: Monaco,
+  target: Parameters<typeof applyElement>[1],
+): void => {
+  const model = ed.getModel();
+  const position = ed.getPosition();
+  if (!model || !position) return;
+
+  const lineContent = model.getLineContent(position.lineNumber);
+  const newLine = applyElement(lineContent, target);
+
+  ed.executeEdits("fountain-force-element", [
+    {
+      range: new monaco.Range(
+        position.lineNumber,
+        1,
+        position.lineNumber,
+        model.getLineLength(position.lineNumber) + 1,
+      ),
+      text: newLine,
+    },
+  ]);
+
+  ed.setPosition({
+    lineNumber: position.lineNumber,
+    column: caretColumnFor(target, newLine),
   });
 };
 
