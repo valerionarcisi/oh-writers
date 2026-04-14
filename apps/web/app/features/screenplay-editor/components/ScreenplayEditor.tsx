@@ -69,7 +69,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       <div className={styles.editorArea}>
         <div className={styles.pageShell}>
           {isEditorV2 ? (
-            <ProseMirrorView />
+            <ProseMirrorView value={content} onChange={setContent} />
           ) : (
             <MonacoWrapper
               value={content}
