@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import styles from "./Badge.module.css";
 
-type Variant = "default" | "accent" | "outline";
+type Variant = "default" | "accent" | "success" | "danger" | "outline";
 
 interface BadgeProps {
   variant?: Variant;

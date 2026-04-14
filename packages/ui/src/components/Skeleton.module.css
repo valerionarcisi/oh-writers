@@ -1,0 +1,26 @@
+.skeleton {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+}
+
+.rounded {
+  border-radius: var(--radius-full);
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}

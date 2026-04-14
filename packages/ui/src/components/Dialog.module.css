@@ -1,0 +1,77 @@
+.dialog {
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-inline-size: min(480px, 90vw);
+  max-block-size: 85vh;
+  overflow: visible;
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dialog::backdrop {
+    animation: fadeIn var(--duration-normal) var(--ease-default);
+  }
+
+  .dialog[open] > .content {
+    animation: slideUp var(--duration-slow) var(--ease-spring);
+  }
+}
+
+.content {
+  background: var(--color-elevated);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.header {
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-fg);
+  margin: 0;
+}
+
+.body {
+  padding: 0 var(--space-5) var(--space-4);
+  color: var(--color-fg-secondary);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-block-start: var(--border-width) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-4));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
