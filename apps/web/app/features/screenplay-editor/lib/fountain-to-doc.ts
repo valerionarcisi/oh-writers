@@ -7,6 +7,18 @@ import {
   DIALOGUE_INDENT,
   SCENE_HEADING_RE,
 } from "./fountain-constants";
+import { splitLegacyHeading } from "@oh-writers/domain";
+
+// Build a structured heading node with `prefix` and `title` child nodes.
+// Any Fountain heading line is split by splitLegacyHeading — the writer's
+// exact prefix/title round-trips verbatim.
+const buildHeadingNode = (raw: string, scene_number: string): Node => {
+  const { prefix, title } = splitLegacyHeading(raw);
+  return schema.node("heading", { scene_number }, [
+    schema.node("prefix", null, prefix ? [schema.text(prefix)] : []),
+    schema.node("title", null, title ? [schema.text(title)] : []),
+  ]);
+};
 
 /**
  * Convert a Fountain-formatted string into a ProseMirror document.
@@ -25,11 +37,10 @@ export const fountainToDoc = (text: string): Node => {
 
   const flushScene = (): void => {
     if (currentHeading === null) return;
-    const headingNode = schema.node(
-      "heading",
-      null,
-      currentHeading ? [schema.text(currentHeading)] : [],
-    );
+    // Assign the next sequential number at parse time — the attr is the source
+    // of truth, not a decoration, so it survives Yjs sync and pm_doc persistence.
+    const sceneNumber = String(scenes.length + 1);
+    const headingNode = buildHeadingNode(currentHeading, sceneNumber);
     scenes.push(schema.node("scene", null, [headingNode, ...currentBody]));
     currentHeading = null;
     currentBody = [];
@@ -38,23 +49,55 @@ export const fountainToDoc = (text: string): Node => {
   // Top-level transitions (e.g. FADE OUT. at the very end, outside a scene)
   const topLevelTransitions: Node[] = [];
 
+  // Context flag: true when the previous non-blank element was a character cue
+  // or parenthetical inside a dialogue block. Used to classify unindented lines
+  // as dialogue when imported from PDF (which strips all indentation).
+  let inDialogueBlock = false;
+
   for (let i = 0; i < lines.length; i++) {
     // lines[i] is always defined inside bounds — TS noUncheckedIndexedAccess guard
     const line = lines[i] as string;
     const prev = i > 0 ? (lines[i - 1] as string) : null;
-    const type: ElementType = detectElement(line, prev);
+
+    // Blank lines end a dialogue block — what follows is no longer dialogue.
+    if (line.trim() === "") {
+      inDialogueBlock = false;
+      continue;
+    }
+
+    let type: ElementType = detectElement(line, prev);
+
+    // Context-aware reclassification for PDF-imported Fountain:
+    // after a character cue (or parenthetical inside a dialogue block),
+    // unindented lines that would otherwise fall to "action" are dialogue.
+    if (inDialogueBlock && type === "action") {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+        type = "parenthetical";
+      } else {
+        type = "dialogue";
+      }
+    }
+
+    // Update dialogue block state for the next line.
+    if (type === "character") {
+      inDialogueBlock = true;
+    } else if (type === "parenthetical") {
+      // parentheticals keep the block open — dialogue follows
+      inDialogueBlock = true;
+    } else if (type !== "dialogue") {
+      inDialogueBlock = false;
+    }
+
     const content = stripIndent(line, type);
 
     if (type === "scene") {
       // Every scene heading starts a new scene block
+      inDialogueBlock = false;
       flushScene();
       currentHeading = content;
       continue;
     }
-
-    // Skip truly blank lines — they are whitespace separators in Fountain,
-    // not content nodes. Block-level spacing is handled by CSS margins.
-    if (line.trim() === "") continue;
 
     const node = buildBodyNode(type, content);
 
@@ -76,7 +119,7 @@ export const fountainToDoc = (text: string): Node => {
     topLevelTransitions.length > 0
       ? [
           schema.node("scene", null, [
-            schema.node("heading", null, []),
+            buildHeadingNode("", ""),
             ...topLevelTransitions,
           ]),
           ...scenes,
@@ -86,7 +129,7 @@ export const fountainToDoc = (text: string): Node => {
   // An empty doc still needs at least one valid child
   if (allScenes.length === 0) {
     return schema.node("doc", null, [
-      schema.node("scene", null, [schema.node("heading", null, [])]),
+      schema.node("scene", null, [buildHeadingNode("", "")]),
     ]);
   }
 

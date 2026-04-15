@@ -37,8 +37,13 @@ export const registerFountainLanguage = (monaco: Monaco): void => {
     monaco.languages.setMonarchTokensProvider("fountain-screenplay", {
       tokenizer: {
         root: [
-          // Scene headings: INT. / EXT. / INT./EXT. / I/E at start of line
-          [/^(INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E).*$/, "scene-heading"],
+          // Scene headings: INT. / EXT. / EST. / combined forms at start of line.
+          // EST. supports Italian conventions ("esterno"). First dot is optional
+          // for combined forms (INT/EXT. as well as INT./EXT.). Combined forms first.
+          [
+            /^(INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E).*$/,
+            "scene-heading",
+          ],
 
           // Forced scene heading with leading dot (.SCENE)
           [/^\.[A-Z].*$/, "scene-heading"],

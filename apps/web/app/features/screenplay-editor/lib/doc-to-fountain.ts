@@ -1,5 +1,20 @@
 import type { Node } from "prosemirror-model";
 import { CHARACTER_INDENT, DIALOGUE_INDENT } from "./fountain-constants";
+import { joinHeading } from "@oh-writers/domain";
+
+// Reconstruct the Fountain heading line from the two child slots —
+// prefix + title are free-text, so whatever the writer typed round-trips
+// verbatim. joinHeading handles empty-slot cases without inserting
+// spurious whitespace.
+const headingText = (heading: Node): string => {
+  let prefix = "";
+  let title = "";
+  heading.forEach((child) => {
+    if (child.type.name === "prefix") prefix = child.textContent;
+    else if (child.type.name === "title") title = child.textContent;
+  });
+  return joinHeading({ prefix, title });
+};
 
 /**
  * Serialize a ProseMirror document back to Fountain-formatted text.
@@ -18,7 +33,8 @@ export const docToFountain = (doc: Node): string => {
     if (scene.type.name !== "scene") return;
 
     scene.forEach((block, _, index) => {
-      const text = block.textContent;
+      const text =
+        block.type.name === "heading" ? headingText(block) : block.textContent;
 
       switch (block.type.name) {
         case "heading":

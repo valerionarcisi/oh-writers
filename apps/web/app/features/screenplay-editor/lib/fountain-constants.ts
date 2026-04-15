@@ -12,8 +12,12 @@ export const CHARACTER_INDENT = "      ";
 export const DIALOGUE_INDENT = "          ";
 
 // Scene-heading prefixes accepted by the tokenizer and element detector.
+// Supports English (INT./EXT.) and Italian (INT./EST.) conventions, plus
+// the common shorthand where the first period is dropped (INT/EXT., INT/EST.).
+// EST. = "esterno" (Italian for exterior).
+// Combined forms come first so they win over the bare forms in regex alternation.
 export const SCENE_HEADING_RE =
-  /^(?:INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s/;
+  /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s/;
 
 // Canonical list of Fountain transitions. Order matters for UI display.
 export const FOUNTAIN_TRANSITIONS = [

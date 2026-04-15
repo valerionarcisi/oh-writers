@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { splitLegacyHeading } from "@oh-writers/domain";
 import { schema } from "./schema";
 import { docToFountain } from "./doc-to-fountain";
 import { CHARACTER_INDENT, DIALOGUE_INDENT } from "./fountain-constants";
@@ -10,11 +11,11 @@ const makeScene = (
   heading: string,
   ...body: Array<{ type: string; text: string }>
 ) => {
-  const headingNode = schema.node(
-    "heading",
-    null,
-    heading ? [schema.text(heading)] : [],
-  );
+  const { prefix, title } = splitLegacyHeading(heading);
+  const headingNode = schema.node("heading", null, [
+    schema.node("prefix", null, prefix ? [schema.text(prefix)] : []),
+    schema.node("title", null, title ? [schema.text(title)] : []),
+  ]);
   const bodyNodes = body.map(({ type, text }) =>
     schema.node(type, null, text ? [schema.text(text)] : []),
   );

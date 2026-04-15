@@ -72,13 +72,14 @@ export const sceneNumberBefore = (
 
 /**
  * Extracts all unique locations from scene headings.
- * Captures the part between the INT./EXT. prefix and the optional " - TIME" suffix.
+ * Captures the part between the prefix and the optional " - TIME" suffix.
+ * Supports English (INT./EXT.) and Italian (INT./EST.) conventions.
  * e.g. "INT. COFFEE SHOP - DAY" → "COFFEE SHOP"
  */
 export const extractLocations = (content: string): string[] => {
   const locs = new Set<string>();
   const headingRe =
-    /^(?:INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s+(.+?)(?:\s+-\s+.+)?$/;
+    /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s+(.+?)(?:\s+-\s+.+)?$/;
   for (const line of content.split("\n")) {
     const match = headingRe.exec(line.trim());
     if (match?.[1]) {
@@ -141,9 +142,13 @@ export const registerFountainAutocomplete = (
         };
       }
 
-      // Scene heading autocomplete: after INT. / EXT. / INT./EXT. at start of line
+      // Scene heading autocomplete: after INT. / EXT. / EST. / combined forms at start of line
       const trimmed = lineContent.trimStart();
-      if (/^(?:INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s/.test(trimmed)) {
+      if (
+        /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s/.test(
+          trimmed,
+        )
+      ) {
         const locations = extractLocations(content);
         const nextSceneNum =
           sceneNumberBefore(content, position.lineNumber) + 1;
@@ -188,7 +193,7 @@ export const registerFountainAutocomplete = (
 
       // Transitions: all-caps line at column 0, not a scene heading
       const isAtRoot = lineContent === lineContent.trimStart();
-      const isSceneStart = /^(?:INT\.|EXT\.|I\/E)/.test(
+      const isSceneStart = /^(?:INT\.|EXT\.|EST\.|I\/E)/.test(
         lineContent.trimStart(),
       );
       const trimmedLine = lineContent.trim();

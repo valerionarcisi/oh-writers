@@ -1,7 +1,8 @@
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  min-block-size: 100vh;
+  block-size: 100vh;
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -18,10 +19,12 @@
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
+  overflow: hidden;
 }
 
 .main {
   flex: 1;
+  min-block-size: 0;
   overflow: auto;
   background: var(--color-bg);
 }

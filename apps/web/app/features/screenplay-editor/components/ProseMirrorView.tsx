@@ -3,19 +3,26 @@ import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { fountainKeymap } from "../lib/plugins/keymap";
 import {
-  sceneNumbersPlugin,
-  injectSceneNumberStyles,
-} from "../lib/plugins/scene-numbers";
+  chainCommands,
+  deleteSelection,
+  joinBackward,
+  joinForward,
+  selectAll,
+  createParagraphNear,
+  liftEmptyBlock,
+} from "prosemirror-commands";
+import { fountainKeymap } from "../lib/plugins/keymap";
 import { injectProseMirrorStyles } from "../lib/plugins/prosemirror-styles";
 import { buildAutocompletePlugin } from "../lib/plugins/autocomplete";
+import { buildSlotPickerPlugin } from "../lib/plugins/scene-slot-picker";
 import {
   buildPaginatorPlugin,
   injectPaginatorStyles,
 } from "../lib/plugins/paginator";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
+import { migratePmDoc } from "@oh-writers/domain";
 import type { ElementType } from "../lib/fountain-element-detector";
 
 interface ProseMirrorViewProps {
@@ -41,6 +48,12 @@ interface ProseMirrorViewProps {
    * "scene" is emitted when the cursor is in a heading node.
    */
   onElementChange?: (element: ElementType) => void;
+  /**
+   * Called once after the view is mounted. Lets the parent hold a handle to
+   * the EditorView (e.g. to dispatch commands from the toolbar) without
+   * threading refs through the component tree.
+   */
+  onReady?: (view: EditorView) => void;
   /** When true the editor is non-editable — used by the version viewer. */
   readOnly?: boolean;
 }
@@ -62,6 +75,7 @@ export function ProseMirrorView({
   onChange,
   onDocChange,
   onElementChange,
+  onReady,
   readOnly = false,
 }: ProseMirrorViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -74,27 +88,54 @@ export function ProseMirrorView({
     if (!mountRef.current) return;
 
     injectProseMirrorStyles();
-    injectSceneNumberStyles();
     injectPaginatorStyles();
 
-    // Prefer pm_doc JSON from DB (faster, no re-parse); fall back to Fountain text
+    // Prefer pm_doc JSON from DB (faster, no re-parse); fall back to Fountain text.
+    // migratePmDoc is idempotent — it rewrites legacy single-text headings into
+    // the current prefix+title shape; already-current docs pass through untouched.
     const initialPmDoc = initialDoc
-      ? schema.nodeFromJSON(initialDoc)
+      ? schema.nodeFromJSON(migratePmDoc(initialDoc))
       : fountainToDoc(value);
 
     const state = EditorState.create({
       doc: initialPmDoc,
       plugins: [
         history(),
+        // Scene-heading pickers: each fires only when the cursor is inside
+        // its respective slot, offering values the writer has already used
+        // elsewhere in the doc (rankByFrequency, filterSuggestions). First
+        // match wins on handleKeyDown, so these come before the generic
+        // character/location autocomplete.
+        buildSlotPickerPlugin("prefix"),
+        buildSlotPickerPlugin("title"),
+        // Character / transition autocomplete — unchanged.
+        buildAutocompletePlugin(),
         fountainKeymap,
         keymap({
           "Mod-z": undo,
           "Mod-y": redo,
           "Mod-Shift-z": redo,
         }),
-        sceneNumbersPlugin,
+        // Delete / Backspace — only the safe commands. We deliberately omit
+        // `selectNodeBackward` / `selectNodeForward` from the default baseKeymap
+        // chain because at scene-heading boundaries they "select the whole
+        // scene node", and the next Delete then wipes the whole doc. Our chain
+        // stops at joinBackward/Forward — if those can't proceed we swallow the
+        // key (returning true via the final command) rather than promoting to a
+        // destructive node-selection.
+        keymap({
+          Backspace: chainCommands(deleteSelection, joinBackward),
+          "Mod-Backspace": chainCommands(deleteSelection, joinBackward),
+          "Shift-Backspace": chainCommands(deleteSelection, joinBackward),
+          Delete: chainCommands(deleteSelection, joinForward),
+          "Mod-Delete": chainCommands(deleteSelection, joinForward),
+          "Mod-a": selectAll,
+          // Default Enter fallback — our fountainKeymap handles Enter first; if
+          // it declines (which shouldn't normally happen) we want at least the
+          // standard PM Enter behavior for edge cases like empty-doc split.
+          "Shift-Enter": chainCommands(createParagraphNear, liftEmptyBlock),
+        }),
         buildPaginatorPlugin(),
-        buildAutocompletePlugin(),
       ],
     });
 
@@ -124,10 +165,65 @@ export function ProseMirrorView({
     });
 
     viewRef.current = view;
+    onReady?.(view);
+
+    // Expose a getter for E2E tests so they can read the current Fountain
+    // content without depending on Monaco internals. `lastValueRef` is kept
+    // in sync on every docChanged transaction.
+    if (typeof window !== "undefined") {
+      const w = window as Record<string, unknown>;
+      w["__ohWritersFountain"] = () => lastValueRef.current;
+
+      // Authoritative PM block-type at cursor — DOM Selection API is unreliable
+      // when the cursor sits inside an empty inline span (prefix/title), so tests
+      // consult the PM state directly.
+      w["__ohWritersBlock"] = () => {
+        const v = viewRef.current;
+        if (!v) return null;
+        return v.state.selection.$from.parent.type.name;
+      };
+
+      // Append a fresh empty action block at the end of the doc and place the
+      // cursor in it. Needed by E2E tests because keyboard.press("End") only
+      // moves to end-of-visible-line in word-wrapped paragraphs, and
+      // subsequent Enter would split mid-paragraph instead of creating a new
+      // empty block after the last action.
+      w["__ohWritersAppendAction"] = () => {
+        const v = viewRef.current;
+        if (!v) return;
+        import("../lib/schema").then(({ schema: s }) => {
+          import("prosemirror-state").then(({ TextSelection }) => {
+            const { state, dispatch } = v;
+            const actionType = s.nodes["action"];
+            if (!actionType) return;
+            const lastScenePos = state.doc.content.size - 1;
+            const $end = state.doc.resolve(lastScenePos);
+            let sceneDepth = $end.depth;
+            while (
+              sceneDepth > 0 &&
+              $end.node(sceneDepth).type.name !== "scene"
+            ) {
+              sceneDepth -= 1;
+            }
+            const insertPos =
+              sceneDepth > 0
+                ? $end.after(sceneDepth) - 1
+                : state.doc.content.size;
+            const tr = state.tr.insert(insertPos, actionType.create());
+            tr.setSelection(TextSelection.create(tr.doc, insertPos + 1));
+            dispatch(tr);
+            v.focus();
+          });
+        });
+      };
+    }
 
     return () => {
       view.destroy();
       viewRef.current = null;
+      if (typeof window !== "undefined") {
+        delete (window as Record<string, unknown>)["__ohWritersFountain"];
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly]);

@@ -26,7 +26,9 @@ test.describe("Versioning", () => {
     await page.waitForURL("**/screenplay/versions", { timeout: 10_000 });
 
     // The seeded version "v13 — 2025-11-11" should be visible
-    await expect(page.getByText("v13")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("v13").first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Click "+ Save Version"
     const createBtn = page.getByRole("button", { name: /Save Version/ });

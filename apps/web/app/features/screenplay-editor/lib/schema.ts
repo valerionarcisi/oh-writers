@@ -15,20 +15,56 @@ export const schema = new Schema({
       toDOM: () => ["section", { class: "pm-scene" }, 0],
     },
 
-    // The INT./EXT. line. `number` attr is written by the scene-numbers plugin
-    // and used by PDF export — it is never part of the editable text.
+    // The scene heading. Two editable slots — prefix and title — each a
+    // child inline node. `isolating: true` on the children keeps Backspace
+    // from fusing them and keeps the caret from tunnelling between slots
+    // unexpectedly. Scene numbers live as a persisted attr so they survive
+    // re-ordering: a scene inserted between "4" and "5" keeps "4A" on disk
+    // and through Yjs sync. Empty string means "unnumbered".
     heading: {
-      content: "text*",
-      attrs: { number: { default: null } },
-      parseDOM: [{ tag: "h2.pm-heading" }],
+      content: "prefix title",
+      attrs: { scene_number: { default: "" } },
+      parseDOM: [
+        {
+          tag: "h2.pm-heading",
+          getAttrs: (el) => ({
+            scene_number: (el as HTMLElement).getAttribute("data-number") ?? "",
+          }),
+        },
+      ],
       toDOM: (node) => [
         "h2",
         {
           class: "pm-heading",
-          "data-number": node.attrs.number ?? "",
+          "data-number": node.attrs.scene_number as string,
         },
         0,
       ],
+    },
+
+    // First slot of the heading — "INT.", "EXT.", "I/E", whatever the writer
+    // types. Rendered as a block <p> but laid out inline via flex on the
+    // parent heading. Block-level so PM gives it its own trailing-BR anchor
+    // when empty; otherwise an empty inline sibling causes PM's DOM→state
+    // input mapping to route typed characters into the preceding text node
+    // (see spec 05h).
+    prefix: {
+      content: "text*",
+      defining: true,
+      isolating: true,
+      parseDOM: [{ tag: "p.pm-heading-prefix" }],
+      toDOM: () => ["p", { class: "pm-heading-prefix" }, 0],
+    },
+
+    // Second slot — "RISTORANTE - NOTTE", location + time of day, free text.
+    // Separator from `prefix` is CSS margin, not a literal space, so the
+    // data stays clean.
+    title: {
+      content: "text*",
+      defining: true,
+      isolating: true,
+      parseDOM: [{ tag: "p.pm-heading-title" }],
+      toDOM: () => ["p", { class: "pm-heading-title" }, 0],
     },
 
     // Free-form description paragraph — full width, no indent.

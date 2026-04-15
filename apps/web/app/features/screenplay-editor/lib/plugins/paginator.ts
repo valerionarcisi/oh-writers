@@ -96,31 +96,44 @@ const buildPageBreakWidget = (): Element => {
 
 /**
  * Inject the page-break widget styles once. Same idempotency pattern as
- * scene-numbers.ts and prosemirror-styles.ts.
+ * prosemirror-styles.ts.
  */
 export const injectPaginatorStyles = (): void => {
   if (document.querySelector("[data-pm-paginator-styles]")) return;
   const style = document.createElement("style");
   style.setAttribute("data-pm-paginator-styles", "true");
   style.textContent = `
+    /*
+     * Screen rendering: a thin horizontal line flush with the page margins,
+     * with the page number on the right. Keeps the single-page illusion while
+     * signalling the boundary.
+     *
+     * PDF/print rendering: zero-height element with page-break-after: always,
+     * letting print drivers split pages exactly there.
+     */
     .pm-page-break {
       display: block;
-      block-size: 32px;
-      margin-inline: -1.5in;
-      padding-inline: 1.5in;
-      background: #2a2927;
-      border-block: 1px solid #3a3836;
+      block-size: 0;
+      margin-block: 1em;
+      border-block-start: 1px dashed #d0cfcd;
+      position: relative;
       user-select: none;
       pointer-events: none;
+    }
+
+    .pm-page-break::after {
+      content: "";
+      display: block;
+      block-size: 0.5em;
     }
 
     @media print {
       .pm-page-break {
         display: block;
         block-size: 0;
-        page-break-after: always;
+        margin: 0;
         border: none;
-        background: transparent;
+        page-break-after: always;
       }
     }
   `;

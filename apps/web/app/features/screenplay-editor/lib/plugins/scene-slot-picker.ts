@@ -1,82 +1,54 @@
 import { Plugin, PluginKey } from "prosemirror-state";
+import { TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { EditorState } from "prosemirror-state";
-import {
-  extractCharacterNames,
-  extractLocations,
-} from "../fountain-autocomplete";
-import { FOUNTAIN_TRANSITIONS, SCENE_HEADING_RE } from "../fountain-constants";
-import { docToFountain } from "../doc-to-fountain";
+import { rankByFrequency, filterSuggestions } from "@oh-writers/domain";
 import {
   reducer,
   initialState,
   type AutocompleteState,
 } from "./autocomplete-reducer";
 
-const pluginKey = new PluginKey<null>("autocomplete");
-
-/**
- * Compute suggestions for the block at the current cursor.
- * Pure — reads state only, no side effects.
- */
-const computeSuggestions = (state: EditorState): string[] => {
-  const { $from } = state.selection;
-  const blockType = $from.parent.type.name;
-  const blockText = $from.parent.textContent;
-
-  if (typeof window !== "undefined") {
-    (window as any).__lastAcCompute = {
-      blockType,
-      blockText: blockText.substring(0, 20),
-    };
-  }
-  console.log(
-    "[ac-compute]",
-    blockType,
-    JSON.stringify(blockText.substring(0, 20)),
-  );
-
-  if (blockType === "character") {
-    const fountain = docToFountain(state.doc);
-    const typed = blockText.toUpperCase();
-    const names = extractCharacterNames(fountain);
-    console.log(
-      "[ac]",
-      blockType,
-      JSON.stringify(typed),
-      "names:",
-      names.length,
-      "sample:",
-      names.slice(0, 3),
-    );
-    return names.filter((n) => n.startsWith(typed) && n !== typed);
-  }
-
-  if (blockType === "heading" && SCENE_HEADING_RE.test(blockText)) {
-    const fountain = docToFountain(state.doc);
-    const after = blockText.replace(SCENE_HEADING_RE, "").toUpperCase();
-    return extractLocations(fountain).filter(
-      (loc) => loc.startsWith(after) && loc !== after,
-    );
-  }
-
-  if (blockType === "transition") {
-    const typed = blockText.toUpperCase();
-    return FOUNTAIN_TRANSITIONS.filter(
-      (t) => t.startsWith(typed) && t !== typed,
-    );
-  }
-
-  return [];
+// Walk the doc and harvest every filled text from the given slot type
+// (`prefix` or `title`) across all headings. These strings form the
+// project's in-use vocabulary — ranked by frequency and suggested back
+// to the writer in the next picker.
+const collectSlotValues = (doc: EditorState["doc"], slot: string): string[] => {
+  const values: string[] = [];
+  doc.descendants((node) => {
+    if (node.type.name !== slot) return true;
+    const t = node.textContent.trim();
+    if (t.length > 0) values.push(t);
+    return false;
+  });
+  return values;
 };
 
-class AutocompleteDropdown {
+const computeSlotSuggestions = (
+  state: EditorState,
+  slot: "prefix" | "title",
+): string[] => {
+  const { $from } = state.selection;
+  if ($from.parent.type.name !== slot) return [];
+  const typed = $from.parent.textContent;
+  const vocabulary = rankByFrequency(collectSlotValues(state.doc, slot));
+  return filterSuggestions(vocabulary, typed);
+};
+
+// Dropdown — structurally identical to the character/location picker, but
+// scoped to a single heading slot and fed by rankByFrequency over the
+// doc's own vocabulary.
+class SlotDropdown {
   private el: HTMLUListElement;
   private state: AutocompleteState = initialState;
 
-  constructor(private readonly view: EditorView) {
+  constructor(
+    private readonly view: EditorView,
+    private readonly slot: "prefix" | "title",
+  ) {
     this.el = document.createElement("ul");
     this.el.setAttribute("role", "listbox");
+    this.el.dataset.pickerSlot = slot;
     this.el.style.cssText = [
       "position:fixed",
       "background:#1e1c1b",
@@ -107,7 +79,7 @@ class AutocompleteDropdown {
   }
 
   update(editorState: EditorState) {
-    const suggestions = computeSuggestions(editorState);
+    const suggestions = computeSlotSuggestions(editorState, this.slot);
     const next = reducer(this.state, {
       type: "suggestions/compute",
       suggestions,
@@ -184,7 +156,24 @@ class AutocompleteDropdown {
 
     const { state, dispatch } = this.view;
     const { $from } = state.selection;
+    // Replace the entire slot content — slot is an inline container,
+    // $from.start()/.end() give its inner range.
     const tr = state.tr.insertText(suggestion, $from.start(), $from.end());
+
+    // For the prefix slot: after filling it in, hop the cursor straight to
+    // the title slot — the same navigation that Space performs in the keymap.
+    // headingStart is stable across the insert (the insert is within the slot).
+    if (this.slot === "prefix") {
+      const headingDepth = $from.depth - 1;
+      const heading = $from.node(headingDepth);
+      if (heading.type.name === "heading") {
+        const headingStart = $from.before(headingDepth) + 1;
+        const newPrefixSize = 2 + suggestion.length;
+        const titleContentStart = headingStart + newPrefixSize + 1;
+        tr.setSelection(TextSelection.create(tr.doc, titleContentStart));
+      }
+    }
+
     dispatch(tr);
     this.dismiss();
   }
@@ -199,16 +188,22 @@ class AutocompleteDropdown {
   }
 }
 
-export const buildAutocompletePlugin = () => {
-  // Shared ref so handleKeyDown can reach the dropdown instance
-  let dropdown: AutocompleteDropdown | null = null;
+/**
+ * Build a picker plugin bound to a single heading slot (`prefix` or
+ * `title`). Options come from whatever the writer has already typed
+ * elsewhere in the doc — nothing is hardcoded. First match wins on
+ * handleKeyDown, so register these before the character/location
+ * autocomplete plugin.
+ */
+export const buildSlotPickerPlugin = (slot: "prefix" | "title") => {
+  const pluginKey = new PluginKey<null>(`scene-${slot}-picker`);
+  let dropdown: SlotDropdown | null = null;
 
   return new Plugin({
     key: pluginKey,
 
     view(editorView) {
-      dropdown = new AutocompleteDropdown(editorView);
-
+      dropdown = new SlotDropdown(editorView, slot);
       return {
         update(view: EditorView) {
           dropdown?.update(view.state);

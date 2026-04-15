@@ -14,6 +14,7 @@ interface ScreenplayToolbarProps {
   isFocusMode: boolean;
   hasContent: boolean;
   currentElement: ElementType;
+  onSetElement: (element: ElementType) => void;
   onToggleFocusMode: () => void;
   onImport: (fountain: string) => void;
 }
@@ -55,6 +56,7 @@ export function ScreenplayToolbar({
   isFocusMode,
   hasContent,
   currentElement,
+  onSetElement,
   onToggleFocusMode,
   onImport,
 }: ScreenplayToolbarProps) {
@@ -70,20 +72,24 @@ export function ScreenplayToolbar({
         </Link>
       </div>
 
-      {/* Element indicator strip */}
+      {/* Element indicator strip — pills double as element-converter buttons.
+          Clicking one converts the block at the cursor to that element type. */}
       <div
         className={styles.elementStrip}
-        role="status"
-        aria-label="Current element type"
+        role="toolbar"
+        aria-label="Convert current block"
       >
         {ELEMENT_ORDER.map((el) => (
-          <span
+          <button
             key={el}
+            type="button"
             className={`${styles.elementPill} ${currentElement === el ? styles.elementPillActive : ""}`}
             title={`${ELEMENT_LABELS[el]} (${ELEMENT_SHORTCUTS[el]})`}
+            aria-pressed={currentElement === el}
+            onClick={() => onSetElement(el)}
           >
             {ELEMENT_LABELS[el]}
-          </span>
+          </button>
         ))}
       </div>
 

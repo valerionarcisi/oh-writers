@@ -1,8 +1,22 @@
 import { describe, it, expect } from "vitest";
+import type { Node } from "prosemirror-model";
+import { joinHeading } from "@oh-writers/domain";
 import { fountainToDoc } from "./fountain-to-doc";
 
 const scene = (heading: string, ...body: string[]) =>
   [heading, ...body].join("\n");
+
+// heading.textContent concatenates prefix + title with no separator —
+// use this helper to reconstruct the original heading line.
+const headingLine = (heading: Node): string => {
+  let prefix = "";
+  let title = "";
+  heading.forEach((c) => {
+    if (c.type.name === "prefix") prefix = c.textContent;
+    else if (c.type.name === "title") title = c.textContent;
+  });
+  return joinHeading({ prefix, title });
+};
 
 describe("fountainToDoc", () => {
   it("parses a scene heading into a scene node with the heading text", () => {
@@ -10,7 +24,7 @@ describe("fountainToDoc", () => {
     const firstScene = doc.firstChild!;
     expect(firstScene.type.name).toBe("scene");
     expect(firstScene.firstChild!.type.name).toBe("heading");
-    expect(firstScene.firstChild!.textContent).toBe("INT. KITCHEN - DAY");
+    expect(headingLine(firstScene.firstChild!)).toBe("INT. KITCHEN - DAY");
   });
 
   it("parses action lines", () => {
@@ -79,8 +93,8 @@ describe("fountainToDoc", () => {
     ].join("\n");
     const doc = fountainToDoc(text);
     expect(doc.childCount).toBe(2);
-    expect(doc.child(0).firstChild!.textContent).toBe("INT. KITCHEN - DAY");
-    expect(doc.child(1).firstChild!.textContent).toBe("EXT. STREET - NIGHT");
+    expect(headingLine(doc.child(0).firstChild!)).toBe("INT. KITCHEN - DAY");
+    expect(headingLine(doc.child(1).firstChild!)).toBe("EXT. STREET - NIGHT");
   });
 
   it("returns a minimal valid doc for empty input", () => {
@@ -88,6 +102,59 @@ describe("fountainToDoc", () => {
     expect(doc.type.name).toBe("doc");
     expect(doc.childCount).toBe(1);
     expect(doc.firstChild!.type.name).toBe("scene");
+  });
+
+  it("classifies unindented lines after character cue as dialogue (PDF import)", () => {
+    // PDF importers strip all indentation. Lines after a character cue should
+    // still become dialogue nodes via the context-aware fallback.
+    const text = [
+      "INT. OFFICE - DAY",
+      "",
+      "JOHN",
+      "Ma tua moglie ancora ti vuole a letto?",
+      "PUBBLICO",
+      "Ma che sarria?",
+    ].join("\n");
+    const doc = fountainToDoc(text);
+    const scene = doc.firstChild!;
+    // heading, character(JOHN), dialogue, character(PUBBLICO), dialogue
+    expect(scene.child(1).type.name).toBe("character");
+    expect(scene.child(2).type.name).toBe("dialogue");
+    expect(scene.child(2).textContent).toBe(
+      "Ma tua moglie ancora ti vuole a letto?",
+    );
+    expect(scene.child(3).type.name).toBe("character");
+    expect(scene.child(4).type.name).toBe("dialogue");
+  });
+
+  it("classifies unindented parenthetical inside dialogue block", () => {
+    const text = [
+      "INT. OFFICE - DAY",
+      "",
+      "JOHN",
+      "(ridendo)",
+      "Ah lo stupeto!",
+    ].join("\n");
+    const doc = fountainToDoc(text);
+    const scene = doc.firstChild!;
+    expect(scene.child(1).type.name).toBe("character");
+    expect(scene.child(2).type.name).toBe("parenthetical");
+    expect(scene.child(3).type.name).toBe("dialogue");
+  });
+
+  it("ends dialogue block on blank line — next line is action", () => {
+    const text = [
+      "INT. OFFICE - DAY",
+      "",
+      "JOHN",
+      "Ciao.",
+      "",
+      "Silenzio in sala.",
+    ].join("\n");
+    const doc = fountainToDoc(text);
+    const scene = doc.firstChild!;
+    expect(scene.child(2).type.name).toBe("dialogue");
+    expect(scene.child(3).type.name).toBe("action");
   });
 
   it("skips blank separator lines — does not create empty nodes", () => {

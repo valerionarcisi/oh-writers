@@ -14,8 +14,12 @@ interface RawLine {
   index: number;
 }
 
+// Accepts English (INT./EXT.) and Italian (INT./EST.) conventions.
+// Combined forms come first so they win over the bare forms during matching.
 const isSceneHeading = (text: string): boolean =>
-  /^(INT\.|EXT\.|INT\.\/EXT\.|EXT\.\/INT\.|I\/E)\s/i.test(text.trim());
+  /^(INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s/i.test(
+    text.trim(),
+  );
 
 const isTransition = (text: string): boolean =>
   /^[A-Z ]+(?:TO:|IN\.|OUT\.)\s*$/.test(text.trim());

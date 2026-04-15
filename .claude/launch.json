@@ -3,12 +3,9 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": [
-        "-c",
-        "source ~/.zshrc 2>/dev/null; PORT=3002 pnpm --filter @oh-writers/web dev"
-      ],
-      "env": {},
+      "runtimeExecutable": "/Users/valerionarcisi/Library/pnpm/pnpm",
+      "runtimeArgs": ["--filter", "@oh-writers/web", "dev"],
+      "env": { "PORT": "3002" },
       "port": 3002
     },
     {

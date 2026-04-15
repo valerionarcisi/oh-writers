@@ -74,8 +74,22 @@ describe("detectElement — character", () => {
     expect(detectElement("NONNO", null)).toBe("character");
   });
 
-  it("rejects ALL-CAPS plain line without a blank line above", () => {
-    expect(detectElement("NONNO", "Some action.")).toBe("action");
+  it("recognises ALL-CAPS name-shaped line even without a blank line above", () => {
+    // Permissive heuristic: a short ALL-CAPS line with no sentence
+    // punctuation is treated as a cue even when the previous line isn't blank.
+    expect(detectElement("NONNO", "Some action.")).toBe("character");
+  });
+
+  it("rejects ALL-CAPS lines with sentence punctuation", () => {
+    // The permissive heuristic requires a name-shaped body: no "." "!" "?"
+    // ",", ";" or ":" in the non-parenthetical part.
+    expect(detectElement("STOP!", "Some action.")).toBe("action");
+  });
+
+  it("rejects ALL-CAPS lines longer than 40 chars", () => {
+    const longLine =
+      "THIS IS A VERY LONG ALL CAPS LINE THAT SHOULD NOT BE A CUE";
+    expect(detectElement(longLine, "Some action.")).toBe("action");
   });
 
   it("rejects plain cues that are actually transitions", () => {
@@ -105,9 +119,9 @@ describe("detectElement — transition", () => {
   });
 
   it("does not recognise unknown transitions (would need user intent)", () => {
-    // Unknown all-caps lines at column 0 are treated as character cues
-    // only if a blank line precedes; otherwise they're action.
-    expect(detectElement("WHOOSH TO:", "")).toBe("character");
+    // Unknown all-caps lines containing sentence punctuation (":") fail the
+    // name-shape heuristic and fall through to action in both contexts.
+    expect(detectElement("WHOOSH TO:", "")).toBe("action");
     expect(detectElement("WHOOSH TO:", "action")).toBe("action");
   });
 });

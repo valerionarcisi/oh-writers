@@ -78,6 +78,18 @@
   border: 1px solid transparent;
   white-space: nowrap;
   user-select: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.elementPill:hover {
+  color: var(--color-fg);
+  background: var(--color-elevated);
+}
+
+.elementPill:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
 }
 
 @media (prefers-reduced-motion: no-preference) {

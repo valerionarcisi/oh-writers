@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
+  globalSetup: "./tests/global-setup.ts",
   testDir: "./tests",
   // Tests share a single DB — run serially to avoid data races on the screenplay row
   fullyParallel: false,

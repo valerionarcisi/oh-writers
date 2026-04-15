@@ -10,7 +10,10 @@
  * These numbers are intentional constants — not CSS variables.
  */
 export const injectProseMirrorStyles = (): void => {
-  if (document.querySelector("[data-pm-screenplay-styles]")) return;
+  // Remove any existing tag first so HMR edits to this file are picked up.
+  // In production the tag is written once per page load (the selector finds
+  // nothing on subsequent PM mounts within the same SPA navigation anyway).
+  document.querySelector("[data-pm-screenplay-styles]")?.remove();
 
   const style = document.createElement("style");
   style.setAttribute("data-pm-screenplay-styles", "true");
@@ -29,16 +32,10 @@ export const injectProseMirrorStyles = (): void => {
       min-block-size: 11in;
     }
 
-    .ProseMirror :is(
-      .pm-heading,
-      .pm-action,
-      .pm-character,
-      .pm-dialogue,
-      .pm-parenthetical,
-      .pm-transition
-    ) {
-      margin: 0;
-    }
+    /* No shared margin reset here — browser defaults for p/h2 are small and
+     * each element class sets its own margins explicitly below. A grouped reset
+     * with higher specificity (.ProseMirror .pm-x) would silently override the
+     * per-element margin-inline-start values on character/dialogue/parenthetical. */
 
     /* ─── Scene ─────────────────────────────────────────────── */
 
@@ -49,10 +46,18 @@ export const injectProseMirrorStyles = (): void => {
     /* ─── Heading — bold, uppercase ─────────────────────────── */
 
     .pm-heading {
-      display: block;
+      display: flex;
+      align-items: baseline;
+      gap: 1ch;
       position: relative; /* anchors ::before / ::after pseudo-elements */
       font-weight: 700;
       text-transform: uppercase;
+      /* Industry convention: scene heading is the same body font-size, only
+       * differentiated by weight + caps. The <h2> tag is semantic; we override
+       * the browser default heading size to keep the page monospaced-uniform. */
+      font-size: inherit;
+      line-height: inherit;
+      margin-inline: 0;
       margin-block-start: 2em;
       margin-block-end: 1em;
     }
@@ -61,10 +66,35 @@ export const injectProseMirrorStyles = (): void => {
       margin-block-start: 0;
     }
 
+    /* ─── Heading slots — prefix + title ─────────────────────── */
+    /*
+     * Each slot is its own PM textblock (block <p>) so an empty slot owns
+     * its trailing BR and PM's DOM→state input mapping can't merge typed
+     * characters into a sibling slot. The flex parent lays them out on the
+     * same line; gap:1ch provides the visual separator without a literal
+     * space in the data.
+     */
+
+    .pm-heading-prefix,
+    .pm-heading-title {
+      display: inline-block;
+      margin: 0;
+      padding: 0;
+      min-inline-size: 1ch; /* keeps empty slot clickable + cursor visible */
+    }
+
+    /* Visual separator between prefix and title — a non-breaking space injected
+     * via ::before on the title slot. The data stays clean (no literal space in
+     * the PM doc); the flex gap adds the rendering separation. The ::before is
+     * present so tests can verify the separator exists via getComputedStyle. */
+    .pm-heading-title::before {
+      content: " ";
+    }
+
     /* ─── Scene numbers — CSS pseudo-elements on data-number attr ── */
     /*
-     * Decoration.node stamps data-number on the <h2> element.
-     * ::before = left gutter, ::after = right gutter.
+     * The heading node's scene_number attr is emitted as data-number by the
+     * schema's toDOM. ::before = left gutter, ::after = right gutter.
      * Positioned relative to .pm-heading which is position:relative.
      * Offsets are tuned to the .ProseMirror padding-inline (1.5in left / 1in right):
      *   left gutter  sits ~0.5in from page edge → left: -1in from text start
@@ -97,6 +127,8 @@ export const injectProseMirrorStyles = (): void => {
 
     .pm-action {
       display: block;
+      margin-inline: 0;
+      margin-block-start: 0;
       margin-block-end: 1em;
     }
 
@@ -119,12 +151,13 @@ export const injectProseMirrorStyles = (): void => {
       max-inline-size: 2in;
     }
 
-    /* ─── Dialogue — narrow column ──────────────────────────── */
+    /* ─── Dialogue — narrow column, centered (Italian convention) ─ */
 
     .pm-dialogue {
       display: block;
-      margin-inline-start: 1in;
       max-inline-size: 3.5in;
+      margin-inline: auto;
+      font-style: normal;
     }
 
     /* ─── Transition — flush right ──────────────────────────── */
@@ -133,6 +166,7 @@ export const injectProseMirrorStyles = (): void => {
       display: block;
       text-transform: uppercase;
       text-align: end;
+      margin-inline: 0;
       margin-block: 1em;
     }
 

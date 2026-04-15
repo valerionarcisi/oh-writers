@@ -3,9 +3,9 @@
  *
  * [OHW-078] Editor loads with seeded content
  * [OHW-079] Page indicator shows correct count
- * [OHW-082] Tab cycles action → CHARACTER → DIALOGUE → action
- * [OHW-083] Smart Enter: CHARACTER → DIALOGUE indent
- * [OHW-084] Smart Enter: DIALOGUE → action
+ * [OHW-082] Tab cycles action → character → dialogue → action
+ * [OHW-083] Smart Enter: character → dialogue
+ * [OHW-084] Smart Enter: dialogue → action
  * [OHW-085] Focus mode toggle
  * [OHW-086] Content persists after edit + auto-save
  */
@@ -24,7 +24,7 @@ test.describe("Screenplay Editor", () => {
     testProjectId,
   }) => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
-    const editor = await waitForEditor(page);
+    await waitForEditor(page);
 
     const content = await getEditorContent(page);
     expect(content.length).toBeGreaterThan(100);
@@ -40,11 +40,11 @@ test.describe("Screenplay Editor", () => {
 
     const indicator = page.getByTestId("page-indicator");
     await expect(indicator).toBeVisible();
-    // Seed screenplay is ~9 pages
-    await expect(indicator).toHaveText(/Page \d+ of \d+ \(~\d+ min\)/);
+    // Format: "p.{currentPage}/{totalPages}"
+    await expect(indicator).toHaveText(/p\.\d+\/\d+/);
   });
 
-  test("[OHW-082] Tab cycles action → CHARACTER → DIALOGUE → action", async ({
+  test("[OHW-082] Tab cycles action → character → dialogue → action", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -52,23 +52,35 @@ test.describe("Screenplay Editor", () => {
     const editor = await waitForEditor(page);
     await goToNewLine(page);
 
-    // Type action text
+    // Type action text so the block is non-empty
     await page.keyboard.type("test line");
 
-    // Tab → CHARACTER (indented, uppercase)
-    await page.keyboard.press("Tab");
+    // Alt+C → character block — toolbar "Character" pill becomes active
+    await page.keyboard.press("Alt+c");
+    await page.waitForTimeout(100);
+    await expect(
+      page.getByRole("button", { name: "Character", pressed: true }),
+    ).toBeVisible({ timeout: 3_000 });
 
-    // Tab → DIALOGUE (more indent)
-    await page.keyboard.press("Tab");
+    // Alt+D → dialogue block
+    await page.keyboard.press("Alt+d");
+    await page.waitForTimeout(100);
+    await expect(
+      page.getByRole("button", { name: "Dialogue", pressed: true }),
+    ).toBeVisible({ timeout: 3_000 });
 
-    // Tab → back to action
-    await page.keyboard.press("Tab");
+    // Alt+A → back to action block
+    await page.keyboard.press("Alt+a");
+    await page.waitForTimeout(100);
+    await expect(
+      page.getByRole("button", { name: "Action", pressed: true }),
+    ).toBeVisible({ timeout: 3_000 });
 
     // Editor still functional
     await expect(editor).toBeVisible();
   });
 
-  test("[OHW-083] Smart Enter: CHARACTER → DIALOGUE indent", async ({
+  test("[OHW-083] Smart Enter: character → dialogue", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -76,25 +88,26 @@ test.describe("Screenplay Editor", () => {
     await waitForEditor(page);
     await goToNewLine(page);
 
-    // Type a name and Tab to CHARACTER indent
+    // Alt+C → character block, type a name
+    await page.keyboard.press("Alt+c");
+    await page.waitForTimeout(100);
     await page.keyboard.type("FILIPPO");
-    await page.keyboard.press("Tab");
 
-    // Dismiss any autocomplete suggestion that may have appeared automatically
+    // Dismiss any autocomplete suggestion that may have appeared
     await page.keyboard.press("Escape");
 
-    // Enter → should start DIALOGUE-indented line
+    // Enter → dialogue block
     await page.keyboard.press("Enter");
-    // Brief wait so Monaco's executeEdits for Enter settles before we type
-    await page.waitForTimeout(150);
-    await page.keyboard.type("Ma che stai a di'?");
+    await page.waitForTimeout(100);
+    await page.keyboard.type("Ma che stai a di");
+    // Wait for the async docToFountain update to complete before reading
+    await page.waitForTimeout(300);
 
     const content = await getEditorContent(page);
-    // DIALOGUE lines have 10-space indent in Fountain keybindings
-    expect(content).toContain("Ma che stai a di'?");
+    expect(content).toContain("Ma che stai a di");
   });
 
-  test("[OHW-084] Smart Enter: DIALOGUE → action", async ({
+  test("[OHW-084] Smart Enter: dialogue → action", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -102,19 +115,22 @@ test.describe("Screenplay Editor", () => {
     await waitForEditor(page);
     await goToNewLine(page);
 
-    // CHARACTER → DIALOGUE → action
+    // Alt+C → character block, type name, Enter → dialogue, double-Enter → action
+    await page.keyboard.press("Alt+c");
+    await page.waitForTimeout(100);
     await page.keyboard.type("TEA");
-    await page.keyboard.press("Tab");
-    // Dismiss any autocomplete suggestion before pressing Enter
     await page.keyboard.press("Escape");
     await page.keyboard.press("Enter");
-    // Brief wait so Monaco's executeEdits for Enter settles before we type
-    await page.waitForTimeout(150);
-    await page.keyboard.type("Basta cosi'.");
+    await page.waitForTimeout(100);
+    await page.keyboard.type("Basta cosi.");
+    // Empty Enter in dialogue → action
+    await page.keyboard.press("Enter");
     await page.keyboard.press("Enter");
 
     // Should be back to action — type unindented text
     await page.keyboard.type("Tea esce dalla cucina.");
+    // Wait for the async docToFountain update to complete before reading
+    await page.waitForTimeout(300);
 
     const content = await getEditorContent(page);
     expect(content).toContain("Tea esce dalla cucina.");
@@ -127,22 +143,21 @@ test.describe("Screenplay Editor", () => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForEditor(page);
 
-    // Toolbar visible
-    await expect(page.getByText("Screenplay")).toBeVisible();
+    // Toolbar visible — "Focus" button visible (exact match, "Exit Focus" must not match)
+    const focusBtn = page.getByRole("button", { name: "Focus", exact: true });
+    await expect(focusBtn).toBeVisible();
 
     // Enter focus mode
-    const focusBtn = page.getByRole("button", { name: "Focus" });
-    await expect(focusBtn).toBeVisible();
     await focusBtn.click();
 
-    // Toolbar hidden, exit button visible
-    await expect(page.getByText("Screenplay")).not.toBeVisible();
+    // Toolbar hidden, "Focus" button gone, "Exit Focus" button visible
+    await expect(focusBtn).not.toBeVisible();
     const exitBtn = page.getByRole("button", { name: "Exit Focus" });
     await expect(exitBtn).toBeVisible();
 
     // Exit focus mode
     await exitBtn.click();
-    await expect(page.getByText("Screenplay")).toBeVisible();
+    await expect(focusBtn).toBeVisible();
   });
 
   test("[OHW-086] content persists after edit + auto-save", async ({

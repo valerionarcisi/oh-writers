@@ -26,7 +26,8 @@ export type ElementType =
  * classify which screenplay element it currently represents.
  *
  * Recognition rules, in priority order:
- *   1. Scene heading — starts with INT./EXT./INT.\/EXT./EXT.\/INT./I\/E
+ *   1. Scene heading — starts with INT./EXT./EST./INT.\/EXT./EXT.\/INT./INT.\/EST./EST.\/INT./I\/E
+ *      (EST. supports Italian conventions — "esterno")
  *   2. Parenthetical — trimmed line is wrapped in ()
  *   3. Dialogue — starts with the dialogue indent
  *   4. Character — starts with the character indent (and not dialogue indent),
@@ -69,10 +70,17 @@ export const detectElement = (
   return "action";
 };
 
+// Permissive plain-Fountain cue detector.
+//
+// Canonical Fountain requires a blank line above an ALL-CAPS cue to disambiguate
+// it from uppercase words inside action. We relax that: if the line looks like
+// a short name (≤40 chars, no sentence punctuation in the body) we accept it
+// even without a blank line separator. Tradeoff — easier for messy imports,
+// tiny risk of a shouted ALL-CAPS action line being misread as a cue.
 const isPlainFountainCue = (
   line: string,
   trimmed: string,
-  prevLine: string | null,
+  _prevLine: string | null,
 ): boolean => {
   if (trimmed.length === 0) return false;
   if (line !== line.trimStart()) return false;
@@ -80,7 +88,11 @@ const isPlainFountainCue = (
   if (TRANSITION_SET.has(trimmed)) return false;
   if (trimmed !== trimmed.toUpperCase()) return false;
   if (!/[A-Z]/.test(trimmed)) return false;
-  // Plain cues require a blank line above (unless at start of doc).
-  // prevLine === null means "no previous line" — treated as blank.
-  return prevLine === null || prevLine.trim() === "";
+  if (trimmed.length > 40) return false;
+  // Strip a trailing parenthetical extension (e.g. "JOHN (V.O.)") before
+  // checking punctuation — the parens themselves are allowed.
+  const nameOnly = trimmed.replace(/\s*\([^)]*\)\s*$/, "");
+  // Reject sentence-like punctuation that wouldn't appear in a name.
+  if (/[.!?,;:]/.test(nameOnly)) return false;
+  return true;
 };
