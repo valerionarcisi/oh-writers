@@ -45,6 +45,7 @@
     "@types/pdf-parse": "1.1.4",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "afterwriting": "1.17.3",
     "typescript": "5.9.3",
     "vinxi": "0.5.3",
     "vite": "6.4.1",

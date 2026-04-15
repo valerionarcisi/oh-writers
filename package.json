@@ -22,7 +22,8 @@
     "db:studio": "pnpm --filter @oh-writers/db studio",
     "db:psql": "docker compose -f docker/docker-compose.dev.yml exec postgres psql -U oh-writers oh-writers_dev",
     "test:setup": "bash scripts/test-db-setup.sh",
-    "db:seed:reset": "pnpm --filter @oh-writers/db seed:reset"
+    "db:seed:reset": "pnpm --filter @oh-writers/db seed:reset",
+    "test:fixtures:pdf": "tsx scripts/generate-test-pdfs.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",

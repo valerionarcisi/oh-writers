@@ -36,8 +36,11 @@ export const importPdf = createServerFn({ method: "POST" })
       return toShape(err(new FileTooLargeError()));
     }
 
-    // Dynamically import pdf-parse to keep it server-only.
-    const pdfParse = (await import("pdf-parse")).default;
+    // Import the internal module directly: pdf-parse's index.js runs a debug
+    // block that tries to read a missing test PDF when module.parent is null
+    // (as happens under ESM dynamic import).
+    // @ts-expect-error — pdf-parse has no types for its internal entry
+    const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
 
     let rawText: string;
     try {
