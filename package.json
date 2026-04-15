@@ -20,7 +20,9 @@
     "db:migrate:status": "pnpm --filter @oh-writers/db migrate:status",
     "db:seed": "pnpm --filter @oh-writers/db seed",
     "db:studio": "pnpm --filter @oh-writers/db studio",
-    "db:psql": "docker compose -f docker/docker-compose.dev.yml exec postgres psql -U oh-writers oh-writers_dev"
+    "db:psql": "docker compose -f docker/docker-compose.dev.yml exec postgres psql -U oh-writers oh-writers_dev",
+    "test:setup": "bash scripts/test-db-setup.sh",
+    "db:seed:reset": "pnpm --filter @oh-writers/db seed:reset"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",
