@@ -34,3 +34,9 @@ playwright/.cache/
 
 # Local scratch / brainstorm
 .superpowers/
+.claude/
+.claudeignore
+.playwright-cli/
+
+# Debug screenshots
+*.png
