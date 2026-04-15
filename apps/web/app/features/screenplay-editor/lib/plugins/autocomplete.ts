@@ -24,31 +24,10 @@ const computeSuggestions = (state: EditorState): string[] => {
   const blockType = $from.parent.type.name;
   const blockText = $from.parent.textContent;
 
-  if (typeof window !== "undefined") {
-    (window as any).__lastAcCompute = {
-      blockType,
-      blockText: blockText.substring(0, 20),
-    };
-  }
-  console.log(
-    "[ac-compute]",
-    blockType,
-    JSON.stringify(blockText.substring(0, 20)),
-  );
-
   if (blockType === "character") {
     const fountain = docToFountain(state.doc);
     const typed = blockText.toUpperCase();
     const names = extractCharacterNames(fountain);
-    console.log(
-      "[ac]",
-      blockType,
-      JSON.stringify(typed),
-      "names:",
-      names.length,
-      "sample:",
-      names.slice(0, 3),
-    );
     return names.filter((n) => n.startsWith(typed) && n !== typed);
   }
 

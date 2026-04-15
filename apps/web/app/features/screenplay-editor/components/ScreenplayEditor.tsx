@@ -41,7 +41,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   // E2E test hook: bypass the 30-second debounce and trigger an immediate save.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const w = window as Record<string, unknown>;
+    const w = window as unknown as Record<string, unknown>;
     w["__ohWritersForceSave"] = () =>
       save.mutate({ screenplayId: screenplay.id, content, pmDoc });
     return () => {

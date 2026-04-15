@@ -171,7 +171,7 @@ export function ProseMirrorView({
     // content without depending on Monaco internals. `lastValueRef` is kept
     // in sync on every docChanged transaction.
     if (typeof window !== "undefined") {
-      const w = window as Record<string, unknown>;
+      const w = window as unknown as Record<string, unknown>;
       w["__ohWritersFountain"] = () => lastValueRef.current;
 
       // Authoritative PM block-type at cursor — DOM Selection API is unreliable
@@ -222,7 +222,9 @@ export function ProseMirrorView({
       view.destroy();
       viewRef.current = null;
       if (typeof window !== "undefined") {
-        delete (window as Record<string, unknown>)["__ohWritersFountain"];
+        delete (window as unknown as Record<string, unknown>)[
+          "__ohWritersFountain"
+        ];
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

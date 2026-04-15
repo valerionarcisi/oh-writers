@@ -118,7 +118,10 @@ export async function seed() {
 
   console.log("  -> Documents created");
 
-  // 4. Screenplay — full Fountain text
+  // 4. Screenplay — full Fountain text.
+  // Use upsert so that re-running the seed after E2E test runs always restores
+  // the clean Fountain content and wipes the pm_doc column (which accumulates
+  // garbage from tests that type markers / DIFF text into the editor).
   await db
     .insert(screenplays)
     .values({
@@ -129,7 +132,10 @@ export async function seed() {
       pageCount: 13,
       createdBy: TEST_USER_ID,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: screenplays.id,
+      set: { content: NON_FA_RIDERE_FOUNTAIN, pmDoc: null, pageCount: 13 },
+    });
 
   console.log("  -> Screenplay created");
 
