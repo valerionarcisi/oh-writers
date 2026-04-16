@@ -42,8 +42,12 @@ interface UseAutoSaveResult {
   isError: boolean;
   isOffline: boolean;
   lastSavedAt: number | null;
-  /** Forces an immediate save, cancelling the pending debounce. */
-  flush: () => void;
+  /**
+   * Forces an immediate save, cancelling the pending debounce.
+   * Returns a Promise that resolves once the server confirms the save —
+   * callers (including the E2E `forceSave` hook) can await it.
+   */
+  flush: () => Promise<void>;
 }
 
 /**
@@ -97,10 +101,13 @@ export const useAutoSave = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, isDirty, isOffline, screenplayId, disabled]);
 
-  const flush = useCallback(() => {
-    if (disabled) return;
+  const flush = useCallback((): Promise<void> => {
+    if (disabled) return Promise.resolve();
     const { screenplayId: id, content: c, pmDoc: d } = latest.current;
-    save.mutate({ screenplayId: id, content: c, pmDoc: d });
+    return save.mutateAsync({ screenplayId: id, content: c, pmDoc: d }).then(
+      () => undefined,
+      () => undefined, // swallow errors — caller doesn't need to handle
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 

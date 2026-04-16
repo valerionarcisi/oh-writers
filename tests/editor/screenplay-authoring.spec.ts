@@ -101,10 +101,12 @@ async function typeAndSettle(page: Page, text: string, extraWait = 0) {
  * Trigger an immediate save (bypasses the 30-second auto-save debounce) and
  * wait for the network request to complete. Call before page.context().close()
  * in data-writing tests so subsequent tests load the saved content from DB.
+ *
+ * `__ohWritersForceSave` returns a Promise (via flush → mutateAsync) so we
+ * can await the actual server round-trip rather than using a blind timeout.
  */
 async function forceSave(page: Page) {
   await page.evaluate(() => (window as any).__ohWritersForceSave?.());
-  await page.waitForTimeout(1_500);
 }
 
 /** Read the current Fountain text from the editor. */
@@ -175,6 +177,10 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
   async function goToScreenplay(page: Page) {
     await page.goto(`${BASE_URL}/projects/${projectId}/screenplay`);
+    // networkidle ensures the initial useScreenplay query has resolved and
+    // ScreenplayEditor has mounted with the persisted content before any test
+    // starts typing — prevents the sync-useEffect from overwriting typed content.
+    await page.waitForLoadState("networkidle");
     return waitForEditor(page);
   }
 
