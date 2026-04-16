@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
 import type { DocumentView } from "../server/documents.server";
 import { useAutoSave, useSaveDocument } from "../hooks/useDocument";
-import { parseOutline, serializeOutline } from "../documents.schema";
+import {
+  parseOutline,
+  serializeOutline,
+  LOGLINE_MAX,
+} from "../documents.schema";
 import { TextEditor } from "./TextEditor";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
@@ -37,6 +41,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [mode, setMode] = useState<EditorMode>("free");
   const save = useSaveDocument();
   const { isDirty, isSaving, isError } = useAutoSave(
+    save,
     document.id,
     content,
     document.content,
@@ -45,6 +50,19 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const handleManualSave = () => {
     if (isDirty) save.mutate({ documentId: document.id, content });
   };
+
+  // E2E test hook: trigger a save with raw content bypassing the textarea
+  // (textarea has HTML maxLength enforcement — tests use this to verify
+  // server-side validation on bypassed input).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as Record<string, unknown>;
+    w["__ohWritersSaveDocumentRaw"] = (raw: string) =>
+      save.mutate({ documentId: document.id, content: raw });
+    return () => {
+      delete w["__ohWritersSaveDocumentRaw"];
+    };
+  }, [document.id, save]);
 
   const isOutline = type === DocumentTypes.OUTLINE;
   const isLogline = type === DocumentTypes.LOGLINE;
@@ -112,7 +130,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               value={content}
               onChange={setContent}
               placeholder={DOCUMENT_PLACEHOLDERS[type]}
-              maxLength={isLogline ? 500 : undefined}
+              maxLength={isLogline ? LOGLINE_MAX : undefined}
               singleLine={false}
             />
           )}

@@ -1,109 +1,194 @@
-# Spec 04 — Narrative Editor (Logline, Synopsis, Outline, Treatment)
+# Spec 04 — Narrative Editor (Logline, Synopsis, Treatment)
 
-## User Stories
+Outline ha la sua spec dedicata — vedi **04b**. Export PDF / pitch package ha la sua spec dedicata — vedi **04c**.
 
-- As a writer I want to write the logline of my film in a clean editor
-- As a writer I want the AI to suggest variants of the logline
-- As a writer I want to develop the synopsis with the AI as an interlocutor
-- As a writer I want to build the outline scene by scene
-- As a writer I want to write the treatment with optional AI support
-- As a writer I want to switch between "free" and "assisted" mode at any time
+## Goal
 
-## Document Types
+Uno scrittore apre il proprio progetto e può scrivere, salvare e versionare i tre documenti narrativi di preproduzione: **logline**, **sinossi**, **trattamento**. Ciascuno è una textarea pura (nessun rich editor), con autosave debounced e salvataggio manuale immediato.
 
+## Status at spec time
+
+La feature è **parzialmente implementata** quando questa spec viene scritta. Questo documento fissa il target state, quindi elenca i gap da chiudere.
+
+Presente in codice:
+
+- DB schema `documents` + `document_versions` (`packages/db/src/schema/documents.ts`)
+- Server fn `getDocument`, `saveDocument` (`apps/web/app/features/documents/server/documents.server.ts`)
+- Hook `useDocument`, `useSaveDocument`, `useAutoSave` (30s debounce)
+- UI: `NarrativeEditor`, `TextEditor`, `OutlineEditor`, `AIAssistantPanel` (stub disabilitato con badge "Spec 07"), `SaveStatus`
+- Route: `/projects/:id/{logline,synopsis,outline,treatment}`
+
+Gap da chiudere in questa spec:
+
+1. **Zero E2E test** sui narrativi oggi
+2. `NarrativeEditor` passa `maxLength={500}` a `TextEditor` per la logline — target: **200**, centralizzato come costante
+3. Nessun cap server-side per tipo documento (`SaveDocumentInput` accetta `z.string()` senza limiti)
+4. `saveDocument` non controlla il ruolo del membro team — il viewer può oggi teoricamente salvare
+
+## Out of scope (esplicito)
+
+- **Outline** editing e DnD → **04b**
+- **Export** PDF, Markdown, plain text, pitch package → **04c**
+- **AI assist** (streaming, suggerimenti, generazione varianti) → `AIAssistantPanel` è già uno stub disabilitato con badge "Spec 07", nessuna modifica qui
+- **Rich text editor** — decisione definitiva: textarea, mai TipTap / Lexical / ProseMirror dedicato
+- **Markdown rendering** sul trattamento — rimane plain text; se emerge esigenza, sotto-spec dedicata
+- **Yjs real-time collaboration** sui narrativi — la colonna `documents.yjsState` resta ma inutilizzata per questi tipi; la sua rimozione è decisione futura
+- **i18n** delle label ("Saved", "Saving…") — copre Spec 18
+
+## Data model
+
+Invariato rispetto allo schema già in produzione:
+
+```sql
+documents (
+  id           uuid PK,
+  project_id   uuid FK → projects.id (on delete cascade),
+  type         'logline' | 'synopsis' | 'outline' | 'treatment',
+  title        text NOT NULL,
+  content      text NOT NULL DEFAULT '',    -- plain text per narrativi, JSON per outline
+  yjs_state    bytea NULLABLE,              -- inutilizzato per narrativi
+  created_by   uuid FK → users.id,
+  created_at, updated_at,
+  UNIQUE (project_id, type)
+)
+
+document_versions ( ... gestito da Spec 06b )
 ```
-logline     → short text (1–3 lines), minimal editor
-synopsis    → 1–3 pages, simple rich text editor
-outline     → block structure (acts → sequences → scenes), structured editor
-treatment   → long text, full rich text editor
-```
 
-## Routes
+Un documento per tipo per progetto: il vincolo `UNIQUE (project_id, type)` rende esplicito a livello DB il concetto "c'è una sola logline per film".
 
-```
-/projects/:id/logline
-/projects/:id/synopsis
-/projects/:id/outline
-/projects/:id/treatment
-```
+## Schemas (Zod)
 
-## Editor Modes
-
-### Free Mode
-
-- Clean editor, no automatic suggestions
-- Only essential formatting tools
-- Auto-save every 30 seconds
-- Real-time collaboration via Yjs
-
-### Assisted Mode
-
-- AI sidebar on the right (collapsible)
-- Contextual panel: the AI "sees" the current document
-- Quick actions by document type
-
-#### Logline actions
-
-- Generate 3 alternative loglines
-- Make it more concise
-- Strengthen the conflict
-
-#### Synopsis actions
-
-- Expand a selected paragraph
-- Suggest a scene to add
-- Check three-act structure
-
-#### Outline actions
-
-- Suggest a scene for a given sequence
-- Identify pacing issues
-- Suggest an alternative for a scene
-
-#### Treatment actions
-
-- Expand a section
-- Suggest dialogue for a scene
-- Identify rhythm issues
-
-## tRPC Procedures
+In `apps/web/app/features/documents/documents.schema.ts` aggiungere:
 
 ```ts
-// documents.get(projectId, type) → Document
-// documents.save(documentId, content) → Document
-// documents.getYjsState(documentId) → Uint8Array
+export const LOGLINE_MAX = 200;
+export const SYNOPSIS_MAX = 5_000;
+export const TREATMENT_MAX = 200_000;
 
-// ai.assist(documentId, action, selection?) → AsyncIterable<string>  // streaming
+export const ContentMaxByType = {
+  logline: LOGLINE_MAX,
+  synopsis: SYNOPSIS_MAX,
+  treatment: TREATMENT_MAX,
+  outline: Number.POSITIVE_INFINITY, // caps strutturali gestiti in 04b
+} as const;
 ```
 
-## AI Integration
+`SaveDocumentInput` oggi accetta `content: z.string()` senza cap. La cap per-tipo va enforced **server-side** (recupero doc → lookup `type` → check lunghezza). Il client duplica il limite via `textarea.maxLength` per UX.
 
-- AI calls are server-side only, never client-side
-- Response via streaming (Server-Sent Events)
-- The AI receives: document type, current content, optional selection, project metadata
-- Result shown in a "suggestion bubble" in the sidebar: Copy / Insert at cursor / Replace selection / Discard
+## Server functions
 
-## Outline Editor
+Esistenti, con le seguenti modifiche richieste:
 
-Structured block editor (not rich text):
+- `getDocument({ projectId, type })` → invariata
+- `saveDocument({ documentId, content })`:
+  1. **Cap per-tipo**: dopo aver caricato il documento, verificare `content.length <= ContentMaxByType[doc.type]` → ritornare `ValidationError` altrimenti (aggiungere al tipo di ritorno).
+  2. **Role check**: lookup membership dell'utente sul team del progetto. Se `viewer` → `ForbiddenError("save document: viewer role")`. Owner ed editor passano.
+
+`getDocument` non cambia: viewer può leggere.
+
+## UI contract
+
+### Logline (`/projects/:id/logline`)
+
+- `<TextEditor>` con `maxLength={LOGLINE_MAX}`, singola area di testo multi-riga (ma il limite forza di fatto 1–3 righe)
+- Counter live `{n}/200`, classe warning a ≥ 180
+- Placeholder: `A [protagonist] must [goal] before [stakes]…`
+
+### Sinossi (`/projects/:id/synopsis`)
+
+- `<TextEditor>` multi-riga auto-resize, `maxLength={SYNOPSIS_MAX}`
+- Counter live `{n}/5000`, warning a ≥ 4500
+- Placeholder: `Begin your synopsis here…`
+
+### Trattamento (`/projects/:id/treatment`)
+
+- `<TextEditor>` multi-riga auto-resize
+- Nessun counter visibile — il cap 200K è server-side a tutela DB, non UX guidance
+- Placeholder: `Begin your treatment here…`
+
+### Shared (toolbar narrative)
+
+- Back link → `/projects/:id`
+- Titolo documento a sinistra (Logline / Synopsis / Treatment)
+- A destra: `SaveStatus` → `Save` button (disabilitato se non dirty) → `Versioni` button → toggle `Free/Assisted` (Assisted mostra `AIAssistantPanel` stub)
+- Autosave: 30s debounce dopo l'ultima modifica
+- Save manuale: flush immediato
+- `Versioni` button apre il drawer universale (Spec 06b, già integrato)
+
+## User stories → OHW IDs
+
+Prossimo ID libero: **OHW-200** (ultimo usato nei test: OHW-184).
+
+| ID      | User story                                                                                                                    |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| OHW-200 | Utente non autenticato su `/projects/:id/logline` è reindirizzato a login                                                     |
+| OHW-201 | Owner apre logline vuota → textarea vuota, placeholder visibile, `SaveStatus` "Saved"                                         |
+| OHW-202 | Owner digita → dopo il debounce autosave, il contenuto persiste al reload senza click esplicito                               |
+| OHW-203 | Owner digita e clicca `Save` → salva subito, non aspetta il debounce                                                          |
+| OHW-204 | Logline: counter mostra `charCountWarn` oltre 180 caratteri                                                                   |
+| OHW-205 | Logline: textarea rifiuta input oltre 200 caratteri (HTML `maxLength` enforcement)                                            |
+| OHW-206 | Server rifiuta `saveDocument` con `content.length > LOGLINE_MAX` per doc di tipo `logline` (bypass HTML via chiamata diretta) |
+| OHW-207 | Sinossi: contenuto round-trip dopo reload                                                                                     |
+| OHW-208 | Trattamento: contenuto round-trip dopo reload                                                                                 |
+| OHW-209 | Navigazione tra `/logline` e `/synopsis` preserva i contenuti rispettivi                                                      |
+| OHW-210 | `SaveStatus` mostra "Error saving" se il server ritorna `DbError` (verifica via intercept)                                    |
+| OHW-211 | Viewer apre `/logline` → textarea `readOnly`, bottone Save disabilitato                                                       |
+| OHW-212 | Viewer tenta chiamata diretta a `saveDocument` → server risponde con `ForbiddenError`                                         |
+| OHW-213 | Progetto archiviato → save rifiutato con `ForbiddenError` (guard già implementato, manca il test)                             |
+| OHW-214 | Click su `Versioni` → drawer apre con scope `{ kind: "document", documentId, docType }`                                       |
+
+## Implementation order (TDD)
+
+Blocco 1 — allineamento limiti e caps:
+
+1. Definire `LOGLINE_MAX / SYNOPSIS_MAX / TREATMENT_MAX / ContentMaxByType` in `documents.schema.ts`
+2. Aggiornare `NarrativeEditor` per passare `LOGLINE_MAX` a `TextEditor` invece di 500 hardcoded
+3. Aggiungere cap server-side in `saveDocument` (test OHW-206)
+
+Blocco 2 — permessi:
+
+4. Introdurre helper `requireTeamRole(projectId, minRole)` in `features/teams/` se assente (verificare prima)
+5. Usarlo in `saveDocument` per rigettare viewer (test OHW-212)
+6. Front-end: leggere il ruolo nel loader della route, passare `isReadOnly` al `NarrativeEditor`; `TextEditor` espone `readOnly` prop se assente (test OHW-211)
+
+Blocco 3 — test E2E:
+
+7. Scrivere `tests/documents/narrative-editor.spec.ts` con OHW-200..214
+8. Seed: Giuseppe (owner), Maria (editor), Marco (viewer — aggiungere se assente in seed)
+
+Blocco 4 — regression & commit:
+
+9. `pnpm lint && pnpm typecheck && pnpm test:unit && pnpm test -- tests/documents`
+10. Commit `[OHW] feat: Spec 04 — narrative editor limits, role guard, E2E coverage`
+
+## Testing
+
+- **Playwright E2E** — `tests/documents/narrative-editor.spec.ts` (tutti gli OHW-200..214)
+- **Vitest** — nessun test unit necessario in questa spec. Logica pura emerge solo in 04b (outline reducer). Cap validation e role check sono 1–2 righe ciascuno → coperti via E2E.
+- Seeded users/project: Giuseppe (owner), Maria (editor), Marco (viewer); progetto con `documents` rows create on-demand al primo save.
+
+## Files touched / created
 
 ```
-Act I
-  └─ Sequence 1: Introduction
-       ├─ Scene 1: [short text]
-       ├─ Scene 2: [short text]
-Act II A
-  └─ ...
+apps/web/app/features/documents/
+├── documents.schema.ts                 ← +LOGLINE_MAX/SYNOPSIS_MAX/TREATMENT_MAX, +ContentMaxByType
+├── documents.errors.ts                 ← +ValidationError re-export
+├── server/documents.server.ts          ← +cap check, +role check
+├── components/NarrativeEditor.tsx      ← 500→LOGLINE_MAX, isReadOnly prop
+└── components/TextEditor.tsx           ← +readOnly prop
+
+apps/web/app/features/teams/
+└── teams.server.ts                     ← +requireTeamRole (se assente)
+
+tests/documents/
+└── narrative-editor.spec.ts            ← NEW, OHW-200..214
 ```
 
-- Drag & drop to reorder
-- Collapse/expand for acts and sequences
-- Each scene: number, short description, characters, notes
-- Content stored as JSON in the `content` field of the documents table
+## Non-goals (again, one more time)
 
-## Test Coverage
-
-- Auto-save every 30s → content persisted
-- Switch free ↔ assisted mode → sidebar appears/disappears
-- AI streaming → text appears progressively
-- Two users editing simultaneously → no conflicts (Yjs)
+- Outline → **04b**
+- Export → **04c**
+- AI assist → futuro (stub disabilitato già in UI)
+- Markdown → mai (o sub-spec se richiesto)
+- Yjs narrative → mai

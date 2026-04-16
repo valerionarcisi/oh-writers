@@ -10,10 +10,15 @@ import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
-import { SaveDocumentInput, GetDocumentInput } from "../documents.schema";
+import {
+  SaveDocumentInput,
+  GetDocumentInput,
+  ContentMaxByType,
+} from "../documents.schema";
 import {
   DocumentNotFoundError,
   ForbiddenError,
+  ValidationError,
   DbError,
 } from "../documents.errors";
 
@@ -74,7 +79,7 @@ export const saveDocument = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         DocumentView,
-        DocumentNotFoundError | ForbiddenError | DbError
+        DocumentNotFoundError | ForbiddenError | ValidationError | DbError
       >
     > => {
       await requireUser();
@@ -89,6 +94,21 @@ export const saveDocument = createServerFn({ method: "POST" })
       if (docResult.isErr()) return toShape(err(docResult.error));
       const doc = docResult.value;
       if (!doc) return toShape(err(new DocumentNotFoundError(data.documentId)));
+
+      // Per-type content cap — Zod accepts any string on the wire, but each
+      // document type has a domain-level maximum enforced here so clients
+      // that bypass the textarea maxLength still get rejected.
+      const maxLength = ContentMaxByType[doc.type];
+      if (data.content.length > maxLength) {
+        return toShape(
+          err(
+            new ValidationError(
+              "content",
+              `exceeds ${doc.type} limit of ${maxLength} characters`,
+            ),
+          ),
+        );
+      }
 
       const { projects: projectsTable } = await import("@oh-writers/db/schema");
       const projectResult = await ResultAsync.fromPromise(
