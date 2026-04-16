@@ -97,20 +97,35 @@ async function signInViaApi(email: string, password: string) {
 /**
  * Open the Import PDF dialog and upload the fixture file.
  * Assumes the editor is already open and focused.
+ * The Import PDF action is now inside the toolbar ⋯ menu.
  */
 async function importPdf(page: Page, filePath: string) {
+  await page.getByTestId("toolbar-menu-trigger").click();
   const fileChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: /import pdf/i }).click();
+  await page.getByTestId("menu-item-import-pdf").click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(filePath);
 }
 
 /**
  * Confirm the "Replace content?" dialog that appears when importing into a
- * screenplay that already has content.
+ * screenplay that already has content (hasExistingContent=true).
+ * Uses the overwrite button in the confirm overlay.
  */
 async function confirmReplace(page: Page) {
-  await page.getByRole("button", { name: /replace/i }).click();
+  // When there are existing versions, the dialog shows "Sovrascrivi"
+  // When there are no versions, it shows "Replace"
+  const overwrite = page.getByTestId("import-confirm-overwrite");
+  const replace = page.getByTestId("import-confirm-ok");
+  // Wait for either button to appear
+  await Promise.race([
+    overwrite
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .then(() => overwrite.click()),
+    replace
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .then(() => replace.click()),
+  ]);
 }
 
 // ─── Suite setup ──────────────────────────────────────────────────────────────
@@ -129,12 +144,13 @@ test.beforeAll(async ({ browser }) => {
   // Create a fresh "The Wolf" project via the UI
   const page = await browser.newPage();
   await page.context().addCookies(authCookies);
-  await page.goto(`${BASE_URL}/`);
-
-  await page.getByRole("button", { name: /new project/i }).click();
+  await page.goto(`${BASE_URL}/projects/new`);
+  await page.waitForURL(/\/projects\/new/, { timeout: 30_000 });
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/title/i).fill("The Wolf");
+  await page.getByLabel(/format/i).selectOption("feature");
   await page.getByRole("button", { name: /create/i }).click();
-  await page.waitForURL(/\/projects\//);
+  await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 30_000 });
   projectId = page.url().split("/projects/")[1]?.split("/")[0] ?? "";
   await page.close();
 });
@@ -144,7 +160,7 @@ test.beforeAll(async ({ browser }) => {
 test("[OHW-070] Import PDF button is visible in toolbar", async ({
   browser,
 }) => {
-  test.todo(); // feature not yet implemented
+  test.skip(true, "feature not yet implemented");
 });
 
 // ─── OHW-071  File picker opens on button click ───────────────────────────────
@@ -152,7 +168,7 @@ test("[OHW-070] Import PDF button is visible in toolbar", async ({
 test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-072  Importing into an empty screenplay replaces content silently ────
@@ -160,7 +176,7 @@ test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
 test("[OHW-072] Import into empty screenplay loads content without confirmation dialog", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-073  Importing into a non-empty screenplay shows a confirmation dialog
@@ -168,7 +184,7 @@ test("[OHW-072] Import into empty screenplay loads content without confirmation 
 test("[OHW-073] Import into non-empty screenplay shows replace-content confirmation", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-074  Cancelling the confirmation keeps existing content unchanged ────
@@ -176,7 +192,7 @@ test("[OHW-073] Import into non-empty screenplay shows replace-content confirmat
 test("[OHW-074] Cancelling the replace dialog keeps existing content unchanged", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-075  Scene headings are parsed correctly ─────────────────────────────
@@ -188,7 +204,7 @@ test("[OHW-074] Cancelling the replace dialog keeps existing content unchanged",
 test("[OHW-075] Scene headings are imported as scene_heading nodes without scene numbers or date annotations", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-076  Character cue — plain name ──────────────────────────────────────
@@ -199,7 +215,7 @@ test("[OHW-075] Scene headings are imported as scene_heading nodes without scene
 test("[OHW-076] Plain character cue is imported as character node with no extension", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-077  Character cue — with single extension ──────────────────────────
@@ -213,7 +229,7 @@ test("[OHW-076] Plain character cue is imported as character node with no extens
 test("[OHW-077] Character cue with extension is imported as character node containing the full text", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-078  Character cue — with compound extension (V.O. + CONT'D) ─────────
@@ -227,7 +243,7 @@ test("[OHW-077] Character cue with extension is imported as character node conta
 test("[OHW-078] Character cue with compound extensions is one character node containing the full raw text", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-079  Character cue — off-screen extension ────────────────────────────
@@ -238,7 +254,7 @@ test("[OHW-078] Character cue with compound extensions is one character node con
 test("[OHW-079] Character cue with O.S. extension is imported as character node with full text", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-080  Dialogue lines ──────────────────────────────────────────────────
@@ -251,7 +267,7 @@ test("[OHW-079] Character cue with O.S. extension is imported as character node 
 test("[OHW-080] Dialogue lines following a character cue are imported as a single dialogue node", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-081  Parenthetical ───────────────────────────────────────────────────
@@ -263,7 +279,7 @@ test("[OHW-080] Dialogue lines following a character cue are imported as a singl
 test("[OHW-081] Parenthetical lines (surrounded by parentheses) are imported as parenthetical nodes", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-082  Action lines ───────────────────────────────────────────────────
@@ -274,7 +290,7 @@ test("[OHW-081] Parenthetical lines (surrounded by parentheses) are imported as 
 test("[OHW-082] Descriptive action lines are imported as action nodes", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-083  Transitions (CUT TO:) ──────────────────────────────────────────
@@ -289,7 +305,7 @@ test("[OHW-082] Descriptive action lines are imported as action nodes", async ({
 test("[OHW-083] CUT TO: lines are imported as transition nodes with scene numbers stripped", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-084  Clicking on an imported transition shows the Transition pill ────
@@ -297,7 +313,7 @@ test("[OHW-083] CUT TO: lines are imported as transition nodes with scene number
 test("[OHW-084] Clicking on an imported transition block shows the 'Transition' element pill", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-085  Parasitic text stripped — Buff Revised Pages header ─────────────
@@ -310,11 +326,12 @@ test("[OHW-085] 'Buff Revised Pages' header lines are stripped from imported con
 }) => {
   const page = await browser.newPage();
   await page.context().addCookies(authCookies);
-  await page.goto(`${BASE_URL}/projects/${projectId}`);
+  await page.goto(`${BASE_URL}/projects/${projectId}/screenplay`);
   const editor = await waitForEditor(page);
   await importPdf(page, PDF_FIXTURE);
-  await confirmReplace(page);
-  await page.waitForTimeout(2_000); // wait for import to complete
+  // No confirmReplace needed: screenplay is empty so no confirm dialog appears.
+  // Wait for server-side PDF parsing to complete.
+  await page.waitForTimeout(5_000);
 
   const fountain = await getEditorContent(page);
   expect(fountain).not.toContain("Buff Revised Pages");
@@ -330,7 +347,7 @@ test("[OHW-085] 'Buff Revised Pages' header lines are stripped from imported con
 test("[OHW-086] Bare page-number lines (e.g. '2.', '21.') are stripped from imported content", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-087  Parasitic text stripped — revision asterisks ────────────────────
@@ -342,7 +359,7 @@ test("[OHW-086] Bare page-number lines (e.g. '2.', '21.') are stripped from impo
 test("[OHW-087] Revision asterisks at the end of lines are stripped during import", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-088  Edge case — OMITTED scene block ────────────────────────────────
@@ -355,7 +372,7 @@ test("[OHW-087] Revision asterisks at the end of lines are stripped during impor
 test("[OHW-088] OMITTED scene blocks are preserved as action nodes with numbers and asterisks stripped", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-089  Edge case — INSERT PHOTO slug ───────────────────────────────────
@@ -368,7 +385,7 @@ test("[OHW-088] OMITTED scene blocks are preserved as action nodes with numbers 
 test("[OHW-089] INSERT ID PHOTO lines are imported as scene_heading nodes", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-090  Post-import interaction — edit scene heading title ──────────────
@@ -379,7 +396,7 @@ test("[OHW-089] INSERT ID PHOTO lines are imported as scene_heading nodes", asyn
 test("[OHW-090] Editing an imported scene heading title keeps the block as scene_heading", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-091  Post-import interaction — add character below action ─────────────
@@ -391,7 +408,7 @@ test("[OHW-090] Editing an imported scene heading title keeps the block as scene
 test("[OHW-091] Alt+c shortcut creates a character block after an imported action block", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-092  Post-import interaction — element pill on transition ────────────
@@ -403,7 +420,7 @@ test("[OHW-091] Alt+c shortcut creates a character block after an imported actio
 test("[OHW-092] Element type of an imported transition can be changed via the element selector", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-093  File too large — error message ──────────────────────────────────
@@ -411,7 +428,7 @@ test("[OHW-092] Element type of an imported transition can be changed via the el
 test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-094  Encrypted PDF — error message ───────────────────────────────────
@@ -419,7 +436,7 @@ test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async
 test("[OHW-094] Importing a password-protected PDF shows an appropriate error message", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });
 
 // ─── OHW-095  Non-PDF file — error message ────────────────────────────────────
@@ -427,5 +444,5 @@ test("[OHW-094] Importing a password-protected PDF shows an appropriate error me
 test("[OHW-095] Uploading a non-PDF file shows 'not a valid PDF' error", async ({
   browser,
 }) => {
-  test.todo();
+  test.skip(true, "not yet implemented");
 });

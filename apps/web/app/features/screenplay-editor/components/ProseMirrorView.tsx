@@ -22,6 +22,7 @@ import {
 } from "../lib/plugins/paginator";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
+import { docToFountain } from "../lib/doc-to-fountain";
 import { migratePmDoc } from "@oh-writers/domain";
 import type { ElementType } from "../lib/fountain-element-detector";
 
@@ -154,12 +155,10 @@ export function ProseMirrorView({
         }
 
         if (tr.docChanged) {
-          import("../lib/doc-to-fountain").then(({ docToFountain }) => {
-            const fountain = docToFountain(newState.doc);
-            lastValueRef.current = fountain;
-            onChange(fountain);
-            onDocChange?.(newState.doc.toJSON() as Record<string, unknown>);
-          });
+          const fountain = docToFountain(newState.doc);
+          lastValueRef.current = fountain;
+          onChange(fountain);
+          onDocChange?.(newState.doc.toJSON() as Record<string, unknown>);
         }
       },
     });
@@ -238,15 +237,13 @@ export function ProseMirrorView({
 
     lastValueRef.current = value;
 
-    import("../lib/fountain-to-doc").then(({ fountainToDoc: ftd }) => {
-      const newDoc = ftd(value);
-      const tr = view.state.tr.replaceWith(
-        0,
-        view.state.doc.content.size,
-        newDoc.content,
-      );
-      view.dispatch(tr);
-    });
+    const newDoc = fountainToDoc(value);
+    const tr = view.state.tr.replaceWith(
+      0,
+      view.state.doc.content.size,
+      newDoc.content,
+    );
+    view.dispatch(tr);
   }, [value]);
 
   return <div ref={mountRef} data-testid="prosemirror-view" />;

@@ -5,7 +5,7 @@ import {
   extractCharacterNames,
   extractLocations,
 } from "../fountain-autocomplete";
-import { FOUNTAIN_TRANSITIONS, SCENE_HEADING_RE } from "../fountain-constants";
+import { FOUNTAIN_TRANSITIONS } from "../fountain-constants";
 import { docToFountain } from "../doc-to-fountain";
 import {
   reducer,
@@ -31,11 +31,15 @@ const computeSuggestions = (state: EditorState): string[] => {
     return names.filter((n) => n.startsWith(typed) && n !== typed);
   }
 
-  if (blockType === "heading" && SCENE_HEADING_RE.test(blockText)) {
+  // Cursor is inside the `title` slot of a scene heading — suggest known locations.
+  // The `title` node holds only the location text (no INT/EXT prefix), so we
+  // can compare directly without stripping the prefix.
+  if (blockType === "title") {
     const fountain = docToFountain(state.doc);
-    const after = blockText.replace(SCENE_HEADING_RE, "").toUpperCase();
+    const typed = blockText.toUpperCase();
     return extractLocations(fountain).filter(
-      (loc) => loc.startsWith(after) && loc !== after,
+      (loc) =>
+        loc.toUpperCase().startsWith(typed) && loc.toUpperCase() !== typed,
     );
   }
 

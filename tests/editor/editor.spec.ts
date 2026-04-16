@@ -174,13 +174,13 @@ test.describe("Screenplay Editor", () => {
     const marker = `MARKER_${Date.now()}`;
     await page.keyboard.type(marker);
 
-    // Wait for "Unsaved changes" indicator
-    await expect(page.getByText("Unsaved changes")).toBeVisible({
+    // Wait for "Non salvato" indicator
+    await expect(page.getByText("Non salvato")).toBeVisible({
       timeout: 5_000,
     });
 
     // Auto-save debounce is 30s, then save request completes
-    await expect(page.getByText("Unsaved changes")).not.toBeVisible({
+    await expect(page.getByText("Non salvato")).not.toBeVisible({
       timeout: 60_000,
     });
 

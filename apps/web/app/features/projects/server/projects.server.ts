@@ -18,6 +18,7 @@ import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
+import { ensureFirstVersion } from "~/features/screenplay-editor/server/versions.server";
 import { CreateProjectInput, UpdateProjectInput } from "../projects.schema";
 import {
   ProjectNotFoundError,
@@ -248,12 +249,19 @@ export const createProject = createServerFn({ method: "POST" })
               })),
             );
 
-            await tx.insert(screenplays).values({
-              projectId: project.id,
-              title: data.title,
-              content: "",
-              createdBy: user.id,
-            });
+            const [screenplay] = await tx
+              .insert(screenplays)
+              .values({
+                projectId: project.id,
+                title: data.title,
+                content: "",
+                createdBy: user.id,
+              })
+              .returning();
+
+            if (screenplay) {
+              await ensureFirstVersion(tx, screenplay.id, user.id);
+            }
 
             return project;
           }),

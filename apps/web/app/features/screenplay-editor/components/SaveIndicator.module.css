@@ -1,0 +1,86 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  cursor: pointer;
+  line-height: 1;
+  min-inline-size: 7rem;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: var(--color-elevated);
+    color: var(--color-fg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+}
+
+.label {
+  flex: 1;
+  text-align: start;
+}
+
+/* ─── State colours ───────────────────────────────────── */
+
+.saved {
+  color: var(--color-status-saved, var(--color-success));
+}
+
+.dirty {
+  color: var(--color-status-dirty, var(--color-warning, var(--color-accent)));
+}
+
+.saving {
+  color: var(--color-status-dirty, var(--color-warning, var(--color-accent)));
+}
+
+.error {
+  color: var(--color-status-error, var(--color-danger));
+}
+
+.offline {
+  color: var(--color-fg-muted);
+}
+
+/* ─── Pulse on saving ─────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .saving .dot {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}

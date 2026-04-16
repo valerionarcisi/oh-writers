@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { SaveStatus } from "~/features/documents";
-import { ImportPdfButton } from "./ImportPdfButton";
+import { SaveIndicator } from "./SaveIndicator";
+import { ToolbarMenu } from "./ToolbarMenu";
 import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
@@ -11,12 +11,21 @@ interface ScreenplayToolbarProps {
   isDirty: boolean;
   isSaving: boolean;
   isError: boolean;
+  isOffline: boolean;
+  lastSavedAt: number | null;
+  onFlushSave: () => void;
   isFocusMode: boolean;
   hasContent: boolean;
   currentElement: ElementType;
   onSetElement: (element: ElementType) => void;
   onToggleFocusMode: () => void;
   onImport: (fountain: string) => void;
+  nextVersionLabel?: string | null;
+  onCreateVersionThenImport?: (fountain: string) => void;
+  onToggleVersions: () => void;
+  isVersionsPanelOpen: boolean;
+  currentVersionLabel?: string | null;
+  hideSaveIndicator?: boolean;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -53,12 +62,21 @@ export function ScreenplayToolbar({
   isDirty,
   isSaving,
   isError,
+  isOffline,
+  lastSavedAt,
+  onFlushSave,
   isFocusMode,
   hasContent,
   currentElement,
   onSetElement,
   onToggleFocusMode,
   onImport,
+  nextVersionLabel = null,
+  onCreateVersionThenImport,
+  onToggleVersions,
+  isVersionsPanelOpen,
+  currentVersionLabel = null,
+  hideSaveIndicator = false,
 }: ScreenplayToolbarProps) {
   return (
     <div className={styles.toolbar}>
@@ -97,14 +115,16 @@ export function ScreenplayToolbar({
         <span className={styles.pageCount} data-testid="page-indicator">
           p.{currentPage}/{totalPages}
         </span>
-        <SaveStatus isDirty={isDirty} isSaving={isSaving} isError={isError} />
-        <Link
-          to="/projects/$id/screenplay/versions"
-          params={{ id: projectId }}
-          className={styles.versionsBtn}
-        >
-          Versions
-        </Link>
+        {!hideSaveIndicator && (
+          <SaveIndicator
+            isDirty={isDirty}
+            isSaving={isSaving}
+            isError={isError}
+            isOffline={isOffline}
+            lastSavedAt={lastSavedAt}
+            onFlush={onFlushSave}
+          />
+        )}
         <button
           className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ""}`}
           onClick={onToggleFocusMode}
@@ -114,15 +134,25 @@ export function ScreenplayToolbar({
         >
           Focus
         </button>
-        <ImportPdfButton hasExistingContent={hasContent} onImport={onImport} />
-        <button
-          className={styles.exportBtn}
-          type="button"
-          disabled
-          title="Coming in Spec 08"
-        >
-          Export PDF
-        </button>
+        {currentVersionLabel != null && (
+          <button
+            type="button"
+            className={`${styles.versionBadge} ${isVersionsPanelOpen ? styles.versionBadgeActive : ""}`}
+            onClick={onToggleVersions}
+            title="Gestisci versioni"
+            data-testid="current-version-badge"
+          >
+            {currentVersionLabel}
+          </button>
+        )}
+        <ToolbarMenu
+          hasContent={hasContent}
+          onImport={onImport}
+          nextVersionLabel={nextVersionLabel}
+          onCreateVersionThenImport={onCreateVersionThenImport}
+          onToggleVersions={onToggleVersions}
+          isVersionsPanelOpen={isVersionsPanelOpen}
+        />
       </div>
     </div>
   );

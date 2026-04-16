@@ -9,6 +9,7 @@ import { TextEditor } from "./TextEditor";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { SaveStatus } from "./SaveStatus";
+import { useVersionsDrawer } from "~/features/versions";
 import styles from "./NarrativeEditor.module.css";
 
 interface NarrativeEditorProps {
@@ -41,6 +42,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     content,
     document.content,
   );
+  const {
+    state: drawerState,
+    open: openDrawer,
+    close: closeDrawer,
+  } = useVersionsDrawer();
+  const isVersionsOpen =
+    drawerState.isOpen &&
+    drawerState.scope?.kind === "document" &&
+    drawerState.scope.documentId === document.id;
 
   const handleManualSave = () => {
     if (isDirty) save.mutate({ documentId: document.id, content });
@@ -72,6 +82,23 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             type="button"
           >
             Save
+          </button>
+          <button
+            className={`${styles.saveBtn} ${isVersionsOpen ? styles.saveBtnActive : ""}`}
+            onClick={() =>
+              isVersionsOpen
+                ? closeDrawer()
+                : openDrawer({
+                    kind: "document",
+                    documentId: document.id,
+                    docType: type,
+                  })
+            }
+            type="button"
+            aria-pressed={isVersionsOpen}
+            data-testid="narrative-versions-toggle"
+          >
+            Versioni
           </button>
           <div
             className={styles.modeToggle}

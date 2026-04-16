@@ -78,6 +78,16 @@
   }
 }
 
+.saveBtnActive {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  border-color: var(--color-accent);
+
+  &:not(:disabled):hover {
+    background: var(--color-accent-hover, var(--color-accent));
+  }
+}
+
 /* ─── Mode toggle ────────────────────────────────────────── */
 
 .modeToggle {

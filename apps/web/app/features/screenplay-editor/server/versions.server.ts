@@ -1,13 +1,19 @@
 import { createServerFn } from "@tanstack/start";
-import { ok, err, ResultAsync } from "neverthrow";
-import { eq, and, desc, asc, count } from "drizzle-orm";
+import { ok, err, okAsync, errAsync, ResultAsync } from "neverthrow";
+import { eq, desc, count, and } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
-import { screenplayVersions, screenplays } from "@oh-writers/db/schema";
-import type { ScreenplayVersion } from "@oh-writers/db";
+import {
+  screenplayVersions,
+  screenplays,
+  projects,
+  teamMembers,
+} from "@oh-writers/db/schema";
+import { TeamRoles } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
+import type { Db } from "~/server/db";
 import { stripYjsSnapshot } from "~/server/helpers";
 import {
   ListVersionsInput,
@@ -15,19 +21,138 @@ import {
   CreateManualVersionInput,
   RestoreVersionInput,
   DeleteVersionInput,
+  RenameVersionInput,
+  DuplicateVersionInput,
 } from "../screenplay-versions.schema";
 import type { VersionView } from "../screenplay-versions.schema";
 import type { ScreenplayView } from "./screenplay.server";
 import {
   VersionNotFoundError,
   CannotDeleteLastManualError,
+  InvalidLabelError,
   ForbiddenError,
   DbError,
 } from "../screenplay-versions.errors";
 
 export type { VersionView };
 
-const MAX_AUTO_SNAPSHOTS = 50;
+// ─── ensureFirstVersion ───────────────────────────────────────────────────────
+// Creates "Versione 1" for a screenplay if it has no versions yet.
+// Accepts a db instance or a transaction so it can run inside an existing tx.
+
+type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+export const ensureFirstVersion = async (
+  db: DbOrTx,
+  screenplayId: string,
+  userId: string,
+): Promise<void> => {
+  const existing = await db
+    .select({ value: count() })
+    .from(screenplayVersions)
+    .where(eq(screenplayVersions.screenplayId, screenplayId))
+    .then((rows) => rows[0]?.value ?? 0);
+
+  if (existing > 0) return;
+
+  const screenplay = await db.query.screenplays
+    .findFirst({ where: eq(screenplays.id, screenplayId) })
+    .then((row) => row ?? null);
+
+  if (!screenplay) return;
+
+  await db.insert(screenplayVersions).values({
+    screenplayId,
+    label: "Versione 1",
+    content: screenplay.content,
+    pageCount: screenplay.pageCount,
+    createdBy: userId,
+  });
+};
+
+// ─── Authorization helper ─────────────────────────────────────────────────────
+// Verifies that `userId` can read/write the screenplay identified by
+// `screenplayId`. Returns the screenplay row on success so callers can reuse
+// it without a second query.
+
+const resolveScreenplayAccess = (
+  db: Db,
+  screenplayId: string,
+  userId: string,
+): ResultAsync<
+  typeof screenplays.$inferSelect,
+  VersionNotFoundError | ForbiddenError | DbError
+> =>
+  ResultAsync.fromPromise(
+    db.query.screenplays
+      .findFirst({ where: eq(screenplays.id, screenplayId) })
+      .then((row) => row ?? null),
+    (e) => new DbError("resolveScreenplayAccess.screenplay", e),
+  )
+    .andThen((s) => (s ? ok(s) : err(new VersionNotFoundError(screenplayId))))
+    .andThen((s) =>
+      ResultAsync.fromPromise(
+        db.query.projects
+          .findFirst({ where: eq(projects.id, s.projectId) })
+          .then((row) => row ?? null),
+        (e) => new DbError("resolveScreenplayAccess.project", e),
+      ).map((p) => ({ s, p })),
+    )
+    .andThen(({ s, p }) => {
+      if (!p) return errAsync(new VersionNotFoundError(s.projectId));
+
+      // Personal project — owner only
+      if (p.ownerId !== null) {
+        return p.ownerId === userId
+          ? okAsync(s)
+          : errAsync(new ForbiddenError("access screenplay versions"));
+      }
+
+      // Team project — owner or editor
+      if (!p.teamId)
+        return errAsync(new ForbiddenError("access screenplay versions"));
+
+      return ResultAsync.fromPromise(
+        db.query.teamMembers
+          .findFirst({
+            where: and(
+              eq(teamMembers.teamId, p.teamId),
+              eq(teamMembers.userId, userId),
+            ),
+          })
+          .then((row) => row ?? null),
+        (e) => new DbError("resolveScreenplayAccess.membership", e),
+      ).andThen((member) => {
+        if (!member)
+          return err(new ForbiddenError("access screenplay versions"));
+        const canEdit =
+          member.role === TeamRoles.OWNER || member.role === TeamRoles.EDITOR;
+        return canEdit
+          ? ok(s)
+          : err(new ForbiddenError("access screenplay versions"));
+      });
+    });
+
+// Same helper but resolves from a versionId — avoids an extra query in the
+// callers that already need the version row.
+const resolveVersionAccess = (
+  db: Db,
+  versionId: string,
+  userId: string,
+): ResultAsync<
+  typeof screenplayVersions.$inferSelect,
+  VersionNotFoundError | ForbiddenError | DbError
+> =>
+  ResultAsync.fromPromise(
+    db.query.screenplayVersions
+      .findFirst({ where: eq(screenplayVersions.id, versionId) })
+      .then((row) => row ?? null),
+    (e) => new DbError("resolveVersionAccess.find", e),
+  )
+    .andThen((v) => (v ? ok(v) : err(new VersionNotFoundError(versionId))))
+    .andThen((v) =>
+      resolveScreenplayAccess(db, v.screenplayId, userId).map(() => v),
+    );
 
 // ─── List versions ────────────────────────────────────────────────────────────
 
@@ -36,9 +161,21 @@ export const listVersions = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<VersionView[], VersionNotFoundError | DbError>> => {
-      await requireUser();
+    }): Promise<
+      ResultShape<
+        VersionView[],
+        VersionNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
       const db = await getDb();
+
+      const access = await resolveScreenplayAccess(
+        db,
+        data.screenplayId,
+        user.id,
+      );
+      if (access.isErr()) return toShape(err(access.error));
 
       return toShape(
         await ResultAsync.fromPromise(
@@ -67,22 +204,16 @@ export const getVersion = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<VersionView, VersionNotFoundError | DbError>> => {
-      await requireUser();
+    }): Promise<
+      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
       const db = await getDb();
 
-      const result = await ResultAsync.fromPromise(
-        db.query.screenplayVersions
-          .findFirst({ where: eq(screenplayVersions.id, data.versionId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("getVersion", e),
-      );
+      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      if (access.isErr()) return toShape(err(access.error));
 
-      if (result.isErr()) return toShape(err(result.error));
-      if (!result.value)
-        return toShape(err(new VersionNotFoundError(data.versionId)));
-
-      return toShape(ok(stripYjsSnapshot(result.value)));
+      return toShape(ok(stripYjsSnapshot(access.value)));
     },
   );
 
@@ -105,16 +236,13 @@ export const createManualVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const screenplayResult = await ResultAsync.fromPromise(
-        db.query.screenplays
-          .findFirst({ where: eq(screenplays.id, data.screenplayId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("createManualVersion.find", e),
+      const access = await resolveScreenplayAccess(
+        db,
+        data.screenplayId,
+        user.id,
       );
-      if (screenplayResult.isErr()) return toShape(err(screenplayResult.error));
-      const screenplay = screenplayResult.value;
-      if (!screenplay)
-        return toShape(err(new VersionNotFoundError(data.screenplayId)));
+      if (access.isErr()) return toShape(err(access.error));
+      const screenplay = access.value;
 
       return toShape(
         await ResultAsync.fromPromise(
@@ -125,7 +253,6 @@ export const createManualVersion = createServerFn({ method: "POST" })
               label: data.label,
               content: screenplay.content,
               pageCount: screenplay.pageCount,
-              isAuto: false,
               createdBy: user.id,
             })
             .returning()
@@ -154,40 +281,13 @@ export const restoreVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const versionResult = await ResultAsync.fromPromise(
-        db.query.screenplayVersions
-          .findFirst({ where: eq(screenplayVersions.id, data.versionId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("restoreVersion.findVersion", e),
-      );
-      if (versionResult.isErr()) return toShape(err(versionResult.error));
-      const version = versionResult.value;
-      if (!version)
-        return toShape(err(new VersionNotFoundError(data.versionId)));
-
-      const screenplayResult = await ResultAsync.fromPromise(
-        db.query.screenplays
-          .findFirst({ where: eq(screenplays.id, version.screenplayId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("restoreVersion.findScreenplay", e),
-      );
-      if (screenplayResult.isErr()) return toShape(err(screenplayResult.error));
-      const screenplay = screenplayResult.value;
-      if (!screenplay)
-        return toShape(err(new VersionNotFoundError(version.screenplayId)));
+      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      if (access.isErr()) return toShape(err(access.error));
+      const version = access.value;
 
       return toShape(
         await ResultAsync.fromPromise(
           db.transaction(async (tx) => {
-            await tx.insert(screenplayVersions).values({
-              screenplayId: screenplay.id,
-              label: null,
-              content: screenplay.content,
-              pageCount: screenplay.pageCount,
-              isAuto: true,
-              createdBy: user.id,
-            });
-
             const [updated] = await tx
               .update(screenplays)
               .set({
@@ -195,7 +295,7 @@ export const restoreVersion = createServerFn({ method: "POST" })
                 pageCount: version.pageCount,
                 updatedAt: new Date(),
               })
-              .where(eq(screenplays.id, screenplay.id))
+              .where(eq(screenplays.id, version.screenplayId))
               .returning();
 
             if (!updated) throw new Error("Restore returned no rows");
@@ -226,38 +326,24 @@ export const deleteVersion = createServerFn({ method: "POST" })
         | DbError
       >
     > => {
-      await requireUser();
+      const user = await requireUser();
       const db = await getDb();
 
-      const versionResult = await ResultAsync.fromPromise(
-        db.query.screenplayVersions
-          .findFirst({ where: eq(screenplayVersions.id, data.versionId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("deleteVersion.find", e),
-      );
-      if (versionResult.isErr()) return toShape(err(versionResult.error));
-      const version = versionResult.value;
-      if (!version)
-        return toShape(err(new VersionNotFoundError(data.versionId)));
+      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      if (access.isErr()) return toShape(err(access.error));
+      const version = access.value;
 
-      if (!version.isAuto) {
-        const countResult = await ResultAsync.fromPromise(
-          db
-            .select({ value: count() })
-            .from(screenplayVersions)
-            .where(
-              and(
-                eq(screenplayVersions.screenplayId, version.screenplayId),
-                eq(screenplayVersions.isAuto, false),
-              ),
-            )
-            .then((rows) => rows[0]?.value ?? 0),
-          (e) => new DbError("deleteVersion.count", e),
-        );
-        if (countResult.isErr()) return toShape(err(countResult.error));
-        if (countResult.value <= 1)
-          return toShape(err(new CannotDeleteLastManualError()));
-      }
+      const countResult = await ResultAsync.fromPromise(
+        db
+          .select({ value: count() })
+          .from(screenplayVersions)
+          .where(eq(screenplayVersions.screenplayId, version.screenplayId))
+          .then((rows) => rows[0]?.value ?? 0),
+        (e) => new DbError("deleteVersion.count", e),
+      );
+      if (countResult.isErr()) return toShape(err(countResult.error));
+      if (countResult.value <= 1)
+        return toShape(err(new CannotDeleteLastManualError()));
 
       return toShape(
         await ResultAsync.fromPromise(
@@ -270,63 +356,77 @@ export const deleteVersion = createServerFn({ method: "POST" })
     },
   );
 
-// ─── Auto-versioning helper (used by saveScreenplay) ─────────────────────────
+// ─── Rename version ───────────────────────────────────────────────────────────
 
-export const maybeCreateAutoVersion = async (
-  tx: Awaited<ReturnType<typeof getDb>>,
-  screenplayId: string,
-  content: string,
-  pageCount: number,
-  userId: string,
-): Promise<void> => {
-  const FIVE_MINUTES_MS = 5 * 60 * 1000;
+export const renameVersion = createServerFn({ method: "POST" })
+  .validator(RenameVersionInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        VersionView,
+        VersionNotFoundError | InvalidLabelError | ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
 
-  const latest = await tx.query.screenplayVersions.findFirst({
-    where: and(
-      eq(screenplayVersions.screenplayId, screenplayId),
-      eq(screenplayVersions.isAuto, true),
-    ),
-    orderBy: [desc(screenplayVersions.createdAt)],
-  });
+      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      if (access.isErr()) return toShape(err(access.error));
 
-  const now = Date.now();
-  const needsSnapshot =
-    !latest || now - latest.createdAt.getTime() >= FIVE_MINUTES_MS;
+      return toShape(
+        await ResultAsync.fromPromise(
+          db
+            .update(screenplayVersions)
+            .set({ label: data.label })
+            .where(eq(screenplayVersions.id, data.versionId))
+            .returning()
+            .then((rows) => rows[0] ?? null),
+          (e) => new DbError("renameVersion", e),
+        ).andThen((row) =>
+          row
+            ? ok(stripYjsSnapshot(row))
+            : err(new VersionNotFoundError(data.versionId)),
+        ),
+      );
+    },
+  );
 
-  if (!needsSnapshot) return;
+// ─── Duplicate version ────────────────────────────────────────────────────────
 
-  const autoCount = await tx
-    .select({ value: count() })
-    .from(screenplayVersions)
-    .where(
-      and(
-        eq(screenplayVersions.screenplayId, screenplayId),
-        eq(screenplayVersions.isAuto, true),
-      ),
-    )
-    .then((rows) => rows[0]?.value ?? 0);
+export const duplicateVersion = createServerFn({ method: "POST" })
+  .validator(DuplicateVersionInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
 
-  if (autoCount >= MAX_AUTO_SNAPSHOTS) {
-    const oldest = await tx.query.screenplayVersions.findFirst({
-      where: and(
-        eq(screenplayVersions.screenplayId, screenplayId),
-        eq(screenplayVersions.isAuto, true),
-      ),
-      orderBy: [asc(screenplayVersions.createdAt)],
-    });
-    if (oldest) {
-      await tx
-        .delete(screenplayVersions)
-        .where(eq(screenplayVersions.id, oldest.id));
-    }
-  }
+      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      if (access.isErr()) return toShape(err(access.error));
+      const source = access.value;
 
-  await tx.insert(screenplayVersions).values({
-    screenplayId,
-    label: null,
-    content,
-    pageCount,
-    isAuto: true,
-    createdBy: userId,
-  });
-};
+      return toShape(
+        await ResultAsync.fromPromise(
+          db
+            .insert(screenplayVersions)
+            .values({
+              screenplayId: source.screenplayId,
+              label: data.label,
+              content: source.content,
+              pageCount: source.pageCount,
+              createdBy: user.id,
+            })
+            .returning()
+            .then((rows) => rows[0]),
+          (e) => new DbError("duplicateVersion", e),
+        ).andThen((v) =>
+          v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
+        ),
+      );
+    },
+  );

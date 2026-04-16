@@ -2,22 +2,20 @@ import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
-import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
+import { screenplays } from "@oh-writers/db/schema";
 import type { Screenplay } from "@oh-writers/db";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
+import { ensureFirstVersion } from "./versions.server";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
   ForbiddenError,
   DbError,
 } from "../screenplay.errors";
-
-const FIVE_MINUTES_MS = 5 * 60 * 1000;
-const MAX_AUTO_SNAPSHOTS = 50;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +72,7 @@ export const saveScreenplay = createServerFn({ method: "POST" })
         ScreenplayNotFoundError | ForbiddenError | DbError
       >
     > => {
-      const user = await requireUser();
+      await requireUser();
       const pageCount = estimatePageCount(data.content);
       const db = await getDb();
 
@@ -122,68 +120,15 @@ export const saveScreenplay = createServerFn({ method: "POST" })
 
             if (!updated) throw new Error("Save returned no rows");
 
-            if (s.content !== data.content) {
-              const {
-                and,
-                desc,
-                asc,
-                count: countFn,
-              } = await import("drizzle-orm");
-
-              const latest = await tx.query.screenplayVersions.findFirst({
-                where: and(
-                  eq(screenplayVersions.screenplayId, data.screenplayId),
-                  eq(screenplayVersions.isAuto, true),
-                ),
-                orderBy: [desc(screenplayVersions.createdAt)],
-              });
-
-              const needsSnapshot =
-                !latest ||
-                Date.now() - latest.createdAt.getTime() >= FIVE_MINUTES_MS;
-
-              if (needsSnapshot) {
-                const [autoCountRow] = await tx
-                  .select({ value: countFn() })
-                  .from(screenplayVersions)
-                  .where(
-                    and(
-                      eq(screenplayVersions.screenplayId, data.screenplayId),
-                      eq(screenplayVersions.isAuto, true),
-                    ),
-                  );
-                const autoCount = autoCountRow?.value ?? 0;
-
-                if (autoCount >= MAX_AUTO_SNAPSHOTS) {
-                  const oldest = await tx.query.screenplayVersions.findFirst({
-                    where: and(
-                      eq(screenplayVersions.screenplayId, data.screenplayId),
-                      eq(screenplayVersions.isAuto, true),
-                    ),
-                    orderBy: [asc(screenplayVersions.createdAt)],
-                  });
-                  if (oldest) {
-                    await tx
-                      .delete(screenplayVersions)
-                      .where(eq(screenplayVersions.id, oldest.id));
-                  }
-                }
-
-                await tx.insert(screenplayVersions).values({
-                  screenplayId: data.screenplayId,
-                  label: null,
-                  content: s.content,
-                  pageCount: s.pageCount,
-                  isAuto: true,
-                  createdBy: user.id,
-                });
-              }
-            }
+            // ensureFirstVersion runs inside the same transaction so the
+            // count + insert are atomic — prevents duplicate "Versione 1"
+            // rows from concurrent saves.
+            await ensureFirstVersion(tx, updated.id, s.createdBy);
 
             return updated;
           }),
           (e) => new DbError("saveScreenplay", e),
-        ).andThen((updated) => ok(stripYjsState(updated))),
+        ).map(stripYjsState),
       );
     },
   );

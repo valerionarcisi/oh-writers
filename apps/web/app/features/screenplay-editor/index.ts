@@ -2,8 +2,11 @@
 export { ScreenplayEditor } from "./components/ScreenplayEditor";
 export { ScreenplayToolbar } from "./components/ScreenplayToolbar";
 export { MonacoWrapper } from "./components/MonacoWrapper";
-export { ImportPdfButton } from "./components/ImportPdfButton";
+export { ToolbarMenu } from "./components/ToolbarMenu";
+export { SaveIndicator } from "./components/SaveIndicator";
 export { VersionsList } from "./components/VersionsList";
+export { VersionsPanel } from "./components/VersionsPanel";
+export { VersionViewingBanner } from "./components/VersionViewingBanner";
 export { VersionViewer } from "./components/VersionViewer";
 export { VersionDiff } from "./components/VersionDiff";
 
@@ -19,6 +22,8 @@ export {
   useCreateManualVersion,
   useRestoreVersion,
   useDeleteVersion,
+  useRenameVersion,
+  useDuplicateVersion,
   versionsQueryOptions,
   versionQueryOptions,
 } from "./hooks/useVersions";
@@ -35,6 +40,8 @@ export {
   createManualVersion,
   restoreVersion,
   deleteVersion,
+  renameVersion,
+  duplicateVersion,
 } from "./hooks/useVersions";
 
 // Lib

@@ -1,0 +1,213 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface, #1b1b1f);
+  border-block-end: 1px solid var(--color-border, #2a2a2f);
+  box-shadow: var(--shadow-md, 0 4px 12px rgb(0 0 0 / 0.25));
+  max-block-size: 50vh;
+  overflow: hidden;
+  animation: slideIn 150ms ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  border-block-end: 1px solid var(--color-border, #2a2a2f);
+}
+
+.title {
+  font-weight: 600;
+  margin-inline-end: auto;
+  color: var(--color-text, #e8e8ea);
+}
+
+.createForm {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  align-items: center;
+}
+
+.labelInput,
+.renameInput {
+  background: var(--color-bg, #0f0f12);
+  border: 1px solid var(--color-border, #2a2a2f);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-1, 0.25rem) var(--space-2, 0.5rem);
+  color: var(--color-text, #e8e8ea);
+  font: inherit;
+  min-inline-size: 14rem;
+}
+
+.primaryBtn,
+.ghostBtn,
+.closeBtn {
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+  font: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.primaryBtn {
+  background: var(--color-accent, #6366f1);
+  color: var(--color-accent-contrast, #fff);
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover, #4f52e0);
+  }
+}
+
+.ghostBtn {
+  background: transparent;
+  border: 1px solid var(--color-border, #2a2a2f);
+  color: var(--color-text, #e8e8ea);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-hover, #23232a);
+  }
+}
+
+.dangerBtn {
+  color: var(--color-error, #ef4444);
+
+  &:hover:not(:disabled) {
+    background: var(--color-error-bg, #3a1212);
+  }
+}
+
+.closeBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text-muted, #9a9aa3);
+  padding-inline: var(--space-2, 0.5rem);
+
+  &:hover {
+    background: var(--color-surface-hover, #23232a);
+    color: var(--color-text, #e8e8ea);
+  }
+}
+
+.error {
+  background: var(--color-error-bg, #3a1212);
+  color: var(--color-error, #ef4444);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  border-block-end: 1px solid var(--color-border, #2a2a2f);
+  font-size: 0.875rem;
+}
+
+.body {
+  overflow-y: auto;
+  padding: var(--space-2, 0.5rem) 0;
+}
+
+.status,
+.empty {
+  padding: var(--space-4, 1rem);
+  color: var(--color-text-muted, #9a9aa3);
+  text-align: center;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4, 1rem);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  border-block-end: 1px solid var(--color-border-subtle, #1f1f24);
+  border-inline-start: 3px solid transparent;
+
+  &:last-child {
+    border-block-end: none;
+  }
+
+  &:hover {
+    background: var(--color-surface-hover, #23232a);
+  }
+}
+
+.rowViewing {
+  background: var(--color-warning-subtle);
+  border-inline-start-color: var(--color-warning);
+
+  &:hover {
+    background: var(--color-warning-subtle);
+  }
+}
+
+.activeBtn {
+  background: var(--color-warning);
+  color: var(--color-fg-inverse);
+
+  &:hover:not(:disabled) {
+    background: var(--color-amber);
+  }
+}
+
+.rowMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.label {
+  font-weight: 500;
+  color: var(--color-text, #e8e8ea);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.autoBadge {
+  font-size: 0.7rem;
+  padding: 0 var(--space-2, 0.5rem);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface-hover, #23232a);
+  color: var(--color-text-muted, #9a9aa3);
+  font-weight: 400;
+}
+
+.date,
+.pages {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #9a9aa3);
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  flex-shrink: 0;
+}

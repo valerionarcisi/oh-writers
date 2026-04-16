@@ -6,6 +6,8 @@ import {
   createManualVersion,
   restoreVersion,
   deleteVersion,
+  renameVersion,
+  duplicateVersion,
   versionsQueryOptions,
   versionQueryOptions,
 } from "../server/versions.server";
@@ -13,6 +15,8 @@ import type {
   CreateManualVersionData,
   RestoreVersionData,
   DeleteVersionData,
+  RenameVersionData,
+  DuplicateVersionData,
 } from "../screenplay-versions.schema";
 
 export { versionsQueryOptions, versionQueryOptions };
@@ -46,11 +50,9 @@ export const useRestoreVersion = () => {
     mutationFn: async (input: RestoreVersionData) =>
       unwrapResult(await restoreVersion({ data: input })),
     onSuccess: (screenplay) => {
-      // Invalidate screenplay so the editor reloads with restored content
       void queryClient.invalidateQueries({
         queryKey: ["screenplays", screenplay.projectId],
       });
-      // Invalidate versions list (restore creates a safety auto-save)
       void queryClient.invalidateQueries({
         queryKey: ["versions", screenplay.id],
       });
@@ -71,10 +73,38 @@ export const useDeleteVersion = (screenplayId: string) => {
   });
 };
 
+export const useRenameVersion = (screenplayId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: RenameVersionData) =>
+      unwrapResult(await renameVersion({ data: input })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["versions", screenplayId],
+      });
+    },
+  });
+};
+
+export const useDuplicateVersion = (screenplayId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: DuplicateVersionData) =>
+      unwrapResult(await duplicateVersion({ data: input })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["versions", screenplayId],
+      });
+    },
+  });
+};
+
 export {
   listVersions,
   getVersion,
   createManualVersion,
   restoreVersion,
   deleteVersion,
+  renameVersion,
+  duplicateVersion,
 };

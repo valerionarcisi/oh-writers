@@ -1,0 +1,103 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+
+.drawer {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: var(--drawer-width, 360px);
+  min-inline-size: 280px;
+  max-inline-size: 600px;
+  background: var(--color-surface);
+  border-inline-start: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  pointer-events: all;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform 250ms var(--ease-default),
+    visibility 0ms 250ms;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.drawerOpen {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform 250ms var(--ease-default),
+    visibility 0ms 0ms;
+}
+
+.resizeHandle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -4px;
+  inline-size: 8px;
+  cursor: col-resize;
+  z-index: 1;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 3px;
+    inline-size: 2px;
+    background: transparent;
+    transition: background 150ms ease;
+  }
+
+  &:hover::after {
+    background: var(--color-accent);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-block-end: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-fg);
+  margin: 0;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  font-size: var(--text-base);
+  line-height: 1;
+
+  &:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-fg);
+  }
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  min-block-size: 0;
+}

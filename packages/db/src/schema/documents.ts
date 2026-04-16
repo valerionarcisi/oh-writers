@@ -39,3 +39,19 @@ export const documents = pgTable(
 
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
+
+export const documentVersions = pgTable("document_versions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  label: text("label"),
+  content: text("content").notNull(),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type NewDocumentVersion = typeof documentVersions.$inferInsert;

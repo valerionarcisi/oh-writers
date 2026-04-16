@@ -38,7 +38,7 @@ const TEST_PASSWORD = "testpassword123";
 const TEST_NAME = "Test User";
 
 export async function seed() {
-  console.log("Seeding database...");
+  process.stdout.write("Seeding database...\n");
 
   // 1. Test user
   const hashedPassword = await hashPassword(TEST_PASSWORD);
@@ -64,7 +64,7 @@ export async function seed() {
     })
     .onConflictDoNothing();
 
-  console.log("  -> Test user created");
+  process.stdout.write("  -> Test user created\n");
 
   // 2. Project — "Non fa ridere"
   await db
@@ -79,7 +79,7 @@ export async function seed() {
     })
     .onConflictDoNothing();
 
-  console.log("  -> Project created");
+  process.stdout.write("  -> Project created\n");
 
   // 3. Documents — all four narrative docs
   await db
@@ -116,7 +116,7 @@ export async function seed() {
     ])
     .onConflictDoNothing();
 
-  console.log("  -> Documents created");
+  process.stdout.write("  -> Documents created\n");
 
   // 4. Screenplay — full Fountain text.
   // Use upsert so that re-running the seed after E2E test runs always restores
@@ -137,7 +137,7 @@ export async function seed() {
       set: { content: NON_FA_RIDERE_FOUNTAIN, pmDoc: null, pageCount: 13 },
     });
 
-  console.log("  -> Screenplay created");
+  process.stdout.write("  -> Screenplay created\n");
 
   // 5. One manual version — "v13 — 2025-11-11"
   await db
@@ -147,13 +147,12 @@ export async function seed() {
       label: "v13 — 2025-11-11",
       content: NON_FA_RIDERE_FOUNTAIN,
       pageCount: 13,
-      isAuto: false,
       createdBy: TEST_USER_ID,
     })
     .onConflictDoNothing();
 
-  console.log("  -> Manual version created");
-  console.log("Seed complete.");
+  process.stdout.write("  -> Manual version created\n");
+  process.stdout.write("Seed complete.\n");
 }
 
 seed()

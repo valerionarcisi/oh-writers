@@ -22,6 +22,20 @@
       "when": 1744632000000,
       "tag": "0002_add_pm_doc",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744720000000,
+      "tag": "0003_add_document_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1744810000000,
+      "tag": "0004_drop_is_auto",
+      "breakpoints": true
     }
   ]
 }

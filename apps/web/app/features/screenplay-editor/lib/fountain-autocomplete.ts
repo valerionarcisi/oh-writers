@@ -78,8 +78,11 @@ export const sceneNumberBefore = (
  */
 export const extractLocations = (content: string): string[] => {
   const locs = new Set<string>();
+  // Accept both ASCII hyphen ( - ) and em dash ( – ) as the separator between
+  // location and time-of-day, since copy-pasted or imported content often uses
+  // the typographic dash.
   const headingRe =
-    /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s+(.+?)(?:\s+-\s+.+)?$/;
+    /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s+(.+?)(?:\s+[-–]\s+.+)?$/;
   for (const line of content.split("\n")) {
     const match = headingRe.exec(line.trim());
     if (match?.[1]) {

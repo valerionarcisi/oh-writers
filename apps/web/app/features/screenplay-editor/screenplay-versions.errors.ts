@@ -20,8 +20,18 @@ export class CannotDeleteLastManualError {
   }
 }
 
+export class InvalidLabelError {
+  readonly _tag = "InvalidLabelError" as const;
+  readonly message: string;
+
+  constructor(reason: string) {
+    this.message = `Invalid label: ${reason}`;
+  }
+}
+
 export type VersionsError =
   | VersionNotFoundError
   | CannotDeleteLastManualError
+  | InvalidLabelError
   | ForbiddenError
   | DbError;
