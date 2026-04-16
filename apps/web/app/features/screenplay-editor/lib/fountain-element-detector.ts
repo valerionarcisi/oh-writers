@@ -89,10 +89,17 @@ const isPlainFountainCue = (
   if (trimmed !== trimmed.toUpperCase()) return false;
   if (!/[A-Z]/.test(trimmed)) return false;
   if (trimmed.length > 40) return false;
-  // Strip a trailing parenthetical extension (e.g. "JOHN (V.O.)") before
-  // checking punctuation — the parens themselves are allowed.
-  const nameOnly = trimmed.replace(/\s*\([^)]*\)\s*$/, "");
+  // Strip all trailing parenthetical extensions iteratively so that compound
+  // cues like "JOHN (V.O.) (CONT'D)" don't leave an intermediate "(V.O.)"
+  // with dots that would falsely trigger the punctuation check below.
+  let nameOnly = trimmed;
+  while (/\s*\([^)]*\)\s*$/.test(nameOnly)) {
+    nameOnly = nameOnly.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  }
   // Reject sentence-like punctuation that wouldn't appear in a name.
   if (/[.!?,;:]/.test(nameOnly)) return false;
+  // Reject en-dash / em-dash: these appear in production notes ("SCENES 42 – 46
+  // OMITTED") and range expressions, never in real character names.
+  if (/[\u2013\u2014]/.test(nameOnly)) return false;
   return true;
 };

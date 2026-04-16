@@ -17,7 +17,7 @@ export const DIALOGUE_INDENT = "          ";
 // EST. = "esterno" (Italian for exterior).
 // Combined forms come first so they win over the bare forms in regex alternation.
 export const SCENE_HEADING_RE =
-  /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s/;
+  /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E|INSERT)\s/;
 
 // Canonical list of Fountain transitions. Order matters for UI display.
 export const FOUNTAIN_TRANSITIONS = [

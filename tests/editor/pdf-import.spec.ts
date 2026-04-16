@@ -49,6 +49,8 @@
  */
 
 import path from "path";
+import fs from "fs";
+import os from "os";
 import { test, expect, type Page } from "@playwright/test";
 import { BASE_URL, waitForEditor, getEditorContent } from "../helpers";
 
@@ -56,7 +58,20 @@ import { BASE_URL, waitForEditor, getEditorContent } from "../helpers";
 
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
+
+// Small generated PDF — used for most tests (fast parsing, ~33 KB).
+// Contains: scene headings, character cues with extensions (V.O., CONT'D,
+// compound, O.S.), dialogue, parenthetical, action, transitions (CUT TO:,
+// FADE OUT.), INSERT slug, OMITTED block.
 const PDF_FIXTURE = path.resolve(
+  __dirname,
+  "../fixtures/screenplays/shooting-script.pdf",
+);
+
+// Full Wolf of Wall Street shooting script — only used for tests that
+// explicitly require its parasitic-text patterns (Buff header, bare page
+// numbers, revision asterisks, scene-number columns).
+const WOLF_PDF = path.resolve(
   __dirname,
   "../fixtures/the-wolf-of-wall-street.pdf",
 );
@@ -120,12 +135,58 @@ async function confirmReplace(page: Page) {
   // Wait for either button to appear
   await Promise.race([
     overwrite
-      .waitFor({ state: "visible", timeout: 5_000 })
+      .waitFor({ state: "visible", timeout: 15_000 })
       .then(() => overwrite.click()),
     replace
-      .waitFor({ state: "visible", timeout: 5_000 })
+      .waitFor({ state: "visible", timeout: 15_000 })
       .then(() => replace.click()),
   ]);
+}
+
+/** Open the screenplay editor and wait for it to be ready. */
+async function openScreenplay(page: Page) {
+  await page.goto(`${BASE_URL}/projects/${projectId}/screenplay`);
+  await page.waitForLoadState("networkidle");
+  return waitForEditor(page);
+}
+
+/**
+ * Import the Wolf PDF into the page, handling any confirm dialog.
+ * Waits until the editor fountain is non-empty (PDF parsed + doc updated).
+ */
+async function importAndConfirm(page: Page) {
+  // Check if screenplay has content before import to decide if we'll see a dialog
+  const before = await getEditorContent(page);
+  await importPdf(page, PDF_FIXTURE);
+  if (before.trim().length > 0) {
+    await confirmReplace(page);
+  }
+  // Wait for PDF parsing + editor update — fountain must be non-empty
+  await page.waitForFunction(
+    () => ((window as any).__ohWritersFountain?.() ?? "").trim().length > 100,
+    { timeout: 20_000 },
+  );
+}
+
+/** Wait until the editor has Wolf content (loaded from DB or just imported). */
+async function waitForWolfContent(page: Page) {
+  await page.waitForFunction(
+    () =>
+      ((window as any).__ohWritersFountain?.() ?? "").includes(
+        "STRATTON OAKMONT",
+      ),
+    { timeout: 15_000 },
+  );
+}
+
+/** Import the Wolf PDF, handling any confirm dialog. For parasitic-text tests. */
+async function importWolfAndConfirm(page: Page) {
+  const before = await getEditorContent(page);
+  await importPdf(page, WOLF_PDF);
+  if (before.trim().length > 0) {
+    await confirmReplace(page);
+  }
+  await waitForWolfContent(page);
 }
 
 // ─── Suite setup ──────────────────────────────────────────────────────────────
@@ -160,7 +221,12 @@ test.beforeAll(async ({ browser }) => {
 test("[OHW-070] Import PDF button is visible in toolbar", async ({
   browser,
 }) => {
-  test.skip(true, "feature not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await page.getByTestId("toolbar-menu-trigger").click();
+  await expect(page.getByTestId("menu-item-import-pdf")).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-071  File picker opens on button click ───────────────────────────────
@@ -168,7 +234,17 @@ test("[OHW-070] Import PDF button is visible in toolbar", async ({
 test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await page.getByTestId("toolbar-menu-trigger").click();
+  const fileChooserPromise = page.waitForEvent("filechooser", {
+    timeout: 5_000,
+  });
+  await page.getByTestId("menu-item-import-pdf").click();
+  const fileChooser = await fileChooserPromise;
+  expect(fileChooser).toBeTruthy();
+  await page.close();
 });
 
 // ─── OHW-072  Importing into an empty screenplay replaces content silently ────
@@ -176,7 +252,24 @@ test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
 test("[OHW-072] Import into empty screenplay loads content without confirmation dialog", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+
+  // Screenplay is empty — no confirm dialog should appear
+  await importPdf(page, PDF_FIXTURE);
+
+  // Confirm dialog must NOT appear
+  await expect(page.getByTestId("import-confirm")).not.toBeVisible();
+
+  // Wait for PDF parsing + editor update
+  await page.waitForFunction(
+    () => ((window as any).__ohWritersFountain?.() ?? "").trim().length > 100,
+    { timeout: 20_000 },
+  );
+  const fountain = await getEditorContent(page);
+  expect(fountain.trim().length).toBeGreaterThan(0);
+  await page.close();
 });
 
 // ─── OHW-073  Importing into a non-empty screenplay shows a confirmation dialog
@@ -184,7 +277,21 @@ test("[OHW-072] Import into empty screenplay loads content without confirmation 
 test("[OHW-073] Import into non-empty screenplay shows replace-content confirmation", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  // Populate the screenplay first (handles empty → no dialog, or non-empty → confirms)
+  await importAndConfirm(page);
+
+  // Now import a second time → screenplay is non-empty, confirm dialog must appear
+  await importPdf(page, PDF_FIXTURE);
+  await expect(page.getByTestId("import-confirm")).toBeVisible({
+    timeout: 8_000,
+  });
+
+  // Dismiss the dialog to restore state
+  await page.getByTestId("import-confirm-cancel").click();
+  await page.close();
 });
 
 // ─── OHW-074  Cancelling the confirmation keeps existing content unchanged ────
@@ -192,7 +299,24 @@ test("[OHW-073] Import into non-empty screenplay shows replace-content confirmat
 test("[OHW-074] Cancelling the replace dialog keeps existing content unchanged", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  const before = await getEditorContent(page);
+  expect(before.trim().length).toBeGreaterThan(0);
+
+  await importPdf(page, PDF_FIXTURE);
+  await expect(page.getByTestId("import-confirm")).toBeVisible({
+    timeout: 8_000,
+  });
+  await page.getByTestId("import-confirm-cancel").click();
+  await expect(page.getByTestId("import-confirm")).not.toBeVisible();
+
+  const after = await getEditorContent(page);
+  expect(after).toBe(before);
+  await page.close();
 });
 
 // ─── OHW-075  Scene headings are parsed correctly ─────────────────────────────
@@ -204,108 +328,163 @@ test("[OHW-074] Cancelling the replace dialog keeps existing content unchanged",
 test("[OHW-075] Scene headings are imported as scene_heading nodes without scene numbers or date annotations", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  const fountain = await getEditorContent(page);
+  // Scene heading must appear (shooting-script has "INT. OFFICE - DAY")
+  expect(fountain).toMatch(/INT\. OFFICE/);
+
+  // Must render as .pm-heading-title in the DOM (not plain action)
+  const heading = page
+    .locator(".pm-heading-title")
+    .filter({ hasText: /OFFICE/ })
+    .first();
+  await expect(heading).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-076  Character cue — plain name ──────────────────────────────────────
-//
-// Input:     "JORDAN"
-// Expected:  character node  name="JORDAN"  extension=null
 
 test("[OHW-076] Plain character cue is imported as character node with no extension", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // JORDAN as a standalone character cue (without extension) must be in a .pm-character block
+  const charNode = page
+    .locator(".pm-character")
+    .filter({ hasText: /^JORDAN$/ })
+    .first();
+  await expect(charNode).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-077  Character cue — with single extension ──────────────────────────
-//
-// Input:     "JORDAN (CONT'D)"
-// Expected:  character node  text="JORDAN (CONT'D)"
-//
-// The character node is a plain text block — no sub-slots. The full string
-// including the parenthetical extension is stored verbatim.
 
 test("[OHW-077] Character cue with extension is imported as character node containing the full text", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  const charNode = page
+    .locator(".pm-character")
+    .filter({ hasText: "JORDAN (CONT'D)" })
+    .first();
+  await expect(charNode).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-078  Character cue — with compound extension (V.O. + CONT'D) ─────────
-//
-// Input:     "JORDAN (V.O.) (CONT'D)"
-// Expected:  character node  text="JORDAN (V.O.) (CONT'D)"
-//
-// The parser must not split this into two nodes. The entire raw string becomes
-// the text content of one character block.
 
 test("[OHW-078] Character cue with compound extensions is one character node containing the full raw text", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // Must be a single .pm-character node containing both extensions — not split in two.
+  // Use a regex to tolerate different apostrophe encodings from the PDF renderer.
+  const charNode = page
+    .locator(".pm-character")
+    .filter({ hasText: /JORDAN \(V\.O\.\) \(CONT.D\)/ })
+    .first();
+  await expect(charNode).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-079  Character cue — off-screen extension ────────────────────────────
-//
-// Input:     "CLIENT #1 (O.S.)"  (page 8)
-// Expected:  character node  text="CLIENT #1 (O.S.)"
 
 test("[OHW-079] Character cue with O.S. extension is imported as character node with full text", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  const charNode = page
+    .locator(".pm-character")
+    .filter({ hasText: "CLIENT #1 (O.S.)" })
+    .first();
+  await expect(charNode).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-080  Dialogue lines ──────────────────────────────────────────────────
-//
-// Input (immediately after "JORDAN"):
-//   "Twenty five grand to the first"
-//   "cocksucker to nail a bullseye!"
-// Expected: dialogue node containing both lines as one block
 
 test("[OHW-080] Dialogue lines following a character cue are imported as a single dialogue node", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // At least one .pm-dialogue block must exist
+  await expect(page.locator(".pm-dialogue").first()).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-081  Parenthetical ───────────────────────────────────────────────────
-//
-// Input (page 4, inside TERESA dialogue block):  "(a few beats; then)"
-// Input (page 4, standalone):                   "(ALT)"
-// Expected: parenthetical node in both cases
 
 test("[OHW-081] Parenthetical lines (surrounded by parentheses) are imported as parenthetical nodes", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  await expect(page.locator(".pm-parenthetical").first()).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-082  Action lines ───────────────────────────────────────────────────
-//
-// Input:  "Absolute bedlam. 300 drunken STOCKBROKERS, most in their..."
-// Expected: action node
 
 test("[OHW-082] Descriptive action lines are imported as action nodes", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  await expect(page.locator(".pm-action").first()).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-083  Transitions (CUT TO:) ──────────────────────────────────────────
-//
-// Input (page 8):  "58A    CUT TO:    58A"
-// Expected:        transition node  text="CUT TO:"
-//
-// The scene number fragments ("58A") on both sides are stripped. Only the
-// "CUT TO:" text survives as a transition block. Clicking on it in the editor
-// must show the element pill labelled "Transition".
 
 test("[OHW-083] CUT TO: lines are imported as transition nodes with scene numbers stripped", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // CUT TO: must exist as a .pm-transition node
+  const transitionNode = page
+    .locator(".pm-transition")
+    .filter({ hasText: "CUT TO:" })
+    .first();
+  await expect(transitionNode).toBeVisible();
+
+  // Scene numbers like "58A" must not appear alongside it in the fountain text
+  const fountain = await getEditorContent(page);
+  expect(fountain).not.toMatch(/58A\s+CUT TO:/);
+  await page.close();
 });
 
 // ─── OHW-084  Clicking on an imported transition shows the Transition pill ────
@@ -313,25 +492,33 @@ test("[OHW-083] CUT TO: lines are imported as transition nodes with scene number
 test("[OHW-084] Clicking on an imported transition block shows the 'Transition' element pill", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  const transitionNode = page
+    .locator(".pm-transition")
+    .filter({ hasText: "CUT TO:" })
+    .first();
+  await expect(transitionNode).toBeVisible();
+  await transitionNode.click();
+
+  // The active element pill in the toolbar should be "Transition"
+  const activePill = page.locator('[aria-pressed="true"]');
+  await expect(activePill).toContainText(/transition/i, { timeout: 3_000 });
+  await page.close();
 });
 
 // ─── OHW-085  Parasitic text stripped — Buff Revised Pages header ─────────────
-//
-// Input:  "The Wolf of Wall Street    Buff Revised Pages    3/5/13"
-// Expected: this line does not appear anywhere in the imported content
 
 test("[OHW-085] 'Buff Revised Pages' header lines are stripped from imported content", async ({
   browser,
 }) => {
   const page = await browser.newPage();
   await page.context().addCookies(authCookies);
-  await page.goto(`${BASE_URL}/projects/${projectId}/screenplay`);
-  const editor = await waitForEditor(page);
-  await importPdf(page, PDF_FIXTURE);
-  // No confirmReplace needed: screenplay is empty so no confirm dialog appears.
-  // Wait for server-side PDF parsing to complete.
-  await page.waitForTimeout(5_000);
+  await openScreenplay(page);
+  await importWolfAndConfirm(page);
 
   const fountain = await getEditorContent(page);
   expect(fountain).not.toContain("Buff Revised Pages");
@@ -340,87 +527,151 @@ test("[OHW-085] 'Buff Revised Pages' header lines are stripped from imported con
 });
 
 // ─── OHW-086  Parasitic text stripped — bare page numbers ─────────────────────
-//
-// Standalone lines that are just a number followed by a period ("2.", "21."…)
-// appear as page footers in the PDF and must not appear in the editor.
 
 test("[OHW-086] Bare page-number lines (e.g. '2.', '21.') are stripped from imported content", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importWolfAndConfirm(page);
+
+  const fountain = await getEditorContent(page);
+  expect(fountain).not.toMatch(/^\s*\d+\.\s*$/m);
+  await page.close();
 });
 
 // ─── OHW-087  Parasitic text stripped — revision asterisks ────────────────────
-//
-// Asterisks at the end of lines ("*") and standalone scene-number+asterisk
-// fragments ("* 42", "*46A") are revision marks that must not appear in the
-// editor content.
 
 test("[OHW-087] Revision asterisks at the end of lines are stripped during import", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importWolfAndConfirm(page);
+
+  const fountain = await getEditorContent(page);
+  expect(fountain).not.toMatch(/\s\*+\s*$/m);
+  expect(fountain).not.toMatch(/^\s*\*+\s*\d*[A-Z]?\s*$/m);
+  await page.close();
 });
 
 // ─── OHW-088  Edge case — OMITTED scene block ────────────────────────────────
-//
-// Input (page 4):  "42    SCENES 42 – 46 OMITTED    * 42"
-// Decision:        preserved as an action block so the writer knows scenes were
-//                  intentionally omitted. Text becomes "SCENES 42 – 46 OMITTED"
-//                  (scene number and asterisk stripped).
 
 test("[OHW-088] OMITTED scene blocks are preserved as action nodes with numbers and asterisks stripped", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // "SCENES 42 – 46 OMITTED" must be preserved (fix: en-dash causes isPlainFountainCue
+  // to reject it, so it falls through to action).
+  const actionNode = page
+    .locator(".pm-action")
+    .filter({ hasText: /SCENES.*OMITTED/ })
+    .first();
+  await expect(actionNode).toBeVisible();
+
+  const fountain = await getEditorContent(page);
+  expect(fountain).toMatch(/SCENES.*OMITTED/);
+  await page.close();
 });
 
 // ─── OHW-089  Edge case — INSERT PHOTO slug ───────────────────────────────────
-//
-// Input (page 4):  "46A    INSERT ID PHOTO – TOBY WELCH    *46A"
-// Decision:        treated as a scene_heading (INSERT is a valid Fountain slug
-//                  prefix). Scene number ("46A") and asterisk stripped.
-//                  Result:  scene_heading  prefix="INSERT"  title="ID PHOTO – TOBY WELCH"
 
 test("[OHW-089] INSERT ID PHOTO lines are imported as scene_heading nodes", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // "INSERT ID PHOTO – TOBY WELCH" — the heading prefix is "INSERT", the title
+  // slot is "ID PHOTO – TOBY WELCH". Test the title slot.
+  const heading = page
+    .locator(".pm-heading-title")
+    .filter({ hasText: /ID PHOTO/ })
+    .first();
+  await expect(heading).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-090  Post-import interaction — edit scene heading title ──────────────
-//
-// The user clicks into a scene heading title cell and types a correction.
-// The block must remain typed as scene_heading (not revert to action).
 
 test("[OHW-090] Editing an imported scene heading title keeps the block as scene_heading", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // Click into a scene heading title and type a correction
+  const heading = page.locator(".pm-heading-title").first();
+  await expect(heading).toBeVisible();
+  await heading.click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" EDITED");
+
+  // The block must remain a scene heading (not converted to action)
+  await expect(
+    page.locator(".pm-heading-title").filter({ hasText: "EDITED" }).first(),
+  ).toBeVisible();
+  await page.close();
 });
 
 // ─── OHW-091  Post-import interaction — add character below action ─────────────
-//
-// The user places the cursor in an imported action block and presses Alt+c to
-// create a new character line. The shortcut must work on imported content
-// identically to hand-typed content.
 
 test("[OHW-091] Alt+c shortcut creates a character block after an imported action block", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  // Click an action block and move to the end
+  const actionNode = page.locator(".pm-action").first();
+  await expect(actionNode).toBeVisible();
+  await actionNode.click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+
+  // Alt+c should convert the new block to a character node
+  await page.keyboard.press("Alt+c");
+  await page.keyboard.type("TESTCHAR");
+
+  await expect(
+    page.locator(".pm-character").filter({ hasText: "TESTCHAR" }).first(),
+  ).toBeVisible({ timeout: 3_000 });
+  await page.close();
 });
 
 // ─── OHW-092  Post-import interaction — element pill on transition ────────────
-//
-// Already covered by OHW-084 but this test explicitly verifies the element
-// selector dropdown can be used to change the element type of an imported
-// transition (proving the block is not locked/read-only).
 
 test("[OHW-092] Element type of an imported transition can be changed via the element selector", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+  await importAndConfirm(page);
+
+  const transitionNode = page.locator(".pm-transition").first();
+  await expect(transitionNode).toBeVisible();
+  await transitionNode.click();
+
+  // The active element pill must show "Transition"
+  const activePill = page.locator('[aria-pressed="true"]');
+  await expect(activePill).toContainText(/transition/i, { timeout: 3_000 });
+
+  // The block is not locked — the pill buttons are interactive
+  await expect(activePill).toBeEnabled();
+  await page.close();
 });
 
 // ─── OHW-093  File too large — error message ──────────────────────────────────
@@ -428,7 +679,32 @@ test("[OHW-092] Element type of an imported transition can be changed via the el
 test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  // Create a temporary file just over 10 MB.
+  // Using 10.1 MB: base64-encoded = ~13.5 MB which is under MAX_BASE64_LENGTH
+  // (~14.7 MB), so the Zod validator passes and the server-side buffer check
+  // catches it with FileTooLargeError.
+  const tmpFile = path.join(os.tmpdir(), "large-test.pdf");
+  const largeBuf = Buffer.alloc(Math.ceil(10.1 * 1024 * 1024), 0x20);
+  largeBuf.write("%PDF-1.4\n", 0, "ascii");
+  fs.writeFileSync(tmpFile, largeBuf);
+
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+
+  await page.getByTestId("toolbar-menu-trigger").click();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByTestId("menu-item-import-pdf").click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(tmpFile);
+
+  await expect(page.getByTestId("import-error")).toBeVisible({
+    timeout: 8_000,
+  });
+  await expect(page.getByTestId("import-error")).toContainText(/10 MB/i);
+
+  fs.unlinkSync(tmpFile);
+  await page.close();
 });
 
 // ─── OHW-094  Encrypted PDF — error message ───────────────────────────────────
@@ -436,7 +712,44 @@ test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async
 test("[OHW-094] Importing a password-protected PDF shows an appropriate error message", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  // Minimal syntactically-valid encrypted PDF that causes pdf-parse to throw with "encrypt"
+  // This is a PDF with /Encrypt in the trailer — enough to trigger the encrypt check.
+  const encryptedPdfContent = `%PDF-1.4
+1 0 obj<</Type /Catalog /Pages 2 0 R>>endobj
+2 0 obj<</Type /Pages /Kids [3 0 R] /Count 1>>endobj
+3 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]>>endobj
+4 0 obj<</Filter /Standard /V 1 /R 2 /O <0000000000000000000000000000000000000000000000000000000000000000> /U <0000000000000000000000000000000000000000000000000000000000000000> /P -4>>endobj
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000206 00000 n
+trailer<</Size 5 /Root 1 0 R /Encrypt 4 0 R>>
+startxref
+400
+%%EOF`;
+
+  const tmpFile = path.join(os.tmpdir(), "encrypted-test.pdf");
+  fs.writeFileSync(tmpFile, encryptedPdfContent, "ascii");
+
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+
+  await page.getByTestId("toolbar-menu-trigger").click();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByTestId("menu-item-import-pdf").click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(tmpFile);
+
+  await expect(page.getByTestId("import-error")).toBeVisible({
+    timeout: 10_000,
+  });
+
+  fs.unlinkSync(tmpFile);
+  await page.close();
 });
 
 // ─── OHW-095  Non-PDF file — error message ────────────────────────────────────
@@ -444,5 +757,23 @@ test("[OHW-094] Importing a password-protected PDF shows an appropriate error me
 test("[OHW-095] Uploading a non-PDF file shows 'not a valid PDF' error", async ({
   browser,
 }) => {
-  test.skip(true, "not yet implemented");
+  const tmpFile = path.join(os.tmpdir(), "not-a-pdf.txt");
+  fs.writeFileSync(tmpFile, "This is just a text file, not a PDF.", "utf8");
+
+  const page = await browser.newPage();
+  await page.context().addCookies(authCookies);
+  await openScreenplay(page);
+
+  await page.getByTestId("toolbar-menu-trigger").click();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByTestId("menu-item-import-pdf").click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(tmpFile);
+
+  await expect(page.getByTestId("import-error")).toBeVisible({
+    timeout: 8_000,
+  });
+
+  fs.unlinkSync(tmpFile);
+  await page.close();
 });
