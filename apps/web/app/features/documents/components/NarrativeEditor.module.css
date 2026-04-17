@@ -147,6 +147,9 @@
 }
 
 .editorMain {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
   overflow-y: auto;
   padding: var(--space-6);
 }

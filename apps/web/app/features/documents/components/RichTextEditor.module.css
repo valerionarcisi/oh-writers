@@ -3,7 +3,8 @@
   flex-direction: column;
   gap: var(--space-2);
   inline-size: 100%;
-  block-size: 100%;
+  flex: 1;
+  min-block-size: 0;
 }
 
 .readOnly {
@@ -53,6 +54,7 @@
     font-size: var(--text-base);
     line-height: var(--leading-relaxed);
     color: var(--color-fg);
+    caret-color: var(--color-accent);
     background: var(--color-bg);
     border: var(--border);
     border-radius: var(--radius-md);

@@ -50,6 +50,7 @@ export function RichTextEditor({
     ],
     content: toTiptapHtml(value),
     editable: !readOnly,
+    immediatelyRender: false,
     onUpdate({ editor }) {
       onChange(editor.getHTML());
     },
@@ -94,12 +95,13 @@ export function RichTextEditor({
           <button
             type="button"
             className={`${styles.toolbarBtn} ${editor.isActive("bulletList") ? styles.active : ""}`}
+            title="Bullet list"
             onMouseDown={(e) => {
               e.preventDefault();
               editor.chain().focus().toggleBulletList().run();
             }}
           >
-            •
+            • List
           </button>
         </div>
       )}
