@@ -19,6 +19,12 @@
  */
 import type { EditorView, NodeView } from "prosemirror-view";
 import type { Node } from "prosemirror-model";
+import {
+  dispatchConflict,
+  hasConflict,
+  resequenceFromHere,
+  setSceneNumberLocked,
+} from "./scene-number-commands";
 
 const VALID_SCENE_NUMBER = /^(\d+)([A-Z]?)$/;
 
@@ -35,6 +41,9 @@ class HeadingNodeView implements NodeView {
   private readonly slots: HTMLElement;
   private input: HTMLInputElement | null = null;
   private errorEl: HTMLElement | null = null;
+  // True while a conflict modal is awaiting user choice; blocks reentrant
+  // commits (blur fires when the modal steals focus).
+  private awaitingResolve = false;
 
   constructor(node: Node, view: EditorView, getPos: () => number | undefined) {
     this.node = node;
@@ -153,7 +162,7 @@ class HeadingNodeView implements NodeView {
   }
 
   private commit() {
-    if (!this.input) return;
+    if (!this.input || this.awaitingResolve) return;
     const raw = this.input.value.trim().toUpperCase();
     if (!VALID_SCENE_NUMBER.test(raw)) {
       this.showError("Use a number like 5 or 5A");
@@ -170,12 +179,34 @@ class HeadingNodeView implements NodeView {
       this.cancelEdit();
       return;
     }
-    const tr = this.view.state.tr.setNodeMarkup(pos, null, {
-      ...this.node.attrs,
-      scene_number: raw,
-      scene_number_locked: true,
-    });
-    this.view.dispatch(tr);
+    if (hasConflict(this.view.state.doc, pos, raw)) {
+      // Hand decision to the React modal; keep input open until it resolves.
+      this.awaitingResolve = true;
+      dispatchConflict({
+        current,
+        proposed: raw,
+        resolve: (choice) => {
+          this.awaitingResolve = false;
+          if (choice === "cancel") {
+            this.cancelEdit();
+            return;
+          }
+          if (choice === "lock") {
+            setSceneNumberLocked(this.view, pos, raw);
+            this.cancelEdit();
+            return;
+          }
+          const r = resequenceFromHere(this.view, pos, raw);
+          if (!r.ok) {
+            this.showError(r.reason);
+            return;
+          }
+          this.cancelEdit();
+        },
+      });
+      return;
+    }
+    setSceneNumberLocked(this.view, pos, raw);
     this.cancelEdit();
   }
 

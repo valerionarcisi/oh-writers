@@ -7,6 +7,12 @@ import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
+import { SceneNumberConflictModal } from "./SceneNumberConflictModal";
+import type { ConflictChoice } from "./SceneNumberConflictModal";
+import {
+  SCENE_NUMBER_CONFLICT_EVENT,
+  type SceneNumberConflictDetail,
+} from "../lib/plugins/scene-number-commands";
 import styles from "./ScreenplayEditor.module.css";
 
 interface ScreenplayEditorProps {
@@ -21,6 +27,9 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [isFocusMode, setFocusMode] = useState(false);
   const [cursorLine] = useState(1);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
+  const [conflict, setConflict] = useState<SceneNumberConflictDetail | null>(
+    null,
+  );
   const viewRef = useRef<EditorView | null>(null);
   const handleSetElement = useCallback((el: ElementType) => {
     const view = viewRef.current;
@@ -48,6 +57,27 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       delete w["__ohWritersForceSave"];
     };
   }, [save, screenplay.id, content, pmDoc]);
+
+  // Scene-number conflict bus — heading NodeView dispatches on Enter/blur
+  // when the proposed number collides with another scene. We open the modal
+  // and forward the user's choice back through the event's resolve callback.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<SceneNumberConflictDetail>).detail;
+      setConflict(detail);
+    };
+    window.addEventListener(SCENE_NUMBER_CONFLICT_EVENT, handler);
+    return () =>
+      window.removeEventListener(SCENE_NUMBER_CONFLICT_EVENT, handler);
+  }, []);
+
+  const onConflictChoice = useCallback(
+    (choice: ConflictChoice) => {
+      conflict?.resolve(choice);
+      setConflict(null);
+    },
+    [conflict],
+  );
 
   // Ctrl/Cmd+Shift+F keybinding dispatches this event from within the editor
   useEffect(() => {
@@ -102,6 +132,13 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           />
         </div>
       </div>
+      {conflict ? (
+        <SceneNumberConflictModal
+          current={conflict.current}
+          proposed={conflict.proposed}
+          onResolve={onConflictChoice}
+        />
+      ) : null}
     </div>
   );
 }
