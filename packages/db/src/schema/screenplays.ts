@@ -7,6 +7,7 @@ import {
   timestamp,
   jsonb,
   customType,
+  unique,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { projects } from "./projects";
@@ -29,6 +30,7 @@ export const screenplays = pgTable("screenplays", {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pmDoc: jsonb("pm_doc").$type<Record<string, any> | null>(),
   content: text("content").notNull().default(""),
+  currentVersionId: uuid("current_version_id"),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),
@@ -36,21 +38,26 @@ export const screenplays = pgTable("screenplays", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const screenplayVersions = pgTable("screenplay_versions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  screenplayId: uuid("screenplay_id")
-    .notNull()
-    .references(() => screenplays.id, { onDelete: "cascade" }),
-  label: text("label"),
-  content: text("content").notNull(),
-  yjsSnapshot: bytea("yjs_snapshot"),
-  pageCount: integer("page_count").notNull().default(0),
-  isAuto: boolean("is_auto").notNull().default(false),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const screenplayVersions = pgTable(
+  "screenplay_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    screenplayId: uuid("screenplay_id")
+      .notNull()
+      .references(() => screenplays.id, { onDelete: "cascade" }),
+    number: integer("number").notNull().default(1),
+    label: text("label"),
+    content: text("content").notNull(),
+    yjsSnapshot: bytea("yjs_snapshot"),
+    pageCount: integer("page_count").notNull().default(0),
+    isAuto: boolean("is_auto").notNull().default(false),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.screenplayId, t.number)],
+);
 
 export const screenplayBranches = pgTable("screenplay_branches", {
   id: uuid("id").defaultRandom().primaryKey(),

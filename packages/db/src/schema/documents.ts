@@ -27,6 +27,7 @@ export const documents = pgTable(
     }).notNull(),
     title: text("title").notNull(),
     content: text("content").notNull().default(""),
+    currentVersionId: uuid("current_version_id"),
     yjsState: bytea("yjs_state"),
     createdBy: uuid("created_by")
       .notNull()

@@ -10,9 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "diff": "^9.0.0",
     "neverthrow": "8.2.0"
   },
   "devDependencies": {
+    "@types/diff": "^8.0.0",
     "typescript": "5.9.3"
   }
 }

@@ -158,6 +158,7 @@ export async function seed() {
       label: "v13 — 2025-11-11",
       content: NON_FA_RIDERE_FOUNTAIN,
       pageCount: 13,
+      number: 1,
       isAuto: false,
       createdBy: TEST_USER_ID,
     })
