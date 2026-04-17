@@ -44,7 +44,7 @@
   display: flex;
   min-block-size: 0;
 
-  & .ProseMirror {
+  & :global(.tiptap) {
     flex: 1;
     inline-size: 100%;
     min-block-size: 320px;
@@ -89,7 +89,7 @@
       margin-block-end: var(--space-3);
     }
 
-    & .is-editor-empty:first-child::before {
+    & p:global(.is-editor-empty):first-child::before {
       content: attr(data-placeholder);
       color: var(--color-fg-subtle);
       pointer-events: none;

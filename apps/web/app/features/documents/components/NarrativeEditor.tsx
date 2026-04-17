@@ -24,6 +24,17 @@ import styles from "./NarrativeEditor.module.css";
 
 const WORDS_PER_PAGE = 250;
 
+const stripHtml = (html: string): string =>
+  html
+    .replace(/<\/(p|h[1-6]|li|br)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .trim();
+
 const countWords = (text: string): number => {
   const trimmed = text.trim();
   if (trimmed.length === 0) return 0;
@@ -80,9 +91,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const isTreatment = type === DocumentTypes.TREATMENT;
   const isReadOnly = !document.canEdit;
 
-  const charCount = content.length;
+  const plainContent = isSynopsis || isTreatment ? stripHtml(content) : content;
+  const charCount = plainContent.length;
   const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
-  const pageEstimate = isTreatment ? estimatePages(content) : 0;
+  const pageEstimate =
+    isSynopsis || isTreatment ? estimatePages(plainContent) : 0;
 
   // Cmd/Ctrl+S — force save, bypassing autosave debounce.
   useEffect(() => {
@@ -263,12 +276,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
                 enableHeadings={isTreatment}
               />
               <div className={styles.editorFooter}>
-                {isSynopsis && (
-                  <span data-testid="char-counter" className={styles.counter}>
-                    {charCount} characters
-                  </span>
-                )}
-                {isTreatment && (
+                {(isSynopsis || isTreatment) && (
                   <>
                     <span data-testid="char-counter" className={styles.counter}>
                       {charCount} characters
