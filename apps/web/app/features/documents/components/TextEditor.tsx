@@ -41,18 +41,6 @@ export function TextEditor({
         spellCheck
         readOnly={readOnly}
       />
-      {maxLength !== undefined && (
-        <div className={styles.charCount}>
-          <span
-            className={
-              value.length > maxLength * 0.9 ? styles.charCountWarn : ""
-            }
-          >
-            {value.length}
-          </span>
-          /{maxLength}
-        </div>
-      )}
     </div>
   );
 }

@@ -23,6 +23,22 @@ interface ScreenplayEditorProps {
   screenplay: ScreenplayView;
 }
 
+// Walk the PM doc JSON and count `heading` nodes — drives the "s.N/M"
+// toolbar indicator. Cheap recursion; the doc rarely exceeds a few hundred
+// nodes even for feature-length screenplays.
+const countHeadings = (doc: Record<string, unknown> | null): number => {
+  if (!doc) return 0;
+  let count = 0;
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== "object") return;
+    const node = n as { type?: string; content?: unknown[] };
+    if (node.type === "heading") count += 1;
+    if (Array.isArray(node.content)) node.content.forEach(walk);
+  };
+  walk(doc);
+  return count;
+};
+
 export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [content, setContent] = useState(screenplay.content);
   const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
@@ -31,6 +47,9 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [isFocusMode, setFocusMode] = useState(false);
   const [cursorLine] = useState(1);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
+  const [currentSceneIndex, setCurrentSceneIndex] = useState<number | null>(
+    null,
+  );
   const [conflict, setConflict] = useState<SceneNumberConflictDetail | null>(
     null,
   );
@@ -41,9 +60,15 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     if (!view) return;
     setElement(el)(view.state, view.dispatch, view);
     view.focus();
+    // Optimistic highlight — the dispatchTransaction listener in
+    // ProseMirrorView will re-derive the pill from the cursor's parent on
+    // the next selection change, which keeps it accurate when the user
+    // clicks into a different block type.
+    setCurrentElement(el);
   }, []);
   const totalPages = estimatePageCount(content);
   const currentPage = currentPageFromLine(cursorLine);
+  const totalScenes = countHeadings(pmDoc);
   const { isDirty, isSaving, isError } = useAutoSave(
     screenplay.id,
     content,
@@ -62,6 +87,21 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       delete w["__ohWritersForceSave"];
     };
   }, [save, screenplay.id, content, pmDoc]);
+
+  // Cmd/Ctrl+S — force save, bypassing autosave debounce.
+  useEffect(() => {
+    if (!(screenplay.canEdit ?? false)) return;
+    const onKey = (e: KeyboardEvent) => {
+      const isSaveCombo =
+        (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s";
+      if (!isSaveCombo) return;
+      e.preventDefault();
+      if (!isSaving)
+        save.mutate({ screenplayId: screenplay.id, content, pmDoc });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [save, screenplay.id, screenplay.canEdit, content, pmDoc, isSaving]);
 
   // Scene-number conflict bus — heading NodeView dispatches on Enter/blur
   // when the proposed number collides with another scene. We open the modal
@@ -132,6 +172,8 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           currentVersionId={screenplay.currentVersionId ?? null}
           currentPage={currentPage}
           totalPages={totalPages}
+          currentSceneIndex={currentSceneIndex}
+          totalScenes={totalScenes}
           isDirty={isDirty}
           isSaving={isSaving}
           isError={isError}
@@ -153,6 +195,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
             onChange={setContent}
             onDocChange={setPmDoc}
             onElementChange={setCurrentElement}
+            onSceneIndexChange={setCurrentSceneIndex}
             readOnly={!(screenplay.canEdit ?? false)}
             onReady={(view) => {
               viewRef.current = view;

@@ -140,3 +140,28 @@
   overflow-y: auto;
   padding: var(--space-6);
 }
+
+.editorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  margin-block-start: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-fg-secondary);
+}
+
+.counter {
+  font-variant-numeric: tabular-nums;
+}
+
+.errorMessage {
+  margin-block-start: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+  background: var(--color-danger-subtle, transparent);
+  border: var(--border);
+  border-color: var(--color-danger);
+  border-radius: var(--radius-md);
+}

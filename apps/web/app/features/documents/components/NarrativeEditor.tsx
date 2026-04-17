@@ -14,6 +14,17 @@ import {
   serializeOutline,
   LOGLINE_MAX,
 } from "../documents.schema";
+
+const WORDS_PER_PAGE = 250;
+
+const countWords = (text: string): number => {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return 0;
+  return trimmed.split(/\s+/).length;
+};
+
+const estimatePages = (text: string): number =>
+  Math.max(1, Math.ceil(countWords(text) / WORDS_PER_PAGE));
 import { TextEditor } from "./TextEditor";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
@@ -63,9 +74,29 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     document.content,
   );
 
-  const handleManualSave = () => {
-    if (isDirty) save.mutate({ documentId: document.id, content });
-  };
+  const isOutline = type === DocumentTypes.OUTLINE;
+  const isLogline = type === DocumentTypes.LOGLINE;
+  const isSynopsis = type === DocumentTypes.SYNOPSIS;
+  const isTreatment = type === DocumentTypes.TREATMENT;
+  const isReadOnly = !document.canEdit;
+
+  const charCount = content.length;
+  const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
+  const pageEstimate = isTreatment ? estimatePages(content) : 0;
+
+  // Cmd/Ctrl+S — force save, bypassing autosave debounce.
+  useEffect(() => {
+    if (isReadOnly) return;
+    const onKey = (e: KeyboardEvent) => {
+      const isSaveCombo =
+        (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s";
+      if (!isSaveCombo) return;
+      e.preventDefault();
+      if (!isSaving) save.mutate({ documentId: document.id, content });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isReadOnly, isSaving, save, document.id, content]);
 
   // E2E test hook: trigger a save with raw content bypassing the textarea
   // (textarea has HTML maxLength enforcement — tests use this to verify
@@ -79,10 +110,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       delete w["__ohWritersSaveDocumentRaw"];
     };
   }, [document.id, save]);
-
-  const isOutline = type === DocumentTypes.OUTLINE;
-  const isLogline = type === DocumentTypes.LOGLINE;
-  const isReadOnly = !document.canEdit;
 
   // Narrative export — only shown on the three narrative pages, not outline.
   const isNarrative =
@@ -162,21 +189,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             </button>
           )}
           {!isReadOnly && (
-            <>
-              <SaveStatus
-                isDirty={isDirty}
-                isSaving={isSaving}
-                isError={isError}
-              />
-              <button
-                className={styles.saveBtn}
-                onClick={handleManualSave}
-                disabled={!isDirty || isSaving}
-                type="button"
-              >
-                Save
-              </button>
-            </>
+            <SaveStatus
+              isDirty={isDirty}
+              isSaving={isSaving}
+              isError={isError}
+            />
           )}
           <VersionsMenu
             versions={versions}
@@ -232,14 +249,47 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               readOnly={isReadOnly}
             />
           ) : (
-            <TextEditor
-              value={content}
-              onChange={setContent}
-              placeholder={DOCUMENT_PLACEHOLDERS[type]}
-              maxLength={isLogline ? LOGLINE_MAX : undefined}
-              singleLine={false}
-              readOnly={isReadOnly}
-            />
+            <>
+              <TextEditor
+                value={content}
+                onChange={setContent}
+                placeholder={DOCUMENT_PLACEHOLDERS[type]}
+                maxLength={isLogline ? LOGLINE_MAX : undefined}
+                singleLine={false}
+                readOnly={isReadOnly}
+              />
+              {isLogline && loglineOverCap && (
+                <div
+                  className={styles.errorMessage}
+                  role="alert"
+                  data-testid="logline-error"
+                >
+                  Logline is limited to {LOGLINE_MAX} characters.
+                </div>
+              )}
+              <div className={styles.editorFooter}>
+                {isLogline && (
+                  <span data-testid="char-counter" className={styles.counter}>
+                    {charCount}/{LOGLINE_MAX}
+                  </span>
+                )}
+                {isSynopsis && (
+                  <span data-testid="char-counter" className={styles.counter}>
+                    {charCount} characters
+                  </span>
+                )}
+                {isTreatment && (
+                  <>
+                    <span data-testid="char-counter" className={styles.counter}>
+                      {charCount} characters
+                    </span>
+                    <span data-testid="page-counter" className={styles.counter}>
+                      ~{pageEstimate} {pageEstimate === 1 ? "page" : "pages"}
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </div>
         {mode === "assisted" && <AIAssistantPanel type={type} />}
