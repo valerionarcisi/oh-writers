@@ -15,6 +15,7 @@ import {
   LOGLINE_MAX,
 } from "../documents.schema";
 import { TextEditor } from "./TextEditor";
+import { RichTextEditor } from "./RichTextEditor";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { SaveStatus } from "./SaveStatus";
@@ -227,17 +228,17 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               onChange={(outline) => setContent(serializeOutline(outline))}
               readOnly={isReadOnly}
             />
-          ) : (
+          ) : isLogline ? (
             <>
               <TextEditor
                 value={content}
                 onChange={setContent}
                 placeholder={DOCUMENT_PLACEHOLDERS[type]}
-                maxLength={isLogline ? LOGLINE_MAX : undefined}
+                maxLength={LOGLINE_MAX}
                 singleLine={false}
                 readOnly={isReadOnly}
               />
-              {isLogline && loglineOverCap && (
+              {loglineOverCap && (
                 <div
                   className={styles.errorMessage}
                   role="alert"
@@ -247,11 +248,21 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
                 </div>
               )}
               <div className={styles.editorFooter}>
-                {isLogline && (
-                  <span data-testid="char-counter" className={styles.counter}>
-                    {charCount}/{LOGLINE_MAX}
-                  </span>
-                )}
+                <span data-testid="char-counter" className={styles.counter}>
+                  {charCount}/{LOGLINE_MAX}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                placeholder={DOCUMENT_PLACEHOLDERS[type]}
+                readOnly={isReadOnly}
+                enableHeadings={isTreatment}
+              />
+              <div className={styles.editorFooter}>
                 {isSynopsis && (
                   <span data-testid="char-counter" className={styles.counter}>
                     {charCount} characters

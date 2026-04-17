@@ -1,5 +1,17 @@
 import PDFDocument from "pdfkit";
 
+const stripHtml = (html: string): string =>
+  html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
 export interface NarrativePdfInput {
   projectTitle: string;
   author: string | null;
@@ -89,7 +101,8 @@ export const buildNarrativePdf = (input: NarrativePdfInput): Promise<Buffer> =>
 
     for (const [title, body] of sections) {
       writeSectionHeader(doc, title);
-      writeBody(doc, body.trim().length > 0 ? body : "(not written yet)");
+      const plain = stripHtml(body);
+      writeBody(doc, plain.length > 0 ? plain : "(not written yet)");
       doc.moveDown(SECTION_SPACING / 12);
     }
 

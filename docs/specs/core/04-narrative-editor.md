@@ -30,7 +30,7 @@ Gap da chiudere in questa spec:
 - **Outline** editing e DnD → **04b**
 - **Export** PDF, Markdown, plain text, pitch package → **04c**
 - **AI assist** (streaming, suggerimenti, generazione varianti) → `AIAssistantPanel` è già uno stub disabilitato con badge "Spec 07", nessuna modifica qui
-- **Rich text editor** — decisione definitiva: textarea, mai TipTap / Lexical / ProseMirror dedicato
+- **Rich text editor** per logline — resta textarea; synopsis e treatment migrano a Tiptap → **04d**
 - **Markdown rendering** sul trattamento — rimane plain text; se emerge esigenza, sotto-spec dedicata
 - **Yjs real-time collaboration** sui narrativi — la colonna `documents.yjsState` resta ma inutilizzata per questi tipi; la sua rimozione è decisione futura
 - **i18n** delle label ("Saved", "Saving…") — copre Spec 18
