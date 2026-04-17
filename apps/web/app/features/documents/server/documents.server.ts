@@ -9,7 +9,7 @@ import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
-import { getDb } from "~/server/db";
+import { getDb, type Db } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { canEdit, getMembership } from "~/server/permissions";
 import {
@@ -33,6 +33,49 @@ export type DocumentViewWithPermission = DocumentView & {
   canEdit: boolean;
 };
 
+// ─── ensureFirstDocumentVersion ──────────────────────────────────────────────
+//
+// Narrative documents (logline / synopsis / outline / treatment) are created
+// without an implicit version row. The Versions popover would otherwise show
+// "Nessuna versione salvata" until the user manually clicks "Nuova versione".
+// Mirroring the screenplay pattern, the first read or save snapshots the
+// current content into document_versions.number = 1 / label = "Versione 1" and
+// points documents.current_version_id at it.
+type TxOrDb = Parameters<Parameters<Db["transaction"]>[0]>[0] | Db;
+
+async function ensureFirstDocumentVersion(
+  tx: TxOrDb,
+  documentId: string,
+  userId: string,
+): Promise<string | null> {
+  const [doc] = await tx
+    .select()
+    .from(documents)
+    .where(eq(documents.id, documentId))
+    .limit(1);
+  if (!doc) return null;
+  if (doc.currentVersionId) return doc.currentVersionId;
+
+  const [version] = await tx
+    .insert(documentVersions)
+    .values({
+      documentId: doc.id,
+      number: 1,
+      label: "Versione 1",
+      content: doc.content,
+      createdBy: userId,
+    })
+    .returning();
+  if (!version) return null;
+
+  await tx
+    .update(documents)
+    .set({ currentVersionId: version.id })
+    .where(eq(documents.id, doc.id));
+
+  return version.id;
+}
+
 // ─── Get document ─────────────────────────────────────────────────────────────
 
 export const getDocument = createServerFn({ method: "GET" })
@@ -47,17 +90,31 @@ export const getDocument = createServerFn({ method: "GET" })
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
-        db.query.documents
-          .findFirst({
-            where: and(
-              eq(documents.projectId, data.projectId),
-              eq(
-                documents.type,
-                data.type as (typeof documents.$inferSelect)["type"],
+        db.transaction(async (tx) => {
+          const existing = await tx.query.documents
+            .findFirst({
+              where: and(
+                eq(documents.projectId, data.projectId),
+                eq(
+                  documents.type,
+                  data.type as (typeof documents.$inferSelect)["type"],
+                ),
               ),
-            ),
-          })
-          .then((row) => row ?? null),
+            })
+            .then((row) => row ?? null);
+          if (!existing) return null;
+          if (!existing.currentVersionId) {
+            const versionId = await ensureFirstDocumentVersion(
+              tx,
+              existing.id,
+              user.id,
+            );
+            if (versionId) {
+              return { ...existing, currentVersionId: versionId };
+            }
+          }
+          return existing;
+        }),
         (e) => new DbError("getDocument", e),
       );
 
@@ -190,45 +247,39 @@ export const saveDocument = createServerFn({ method: "POST" })
       }
 
       // Write to the active version row (Spec 06b). documents.updatedAt is
-      // bumped so list views sort freshly; documents.content is left stale
-      // on purpose — the version row is the source of truth.
-      if (doc.currentVersionId) {
-        return toShape(
-          await ResultAsync.fromPromise(
-            db
-              .update(documentVersions)
-              .set({ content: data.content, updatedAt: new Date() })
-              .where(eq(documentVersions.id, doc.currentVersionId))
-              .then(() =>
-                db
-                  .update(documents)
-                  .set({ updatedAt: new Date() })
-                  .where(eq(documents.id, data.documentId))
-                  .returning()
-                  .then((rows) => rows[0] ?? null),
-              ),
-            (e) => new DbError("saveDocument.version", e),
-          ).andThen((updated) =>
-            updated
-              ? ok({ ...stripYjsState(updated), content: data.content })
-              : err(new DocumentNotFoundError(data.documentId)),
-          ),
-        );
-      }
-
+      // bumped so list views sort freshly; documents.content is mirrored so
+      // legacy readers that skip the version lookup still see fresh text.
+      // If the document has no current version yet (first save on a freshly
+      // created doc), snapshot a "Versione 1" row first so the Versions
+      // popover is never empty.
       return toShape(
         await ResultAsync.fromPromise(
-          db
-            .update(documents)
-            .set({ content: data.content, updatedAt: new Date() })
-            .where(eq(documents.id, data.documentId))
-            .returning()
-            .then((rows) => rows[0] ?? null),
+          db.transaction(async (tx) => {
+            let activeVersionId = doc.currentVersionId;
+            if (!activeVersionId) {
+              activeVersionId = await ensureFirstDocumentVersion(
+                tx,
+                doc.id,
+                user.id,
+              );
+            }
+            if (activeVersionId) {
+              await tx
+                .update(documentVersions)
+                .set({ content: data.content, updatedAt: new Date() })
+                .where(eq(documentVersions.id, activeVersionId));
+            }
+            const [updated] = await tx
+              .update(documents)
+              .set({ content: data.content, updatedAt: new Date() })
+              .where(eq(documents.id, data.documentId))
+              .returning();
+            if (!updated) throw new Error("Save returned no rows");
+            return updated;
+          }),
           (e) => new DbError("saveDocument", e),
         ).andThen((updated) =>
-          updated
-            ? ok(stripYjsState(updated))
-            : err(new DocumentNotFoundError(data.documentId)),
+          ok({ ...stripYjsState(updated), content: data.content }),
         ),
       );
     },

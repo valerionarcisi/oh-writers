@@ -4,16 +4,19 @@ import {
   accounts,
   projects,
   documents,
+  documentVersions,
   screenplays,
   screenplayVersions,
   teams,
   teamMembers,
 } from "../schema/index";
+import { and, eq } from "drizzle-orm";
 import {
   NON_FA_RIDERE_FOUNTAIN,
   NON_FA_RIDERE_LOGLINE,
   NON_FA_RIDERE_SYNOPSIS,
 } from "./fixtures/non-fa-ridere.fountain";
+import { buildPmDocFromFountain } from "./build-pm-doc";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { randomBytes, bytesToHex } from "@noble/hashes/utils.js";
 
@@ -65,6 +68,36 @@ const VALERIO_NAME = "Valerio";
 const VALERIO_VIEWER_EMAIL = "collab@ohwriters.dev";
 const VALERIO_VIEWER_PASSWORD = "collab123";
 const VALERIO_VIEWER_NAME = "Collaboratore";
+
+// Snapshot each seeded narrative document with non-empty content into a
+// "Versione 1" row so the Versions popover is never empty on first open.
+// Mirrors the screenplayVersions seed block below.
+async function seedFirstDocumentVersions(projectId: string, userId: string) {
+  const docs = await db
+    .select()
+    .from(documents)
+    .where(eq(documents.projectId, projectId));
+  for (const doc of docs) {
+    if (doc.currentVersionId) continue;
+    if (!doc.content || doc.content.length === 0) continue;
+    const [version] = await db
+      .insert(documentVersions)
+      .values({
+        documentId: doc.id,
+        number: 1,
+        label: "Versione 1",
+        content: doc.content,
+        createdBy: userId,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (!version) continue;
+    await db
+      .update(documents)
+      .set({ currentVersionId: version.id })
+      .where(and(eq(documents.id, doc.id)));
+  }
+}
 
 export async function seed() {
   console.log("Seeding database...");
@@ -145,12 +178,16 @@ export async function seed() {
     ])
     .onConflictDoNothing();
 
+  await seedFirstDocumentVersions(TEST_PROJECT_ID, TEST_USER_ID);
+
   console.log("  -> Documents created");
 
   // 4. Screenplay — full Fountain text.
   // Use upsert so that re-running the seed after E2E test runs always restores
-  // the clean Fountain content and wipes the pm_doc column (which accumulates
-  // garbage from tests that type markers / DIFF text into the editor).
+  // the clean Fountain content and refreshes the pm_doc column with a freshly
+  // numbered doc (scene_number: "1", "2", … scene_number_locked: false) so
+  // the left-gutter scene-number buttons are visible on first load.
+  const nonFaRiderePmDoc = buildPmDocFromFountain(NON_FA_RIDERE_FOUNTAIN);
   await db
     .insert(screenplays)
     .values({
@@ -158,12 +195,17 @@ export async function seed() {
       projectId: TEST_PROJECT_ID,
       title: "Non fa ridere",
       content: NON_FA_RIDERE_FOUNTAIN,
+      pmDoc: nonFaRiderePmDoc,
       pageCount: 13,
       createdBy: TEST_USER_ID,
     })
     .onConflictDoUpdate({
       target: screenplays.id,
-      set: { content: NON_FA_RIDERE_FOUNTAIN, pmDoc: null, pageCount: 13 },
+      set: {
+        content: NON_FA_RIDERE_FOUNTAIN,
+        pmDoc: nonFaRiderePmDoc,
+        pageCount: 13,
+      },
     });
 
   console.log("  -> Screenplay created");
@@ -285,6 +327,8 @@ export async function seed() {
     ])
     .onConflictDoNothing();
 
+  await seedFirstDocumentVersions(TEST_TEAM_PROJECT_ID, TEST_USER_ID);
+
   console.log("  -> Team project + documents created");
 
   // ─── 9. Valerio's personal dev account ─────────────────────────────────
@@ -391,12 +435,17 @@ export async function seed() {
       projectId: VALERIO_PERSONAL_PROJECT_ID,
       title: "Non fa ridere",
       content: NON_FA_RIDERE_FOUNTAIN,
+      pmDoc: nonFaRiderePmDoc,
       pageCount: 13,
       createdBy: VALERIO_USER_ID,
     })
     .onConflictDoUpdate({
       target: screenplays.id,
-      set: { content: NON_FA_RIDERE_FOUNTAIN, pmDoc: null, pageCount: 13 },
+      set: {
+        content: NON_FA_RIDERE_FOUNTAIN,
+        pmDoc: nonFaRiderePmDoc,
+        pageCount: 13,
+      },
     });
 
   await db
@@ -410,6 +459,8 @@ export async function seed() {
       createdBy: VALERIO_USER_ID,
     })
     .onConflictDoNothing();
+
+  await seedFirstDocumentVersions(VALERIO_PERSONAL_PROJECT_ID, VALERIO_USER_ID);
 
   console.log("  -> Valerio personal project + screenplay + version created");
 
@@ -491,6 +542,8 @@ export async function seed() {
       },
     ])
     .onConflictDoNothing();
+
+  await seedFirstDocumentVersions(VALERIO_TEAM_PROJECT_ID, VALERIO_USER_ID);
 
   console.log("  -> Valerio team project created");
 
