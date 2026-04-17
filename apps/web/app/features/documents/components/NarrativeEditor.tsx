@@ -3,7 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
 import type { DocumentViewWithPermission } from "../server/documents.server";
-import { useAutoSave, useSaveDocument } from "../hooks/useDocument";
+import {
+  useAutoSave,
+  useDocument,
+  useSaveDocument,
+  useExportNarrativePdf,
+} from "../hooks/useDocument";
 import {
   parseOutline,
   serializeOutline,
@@ -68,6 +73,30 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const isLogline = type === DocumentTypes.LOGLINE;
   const isReadOnly = !document.canEdit;
 
+  // Narrative export — only shown on the three narrative pages, not outline.
+  const isNarrative =
+    type === DocumentTypes.LOGLINE ||
+    type === DocumentTypes.SYNOPSIS ||
+    type === DocumentTypes.TREATMENT;
+  const logline = useDocument(document.projectId, DocumentTypes.LOGLINE);
+  const synopsis = useDocument(document.projectId, DocumentTypes.SYNOPSIS);
+  const treatment = useDocument(document.projectId, DocumentTypes.TREATMENT);
+  const extractContent = (q: typeof logline): string => {
+    if (!q.data || !q.data.isOk) return "";
+    return q.data.value.content;
+  };
+  // Prefer the live (dirty) content for the current doc so the button state
+  // reflects what the user is about to export, not the last saved version.
+  const contentFor = (t: DocumentType, q: typeof logline): string =>
+    t === type ? content : extractContent(q);
+  const allEmpty =
+    isNarrative &&
+    contentFor(DocumentTypes.LOGLINE, logline).trim().length === 0 &&
+    contentFor(DocumentTypes.SYNOPSIS, synopsis).trim().length === 0 &&
+    contentFor(DocumentTypes.TREATMENT, treatment).trim().length === 0;
+  const exportPdf = useExportNarrativePdf();
+  const handleExport = () => exportPdf.mutate(document.projectId);
+
   return (
     <div className={styles.page}>
       {/* Toolbar */}
@@ -91,6 +120,17 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           )}
         </div>
         <div className={styles.toolbarRight}>
+          {isNarrative && (
+            <button
+              type="button"
+              className={styles.saveBtn}
+              onClick={handleExport}
+              disabled={allEmpty || exportPdf.isPending}
+              data-testid="narrative-export-pdf"
+            >
+              {exportPdf.isPending ? "Exporting…" : "Export PDF"}
+            </button>
+          )}
           {!isReadOnly && (
             <>
               <SaveStatus

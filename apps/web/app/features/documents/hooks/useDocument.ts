@@ -10,10 +10,12 @@ import { unwrapResult } from "@oh-writers/utils";
 import {
   getDocument,
   saveDocument,
+  exportNarrativePdf,
   documentQueryOptions,
   type DocumentView,
 } from "../server/documents.server";
 import type { SaveDocumentData } from "../documents.schema";
+import { base64ToBlob, downloadBlob } from "../lib/download";
 
 export type SaveDocumentMutation = UseMutationResult<
   DocumentView,
@@ -94,4 +96,18 @@ export const useAutoSave = (
   return { isDirty, isSaving: save.isPending, isError: save.isError };
 };
 
-export { getDocument, saveDocument };
+// ─── Export narrative PDF ─────────────────────────────────────────────────────
+
+export const useExportNarrativePdf = () =>
+  useMutation({
+    mutationFn: async (projectId: string) => {
+      const result = unwrapResult(
+        await exportNarrativePdf({ data: { projectId } }),
+      );
+      const blob = base64ToBlob(result.pdfBase64, "application/pdf");
+      downloadBlob(blob, result.filename);
+      return result;
+    },
+  });
+
+export { getDocument, saveDocument, exportNarrativePdf };

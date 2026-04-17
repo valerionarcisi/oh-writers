@@ -17,10 +17,10 @@ export default defineConfig({
     // client bundle. createServerFn handlers are server-only but static analysis
     // can still include transitive server imports in the client chunk.
     optimizeDeps: {
-      exclude: ["postgres", "@oh-writers/db"],
+      exclude: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse"],
     },
     ssr: {
-      external: ["postgres", "@oh-writers/db"],
+      external: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse"],
     },
   },
   routers: {
