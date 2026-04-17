@@ -48,6 +48,24 @@ const TEST_VIEWER_NAME = "Viewer User";
 
 const TEST_TEAM_PROJECT_TITLE = "Team Thriller";
 
+// ─── Valerio's personal dev account ───────────────────────────────────────
+// Fixed UUIDs so re-running the seed is idempotent. Credentials are seed-only;
+// never use outside local development.
+const VALERIO_USER_ID = "00000000-0000-4000-a000-000000000003";
+const VALERIO_VIEWER_ID = "00000000-0000-4000-a000-000000000004";
+const VALERIO_PERSONAL_PROJECT_ID = "00000000-0000-4000-a000-000000000012";
+const VALERIO_TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000013";
+const VALERIO_SCREENPLAY_ID = "00000000-0000-4000-a000-000000000021";
+const VALERIO_TEAM_ID = "00000000-0000-4000-a000-000000000031";
+
+const VALERIO_EMAIL = "valerio@ohwriters.dev";
+const VALERIO_PASSWORD = "valerio123";
+const VALERIO_NAME = "Valerio";
+
+const VALERIO_VIEWER_EMAIL = "collab@ohwriters.dev";
+const VALERIO_VIEWER_PASSWORD = "collab123";
+const VALERIO_VIEWER_NAME = "Collaboratore";
+
 export async function seed() {
   console.log("Seeding database...");
 
@@ -269,7 +287,218 @@ export async function seed() {
 
   console.log("  -> Team project + documents created");
 
+  // ─── 9. Valerio's personal dev account ─────────────────────────────────
+  const valerioHash = await hashPassword(VALERIO_PASSWORD);
+  const valerioViewerHash = await hashPassword(VALERIO_VIEWER_PASSWORD);
+
+  await db
+    .insert(users)
+    .values([
+      {
+        id: VALERIO_USER_ID,
+        email: VALERIO_EMAIL,
+        name: VALERIO_NAME,
+        emailVerified: true,
+      },
+      {
+        id: VALERIO_VIEWER_ID,
+        email: VALERIO_VIEWER_EMAIL,
+        name: VALERIO_VIEWER_NAME,
+        emailVerified: true,
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(accounts)
+    .values([
+      {
+        id: `credential:${VALERIO_USER_ID}`,
+        userId: VALERIO_USER_ID,
+        accountId: VALERIO_USER_ID,
+        providerId: "credential",
+        password: valerioHash,
+      },
+      {
+        id: `credential:${VALERIO_VIEWER_ID}`,
+        userId: VALERIO_VIEWER_ID,
+        accountId: VALERIO_VIEWER_ID,
+        providerId: "credential",
+        password: valerioViewerHash,
+      },
+    ])
+    .onConflictDoNothing();
+
+  console.log("  -> Valerio + collaborator users created");
+
+  // Personal project (solo-owned) with full narrative docs + title page.
+  await db
+    .insert(projects)
+    .values({
+      id: VALERIO_PERSONAL_PROJECT_ID,
+      title: "Non fa ridere",
+      slug: "valerio-non-fa-ridere",
+      genre: "comedy",
+      format: "short",
+      ownerId: VALERIO_USER_ID,
+      titlePageAuthor: "Valerio Narcisi",
+      titlePageContact: "valerio@ohwriters.dev",
+      titlePageDraftColor: "white",
+      titlePageNotes: "First draft — demo project for feature tour.",
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(documents)
+    .values([
+      {
+        projectId: VALERIO_PERSONAL_PROJECT_ID,
+        type: "logline" as const,
+        title: "Logline",
+        content: NON_FA_RIDERE_LOGLINE,
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_PERSONAL_PROJECT_ID,
+        type: "synopsis" as const,
+        title: "Synopsis",
+        content: NON_FA_RIDERE_SYNOPSIS,
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_PERSONAL_PROJECT_ID,
+        type: "outline" as const,
+        title: "Outline",
+        content:
+          "ATTO I\n- Filippo prepara l'Open Grezzo di nascosto.\n- Giulio ignora tutto; Tea sospetta.\n\nATTO II\n- La serata va fuori controllo.\n- Il nonno morto appare.\n\nATTO III\n- Filippo sale sul palco e si libera.\n- Giulio lo colpisce; il nonno ride.",
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_PERSONAL_PROJECT_ID,
+        type: "treatment" as const,
+        title: "Treatment",
+        content:
+          "Filippo ha quarant'anni e cammina tra i tavoli della pizzeria del suocero come se fosse una condanna. Stasera, però, ha un piano: ha trasformato la sala in un open mic comedy senza dirlo a nessuno, l'Open Grezzo...",
+        createdBy: VALERIO_USER_ID,
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(screenplays)
+    .values({
+      id: VALERIO_SCREENPLAY_ID,
+      projectId: VALERIO_PERSONAL_PROJECT_ID,
+      title: "Non fa ridere",
+      content: NON_FA_RIDERE_FOUNTAIN,
+      pageCount: 13,
+      createdBy: VALERIO_USER_ID,
+    })
+    .onConflictDoUpdate({
+      target: screenplays.id,
+      set: { content: NON_FA_RIDERE_FOUNTAIN, pmDoc: null, pageCount: 13 },
+    });
+
+  await db
+    .insert(screenplayVersions)
+    .values({
+      screenplayId: VALERIO_SCREENPLAY_ID,
+      label: "First draft — 2026-04-17",
+      content: NON_FA_RIDERE_FOUNTAIN,
+      pageCount: 13,
+      number: 1,
+      createdBy: VALERIO_USER_ID,
+    })
+    .onConflictDoNothing();
+
+  console.log("  -> Valerio personal project + screenplay + version created");
+
+  // Team project: Valerio = owner, collaborator = viewer. Lets you see
+  // role-guard behaviour (viewer is read-only on every mutation).
+  await db
+    .insert(teams)
+    .values({
+      id: VALERIO_TEAM_ID,
+      name: "Valerio's Crew",
+      slug: "valerio-crew",
+      createdBy: VALERIO_USER_ID,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(teamMembers)
+    .values([
+      {
+        teamId: VALERIO_TEAM_ID,
+        userId: VALERIO_USER_ID,
+        role: "owner" as const,
+      },
+      {
+        teamId: VALERIO_TEAM_ID,
+        userId: VALERIO_VIEWER_ID,
+        role: "viewer" as const,
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(projects)
+    .values({
+      id: VALERIO_TEAM_PROJECT_ID,
+      title: "La città silenziosa",
+      slug: "valerio-team-thriller",
+      genre: "thriller",
+      format: "feature",
+      teamId: VALERIO_TEAM_ID,
+      titlePageAuthor: "Valerio Narcisi & Collaboratore",
+      titlePageContact: "valerio@ohwriters.dev",
+      titlePageDraftColor: "blue",
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(documents)
+    .values([
+      {
+        projectId: VALERIO_TEAM_PROJECT_ID,
+        type: "logline" as const,
+        title: "Logline",
+        content:
+          "Una detective insonne insegue un killer seriale in una città dove il suono è stato bandito.",
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_TEAM_PROJECT_ID,
+        type: "synopsis" as const,
+        title: "Synopsis",
+        content:
+          "In una metropoli governata dal silenzio, Alma Ricci è l'unica poliziotta che ancora parla.",
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_TEAM_PROJECT_ID,
+        type: "outline" as const,
+        title: "Outline",
+        content: "",
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_TEAM_PROJECT_ID,
+        type: "treatment" as const,
+        title: "Treatment",
+        content: "",
+        createdBy: VALERIO_USER_ID,
+      },
+    ])
+    .onConflictDoNothing();
+
+  console.log("  -> Valerio team project created");
+
   console.log("Seed complete.");
+  console.log("");
+  console.log("  Login: valerio@ohwriters.dev / valerio123");
+  console.log("  Viewer: collab@ohwriters.dev / collab123");
+  console.log("");
 }
 
 seed()
