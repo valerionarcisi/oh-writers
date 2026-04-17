@@ -23,12 +23,20 @@ export const schema = new Schema({
     // and through Yjs sync. Empty string means "unnumbered".
     heading: {
       content: "prefix title",
-      attrs: { scene_number: { default: "" } },
+      attrs: {
+        scene_number: { default: "" },
+        // When true, `resequenceAll` and "Renumber All" will not change
+        // this scene's number. Set via the popover "Lock/Unlock number"
+        // action. Legacy docs missing this attr default to false.
+        scene_number_locked: { default: false },
+      },
       parseDOM: [
         {
           tag: "h2.pm-heading",
           getAttrs: (el) => ({
             scene_number: (el as HTMLElement).getAttribute("data-number") ?? "",
+            scene_number_locked:
+              (el as HTMLElement).getAttribute("data-locked") === "true",
           }),
         },
       ],
@@ -37,6 +45,7 @@ export const schema = new Schema({
         {
           class: "pm-heading",
           "data-number": node.attrs.scene_number as string,
+          "data-locked": String(Boolean(node.attrs.scene_number_locked)),
         },
         0,
       ],
