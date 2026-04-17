@@ -30,8 +30,6 @@ export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
     return <div className={styles.statusError}>Failed to load versions.</div>;
 
   const versions = result.value;
-  const manualVersions = versions.filter((v) => !v.isAuto);
-  const autoVersions = versions.filter((v) => v.isAuto);
 
   const handleCreate = () => {
     if (!labelInput.trim()) return;
@@ -133,50 +131,23 @@ export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
         </div>
       ) : (
         <div className={styles.sections}>
-          {manualVersions.length > 0 && (
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Manual Versions</h2>
-              <ul className={styles.list}>
-                {manualVersions.map((v) => (
-                  <VersionRow
-                    key={v.id}
-                    version={v}
-                    projectId={projectId}
-                    screenplayId={screenplayId}
-                    onRestore={handleRestore}
-                    onDelete={handleDelete}
-                    isRestoring={restoreVersion.isPending}
-                    isDeleting={deleteVersion.isPending}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {autoVersions.length > 0 && (
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>
-                Auto-saves{" "}
-                <span className={styles.autoCount}>
-                  ({autoVersions.length} / 50)
-                </span>
-              </h2>
-              <ul className={styles.list}>
-                {autoVersions.map((v) => (
-                  <VersionRow
-                    key={v.id}
-                    version={v}
-                    projectId={projectId}
-                    screenplayId={screenplayId}
-                    onRestore={handleRestore}
-                    onDelete={handleDelete}
-                    isRestoring={restoreVersion.isPending}
-                    isDeleting={deleteVersion.isPending}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Versions</h2>
+            <ul className={styles.list}>
+              {versions.map((v) => (
+                <VersionRow
+                  key={v.id}
+                  version={v}
+                  projectId={projectId}
+                  screenplayId={screenplayId}
+                  onRestore={handleRestore}
+                  onDelete={handleDelete}
+                  isRestoring={restoreVersion.isPending}
+                  isDeleting={deleteVersion.isPending}
+                />
+              ))}
+            </ul>
+          </section>
         </div>
       )}
     </div>
@@ -205,7 +176,9 @@ function VersionRow({
   return (
     <li className={styles.row}>
       <div className={styles.rowMeta}>
-        <span className={styles.label}>{version.label ?? "Auto-save"}</span>
+        <span className={styles.label}>
+          {version.label ?? `VERSION-${version.number}`}
+        </span>
         <span className={styles.date}>
           {version.createdAt.toLocaleDateString()}{" "}
           {version.createdAt.toLocaleTimeString()}
@@ -242,11 +215,7 @@ function VersionRow({
           type="button"
           onClick={() => onDelete(version.id)}
           disabled={isDeleting}
-          title={
-            !version.isAuto
-              ? "Cannot delete the only manual version"
-              : undefined
-          }
+          title="Cannot delete the only or current version"
           data-testid={`delete-version-${version.id}`}
         >
           Delete

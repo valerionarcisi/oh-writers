@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
-import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
+import {
+  screenplays,
+  screenplayVersions,
+  projects,
+} from "@oh-writers/db/schema";
 import type { Screenplay } from "@oh-writers/db";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
@@ -15,9 +19,6 @@ import {
   ForbiddenError,
   DbError,
 } from "../screenplay.errors";
-
-const FIVE_MINUTES_MS = 5 * 60 * 1000;
-const MAX_AUTO_SNAPSHOTS = 50;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +52,33 @@ export const getScreenplay = createServerFn({ method: "GET" })
         return toShape(err(new ScreenplayNotFoundError(data.projectId)));
       }
 
-      return toShape(ok(stripYjsState(result.value)));
+      // Spec 06b: live content sits on the active version row. Fall back to
+      // screenplays.content for legacy rows with no current_version_id.
+      let liveContent = result.value.content;
+      let livePageCount = result.value.pageCount;
+      if (result.value.currentVersionId) {
+        const versionResult = await ResultAsync.fromPromise(
+          db.query.screenplayVersions
+            .findFirst({
+              where: eq(screenplayVersions.id, result.value.currentVersionId),
+            })
+            .then((row) => row ?? null),
+          (e) => new DbError("getScreenplay.version", e),
+        );
+        if (versionResult.isErr()) return toShape(err(versionResult.error));
+        if (versionResult.value) {
+          liveContent = versionResult.value.content;
+          livePageCount = versionResult.value.pageCount;
+        }
+      }
+
+      return toShape(
+        ok({
+          ...stripYjsState(result.value),
+          content: liveContent,
+          pageCount: livePageCount,
+        }),
+      );
     },
   );
 
@@ -74,7 +101,7 @@ export const saveScreenplay = createServerFn({ method: "POST" })
         ScreenplayNotFoundError | ForbiddenError | DbError
       >
     > => {
-      const user = await requireUser();
+      await requireUser();
       const pageCount = estimatePageCount(data.content);
       const db = await getDb();
 
@@ -89,10 +116,9 @@ export const saveScreenplay = createServerFn({ method: "POST" })
       if (!s)
         return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
 
-      const { projects: projectsTable } = await import("@oh-writers/db/schema");
       const projectResult = await ResultAsync.fromPromise(
         db.query.projects
-          .findFirst({ where: eq(projectsTable.id, s.projectId) })
+          .findFirst({ where: eq(projects.id, s.projectId) })
           .then((row) => row ?? null),
         (e) => new DbError("saveScreenplay.project", e),
       );
@@ -106,9 +132,17 @@ export const saveScreenplay = createServerFn({ method: "POST" })
         );
       }
 
+      // Spec 06b: the active version row is the source of truth. Auto-version
+      // snapshots are gone — saving just writes to the current version.
       return toShape(
         await ResultAsync.fromPromise(
           db.transaction(async (tx) => {
+            if (s.currentVersionId) {
+              await tx
+                .update(screenplayVersions)
+                .set({ content: data.content, pageCount })
+                .where(eq(screenplayVersions.id, s.currentVersionId));
+            }
             const [updated] = await tx
               .update(screenplays)
               .set({
@@ -119,67 +153,7 @@ export const saveScreenplay = createServerFn({ method: "POST" })
               })
               .where(eq(screenplays.id, data.screenplayId))
               .returning();
-
             if (!updated) throw new Error("Save returned no rows");
-
-            if (s.content !== data.content) {
-              const {
-                and,
-                desc,
-                asc,
-                count: countFn,
-              } = await import("drizzle-orm");
-
-              const latest = await tx.query.screenplayVersions.findFirst({
-                where: and(
-                  eq(screenplayVersions.screenplayId, data.screenplayId),
-                  eq(screenplayVersions.isAuto, true),
-                ),
-                orderBy: [desc(screenplayVersions.createdAt)],
-              });
-
-              const needsSnapshot =
-                !latest ||
-                Date.now() - latest.createdAt.getTime() >= FIVE_MINUTES_MS;
-
-              if (needsSnapshot) {
-                const [autoCountRow] = await tx
-                  .select({ value: countFn() })
-                  .from(screenplayVersions)
-                  .where(
-                    and(
-                      eq(screenplayVersions.screenplayId, data.screenplayId),
-                      eq(screenplayVersions.isAuto, true),
-                    ),
-                  );
-                const autoCount = autoCountRow?.value ?? 0;
-
-                if (autoCount >= MAX_AUTO_SNAPSHOTS) {
-                  const oldest = await tx.query.screenplayVersions.findFirst({
-                    where: and(
-                      eq(screenplayVersions.screenplayId, data.screenplayId),
-                      eq(screenplayVersions.isAuto, true),
-                    ),
-                    orderBy: [asc(screenplayVersions.createdAt)],
-                  });
-                  if (oldest) {
-                    await tx
-                      .delete(screenplayVersions)
-                      .where(eq(screenplayVersions.id, oldest.id));
-                  }
-                }
-
-                await tx.insert(screenplayVersions).values({
-                  screenplayId: data.screenplayId,
-                  label: null,
-                  content: s.content,
-                  pageCount: s.pageCount,
-                  isAuto: true,
-                  createdBy: user.id,
-                });
-              }
-            }
-
             return updated;
           }),
           (e) => new DbError("saveScreenplay", e),

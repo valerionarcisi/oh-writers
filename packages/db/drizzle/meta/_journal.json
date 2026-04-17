@@ -36,6 +36,13 @@
       "when": 1777500000000,
       "tag": "0004_universal_versioning",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777500500000,
+      "tag": "0005_drop_screenplay_is_auto",
+      "breakpoints": true
     }
   ]
 }

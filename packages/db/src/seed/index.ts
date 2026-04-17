@@ -159,7 +159,6 @@ export async function seed() {
       content: NON_FA_RIDERE_FOUNTAIN,
       pageCount: 13,
       number: 1,
-      isAuto: false,
       createdBy: TEST_USER_ID,
     })
     .onConflictDoNothing();

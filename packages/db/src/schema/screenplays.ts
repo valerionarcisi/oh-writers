@@ -3,7 +3,6 @@ import {
   uuid,
   text,
   integer,
-  boolean,
   timestamp,
   jsonb,
   customType,
@@ -50,7 +49,6 @@ export const screenplayVersions = pgTable(
     content: text("content").notNull(),
     yjsSnapshot: bytea("yjs_snapshot"),
     pageCount: integer("page_count").notNull().default(0),
-    isAuto: boolean("is_auto").notNull().default(false),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
