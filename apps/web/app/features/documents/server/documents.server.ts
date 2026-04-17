@@ -3,7 +3,7 @@ import { ok, err, ResultAsync } from "neverthrow";
 import { eq, and } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { documents, projects } from "@oh-writers/db/schema";
+import { documents, documentVersions, projects } from "@oh-writers/db/schema";
 import type { Document } from "@oh-writers/db";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
@@ -68,6 +68,22 @@ export const getDocument = createServerFn({ method: "GET" })
         );
       }
 
+      // Content lives on the active version row (Spec 06b). documents.content
+      // is retained as legacy fallback for rows the migration hasn't touched.
+      let liveContent = result.value.content;
+      if (result.value.currentVersionId) {
+        const versionResult = await ResultAsync.fromPromise(
+          db.query.documentVersions
+            .findFirst({
+              where: eq(documentVersions.id, result.value.currentVersionId),
+            })
+            .then((row) => row ?? null),
+          (e) => new DbError("getDocument.version", e),
+        );
+        if (versionResult.isErr()) return toShape(err(versionResult.error));
+        if (versionResult.value) liveContent = versionResult.value.content;
+      }
+
       const projectResult = await ResultAsync.fromPromise(
         db.query.projects
           .findFirst({ where: eq(projects.id, data.projectId) })
@@ -90,7 +106,11 @@ export const getDocument = createServerFn({ method: "GET" })
       const permission = canEdit(project, user.id, membershipResult.value);
 
       return toShape(
-        ok({ ...stripYjsState(result.value), canEdit: permission }),
+        ok({
+          ...stripYjsState(result.value),
+          content: liveContent,
+          canEdit: permission,
+        }),
       );
     },
   );
@@ -169,6 +189,33 @@ export const saveDocument = createServerFn({ method: "POST" })
         );
       }
 
+      // Write to the active version row (Spec 06b). documents.updatedAt is
+      // bumped so list views sort freshly; documents.content is left stale
+      // on purpose — the version row is the source of truth.
+      if (doc.currentVersionId) {
+        return toShape(
+          await ResultAsync.fromPromise(
+            db
+              .update(documentVersions)
+              .set({ content: data.content, updatedAt: new Date() })
+              .where(eq(documentVersions.id, doc.currentVersionId))
+              .then(() =>
+                db
+                  .update(documents)
+                  .set({ updatedAt: new Date() })
+                  .where(eq(documents.id, data.documentId))
+                  .returning()
+                  .then((rows) => rows[0] ?? null),
+              ),
+            (e) => new DbError("saveDocument.version", e),
+          ).andThen((updated) =>
+            updated
+              ? ok({ ...stripYjsState(updated), content: data.content })
+              : err(new DocumentNotFoundError(data.documentId)),
+          ),
+        );
+      }
+
       return toShape(
         await ResultAsync.fromPromise(
           db
@@ -240,9 +287,30 @@ export const exportNarrativePdf = createServerFn({ method: "POST" })
         (e) => new DbError("exportNarrativePdf.documents", e),
       );
       if (docsResult.isErr()) return toShape(err(docsResult.error));
+      // Resolve each document's live content via its active version row.
+      // Falls back to documents.content for the unlikely case of a row
+      // whose current_version_id never got backfilled.
+      const versionIds = docsResult.value
+        .map((d) => d.currentVersionId)
+        .filter((v): v is string => v !== null);
+      const versionsResult = versionIds.length
+        ? await ResultAsync.fromPromise(
+            db.query.documentVersions.findMany({
+              where: (v, { inArray }) => inArray(v.id, versionIds),
+            }),
+            (e) => new DbError("exportNarrativePdf.versions", e),
+          )
+        : ok([] as { id: string; content: string }[]);
+      if (versionsResult.isErr()) return toShape(err(versionsResult.error));
+      const versionById = new Map(
+        versionsResult.value.map((v) => [v.id, v.content] as const),
+      );
       const byType = new Map<DocumentType, string>();
       for (const d of docsResult.value) {
-        byType.set(d.type as DocumentType, d.content);
+        const content = d.currentVersionId
+          ? (versionById.get(d.currentVersionId) ?? d.content)
+          : d.content;
+        byType.set(d.type as DocumentType, content);
       }
 
       // Dynamic import keeps pdfkit out of the client bundle — its transitive
