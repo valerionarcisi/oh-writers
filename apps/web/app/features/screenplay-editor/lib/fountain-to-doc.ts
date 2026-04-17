@@ -9,12 +9,29 @@ import {
 } from "./fountain-constants";
 import { splitLegacyHeading } from "@oh-writers/domain";
 
+// Fountain forced-scene-number syntax: `#1A#`, `#42#`, `#3-3B#` at end of
+// heading line. Used by fountain-from-pdf to round-trip shooting-script
+// numbers into the heading attr.
+const FORCED_SCENE_NUMBER_RE = /\s*#([^#\n]+)#\s*$/;
+
+const extractForcedNumber = (
+  raw: string,
+): { line: string; number: string | null } => {
+  const m = raw.match(FORCED_SCENE_NUMBER_RE);
+  if (!m) return { line: raw, number: null };
+  return { line: raw.slice(0, m.index).trimEnd(), number: m[1]!.trim() };
+};
+
 // Build a structured heading node with `prefix` and `title` child nodes.
 // Any Fountain heading line is split by splitLegacyHeading — the writer's
 // exact prefix/title round-trips verbatim.
-const buildHeadingNode = (raw: string, scene_number: string): Node => {
+const buildHeadingNode = (
+  raw: string,
+  scene_number: string,
+  scene_number_locked: boolean = false,
+): Node => {
   const { prefix, title } = splitLegacyHeading(raw);
-  return schema.node("heading", { scene_number }, [
+  return schema.node("heading", { scene_number, scene_number_locked }, [
     schema.node("prefix", null, prefix ? [schema.text(prefix)] : []),
     schema.node("title", null, title ? [schema.text(title)] : []),
   ]);
@@ -37,10 +54,14 @@ export const fountainToDoc = (text: string): Node => {
 
   const flushScene = (): void => {
     if (currentHeading === null) return;
-    // Assign the next sequential number at parse time — the attr is the source
-    // of truth, not a decoration, so it survives Yjs sync and pm_doc persistence.
-    const sceneNumber = String(scenes.length + 1);
-    const headingNode = buildHeadingNode(currentHeading, sceneNumber);
+    // Forced-scene-number syntax wins over sequential assignment. Presence of
+    // `#...#` means the writer (or a shooting-script import) asserted the
+    // number — we preserve it verbatim and lock it so Ricalcola doesn't wipe.
+    const { line, number } = extractForcedNumber(currentHeading);
+    const sceneNumber =
+      number !== null && number.length > 0 ? number : String(scenes.length + 1);
+    const locked = number !== null && number.length > 0;
+    const headingNode = buildHeadingNode(line, sceneNumber, locked);
     scenes.push(schema.node("scene", null, [headingNode, ...currentBody]));
     currentHeading = null;
     currentBody = [];

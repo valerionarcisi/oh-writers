@@ -164,4 +164,49 @@ describe("fountainToDoc", () => {
     // heading + 1 action — no blank nodes
     expect(scene.childCount).toBe(2);
   });
+
+  describe("forced scene numbers (shooting-script import)", () => {
+    it("reads `INT. FOO #1A#` → scene_number='1A', locked=true", () => {
+      const doc = fountainToDoc("INT. KITCHEN - DAY #1A#\n");
+      const heading = doc.firstChild!.firstChild!;
+      expect(heading.attrs["scene_number"]).toBe("1A");
+      expect(heading.attrs["scene_number_locked"]).toBe(true);
+      // The `#1A#` suffix is not echoed in the slot text — it only lives on the attr.
+      expect(headingLine(heading)).toBe("INT. KITCHEN - DAY");
+    });
+
+    it("reads a range suffix like `#3-3B#` verbatim", () => {
+      const doc = fountainToDoc("INT. POLAROIDS #3-3B#\n");
+      const heading = doc.firstChild!.firstChild!;
+      expect(heading.attrs["scene_number"]).toBe("3-3B");
+      expect(heading.attrs["scene_number_locked"]).toBe(true);
+    });
+
+    it("falls back to sequential + unlocked when no `#...#` marker", () => {
+      const doc = fountainToDoc("INT. KITCHEN - DAY\n");
+      const heading = doc.firstChild!.firstChild!;
+      expect(heading.attrs["scene_number"]).toBe("1");
+      expect(heading.attrs["scene_number_locked"]).toBe(false);
+    });
+
+    it("keeps every imported heading locked with its original number", () => {
+      const text = [
+        "INT. ONE #2#",
+        "",
+        "INT. TWO #3-3B#",
+        "",
+        "INT. THREE #15A#",
+      ].join("\n");
+      const doc = fountainToDoc(text);
+      const numbers: string[] = [];
+      const locks: boolean[] = [];
+      doc.forEach((s) => {
+        const h = s.firstChild!;
+        numbers.push(h.attrs["scene_number"] as string);
+        locks.push(h.attrs["scene_number_locked"] as boolean);
+      });
+      expect(numbers).toEqual(["2", "3-3B", "15A"]);
+      expect(locks).toEqual([true, true, true]);
+    });
+  });
 });

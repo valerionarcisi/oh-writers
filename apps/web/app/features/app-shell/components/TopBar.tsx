@@ -1,13 +1,23 @@
 import { Link, useMatches } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { FolderOpen } from "lucide-react";
+import { projectQueryOptions } from "~/features/projects";
 import styles from "./TopBar.module.css";
 
 export function TopBar() {
   const matches = useMatches();
-  const breadcrumbs = buildBreadcrumbs(matches);
-  const isInsideProject = matches.some((m) =>
-    m.routeId.includes("/projects/$id"),
-  );
+  const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
+  const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
+  const { data: projectResult } = useQuery({
+    ...projectQueryOptions(projectId ?? ""),
+    enabled: !!projectId,
+  });
+  const projectTitle =
+    projectResult?.isOk && projectResult.value?.title
+      ? projectResult.value.title
+      : null;
+  const breadcrumbs = buildBreadcrumbs(matches, projectTitle);
+  const isInsideProject = !!projectMatch;
 
   return (
     <header className={styles.topBar}>
@@ -49,17 +59,15 @@ interface Breadcrumb {
 
 function buildBreadcrumbs(
   matches: ReturnType<typeof useMatches>,
+  projectTitle: string | null,
 ): Breadcrumb[] {
   const crumbs: Breadcrumb[] = [{ label: "Projects", path: "/dashboard" }];
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
 
   if (projectMatch) {
-    const id = projectMatch.params?.id as string;
-    const loaderData = projectMatch.loaderData as
-      | { value?: { title?: string } }
-      | undefined;
-    const title = loaderData?.value?.title ?? "Project";
+    const id = (projectMatch.params as { id?: string } | undefined)?.id ?? "";
+    const title = projectTitle ?? "Project";
 
     crumbs.push({ label: title, path: `/projects/${id}` });
 

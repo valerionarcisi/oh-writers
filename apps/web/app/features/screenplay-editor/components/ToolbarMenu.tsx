@@ -10,6 +10,10 @@ interface ToolbarMenuProps {
   onCreateVersionThenImport?: (fountain: string) => void;
   onToggleVersions: () => void;
   isVersionsPanelOpen: boolean;
+  /** Current version label (e.g. "First draft") shown as subtitle on Versioni. */
+  currentVersionLabel?: string | null;
+  /** Opens the resequence confirmation modal. Hidden when undefined. */
+  onResequenceAll?: () => void;
 }
 
 /**
@@ -28,6 +32,8 @@ export function ToolbarMenu({
   onCreateVersionThenImport,
   onToggleVersions,
   isVersionsPanelOpen,
+  currentVersionLabel = null,
+  onResequenceAll,
 }: ToolbarMenuProps) {
   const { isOpen, toggle, close, triggerRef, panelRef } = useMenuPopover();
   const imp = useImportPdf({
@@ -104,8 +110,13 @@ export function ToolbarMenu({
             type="button"
             role="menuitem"
             className={styles.item}
-            disabled
-            title="Disponibile a breve"
+            disabled={!onResequenceAll}
+            title={
+              onResequenceAll
+                ? "Renumber every scene based on document order"
+                : "Disponibile a breve"
+            }
+            onClick={onResequenceAll ? runAndClose(onResequenceAll) : undefined}
             data-testid="menu-item-renumber"
           >
             <span className={styles.itemIcon} aria-hidden="true">
@@ -114,7 +125,9 @@ export function ToolbarMenu({
             <span className={styles.itemLabel}>
               Ricalcola numerazione scene
             </span>
-            <span className={styles.comingSoon}>soon</span>
+            {!onResequenceAll && (
+              <span className={styles.comingSoon}>soon</span>
+            )}
           </button>
 
           <div className={styles.divider} aria-hidden="true" />
@@ -131,6 +144,9 @@ export function ToolbarMenu({
               ⟲
             </span>
             <span className={styles.itemLabel}>Versioni</span>
+            {currentVersionLabel && (
+              <span className={styles.comingSoon}>{currentVersionLabel}</span>
+            )}
           </button>
 
           <button
@@ -172,32 +188,53 @@ export function ToolbarMenu({
           className={styles.confirmOverlay}
           role="dialog"
           aria-modal="true"
+          aria-labelledby="import-confirm-title"
+          aria-describedby="import-confirm-body"
           data-testid="import-confirm"
+          onClick={imp.cancel}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") imp.cancel();
+          }}
         >
-          <div className={styles.confirmBox}>
-            <p className={styles.confirmText}>
-              {nextVersionLabel
-                ? "Scegli come importare il PDF:"
-                : "Replace the current screenplay with the imported content?"}
+          <div
+            className={styles.confirmBox}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="import-confirm-title" className={styles.confirmTitle}>
+              Importa PDF
+            </h2>
+            <p id="import-confirm-body" className={styles.confirmText}>
+              {nextVersionLabel && onCreateVersionThenImport
+                ? "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla."
+                : "Sostituire la sceneggiatura attuale con il contenuto importato?"}
             </p>
             <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={imp.cancel}
+                data-testid="import-confirm-cancel"
+              >
+                Annulla
+              </button>
               {nextVersionLabel && onCreateVersionThenImport ? (
                 <>
+                  <button
+                    type="button"
+                    className={styles.dangerBtn}
+                    onClick={imp.confirm}
+                    data-testid="import-confirm-overwrite"
+                  >
+                    Sovrascrivi
+                  </button>
                   <button
                     type="button"
                     className={styles.confirmBtn}
                     onClick={imp.confirmWithVersion}
                     data-testid="import-confirm-new-version"
+                    autoFocus
                   >
                     Salva come {nextVersionLabel} e importa
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.ghostBtn}
-                    onClick={imp.confirm}
-                    data-testid="import-confirm-overwrite"
-                  >
-                    Sovrascrivi
                   </button>
                 </>
               ) : (
@@ -206,18 +243,11 @@ export function ToolbarMenu({
                   className={styles.confirmBtn}
                   onClick={imp.confirm}
                   data-testid="import-confirm-ok"
+                  autoFocus
                 >
-                  Replace
+                  Sostituisci
                 </button>
               )}
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={imp.cancel}
-                data-testid="import-confirm-cancel"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>

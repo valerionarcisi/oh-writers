@@ -153,28 +153,6 @@ export function ScreenplayToolbar({
         >
           Focus
         </button>
-        {onResequenceAll && canEdit ? (
-          <button
-            className={styles.focusBtn}
-            type="button"
-            title="Renumber every scene based on document order, respecting locked scenes"
-            data-testid="resequence-all-trigger"
-            onClick={() => setResequenceConfirmOpen(true)}
-          >
-            Resequence scenes
-          </button>
-        ) : null}
-        {currentVersionLabel != null && (
-          <button
-            type="button"
-            className={`${styles.versionBadge} ${isVersionsPanelOpen ? styles.versionBadgeActive : ""}`}
-            onClick={onToggleVersions}
-            title="Gestisci versioni"
-            data-testid="current-version-badge"
-          >
-            {currentVersionLabel}
-          </button>
-        )}
         <ToolbarMenu
           hasContent={hasContent}
           onImport={onImport}
@@ -182,6 +160,12 @@ export function ScreenplayToolbar({
           onCreateVersionThenImport={onCreateVersionThenImport}
           onToggleVersions={onToggleVersions}
           isVersionsPanelOpen={isVersionsPanelOpen}
+          currentVersionLabel={currentVersionLabel}
+          onResequenceAll={
+            onResequenceAll && canEdit
+              ? () => setResequenceConfirmOpen(true)
+              : undefined
+          }
         />
       </div>
       {resequenceConfirmOpen && onResequenceAll ? (

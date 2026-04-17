@@ -72,10 +72,12 @@ describe("fountainFromPdf — 03-shooting-script (Wolf-style)", () => {
     expect(out).not.toMatch(/^\s*23\.\s*$/m);
   });
 
-  it("strips leading scene numbers on sluglines ('41', '47', '48')", () => {
-    expect(out).toMatch(/^INT\. STRATTON OAKMONT I – AUTO BODY SHOP – DAY$/m);
+  it("captures leading scene numbers on sluglines as #N# forced-number syntax", () => {
     expect(out).toMatch(
-      /^INT\. STRATTON OAKMONT I – AUTO BODY SHOP – REAR – NIGHT$/m,
+      /^INT\. STRATTON OAKMONT I – AUTO BODY SHOP – DAY #41#$/m,
+    );
+    expect(out).toMatch(
+      /^INT\. STRATTON OAKMONT I – AUTO BODY SHOP – REAR – NIGHT #47#$/m,
     );
   });
 
@@ -93,8 +95,8 @@ describe("fountainFromPdf — 03-shooting-script (Wolf-style)", () => {
     expect(out).toMatch(/^SCENES 42 – 46 OMITTED$/m);
   });
 
-  it("keeps 'INSERT ID PHOTO – TOBY WELCH' as a scene heading", () => {
-    expect(out).toMatch(/^INSERT ID PHOTO – TOBY WELCH$/m);
+  it("keeps 'INSERT ID PHOTO – TOBY WELCH' as a scene heading (with forced #46A#)", () => {
+    expect(out).toMatch(/^INSERT ID PHOTO – TOBY WELCH #46A#$/m);
   });
 
   it("strips date annotation '(MAR `90)' dangling line", () => {
@@ -174,8 +176,8 @@ describe("fountainFromPdf — 06-wolf-page-1 (real extract)", () => {
     expect(out).not.toMatch(/^\s*2\.\s*$/m);
   });
 
-  it("strips scene number '2' and date '(FEB `95)' from slugline", () => {
-    expect(out).toMatch(/^INT\. STRATTON OAKMONT III – BULLPEN – DAY$/m);
+  it("captures scene number '2' as forced #2# and strips date '(FEB `95)'", () => {
+    expect(out).toMatch(/^INT\. STRATTON OAKMONT III – BULLPEN – DAY #2#$/m);
   });
 
   it("strips scene number '1F' from slugline-like line", () => {
@@ -213,6 +215,121 @@ describe("fountainFromPdf — 07-transitions", () => {
     "FADE OUT.",
   ])("recognises '%s' as transition (unindented)", (phrase) => {
     expect(out).toMatch(new RegExp(`^${phrase.replace(/\./g, "\\.")}$`, "m"));
+  });
+});
+
+describe("fountainFromPdf — real-world shooting-script artefacts", () => {
+  it("strips fused duplicate gutter numbers with trailing revision asterisk (139139*)", () => {
+    const out = fountainFromPdf(
+      ["INT. CONFERENCE ROOM - DAY   139139*", "", "Action line."].join("\n"),
+    );
+    expect(out).toMatch(/^INT\. CONFERENCE ROOM - DAY #139#$/m);
+    expect(out).not.toMatch(/139139/);
+    expect(out).not.toMatch(/\*/);
+  });
+
+  it("strips fused gutter number stuck to date annotation (JUN '88)3232*", () => {
+    const out = fountainFromPdf(
+      ["INT. BAR - DAY  (JUN \u201888)3232*", "", "Action."].join("\n"),
+    );
+    expect(out).toMatch(/^INT\. BAR - DAY #32#$/m);
+    expect(out).not.toMatch(/JUN/);
+    expect(out).not.toMatch(/3232/);
+  });
+
+  it("strips date annotation written with U+2018 left curly quote", () => {
+    const out = fountainFromPdf(
+      ["INT. OFFICE - DAY (FEB \u201895)", "", "Action."].join("\n"),
+    );
+    expect(out).toMatch(/^INT\. OFFICE - DAY$/m);
+  });
+
+  it("preserves multi-letter scene-number suffixes (202HA)", () => {
+    const out = fountainFromPdf(
+      ["INT. BULLPEN - DAY  202HA202HA", "", "Action."].join("\n"),
+    );
+    expect(out).toMatch(/^INT\. BULLPEN - DAY #202HA#$/m);
+  });
+});
+
+describe("fountainFromPdf — title page handling", () => {
+  it("strips a leading title-page block when it contains marker phrases", () => {
+    const out = fountainFromPdf(
+      [
+        "THE WOLF OF WALL STREET",
+        "Written by",
+        "Terence Winter",
+        "Based on the book by Jordan Belfort",
+        "White Shooting Script - September 7th, 2012",
+        "",
+        "INT. ROOM - DAY",
+        "Action line.",
+      ].join("\n"),
+    );
+    expect(out).not.toContain("THE WOLF OF WALL STREET");
+    expect(out).not.toMatch(/^\s*Written by\s*$/m);
+    expect(out).not.toContain("Shooting Script");
+    expect(out).toMatch(/^INT\. ROOM - DAY$/m);
+  });
+
+  it("keeps the opening V.O. when there is no title-page marker", () => {
+    const out = fountainFromPdf(
+      [
+        "                                GENE HACKMAN (V.O.)",
+        "                  Stratton Oakmont. Stability.",
+        "",
+        "INT. ROOM - DAY",
+      ].join("\n"),
+    );
+    expect(out).toContain(`${CHARACTER_INDENT}GENE HACKMAN (V.O.)`);
+  });
+});
+
+describe("fountainFromPdf — alternative heading prefixes", () => {
+  it("recognises 'A SERIES OF POLAROIDS' as a scene heading", () => {
+    const out = fountainFromPdf(
+      [
+        "INT. ROOM - DAY",
+        "",
+        "Action line.",
+        "",
+        "A SERIES OF POLAROIDS",
+        "",
+        "First shot description.",
+      ].join("\n"),
+    );
+    expect(out).toMatch(/^A SERIES OF POLAROIDS$/m);
+  });
+
+  it("recognises 'MONTAGE - TRAINING' as a scene heading", () => {
+    const out = fountainFromPdf(
+      ["", "MONTAGE - TRAINING", "", "He runs up stairs."].join("\n"),
+    );
+    expect(out).toMatch(/^MONTAGE - TRAINING$/m);
+  });
+
+  it("recognises bare 'INTERCUT' as a scene heading", () => {
+    const out = fountainFromPdf(
+      ["", "INTERCUT", "", "Back and forth."].join("\n"),
+    );
+    expect(out).toMatch(/^INTERCUT$/m);
+  });
+
+  it("does not treat mid-sentence 'MONTAGE' as a heading", () => {
+    const out = fountainFromPdf("A chaotic MONTAGE of faces rushes by.");
+    expect(out).toMatch(/^A chaotic MONTAGE of faces rushes by\.$/m);
+  });
+});
+
+describe("fountainFromPdf — orphan parentheticals", () => {
+  it("re-attaches a parenthetical to the preceding CHARACTER cue after a spurious blank", () => {
+    const out = fountainFromPdf(
+      ["INT. ROOM - DAY", "", "ANNA", "", "(sotto)", "Hello."].join("\n"),
+    );
+    // The parenthetical and dialogue must be indented like a dialogue block
+    expect(out).toContain(`${CHARACTER_INDENT}ANNA`);
+    expect(out).toContain(`${DIALOGUE_INDENT}(sotto)`);
+    expect(out).toMatch(new RegExp(`^${DIALOGUE_INDENT}Hello\\.$`, "m"));
   });
 });
 

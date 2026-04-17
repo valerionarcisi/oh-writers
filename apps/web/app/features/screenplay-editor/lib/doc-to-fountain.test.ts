@@ -96,4 +96,34 @@ describe("docToFountain", () => {
     expect(output.endsWith("\n")).toBe(true);
     expect(output.endsWith("\n\n")).toBe(false);
   });
+
+  describe("forced scene numbers (locked headings)", () => {
+    const makeLockedScene = (heading: string, number: string) => {
+      const { prefix, title } = splitLegacyHeading(heading);
+      const headingNode = schema.node(
+        "heading",
+        { scene_number: number, scene_number_locked: true },
+        [
+          schema.node("prefix", null, prefix ? [schema.text(prefix)] : []),
+          schema.node("title", null, title ? [schema.text(title)] : []),
+        ],
+      );
+      return schema.node("scene", null, [headingNode]);
+    };
+
+    it("emits `#N#` suffix on locked headings", () => {
+      const doc = makeDoc(makeLockedScene("INT. KITCHEN - DAY", "1A"));
+      expect(docToFountain(doc)).toMatch(/^INT\. KITCHEN - DAY #1A#$/m);
+    });
+
+    it("preserves range suffixes like `3-3B`", () => {
+      const doc = makeDoc(makeLockedScene("INT. POLAROIDS", "3-3B"));
+      expect(docToFountain(doc)).toMatch(/^INT\. POLAROIDS #3-3B#$/m);
+    });
+
+    it("omits the `#N#` suffix on unlocked (sequential) headings", () => {
+      const doc = makeDoc(makeScene("INT. OFFICE - DAY"));
+      expect(docToFountain(doc)).not.toMatch(/#[^#\n]+#/);
+    });
+  });
 });

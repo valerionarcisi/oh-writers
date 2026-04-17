@@ -68,7 +68,7 @@ class AutocompleteDropdown {
       "padding:4px 0",
       "margin:0",
       "list-style:none",
-      "z-index:9999",
+      "z-index:50",
       "min-width:180px",
       "max-height:200px",
       "overflow-y:auto",

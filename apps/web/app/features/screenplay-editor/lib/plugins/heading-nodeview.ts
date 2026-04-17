@@ -121,6 +121,11 @@ class HeadingNodeView implements NodeView {
     this.rightBtn.hidden = hide;
     this.leftBtn.classList.toggle("is-locked", locked);
     this.rightBtn.classList.toggle("is-locked", locked);
+    const tooltip = locked
+      ? "Numero di scena bloccato: non verrà modificato da “Ricalcola numerazione”. Apri il menu ⋮ per sbloccarlo."
+      : "Numero di scena. Clicca per modificarlo; verrà bloccato automaticamente.";
+    this.leftBtn.title = tooltip;
+    this.rightBtn.title = tooltip;
   }
 
   private startEdit() {

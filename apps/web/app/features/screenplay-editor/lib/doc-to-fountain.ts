@@ -13,7 +13,16 @@ const headingText = (heading: Node): string => {
     if (child.type.name === "prefix") prefix = child.textContent;
     else if (child.type.name === "title") title = child.textContent;
   });
-  return joinHeading({ prefix, title });
+  const base = joinHeading({ prefix, title });
+  // Locked scene numbers round-trip through Fountain's forced-number syntax
+  // (`INT. FOO - DAY #3-3B#`). Unlocked sequential numbers stay implicit so
+  // human-edited Fountain files don't accumulate noise.
+  const locked = Boolean(heading.attrs["scene_number_locked"]);
+  const num = (heading.attrs["scene_number"] as string) ?? "";
+  if (locked && num.length > 0) {
+    return base.length > 0 ? `${base} #${num}#` : `#${num}#`;
+  }
+  return base;
 };
 
 /**

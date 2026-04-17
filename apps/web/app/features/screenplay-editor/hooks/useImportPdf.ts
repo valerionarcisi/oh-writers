@@ -1,6 +1,23 @@
 import { useRef, useState } from "react";
 import { importPdf } from "../server/pdf-import.server";
 import type { ImportPdfError } from "../pdf-import.errors";
+import { dispatchSceneNumberToast } from "../lib/plugins/scene-number-commands";
+
+// Count the `#...#` forced-scene-number markers in the imported Fountain.
+// Each one becomes a locked heading in the PM doc — we surface the total
+// via a post-import toast so the writer understands Ricalcola will skip them.
+const countForcedSceneNumbers = (fountain: string): number => {
+  const matches = fountain.match(/^.*#[^#\n]+#\s*$/gm);
+  return matches ? matches.length : 0;
+};
+
+const announceImport = (fountain: string): void => {
+  const n = countForcedSceneNumbers(fountain);
+  if (n === 0) return;
+  dispatchSceneNumberToast(
+    `Importate ${n} scene con numerazione originale. I numeri sono bloccati — sblocca dal menu della scena per rinumerare.`,
+  );
+};
 
 type Status =
   | { type: "idle" }
@@ -91,6 +108,7 @@ export function useImportPdf({
       setStatus({ type: "confirm", fountain: result.value });
     } else {
       onImport(result.value);
+      announceImport(result.value);
       setStatus({ type: "idle" });
     }
   };
@@ -98,6 +116,7 @@ export function useImportPdf({
   const confirm = () => {
     if (status.type !== "confirm") return;
     onImport(status.fountain);
+    announceImport(status.fountain);
     setStatus({ type: "idle" });
   };
 
@@ -108,6 +127,7 @@ export function useImportPdf({
     } else {
       onImport(status.fountain);
     }
+    announceImport(status.fountain);
     setStatus({ type: "idle" });
   };
 

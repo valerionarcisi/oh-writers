@@ -32,6 +32,51 @@ const collectNumberedSceneNumbers = (state: EditorState): string[] => {
  * current block's text out and wrap it in a new scene node inserted after the
  * current scene.
  */
+// Non-scene element requested while the caret sits in a heading slot
+// (prefix/title). setBlockType can't promote across the heading boundary —
+// instead we insert an empty target block right after the heading (still
+// inside the same scene) and move the cursor there. The heading is left in
+// place; if it was the "empty pre-heading synthetic" scene the writer just
+// created to escape, they can delete the empty heading with Backspace later
+// or the doc-to-fountain serializer will drop it. See spec 05i.
+const escapeHeadingToBodyElement = (
+  element: Exclude<ElementType, "scene">,
+): Command => {
+  return (state, dispatch) => {
+    const { $from } = state.selection;
+    const parent = $from.parent.type.name;
+    if (parent !== "prefix" && parent !== "title" && parent !== "heading") {
+      return false;
+    }
+    let sceneDepth = $from.depth;
+    while (sceneDepth > 0 && $from.node(sceneDepth).type.name !== "scene") {
+      sceneDepth -= 1;
+    }
+    if (sceneDepth <= 0) return false;
+
+    const targetType =
+      element === "action"
+        ? schema.nodes.action
+        : element === "character"
+          ? schema.nodes.character
+          : element === "parenthetical"
+            ? schema.nodes.parenthetical
+            : element === "dialogue"
+              ? schema.nodes.dialogue
+              : schema.nodes.transition;
+    if (!targetType) return false;
+
+    if (!dispatch) return true;
+    const sceneNode = $from.node(sceneDepth);
+    const scenePos = $from.before(sceneDepth);
+    const insertPos = scenePos + 1 + sceneNode.child(0).nodeSize;
+    const tr = state.tr.insert(insertPos, targetType.create());
+    tr.setSelection(TextSelection.create(tr.doc, insertPos + 1));
+    dispatch(tr);
+    return true;
+  };
+};
+
 export const setElement = (element: ElementType): Command => {
   if (element !== "scene") {
     const nodeType =
@@ -44,7 +89,14 @@ export const setElement = (element: ElementType): Command => {
             : element === "dialogue"
               ? schema.nodes.dialogue
               : schema.nodes.transition;
-    return setBlockType(nodeType);
+    const escape = escapeHeadingToBodyElement(element);
+    return (state, dispatch, view) => {
+      const parent = state.selection.$from.parent.type.name;
+      if (parent === "prefix" || parent === "title" || parent === "heading") {
+        return escape(state, dispatch, view);
+      }
+      return setBlockType(nodeType)(state, dispatch, view);
+    };
   }
 
   // "scene": create a new scene. Two cases per spec 05g:

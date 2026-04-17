@@ -130,6 +130,15 @@ export const injectProseMirrorStyles = (): void => {
       color: #0b57d0;
     }
 
+    /* Lock glyph — tells the writer "this number is protected from
+       Ricalcola". Rendered inline after the number so it follows wherever
+       the number sits (left/right gutter, narrow screens). */
+    .pm-heading .scene-number-btn.is-locked::after {
+      content: " 🔒";
+      font-size: 9pt;
+      opacity: 0.75;
+    }
+
     .pm-heading .scene-number-btn[hidden] {
       display: none;
     }

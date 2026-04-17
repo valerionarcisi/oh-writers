@@ -255,6 +255,27 @@ export const backspaceCommand: Command = (state, dispatch) => {
 };
 
 /**
+ * Escape inside an empty heading slot — bail out of the scene and drop
+ * the caret into a fresh empty action right after the heading. If the
+ * heading has any content we keep it: Esc is the "undo my new scene"
+ * shortcut, not a destructive one. Runs only when the slot picker is
+ * closed (the picker's own handleKeyDown dismisses on Esc first).
+ */
+export const escapeHeadingCommand: Command = (state, dispatch, view) => {
+  const { $from } = state.selection;
+  const parent = $from.parent.type.name;
+  if (parent !== "prefix" && parent !== "title") return false;
+  let headingDepth = $from.depth;
+  while (headingDepth > 0 && $from.node(headingDepth).type.name !== "heading") {
+    headingDepth -= 1;
+  }
+  if (headingDepth <= 0) return false;
+  const heading = $from.node(headingDepth);
+  if (heading.textContent.length > 0) return false;
+  return setElement("action")(state, dispatch, view);
+};
+
+/**
  * Focus mode toggle — fires a DOM custom event so ScreenplayEditor's React
  * state can respond. Identical to the Monaco approach.
  */
@@ -268,6 +289,7 @@ export const fountainKeymap = keymap({
   Enter: enterCommand,
   Space: spaceCommand,
   Backspace: backspaceCommand,
+  Escape: escapeHeadingCommand,
   "Mod-Shift-f": focusModeCommand,
 
   // Force element — Alt + letter (same as Spec 05e)
