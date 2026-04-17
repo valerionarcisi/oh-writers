@@ -1,8 +1,11 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useMenuPopover } from "../hooks/useMenuPopover";
 import { useImportPdf } from "../hooks/useImportPdf";
 import styles from "./ToolbarMenu.module.css";
 
 interface ToolbarMenuProps {
+  /** Project id — used to navigate to per-project screens (e.g. Frontespizio). */
+  projectId: string;
   hasContent: boolean;
   onImport: (fountain: string) => void;
   /** Label for the "save as new version then import" button, e.g. "Versione 2" */
@@ -26,6 +29,7 @@ interface ToolbarMenuProps {
  *   - Versioni  (navigates to the versions route)
  */
 export function ToolbarMenu({
+  projectId,
   hasContent,
   onImport,
   nextVersionLabel,
@@ -35,6 +39,12 @@ export function ToolbarMenu({
   currentVersionLabel = null,
   onResequenceAll,
 }: ToolbarMenuProps) {
+  const navigate = useNavigate();
+  const openTitlePage = () =>
+    void navigate({
+      to: "/projects/$id/title-page",
+      params: { id: projectId },
+    });
   const { isOpen, toggle, close, triggerRef, panelRef } = useMenuPopover();
   const imp = useImportPdf({
     hasExistingContent: hasContent,
@@ -153,15 +163,14 @@ export function ToolbarMenu({
             type="button"
             role="menuitem"
             className={styles.item}
-            disabled
-            title="Disponibile a breve"
+            onClick={runAndClose(openTitlePage)}
+            title="Apri il frontespizio"
             data-testid="menu-item-title-page"
           >
             <span className={styles.itemIcon} aria-hidden="true">
               ✎
             </span>
             <span className={styles.itemLabel}>Frontespizio</span>
-            <span className={styles.comingSoon}>soon</span>
           </button>
         </div>
       )}

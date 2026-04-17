@@ -154,6 +154,7 @@ export function ScreenplayToolbar({
           Focus
         </button>
         <ToolbarMenu
+          projectId={projectId}
           hasContent={hasContent}
           onImport={onImport}
           nextVersionLabel={nextVersionLabel}
