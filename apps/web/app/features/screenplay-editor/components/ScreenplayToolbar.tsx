@@ -1,11 +1,22 @@
 import { Link } from "@tanstack/react-router";
 import { SaveStatus } from "~/features/documents";
+import { VersionsMenu } from "~/features/documents/components/VersionsMenu";
 import { ImportPdfButton } from "./ImportPdfButton";
 import type { ElementType } from "../lib/fountain-element-detector";
+import {
+  useVersions,
+  useCreateVersionFromScratch,
+  useDuplicateScreenplayVersion,
+  useRenameScreenplayVersion,
+  useSwitchToVersion,
+  useDeleteVersion,
+} from "../hooks/useVersions";
 import styles from "./ScreenplayToolbar.module.css";
 
 interface ScreenplayToolbarProps {
   projectId: string;
+  screenplayId: string;
+  currentVersionId: string | null;
   currentPage: number;
   totalPages: number;
   isDirty: boolean;
@@ -48,6 +59,8 @@ const ELEMENT_ORDER: ElementType[] = [
 
 export function ScreenplayToolbar({
   projectId,
+  screenplayId,
+  currentVersionId,
   currentPage,
   totalPages,
   isDirty,
@@ -60,6 +73,22 @@ export function ScreenplayToolbar({
   onToggleFocusMode,
   onImport,
 }: ScreenplayToolbarProps) {
+  const versionsQuery = useVersions(screenplayId);
+  const createVersion = useCreateVersionFromScratch(screenplayId);
+  const duplicateVersion = useDuplicateScreenplayVersion(screenplayId);
+  const renameVersion = useRenameScreenplayVersion(screenplayId);
+  const switchVersion = useSwitchToVersion(screenplayId);
+  const deleteVersion = useDeleteVersion(screenplayId);
+  const versions =
+    versionsQuery.data && versionsQuery.data.isOk
+      ? versionsQuery.data.value
+      : [];
+  const isVersionBusy =
+    createVersion.isPending ||
+    duplicateVersion.isPending ||
+    renameVersion.isPending ||
+    switchVersion.isPending ||
+    deleteVersion.isPending;
   return (
     <div className={styles.toolbar}>
       <div className={styles.left}>
@@ -98,13 +127,21 @@ export function ScreenplayToolbar({
           p.{currentPage}/{totalPages}
         </span>
         <SaveStatus isDirty={isDirty} isSaving={isSaving} isError={isError} />
-        <Link
-          to="/projects/$id/screenplay/versions"
-          params={{ id: projectId }}
-          className={styles.versionsBtn}
-        >
-          Versions
-        </Link>
+        <VersionsMenu
+          versions={versions}
+          currentVersionId={currentVersionId}
+          canEdit={true}
+          isBusy={isVersionBusy}
+          onSwitch={(id) => switchVersion.mutate(id)}
+          onRename={(id, label) =>
+            renameVersion.mutate({ versionId: id, label })
+          }
+          onDelete={(id) => deleteVersion.mutate({ versionId: id })}
+          onCreateFromScratch={() => createVersion.mutate()}
+          onDuplicateCurrent={() => {
+            if (currentVersionId) duplicateVersion.mutate(currentVersionId);
+          }}
+        />
         <button
           className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ""}`}
           onClick={onToggleFocusMode}

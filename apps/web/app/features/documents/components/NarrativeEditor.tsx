@@ -18,6 +18,15 @@ import { TextEditor } from "./TextEditor";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { SaveStatus } from "./SaveStatus";
+import { VersionsMenu } from "./VersionsMenu";
+import {
+  useVersions,
+  useCreateVersionFromScratch,
+  useDuplicateVersion,
+  useRenameVersion,
+  useSwitchToVersion,
+  useDeleteDocumentVersion,
+} from "../hooks/useVersions";
 import styles from "./NarrativeEditor.module.css";
 
 interface NarrativeEditorProps {
@@ -97,6 +106,25 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const exportPdf = useExportNarrativePdf();
   const handleExport = () => exportPdf.mutate(document.projectId);
 
+  // Versions menu wiring
+  const versionsQuery = useVersions(document.id);
+  const createVersion = useCreateVersionFromScratch(document.id);
+  const duplicateVersion = useDuplicateVersion(document.id);
+  const renameVersion = useRenameVersion(document.id);
+  const switchVersion = useSwitchToVersion(document.id);
+  const deleteDocVersion = useDeleteDocumentVersion(document.id);
+  const versions =
+    versionsQuery.data && versionsQuery.data.isOk
+      ? versionsQuery.data.value
+      : [];
+  const currentVersionId = document.currentVersionId ?? null;
+  const isVersionBusy =
+    createVersion.isPending ||
+    duplicateVersion.isPending ||
+    renameVersion.isPending ||
+    switchVersion.isPending ||
+    deleteDocVersion.isPending;
+
   return (
     <div className={styles.page}>
       {/* Toolbar */}
@@ -148,6 +176,21 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               </button>
             </>
           )}
+          <VersionsMenu
+            versions={versions}
+            currentVersionId={currentVersionId}
+            canEdit={document.canEdit}
+            isBusy={isVersionBusy}
+            onSwitch={(id) => switchVersion.mutate(id)}
+            onRename={(id, label) =>
+              renameVersion.mutate({ versionId: id, label })
+            }
+            onDelete={(id) => deleteDocVersion.mutate(id)}
+            onCreateFromScratch={() => createVersion.mutate()}
+            onDuplicateCurrent={() => {
+              if (currentVersionId) duplicateVersion.mutate(currentVersionId);
+            }}
+          />
           <div
             className={styles.modeToggle}
             role="group"

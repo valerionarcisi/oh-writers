@@ -73,6 +73,8 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       ) : (
         <ScreenplayToolbar
           projectId={screenplay.projectId}
+          screenplayId={screenplay.id}
+          currentVersionId={screenplay.currentVersionId ?? null}
           currentPage={currentPage}
           totalPages={totalPages}
           isDirty={isDirty}
