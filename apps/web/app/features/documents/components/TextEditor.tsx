@@ -7,6 +7,7 @@ interface TextEditorProps {
   placeholder?: string;
   maxLength?: number;
   singleLine?: boolean;
+  readOnly?: boolean;
 }
 
 export function TextEditor({
@@ -15,6 +16,7 @@ export function TextEditor({
   placeholder,
   maxLength,
   singleLine = false,
+  readOnly = false,
 }: TextEditorProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -37,6 +39,7 @@ export function TextEditor({
         maxLength={maxLength}
         rows={singleLine ? 1 : 6}
         spellCheck
+        readOnly={readOnly}
       />
       {maxLength !== undefined && (
         <div className={styles.charCount}>

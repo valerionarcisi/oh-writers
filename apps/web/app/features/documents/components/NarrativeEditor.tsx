@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
-import type { DocumentView } from "../server/documents.server";
+import type { DocumentViewWithPermission } from "../server/documents.server";
 import { useAutoSave, useSaveDocument } from "../hooks/useDocument";
 import {
   parseOutline,
@@ -16,7 +16,7 @@ import { SaveStatus } from "./SaveStatus";
 import styles from "./NarrativeEditor.module.css";
 
 interface NarrativeEditorProps {
-  document: DocumentView;
+  document: DocumentViewWithPermission;
   type: DocumentType;
 }
 
@@ -66,6 +66,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   const isOutline = type === DocumentTypes.OUTLINE;
   const isLogline = type === DocumentTypes.LOGLINE;
+  const isReadOnly = !document.canEdit;
 
   return (
     <div className={styles.page}>
@@ -80,17 +81,33 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             ← Back
           </Link>
           <h1 className={styles.docTitle}>{DOCUMENT_LABELS[type]}</h1>
+          {isReadOnly && (
+            <span
+              className={styles.readOnlyBadge}
+              data-testid="narrative-readonly-badge"
+            >
+              Read only
+            </span>
+          )}
         </div>
         <div className={styles.toolbarRight}>
-          <SaveStatus isDirty={isDirty} isSaving={isSaving} isError={isError} />
-          <button
-            className={styles.saveBtn}
-            onClick={handleManualSave}
-            disabled={!isDirty || isSaving}
-            type="button"
-          >
-            Save
-          </button>
+          {!isReadOnly && (
+            <>
+              <SaveStatus
+                isDirty={isDirty}
+                isSaving={isSaving}
+                isError={isError}
+              />
+              <button
+                className={styles.saveBtn}
+                onClick={handleManualSave}
+                disabled={!isDirty || isSaving}
+                type="button"
+              >
+                Save
+              </button>
+            </>
+          )}
           <div
             className={styles.modeToggle}
             role="group"
@@ -124,6 +141,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             <OutlineEditor
               value={parseOutline(content)}
               onChange={(outline) => setContent(serializeOutline(outline))}
+              readOnly={isReadOnly}
             />
           ) : (
             <TextEditor
@@ -132,6 +150,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               placeholder={DOCUMENT_PLACEHOLDERS[type]}
               maxLength={isLogline ? LOGLINE_MAX : undefined}
               singleLine={false}
+              readOnly={isReadOnly}
             />
           )}
         </div>

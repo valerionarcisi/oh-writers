@@ -17,7 +17,8 @@ If those files don't exist yet, ask before proceeding.
 3. Validate inputs with Zod before any logic runs
 4. Implement server logic in `createServerFn`, client logic in the feature folder
 5. Test with Playwright — never skip tests for mutations or critical paths
-6. Commit following the Git conventions below
+6. **Code-review the staged diff before every commit** — run the `/code-review` skill on the change, address any critical findings, then commit
+7. Commit following the Git conventions below
 
 **Before implementation:** every plan or brainstorm that gets approved must produce a spec file in `docs/specs/` before any code is written. Name it `NN-feature-name.md` (or `NNb-feature-name.md` for sub-specs of an existing numbered spec). The spec is written first, then implementation starts.
 

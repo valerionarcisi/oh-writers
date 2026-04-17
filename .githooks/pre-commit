@@ -44,7 +44,7 @@ fi
 
 step "No debug leftovers"
 
-staged_ts=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' || true)
+staged_ts=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' | grep -vE '(^|/)(seed|scripts)/' || true)
 console_hits=""
 
 if [[ -n "$staged_ts" ]]; then

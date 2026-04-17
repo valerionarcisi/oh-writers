@@ -6,18 +6,13 @@ import { z } from "zod";
 import { DocumentTypes, TeamRoles } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
-import {
-  projects,
-  documents,
-  screenplays,
-  teamMembers,
-} from "@oh-writers/db/schema";
+import { projects, documents, screenplays } from "@oh-writers/db/schema";
 import type { TeamMember } from "@oh-writers/db/schema";
 import type { Project, Document, Screenplay } from "@oh-writers/db";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
-import type { Db } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
+import { canEdit, isOwner, getMembership } from "~/server/permissions";
 import { CreateProjectInput, UpdateProjectInput } from "../projects.schema";
 import {
   ProjectNotFoundError,
@@ -35,52 +30,7 @@ export type ProjectWithDocuments = Project & {
   screenplay: ScreenplayView | null;
 };
 
-// ─── Permission helpers ───────────────────────────────────────────────────────
-
-const canEdit = (
-  project: {
-    ownerId: string | null;
-    teamId: string | null;
-    isArchived: boolean;
-  },
-  userId: string,
-  membership: TeamMember | null,
-): boolean => {
-  if (project.isArchived) return false;
-  if (project.ownerId === userId && project.teamId === null) return true;
-  if (!membership) return false;
-  return (
-    membership.role === TeamRoles.OWNER || membership.role === TeamRoles.EDITOR
-  );
-};
-
-const isOwner = (
-  project: { ownerId: string | null; teamId: string | null },
-  userId: string,
-  membership: TeamMember | null,
-): boolean => {
-  if (project.ownerId === userId && project.teamId === null) return true;
-  return membership?.role === TeamRoles.OWNER;
-};
-
-// ─── DB helpers ───────────────────────────────────────────────────────────────
-
-const getMembership = (
-  db: Db,
-  teamId: string,
-  userId: string,
-): ResultAsync<TeamMember | null, DbError> =>
-  ResultAsync.fromPromise(
-    db.query.teamMembers
-      .findFirst({
-        where: and(
-          eq(teamMembers.teamId, teamId),
-          eq(teamMembers.userId, userId),
-        ),
-      })
-      .then((row) => row ?? null),
-    (e) => new DbError("getMembership", e),
-  );
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const toSlug = (title: string): string =>
   title

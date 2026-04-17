@@ -146,11 +146,25 @@ Blocco 1 — allineamento limiti e caps:
 2. Aggiornare `NarrativeEditor` per passare `LOGLINE_MAX` a `TextEditor` invece di 500 hardcoded
 3. Aggiungere cap server-side in `saveDocument` (test OHW-206)
 
-Blocco 2 — permessi:
+Blocco 2 — permessi: ✅ done (commit Blocco 2)
 
-4. Introdurre helper `requireTeamRole(projectId, minRole)` in `features/teams/` se assente (verificare prima)
-5. Usarlo in `saveDocument` per rigettare viewer (test OHW-212)
-6. Front-end: leggere il ruolo nel loader della route, passare `isReadOnly` al `NarrativeEditor`; `TextEditor` espone `readOnly` prop se assente (test OHW-211)
+4. Estratto `canEdit / isOwner / getMembership` in `~/server/permissions.ts` (già
+   presenti come helper privati in `projects.server.ts`, ora condivisi tra
+   `projects` e `documents`). Refactor di `projects.server.ts` per consumarli.
+5. Role guard in `saveDocument`: carica project + membership, se `!canEdit` →
+   `ForbiddenError` (test OHW-212).
+6. `getDocument` restituisce `DocumentViewWithPermission` (DocumentView + `canEdit`)
+   così il client sa se rendere read-only senza una seconda query.
+7. Front-end: `NarrativeEditor` legge `document.canEdit` → se false:
+   - Badge "Read only" nella toolbar
+   - `readOnly` prop passata a `TextEditor` (+ attributo HTML `readonly`)
+   - `readOnly` prop passata a `OutlineEditor` (wrapper `<fieldset disabled>`
+     disabilita tutti gli input/button nativi senza riscrivere gli handler)
+   - Bottone Save nascosto (HTML `hidden` via conditional render)
+   - `SaveStatus` nascosto (nulla da salvare)
+8. Seed esteso: `viewer@ohwriters.dev` + team "Test Team" + team project
+   "Team Thriller" (TEST_TEAM_PROJECT_ID). `tests/fixtures.ts` espone
+   `authenticatedViewerPage` fixture + costante `TEST_TEAM_PROJECT_ID`.
 
 Blocco 3 — test E2E:
 

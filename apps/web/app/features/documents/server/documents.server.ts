@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { eq, and } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
-import { documents } from "@oh-writers/db/schema";
+import { documents, projects } from "@oh-writers/db/schema";
 import type { Document } from "@oh-writers/db";
 import type { DocumentType } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
@@ -10,6 +10,7 @@ import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
+import { canEdit, getMembership } from "~/server/permissions";
 import {
   SaveDocumentInput,
   GetDocumentInput,
@@ -26,6 +27,10 @@ import {
 
 export type DocumentView = Omit<Document, "yjsState">;
 
+export type DocumentViewWithPermission = DocumentView & {
+  canEdit: boolean;
+};
+
 // ─── Get document ─────────────────────────────────────────────────────────────
 
 export const getDocument = createServerFn({ method: "GET" })
@@ -33,8 +38,10 @@ export const getDocument = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<DocumentView, DocumentNotFoundError | DbError>> => {
-      await requireUser();
+    }): Promise<
+      ResultShape<DocumentViewWithPermission, DocumentNotFoundError | DbError>
+    > => {
+      const user = await requireUser();
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
@@ -59,7 +66,30 @@ export const getDocument = createServerFn({ method: "GET" })
         );
       }
 
-      return toShape(ok(stripYjsState(result.value)));
+      const projectResult = await ResultAsync.fromPromise(
+        db.query.projects
+          .findFirst({ where: eq(projects.id, data.projectId) })
+          .then((row) => row ?? null),
+        (e) => new DbError("getDocument.project", e),
+      );
+      if (projectResult.isErr()) return toShape(err(projectResult.error));
+      const project = projectResult.value;
+      if (!project) {
+        return toShape(
+          err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
+        );
+      }
+
+      const membershipResult = project.teamId
+        ? await getMembership(db, project.teamId, user.id)
+        : ok(null);
+      if (membershipResult.isErr()) return toShape(err(membershipResult.error));
+
+      const permission = canEdit(project, user.id, membershipResult.value);
+
+      return toShape(
+        ok({ ...stripYjsState(result.value), canEdit: permission }),
+      );
     },
   );
 
@@ -82,7 +112,7 @@ export const saveDocument = createServerFn({ method: "POST" })
         DocumentNotFoundError | ForbiddenError | ValidationError | DbError
       >
     > => {
-      await requireUser();
+      const user = await requireUser();
       const db = await getDb();
 
       const docResult = await ResultAsync.fromPromise(
@@ -110,10 +140,9 @@ export const saveDocument = createServerFn({ method: "POST" })
         );
       }
 
-      const { projects: projectsTable } = await import("@oh-writers/db/schema");
       const projectResult = await ResultAsync.fromPromise(
         db.query.projects
-          .findFirst({ where: eq(projectsTable.id, doc.projectId) })
+          .findFirst({ where: eq(projects.id, doc.projectId) })
           .then((row) => row ?? null),
         (e) => new DbError("saveDocument.project", e),
       );
@@ -124,6 +153,17 @@ export const saveDocument = createServerFn({ method: "POST" })
       if (project.isArchived) {
         return toShape(
           err(new ForbiddenError("save document: project is archived")),
+        );
+      }
+
+      // Role guard — viewers (and non-members on team projects) cannot save.
+      const membershipResult = project.teamId
+        ? await getMembership(db, project.teamId, user.id)
+        : ok(null);
+      if (membershipResult.isErr()) return toShape(err(membershipResult.error));
+      if (!canEdit(project, user.id, membershipResult.value)) {
+        return toShape(
+          err(new ForbiddenError("save document: insufficient role")),
         );
       }
 

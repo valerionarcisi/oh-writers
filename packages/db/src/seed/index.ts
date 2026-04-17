@@ -6,6 +6,8 @@ import {
   documents,
   screenplays,
   screenplayVersions,
+  teams,
+  teamMembers,
 } from "../schema/index";
 import {
   NON_FA_RIDERE_FOUNTAIN,
@@ -30,12 +32,21 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 const TEST_USER_ID = "00000000-0000-4000-a000-000000000001";
+const TEST_VIEWER_ID = "00000000-0000-4000-a000-000000000002";
 const TEST_PROJECT_ID = "00000000-0000-4000-a000-000000000010";
+const TEST_TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 const TEST_SCREENPLAY_ID = "00000000-0000-4000-a000-000000000020";
+const TEST_TEAM_ID = "00000000-0000-4000-a000-000000000030";
 
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
 const TEST_NAME = "Test User";
+
+const TEST_VIEWER_EMAIL = "viewer@ohwriters.dev";
+const TEST_VIEWER_PASSWORD = "viewerpassword123";
+const TEST_VIEWER_NAME = "Viewer User";
+
+const TEST_TEAM_PROJECT_TITLE = "Team Thriller";
 
 export async function seed() {
   console.log("Seeding database...");
@@ -153,6 +164,111 @@ export async function seed() {
     .onConflictDoNothing();
 
   console.log("  -> Manual version created");
+
+  // 6. Viewer user — for E2E role-guard tests (Spec 04, block 2)
+  const hashedViewerPassword = await hashPassword(TEST_VIEWER_PASSWORD);
+
+  await db
+    .insert(users)
+    .values({
+      id: TEST_VIEWER_ID,
+      email: TEST_VIEWER_EMAIL,
+      name: TEST_VIEWER_NAME,
+      emailVerified: true,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(accounts)
+    .values({
+      id: `credential:${TEST_VIEWER_ID}`,
+      userId: TEST_VIEWER_ID,
+      accountId: TEST_VIEWER_ID,
+      providerId: "credential",
+      password: hashedViewerPassword,
+    })
+    .onConflictDoNothing();
+
+  console.log("  -> Viewer user created");
+
+  // 7. Team — test user (owner) + viewer user (viewer)
+  await db
+    .insert(teams)
+    .values({
+      id: TEST_TEAM_ID,
+      name: "Test Team",
+      slug: "test-team",
+      createdBy: TEST_USER_ID,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(teamMembers)
+    .values([
+      {
+        teamId: TEST_TEAM_ID,
+        userId: TEST_USER_ID,
+        role: "owner" as const,
+      },
+      {
+        teamId: TEST_TEAM_ID,
+        userId: TEST_VIEWER_ID,
+        role: "viewer" as const,
+      },
+    ])
+    .onConflictDoNothing();
+
+  console.log("  -> Team + memberships created");
+
+  // 8. Team project (teamId set, ownerId null) + narrative docs
+  await db
+    .insert(projects)
+    .values({
+      id: TEST_TEAM_PROJECT_ID,
+      title: TEST_TEAM_PROJECT_TITLE,
+      slug: "team-thriller",
+      genre: "thriller",
+      format: "feature",
+      teamId: TEST_TEAM_ID,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(documents)
+    .values([
+      {
+        projectId: TEST_TEAM_PROJECT_ID,
+        type: "logline" as const,
+        title: "Logline",
+        content: "A detective chases a killer through a silent city.",
+        createdBy: TEST_USER_ID,
+      },
+      {
+        projectId: TEST_TEAM_PROJECT_ID,
+        type: "synopsis" as const,
+        title: "Synopsis",
+        content: "",
+        createdBy: TEST_USER_ID,
+      },
+      {
+        projectId: TEST_TEAM_PROJECT_ID,
+        type: "outline" as const,
+        title: "Outline",
+        content: "",
+        createdBy: TEST_USER_ID,
+      },
+      {
+        projectId: TEST_TEAM_PROJECT_ID,
+        type: "treatment" as const,
+        title: "Treatment",
+        content: "",
+        createdBy: TEST_USER_ID,
+      },
+    ])
+    .onConflictDoNothing();
+
+  console.log("  -> Team project + documents created");
+
   console.log("Seed complete.");
 }
 
