@@ -11,7 +11,11 @@ import { SceneNumberConflictModal } from "./SceneNumberConflictModal";
 import type { ConflictChoice } from "./SceneNumberConflictModal";
 import {
   SCENE_NUMBER_CONFLICT_EVENT,
+  SCENE_NUMBER_TOAST_EVENT,
+  dispatchSceneNumberToast,
+  resequenceWholeDoc,
   type SceneNumberConflictDetail,
+  type SceneNumberToastDetail,
 } from "../lib/plugins/scene-number-commands";
 import styles from "./ScreenplayEditor.module.css";
 
@@ -30,6 +34,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [conflict, setConflict] = useState<SceneNumberConflictDetail | null>(
     null,
   );
+  const [toast, setToast] = useState<string | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const handleSetElement = useCallback((el: ElementType) => {
     const view = viewRef.current;
@@ -79,6 +84,26 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     [conflict],
   );
 
+  // Toast bus — raised by popover "Resequence from here" and toolbar
+  // "Resequence scenes" when the constraints can't be satisfied.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<SceneNumberToastDetail>).detail;
+      setToast(detail.message);
+      const t = window.setTimeout(() => setToast(null), 4000);
+      return () => window.clearTimeout(t);
+    };
+    window.addEventListener(SCENE_NUMBER_TOAST_EVENT, handler);
+    return () => window.removeEventListener(SCENE_NUMBER_TOAST_EVENT, handler);
+  }, []);
+
+  const onResequenceAll = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const r = resequenceWholeDoc(view);
+    if (!r.ok) dispatchSceneNumberToast(r.reason);
+  }, []);
+
   // Ctrl/Cmd+Shift+F keybinding dispatches this event from within the editor
   useEffect(() => {
     const handleToggle = () => setFocusMode((prev) => !prev);
@@ -116,6 +141,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onSetElement={handleSetElement}
           onToggleFocusMode={() => setFocusMode((prev) => !prev)}
           onImport={setContent}
+          onResequenceAll={onResequenceAll}
         />
       )}
       <div className={styles.editorArea}>
@@ -138,6 +164,15 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           proposed={conflict.proposed}
           onResolve={onConflictChoice}
         />
+      ) : null}
+      {toast ? (
+        <div
+          role="status"
+          className={styles.toast}
+          data-testid="scene-number-toast"
+        >
+          {toast}
+        </div>
       ) : null}
     </div>
   );

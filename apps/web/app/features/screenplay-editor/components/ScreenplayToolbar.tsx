@@ -30,6 +30,9 @@ interface ScreenplayToolbarProps {
   onSetElement: (element: ElementType) => void;
   onToggleFocusMode: () => void;
   onImport: (fountain: string) => void;
+  /** Opens the "Resequence all scenes?" confirmation modal and, on confirm,
+   *  reruns resequenceAll over the whole doc via the editor view. */
+  onResequenceAll?: () => void;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -74,8 +77,10 @@ export function ScreenplayToolbar({
   onSetElement,
   onToggleFocusMode,
   onImport,
+  onResequenceAll,
 }: ScreenplayToolbarProps) {
   const [compareOpen, setCompareOpen] = useState(false);
+  const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   const versionsQuery = useVersions(screenplayId);
   const createVersion = useCreateVersionFromScratch(screenplayId);
   const duplicateVersion = useDuplicateScreenplayVersion(screenplayId);
@@ -157,6 +162,17 @@ export function ScreenplayToolbar({
         >
           Focus
         </button>
+        {onResequenceAll ? (
+          <button
+            className={styles.focusBtn}
+            type="button"
+            title="Renumber every scene based on document order, respecting locked scenes"
+            data-testid="resequence-all-trigger"
+            onClick={() => setResequenceConfirmOpen(true)}
+          >
+            Resequence scenes
+          </button>
+        ) : null}
         <ImportPdfButton hasExistingContent={hasContent} onImport={onImport} />
         <button
           className={styles.exportBtn}
@@ -167,6 +183,50 @@ export function ScreenplayToolbar({
           Export PDF
         </button>
       </div>
+      {resequenceConfirmOpen && onResequenceAll ? (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Resequence all scenes"
+          data-testid="resequence-confirm-modal"
+          onClick={() => setResequenceConfirmOpen(false)}
+        >
+          <div
+            className={styles.confirmModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className={styles.confirmTitle}>Resequence all scenes?</h2>
+            <p className={styles.confirmBody}>
+              This renumbers every scene from 1 upward based on the current
+              document order. Locked scenes keep their numbers — others get
+              assigned around them with letter suffixes if needed. This
+              can&apos;t be undone automatically.
+            </p>
+            <div className={styles.confirmFooter}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                data-testid="resequence-confirm-cancel"
+                onClick={() => setResequenceConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                data-testid="resequence-confirm-apply"
+                onClick={() => {
+                  onResequenceAll();
+                  setResequenceConfirmOpen(false);
+                }}
+              >
+                Resequence
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {compareOpen && (
         <VersionCompareModal
           versions={versions.map((v) => ({

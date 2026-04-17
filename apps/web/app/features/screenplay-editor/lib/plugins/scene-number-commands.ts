@@ -118,6 +118,85 @@ export const resequenceFromHere = (
   return { ok: true };
 };
 
+/**
+ * "Resequence from here" — treats every scene before `pos` as a locked
+ * anchor, then reruns `resequenceAll`. Scenes before stay untouched; the
+ * scene at `pos` and everything after get renumbered within the remaining
+ * gap, honouring any locked flags they carry.
+ */
+export const resequenceFrom = (
+  view: EditorView,
+  pos: number,
+): { ok: true } | { ok: false; reason: string } => {
+  const headings = listHeadings(view.state.doc);
+  const selfIdx = headings.findIndex((h) => h.pos === pos);
+  if (selfIdx < 0) return { ok: false, reason: "scene not found" };
+
+  const input = headings.map((h, i) => ({
+    number: h.number,
+    locked: i < selfIdx ? true : h.locked,
+  }));
+  const result = resequenceAll(input);
+  if (!result.ok) return { ok: false, reason: result.error.reason };
+
+  const tr = view.state.tr;
+  headings.forEach((h, i) => {
+    const node = tr.doc.nodeAt(h.pos);
+    if (!node || node.type.name !== "heading") return;
+    const nextNumber = result.numbers[i] ?? h.number;
+    if (nextNumber === h.number) return;
+    tr.setNodeMarkup(h.pos, null, {
+      ...node.attrs,
+      scene_number: nextNumber,
+    });
+  });
+  view.dispatch(tr);
+  return { ok: true };
+};
+
+/**
+ * Clear the locked flag on a single heading. The number itself is kept —
+ * the next run of `resequenceAll` is what actually reassigns it.
+ */
+export const unlockSceneNumber = (view: EditorView, pos: number): boolean => {
+  const node = view.state.doc.nodeAt(pos);
+  if (!node || node.type.name !== "heading") return false;
+  if (!node.attrs["scene_number_locked"]) return false;
+  const tr = view.state.tr.setNodeMarkup(pos, null, {
+    ...node.attrs,
+    scene_number_locked: false,
+  });
+  view.dispatch(tr);
+  return true;
+};
+
+/**
+ * Rerun `resequenceAll` over the entire doc, respecting every heading's
+ * current locked flag. Used by the toolbar "Resequence scenes" action.
+ */
+export const resequenceWholeDoc = (
+  view: EditorView,
+): { ok: true } | { ok: false; reason: string } => {
+  const headings = listHeadings(view.state.doc);
+  const result = resequenceAll(
+    headings.map((h) => ({ number: h.number, locked: h.locked })),
+  );
+  if (!result.ok) return { ok: false, reason: result.error.reason };
+  const tr = view.state.tr;
+  headings.forEach((h, i) => {
+    const node = tr.doc.nodeAt(h.pos);
+    if (!node || node.type.name !== "heading") return;
+    const nextNumber = result.numbers[i] ?? h.number;
+    if (nextNumber === h.number) return;
+    tr.setNodeMarkup(h.pos, null, {
+      ...node.attrs,
+      scene_number: nextNumber,
+    });
+  });
+  view.dispatch(tr);
+  return { ok: true };
+};
+
 // ─── Event bus ────────────────────────────────────────────────────────────
 
 export type ConflictChoice = "lock" | "resequence-from" | "cancel";
@@ -134,5 +213,18 @@ export const dispatchConflict = (detail: SceneNumberConflictDetail): void => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent(SCENE_NUMBER_CONFLICT_EVENT, { detail }),
+  );
+};
+
+export const SCENE_NUMBER_TOAST_EVENT = "scene-number-toast" as const;
+
+export interface SceneNumberToastDetail {
+  readonly message: string;
+}
+
+export const dispatchSceneNumberToast = (message: string): void => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(SCENE_NUMBER_TOAST_EVENT, { detail: { message } }),
   );
 };

@@ -159,6 +159,69 @@ export const injectProseMirrorStyles = (): void => {
       text-transform: uppercase;
     }
 
+    /* ⋮ button next to the left scene number — opens the scene popover. */
+    .pm-heading .scene-number-menu-btn {
+      position: absolute;
+      top: 0;
+      left: -0.55in;
+      padding: 0 2px;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      font-weight: 700;
+      color: #888;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .pm-heading .scene-number-menu-btn:hover {
+      color: #111;
+    }
+
+    .pm-heading .scene-menu {
+      position: absolute;
+      top: 1.6em;
+      left: -1in;
+      z-index: 10;
+      inline-size: 12em;
+      padding: 4px 0;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+      font-family: system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 10pt;
+      text-transform: none;
+      color: #111;
+    }
+
+    .pm-heading .scene-menu-item {
+      text-align: start;
+      padding: 6px 10px;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .pm-heading .scene-menu-item:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+
+    .pm-heading .scene-menu-item:disabled {
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    .pm-heading .scene-menu-divider {
+      margin: 4px 0;
+      border: 0;
+      border-block-start: 1px solid #e5e5e5;
+    }
+
     .pm-heading .scene-number-error {
       position: absolute;
       top: 1.6em;

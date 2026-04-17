@@ -21,9 +21,12 @@ import type { EditorView, NodeView } from "prosemirror-view";
 import type { Node } from "prosemirror-model";
 import {
   dispatchConflict,
+  dispatchSceneNumberToast,
   hasConflict,
+  resequenceFrom,
   resequenceFromHere,
   setSceneNumberLocked,
+  unlockSceneNumber,
 } from "./scene-number-commands";
 
 const VALID_SCENE_NUMBER = /^(\d+)([A-Z]?)$/;
@@ -38,9 +41,17 @@ class HeadingNodeView implements NodeView {
 
   private readonly leftBtn: HTMLButtonElement;
   private readonly rightBtn: HTMLButtonElement;
+  private readonly menuBtn: HTMLButtonElement;
   private readonly slots: HTMLElement;
   private input: HTMLInputElement | null = null;
   private errorEl: HTMLElement | null = null;
+  private menu: HTMLElement | null = null;
+  private readonly outsideMenuClick = (e: MouseEvent) => {
+    if (!this.menu) return;
+    const t = e.target as globalThis.Node | null;
+    if (t && (this.menu.contains(t) || this.menuBtn.contains(t))) return;
+    this.closeMenu();
+  };
   // True while a conflict modal is awaiting user choice; blocks reentrant
   // commits (blur fires when the modal steals focus).
   private awaitingResolve = false;
@@ -55,13 +66,31 @@ class HeadingNodeView implements NodeView {
 
     this.leftBtn = this.createButton("scene-number-left");
     this.rightBtn = this.createButton("scene-number-right");
+    this.menuBtn = this.createMenuButton();
 
     this.slots = document.createElement("div");
     this.slots.className = "pm-heading-slots";
     this.contentDOM = this.slots;
 
-    this.dom.append(this.leftBtn, this.slots, this.rightBtn);
+    this.dom.append(this.leftBtn, this.menuBtn, this.slots, this.rightBtn);
     this.syncAttrs();
+  }
+
+  private createMenuButton(): HTMLButtonElement {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "scene-number-menu-btn";
+    btn.textContent = "⋮";
+    btn.setAttribute("data-testid", "scene-menu-trigger");
+    btn.setAttribute("aria-label", "Scene actions");
+    btn.setAttribute("aria-haspopup", "menu");
+    btn.contentEditable = "false";
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleMenu();
+    });
+    return btn;
   }
 
   private createButton(side: string): HTMLButtonElement {
@@ -210,6 +239,95 @@ class HeadingNodeView implements NodeView {
     this.cancelEdit();
   }
 
+  private toggleMenu() {
+    if (this.menu) {
+      this.closeMenu();
+      return;
+    }
+    this.openMenu();
+  }
+
+  private openMenu() {
+    const locked = Boolean(this.node.attrs["scene_number_locked"]);
+    const menu = document.createElement("div");
+    menu.className = "scene-menu";
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("data-testid", "scene-menu");
+
+    const items: Array<
+      | {
+          label: string;
+          testid: string;
+          onClick: () => void;
+          disabled?: boolean;
+        }
+      | "divider"
+    > = [
+      {
+        label: "Edit number",
+        testid: "scene-menu-edit",
+        onClick: () => {
+          this.closeMenu();
+          this.startEdit();
+        },
+      },
+      {
+        label: "Unlock number",
+        testid: "scene-menu-unlock",
+        disabled: !locked,
+        onClick: () => {
+          this.closeMenu();
+          const pos = this.getPos();
+          if (pos === undefined) return;
+          unlockSceneNumber(this.view, pos);
+        },
+      },
+      "divider",
+      {
+        label: "Resequence from here",
+        testid: "scene-menu-resequence-from",
+        onClick: () => {
+          this.closeMenu();
+          const pos = this.getPos();
+          if (pos === undefined) return;
+          const r = resequenceFrom(this.view, pos);
+          if (!r.ok) dispatchSceneNumberToast(r.reason);
+        },
+      },
+    ];
+
+    for (const item of items) {
+      if (item === "divider") {
+        const hr = document.createElement("hr");
+        hr.className = "scene-menu-divider";
+        menu.appendChild(hr);
+        continue;
+      }
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "scene-menu-item";
+      btn.textContent = item.label;
+      btn.setAttribute("role", "menuitem");
+      btn.setAttribute("data-testid", item.testid);
+      if (item.disabled) btn.disabled = true;
+      btn.addEventListener("click", item.onClick);
+      menu.appendChild(btn);
+    }
+
+    this.dom.appendChild(menu);
+    this.menu = menu;
+    this.menuBtn.setAttribute("aria-expanded", "true");
+    document.addEventListener("mousedown", this.outsideMenuClick);
+  }
+
+  private closeMenu() {
+    if (!this.menu) return;
+    this.menu.remove();
+    this.menu = null;
+    this.menuBtn.setAttribute("aria-expanded", "false");
+    document.removeEventListener("mousedown", this.outsideMenuClick);
+  }
+
   update(node: Node): boolean {
     if (node.type !== this.node.type) return false;
     this.node = node;
@@ -221,14 +339,20 @@ class HeadingNodeView implements NodeView {
     const t = event.target as HTMLElement | null;
     if (!t) return false;
     if (t === this.input) return true;
-    if (t === this.leftBtn || t === this.rightBtn) return true;
+    if (t === this.leftBtn || t === this.rightBtn || t === this.menuBtn)
+      return true;
+    if (this.menu && this.menu.contains(t)) return true;
     return false;
   }
 
   ignoreMutation(m: MutationRecord): boolean {
     // PM must only observe mutations inside contentDOM (slots).
-    // Button/input/error live outside and are fully owned by the NodeView.
+    // Button/input/menu/error live outside and are fully owned by the NodeView.
     return !this.slots.contains(m.target as globalThis.Node);
+  }
+
+  destroy() {
+    if (this.menu) this.closeMenu();
   }
 }
 
