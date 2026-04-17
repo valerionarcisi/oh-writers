@@ -70,6 +70,16 @@ function ProjectPage() {
             variant="secondary"
             size="sm"
             onClick={() =>
+              navigate({ to: "/projects/$id/title-page", params: { id } })
+            }
+            data-testid="nav-title-page"
+          >
+            Title Page
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
               navigate({ to: "/projects/$id/settings", params: { id } })
             }
           >
