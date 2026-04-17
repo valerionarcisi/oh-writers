@@ -140,3 +140,155 @@ export const sceneNumberForInsertion = (
  */
 export const renumberAll = (count: number): readonly string[] =>
   Array.from({ length: count }, (_, i) => String(i + 1));
+
+// ─── Resequence ──────────────────────────────────────────────────────────────
+
+/**
+ * Raised when `resequenceAll` cannot produce a valid numbering: usually because
+ * two locked scenes are out of order (e.g. a later scene is locked to "3" but
+ * an earlier scene is locked to "5"), or there is not enough numeric room to
+ * fit the unlocked scenes between two locked bounds.
+ *
+ * Plain value object so it survives JSON serialization over a server fn
+ * boundary (see `packages/utils/src/errors.ts`).
+ */
+export class ResequenceConflictError {
+  readonly _tag = "ResequenceConflictError" as const;
+  readonly message: string;
+  constructor(readonly reason: string) {
+    this.message = `Resequence conflict: ${reason}`;
+  }
+}
+
+export interface ResequenceInput {
+  readonly number: string;
+  readonly locked: boolean;
+}
+
+export type ResequenceResult =
+  | { readonly ok: true; readonly numbers: readonly string[] }
+  | { readonly ok: false; readonly error: ResequenceConflictError };
+
+const formatSceneNumber = (sn: SceneNumber): string =>
+  `${sn.number}${sn.letters}`;
+
+/**
+ * Fill a gap of `count` scene numbers between `prev` (exclusive, or null for
+ * "start of doc") and `next` (exclusive, or null for "end of doc").
+ *
+ * Strategy: prefer plain ascending integers starting from `prev.number + 1`.
+ * If that would run into `next`, fall back to letter suffixes anchored on
+ * `prev` (so inserting 3 scenes between `5-locked` and `6-locked` yields
+ * `5A, 5B, 5C`). Throws a conflict error if no layout works.
+ */
+const fillGap = (
+  prev: SceneNumber | null,
+  next: SceneNumber | null,
+  count: number,
+): string[] => {
+  if (count === 0) return [];
+
+  const start = prev ? prev.number + 1 : 1;
+  const fitsNumerically = next === null || start + count - 1 < next.number;
+  if (fitsNumerically) {
+    return Array.from({ length: count }, (_, i) => String(start + i));
+  }
+
+  // Letter-suffix fallback: anchor on prev (or on "0" if there is no prev).
+  const anchorNum = prev ? prev.number : 0;
+  let letters = prev ? prev.letters : "";
+  const result: string[] = [];
+  for (let i = 0; i < count; i++) {
+    letters = nextLetterSuffix(letters);
+    const candidate = `${anchorNum}${letters}`;
+    if (
+      next !== null &&
+      compareSceneNumbers(candidate, formatSceneNumber(next)) >= 0
+    ) {
+      throw new ResequenceConflictError(
+        `cannot fit ${count} scene(s) between ${prev ? formatSceneNumber(prev) : "start"} and ${formatSceneNumber(next)}`,
+      );
+    }
+    result.push(candidate);
+  }
+  return result;
+};
+
+/**
+ * Resequence an ordered list of scenes, keeping every `locked` scene's number
+ * fixed and assigning fresh numbers to the unlocked ones.
+ *
+ * Guarantees:
+ * - Output has the same length as input.
+ * - Locked scenes keep their exact number string.
+ * - Unlocked scenes get the smallest ascending numbers that respect both
+ *   surrounding locked bounds.
+ *
+ * Fails (returns `{ ok: false, error }`) if:
+ * - A locked scene number is unparseable.
+ * - Two locked scenes are not strictly increasing in document order.
+ * - There isn't enough numeric room between two locked bounds to fit the
+ *   unlocked scenes in between.
+ */
+export const resequenceAll = (
+  scenes: readonly ResequenceInput[],
+): ResequenceResult => {
+  const out: string[] = new Array(scenes.length).fill("");
+
+  // Validate locked ordering and preload their numbers into the output.
+  let lastLocked: SceneNumber | null = null;
+  for (let i = 0; i < scenes.length; i++) {
+    if (!scenes[i]!.locked) continue;
+    const parsed = parseSceneNumber(scenes[i]!.number);
+    if (!parsed) {
+      return {
+        ok: false,
+        error: new ResequenceConflictError(
+          `invalid locked number "${scenes[i]!.number}"`,
+        ),
+      };
+    }
+    if (
+      lastLocked &&
+      compareSceneNumbers(
+        formatSceneNumber(lastLocked),
+        formatSceneNumber(parsed),
+      ) >= 0
+    ) {
+      return {
+        ok: false,
+        error: new ResequenceConflictError(
+          `locked scenes out of order: ${formatSceneNumber(lastLocked)} before ${formatSceneNumber(parsed)}`,
+        ),
+      };
+    }
+    out[i] = formatSceneNumber(parsed);
+    lastLocked = parsed;
+  }
+
+  // Walk the array, filling each run of unlocked scenes between locked bounds.
+  let prev: SceneNumber | null = null;
+  let runStart = 0;
+  for (let i = 0; i <= scenes.length; i++) {
+    const atBoundary = i === scenes.length || scenes[i]!.locked;
+    if (!atBoundary) continue;
+
+    const next =
+      i === scenes.length ? null : parseSceneNumber(scenes[i]!.number);
+    const count = i - runStart;
+    if (count > 0) {
+      try {
+        const filled = fillGap(prev, next, count);
+        for (let j = 0; j < count; j++) out[runStart + j] = filled[j]!;
+      } catch (e) {
+        if (e instanceof ResequenceConflictError)
+          return { ok: false, error: e };
+        throw e;
+      }
+    }
+    if (i < scenes.length) prev = next;
+    runStart = i + 1;
+  }
+
+  return { ok: true, numbers: out };
+};

@@ -32,14 +32,3 @@
   resize: none;
   overflow: hidden;
 }
-
-.charCount {
-  font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
-  text-align: end;
-}
-
-.charCountWarn {
-  color: var(--color-warning);
-  font-weight: var(--weight-semibold);
-}

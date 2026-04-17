@@ -1,6 +1,6 @@
-import { ForbiddenError, DbError } from "@oh-writers/utils";
+import { ForbiddenError, DbError, ValidationError } from "@oh-writers/utils";
 
-export { ForbiddenError, DbError };
+export { ForbiddenError, DbError, ValidationError };
 
 export class VersionNotFoundError {
   readonly _tag = "VersionNotFoundError" as const;
@@ -34,4 +34,5 @@ export type VersionsError =
   | CannotDeleteLastManualError
   | InvalidLabelError
   | ForbiddenError
+  | ValidationError
   | DbError;

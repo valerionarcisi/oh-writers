@@ -15,6 +15,17 @@ import { ProseMirrorView } from "./ProseMirrorView";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { useVersionsDrawer } from "~/features/versions";
+import { useSaveScreenplay } from "../hooks/useScreenplay";
+import { SceneNumberConflictModal } from "./SceneNumberConflictModal";
+import type { ConflictChoice } from "./SceneNumberConflictModal";
+import {
+  SCENE_NUMBER_CONFLICT_EVENT,
+  SCENE_NUMBER_TOAST_EVENT,
+  dispatchSceneNumberToast,
+  resequenceWholeDoc,
+  type SceneNumberConflictDetail,
+  type SceneNumberToastDetail,
+} from "../lib/plugins/scene-number-commands";
 import styles from "./ScreenplayEditor.module.css";
 
 interface ScreenplayEditorProps {
@@ -31,6 +42,22 @@ type ViewingState =
       savedContent: string;
       savedPmDoc: Record<string, unknown> | null;
     };
+
+// Walk the PM doc JSON and count `heading` nodes — drives the "s.N/M"
+// toolbar indicator. Cheap recursion; the doc rarely exceeds a few hundred
+// nodes even for feature-length screenplays.
+const countHeadings = (doc: Record<string, unknown> | null): number => {
+  if (!doc) return 0;
+  let count = 0;
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== "object") return;
+    const node = n as { type?: string; content?: unknown[] };
+    if (node.type === "heading") count += 1;
+    if (Array.isArray(node.content)) node.content.forEach(walk);
+  };
+  walk(doc);
+  return count;
+};
 
 export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [content, setContent] = useState(screenplay.content);
@@ -52,6 +79,13 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [awaitingRestoreConfirm, setAwaitingRestoreConfirm] = useState(false);
   const [cursorLine] = useState(1);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
+  const [currentSceneIndex, setCurrentSceneIndex] = useState<number | null>(
+    null,
+  );
+  const [conflict, setConflict] = useState<SceneNumberConflictDetail | null>(
+    null,
+  );
+  const [toast, setToast] = useState<string | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
   const isViewing = viewing.kind === "viewing";
@@ -85,11 +119,18 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     if (!view) return;
     setElement(el)(view.state, view.dispatch, view);
     view.focus();
+    // Optimistic highlight — the dispatchTransaction listener in
+    // ProseMirrorView will re-derive the pill from the cursor's parent on
+    // the next selection change, which keeps it accurate when the user
+    // clicks into a different block type.
+    setCurrentElement(el);
   }, []);
   const totalPages = estimatePageCount(content);
   const currentPage = currentPageFromLine(cursorLine);
+  const totalScenes = countHeadings(pmDoc);
   const { isDirty, isSaving, isError, isOffline, lastSavedAt, flush } =
     useAutoSave(screenplay.id, content, screenplay.content, pmDoc, isViewing);
+  const save = useSaveScreenplay();
 
   const restore = useRestoreVersion();
 
@@ -195,6 +236,62 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     };
   }, [flush]);
 
+  // Cmd/Ctrl+S — force save, bypassing autosave debounce.
+  useEffect(() => {
+    if (!(screenplay.canEdit ?? false)) return;
+    const onKey = (e: KeyboardEvent) => {
+      const isSaveCombo =
+        (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s";
+      if (!isSaveCombo) return;
+      e.preventDefault();
+      if (!isSaving)
+        save.mutate({ screenplayId: screenplay.id, content, pmDoc });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [save, screenplay.id, screenplay.canEdit, content, pmDoc, isSaving]);
+
+  // Scene-number conflict bus — heading NodeView dispatches on Enter/blur
+  // when the proposed number collides with another scene. We open the modal
+  // and forward the user's choice back through the event's resolve callback.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<SceneNumberConflictDetail>).detail;
+      setConflict(detail);
+    };
+    window.addEventListener(SCENE_NUMBER_CONFLICT_EVENT, handler);
+    return () =>
+      window.removeEventListener(SCENE_NUMBER_CONFLICT_EVENT, handler);
+  }, []);
+
+  const onConflictChoice = useCallback(
+    (choice: ConflictChoice) => {
+      conflict?.resolve(choice);
+      setConflict(null);
+    },
+    [conflict],
+  );
+
+  // Toast bus — raised by popover "Resequence from here" and toolbar
+  // "Resequence scenes" when the constraints can't be satisfied.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<SceneNumberToastDetail>).detail;
+      setToast(detail.message);
+      const t = window.setTimeout(() => setToast(null), 4000);
+      return () => window.clearTimeout(t);
+    };
+    window.addEventListener(SCENE_NUMBER_TOAST_EVENT, handler);
+    return () => window.removeEventListener(SCENE_NUMBER_TOAST_EVENT, handler);
+  }, []);
+
+  const onResequenceAll = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const r = resequenceWholeDoc(view);
+    if (!r.ok) dispatchSceneNumberToast(r.reason);
+  }, []);
+
   // Ctrl/Cmd+Shift+F keybinding dispatches this event from within the editor
   useEffect(() => {
     const handleToggle = () => setFocusMode((prev) => !prev);
@@ -219,8 +316,12 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       ) : (
         <ScreenplayToolbar
           projectId={screenplay.projectId}
+          screenplayId={screenplay.id}
+          currentVersionId={screenplay.currentVersionId ?? null}
           currentPage={currentPage}
           totalPages={totalPages}
+          currentSceneIndex={currentSceneIndex}
+          totalScenes={totalScenes}
           isDirty={isDirty}
           isSaving={isSaving}
           isError={isError}
@@ -250,6 +351,8 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           isVersionsPanelOpen={isVersionsPanelOpen}
           currentVersionLabel={latestVersion?.label ?? null}
           hideSaveIndicator={isViewing}
+          onResequenceAll={onResequenceAll}
+          canEdit={screenplay.canEdit ?? false}
         />
       )}
       {!isFocusMode && isViewing && (
@@ -279,13 +382,30 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
             onChange={setContent}
             onDocChange={setPmDoc}
             onElementChange={setCurrentElement}
-            readOnly={isViewing}
+            onSceneIndexChange={setCurrentSceneIndex}
+            readOnly={isViewing || !(screenplay.canEdit ?? false)}
             onReady={(view) => {
               viewRef.current = view;
             }}
           />
         </div>
       </div>
+      {conflict ? (
+        <SceneNumberConflictModal
+          current={conflict.current}
+          proposed={conflict.proposed}
+          onResolve={onConflictChoice}
+        />
+      ) : null}
+      {toast ? (
+        <div
+          role="status"
+          className={styles.toast}
+          data-testid="scene-number-toast"
+        >
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

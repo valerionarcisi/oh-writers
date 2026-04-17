@@ -46,10 +46,8 @@ export const injectProseMirrorStyles = (): void => {
     /* ─── Heading — bold, uppercase ─────────────────────────── */
 
     .pm-heading {
-      display: flex;
-      align-items: baseline;
-      gap: 1ch;
-      position: relative; /* anchors ::before / ::after pseudo-elements */
+      display: block;
+      position: relative; /* anchors the absolutely-positioned scene-number buttons */
       font-weight: 700;
       text-transform: uppercase;
       /* Industry convention: scene heading is the same body font-size, only
@@ -60,6 +58,14 @@ export const injectProseMirrorStyles = (): void => {
       margin-inline: 0;
       margin-block-start: 2em;
       margin-block-end: 1em;
+    }
+
+    /* Flex wrapper that holds prefix + title. This is the NodeView's
+     * contentDOM — PM writes the two inline slots here. */
+    .pm-heading-slots {
+      display: flex;
+      align-items: baseline;
+      gap: 1ch;
     }
 
     .pm-scene:first-child .pm-heading {
@@ -91,36 +97,142 @@ export const injectProseMirrorStyles = (): void => {
       content: " ";
     }
 
-    /* ─── Scene numbers — CSS pseudo-elements on data-number attr ── */
+    /* ─── Scene numbers — real <button> elements rendered by the NodeView ── */
     /*
-     * The heading node's scene_number attr is emitted as data-number by the
-     * schema's toDOM. ::before = left gutter, ::after = right gutter.
-     * Positioned relative to .pm-heading which is position:relative.
-     * Offsets are tuned to the .ProseMirror padding-inline (1.5in left / 1in right):
-     *   left gutter  sits ~0.5in from page edge → left: -1in from text start
-     *   right gutter sits ~0.5in from right edge → right: -0.75in from text end
+     * Each heading NodeView renders two <button.scene-number> siblings of its
+     * contentDOM, one on each gutter, so the user can click to edit. Both are
+     * absolutely positioned relative to .pm-heading so they don't affect the
+     * flex layout of the slots wrapper. Offsets mirror the old pseudo-element
+     * rules (tuned to the .ProseMirror 1.5in / 1in padding-inline).
      */
 
-    .pm-heading[data-number]::before,
-    .pm-heading[data-number]::after {
-      content: attr(data-number);
+    .pm-heading .scene-number-btn {
       position: absolute;
       top: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
       font-family: "Courier Prime", "Courier New", Courier, monospace;
       font-weight: 700;
       font-size: 12pt;
       line-height: inherit;
       color: #555;
+      cursor: pointer;
       user-select: none;
-      pointer-events: none;
     }
 
-    .pm-heading[data-number]::before {
+    .pm-heading .scene-number-btn:hover {
+      color: #111;
+      text-decoration: underline;
+    }
+
+    .pm-heading .scene-number-btn.is-locked {
+      color: #0b57d0;
+    }
+
+    .pm-heading .scene-number-btn[hidden] {
+      display: none;
+    }
+
+    .pm-heading .scene-number-left {
       left: -1in;
     }
 
-    .pm-heading[data-number]::after {
+    .pm-heading .scene-number-right {
       right: -0.75in;
+    }
+
+    /* Inline edit input — replaces the left button while editing. */
+    .pm-heading .scene-number-input {
+      position: absolute;
+      top: 0;
+      left: -1in;
+      inline-size: 4ch;
+      padding: 0 2px;
+      border: 1px solid #0b57d0;
+      background: #fff;
+      font-family: "Courier Prime", "Courier New", Courier, monospace;
+      font-weight: 700;
+      font-size: 12pt;
+      line-height: inherit;
+      color: #111;
+      text-transform: uppercase;
+    }
+
+    /* ⋮ button next to the left scene number — opens the scene popover. */
+    .pm-heading .scene-number-menu-btn {
+      position: absolute;
+      top: 0;
+      left: -0.55in;
+      padding: 0 2px;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      font-weight: 700;
+      color: #888;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .pm-heading .scene-number-menu-btn:hover {
+      color: #111;
+    }
+
+    .pm-heading .scene-menu {
+      position: absolute;
+      top: 1.6em;
+      left: -1in;
+      z-index: 10;
+      inline-size: 12em;
+      padding: 4px 0;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+      font-family: system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 10pt;
+      text-transform: none;
+      color: #111;
+    }
+
+    .pm-heading .scene-menu-item {
+      text-align: start;
+      padding: 6px 10px;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .pm-heading .scene-menu-item:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+
+    .pm-heading .scene-menu-item:disabled {
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    .pm-heading .scene-menu-divider {
+      margin: 4px 0;
+      border: 0;
+      border-block-start: 1px solid #e5e5e5;
+    }
+
+    .pm-heading .scene-number-error {
+      position: absolute;
+      top: 1.6em;
+      left: -1in;
+      max-inline-size: 2in;
+      font-family: system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 10pt;
+      line-height: 1.2;
+      color: #c0392b;
+      text-transform: none;
     }
 
     /* ─── Action — full width ───────────────────────────────── */

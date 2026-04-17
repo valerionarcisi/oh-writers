@@ -2,14 +2,20 @@ import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
-import { screenplays } from "@oh-writers/db/schema";
+import {
+  screenplays,
+  screenplayVersions,
+  projects,
+} from "@oh-writers/db/schema";
 import type { Screenplay } from "@oh-writers/db";
+import type { TeamMember } from "@oh-writers/db/schema";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "./versions.server";
+import { canEdit, getMembership } from "~/server/permissions";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
@@ -19,7 +25,11 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ScreenplayView = Omit<Screenplay, "yjsState">;
+export type ScreenplayView = Omit<Screenplay, "yjsState"> & {
+  // Optional because only the GET endpoint computes permissions; mutation
+  // responses (save, switch version, …) return the raw row without it.
+  canEdit?: boolean;
+};
 
 const estimatePageCount = (content: string): number =>
   Math.max(0, Math.ceil(content.split("\n").length / 55));
@@ -34,7 +44,7 @@ export const getScreenplay = createServerFn({ method: "GET" })
     }): Promise<
       ResultShape<ScreenplayView, ScreenplayNotFoundError | DbError>
     > => {
-      await requireUser();
+      const user = await requireUser();
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
@@ -49,7 +59,55 @@ export const getScreenplay = createServerFn({ method: "GET" })
         return toShape(err(new ScreenplayNotFoundError(data.projectId)));
       }
 
-      return toShape(ok(stripYjsState(result.value)));
+      // Compute canEdit from the owning project + membership so the client
+      // can disable version mutations + save path for viewers.
+      const projectResult = await ResultAsync.fromPromise(
+        db.query.projects
+          .findFirst({ where: eq(projects.id, data.projectId) })
+          .then((row) => row ?? null),
+        (e) => new DbError("getScreenplay.project", e),
+      );
+      if (projectResult.isErr()) return toShape(err(projectResult.error));
+      const project = projectResult.value;
+      if (!project) {
+        return toShape(err(new ScreenplayNotFoundError(data.projectId)));
+      }
+      let membership: TeamMember | null = null;
+      if (project.teamId) {
+        const memberResult = await getMembership(db, project.teamId, user.id);
+        if (memberResult.isErr()) return toShape(err(memberResult.error));
+        membership = memberResult.value;
+      }
+      const canUserEdit = canEdit(project, user.id, membership);
+
+      // Spec 06b: live content sits on the active version row. Fall back to
+      // screenplays.content for legacy rows with no current_version_id.
+      let liveContent = result.value.content;
+      let livePageCount = result.value.pageCount;
+      if (result.value.currentVersionId) {
+        const versionResult = await ResultAsync.fromPromise(
+          db.query.screenplayVersions
+            .findFirst({
+              where: eq(screenplayVersions.id, result.value.currentVersionId),
+            })
+            .then((row) => row ?? null),
+          (e) => new DbError("getScreenplay.version", e),
+        );
+        if (versionResult.isErr()) return toShape(err(versionResult.error));
+        if (versionResult.value) {
+          liveContent = versionResult.value.content;
+          livePageCount = versionResult.value.pageCount;
+        }
+      }
+
+      return toShape(
+        ok({
+          ...stripYjsState(result.value),
+          content: liveContent,
+          pageCount: livePageCount,
+          canEdit: canUserEdit,
+        }),
+      );
     },
   );
 
@@ -87,10 +145,9 @@ export const saveScreenplay = createServerFn({ method: "POST" })
       if (!s)
         return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
 
-      const { projects: projectsTable } = await import("@oh-writers/db/schema");
       const projectResult = await ResultAsync.fromPromise(
         db.query.projects
-          .findFirst({ where: eq(projectsTable.id, s.projectId) })
+          .findFirst({ where: eq(projects.id, s.projectId) })
           .then((row) => row ?? null),
         (e) => new DbError("saveScreenplay.project", e),
       );
@@ -104,9 +161,17 @@ export const saveScreenplay = createServerFn({ method: "POST" })
         );
       }
 
+      // Spec 06b: the active version row is the source of truth. Auto-version
+      // snapshots are gone — saving just writes to the current version.
       return toShape(
         await ResultAsync.fromPromise(
           db.transaction(async (tx) => {
+            if (s.currentVersionId) {
+              await tx
+                .update(screenplayVersions)
+                .set({ content: data.content, pageCount })
+                .where(eq(screenplayVersions.id, s.currentVersionId));
+            }
             const [updated] = await tx
               .update(screenplays)
               .set({
@@ -117,7 +182,6 @@ export const saveScreenplay = createServerFn({ method: "POST" })
               })
               .where(eq(screenplays.id, data.screenplayId))
               .returning();
-
             if (!updated) throw new Error("Save returned no rows");
 
             // ensureFirstVersion runs inside the same transaction so the

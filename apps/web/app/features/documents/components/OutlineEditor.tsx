@@ -10,6 +10,7 @@ import styles from "./OutlineEditor.module.css";
 interface OutlineEditorProps {
   value: OutlineContent;
   onChange: (value: OutlineContent) => void;
+  readOnly?: boolean;
 }
 
 // ─── Pure state transformers ──────────────────────────────────────────────────
@@ -373,9 +374,17 @@ function ActBlock({
 
 // ─── Outline editor root ──────────────────────────────────────────────────────
 
-export function OutlineEditor({ value, onChange }: OutlineEditorProps) {
-  return (
-    <div className={styles.editor}>
+export function OutlineEditor({
+  value,
+  onChange,
+  readOnly = false,
+}: OutlineEditorProps) {
+  // In read-only mode we wrap in a <fieldset disabled> — this natively
+  // disables every form control and button inside without rewiring each
+  // handler. Visual state stays intact; interaction is blocked by the
+  // browser.
+  const body = (
+    <>
       {value.acts.map((act) => (
         <ActBlock
           key={act.id}
@@ -411,13 +420,25 @@ export function OutlineEditor({ value, onChange }: OutlineEditorProps) {
           }
         />
       ))}
-      <button
-        className={`${styles.addBtn} ${styles.addActBtn}`}
-        onClick={() => onChange(addAct(value))}
-        type="button"
-      >
-        + Add act
-      </button>
-    </div>
+      {!readOnly && (
+        <button
+          className={`${styles.addBtn} ${styles.addActBtn}`}
+          onClick={() => onChange(addAct(value))}
+          type="button"
+        >
+          + Add act
+        </button>
+      )}
+    </>
   );
+
+  if (readOnly) {
+    return (
+      <fieldset className={styles.editor} disabled>
+        {body}
+      </fieldset>
+    );
+  }
+
+  return <div className={styles.editor}>{body}</div>;
 }

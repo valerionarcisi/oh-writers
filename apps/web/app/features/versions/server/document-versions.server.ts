@@ -114,16 +114,25 @@ export const createDocumentVersion = createServerFn({ method: "POST" })
 
       return toShape(
         await ResultAsync.fromPromise(
-          db
-            .insert(documentVersions)
-            .values({
-              documentId: data.documentId,
-              label: data.label ?? null,
-              content: doc.content,
-              createdBy: user.id,
-            })
-            .returning()
-            .then((rows) => rows[0]),
+          db.transaction(async (tx) => {
+            const existing = await tx
+              .select({ number: documentVersions.number })
+              .from(documentVersions)
+              .where(eq(documentVersions.documentId, data.documentId));
+            const nextNumber =
+              existing.reduce((max, r) => Math.max(max, r.number), 0) + 1;
+            const [row] = await tx
+              .insert(documentVersions)
+              .values({
+                documentId: data.documentId,
+                number: nextNumber,
+                label: data.label ?? null,
+                content: doc.content,
+                createdBy: user.id,
+              })
+              .returning();
+            return row;
+          }),
           (e) => new DbError("createDocumentVersion", e),
         ).andThen((v) =>
           v ? ok(toView(v)) : err(new VersionNotFoundError("new")),

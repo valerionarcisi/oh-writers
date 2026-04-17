@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { SaveIndicator } from "./SaveIndicator";
 import { ToolbarMenu } from "./ToolbarMenu";
@@ -6,8 +7,12 @@ import styles from "./ScreenplayToolbar.module.css";
 
 interface ScreenplayToolbarProps {
   projectId: string;
+  screenplayId: string;
+  currentVersionId: string | null;
   currentPage: number;
   totalPages: number;
+  currentSceneIndex: number | null;
+  totalScenes: number;
   isDirty: boolean;
   isSaving: boolean;
   isError: boolean;
@@ -26,6 +31,12 @@ interface ScreenplayToolbarProps {
   isVersionsPanelOpen: boolean;
   currentVersionLabel?: string | null;
   hideSaveIndicator?: boolean;
+  /** Opens the "Resequence all scenes?" confirmation modal and, on confirm,
+   *  reruns resequenceAll over the whole doc via the editor view. */
+  onResequenceAll?: () => void;
+  /** True when the signed-in user can mutate this project (owner or editor
+   *  on a non-archived project). Gates write affordances. */
+  canEdit: boolean;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -59,6 +70,8 @@ export function ScreenplayToolbar({
   projectId,
   currentPage,
   totalPages,
+  currentSceneIndex,
+  totalScenes,
   isDirty,
   isSaving,
   isError,
@@ -77,7 +90,10 @@ export function ScreenplayToolbar({
   isVersionsPanelOpen,
   currentVersionLabel = null,
   hideSaveIndicator = false,
+  onResequenceAll,
+  canEdit,
 }: ScreenplayToolbarProps) {
+  const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   return (
     <div className={styles.toolbar}>
       <div className={styles.left}>
@@ -115,6 +131,9 @@ export function ScreenplayToolbar({
         <span className={styles.pageCount} data-testid="page-indicator">
           p.{currentPage}/{totalPages}
         </span>
+        <span className={styles.pageCount} data-testid="scene-indicator">
+          s.{currentSceneIndex ?? "—"}/{totalScenes}
+        </span>
         {!hideSaveIndicator && (
           <SaveIndicator
             isDirty={isDirty}
@@ -134,6 +153,17 @@ export function ScreenplayToolbar({
         >
           Focus
         </button>
+        {onResequenceAll && canEdit ? (
+          <button
+            className={styles.focusBtn}
+            type="button"
+            title="Renumber every scene based on document order, respecting locked scenes"
+            data-testid="resequence-all-trigger"
+            onClick={() => setResequenceConfirmOpen(true)}
+          >
+            Resequence scenes
+          </button>
+        ) : null}
         {currentVersionLabel != null && (
           <button
             type="button"
@@ -154,6 +184,50 @@ export function ScreenplayToolbar({
           isVersionsPanelOpen={isVersionsPanelOpen}
         />
       </div>
+      {resequenceConfirmOpen && onResequenceAll ? (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Resequence all scenes"
+          data-testid="resequence-confirm-modal"
+          onClick={() => setResequenceConfirmOpen(false)}
+        >
+          <div
+            className={styles.confirmModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className={styles.confirmTitle}>Resequence all scenes?</h2>
+            <p className={styles.confirmBody}>
+              This renumbers every scene from 1 upward based on the current
+              document order. Locked scenes keep their numbers — others get
+              assigned around them with letter suffixes if needed. This
+              can&apos;t be undone automatically.
+            </p>
+            <div className={styles.confirmFooter}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                data-testid="resequence-confirm-cancel"
+                onClick={() => setResequenceConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                data-testid="resequence-confirm-apply"
+                onClick={() => {
+                  onResequenceAll();
+                  setResequenceConfirmOpen(false);
+                }}
+              >
+                Resequence
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

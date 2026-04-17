@@ -92,3 +92,18 @@
   position: relative;
   flex-shrink: 0;
 }
+
+.toast {
+  position: fixed;
+  inset-block-end: var(--space-4);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  background: var(--color-fg);
+  color: var(--color-bg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  z-index: var(--z-toast, 9000);
+  max-inline-size: 28rem;
+}

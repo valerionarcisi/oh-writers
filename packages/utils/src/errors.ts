@@ -29,3 +29,18 @@ export class DbError {
       cause instanceof Error ? cause.message : String(cause ?? null);
   }
 }
+
+// Input that passes Zod shape validation but violates a domain-level
+// constraint (length cap depending on discriminator, business-rule limit, etc.)
+// that Zod alone cannot express without refetching DB state.
+export class ValidationError {
+  readonly _tag = "ValidationError" as const;
+  readonly message: string;
+
+  constructor(
+    readonly field: string,
+    readonly reason: string,
+  ) {
+    this.message = `Validation failed on ${field}: ${reason}`;
+  }
+}

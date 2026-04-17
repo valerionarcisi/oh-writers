@@ -16,6 +16,7 @@ import { fountainKeymap } from "../lib/plugins/keymap";
 import { injectProseMirrorStyles } from "../lib/plugins/prosemirror-styles";
 import { buildAutocompletePlugin } from "../lib/plugins/autocomplete";
 import { buildSlotPickerPlugin } from "../lib/plugins/scene-slot-picker";
+import { createHeadingNodeView } from "../lib/plugins/heading-nodeview";
 import {
   buildPaginatorPlugin,
   injectPaginatorStyles,
@@ -50,6 +51,12 @@ interface ProseMirrorViewProps {
    */
   onElementChange?: (element: ElementType) => void;
   /**
+   * Emits the 1-based index of the scene containing the cursor, or null when
+   * the cursor is positioned before the first heading (no enclosing scene).
+   * Drives the `s.N/total` indicator in the toolbar.
+   */
+  onSceneIndexChange?: (index: number | null) => void;
+  /**
    * Called once after the view is mounted. Lets the parent hold a handle to
    * the EditorView (e.g. to dispatch commands from the toolbar) without
    * threading refs through the component tree.
@@ -61,8 +68,13 @@ interface ProseMirrorViewProps {
 
 // Maps PM node type names to the ElementType the toolbar understands.
 // "heading" → "scene" because from the writer's POV a heading IS a scene line.
+// "prefix" / "title" are child nodes of a heading (the INT./EXT. slot and the
+// location/time slot) — when the cursor lands in either, the block is still a
+// scene as far as the toolbar is concerned.
 const NODE_TO_ELEMENT: Record<string, ElementType> = {
   heading: "scene",
+  prefix: "scene",
+  title: "scene",
   action: "action",
   character: "character",
   dialogue: "dialogue",
@@ -76,6 +88,7 @@ export function ProseMirrorView({
   onChange,
   onDocChange,
   onElementChange,
+  onSceneIndexChange,
   onReady,
   readOnly = false,
 }: ProseMirrorViewProps) {
@@ -143,6 +156,9 @@ export function ProseMirrorView({
     const view = new EditorView(mountRef.current, {
       state,
       editable: () => !readOnly,
+      nodeViews: {
+        heading: (node, v, getPos) => createHeadingNodeView(node, v, getPos),
+      },
       dispatchTransaction(tr) {
         const newState = view.state.apply(tr);
         view.updateState(newState);
@@ -152,6 +168,22 @@ export function ProseMirrorView({
           const blockType = newState.selection.$from.parent.type.name;
           const element = NODE_TO_ELEMENT[blockType] ?? "action";
           onElementChange(element);
+        }
+
+        // Scene index at cursor: count heading nodes whose start offset is
+        // <= the cursor position. Zero means the cursor sits before the
+        // first heading — we report null so the toolbar renders "—".
+        if (onSceneIndexChange) {
+          const cursor = newState.selection.$from.pos;
+          let count = 0;
+          newState.doc.descendants((n, pos) => {
+            if (n.type.name === "heading") {
+              if (pos <= cursor) count += 1;
+              return false;
+            }
+            return true;
+          });
+          onSceneIndexChange(count > 0 ? count : null);
         }
 
         if (tr.docChanged) {

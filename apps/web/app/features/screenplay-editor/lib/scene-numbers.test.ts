@@ -6,7 +6,12 @@ import {
   sceneNumberForInsertion,
   renumberAll,
   compareSceneNumbers,
+  resequenceAll,
+  ResequenceConflictError,
 } from "@oh-writers/domain";
+
+const unlocked = (number: string) => ({ number, locked: false });
+const locked = (number: string) => ({ number, locked: true });
 
 describe("filterIntExt", () => {
   it("returns all options for empty input", () => {
@@ -119,5 +124,98 @@ describe("compareSceneNumbers", () => {
     const nums = ["2", "1A", "1", "2A", "10"];
     const sorted = [...nums].sort(compareSceneNumbers);
     expect(sorted).toEqual(["1", "1A", "2", "2A", "10"]);
+  });
+});
+
+describe("resequenceAll", () => {
+  it("numbers all-unlocked scenes 1..N", () => {
+    const r = resequenceAll([unlocked("7"), unlocked("3"), unlocked("x")]);
+    expect(r).toEqual({ ok: true, numbers: ["1", "2", "3"] });
+  });
+
+  it("empty input returns empty numbers", () => {
+    expect(resequenceAll([])).toEqual({ ok: true, numbers: [] });
+  });
+
+  it("preserves all-locked scenes in strictly increasing order", () => {
+    const r = resequenceAll([locked("2"), locked("5"), locked("5A")]);
+    expect(r).toEqual({ ok: true, numbers: ["2", "5", "5A"] });
+  });
+
+  it("fills unlocked scenes around a locked midpoint with plain integers", () => {
+    const r = resequenceAll([
+      unlocked("a"),
+      unlocked("b"),
+      locked("10"),
+      unlocked("c"),
+      unlocked("d"),
+    ]);
+    expect(r).toEqual({ ok: true, numbers: ["1", "2", "10", "11", "12"] });
+  });
+
+  it("falls back to letter suffixes when numeric room is tight", () => {
+    const r = resequenceAll([
+      locked("5"),
+      unlocked("x"),
+      unlocked("y"),
+      unlocked("z"),
+      locked("6"),
+    ]);
+    expect(r).toEqual({
+      ok: true,
+      numbers: ["5", "5A", "5B", "5C", "6"],
+    });
+  });
+
+  it("continues letter sequence from an anchored locked scene", () => {
+    const r = resequenceAll([
+      locked("5A"),
+      unlocked("x"),
+      unlocked("y"),
+      locked("6"),
+    ]);
+    expect(r).toEqual({ ok: true, numbers: ["5A", "5B", "5C", "6"] });
+  });
+
+  it("uses letter fallback from start when first lock is at 1", () => {
+    const r = resequenceAll([unlocked("x"), unlocked("y"), locked("1")]);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.numbers).toEqual(["0A", "0B", "1"]);
+  });
+
+  it("fails when two locked scenes are out of order", () => {
+    const r = resequenceAll([locked("5"), unlocked("x"), locked("3")]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).toBeInstanceOf(ResequenceConflictError);
+      expect(r.error.reason).toMatch(/out of order/);
+    }
+  });
+
+  it("fails when locked scenes are equal (not strictly increasing)", () => {
+    const r = resequenceAll([locked("4"), unlocked("x"), locked("4")]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("fails on invalid locked number", () => {
+    const r = resequenceAll([locked("not-a-number")]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.reason).toMatch(/invalid locked number/);
+  });
+
+  it("fails when unlocked run cannot fit between tight locked bounds exhausting letters", () => {
+    // Between "5" and "5A" there is no room for any unlocked scene:
+    // the only candidate "5A" collides with the next locked number.
+    const input = [locked("5"), unlocked("x"), locked("5A")];
+    const r = resequenceAll(input);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.reason).toMatch(/cannot fit/);
+  });
+
+  it("output length equals input length", () => {
+    const input = [unlocked("a"), locked("5"), unlocked("b"), unlocked("c")];
+    const r = resequenceAll(input);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.numbers).toHaveLength(input.length);
   });
 });

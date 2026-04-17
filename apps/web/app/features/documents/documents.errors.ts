@@ -1,6 +1,6 @@
-import { ForbiddenError, DbError } from "@oh-writers/utils";
+import { ForbiddenError, DbError, ValidationError } from "@oh-writers/utils";
 
-export { ForbiddenError, DbError };
+export { ForbiddenError, DbError, ValidationError };
 
 export class DocumentNotFoundError {
   readonly _tag = "DocumentNotFoundError" as const;
@@ -11,4 +11,8 @@ export class DocumentNotFoundError {
   }
 }
 
-export type DocumentsError = DocumentNotFoundError | ForbiddenError | DbError;
+export type DocumentsError =
+  | DocumentNotFoundError
+  | ForbiddenError
+  | ValidationError
+  | DbError;
