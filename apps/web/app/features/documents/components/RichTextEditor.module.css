@@ -44,6 +44,15 @@
   flex: 1;
   display: flex;
   min-block-size: 0;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  overflow-y: auto;
+
+  &:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: var(--ring-focus);
+  }
 
   & :global(.tiptap) {
     flex: 1;
@@ -55,18 +64,10 @@
     line-height: var(--leading-relaxed);
     color: var(--color-fg);
     caret-color: var(--color-accent);
-    background: var(--color-bg);
-    border: var(--border);
-    border-radius: var(--radius-md);
     outline: none;
-    overflow-y: auto;
-
-    &:focus-visible {
-      border-color: var(--color-accent);
-      box-shadow: var(--ring-focus);
-    }
 
     & p {
+      min-block-size: 1lh;
       margin-block-end: var(--space-3);
 
       &:last-child {
