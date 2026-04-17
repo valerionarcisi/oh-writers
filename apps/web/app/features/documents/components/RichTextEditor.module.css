@@ -41,10 +41,13 @@
 
 .editor {
   flex: 1;
-  min-block-size: 200px;
+  display: flex;
+  min-block-size: 0;
 
   & .ProseMirror {
-    min-block-size: 200px;
+    flex: 1;
+    inline-size: 100%;
+    min-block-size: 320px;
     padding: var(--space-4);
     font-family: var(--font-serif);
     font-size: var(--text-base);
@@ -54,8 +57,9 @@
     border: var(--border);
     border-radius: var(--radius-md);
     outline: none;
+    overflow-y: auto;
 
-    &:focus {
+    &:focus-visible {
       border-color: var(--color-accent);
       box-shadow: var(--ring-focus);
     }
