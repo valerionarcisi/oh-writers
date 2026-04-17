@@ -33,6 +33,9 @@ interface ScreenplayToolbarProps {
   /** Opens the "Resequence all scenes?" confirmation modal and, on confirm,
    *  reruns resequenceAll over the whole doc via the editor view. */
   onResequenceAll?: () => void;
+  /** True when the signed-in user can mutate this project (owner or editor
+   *  on a non-archived project). Drives VersionsMenu write affordances. */
+  canEdit: boolean;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -78,6 +81,7 @@ export function ScreenplayToolbar({
   onToggleFocusMode,
   onImport,
   onResequenceAll,
+  canEdit,
 }: ScreenplayToolbarProps) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
@@ -138,7 +142,7 @@ export function ScreenplayToolbar({
         <VersionsMenu
           versions={versions}
           currentVersionId={currentVersionId}
-          canEdit={true}
+          canEdit={canEdit}
           isBusy={isVersionBusy}
           onSwitch={(id) => switchVersion.mutate(id)}
           onRename={(id, label) =>
@@ -162,7 +166,7 @@ export function ScreenplayToolbar({
         >
           Focus
         </button>
-        {onResequenceAll ? (
+        {onResequenceAll && canEdit ? (
           <button
             className={styles.focusBtn}
             type="button"

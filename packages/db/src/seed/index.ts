@@ -501,9 +501,19 @@ export async function seed() {
   console.log("");
 }
 
-seed()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error("Seed failed:", err);
-    process.exit(1);
-  });
+// Only auto-run when this file is the entrypoint (tsx src/seed/index.ts).
+// reset.ts imports { seed } from here and invokes it explicitly — running it
+// twice concurrently trips the screenplays.project_id unique constraint.
+const isDirectEntry =
+  typeof process !== "undefined" &&
+  process.argv[1] &&
+  import.meta.url === `file://${process.argv[1]}`;
+
+if (isDirectEntry) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error("Seed failed:", err);
+      process.exit(1);
+    });
+}

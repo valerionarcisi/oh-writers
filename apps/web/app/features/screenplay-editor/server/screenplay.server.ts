@@ -8,11 +8,13 @@ import {
   projects,
 } from "@oh-writers/db/schema";
 import type { Screenplay } from "@oh-writers/db";
+import type { TeamMember } from "@oh-writers/db/schema";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
+import { canEdit, getMembership } from "~/server/permissions";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
@@ -22,7 +24,11 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ScreenplayView = Omit<Screenplay, "yjsState">;
+export type ScreenplayView = Omit<Screenplay, "yjsState"> & {
+  // Optional because only the GET endpoint computes permissions; mutation
+  // responses (save, switch version, …) return the raw row without it.
+  canEdit?: boolean;
+};
 
 const estimatePageCount = (content: string): number =>
   Math.max(0, Math.ceil(content.split("\n").length / 55));
@@ -37,7 +43,7 @@ export const getScreenplay = createServerFn({ method: "GET" })
     }): Promise<
       ResultShape<ScreenplayView, ScreenplayNotFoundError | DbError>
     > => {
-      await requireUser();
+      const user = await requireUser();
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
@@ -51,6 +57,27 @@ export const getScreenplay = createServerFn({ method: "GET" })
       if (!result.value) {
         return toShape(err(new ScreenplayNotFoundError(data.projectId)));
       }
+
+      // Compute canEdit from the owning project + membership so the client
+      // can disable version mutations + save path for viewers.
+      const projectResult = await ResultAsync.fromPromise(
+        db.query.projects
+          .findFirst({ where: eq(projects.id, data.projectId) })
+          .then((row) => row ?? null),
+        (e) => new DbError("getScreenplay.project", e),
+      );
+      if (projectResult.isErr()) return toShape(err(projectResult.error));
+      const project = projectResult.value;
+      if (!project) {
+        return toShape(err(new ScreenplayNotFoundError(data.projectId)));
+      }
+      let membership: TeamMember | null = null;
+      if (project.teamId) {
+        const memberResult = await getMembership(db, project.teamId, user.id);
+        if (memberResult.isErr()) return toShape(err(memberResult.error));
+        membership = memberResult.value;
+      }
+      const canUserEdit = canEdit(project, user.id, membership);
 
       // Spec 06b: live content sits on the active version row. Fall back to
       // screenplays.content for legacy rows with no current_version_id.
@@ -77,6 +104,7 @@ export const getScreenplay = createServerFn({ method: "GET" })
           ...stripYjsState(result.value),
           content: liveContent,
           pageCount: livePageCount,
+          canEdit: canUserEdit,
         }),
       );
     },

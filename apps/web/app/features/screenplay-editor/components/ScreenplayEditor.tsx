@@ -142,6 +142,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onToggleFocusMode={() => setFocusMode((prev) => !prev)}
           onImport={setContent}
           onResequenceAll={onResequenceAll}
+          canEdit={screenplay.canEdit ?? false}
         />
       )}
       <div className={styles.editorArea}>
@@ -152,6 +153,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
             onChange={setContent}
             onDocChange={setPmDoc}
             onElementChange={setCurrentElement}
+            readOnly={!(screenplay.canEdit ?? false)}
             onReady={(view) => {
               viewRef.current = view;
             }}
