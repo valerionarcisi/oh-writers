@@ -67,8 +67,13 @@ interface ProseMirrorViewProps {
 
 // Maps PM node type names to the ElementType the toolbar understands.
 // "heading" → "scene" because from the writer's POV a heading IS a scene line.
+// "prefix" / "title" are child nodes of a heading (the INT./EXT. slot and the
+// location/time slot) — when the cursor lands in either, the block is still a
+// scene as far as the toolbar is concerned.
 const NODE_TO_ELEMENT: Record<string, ElementType> = {
   heading: "scene",
+  prefix: "scene",
+  title: "scene",
   action: "action",
   character: "character",
   dialogue: "dialogue",
