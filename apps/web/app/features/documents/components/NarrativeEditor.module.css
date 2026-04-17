@@ -139,6 +139,8 @@
 .editorArea {
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  min-block-size: 0;
   overflow: hidden;
 }
 
@@ -159,7 +161,9 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-4);
+  flex-shrink: 0;
   margin-block-start: var(--space-2);
+  padding-block-start: var(--space-2);
   font-size: var(--text-xs);
   color: var(--color-fg-secondary);
 }

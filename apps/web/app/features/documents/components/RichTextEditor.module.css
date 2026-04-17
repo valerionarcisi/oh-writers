@@ -57,7 +57,7 @@
   & :global(.tiptap) {
     flex: 1;
     inline-size: 100%;
-    min-block-size: 320px;
+    min-block-size: 200px;
     padding: var(--space-4);
     font-family: var(--font-serif);
     font-size: var(--text-base);

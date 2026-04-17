@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
+import { useMemo, useRef } from "react";
 import styles from "./RichTextEditor.module.css";
 
 interface RichTextEditorProps {
@@ -32,8 +33,19 @@ export function RichTextEditor({
   onSelectionChange,
   enableHeadings = false,
 }: RichTextEditorProps) {
-  const editor = useEditor({
-    extensions: [
+  // Callback refs — keep the same function identity across renders so Tiptap
+  // never thinks options changed and never resets editor state.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
+
+  // Extensions MUST be stable across renders. Tiptap's compareOptions compares
+  // the extensions array by reference; new instances every render cause the
+  // editor to call setOptions (which resets caret + content). Memoize by the
+  // structural knobs that actually change (enableHeadings / maxLength).
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         heading: enableHeadings ? { levels: [2, 3] } : false,
         bulletList: enableHeadings ? {} : false,
@@ -48,15 +60,23 @@ export function RichTextEditor({
         ? [CharacterCount.configure({ limit: maxLength })]
         : []),
     ],
-    content: toTiptapHtml(value),
+    [enableHeadings, maxLength, placeholder],
+  );
+
+  // Freeze the initial content; the editor is the source of truth once mounted.
+  const initialContent = useMemo(() => toTiptapHtml(value), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const editor = useEditor({
+    extensions,
+    content: initialContent,
     editable: !readOnly,
     immediatelyRender: false,
     shouldRerenderOnTransaction: true,
     onUpdate({ editor }) {
-      onChange(editor.getHTML());
+      onChangeRef.current(editor.getHTML());
     },
     onSelectionUpdate({ editor }) {
-      onSelectionChange?.(
+      onSelectionChangeRef.current?.(
         editor.state.doc.textBetween(
           editor.state.selection.from,
           editor.state.selection.to,
