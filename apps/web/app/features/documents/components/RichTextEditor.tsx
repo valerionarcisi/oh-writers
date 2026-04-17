@@ -51,6 +51,7 @@ export function RichTextEditor({
     content: toTiptapHtml(value),
     editable: !readOnly,
     immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
     onUpdate({ editor }) {
       onChange(editor.getHTML());
     },

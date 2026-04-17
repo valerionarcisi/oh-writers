@@ -90,6 +90,17 @@
     & ul {
       padding-inline-start: var(--space-5);
       margin-block-end: var(--space-3);
+      list-style-type: disc;
+    }
+
+    & li {
+      display: list-item;
+      margin-block: var(--space-1);
+
+      & p {
+        margin: 0;
+        min-block-size: 0;
+      }
     }
 
     & p:global(.is-editor-empty):first-child::before {
