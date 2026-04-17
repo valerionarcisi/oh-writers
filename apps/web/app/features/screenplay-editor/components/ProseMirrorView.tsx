@@ -16,6 +16,7 @@ import { fountainKeymap } from "../lib/plugins/keymap";
 import { injectProseMirrorStyles } from "../lib/plugins/prosemirror-styles";
 import { buildAutocompletePlugin } from "../lib/plugins/autocomplete";
 import { buildSlotPickerPlugin } from "../lib/plugins/scene-slot-picker";
+import { createHeadingNodeView } from "../lib/plugins/heading-nodeview";
 import {
   buildPaginatorPlugin,
   injectPaginatorStyles,
@@ -142,6 +143,9 @@ export function ProseMirrorView({
     const view = new EditorView(mountRef.current, {
       state,
       editable: () => !readOnly,
+      nodeViews: {
+        heading: (node, v, getPos) => createHeadingNodeView(node, v, getPos),
+      },
       dispatchTransaction(tr) {
         const newState = view.state.apply(tr);
         view.updateState(newState);
