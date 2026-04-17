@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { SaveStatus } from "~/features/documents";
 import { VersionsMenu } from "~/features/documents/components/VersionsMenu";
+import { VersionCompareModal } from "~/features/documents/components/VersionCompareModal";
 import { ImportPdfButton } from "./ImportPdfButton";
 import type { ElementType } from "../lib/fountain-element-detector";
 import {
@@ -73,6 +75,7 @@ export function ScreenplayToolbar({
   onToggleFocusMode,
   onImport,
 }: ScreenplayToolbarProps) {
+  const [compareOpen, setCompareOpen] = useState(false);
   const versionsQuery = useVersions(screenplayId);
   const createVersion = useCreateVersionFromScratch(screenplayId);
   const duplicateVersion = useDuplicateScreenplayVersion(screenplayId);
@@ -141,6 +144,9 @@ export function ScreenplayToolbar({
           onDuplicateCurrent={() => {
             if (currentVersionId) duplicateVersion.mutate(currentVersionId);
           }}
+          onCompare={
+            versions.length >= 2 ? () => setCompareOpen(true) : undefined
+          }
         />
         <button
           className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ""}`}
@@ -161,6 +167,18 @@ export function ScreenplayToolbar({
           Export PDF
         </button>
       </div>
+      {compareOpen && (
+        <VersionCompareModal
+          versions={versions.map((v) => ({
+            id: v.id,
+            number: v.number,
+            label: v.label,
+            content: v.content,
+          }))}
+          initialRightId={currentVersionId}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
     </div>
   );
 }

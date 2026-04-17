@@ -19,6 +19,7 @@ import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { SaveStatus } from "./SaveStatus";
 import { VersionsMenu } from "./VersionsMenu";
+import { VersionCompareModal } from "./VersionCompareModal";
 import {
   useVersions,
   useCreateVersionFromScratch,
@@ -53,6 +54,7 @@ type EditorMode = "free" | "assisted";
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
   const [mode, setMode] = useState<EditorMode>("free");
+  const [compareOpen, setCompareOpen] = useState(false);
   const save = useSaveDocument();
   const { isDirty, isSaving, isError } = useAutoSave(
     save,
@@ -190,6 +192,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onDuplicateCurrent={() => {
               if (currentVersionId) duplicateVersion.mutate(currentVersionId);
             }}
+            onCompare={
+              versions.length >= 2 ? () => setCompareOpen(true) : undefined
+            }
           />
           <div
             className={styles.modeToggle}
@@ -239,6 +244,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         </div>
         {mode === "assisted" && <AIAssistantPanel type={type} />}
       </div>
+      {compareOpen && (
+        <VersionCompareModal
+          versions={versions.map((v) => ({
+            id: v.id,
+            number: v.number,
+            label: v.label,
+            content: v.content,
+          }))}
+          initialRightId={currentVersionId}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
     </div>
   );
 }
