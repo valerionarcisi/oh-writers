@@ -21,6 +21,8 @@ interface ScreenplayToolbarProps {
   currentVersionId: string | null;
   currentPage: number;
   totalPages: number;
+  currentSceneIndex: number | null;
+  totalScenes: number;
   isDirty: boolean;
   isSaving: boolean;
   isError: boolean;
@@ -71,6 +73,8 @@ export function ScreenplayToolbar({
   currentVersionId,
   currentPage,
   totalPages,
+  currentSceneIndex,
+  totalScenes,
   isDirty,
   isSaving,
   isError,
@@ -137,6 +141,9 @@ export function ScreenplayToolbar({
       <div className={styles.right}>
         <span className={styles.pageCount} data-testid="page-indicator">
           p.{currentPage}/{totalPages}
+        </span>
+        <span className={styles.pageCount} data-testid="scene-indicator">
+          s.{currentSceneIndex ?? "—"}/{totalScenes}
         </span>
         <SaveStatus isDirty={isDirty} isSaving={isSaving} isError={isError} />
         <VersionsMenu

@@ -50,6 +50,12 @@ interface ProseMirrorViewProps {
    */
   onElementChange?: (element: ElementType) => void;
   /**
+   * Emits the 1-based index of the scene containing the cursor, or null when
+   * the cursor is positioned before the first heading (no enclosing scene).
+   * Drives the `s.N/total` indicator in the toolbar.
+   */
+  onSceneIndexChange?: (index: number | null) => void;
+  /**
    * Called once after the view is mounted. Lets the parent hold a handle to
    * the EditorView (e.g. to dispatch commands from the toolbar) without
    * threading refs through the component tree.
@@ -76,6 +82,7 @@ export function ProseMirrorView({
   onChange,
   onDocChange,
   onElementChange,
+  onSceneIndexChange,
   onReady,
   readOnly = false,
 }: ProseMirrorViewProps) {
@@ -155,6 +162,22 @@ export function ProseMirrorView({
           const blockType = newState.selection.$from.parent.type.name;
           const element = NODE_TO_ELEMENT[blockType] ?? "action";
           onElementChange(element);
+        }
+
+        // Scene index at cursor: count heading nodes whose start offset is
+        // <= the cursor position. Zero means the cursor sits before the
+        // first heading — we report null so the toolbar renders "—".
+        if (onSceneIndexChange) {
+          const cursor = newState.selection.$from.pos;
+          let count = 0;
+          newState.doc.descendants((n, pos) => {
+            if (n.type.name === "heading") {
+              if (pos <= cursor) count += 1;
+              return false;
+            }
+            return true;
+          });
+          onSceneIndexChange(count > 0 ? count : null);
         }
 
         if (tr.docChanged) {
