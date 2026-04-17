@@ -166,10 +166,15 @@ Blocco 2 — permessi: ✅ done (commit Blocco 2)
    "Team Thriller" (TEST_TEAM_PROJECT_ID). `tests/fixtures.ts` espone
    `authenticatedViewerPage` fixture + costante `TEST_TEAM_PROJECT_ID`.
 
-Blocco 3 — test E2E:
+Blocco 3 — test E2E: ✅ done (commit Blocco 3)
 
-7. Scrivere `tests/documents/narrative-editor.spec.ts` con OHW-200..214
-8. Seed: Giuseppe (owner), Maria (editor), Marco (viewer — aggiungere se assente in seed)
+7. `tests/documents/narrative-editor.spec.ts` ora copre OHW-200..213 (14 test
+   verdi); OHW-214 (drawer versioni narrative) è `test.skip` — dipende
+   dall'integrazione drawer universale di Spec 06b, non ancora wired nella
+   toolbar `NarrativeEditor`.
+8. Autosave: il debounce resta 30s in produzione ma è ora overridabile in E2E
+   tramite `window.__ohWritersAutoSaveDelayMs` (letto in `useAutoSave`), così
+   OHW-202 può testare l'autosave senza attese reali di 30s.
 
 Blocco 4 — regression & commit:
 

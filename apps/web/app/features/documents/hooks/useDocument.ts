@@ -47,7 +47,23 @@ export const useSaveDocument = () => {
 
 // ─── Auto-save ────────────────────────────────────────────────────────────────
 
-const AUTO_SAVE_DELAY_MS = 30_000;
+const DEFAULT_AUTO_SAVE_DELAY_MS = 30_000;
+
+// E2E override: Playwright can set window.__ohWritersAutoSaveDelayMs
+// via addInitScript to shrink the debounce window (30s is untestable
+// in an E2E run). Gated to non-production builds so a browser extension
+// or console user can't dial it down to 1ms in production and hammer
+// the server.
+const getAutoSaveDelayMs = (): number => {
+  if (typeof window === "undefined") return DEFAULT_AUTO_SAVE_DELAY_MS;
+  if (import.meta.env.PROD) return DEFAULT_AUTO_SAVE_DELAY_MS;
+  const override = (
+    window as unknown as { __ohWritersAutoSaveDelayMs?: number }
+  ).__ohWritersAutoSaveDelayMs;
+  return typeof override === "number" && override > 0
+    ? override
+    : DEFAULT_AUTO_SAVE_DELAY_MS;
+};
 
 /**
  * Schedules a save 30 seconds after the last content change.
@@ -69,7 +85,7 @@ export const useAutoSave = (
     if (!isDirty) return;
     const handle = setTimeout(() => {
       save.mutate({ documentId, content });
-    }, AUTO_SAVE_DELAY_MS);
+    }, getAutoSaveDelayMs());
     return () => clearTimeout(handle);
     // Re-schedule whenever content or dirty state changes (not save — stable mutation)
     // eslint-disable-next-line react-hooks/exhaustive-deps
