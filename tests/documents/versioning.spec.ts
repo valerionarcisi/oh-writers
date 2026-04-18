@@ -169,43 +169,68 @@ test.describe("Universal versioning — narrative", () => {
     const textarea = page.locator("textarea").first();
     await expect(textarea).toBeVisible({ timeout: 10_000 });
 
-    // Record VERSION-1 content
-    const v1Content = await textarea.inputValue();
+    // Write unique content to the current active version so we can assert it later
+    await page.waitForFunction(
+      () =>
+        typeof (window as unknown as { __ohWritersSaveDocumentRaw?: unknown })
+          .__ohWritersSaveDocumentRaw === "function",
+      undefined,
+      { timeout: 10_000 },
+    );
+    const uniqueContent = `switch-test-${Date.now()}`;
+    await page.evaluate((c) => {
+      (
+        window as unknown as {
+          __ohWritersSaveDocumentRaw: (content: string) => void;
+        }
+      ).__ohWritersSaveDocumentRaw(c);
+    }, uniqueContent);
+    await page.waitForResponse(
+      (r) =>
+        r.url().includes("saveDocument") && r.request().method() === "POST",
+      { timeout: 10_000 },
+    );
 
-    // Create a new scratch version from scratch (empty)
+    // Capture the current active version ID before creating a scratch version
     await openVersionsDrawer(page);
     const rows = page.locator('[data-testid^="version-row-"]');
+    // Wait for the list to fully load before reading the count
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
     const countBefore = await rows.count();
+    const activeBadge = page.locator('[data-testid^="version-badge-active-"]');
+    await expect(activeBadge).toBeVisible({ timeout: 5_000 });
+    const badgeTestid = await activeBadge.getAttribute("data-testid");
+    const prevVersionId =
+      badgeTestid?.replace("version-badge-active-", "") ?? "";
+    expect(prevVersionId).not.toBe("");
+
+    // Create a new scratch version (empty)
     await page.getByTestId("versions-new-scratch").click();
     await expect(rows).toHaveCount(countBefore + 1, { timeout: 10_000 });
 
-    // Close drawer, editor should be empty (new version has no content)
+    // Close drawer — editor should be empty (new version has no content)
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("versions-drawer")).toBeHidden();
     await expect(textarea).toHaveValue("", { timeout: 10_000 });
 
-    // Re-open drawer, click the original version (last row — ordered desc by number)
+    // Re-open drawer, click the previous version by its captured ID
     await openVersionsDrawer(page);
-    const v1Row = page.locator('[data-testid^="version-row-"]').last();
-    const v1Testid = await v1Row.getAttribute("data-testid");
-    const v1Id = v1Testid?.replace("version-row-", "") ?? "";
-    await v1Row.click();
+    await page.locator(`[data-testid="version-row-${prevVersionId}"]`).click();
 
-    // Wait for VERSION-1 to become active (badge updates after switchToVersion
-    // mutation succeeds and query invalidation + document refetch complete).
+    // Wait for the switch to complete and the badge to move
     await page.waitForResponse(
       (r) =>
         r.url().includes("switchToVersion") && r.request().method() === "POST",
       { timeout: 10_000 },
     );
-    await expect(page.getByTestId(`version-badge-active-${v1Id}`)).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(
+      page.getByTestId(`version-badge-active-${prevVersionId}`),
+    ).toBeVisible({ timeout: 10_000 });
 
-    // Close drawer — content must match VERSION-1
+    // Close drawer — content must match what we saved earlier
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("versions-drawer")).toBeHidden();
-    await expect(textarea).toHaveValue(v1Content, { timeout: 10_000 });
+    await expect(textarea).toHaveValue(uniqueContent, { timeout: 15_000 });
   });
 
   test("[OHW-254] delete disabled on the only / active version", async ({
@@ -218,7 +243,9 @@ test.describe("Universal versioning — narrative", () => {
     });
 
     await openVersionsDrawer(page);
-    const row = page.locator('[data-testid^="version-row-"]').first();
+    // Use the active row (not first, which may be a non-active version after prior tests)
+    const row = page.locator('[data-testid^="version-row-"][data-active]');
+    await expect(row).toBeVisible({ timeout: 5_000 });
     const testid = await row.getAttribute("data-testid");
     const id = testid?.replace("version-row-", "") ?? "";
     const deleteBtn = page.getByTestId(`version-delete-${id}`);
@@ -280,14 +307,26 @@ test.describe("Universal versioning — narrative", () => {
       { timeout: 10_000 },
     );
 
-    // Create a new scratch version from scratch (empty)
+    // Capture the active version ID (the "cat" version) before creating scratch
     await openVersionsDrawer(page);
     const rowsBefore = page.locator('[data-testid^="version-row-"]');
+    // Wait for the list to fully load before reading the count
+    await expect(rowsBefore.first()).toBeVisible({ timeout: 10_000 });
     const countBefore = await rowsBefore.count();
+    const catActiveBadge = page.locator(
+      '[data-testid^="version-badge-active-"]',
+    );
+    await expect(catActiveBadge).toBeVisible({ timeout: 5_000 });
+    const catBadgeTestid = await catActiveBadge.getAttribute("data-testid");
+    const catVersionId =
+      catBadgeTestid?.replace("version-badge-active-", "") ?? "";
+    expect(catVersionId).not.toBe("");
+
+    // Create a new scratch version (empty)
     await page.getByTestId("versions-new-scratch").click();
     await expect(rowsBefore).toHaveCount(countBefore + 1, { timeout: 10_000 });
 
-    // Write different content to VERSION-2 via the E2E hook
+    // Write different content to the new version via the E2E hook
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("versions-drawer")).toBeHidden();
     await page.evaluate(() => {
@@ -313,8 +352,13 @@ test.describe("Universal versioning — narrative", () => {
     // Modal should be visible with both selectors
     const modal = page.getByTestId("version-compare-modal");
     await expect(modal).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByTestId("version-compare-left")).toBeVisible();
-    await expect(page.getByTestId("version-compare-right")).toBeVisible();
+    const leftSelect = page.getByTestId("version-compare-left");
+    const rightSelect = page.getByTestId("version-compare-right");
+    await expect(leftSelect).toBeVisible();
+    await expect(rightSelect).toBeVisible();
+
+    // Explicitly set left = cat version, right = dog version (active)
+    await leftSelect.selectOption(catVersionId);
 
     // Diff area should contain rows
     const diffArea = page.getByTestId("version-compare-diff");
