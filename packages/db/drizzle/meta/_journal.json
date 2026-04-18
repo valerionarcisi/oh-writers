@@ -57,6 +57,13 @@
       "when": 1777500500000,
       "tag": "0005_drop_screenplay_is_auto",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777501000000,
+      "tag": "0006_add_title_page_doc",
+      "breakpoints": true
     }
   ]
 }
