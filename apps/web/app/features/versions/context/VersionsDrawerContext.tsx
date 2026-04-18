@@ -23,13 +23,27 @@ interface VersionsDrawerState {
   width: number;
 }
 
+/** Lets the editor that opened the drawer expose its unsaved-edits state, so the
+ *  drawer can prompt before destructive actions (e.g. switching version drops
+ *  in-progress edits silently). The drawer uses callbacks (not snapshots) so
+ *  the values stay live as the user keeps typing. */
+export interface VersionsDrawerDirtyHook {
+  isDirty: () => boolean;
+  flush: () => void;
+}
+
 interface VersionsDrawerContextValue {
   state: VersionsDrawerState;
   /** Called when the user clicks a version row in the drawer. */
   onSelectVersion: ((versionId: string) => void) | null;
+  /** Live access to the opener's unsaved-edits state, if it provided one. */
+  dirtyHook: VersionsDrawerDirtyHook | null;
   open: (
     scope: VersionScope,
-    onSelectVersion?: (versionId: string) => void,
+    options?: {
+      onSelectVersion?: (versionId: string) => void;
+      dirtyHook?: VersionsDrawerDirtyHook;
+    },
   ) => void;
   close: () => void;
   setWidth: (width: number) => void;
@@ -48,13 +62,18 @@ export function VersionsDrawerProvider({ children }: { children: ReactNode }) {
   const [onSelectVersion, setOnSelectVersion] = useState<
     ((versionId: string) => void) | null
   >(null);
+  const [dirtyHook, setDirtyHook] = useState<VersionsDrawerDirtyHook | null>(
+    null,
+  );
 
-  const open = useCallback(
-    (scope: VersionScope, selectHandler?: (versionId: string) => void) => {
+  const open = useCallback<VersionsDrawerContextValue["open"]>(
+    (scope, options) => {
       setState((prev) => ({ ...prev, isOpen: true, scope }));
       // useState setter receives a function → must wrap to avoid it being
       // treated as an updater function
+      const selectHandler = options?.onSelectVersion;
       setOnSelectVersion(selectHandler ? () => selectHandler : null);
+      setDirtyHook(options?.dirtyHook ?? null);
     },
     [],
   );
@@ -70,7 +89,7 @@ export function VersionsDrawerProvider({ children }: { children: ReactNode }) {
 
   return (
     <VersionsDrawerContext.Provider
-      value={{ state, onSelectVersion, open, close, setWidth }}
+      value={{ state, onSelectVersion, dirtyHook, open, close, setWidth }}
     >
       {children}
     </VersionsDrawerContext.Provider>

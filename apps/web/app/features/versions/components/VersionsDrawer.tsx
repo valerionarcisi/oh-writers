@@ -3,7 +3,10 @@ import type { DocumentType, DraftRevisionColor } from "@oh-writers/domain";
 import { Drawer } from "./Drawer";
 import { VersionsList } from "./VersionsList";
 import type { VersionListItem } from "./VersionsList";
-import { useVersionsDrawer } from "../context/VersionsDrawerContext";
+import {
+  useVersionsDrawer,
+  type VersionsDrawerDirtyHook,
+} from "../context/VersionsDrawerContext";
 import {
   useVersions,
   useCreateManualVersion,
@@ -149,10 +152,12 @@ function DocumentVersionsList({
   documentId,
   canEdit,
   initialActiveId,
+  dirtyHook,
 }: {
   documentId: string;
   canEdit: boolean;
   initialActiveId: string | null;
+  dirtyHook: VersionsDrawerDirtyHook | null;
 }) {
   const { data: result, isLoading } = useDocVersions(documentId);
   const createScratch = useCreateVersionFromScratch(documentId);
@@ -221,13 +226,23 @@ function DocumentVersionsList({
   const handleSelect = useCallback(
     (item: VersionListItem) => {
       if (item.id === activeId) return;
+      // If the editor has unsaved edits, switching version would silently
+      // throw them away (the active doc reloads from the server). Ask first,
+      // and on confirm flush so the in-progress edits are preserved as the
+      // current version's last state before the pointer moves.
+      if (dirtyHook?.isDirty()) {
+        const ok = window.confirm(
+          "Hai modifiche non salvate. Vuoi salvarle prima di passare a un'altra versione? (Annulla per scartarle e procedere)",
+        );
+        if (ok) dirtyHook.flush();
+      }
       setError(null);
       switchTo.mutate(item.id, {
         onSuccess: () => setActiveId(item.id),
         onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
       });
     },
-    [switchTo, activeId],
+    [switchTo, activeId, dirtyHook],
   );
 
   const handleDelete = useCallback(
@@ -291,7 +306,8 @@ const getScopeTitle = (
 };
 
 export function VersionsDrawer() {
-  const { state, onSelectVersion, close, setWidth } = useVersionsDrawer();
+  const { state, onSelectVersion, dirtyHook, close, setWidth } =
+    useVersionsDrawer();
   const { isOpen, scope, width } = state;
 
   const title = scope ? getScopeTitle(scope) : "Versioni";
@@ -316,6 +332,7 @@ export function VersionsDrawer() {
           documentId={scope.documentId}
           canEdit={scope.canEdit}
           initialActiveId={scope.currentVersionId}
+          dirtyHook={dirtyHook}
         />
       )}
     </Drawer>

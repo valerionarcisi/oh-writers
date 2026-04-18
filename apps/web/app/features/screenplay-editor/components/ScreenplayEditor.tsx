@@ -344,7 +344,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
             } else {
               openDrawer(
                 { kind: "screenplay", screenplayId: screenplay.id },
-                (versionId) => requestView(versionId),
+                { onSelectVersion: (versionId) => requestView(versionId) },
               );
             }
           }}

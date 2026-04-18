@@ -96,6 +96,13 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     drawerState.scope?.kind === "document" &&
     drawerState.scope.documentId === document.id;
 
+  // The drawer captures dirtyHook at open(); refs let the captured callbacks
+  // read fresh values on every drawer interaction without re-opening.
+  const isDirtyRef = useRef(isDirty);
+  const flushRef = useRef(flush);
+  isDirtyRef.current = isDirty;
+  flushRef.current = flush;
+
   const isOutline = type === DocumentTypes.OUTLINE;
   const isLogline = type === DocumentTypes.LOGLINE;
   const isSynopsis = type === DocumentTypes.SYNOPSIS;
@@ -216,13 +223,21 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onClick={() =>
               isVersionsOpen
                 ? closeDrawer()
-                : openDrawer({
-                    kind: "document",
-                    documentId: document.id,
-                    docType: type,
-                    canEdit: document.canEdit,
-                    currentVersionId: document.currentVersionId ?? null,
-                  })
+                : openDrawer(
+                    {
+                      kind: "document",
+                      documentId: document.id,
+                      docType: type,
+                      canEdit: document.canEdit,
+                      currentVersionId: document.currentVersionId ?? null,
+                    },
+                    {
+                      dirtyHook: {
+                        isDirty: () => isDirtyRef.current,
+                        flush: () => flushRef.current(),
+                      },
+                    },
+                  )
             }
             type="button"
             aria-pressed={isVersionsOpen}
