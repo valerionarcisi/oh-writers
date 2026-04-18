@@ -8,7 +8,7 @@ import {
   useCreateManualVersion,
   useRestoreVersion,
 } from "../hooks/useVersions";
-import { estimatePageCount, currentPageFromLine } from "../lib/page-counter";
+import { estimatePageCount } from "../lib/page-counter";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
@@ -77,11 +77,14 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   const [viewing, setViewing] = useState<ViewingState>({ kind: "live" });
   const [pendingView, setPendingView] = useState<{ id: string } | null>(null);
   const [awaitingRestoreConfirm, setAwaitingRestoreConfirm] = useState(false);
-  const [cursorLine] = useState(1);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
   const [currentSceneIndex, setCurrentSceneIndex] = useState<number | null>(
     null,
   );
+  const [pageInfo, setPageInfo] = useState<{ current: number; total: number }>({
+    current: 1,
+    total: 1,
+  });
   const [conflict, setConflict] = useState<SceneNumberConflictDetail | null>(
     null,
   );
@@ -125,8 +128,12 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     // clicks into a different block type.
     setCurrentElement(el);
   }, []);
-  const totalPages = estimatePageCount(content);
-  const currentPage = currentPageFromLine(cursorLine);
+  // Fall back to the fountain-line estimate until the paginator emits its
+  // first measurement (post-mount rAF). After that, pageInfo wins because
+  // it matches the rendered page-break geometry.
+  const fallbackTotalPages = estimatePageCount(content);
+  const currentPage = pageInfo.current;
+  const totalPages = Math.max(pageInfo.total, fallbackTotalPages);
   const totalScenes = countHeadings(pmDoc);
   const { isDirty, isSaving, isError, isOffline, lastSavedAt, flush } =
     useAutoSave(screenplay.id, content, screenplay.content, pmDoc, isViewing);
@@ -380,6 +387,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
             onDocChange={setPmDoc}
             onElementChange={setCurrentElement}
             onSceneIndexChange={setCurrentSceneIndex}
+            onPageChange={(current, total) => setPageInfo({ current, total })}
             readOnly={isViewing || !(screenplay.canEdit ?? false)}
             onReady={(view) => {
               viewRef.current = view;

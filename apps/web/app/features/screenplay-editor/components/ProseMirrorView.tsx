@@ -19,6 +19,7 @@ import { buildSlotPickerPlugin } from "../lib/plugins/scene-slot-picker";
 import { createHeadingNodeView } from "../lib/plugins/heading-nodeview";
 import {
   buildPaginatorPlugin,
+  getPaginationInfo,
   injectPaginatorStyles,
 } from "../lib/plugins/paginator";
 import { schema } from "../lib/schema";
@@ -57,6 +58,13 @@ interface ProseMirrorViewProps {
    */
   onSceneIndexChange?: (index: number | null) => void;
   /**
+   * Emits the 1-based current page (cursor position) and the total page
+   * count derived from the rendered geometry — same numbers the page-break
+   * widgets are placed at, so the footer indicator stays in lock-step with
+   * the visual breaks.
+   */
+  onPageChange?: (current: number, total: number) => void;
+  /**
    * Called once after the view is mounted. Lets the parent hold a handle to
    * the EditorView (e.g. to dispatch commands from the toolbar) without
    * threading refs through the component tree.
@@ -89,6 +97,7 @@ export function ProseMirrorView({
   onDocChange,
   onElementChange,
   onSceneIndexChange,
+  onPageChange,
   onReady,
   readOnly = false,
 }: ProseMirrorViewProps) {
@@ -184,6 +193,21 @@ export function ProseMirrorView({
             return true;
           });
           onSceneIndexChange(count > 0 ? count : null);
+        }
+
+        // Page indicator — derived from the same coords the paginator uses
+        // so the footer counter and the visual page breaks always agree.
+        // Deferred to the next frame because the paginator itself recomputes
+        // breaks on rAF after a doc change; reading coordsAtPos earlier
+        // would race with the still-stale layout.
+        if (onPageChange) {
+          requestAnimationFrame(() => {
+            const v = viewRef.current;
+            if (!v) return;
+            const pos = v.state.selection.$from.pos;
+            const { current, total } = getPaginationInfo(v, pos);
+            onPageChange(current, total);
+          });
         }
 
         if (tr.docChanged) {

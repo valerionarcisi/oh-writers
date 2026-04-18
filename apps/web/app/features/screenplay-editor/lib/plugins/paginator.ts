@@ -141,6 +141,50 @@ export const injectPaginatorStyles = (): void => {
 };
 
 /**
+ * Compute the 1-based page number at a given doc position and the total
+ * number of pages visible right now. Both values come from the same
+ * coords-based geometry the page-break widgets use, so the toolbar/footer
+ * stays in sync with the rendered breaks.
+ *
+ * Falls back to `{ current: 1, total: 1 }` outside the browser or when the
+ * view hasn't painted yet (coordsAtPos throws).
+ */
+export const getPaginationInfo = (
+  view: EditorView,
+  pos: number,
+): { current: number; total: number } => {
+  if (typeof document === "undefined") return { current: 1, total: 1 };
+  const editorTop = view.dom.getBoundingClientRect().top + window.scrollY;
+
+  let cursorTop = 0;
+  try {
+    const coords = view.coordsAtPos(pos);
+    cursorTop = coords.top + window.scrollY - editorTop;
+  } catch {
+    return { current: 1, total: 1 };
+  }
+
+  let bottomMost = cursorTop;
+  for (const blockPos of collectBlockPositions(view.state.doc)) {
+    try {
+      const coords = view.coordsAtPos(blockPos);
+      const blockBottom = coords.bottom + window.scrollY - editorTop;
+      if (blockBottom > bottomMost) bottomMost = blockBottom;
+    } catch {
+      continue;
+    }
+  }
+
+  const current = Math.max(1, Math.floor(cursorTop / PRINTABLE_HEIGHT_PX) + 1);
+  const total = Math.max(
+    1,
+    Math.floor(bottomMost / PRINTABLE_HEIGHT_PX) + 1,
+    current,
+  );
+  return { current, total };
+};
+
+/**
  * Paginator plugin.
  *
  * Recomputes page-break decorations after every transaction that changes the
