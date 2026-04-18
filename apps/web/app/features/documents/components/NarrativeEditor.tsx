@@ -20,7 +20,6 @@ import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { SaveIndicator } from "~/features/screenplay-editor";
-import { DraftMetaBadge } from "~/features/projects";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   isBulletListActive,
@@ -181,7 +180,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               {exportPdf.isPending ? "Exporting…" : "Export PDF"}
             </button>
           )}
-          <DraftMetaBadge projectId={document.projectId} />
           {!isReadOnly && (
             <SaveIndicator
               isDirty={isDirty}

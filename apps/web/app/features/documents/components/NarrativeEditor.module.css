@@ -173,6 +173,11 @@
   border-radius: var(--radius-md);
   padding: var(--space-8) var(--space-10);
   min-block-size: 80vh;
+  /* Don't let the flex parent shrink the page when content overflows;
+   * the page must grow with ProseMirror so the white background covers
+   * all the text instead of clipping at the initial 80vh. */
+  flex-shrink: 0;
+  block-size: auto;
 }
 
 .editorToolbar {
