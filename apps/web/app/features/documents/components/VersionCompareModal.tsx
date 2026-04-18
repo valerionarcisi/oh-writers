@@ -147,7 +147,11 @@ function renderSegments(segments: readonly DiffSegment[] | null) {
   if (!segments) return <span className={styles.empty}>&nbsp;</span>;
   if (segments.length === 0) return <span>&nbsp;</span>;
   return segments.map((seg, i) => (
-    <span key={i} className={seg.changed ? styles.intra : undefined}>
+    <span
+      key={i}
+      className={seg.changed ? styles.intra : undefined}
+      data-diff-changed={seg.changed || undefined}
+    >
       {seg.text || "\u00a0"}
     </span>
   ));

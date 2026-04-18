@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { DocumentType } from "@oh-writers/domain";
 import { Drawer } from "./Drawer";
 import { VersionsList } from "./VersionsList";
@@ -12,11 +12,15 @@ import {
   useDuplicateVersion,
 } from "~/features/screenplay-editor/hooks/useVersions";
 import {
-  useDocumentVersions,
-  useCreateDocumentVersion,
-  useRenameDocumentVersion,
+  useVersions as useDocVersions,
+  useCreateVersionFromScratch,
+  useDuplicateVersion as useDuplicateDocVersion,
+  useRenameVersion as useRenameDocVersion,
+  useSwitchToVersion,
   useDeleteDocumentVersion,
-} from "../hooks/useDocumentVersions";
+} from "~/features/documents/hooks/useVersions";
+import { VersionCompareModal } from "~/features/documents/components/VersionCompareModal";
+import type { VersionCompareItem } from "~/features/documents/components/VersionCompareModal";
 
 // ─── Screenplay scope ─────────────────────────────────────────────────────────
 
@@ -113,28 +117,66 @@ function ScreenplayVersionsList({
 
 // ─── Document scope ───────────────────────────────────────────────────────────
 
-function DocumentVersionsList({ documentId }: { documentId: string }) {
-  const { data: result, isLoading } = useDocumentVersions(documentId);
-  const create = useCreateDocumentVersion(documentId);
-  const rename = useRenameDocumentVersion(documentId);
+function DocumentVersionsList({
+  documentId,
+  canEdit,
+  initialActiveId,
+}: {
+  documentId: string;
+  canEdit: boolean;
+  initialActiveId: string | null;
+}) {
+  const { data: result, isLoading } = useDocVersions(documentId);
+  const createScratch = useCreateVersionFromScratch(documentId);
+  const duplicate = useDuplicateDocVersion(documentId);
+  const rename = useRenameDocVersion(documentId);
+  const switchTo = useSwitchToVersion(documentId);
   const del = useDeleteDocumentVersion(documentId);
   const [error, setError] = useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  // Track active version locally so it updates immediately after a mutation.
+  // Also re-sync when the prop changes (e.g. drawer re-opened after a refetch
+  // brings an updated currentVersionId from the server).
+  const [activeId, setActiveId] = useState<string | null>(initialActiveId);
+  useEffect(() => {
+    setActiveId(initialActiveId);
+  }, [initialActiveId]);
 
   const versions = result?.isOk ? result.value : [];
   const items: VersionListItem[] = versions.map((v) => ({
     id: v.id,
     label: v.label,
-    createdAt: v.createdAt,
+    createdAt:
+      typeof v.createdAt === "string"
+        ? v.createdAt
+        : new Date(v.createdAt).toISOString(),
   }));
 
-  const handleCreate = useCallback(
-    (label: string) => {
+  const compareItems: VersionCompareItem[] = versions.map((v) => ({
+    id: v.id,
+    number: v.number,
+    label: v.label,
+    content: v.content,
+  }));
+
+  const handleCreateFromScratch = useCallback(() => {
+    setError(null);
+    createScratch.mutate(undefined, {
+      onSuccess: (v) => setActiveId(v.id),
+      onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
+    });
+  }, [createScratch]);
+
+  const handleDuplicate = useCallback(
+    (id: string) => {
       setError(null);
-      create.mutate(label, {
+      duplicate.mutate(id, {
+        onSuccess: (v) => setActiveId(v.id),
         onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
       });
     },
-    [create],
+    [duplicate],
   );
 
   const handleRename = useCallback(
@@ -148,6 +190,18 @@ function DocumentVersionsList({ documentId }: { documentId: string }) {
     [rename],
   );
 
+  const handleSelect = useCallback(
+    (item: VersionListItem) => {
+      if (item.id === activeId) return;
+      setError(null);
+      switchTo.mutate(item.id, {
+        onSuccess: () => setActiveId(item.id),
+        onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
+      });
+    },
+    [switchTo, activeId],
+  );
+
   const handleDelete = useCallback(
     (id: string) => {
       setError(null);
@@ -158,23 +212,36 @@ function DocumentVersionsList({ documentId }: { documentId: string }) {
     [del],
   );
 
-  // Document versions are ordered desc by createdAt — the first row is
-  // the most recent snapshot of the live document and we treat it as active.
-  const activeId = items[0]?.id ?? null;
-
   return (
-    <VersionsList
-      items={items}
-      isLoading={isLoading}
-      error={error}
-      activeId={activeId}
-      onCreate={handleCreate}
-      isCreating={create.isPending}
-      onRename={handleRename}
-      isRenaming={rename.isPending}
-      onDelete={handleDelete}
-      isDeleting={del.isPending}
-    />
+    <>
+      <VersionsList
+        items={items}
+        isLoading={isLoading}
+        error={error}
+        activeId={activeId}
+        canEdit={canEdit}
+        onSelect={handleSelect}
+        onCreateFromScratch={canEdit ? handleCreateFromScratch : undefined}
+        isCreatingFromScratch={createScratch.isPending}
+        onRename={handleRename}
+        isRenaming={rename.isPending}
+        onDelete={handleDelete}
+        isDeleting={del.isPending}
+        onDuplicate={canEdit ? handleDuplicate : undefined}
+        isDuplicating={duplicate.isPending}
+        onCompare={items.length >= 2 ? () => setCompareOpen(true) : undefined}
+      />
+      {compareOpen && compareItems.length >= 2 && (
+        <VersionCompareModal
+          versions={compareItems}
+          initialLeftId={
+            compareItems.find((v) => v.id !== activeId)?.id ?? null
+          }
+          initialRightId={activeId}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -217,7 +284,11 @@ export function VersionsDrawer() {
         />
       )}
       {scope?.kind === "document" && (
-        <DocumentVersionsList documentId={scope.documentId} />
+        <DocumentVersionsList
+          documentId={scope.documentId}
+          canEdit={scope.canEdit}
+          initialActiveId={scope.currentVersionId}
+        />
       )}
     </Drawer>
   );

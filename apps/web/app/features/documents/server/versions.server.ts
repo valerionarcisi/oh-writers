@@ -341,7 +341,7 @@ export const switchToVersion = createServerFn({ method: "POST" })
             })),
           )
           .andThen(({ version, doc }) =>
-            assertCanEdit(db, doc, user.id).map(() => ({ version, doc })),
+            assertCanRead(db, doc, user.id).map(() => ({ version, doc })),
           )
           .andThen(({ version, doc }) =>
             ResultAsync.fromPromise(

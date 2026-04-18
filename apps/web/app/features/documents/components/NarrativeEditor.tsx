@@ -28,6 +28,7 @@ import {
   toggleHeading,
 } from "../lib/narrative-plugins";
 import { useVersionsDrawer } from "~/features/versions";
+import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
 
 const WORDS_PER_PAGE = 250;
@@ -107,6 +108,14 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const pageEstimate =
     isSynopsis || isTreatment ? estimatePages(plainContent) : 0;
 
+  // When the active version changes (e.g. after switchToVersion), reload content
+  // from the freshly-fetched document. We key on currentVersionId rather than
+  // content itself to avoid overwriting in-progress edits.
+  useEffect(() => {
+    setContent(document.content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document.currentVersionId]);
+
   // Cmd/Ctrl+S — force save, bypassing autosave debounce.
   useEffect(() => {
     if (isReadOnly) return;
@@ -133,6 +142,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       delete w["__ohWritersSaveDocumentRaw"];
     };
   }, [document.id, save]);
+
+  // E2E test hook: call createVersionFromScratch directly to test server-side
+  // permission enforcement (e.g. verify ForbiddenError for viewer role).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as Record<string, unknown>;
+    w["__ohWritersCreateVersionFromScratch"] = () =>
+      createVersionFromScratch({ data: { documentId: document.id } });
+    return () => {
+      delete w["__ohWritersCreateVersionFromScratch"];
+    };
+  }, [document.id]);
 
   // Narrative export — only shown on the three narrative pages, not outline.
   const isNarrative =
@@ -208,6 +229,8 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
                     kind: "document",
                     documentId: document.id,
                     docType: type,
+                    canEdit: document.canEdit,
+                    currentVersionId: document.currentVersionId ?? null,
                   })
             }
             type="button"
