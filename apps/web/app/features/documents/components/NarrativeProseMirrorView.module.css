@@ -1,0 +1,74 @@
+.wrapper {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.mount {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.mount :global(.ProseMirror) {
+  outline: none;
+  min-block-size: 100%;
+  font-family: var(--font-serif, Georgia, "Times New Roman", serif);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--color-page-fg, #1a1a1a);
+}
+
+.mount :global(.ProseMirror p),
+.mount :global(.ProseMirror h2),
+.mount :global(.ProseMirror h3),
+.mount :global(.ProseMirror li) {
+  margin-block: 0 var(--space-3);
+}
+
+.mount :global(.ProseMirror p:last-child),
+.mount :global(.ProseMirror h2:last-child),
+.mount :global(.ProseMirror h3:last-child),
+.mount :global(.ProseMirror ul:last-child) {
+  margin-block-end: 0;
+}
+
+.mount :global(.ProseMirror h2) {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  margin-block-start: var(--space-5);
+}
+
+.mount :global(.ProseMirror h3) {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin-block-start: var(--space-4);
+}
+
+.mount :global(.ProseMirror ul) {
+  padding-inline-start: var(--space-5);
+  margin-block: 0 var(--space-3);
+  list-style-type: disc;
+}
+
+.mount :global(.ProseMirror li) {
+  display: list-item;
+}
+
+.mount :global(.ProseMirror li > p) {
+  margin-block-end: 0;
+}
+
+.mount :global(.pm-narrative-empty)::before {
+  content: attr(data-placeholder);
+  pointer-events: none;
+  color: var(--color-fg-secondary);
+  opacity: 0.55;
+  font-style: italic;
+  float: inline-start;
+  height: 0;
+}
+
+.readOnly .mount :global(.ProseMirror) {
+  cursor: default;
+}

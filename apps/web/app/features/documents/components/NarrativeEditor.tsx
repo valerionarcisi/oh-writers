@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
 import type { DocumentViewWithPermission } from "../server/documents.server";
@@ -15,10 +16,17 @@ import {
   LOGLINE_MAX,
 } from "../documents.schema";
 import { TextEditor } from "./TextEditor";
-import { RichTextEditor } from "./RichTextEditor";
+import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
 import { SaveStatus } from "./SaveStatus";
+import { getNarrativeSchema } from "../lib/narrative-schema";
+import {
+  isBulletListActive,
+  isHeadingActive,
+  toggleBulletList,
+  toggleHeading,
+} from "../lib/narrative-plugins";
 import { useVersionsDrawer } from "~/features/versions";
 import styles from "./NarrativeEditor.module.css";
 
@@ -68,6 +76,8 @@ type EditorMode = "free" | "assisted";
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
   const [mode, setMode] = useState<EditorMode>("free");
+  const editorViewRef = useRef<EditorView | null>(null);
+  const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
   const { isDirty, isSaving, isError } = useAutoSave(
     save,
@@ -267,31 +277,132 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               </div>
             </>
           ) : (
-            <>
-              <RichTextEditor
+            <div className={styles.pageShell}>
+              {isTreatment && !isReadOnly && (
+                <div className={styles.editorToolbar}>
+                  <button
+                    type="button"
+                    className={`${styles.editorToolbarBtn} ${
+                      editorViewRef.current &&
+                      isHeadingActive(editorViewRef.current.state, 2)
+                        ? styles.editorToolbarBtnActive
+                        : ""
+                    }`}
+                    aria-pressed={
+                      editorViewRef.current
+                        ? isHeadingActive(editorViewRef.current.state, 2)
+                        : false
+                    }
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const view = editorViewRef.current;
+                      if (!view) return;
+                      toggleHeading(
+                        getNarrativeSchema(true),
+                        2,
+                        view.state,
+                        view.dispatch,
+                      );
+                      view.focus();
+                    }}
+                  >
+                    H2
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.editorToolbarBtn} ${
+                      editorViewRef.current &&
+                      isHeadingActive(editorViewRef.current.state, 3)
+                        ? styles.editorToolbarBtnActive
+                        : ""
+                    }`}
+                    aria-pressed={
+                      editorViewRef.current
+                        ? isHeadingActive(editorViewRef.current.state, 3)
+                        : false
+                    }
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const view = editorViewRef.current;
+                      if (!view) return;
+                      toggleHeading(
+                        getNarrativeSchema(true),
+                        3,
+                        view.state,
+                        view.dispatch,
+                      );
+                      view.focus();
+                    }}
+                  >
+                    H3
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.editorToolbarBtn} ${
+                      editorViewRef.current &&
+                      isBulletListActive(editorViewRef.current.state)
+                        ? styles.editorToolbarBtnActive
+                        : ""
+                    }`}
+                    aria-pressed={
+                      editorViewRef.current
+                        ? isBulletListActive(editorViewRef.current.state)
+                        : false
+                    }
+                    aria-label="Bullet list"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const view = editorViewRef.current;
+                      if (!view) return;
+                      toggleBulletList(
+                        getNarrativeSchema(true),
+                        view.state,
+                        view.dispatch,
+                      );
+                      view.focus();
+                    }}
+                  >
+                    • List
+                  </button>
+                </div>
+              )}
+              <NarrativeProseMirrorView
                 value={content}
                 onChange={setContent}
                 placeholder={DOCUMENT_PLACEHOLDERS[type]}
                 readOnly={isReadOnly}
                 enableHeadings={isTreatment}
+                onReady={(view) => {
+                  editorViewRef.current = view;
+                  // Re-render the toolbar on every transaction so the active
+                  // pill state reflects the current selection.
+                  const original = view.props.dispatchTransaction;
+                  view.setProps({
+                    dispatchTransaction: (tr) => {
+                      original?.call(view, tr);
+                      forceToolbarUpdate((n) => (n + 1) % 1_000_000);
+                    },
+                  });
+                }}
               />
-              <div className={styles.editorFooter}>
-                {(isSynopsis || isTreatment) && (
-                  <>
-                    <span data-testid="char-counter" className={styles.counter}>
-                      {charCount} characters
-                    </span>
-                    <span data-testid="page-counter" className={styles.counter}>
-                      ~{pageEstimate} {pageEstimate === 1 ? "page" : "pages"}
-                    </span>
-                  </>
-                )}
-              </div>
-            </>
+            </div>
           )}
         </div>
         {mode === "assisted" && <AIAssistantPanel type={type} />}
       </div>
+      {(isSynopsis || isTreatment) && (
+        <div
+          className={styles.stickyFooter}
+          data-testid="narrative-counters-footer"
+        >
+          <span data-testid="char-counter" className={styles.counter}>
+            {charCount} characters
+          </span>
+          <span data-testid="page-counter" className={styles.counter}>
+            ~{pageEstimate} {pageEstimate === 1 ? "page" : "pages"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

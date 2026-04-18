@@ -22,6 +22,22 @@ Professional screenplay collaboration platform. Real-time co-writing, AI-assiste
 
 ---
 
+## 0. Project status — TODO / DONE
+
+**Done**
+
+- Spec 04e — narrative editor su vanilla ProseMirror (imperative mount, ref-stable). Closes BUG-001..003.
+- E2E `OHW-EDR-01..03` verdi (Enter, bullet list, counters visibili).
+- Tiptap rimosso completamente (deps + componenti `RichTextEditor`).
+
+**TODO**
+
+- Riallineare gli E2E `tests/documents/narrative-editor.spec.ts` (OHW-201..210): cercano un bottone "Save" e una classe CSS `charCountWarn` non più presenti — pre-esistente al refactor ma da bonificare.
+- Spec 06b — versions drawer per documenti narrativi (OHW-214 skipped).
+- Roadmap successiva su `docs/specs/`.
+
+---
+
 ## 1. Prerequisites
 
 | Tool           | Minimum version | Notes                        |
