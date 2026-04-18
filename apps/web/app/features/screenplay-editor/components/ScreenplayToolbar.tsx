@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { SaveIndicator } from "./SaveIndicator";
 import { ToolbarMenu } from "./ToolbarMenu";
+import { DraftMetaBadge } from "~/features/projects";
 import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
@@ -132,6 +133,7 @@ export function ScreenplayToolbar({
       </div>
 
       <div className={styles.right}>
+        <DraftMetaBadge projectId={projectId} />
         <span className={styles.pageCount} data-testid="page-indicator">
           p.{currentPage}/{totalPages}
         </span>

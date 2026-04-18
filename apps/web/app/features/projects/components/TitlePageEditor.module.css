@@ -92,6 +92,7 @@
 .editor :global(.tp-footer-left) {
   grid-column: 1;
   text-align: start;
+  margin-inline-start: -1in;
 }
 
 .editor :global(.tp-footer-center) {
@@ -102,6 +103,7 @@
 .editor :global(.tp-footer-right) {
   grid-column: 3;
   text-align: end;
+  margin-inline-end: -0.5in;
 }
 
 /* Empty paragraphs render <br> with zero hit-area; force a min target. */

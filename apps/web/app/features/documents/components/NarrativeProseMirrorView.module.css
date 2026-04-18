@@ -1,20 +1,17 @@
 .wrapper {
   display: block;
   inline-size: 100%;
-  block-size: 100%;
 }
 
 .mount {
   inline-size: 100%;
-  block-size: 100%;
 }
 
 .mount :global(.ProseMirror) {
   outline: none;
-  min-block-size: 100%;
   font-family: var(--font-serif, Georgia, "Times New Roman", serif);
   font-size: var(--text-base);
-  line-height: 1.6;
+  line-height: 1.5;
   color: #1a1a1a;
   caret-color: #1a1a1a;
 }
@@ -23,7 +20,7 @@
 .mount :global(.ProseMirror h2),
 .mount :global(.ProseMirror h3),
 .mount :global(.ProseMirror li) {
-  margin-block: 0 var(--space-3);
+  margin-block: 0 var(--space-2);
 }
 
 .mount :global(.ProseMirror p:last-child),

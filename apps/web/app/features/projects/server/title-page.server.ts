@@ -5,16 +5,13 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
-import {
-  projects,
-  screenplays,
-  screenplayVersions,
-} from "@oh-writers/db/schema";
+import { projects } from "@oh-writers/db/schema";
 import type { TeamMember } from "@oh-writers/db/schema";
 import type { DraftRevisionColor } from "@oh-writers/domain";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { isOwner, getMembership } from "~/server/permissions";
+import { loadProjectDraftMeta } from "./draft-meta.server";
 import {
   UpdateTitlePageInput,
   EMPTY_TITLE_PAGE,
@@ -165,29 +162,14 @@ export type TitlePageStateView = {
   isOwner: boolean;
 };
 
-const loadCurrentVersionMeta = async (
+const loadCurrentVersionMeta = (
   db: Awaited<ReturnType<typeof getDb>>,
   projectId: string,
-): Promise<{ draftDate: string | null; draftColor: DraftColor | null }> => {
-  const row = await db
-    .select({
-      draftDate: screenplayVersions.draftDate,
-      draftColor: screenplayVersions.draftColor,
-    })
-    .from(screenplays)
-    .innerJoin(
-      screenplayVersions,
-      eq(screenplayVersions.id, screenplays.currentVersionId),
-    )
-    .where(eq(screenplays.projectId, projectId))
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
-
-  return {
-    draftDate: row?.draftDate ?? null,
-    draftColor: (row?.draftColor as DraftColor | null) ?? null,
-  };
-};
+): Promise<{ draftDate: string | null; draftColor: DraftColor | null }> =>
+  loadProjectDraftMeta(db, projectId) as Promise<{
+    draftDate: string | null;
+    draftColor: DraftColor | null;
+  }>;
 
 const buildTitlePageState = (
   row: typeof projects.$inferSelect,

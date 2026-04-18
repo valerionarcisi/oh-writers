@@ -19,7 +19,8 @@ import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
-import { SaveStatus } from "./SaveStatus";
+import { SaveIndicator } from "~/features/screenplay-editor";
+import { DraftMetaBadge } from "~/features/projects";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   isBulletListActive,
@@ -79,7 +80,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const editorViewRef = useRef<EditorView | null>(null);
   const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
-  const { isDirty, isSaving, isError } = useAutoSave(
+  const { isDirty, isSaving, isError, lastSavedAt, flush } = useAutoSave(
     save,
     document.id,
     content,
@@ -107,19 +108,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const pageEstimate =
     isSynopsis || isTreatment ? estimatePages(plainContent) : 0;
 
-  // Cmd/Ctrl+S — force save, bypassing autosave debounce.
-  useEffect(() => {
-    if (isReadOnly) return;
-    const onKey = (e: KeyboardEvent) => {
-      const isSaveCombo =
-        (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s";
-      if (!isSaveCombo) return;
-      e.preventDefault();
-      if (!isSaving) save.mutate({ documentId: document.id, content });
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isReadOnly, isSaving, save, document.id, content]);
+  // Cmd/Ctrl+S handled by SaveIndicator.
 
   // E2E test hook: trigger a save with raw content bypassing the textarea
   // (textarea has HTML maxLength enforcement — tests use this to verify
@@ -192,11 +181,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
               {exportPdf.isPending ? "Exporting…" : "Export PDF"}
             </button>
           )}
+          <DraftMetaBadge projectId={document.projectId} />
           {!isReadOnly && (
-            <SaveStatus
+            <SaveIndicator
               isDirty={isDirty}
               isSaving={isSaving}
               isError={isError}
+              isOffline={false}
+              lastSavedAt={lastSavedAt}
+              onFlush={flush}
             />
           )}
           <button

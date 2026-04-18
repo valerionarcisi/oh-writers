@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -80,20 +80,44 @@ export const useAutoSave = (
   documentId: string,
   content: string,
   savedContent: string,
-): { isDirty: boolean; isSaving: boolean; isError: boolean } => {
+): {
+  isDirty: boolean;
+  isSaving: boolean;
+  isError: boolean;
+  lastSavedAt: number | null;
+  flush: () => void;
+} => {
   const isDirty = content !== savedContent;
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isDirty) return;
     const handle = setTimeout(() => {
-      save.mutate({ documentId, content });
+      save.mutate(
+        { documentId, content },
+        { onSuccess: () => setLastSavedAt(Date.now()) },
+      );
     }, getAutoSaveDelayMs());
     return () => clearTimeout(handle);
     // Re-schedule whenever content or dirty state changes (not save — stable mutation)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, isDirty, documentId]);
 
-  return { isDirty, isSaving: save.isPending, isError: save.isError };
+  const flush = (): void => {
+    if (!isDirty || save.isPending) return;
+    save.mutate(
+      { documentId, content },
+      { onSuccess: () => setLastSavedAt(Date.now()) },
+    );
+  };
+
+  return {
+    isDirty,
+    isSaving: save.isPending,
+    isError: save.isError,
+    lastSavedAt,
+    flush,
+  };
 };
 
 // ─── Export narrative PDF ─────────────────────────────────────────────────────

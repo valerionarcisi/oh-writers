@@ -7,6 +7,7 @@ export type { FilterTab, SortKey } from "./components/ProjectFilters";
 export { TitlePageForm } from "./components/TitlePageForm";
 export { TitlePageEditor } from "./components/TitlePageEditor";
 export { TitlePageDraftPanel } from "./components/TitlePageDraftPanel";
+export { DraftMetaBadge } from "./components/DraftMetaBadge";
 export * from "./hooks/useProjects";
 export * from "./hooks/useTitlePage";
 export * from "./hooks/useTitlePageState";
