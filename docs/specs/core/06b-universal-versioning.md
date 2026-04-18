@@ -141,6 +141,28 @@ Rollback: non reversibile automaticamente — restore da backup.
 - Esporre `documents.content` legacy al client.
 - Merge tool. L'utente copia/incolla dal diff.
 
+## Deferred — funzionalità da fare dopo lo MVP breakdown
+
+Identificate il 2026-04-18 in chiusura del lavoro su 06b. Non bloccano lo spec
+10 (breakdown), ma vanno chiuse prima del primo design partner per uniformare
+l'esperienza versioning sui due editor.
+
+1. **Anteprima senza switch sui documenti narrativi** — oggi switchToVersion
+   sui documenti è distruttivo (cambia `currentVersionId` globale, visibile a
+   tutti i collaboratori). Lo screenplay ha già la modalità "viewing" col
+   banner di restore. Replicare lo stesso pattern su narrative/outline.
+
+2. **Compare versioni sullo screenplay** — `VersionCompareModal` esiste solo
+   nello scope `document`. Per uno screenplay che cresce a colpi di revisione
+   è probabilmente più utile lì che sulla logline. Estendere il modal e
+   passarlo a `ScreenplayVersionsList`.
+
+3. **"Pinned/canonical" separato da "current"** — il writer vuole marcare una
+   versione come "definitiva, da lì partono le altre" senza forzare la
+   selezione corrente. Aggiungere `pinnedVersionId` a documents/screenplays
+   come campo opzionale, distinto da `currentVersionId`. UI: pin icon sul
+   row, badge "definitiva" nel drawer.
+
 ## User stories → OHW IDs
 
 Prossimo ID libero: **OHW-248**.
