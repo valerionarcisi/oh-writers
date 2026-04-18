@@ -341,7 +341,10 @@ export const switchToVersion = createServerFn({ method: "POST" })
             })),
           )
           .andThen(({ version, doc }) =>
-            assertCanRead(db, doc, user.id).map(() => ({ version, doc })),
+            // currentVersionId is global on the document row — switching it
+            // changes what every collaborator sees. Must be edit-gated, not
+            // read-gated, otherwise viewers can mutate shared state.
+            assertCanEdit(db, doc, user.id).map(() => ({ version, doc })),
           )
           .andThen(({ version, doc }) =>
             ResultAsync.fromPromise(

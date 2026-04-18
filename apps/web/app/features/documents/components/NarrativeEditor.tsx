@@ -140,8 +140,10 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   // E2E test hook: call createVersionFromScratch directly to test server-side
   // permission enforcement (e.g. verify ForbiddenError for viewer role).
+  // Gated to non-prod so this isn't exposed on window.* in the deployed app.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (import.meta.env.PROD) return;
     const w = window as unknown as Record<string, unknown>;
     w["__ohWritersCreateVersionFromScratch"] = () =>
       createVersionFromScratch({ data: { documentId: document.id } });

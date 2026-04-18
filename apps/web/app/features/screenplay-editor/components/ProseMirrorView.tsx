@@ -278,5 +278,11 @@ export function ProseMirrorView({
     view.dispatch(tr);
   }, [value]);
 
-  return <div ref={mountRef} data-testid="prosemirror-view" />;
+  return (
+    <div
+      ref={mountRef}
+      data-testid="prosemirror-view"
+      data-pm-screenplay="true"
+    />
+  );
 }

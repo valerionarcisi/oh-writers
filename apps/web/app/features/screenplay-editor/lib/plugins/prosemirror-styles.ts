@@ -17,10 +17,14 @@ export const injectProseMirrorStyles = (): void => {
 
   const style = document.createElement("style");
   style.setAttribute("data-pm-screenplay-styles", "true");
+  // All selectors are scoped under `[data-pm-screenplay]` (set on the mount
+  // div in ProseMirrorView) so the screenplay's page-format rules can't leak
+  // to other ProseMirror instances on the page (e.g. the narrative editor),
+  // which would otherwise inherit the 1.5in/1in inline padding and shrink.
   style.textContent = `
     /* ─── ProseMirror editor root ──────────────────────────── */
 
-    .ProseMirror {
+    [data-pm-screenplay] .ProseMirror {
       font-family: "Courier Prime", "Courier New", Courier, monospace;
       font-size: 12pt;
       line-height: 1;
