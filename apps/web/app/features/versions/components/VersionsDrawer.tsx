@@ -158,11 +158,16 @@ function DocumentVersionsList({ documentId }: { documentId: string }) {
     [del],
   );
 
+  // Document versions are ordered desc by createdAt — the first row is
+  // the most recent snapshot of the live document and we treat it as active.
+  const activeId = items[0]?.id ?? null;
+
   return (
     <VersionsList
       items={items}
       isLoading={isLoading}
       error={error}
+      activeId={activeId}
       onCreate={handleCreate}
       isCreating={create.isPending}
       onRename={handleRename}

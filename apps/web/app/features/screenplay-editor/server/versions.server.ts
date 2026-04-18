@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err, okAsync, errAsync, ResultAsync } from "neverthrow";
-import { eq, desc, count, and } from "drizzle-orm";
+import { eq, desc, count, and, sql } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import {
   screenplayVersions,
@@ -42,6 +42,18 @@ export type { VersionView };
 
 type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 
+// `screenplay_versions.number` is UNIQUE per screenplay. Compute max+1 so
+// concurrent creates short-circuit via constraint rather than silently
+// clobbering each other.
+const nextVersionNumber = (db: DbOrTx, screenplayId: string): Promise<number> =>
+  db
+    .select({
+      max: sql<number>`coalesce(max(${screenplayVersions.number}), 0)`,
+    })
+    .from(screenplayVersions)
+    .where(eq(screenplayVersions.screenplayId, screenplayId))
+    .then((rows) => (rows[0]?.max ?? 0) + 1);
+
 export const ensureFirstVersion = async (
   db: DbOrTx,
   screenplayId: string,
@@ -63,6 +75,7 @@ export const ensureFirstVersion = async (
 
   await db.insert(screenplayVersions).values({
     screenplayId,
+    number: 1,
     label: "Versione 1",
     content: screenplay.content,
     pageCount: screenplay.pageCount,
@@ -246,17 +259,20 @@ export const createManualVersion = createServerFn({ method: "POST" })
 
       return toShape(
         await ResultAsync.fromPromise(
-          db
-            .insert(screenplayVersions)
-            .values({
-              screenplayId: data.screenplayId,
-              label: data.label,
-              content: screenplay.content,
-              pageCount: screenplay.pageCount,
-              createdBy: user.id,
-            })
-            .returning()
-            .then((rows) => rows[0]),
+          nextVersionNumber(db, data.screenplayId).then((number) =>
+            db
+              .insert(screenplayVersions)
+              .values({
+                screenplayId: data.screenplayId,
+                number,
+                label: data.label,
+                content: screenplay.content,
+                pageCount: screenplay.pageCount,
+                createdBy: user.id,
+              })
+              .returning()
+              .then((rows) => rows[0]),
+          ),
           (e) => new DbError("createManualVersion", e),
         ).andThen((v) =>
           v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
@@ -412,17 +428,20 @@ export const duplicateVersion = createServerFn({ method: "POST" })
 
       return toShape(
         await ResultAsync.fromPromise(
-          db
-            .insert(screenplayVersions)
-            .values({
-              screenplayId: source.screenplayId,
-              label: data.label,
-              content: source.content,
-              pageCount: source.pageCount,
-              createdBy: user.id,
-            })
-            .returning()
-            .then((rows) => rows[0]),
+          nextVersionNumber(db, source.screenplayId).then((number) =>
+            db
+              .insert(screenplayVersions)
+              .values({
+                screenplayId: source.screenplayId,
+                number,
+                label: data.label,
+                content: source.content,
+                pageCount: source.pageCount,
+                createdBy: user.id,
+              })
+              .returning()
+              .then((rows) => rows[0]),
+          ),
           (e) => new DbError("duplicateVersion", e),
         ).andThen((v) =>
           v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),

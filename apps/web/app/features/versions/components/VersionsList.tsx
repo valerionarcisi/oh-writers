@@ -191,6 +191,14 @@ export function VersionsList({
                 );
               }
 
+              const isOnlyVersion = items.length === 1;
+              const deleteDisabled = isDeleting || isActive || isOnlyVersion;
+              const deleteTitle = isOnlyVersion
+                ? "Unica versione — non eliminabile"
+                : isActive
+                  ? "Versione attiva — non eliminabile"
+                  : undefined;
+
               return (
                 <li
                   key={item.id}
@@ -204,6 +212,14 @@ export function VersionsList({
                       <span className={styles.label}>
                         {item.label ?? "Senza nome"}
                       </span>
+                      {isActive && (
+                        <span
+                          className={styles.badgeActive}
+                          data-testid={`version-badge-active-${item.id}`}
+                        >
+                          Attiva
+                        </span>
+                      )}
                       <button
                         type="button"
                         className={styles.pencilBtn}
@@ -250,7 +266,8 @@ export function VersionsList({
                         e.stopPropagation();
                         setDeletingId(item.id);
                       }}
-                      disabled={isDeleting}
+                      disabled={deleteDisabled}
+                      title={deleteTitle}
                       data-testid={`version-delete-${item.id}`}
                     >
                       Elimina
