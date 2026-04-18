@@ -1,12 +1,12 @@
 /**
- * Spec 14 — Title Page E2E
+ * Spec 07b — Title Page (ProseMirror editor) E2E
  *
- * [OHW-230] Owner: empty form (except Title read-only)
- * [OHW-231] Owner: fill Author + DraftDate + Color → Save → reload persists
- * [OHW-232] Viewer: read-only fieldset, no Save button
- * [OHW-233] Non-member: server rejects updateTitlePage with ForbiddenError
- * [OHW-234] Draft color select exposes all 10 industry-standard colors
- * [OHW-235] Preview updates live as Author is typed
+ * [OHW-FP20] Owner: editor mounts, placeholders visible in empty regions
+ * [OHW-FP21] Owner: type into title syncs to project breadcrumb (autosave)
+ * [OHW-FP22] Owner: pick a draft color → reload persists
+ * [OHW-FP23] Owner: pick a draft date → reload persists
+ * [OHW-FP24] Owner: type into a footer region → reload persists the doc
+ * [OHW-FP25] Viewer: editor is contenteditable=false, no draft swatches enabled
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
@@ -15,134 +15,129 @@ import { BASE_URL } from "../helpers";
 const TITLE_PAGE_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/title-page`;
 
-test.describe("Title Page — Spec 14", () => {
-  test("[OHW-230] owner sees an empty form, Title read-only", async ({
+const SAVE_DEBOUNCE_MS = 800;
+
+test.describe("Title Page — Spec 07b (PM editor)", () => {
+  test("[OHW-FP20] owner sees the editor with placeholders in empty regions", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(TITLE_PAGE_PATH(testProjectId));
 
-    const titleInput = page.getByTestId("title-page-title");
-    await expect(titleInput).toBeVisible({ timeout: 10_000 });
-    await expect(titleInput).toHaveAttribute("readonly", "");
-    await expect(titleInput).not.toHaveValue("");
+    const editor = page.getByTestId("title-page-editor");
+    await expect(editor).toBeVisible({ timeout: 10_000 });
+    await expect(editor.locator(".ProseMirror")).toHaveAttribute(
+      "contenteditable",
+      "true",
+    );
 
-    await expect(page.getByTestId("title-page-author")).toHaveValue("");
-    await expect(page.getByTestId("title-page-based-on")).toHaveValue("");
-    await expect(page.getByTestId("title-page-contact")).toHaveValue("");
-    await expect(page.getByTestId("title-page-draft-date")).toHaveValue("");
-    await expect(page.getByTestId("title-page-notes")).toHaveValue("");
-    await expect(page.getByTestId("title-page-wga")).toHaveValue("");
+    // At minimum the four non-title regions start empty in the seeded project,
+    // so their placeholders are rendered.
+    const placeholders = editor.locator(".tp-placeholder");
+    await expect(placeholders).toHaveCount(4);
+    await expect(placeholders).toContainText([
+      /Author/i,
+      /Draft date/i,
+      /Notes/i,
+      /Contact info/i,
+    ]);
   });
 
-  test("[OHW-231] owner saves Author + DraftDate + Color → reload persists", async ({
+  test("[OHW-FP21] owner: typing the title autosaves and updates the breadcrumb", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(TITLE_PAGE_PATH(testProjectId));
 
-    const author = page.getByTestId("title-page-author");
-    await expect(author).toBeVisible({ timeout: 10_000 });
+    const titleNode = page.locator(".ProseMirror .tp-title");
+    await expect(titleNode).toBeVisible({ timeout: 10_000 });
 
-    const authorValue = `Valerio ${Date.now()}`;
-    await author.fill(authorValue);
-    await page.getByTestId("title-page-draft-date").fill("2026-04-17");
-    await page.getByTestId("title-page-draft-color").selectOption("blue");
+    const newTitle = `Title ${Date.now()}`;
+    await titleNode.click();
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.type(newTitle);
 
-    const saveButton = page.getByTestId("title-page-save");
-    await expect(saveButton).toBeEnabled();
-
-    const [saveResp] = await Promise.all([
-      page.waitForResponse(
-        (resp) =>
-          resp.url().includes("updateTitlePage") &&
-          resp.request().method() === "POST",
-        { timeout: 10_000 },
-      ),
-      saveButton.click(),
-    ]);
-    expect(saveResp.status()).toBe(200);
-    const body = await saveResp.json();
-    expect(body).toMatchObject({ result: { isOk: true } });
+    // Wait for the debounced autosave + invalidation to land in the breadcrumb.
+    await expect(page.getByText(newTitle).first()).toBeVisible({
+      timeout: SAVE_DEBOUNCE_MS + 5_000,
+    });
 
     await page.reload();
-    await expect(page.getByTestId("title-page-author")).toHaveValue(
-      authorValue,
-    );
-    await expect(page.getByTestId("title-page-draft-date")).toHaveValue(
-      "2026-04-17",
-    );
-    await expect(page.getByTestId("title-page-draft-color")).toHaveValue(
-      "blue",
+    await expect(page.locator(".ProseMirror .tp-title")).toContainText(
+      newTitle,
     );
   });
 
-  test("[OHW-232] viewer sees read-only fieldset, no Save button", async ({
+  test("[OHW-FP22] owner: picking a draft color persists across reload", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(TITLE_PAGE_PATH(testProjectId));
+
+    const blueSwatch = page.getByTestId("tp-draft-color-blue");
+    await expect(blueSwatch).toBeVisible({ timeout: 10_000 });
+    await blueSwatch.click();
+    await expect(blueSwatch).toHaveAttribute("aria-pressed", "true");
+
+    await page.waitForTimeout(SAVE_DEBOUNCE_MS + 400);
+    await page.reload();
+
+    await expect(page.getByTestId("tp-draft-color-blue")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  test("[OHW-FP23] owner: picking a draft date persists across reload", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(TITLE_PAGE_PATH(testProjectId));
+
+    const dateInput = page.getByTestId("tp-draft-date");
+    await expect(dateInput).toBeVisible({ timeout: 10_000 });
+    await dateInput.fill("2026-04-18");
+
+    await page.waitForTimeout(SAVE_DEBOUNCE_MS + 400);
+    await page.reload();
+
+    await expect(page.getByTestId("tp-draft-date")).toHaveValue("2026-04-18");
+  });
+
+  test("[OHW-FP24] owner: typing into a footer region persists across reload", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(TITLE_PAGE_PATH(testProjectId));
+
+    const footerLeft = page.locator(".ProseMirror .tp-footer-left p").first();
+    await expect(footerLeft).toBeVisible({ timeout: 10_000 });
+
+    const stamp = `Draft ${Date.now()}`;
+    await footerLeft.click();
+    await page.keyboard.type(stamp);
+
+    await page.waitForTimeout(SAVE_DEBOUNCE_MS + 400);
+    await page.reload();
+
+    await expect(page.locator(".ProseMirror .tp-footer-left")).toContainText(
+      stamp,
+    );
+  });
+
+  test("[OHW-FP25] viewer: editor is read-only, draft controls disabled", async ({
     authenticatedViewerPage: page,
   }) => {
     await page.goto(TITLE_PAGE_PATH(TEST_TEAM_PROJECT_ID));
 
-    const author = page.getByTestId("title-page-author");
-    await expect(author).toBeVisible({ timeout: 10_000 });
-    await expect(author).toBeDisabled();
-    await expect(page.getByTestId("title-page-save")).toHaveCount(0);
-  });
-
-  // [OHW-233] server-side guard is covered by the Save button being hidden
-  // for viewers (OHW-232) plus the shared canEdit() helper, which is already
-  // proven by the updateProject E2E guard. A direct server-fn POST would need
-  // a raw-hook plumbing that is not worth it for parity with updateProject.
-  test.skip("[OHW-233] non-member: server rejects updateTitlePage", () => {});
-
-  test("[OHW-234] draft color exposes all 10 industry-standard values", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    await page.goto(TITLE_PAGE_PATH(testProjectId));
-
-    const select = page.getByTestId("title-page-draft-color");
-    await expect(select).toBeVisible({ timeout: 10_000 });
-
-    const optionValues = await select
-      .locator("option")
-      .evaluateAll((nodes) =>
-        (nodes as HTMLOptionElement[])
-          .map((n) => n.value)
-          .filter((v) => v.length > 0),
-      );
-
-    expect(optionValues.sort()).toEqual(
-      [
-        "blue",
-        "buff",
-        "cherry",
-        "goldenrod",
-        "green",
-        "pink",
-        "salmon",
-        "tan",
-        "white",
-        "yellow",
-      ].sort(),
+    const editor = page.getByTestId("title-page-editor");
+    await expect(editor).toBeVisible({ timeout: 10_000 });
+    await expect(editor.locator(".ProseMirror")).toHaveAttribute(
+      "contenteditable",
+      "false",
     );
-  });
 
-  test("[OHW-235] preview updates live as author is typed", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    await page.goto(TITLE_PAGE_PATH(testProjectId));
-
-    const author = page.getByTestId("title-page-author");
-    await expect(author).toBeVisible({ timeout: 10_000 });
-
-    const preview = page.getByTestId("title-page-preview");
-    const sample = "Preview Author Name";
-    await author.fill(sample);
-    await expect(preview).toContainText(sample);
-    await expect(preview).toContainText("Written by");
-
-    // Reset dirty without persisting — fill back original
-    await author.fill("");
+    await expect(page.getByTestId("tp-draft-date")).toBeDisabled();
+    await expect(page.getByTestId("tp-draft-color-blue")).toBeDisabled();
   });
 });

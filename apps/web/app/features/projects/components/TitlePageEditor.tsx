@@ -7,6 +7,7 @@ import { baseKeymap } from "prosemirror-commands";
 import { Node as PMNode } from "prosemirror-model";
 import { titlePageSchema } from "../title-page-pm/schema";
 import { emptyDoc } from "../title-page-pm/empty-doc";
+import { placeholdersPlugin } from "../title-page-pm/placeholders";
 import styles from "./TitlePageEditor.module.css";
 
 interface TitlePageEditorProps {
@@ -50,6 +51,7 @@ export function TitlePageEditor({
           "Mod-Shift-z": redo,
         }),
         keymap(baseKeymap),
+        placeholdersPlugin(),
       ],
     });
 

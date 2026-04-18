@@ -113,6 +113,43 @@
   min-block-size: 1.2em;
 }
 
+/* Placeholder hints rendered by the placeholders plugin. */
+.editor :global(.tp-placeholder) {
+  pointer-events: none;
+  color: #b8b3aa;
+  font-style: italic;
+  user-select: none;
+}
+
+/* Subtle dashed outline on empty regions so the user understands they're
+   click/tab targets. Disappears the moment text is typed. */
+.editor :global(.tp-center:has(p:empty)),
+.editor :global(.tp-footer-left:has(p:empty)),
+.editor :global(.tp-footer-center:has(p:empty)),
+.editor :global(.tp-footer-right:has(p:empty)),
+.editor :global(.tp-title:empty) {
+  outline: 1px dashed rgba(0, 0, 0, 0.12);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm, 4px);
+  transition: outline-color 120ms ease;
+}
+
+.editor :global(.ProseMirror-focused .tp-center:has(p:empty)),
+.editor :global(.ProseMirror-focused .tp-footer-left:has(p:empty)),
+.editor :global(.ProseMirror-focused .tp-footer-center:has(p:empty)),
+.editor :global(.ProseMirror-focused .tp-footer-right:has(p:empty)),
+.editor :global(.ProseMirror-focused .tp-title:empty) {
+  outline-color: rgba(0, 0, 0, 0.22);
+}
+
+.readOnly :global(.tp-placeholder) {
+  display: none;
+}
+
+.readOnly :global([class^="tp-"]) {
+  outline: none;
+}
+
 .readOnly {
   cursor: default;
 }
