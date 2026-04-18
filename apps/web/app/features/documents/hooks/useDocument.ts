@@ -39,6 +39,9 @@ export const useSaveDocument = () => {
       void queryClient.invalidateQueries({
         queryKey: ["documents", saved.projectId, saved.type],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["document-versions", saved.id],
+      });
       // Refresh project so the progress bar updates (completed doc count)
       void queryClient.invalidateQueries({
         queryKey: ["projects", saved.projectId],
