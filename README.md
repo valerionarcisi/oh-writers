@@ -22,19 +22,149 @@ Professional screenplay collaboration platform. Real-time co-writing, AI-assiste
 
 ---
 
-## 0. Project status — TODO / DONE
+## 0. What we're building
+
+### TL;DR
+
+Oh Writers is a SaaS that follows a film from the first line of the logline to the first cut of the edit. Screenwriting, 1st AD work, production planning, and post hand-off — all in one project, one team, one AI copilot named **Cesare**. Built for indie production houses and film schools that don't want to stitch together Final Draft, Movie Magic, StudioBinder, Filmustage and an NLE plug-in just to make a movie.
+
+**Status:** pre-demo. Actively seeking early design partners.
+
+### The problem
+
+Making a small-to-mid independent film today means working across a dozen disconnected tools. Final Draft for the screenplay, Google Docs for the treatment, Movie Magic for scheduling, StudioBinder or Filmustage for the set, then DaVinci or Premiere in the edit bay. Every hand-off is a manual copy-paste. Every rewrite breaks the schedule and the budget. AI — when present — is a side chatbot that knows nothing about the actual project.
+
+The enterprise stack costs thousands of euros per seat. Indie production houses, film schools, and small teams either can't afford it or burn time they don't have holding it together.
+
+### The solution — Oh Writers
+
+One platform that walks with the production from first idea to rough cut, organized around five pillars:
+
+1. **Write** — logline, synopsis, outline, treatment, screenplay. Real-time co-writing, universal versioning, comments, roles.
+2. **Plan (with the 1st AD)** — automatic per-scene breakdown (cast, props, locations, VFX, vehicles, extras, sound FX); shooting schedule composition; **calendar templates per country of production** (working days, national holidays, allowed hours, night shifts, minimum rest); call sheets; budget. All generated and kept in sync by Cesare — **Movie Magic is no longer needed**.
+3. **Previsualize** — moodboards built from visual references and the treatment, then storyboards generated scene by scene from screenplay and breakdown, with shot lists tied to the shooting schedule. Cesare proposes frames, the director refines them. Replaces the Milanote + Boords + StudioBinder-shotlist stitch-up.
+4. **Shoot** — locked scenes, director's notes, location scouting, version tracking on every take and rewrite.
+5. **Edit** — scene markers and a rough cut assembled by our **DaVinci Resolve and Adobe Premiere agents**, returning into the platform as a living part of the project.
+
+### Meet Cesare
+
+Cesare is Oh Writers' AI copilot — not a chatbot parked on the side, but an agent that knows the project end-to-end. Cesare unblocks the blank page, reviews structure and beats, drafts breakdowns, composes shooting schedules under the labor constraints of the country you're shooting in, flags cast/location conflicts when the script changes, and — once the material is on the edit timeline — maps cuts back to the written scenes. One name, one voice, one memory spanning the whole production.
+
+### Why now
+
+- **AI finally understands narrative.** Modern models genuinely grasp structure, beats, and scene-level conflict. An AI copilot is useful, not decorative.
+- **Agents can talk to professional software.** MCP and adjacent protocols let our platform integrate natively with DaVinci, Premiere, and other AI agents — no brittle file exports, no plug-in zoo.
+- **Live collaboration is solved.** CRDT (Yjs) makes a Google-Docs-class experience native to screenwriting.
+- **The market gap is wide.** The indie + school + small-production segment has no vertical platform — only enterprise suites or generic tools.
+
+### Who it's for
+
+1. **Small production houses (priority 1).** 2–30 people, 1–5 projects a year. Today bleeding budget on fragmented enterprise licenses. Oh Writers replaces the stack with one team subscription.
+2. **Film schools and screenwriting courses (priority 2).** Annual institutional licenses, multi-student access, Cesare as integrated tutor. Students touch the full pipeline — logline to rough cut — without per-seat enterprise costs.
+3. **Professional screenwriters and writing teams (priority 3).** Individual or team plans, editor plus Cesare as a shared story doctor. Viral entry point: writers bring the platform into the productions they work with.
+4. **1st ADs and independent directors.** Natural extension from the screenwriter's project — already inside Oh Writers, no new tool to buy.
+
+### Competitive landscape
+
+| Stage                  | Incumbents                                 | Oh Writers                                                                     |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| Screenwriting          | Final Draft, WriterDuet, Arc Studio, Celtx | Modern editor, real-time co-writing, Cesare as story doctor                    |
+| Breakdown & pre-prod   | StudioBinder, Filmustage                   | Breakdown auto-generated from the live script, country-aware schedules         |
+| Scheduling             | Movie Magic Scheduling                     | Replaced by Cesare — AI-native, kept in sync with every rewrite                |
+| Moodboard & storyboard | Milanote, Boords, StudioBinder shot lists  | Moodboard + storyboard + shot list generated by Cesare from script + breakdown |
+| Post-production bridge | Manual exports, per-NLE plug-ins           | DaVinci Resolve & Adobe Premiere agents, script ⇄ rough cut round-trip         |
+
+No single competitor covers the full arc. Most don't speak to each other. None has an AI copilot that remembers the project across phases.
+
+### Business model
+
+Two tiers from day one:
+
+- **Oh Writers SaaS — Teams & Schools.** Simple subscription, self-serve sign-up. For indie productions, film schools, writing collectives, and individual pros. Designed to replace the generalist stack at a fraction of the cost.
+- **Oh Writers Enterprise.** Custom deployment for larger production houses, studios, or institutions with compliance and procurement needs. Dedicated onboarding, custom integrations, SLA.
+
+Exact pricing is being defined during the pre-demo / design-partner phase.
+
+### The NLE bridge — our competitive moat
+
+No competitor in the indie tier closes the loop from script to rough cut. Oh Writers will, through agents running inside **DaVinci Resolve** and **Adobe Premiere**:
+
+1. Oh Writers exports the approved scene plus markers (scene number, beat, dialogue).
+2. The NLE agent assembles a **rough cut** from tagged clips, guided by the beats of the script.
+3. The cut returns as a timeline in the platform, driving scene status: `written → shot → assembled → locked`.
+
+This is the piece that turns Oh Writers from "writing + pre-production" into a **full indie production platform** — and justifies a premium positioning over StudioBinder, Filmustage, and the Movie Magic stack. None of them have a native AI round-trip with the edit.
+
+---
+
+## 0.1 Roadmap — Done / Todo
+
+_Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from Todo → Done as they ship, and add new Todo rows whenever a new idea lands, even before a spec file exists._
+
+### Core platform (`docs/specs/core/`)
 
 **Done**
 
-- Spec 04e — narrative editor su vanilla ProseMirror (imperative mount, ref-stable). Closes BUG-001..003.
-- E2E `OHW-EDR-01..03` verdi (Enter, bullet list, counters visibili).
-- Tiptap rimosso completamente (deps + componenti `RichTextEditor`).
+- **01 / 01b — Auth**: email/password, OAuth Google + GitHub, sessions
+- **02 — Teams & roles**: Owner / Editor / Viewer
+- **03 — Projects**
+- **04e — Narrative editor** on vanilla ProseMirror (logline, synopsis, treatment) — closes BUG-001..003
+- **05 / 05b–05i — Screenplay editor**: custom editor, autocomplete, scene numbering, heading slots, inline scene number edit
+- **06 / 06b / 06c / 06d — Universal versioning**: panel, row popover, toolbar popover
+- **14 — Title page**
+- **20 — Shooting script PDF import**
 
-**TODO**
+**Todo**
 
-- Riallineare gli E2E `tests/documents/narrative-editor.spec.ts` (OHW-201..210): cercano un bottone "Save" e una classe CSS `charCountWarn` non più presenti — pre-esistente al refactor ma da bonificare.
-- Spec 06b — versions drawer per documenti narrativi (OHW-214 skipped).
-- Roadmap successiva su `docs/specs/`.
+- **04 / 04b / 04c / 04d — Narrative editor foundations**, outline drag & drop, narrative export, legacy Tiptap spec (to retire cleanly)
+- **07 — Title page legacy** (superseded, to reconcile with 14)
+- **08 — Scene renumber**
+- **09 / 09b — Save indicator, WebSocket server**
+- **10 / 10b — Breakdown** + version viewing marker
+- **11 / 11b — Budget** + versions row popover
+- **12 / 12b — Shooting schedule** + versions drawer
+- **13 — Locations & scouting**
+- **15 — Timeline / scaletta**
+- **16 — Multi-tenancy & billing** (gates the two-tier model above)
+- **18 — i18n** (Italian first, then English, then others)
+
+### AI — Cesare (`docs/specs/ai/`)
+
+**Todo**
+
+- **07 — AI predictions engine** (cost, risk)
+- **14 — Auto-generate logline & synopsis**
+- **14b — Auto-outline**
+- **16 — Logline → scaletta**
+- **17 — Cesare assistant** (the conversational copilot at the heart of the product)
+- **17b — Story doctor**
+- **19 — Moodboard & storyboard**
+
+### Infra (`docs/specs/infra/`)
+
+**Todo**
+
+- **07 — Core refactor**
+- **07b — Design system** (prerequisite for go-to-market)
+- **07c — Docker E2E**
+- **08 / 08b — Infrastructure & cloud deploy**
+
+### Agents — external interop (`docs/specs/agents/`)
+
+Placeholder epic — no specs filed yet. These are the known targets.
+
+**Todo**
+
+- **NLE round-trip** — DaVinci Resolve + Adobe Premiere agents, script ⇄ rough cut (the competitive moat above)
+- **Industry interchange** — FDX (Final Draft), FCPXML (Final Cut), EDL / XML (DaVinci, Premiere, Avid), `.mms` (Movie Magic Scheduling, for migration)
+- **MCP server** — expose Oh Writers as an MCP endpoint so Claude Desktop, Cursor, ChatGPT and custom agents can read scenes, characters, outline and propose revisions as new versions
+
+### Ideas not yet in specs
+
+- **Country-aware shooting calendar templates** — labor rules, national holidays, allowed hours, night shifts, minimum rest. Feeds into core/12.
+- **Cast/location conflict detection on script rewrites** — feeds into ai/17 Cesare.
+- **Scene status derived from the NLE timeline** — feeds into the Agents round-trip.
+- **Call sheet generation from the schedule + breakdown** — feeds into core/12.
 
 ---
 
