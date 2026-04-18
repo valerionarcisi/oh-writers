@@ -54,3 +54,14 @@
   color: var(--color-danger);
   font-size: var(--text-sm);
 }
+
+.layout {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+
+  & > :first-child {
+    flex: 1;
+    min-inline-size: 0;
+  }
+}

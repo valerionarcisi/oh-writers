@@ -3,10 +3,12 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "/Users/valerionarcisi/Library/pnpm/pnpm",
-      "runtimeArgs": ["--filter", "@oh-writers/web", "dev"],
-      "env": { "PORT": "3002" },
-      "port": 3002
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && pnpm --filter @oh-writers/web dev"
+      ],
+      "port": 3000
     },
     {
       "name": "ws-server",
