@@ -1,7 +1,9 @@
 /*
  * Title page editor — mirrors the screenplay editor's chrome:
  * dark canvas + white US-Letter page card + Courier Prime monospace.
- * Layout inside the page is a 5-region grid (title, center, 3 footer cols).
+ * Layout inside the page is a 5-region grid (title, center, 3 footer cols),
+ * applied directly to the .ProseMirror element so it remains the editable
+ * host (display:contents on the editable host breaks PM focus/selection).
  */
 
 .canvas {
@@ -19,7 +21,7 @@
 .pageShell {
   inline-size: 100%;
   max-inline-size: 816px;
-  min-block-size: 1056px; /* 11in × 96dpi — US Letter feel */
+  min-block-size: 1056px;
   background: #ffffff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
   position: relative;
@@ -35,83 +37,80 @@
   line-height: 1.4;
   color: #111;
   caret-color: #111;
-  outline: none;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
   block-size: calc(1056px - 2in);
 }
 
 .editor :global(.ProseMirror) {
   outline: none;
-  display: contents;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  block-size: 100%;
+  inline-size: 100%;
 }
 
 .editor :global(.tp-title) {
+  grid-column: 1 / -1;
+  grid-row: 1;
   text-align: center;
   text-transform: uppercase;
   font-weight: 700;
   font-size: 14pt;
   margin: 3in 0 0.5in;
   min-block-size: 1.4em;
-}
-
-.editor :global(.tp-center) {
-  text-align: center;
-  margin: 0 auto;
-  max-inline-size: 4.5in;
-
-  & p {
-    margin: 0.4em 0;
-    min-block-size: 1.2em;
-  }
-}
-
-/* Footer row — three columns at the bottom of the page */
-.editor :global(.tp-footer-left),
-.editor :global(.tp-footer-center),
-.editor :global(.tp-footer-right) {
-  align-self: end;
-
-  & p {
-    margin: 0.2em 0;
-    min-block-size: 1.2em;
-  }
-}
-
-/* Use a sub-grid so the three footers sit side by side on the same row.
-   PM emits them as siblings of title/center inside .ProseMirror, so we
-   pin each to a column and the same grid row via grid-area assignments. */
-.editor :global(.ProseMirror) {
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
-}
-
-.editor :global(.tp-title) {
-  grid-column: 1 / -1;
-  grid-row: 1;
+  cursor: text;
 }
 
 .editor :global(.tp-center) {
   grid-column: 1 / -1;
   grid-row: 2;
+  text-align: center;
+  margin: 0 auto;
+  inline-size: 100%;
+  max-inline-size: 4.5in;
+  cursor: text;
+
+  & p {
+    margin: 0.4em 0;
+    min-block-size: 1.4em;
+  }
+}
+
+.editor :global(.tp-footer-left),
+.editor :global(.tp-footer-center),
+.editor :global(.tp-footer-right) {
+  grid-row: 3;
+  align-self: end;
+  cursor: text;
+
+  & p {
+    margin: 0.2em 0;
+    min-block-size: 1.4em;
+  }
 }
 
 .editor :global(.tp-footer-left) {
   grid-column: 1;
-  grid-row: 3;
   text-align: start;
 }
 
 .editor :global(.tp-footer-center) {
   grid-column: 2;
-  grid-row: 3;
   text-align: center;
 }
 
 .editor :global(.tp-footer-right) {
   grid-column: 3;
-  grid-row: 3;
   text-align: end;
+}
+
+/* Empty paragraphs render <br> with zero hit-area; force a min target. */
+.editor :global(.ProseMirror) p:empty::before,
+.editor :global(.ProseMirror) p > br:only-child {
+  content: "";
+  display: inline-block;
+  min-inline-size: 1px;
+  min-block-size: 1.2em;
 }
 
 .readOnly {
