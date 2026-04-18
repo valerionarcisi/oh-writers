@@ -270,8 +270,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
                   Logline is limited to {LOGLINE_MAX} characters.
                 </div>
               )}
-              <div className={styles.editorFooter}>
-                <span data-testid="char-counter" className={styles.counter}>
+              <div className={`${styles.editorFooter} ${styles.charCount}`}>
+                <span
+                  data-testid="char-counter"
+                  className={`${styles.counter} ${charCount > LOGLINE_MAX * 0.9 ? styles.charCountWarn : ""}`}
+                >
                   {charCount}/{LOGLINE_MAX}
                 </span>
               </div>

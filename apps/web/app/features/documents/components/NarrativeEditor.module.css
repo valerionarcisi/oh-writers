@@ -236,6 +236,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.charCount {
+  /* hook for tests + future styling overrides */
+}
+
+.charCountWarn {
+  color: var(--color-danger);
+  font-weight: var(--weight-semibold);
+}
+
 .errorMessage {
   margin-block-start: var(--space-2);
   padding: var(--space-2) var(--space-3);

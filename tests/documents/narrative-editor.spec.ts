@@ -35,9 +35,50 @@ const SYNOPSIS_PATH = (projectId: string) =>
 const TREATMENT_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/treatment`;
 
-// Used by OHW-202 to make the auto-save debounce testable. Set via
+// Used to make the auto-save debounce testable. Set via
 // page.addInitScript before navigation.
 const FAST_AUTOSAVE_SCRIPT = `window.__ohWritersAutoSaveDelayMs = 300;`;
+
+// Spec 04e — synopsis/treatment use a vanilla ProseMirror contenteditable,
+// not a textarea. Logline still uses a textarea via TextEditor.
+const pmEditorLocator = (page: import("@playwright/test").Page) =>
+  page.locator('[data-testid="rich-text-editor"] [contenteditable="true"]');
+
+const focusPmEditor = async (page: import("@playwright/test").Page) => {
+  const editor = pmEditorLocator(page);
+  await editor.click();
+  const isEmpty = await editor.evaluate(
+    (el) => (el.textContent ?? "").trim().length === 0,
+  );
+  if (!isEmpty) {
+    await page.keyboard.press(
+      process.platform === "darwin" ? "Meta+A" : "Control+A",
+    );
+    await page.keyboard.press("Delete");
+  }
+};
+
+const readPmEditorText = async (
+  page: import("@playwright/test").Page,
+): Promise<string> => {
+  const editor = pmEditorLocator(page);
+  return await editor.evaluate((el) => {
+    const blocks = Array.from(el.querySelectorAll("p, h2, h3, li"));
+    return blocks
+      .map((b) => (b.textContent ?? "").trim())
+      .filter((t) => t.length > 0)
+      .join("\n");
+  });
+};
+
+const triggerManualSave = async (page: import("@playwright/test").Page) => {
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+s" : "Control+s",
+  );
+};
+
+const savedStatus = (page: import("@playwright/test").Page) =>
+  page.locator('[class*="status"]').filter({ hasText: /^Saved$/ });
 
 test.describe("Narrative Editor — content caps", () => {
   test("[OHW-204] logline counter warns above 180 characters", async ({
@@ -218,19 +259,12 @@ test.describe("Narrative Editor — role guard", () => {
     await expect(page.getByTestId("narrative-readonly-badge")).toHaveCount(0);
     await expect(textarea).not.toHaveAttribute("readonly", "");
 
-    // Edit + manual save path
+    // Edit + manual save (Cmd/Ctrl+S, spec 04e)
     const marker = `owner-write-${Date.now()}`;
     await textarea.fill(marker);
+    await triggerManualSave(page);
 
-    const saveBtn = page.getByRole("button", { name: /^save$/i });
-    await expect(saveBtn).toBeEnabled();
-    await saveBtn.click();
-
-    // SaveStatus transitions to "Saved"
-    const savedStatus = page.locator('[class*="status"]').filter({
-      hasText: /^Saved$/,
-    });
-    await expect(savedStatus).toBeVisible({ timeout: 10_000 });
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
     // Round-trip: reload and verify the marker is persisted
     await page.reload();
@@ -267,14 +301,8 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     await expect(textarea).toBeVisible({ timeout: 10_000 });
 
     // Freshly loaded content is not dirty → SaveStatus shows "Saved".
-    const savedStatus = page.locator('[class*="status"]').filter({
-      hasText: /^Saved$/,
-    });
-    await expect(savedStatus).toBeVisible({ timeout: 10_000 });
-
-    // Save button is rendered but disabled (nothing to save).
-    const saveBtn = page.getByRole("button", { name: /^save$/i });
-    await expect(saveBtn).toBeDisabled();
+    // Spec 04e: there is no manual Save button — autosave + Cmd/Ctrl+S only.
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
   });
 
   test("[OHW-202] typing triggers autosave after the debounce, persists on reload", async ({
@@ -285,17 +313,15 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
     await page.goto(TREATMENT_PATH(testProjectId));
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
     // Wait for the initial "Saved" state so we don't race a spurious
     // autosave of seeded content against the marker write.
-    await expect(
-      page.locator('[class*="status"]').filter({ hasText: /^Saved$/ }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
     const marker = `autosaved-${Date.now()}`;
-    await textarea.fill(marker);
+    await focusPmEditor(page);
+    await page.keyboard.type(marker);
 
     // Wait for the autosave network round-trip, then for SaveStatus.
     await page.waitForResponse(
@@ -306,34 +332,27 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
       { timeout: 10_000 },
     );
 
-    const savedStatus = page.locator('[class*="status"]').filter({
-      hasText: /^Saved$/,
-    });
-    await expect(savedStatus).toBeVisible({ timeout: 10_000 });
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
-    // Critical: autosave persisted without any manual click.
+    // Critical: autosave persisted without any manual save action.
     await page.reload();
-    await expect(page.locator("textarea").first()).toHaveValue(marker, {
-      timeout: 10_000,
-    });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    expect(await readPmEditorText(page)).toContain(marker);
   });
 
-  test("[OHW-203] clicking Save flushes immediately (no debounce wait)", async ({
+  test("[OHW-203] Cmd/Ctrl+S flushes immediately (no debounce wait)", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
-    // Keep the default 30s debounce: if manual Save didn't flush, the test
+    // Keep the default 30s debounce: if manual save didn't flush, the test
     // would hit its timeout well before autosave could fire.
     await page.goto(TREATMENT_PATH(testProjectId));
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
     const marker = `manual-save-${Date.now()}`;
-    await textarea.fill(marker);
-
-    const saveBtn = page.getByRole("button", { name: /^save$/i });
-    await expect(saveBtn).toBeEnabled();
+    await focusPmEditor(page);
+    await page.keyboard.type(marker);
 
     const respPromise = page.waitForResponse(
       (resp) =>
@@ -341,14 +360,11 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
         resp.request().method() === "POST",
       { timeout: 5_000 },
     );
-    await saveBtn.click();
+    await triggerManualSave(page);
     const resp = await respPromise;
     expect(resp.ok()).toBe(true);
 
-    const savedStatus = page.locator('[class*="status"]').filter({
-      hasText: /^Saved$/,
-    });
-    await expect(savedStatus).toBeVisible({ timeout: 5_000 });
+    await expect(savedStatus(page)).toBeVisible({ timeout: 5_000 });
   });
 
   test("[OHW-207] synopsis round-trips across reload", async ({
@@ -357,21 +373,18 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
   }) => {
     await page.goto(SYNOPSIS_PATH(testProjectId));
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
     const marker = `synopsis-${Date.now()} — a short paragraph with punctuation, accents àèìòù, and emojis 🎬.`;
-    await textarea.fill(marker);
-    await page.getByRole("button", { name: /^save$/i }).click();
+    await focusPmEditor(page);
+    await page.keyboard.type(marker);
+    await triggerManualSave(page);
 
-    await expect(
-      page.locator('[class*="status"]').filter({ hasText: /^Saved$/ }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
     await page.reload();
-    await expect(page.locator("textarea").first()).toHaveValue(marker, {
-      timeout: 10_000,
-    });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    expect(await readPmEditorText(page)).toContain(marker);
   });
 
   test("[OHW-208] treatment round-trips across reload", async ({
@@ -380,23 +393,26 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
   }) => {
     await page.goto(TREATMENT_PATH(testProjectId));
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
-    // Multi-paragraph, large-ish content to exercise the treatment path
-    // (no client-side maxLength on treatment).
-    const marker = `treatment-${Date.now()}\n\n`.repeat(20);
-    await textarea.fill(marker);
-    await page.getByRole("button", { name: /^save$/i }).click();
+    // Multi-paragraph content to exercise the treatment path. Each "Enter"
+    // creates a new <p> in PM; the round-trip joins them back via newlines.
+    const stamp = `treatment-${Date.now()}`;
+    const paragraphs = Array.from({ length: 5 }, (_, i) => `${stamp}-p${i}`);
 
-    await expect(
-      page.locator('[class*="status"]').filter({ hasText: /^Saved$/ }),
-    ).toBeVisible({ timeout: 10_000 });
+    await focusPmEditor(page);
+    for (let i = 0; i < paragraphs.length; i++) {
+      await page.keyboard.type(paragraphs[i] ?? "");
+      if (i < paragraphs.length - 1) await page.keyboard.press("Enter");
+    }
+    await triggerManualSave(page);
+
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
     await page.reload();
-    await expect(page.locator("textarea").first()).toHaveValue(marker, {
-      timeout: 10_000,
-    });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    const text = await readPmEditorText(page);
+    for (const p of paragraphs) expect(text).toContain(p);
   });
 
   test("[OHW-209] navigating between logline and synopsis preserves each", async ({
@@ -406,39 +422,33 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     const logMarker = `logline-nav-${Date.now()}`.slice(0, 180);
     const synMarker = `synopsis-nav-${Date.now()} — keep me around when coming back`;
 
-    // Write + save logline
+    // Write + save logline (still a textarea via TextEditor).
     await page.goto(LOGLINE_PATH(testProjectId));
     await expect(page.locator("textarea").first()).toBeVisible({
       timeout: 10_000,
     });
     await page.locator("textarea").first().fill(logMarker);
-    await page.getByRole("button", { name: /^save$/i }).click();
-    await expect(
-      page.locator('[class*="status"]').filter({ hasText: /^Saved$/ }),
-    ).toBeVisible({ timeout: 10_000 });
+    await triggerManualSave(page);
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
-    // Navigate to synopsis, write + save
+    // Navigate to synopsis (PM editor), write + save.
     await page.goto(SYNOPSIS_PATH(testProjectId));
-    await expect(page.locator("textarea").first()).toBeVisible({
-      timeout: 10_000,
-    });
-    await page.locator("textarea").first().fill(synMarker);
-    await page.getByRole("button", { name: /^save$/i }).click();
-    await expect(
-      page.locator('[class*="status"]').filter({ hasText: /^Saved$/ }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    await focusPmEditor(page);
+    await page.keyboard.type(synMarker);
+    await triggerManualSave(page);
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
-    // Go back to logline — its value must still be logMarker (not synMarker)
+    // Go back to logline — its value must still be logMarker.
     await page.goto(LOGLINE_PATH(testProjectId));
     await expect(page.locator("textarea").first()).toHaveValue(logMarker, {
       timeout: 10_000,
     });
 
-    // And synopsis still holds synMarker
+    // And synopsis still holds synMarker.
     await page.goto(SYNOPSIS_PATH(testProjectId));
-    await expect(page.locator("textarea").first()).toHaveValue(synMarker, {
-      timeout: 10_000,
-    });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    expect(await readPmEditorText(page)).toContain(synMarker);
   });
 
   test("[OHW-210] SaveStatus shows 'Error saving' when the server fails", async ({
@@ -465,11 +475,11 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     );
 
     await page.goto(TREATMENT_PATH(testProjectId));
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
-    await textarea.fill(`will-fail-${Date.now()}`);
-    await page.getByRole("button", { name: /^save$/i }).click();
+    await focusPmEditor(page);
+    await page.keyboard.type(`will-fail-${Date.now()}`);
+    await triggerManualSave(page);
 
     const errorStatus = page.locator('[class*="status"]').filter({
       hasText: /Error saving/i,
