@@ -318,10 +318,6 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           projectId={screenplay.projectId}
           screenplayId={screenplay.id}
           currentVersionId={screenplay.currentVersionId ?? null}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          currentSceneIndex={currentSceneIndex}
-          totalScenes={totalScenes}
           isDirty={isDirty}
           isSaving={isSaving}
           isError={isError}
@@ -391,6 +387,19 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           />
         </div>
       </div>
+      {!isFocusMode && (
+        <div
+          className={styles.stickyFooter}
+          data-testid="screenplay-counters-footer"
+        >
+          <span data-testid="page-indicator" className={styles.counter}>
+            page {currentPage}/{totalPages}
+          </span>
+          <span data-testid="scene-indicator" className={styles.counter}>
+            scene {currentSceneIndex ?? "—"}/{totalScenes}
+          </span>
+        </div>
+      )}
       {conflict ? (
         <SceneNumberConflictModal
           current={conflict.current}

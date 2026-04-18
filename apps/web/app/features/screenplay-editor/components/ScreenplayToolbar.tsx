@@ -10,10 +10,6 @@ interface ScreenplayToolbarProps {
   projectId: string;
   screenplayId: string;
   currentVersionId: string | null;
-  currentPage: number;
-  totalPages: number;
-  currentSceneIndex: number | null;
-  totalScenes: number;
   isDirty: boolean;
   isSaving: boolean;
   isError: boolean;
@@ -72,10 +68,6 @@ const ELEMENT_ORDER: ElementType[] = [
 
 export function ScreenplayToolbar({
   projectId,
-  currentPage,
-  totalPages,
-  currentSceneIndex,
-  totalScenes,
   isDirty,
   isSaving,
   isError,
@@ -134,12 +126,6 @@ export function ScreenplayToolbar({
 
       <div className={styles.right}>
         <DraftMetaBadge projectId={projectId} />
-        <span className={styles.pageCount} data-testid="page-indicator">
-          p.{currentPage}/{totalPages}
-        </span>
-        <span className={styles.pageCount} data-testid="scene-indicator">
-          s.{currentSceneIndex ?? "—"}/{totalScenes}
-        </span>
         {!hideSaveIndicator && (
           <SaveIndicator
             isDirty={isDirty}

@@ -1,8 +1,24 @@
 .page {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   height: 100%;
   overflow: hidden;
+}
+
+.stickyFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  border-block-start: var(--border);
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+  color: var(--color-fg-secondary);
+}
+
+.counter {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Focus mode ─────────────────────────────────────────── */

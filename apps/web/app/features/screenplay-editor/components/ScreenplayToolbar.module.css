@@ -108,16 +108,6 @@
   font-weight: var(--weight-semibold);
 }
 
-/* ─── Right items ────────────────────────────────────────── */
-
-.pageCount {
-  font-size: var(--text-xs);
-  color: var(--color-fg-muted);
-  font-family: var(--font-mono);
-  letter-spacing: var(--tracking-wide);
-  white-space: nowrap;
-}
-
 /* ─── Right buttons ─────────────────────────────────────── */
 
 .focusBtn {
