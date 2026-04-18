@@ -172,18 +172,19 @@ test.describe("Universal versioning — narrative", () => {
     // Record VERSION-1 content
     const v1Content = await textarea.inputValue();
 
-    // Create VERSION-2 from scratch (empty)
+    // Create a new scratch version from scratch (empty)
     await openVersionsDrawer(page);
-    await page.getByTestId("versions-new-scratch").click();
     const rows = page.locator('[data-testid^="version-row-"]');
-    await expect(rows).toHaveCount(2, { timeout: 10_000 });
+    const countBefore = await rows.count();
+    await page.getByTestId("versions-new-scratch").click();
+    await expect(rows).toHaveCount(countBefore + 1, { timeout: 10_000 });
 
-    // Close drawer, editor should be empty (VERSION-2 has no content)
+    // Close drawer, editor should be empty (new version has no content)
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("versions-drawer")).toBeHidden();
     await expect(textarea).toHaveValue("", { timeout: 10_000 });
 
-    // Re-open drawer, click VERSION-1 (last row — ordered desc by number)
+    // Re-open drawer, click the original version (last row — ordered desc by number)
     await openVersionsDrawer(page);
     const v1Row = page.locator('[data-testid^="version-row-"]').last();
     const v1Testid = await v1Row.getAttribute("data-testid");
@@ -279,12 +280,12 @@ test.describe("Universal versioning — narrative", () => {
       { timeout: 10_000 },
     );
 
-    // Create VERSION-2 from scratch (empty)
+    // Create a new scratch version from scratch (empty)
     await openVersionsDrawer(page);
+    const rowsBefore = page.locator('[data-testid^="version-row-"]');
+    const countBefore = await rowsBefore.count();
     await page.getByTestId("versions-new-scratch").click();
-    await expect(page.locator('[data-testid^="version-row-"]')).toHaveCount(2, {
-      timeout: 10_000,
-    });
+    await expect(rowsBefore).toHaveCount(countBefore + 1, { timeout: 10_000 });
 
     // Write different content to VERSION-2 via the E2E hook
     await page.keyboard.press("Escape");
