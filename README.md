@@ -120,7 +120,7 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 
 **Core platform**
 
-- **core/07b — Screenplay front page** (riconciliazione di 07 + 14 in una spec sola: editor modale, import PDF Pass 0, export PDF pagina 1)
+- **core/07b — Screenplay front page** (editor route già shipped da spec 14; restano da fare: parser import PDF Pass 0 + renderer export PDF pagina 1)
 - **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
 - **core/10 — Breakdown** (cast, props, locations, VFX, vehicles, extras, sound FX — per scene, kept in sync with the script)
 - **core/11 — Budget** (line items from breakdown, totals — no AI risk prediction yet)

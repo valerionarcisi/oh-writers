@@ -1,6 +1,23 @@
 # Spec 07b — Screenplay Front Page (riconciliazione 07 + 14)
 
-**Status:** active. **Supersedes:** [07](07-title-page-legacy.md), [14](14-title-page.md).
+**Status:** in progress — storage + editor route già shipped, mancano parser import e renderer export. **Supersedes:** [07](07-title-page-legacy.md), [14](14-title-page.md).
+
+## Stato implementazione (snapshot 2026-04-18)
+
+| Pezzo                                                                      | Stato      | Note                                                                                                                                 |
+| -------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| DB columns `title_page_*` su `projects`                                    | ✅ shipped | [packages/db/src/schema/projects.ts:41-60](packages/db/src/schema/projects.ts:41)                                                    |
+| `TitlePageSchema` + `DraftColors` + Vitest                                 | ✅ shipped | [features/projects/title-page.schema.ts](apps/web/app/features/projects/title-page.schema.ts)                                        |
+| Server fn `getTitlePage` / `updateTitlePage` con `canEdit` + `ResultShape` | ✅ shipped | [features/projects/server/title-page.server.ts](apps/web/app/features/projects/server/title-page.server.ts)                          |
+| Hook `useTitlePage` + `useUpdateTitlePage`                                 | ✅ shipped | [features/projects/hooks/useTitlePage.ts](apps/web/app/features/projects/hooks/useTitlePage.ts)                                      |
+| `TitlePageForm` (form + preview live + dirty tracking + viewer disabled)   | ✅ shipped | [features/projects/components/TitlePageForm.tsx](apps/web/app/features/projects/components/TitlePageForm.tsx)                        |
+| Route dedicata `/projects/$id/title-page`                                  | ✅ shipped | [routes/_app.projects.$id_.title-page.tsx](apps/web/app/routes/_app.projects.$id_.title-page.tsx)                                    |
+| Voce "Frontespizio" in `ToolbarMenu` che naviga alla route                 | ✅ shipped | [features/screenplay-editor/components/ToolbarMenu.tsx:43-47](apps/web/app/features/screenplay-editor/components/ToolbarMenu.tsx:43) |
+| **Parser import PDF** (`splitFirstPage` + `parseFrontPage`)                | ❌ missing | Block 3 sotto                                                                                                                        |
+| **Pass 0 in `fountainFromPdf`** + persist via `updateTitlePage`            | ❌ missing | Block 4 sotto                                                                                                                        |
+| **Renderer export PDF** (`renderTitlePagePdf`)                             | ❌ missing | Block 5 sotto                                                                                                                        |
+| **Wire export pipeline** (Spec 08)                                         | ❌ missing | Block 6 sotto                                                                                                                        |
+| E2E Playwright per la route Frontespizio                                   | ✅ shipped | [tests/projects/title-page.spec.ts](tests/projects/title-page.spec.ts)                                                               |
 
 ## Goal
 
@@ -12,17 +29,17 @@ Le spec 07 e 14 coprono pezzi diversi della stessa feature e si contraddicono (0
 
 ## Decisioni di riconciliazione
 
-| Tema          | Decisione                                                                                       | Da quale spec     |
-| ------------- | ----------------------------------------------------------------------------------------------- | ----------------- |
-| Storage       | Colonne `title_page_*` flat su `projects` (già migrate)                                         | 14                |
-| Granularità   | **Una** front page per progetto (no per-screenplay, no per-draft)                               | 14                |
-| Editor        | **Modale** aperta dalla toolbar dello screenplay editor (writer non esce dal contesto)          | 07                |
-| Route         | No route dedicata `/title-page` — la modale basta. La route 14 è scartata.                      | nuova             |
-| Schema fields | Flat: `author`, `basedOn`, `contact`, `draftDate`, `draftColor`, `wgaRegistration`, `notes`     | 14                |
-| Title source  | `projects.title` riusato come titolo (no campo separato)                                        | 14                |
-| Import PDF    | Pass 0 in `fountainFromPdf` che splitta la prima pagina e popola i campi `title_page_*`         | 07                |
-| Export PDF    | `renderFrontPagePdf(doc, project)` invocato come pagina 1 dalla pipeline fountain→PDF (Spec 08) | 14 (formalizzato) |
-| Permessi      | Edit: Owner + Editor. Read: Viewer (form disabled).                                             | 14                |
+| Tema          | Decisione                                                                                                                                                                                | Da quale spec     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Storage       | Colonne `title_page_*` flat su `projects` (già migrate)                                                                                                                                  | 14                |
+| Granularità   | **Una** front page per progetto (no per-screenplay, no per-draft)                                                                                                                        | 14                |
+| Editor        | **Route dedicata** `/projects/$id/title-page` aperta dalla voce "Frontespizio" del menu toolbar dello screenplay editor                                                                  | 14 (già shipped)  |
+| Naming        | In codice e DB: `titlePage` / `title_page_*`. Nei doc utente / pitch: "Frontespizio". L'opzione "FrontPage" del primo draft di 07b è scartata per non rinominare codice già funzionante. | revisione         |
+| Schema fields | Flat: `author`, `basedOn`, `contact`, `draftDate`, `draftColor`, `wgaRegistration`, `notes`                                                                                              | 14                |
+| Title source  | `projects.title` riusato come titolo (no campo separato)                                                                                                                                 | 14                |
+| Import PDF    | Pass 0 in `fountainFromPdf` che splitta la prima pagina e popola i campi `title_page_*`                                                                                                  | 07                |
+| Export PDF    | `renderFrontPagePdf(doc, project)` invocato come pagina 1 dalla pipeline fountain→PDF (Spec 08)                                                                                          | 14 (formalizzato) |
+| Permessi      | Edit: Owner + Editor. Read: Viewer (form disabled).                                                                                                                                      | 14                |
 
 ## Out of scope
 
@@ -96,61 +113,44 @@ export const updateFrontPage = createServerFn({ method: "POST" })
 
 `updateFrontPage` è chiamata sia dall'editor manuale sia dal pdf-import (vedi sotto).
 
-## UI — Editor modale
+## UI — Editor route (già shipped)
 
-Componente `FrontPageEditor.tsx` aperto dalla voce **"Frontespizio"** del menu toolbar dello screenplay editor ([ToolbarMenu.tsx](apps/web/app/features/screenplay-editor/components/ToolbarMenu.tsx)).
+`TitlePageForm` è montato sulla route `/projects/$id/title-page` ([routes/_app.projects.$id_.title-page.tsx](apps/web/app/routes/_app.projects.$id_.title-page.tsx)). La voce "Frontespizio" del menu toolbar dello screenplay editor naviga lì ([ToolbarMenu.tsx:43-47](apps/web/app/features/screenplay-editor/components/ToolbarMenu.tsx:43)).
 
-```
-┌─ Frontespizio ────────────────────────── [Annulla] [Salva] ─┐
-│  Titolo            [readonly: project.title]                │
-│  Scritto da        [input]                                  │
-│  Tratto da         [input]                                  │
-│  Contatti          [textarea, 4 righe]                      │
-│  ────────────────────────────────────────────────────────── │
-│  Data draft        [date]    Colore  [select 10 colori]     │
-│  Note              [input]   (es. "FIRST DRAFT")            │
-│  WGA Reg.          [input]                                  │
-│  ────────────────────────────────────────────────────────── │
-│  Anteprima:                                                 │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                                                      │   │
-│  │              [TITOLO IN MAIUSCOLO]                   │   │
-│  │                                                      │   │
-│  │                  Written by                          │   │
-│  │                                                      │   │
-│  │                  [Author Name]                       │   │
-│  │                                                      │   │
-│  │   [Draft date · Color · Notes]   [Contact block]     │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+Caratteristiche già implementate:
 
-- `useReducer` + ts-pattern (pattern CLAUDE.md), action creators `setAuthor`, `setBasedOn`, ecc.
-- Salva esplicito (no autosave) — l'utente non sta scrivendo prosa qui, sono dati strutturati
-- Dirty tracking → bottone "Salva" disabilitato se non c'è nulla da salvare
-- Viewer: tutti gli input `disabled`, bottoni nascosti, anteprima visibile
-- `Esc` chiude (con conferma se dirty)
-- CSS Module + transition `prefers-reduced-motion`-safe
+- Form a sinistra + preview live a destra (industry-standard USA)
+- Dirty tracking → bottone Save disabilitato se nulla da salvare
+- Viewer: `fieldset disabled`, bottoni nascosti, preview visibile
+- `useTitlePage` (query) + `useUpdateTitlePage` (mutation con invalidate)
+- Permission check server-side via `canEdit(project, user.id, membership)` + esposto al client come `result.value.canEdit`
+- Stato locale con `useState` (semplice, una form piatta — `useReducer` non necessario, regola "non over-abstract" del CLAUDE.md)
 
-## Import PDF — Pass 0
+### Limature aperte (UI polish — non bloccanti per la release MVP)
+
+- Test Vitest sul componente `TitlePageForm` (dirty toggle, viewer disabled, color enum) — assenti
+- Playwright E2E sulla route — verificare se `tests/projects/title-page.spec.ts` esiste e copre OHW-FP01..05
+- Errore `update.error` mostrato come testo grezzo (`error.message`) — può diventare un toast, fuori scope di 07b
+
+## Import PDF — Pass 0 (TODO)
 
 Estensione di `fountainFromPdf` ([fountain-from-pdf.ts](apps/web/app/features/screenplay-editor/lib/fountain-from-pdf.ts)):
 
 ```ts
 // Prima delle pass esistenti
 const { firstPage, rest } = splitFirstPage(pages);
-const frontPage = parseFrontPage(firstPage); // pure
+const titlePage = parseTitlePage(firstPage); // pure
 // rest → pipeline fountain esistente
-return { fountain: ..., frontPage };
+return { fountain: ..., titlePage };
 ```
 
 ### `splitFirstPage(pages)`
 
 - Identifica la prima pagina logica via i marker già usati dalla pipeline (page-number / `Buff Revised Pages`)
-- Se la prima pagina contiene una scene heading (`SCENE_HEADING_RE` di `fountain-constants.ts`), **non è una front page** → ritorna `{ firstPage: [], rest: pages }`
-- Altrimenti la rimuove dall'input e la passa a `parseFrontPage`
+- Se la prima pagina contiene una scene heading (`SCENE_HEADING_RE` di `fountain-constants.ts`), **non è una title page** → ritorna `{ firstPage: [], rest: pages }`
+- Altrimenti la rimuove dall'input e la passa a `parseTitlePage`
 
-### `parseFrontPage(lines: string[]): FrontPage`
+### `parseTitlePage(lines: string[]): TitlePage`
 
 Funzione pura, deterministica, mai throw. Heuristics:
 
@@ -165,15 +165,15 @@ Funzione pura, deterministica, mai throw. Heuristics:
 | Pattern data ISO o `Month DD, YYYY`                     | `draftDate`                                  |
 | Nome colore industry (`PINK REVISIONS`, ecc.)           | `draftColor`                                 |
 
-Quello che non si riconosce viene scartato — il writer corregge nella modale.
+Quello che non si riconosce viene scartato — il writer corregge dalla route `/title-page`.
 
 ### Server-side flow
 
-`importPdf` server function (Spec 05c, esistente) ritorna `{ fountain, frontPage }`. Il client chiama `updateFrontPage` con `frontPage` **prima** di scrivere il `pm_doc`, così la front page è già pronta al primo open dell'editor.
+`importPdf` server function ([Spec 05c](05c-pdf-import.md), esistente) ritorna `{ fountain, titlePage }`. Il client chiama `updateTitlePage` con il `titlePage` **prima** di scrivere il `pm_doc`, così il frontespizio è già pronto al primo open dell'editor.
 
-## Export PDF — Pagina 1
+## Export PDF — Pagina 1 (TODO)
 
-Funzione pura `renderFrontPagePdf(doc: PDFKit.PDFDocument, project: Project): void` in `apps/web/app/features/screenplay-editor/lib/pdf-front-page.ts`.
+Funzione pura `renderTitlePagePdf(doc: PDFKit.PDFDocument, project: Project): void` in `apps/web/app/features/screenplay-editor/lib/pdf-title-page.ts`.
 
 Layout (industry-standard USA):
 
@@ -190,30 +190,36 @@ Invocata da:
 
 ## Files
 
-### Create
+### Già esistenti (no-touch)
+
+| File                                                                       | Scopo                                                       |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `apps/web/app/features/projects/title-page.schema.ts` (+ `.test.ts`)       | `TitlePageSchema` + `DraftColors` + Vitest                  |
+| `apps/web/app/features/projects/server/title-page.server.ts`               | `getTitlePage`, `updateTitlePage` + `titlePageQueryOptions` |
+| `apps/web/app/features/projects/hooks/useTitlePage.ts`                     | `useTitlePage`, `useUpdateTitlePage`                        |
+| `apps/web/app/features/projects/components/TitlePageForm.tsx` + module.css | Form + preview + dirty + viewer disabled                    |
+| `apps/web/app/routes/_app.projects.$id_.title-page.tsx` + module.css       | Route                                                       |
+| `apps/web/app/features/screenplay-editor/components/ToolbarMenu.tsx`       | Voce "Frontespizio" già naviga alla route                   |
+
+### Da creare (parser + renderer)
 
 | File                                                                      | Scopo                                                     |
 | ------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `apps/web/app/features/projects/front-page.schema.ts`                     | `FrontPageSchema`, `DraftColors`, tipi inferiti           |
-| `apps/web/app/features/projects/front-page.errors.ts`                     | Errori tipati (plain value)                               |
-| `apps/web/app/features/projects/server/front-page.server.ts`              | `getFrontPage`, `updateFrontPage`                         |
-| `apps/web/app/features/projects/hooks/useFrontPage.ts`                    | Query + mutation hook                                     |
-| `apps/web/app/features/projects/components/FrontPageEditor.tsx` + css     | Modale editor + anteprima                                 |
-| `apps/web/app/features/screenplay-editor/lib/front-page-from-pdf.ts`      | `splitFirstPage` + `parseFrontPage` puri                  |
-| `apps/web/app/features/screenplay-editor/lib/front-page-from-pdf.test.ts` | Vitest, una `describe` per fixture                        |
-| `apps/web/app/features/screenplay-editor/lib/pdf-front-page.ts`           | `renderFrontPagePdf` puro                                 |
-| `apps/web/app/features/screenplay-editor/lib/pdf-front-page.test.ts`      | Vitest, render → buffer non-empty + testo via `pdf-parse` |
-| `tests/fixtures/front-pages/01..06.txt`                                   | Estratti raw prima pagina (vedi tabella sotto)            |
-| `tests/editor/front-page.spec.ts`                                         | Playwright OHW-FP01..09                                   |
+| `apps/web/app/features/screenplay-editor/lib/title-page-from-pdf.ts`      | `splitFirstPage` + `parseTitlePage` puri                  |
+| `apps/web/app/features/screenplay-editor/lib/title-page-from-pdf.test.ts` | Vitest, una `describe` per fixture                        |
+| `apps/web/app/features/screenplay-editor/lib/pdf-title-page.ts`           | `renderTitlePagePdf` puro                                 |
+| `apps/web/app/features/screenplay-editor/lib/pdf-title-page.test.ts`      | Vitest, render → buffer non-empty + testo via `pdf-parse` |
+| `tests/fixtures/title-pages/01..06.txt`                                   | Estratti raw prima pagina (vedi tabella sotto)            |
+| `tests/editor/title-page-import.spec.ts`                                  | Playwright OHW-FP06..07 (import)                          |
+| `tests/editor/title-page-export.spec.ts`                                  | Playwright OHW-FP08..09 (export)                          |
 
-### Modify
+### Da modificare (wiring)
 
 | File                                                                  | Cambio                                                              |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `apps/web/app/features/screenplay-editor/lib/fountain-from-pdf.ts`    | Pass 0: splitta prima pagina, ritorna `{ fountain, frontPage }`     |
-| `apps/web/app/features/screenplay-editor/server/pdf-import.server.ts` | Persiste `frontPage` via `updateFrontPage` prima del `pm_doc` write |
-| `apps/web/app/features/screenplay-editor/components/ToolbarMenu.tsx`  | Voce "Frontespizio" apre `FrontPageEditor`                          |
-| `apps/web/app/features/projects/index.ts`                             | Esporta `FrontPageEditor`, hook, schema                             |
+| `apps/web/app/features/screenplay-editor/lib/fountain-from-pdf.ts`    | Pass 0: splitta prima pagina, ritorna `{ fountain, titlePage }`     |
+| `apps/web/app/features/screenplay-editor/server/pdf-import.server.ts` | Persiste `titlePage` via `updateTitlePage` prima del `pm_doc` write |
+| Pipeline export Spec 08 (file da definire in 08)                      | Invoca `renderTitlePagePdf` come pagina 1                           |
 
 ### Decommissioned
 
@@ -222,7 +228,7 @@ Invocata da:
 
 ## Test fixtures
 
-`tests/fixtures/front-pages/`:
+`tests/fixtures/title-pages/`:
 
 | File                   | Copre                                                        |
 | ---------------------- | ------------------------------------------------------------ |
@@ -237,35 +243,35 @@ Invocata da:
 
 Prossimo blocco libero: `OHW-FP01..09`.
 
-| ID       | Story                                                                                            |
-| -------- | ------------------------------------------------------------------------------------------------ |
-| OHW-FP01 | Owner clicca "Frontespizio" in toolbar → modale aperta con form vuota (solo title popolato)      |
-| OHW-FP02 | Owner compila Author + DraftDate + Color → Salva → riapre → campi persistono                     |
-| OHW-FP03 | Editor (non-owner) può salvare; Viewer vede form disabled, no bottoni                            |
-| OHW-FP04 | Non-member: server rifiuta `updateFrontPage` con `ForbiddenError`                                |
-| OHW-FP05 | Modale: dirty + Esc → conferma "scartare modifiche?"                                             |
-| OHW-FP06 | Import PDF con front page completa → campi popolati automaticamente                              |
-| OHW-FP07 | Import PDF senza front page (prima pagina = scena) → `title_page_*` restano NULL, no scena persa |
-| OHW-FP08 | Export PDF: pagina 1 mostra titolo + autore + contatti + draft info nelle posizioni attese       |
-| OHW-FP09 | Export PDF con front page vuota → pagina 1 mostra solo `project.title`, no errori                |
+| ID       | Stato      | Story                                                                                            |
+| -------- | ---------- | ------------------------------------------------------------------------------------------------ |
+| OHW-FP01 | ✅ shipped | Owner clicca "Frontespizio" in toolbar → naviga alla route con form vuota (solo title popolato)  |
+| OHW-FP02 | ✅ shipped | Owner compila Author + DraftDate + Color → Salva → reload → campi persistono                     |
+| OHW-FP03 | ✅ shipped | Editor (non-owner) può salvare; Viewer vede form disabled, no bottoni                            |
+| OHW-FP04 | ✅ shipped | Non-member: server rifiuta `updateTitlePage` con `ForbiddenError`                                |
+| OHW-FP05 | ✅ shipped | E2E presente in `tests/projects/title-page.spec.ts` — verificare cosa copre se serve dettaglio   |
+| OHW-FP06 | ❌ TODO    | Import PDF con title page completa → campi `title_page_*` popolati automaticamente               |
+| OHW-FP07 | ❌ TODO    | Import PDF senza title page (prima pagina = scena) → `title_page_*` restano NULL, no scena persa |
+| OHW-FP08 | ❌ TODO    | Export PDF: pagina 1 mostra titolo + autore + contatti + draft info nelle posizioni attese       |
+| OHW-FP09 | ❌ TODO    | Export PDF con title page vuota → pagina 1 mostra solo `project.title`, no errori                |
 
 ## Implementation order (TDD)
 
-1. **Schema + server fn** — `FrontPageSchema`, `getFrontPage`, `updateFrontPage` + permission tests (Vitest)
-2. **Modale editor** — `FrontPageEditor` + hook + integrazione toolbar (Playwright OHW-FP01..05)
-3. **Parser import** — `splitFirstPage` + `parseFrontPage` puri + fixture (Vitest)
-4. **Wire import** — Pass 0 in `fountainFromPdf` + persistenza in `pdf-import.server.ts` (Playwright OHW-FP06..07)
-5. **Renderer export** — `renderFrontPagePdf` (Vitest con `pdf-parse`)
-6. **Wire export** — invocazione da pipeline Spec 08 (Playwright OHW-FP08..09)
-7. **Cleanup** — header "superseded" su 07 e 14, README roadmap aggiornata
+1. **Parser import** — `splitFirstPage` + `parseTitlePage` puri + 6 fixture (Vitest). Pure code, niente DB, niente UI.
+2. **Wire import** — Pass 0 in `fountainFromPdf` (ritorna `{ fountain, titlePage }`); `pdf-import.server.ts` chiama `updateTitlePage` prima del `pm_doc` write (Playwright OHW-FP06..07).
+3. **Renderer export** — `renderTitlePagePdf` puro (Vitest con `pdf-parse`).
+4. **Wire export** — invocazione da pipeline Spec 08 come pagina 1, sempre presente (Playwright OHW-FP08..09).
+
+Nice-to-have (non bloccanti): Vitest sul componente `TitlePageForm` (dirty toggle, viewer disabled, color enum) — la copertura E2E già esiste.
 
 ## Mock mode
 
-`MOCK_PDF_IMPORT=true` (Spec 05c, esistente) ritorna anche un `frontPage` fisso, così l'E2E gira senza pipeline pdf reale.
+`MOCK_PDF_IMPORT=true` ([Spec 05c](05c-pdf-import.md), esistente) deve essere esteso a ritornare anche un `titlePage` fisso, così l'E2E gira senza pipeline pdf reale.
 
 ## Open questions
 
 Nessuna bloccante. Da rivedere se emergono in implementazione:
 
-- Se l'utente cambia `project.title` mentre la front page è popolata → re-render anteprima OK, niente da fare server-side
-- Versioning della front page: per ora no, se serve si tratta come campo del progetto e si versiona via document-versions universale (Spec 06)
+- Se l'utente cambia `project.title` mentre la title page è popolata → re-render anteprima già OK lato UI; export PDF userà sempre il `project.title` corrente.
+- Versioning della title page: per ora no, se serve si tratta come campo del progetto e si versiona via document-versions universale (Spec 06).
+- Se decideremo poi di aprire il frontespizio come **modale invece che route** (UX più fluida, niente cambio di pagina), si tratterà di riutilizzare `TitlePageForm` dentro un dialog — la route può rimanere come deep link.
