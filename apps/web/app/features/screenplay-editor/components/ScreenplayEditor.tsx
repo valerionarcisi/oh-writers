@@ -353,6 +353,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           hideSaveIndicator={isViewing}
           onResequenceAll={onResequenceAll}
           canEdit={screenplay.canEdit ?? false}
+          isOwner={screenplay.isOwner ?? false}
         />
       )}
       {!isFocusMode && isViewing && (

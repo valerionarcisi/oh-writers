@@ -9,7 +9,7 @@ import { projects } from "@oh-writers/db/schema";
 import type { TeamMember } from "@oh-writers/db/schema";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
-import { canEdit, getMembership } from "~/server/permissions";
+import { isOwner, getMembership } from "~/server/permissions";
 import {
   UpdateTitlePageInput,
   EMPTY_TITLE_PAGE,
@@ -68,7 +68,7 @@ export const getTitlePage = createServerFn({ method: "GET" })
         ok({
           projectTitle: project.title,
           titlePage: toTitlePage(project),
-          canEdit: canEdit(project, user.id, membership),
+          canEdit: isOwner(project, user.id, membership),
         }),
       );
     },
@@ -108,7 +108,7 @@ export const updateTitlePage = createServerFn({ method: "POST" })
         membership = memberResult.value;
       }
 
-      if (!canEdit(project, user.id, membership)) {
+      if (!isOwner(project, user.id, membership)) {
         return toShape(err(new ForbiddenError("update title page")));
       }
 

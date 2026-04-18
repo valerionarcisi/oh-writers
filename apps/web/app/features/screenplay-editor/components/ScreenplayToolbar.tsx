@@ -37,6 +37,9 @@ interface ScreenplayToolbarProps {
   /** True when the signed-in user can mutate this project (owner or editor
    *  on a non-archived project). Gates write affordances. */
   canEdit: boolean;
+  /** True when the signed-in user owns the project. Gates Owner-only entries
+   *  (e.g. Frontespizio per spec 07b). */
+  isOwner: boolean;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -92,6 +95,7 @@ export function ScreenplayToolbar({
   hideSaveIndicator = false,
   onResequenceAll,
   canEdit,
+  isOwner,
 }: ScreenplayToolbarProps) {
   const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   return (
@@ -167,6 +171,7 @@ export function ScreenplayToolbar({
               ? () => setResequenceConfirmOpen(true)
               : undefined
           }
+          isOwner={isOwner}
         />
       </div>
       {resequenceConfirmOpen && onResequenceAll ? (

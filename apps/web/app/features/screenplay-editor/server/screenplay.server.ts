@@ -15,7 +15,7 @@ import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "./versions.server";
-import { canEdit, getMembership } from "~/server/permissions";
+import { canEdit, isOwner, getMembership } from "~/server/permissions";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
@@ -29,6 +29,7 @@ export type ScreenplayView = Omit<Screenplay, "yjsState"> & {
   // Optional because only the GET endpoint computes permissions; mutation
   // responses (save, switch version, …) return the raw row without it.
   canEdit?: boolean;
+  isOwner?: boolean;
 };
 
 const estimatePageCount = (content: string): number =>
@@ -79,6 +80,7 @@ export const getScreenplay = createServerFn({ method: "GET" })
         membership = memberResult.value;
       }
       const canUserEdit = canEdit(project, user.id, membership);
+      const isUserOwner = isOwner(project, user.id, membership);
 
       // Spec 06b: live content sits on the active version row. Fall back to
       // screenplays.content for legacy rows with no current_version_id.
@@ -106,6 +108,7 @@ export const getScreenplay = createServerFn({ method: "GET" })
           content: liveContent,
           pageCount: livePageCount,
           canEdit: canUserEdit,
+          isOwner: isUserOwner,
         }),
       );
     },

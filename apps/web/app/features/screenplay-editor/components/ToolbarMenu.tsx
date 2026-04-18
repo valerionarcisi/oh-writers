@@ -17,6 +17,9 @@ interface ToolbarMenuProps {
   currentVersionLabel?: string | null;
   /** Opens the resequence confirmation modal. Hidden when undefined. */
   onResequenceAll?: () => void;
+  /** True when the signed-in user owns this project. Gates the Frontespizio
+   *  entry, which is Owner-only per spec 07b. */
+  isOwner: boolean;
 }
 
 /**
@@ -38,6 +41,7 @@ export function ToolbarMenu({
   isVersionsPanelOpen,
   currentVersionLabel = null,
   onResequenceAll,
+  isOwner,
 }: ToolbarMenuProps) {
   const navigate = useNavigate();
   const openTitlePage = () =>
@@ -159,19 +163,21 @@ export function ToolbarMenu({
             )}
           </button>
 
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.item}
-            onClick={runAndClose(openTitlePage)}
-            title="Apri il frontespizio"
-            data-testid="menu-item-title-page"
-          >
-            <span className={styles.itemIcon} aria-hidden="true">
-              ✎
-            </span>
-            <span className={styles.itemLabel}>Frontespizio</span>
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.item}
+              onClick={runAndClose(openTitlePage)}
+              title="Apri il frontespizio"
+              data-testid="menu-item-title-page"
+            >
+              <span className={styles.itemIcon} aria-hidden="true">
+                ✎
+              </span>
+              <span className={styles.itemLabel}>Frontespizio</span>
+            </button>
+          )}
         </div>
       )}
 

@@ -142,18 +142,26 @@ test("[OHW-105] Versioni menu item toggles the inline panel", async ({
 
 // ─── OHW-106  Placeholder items render as disabled ───────────────────────────
 
-test("[OHW-106] Export, Ricalcola and Frontespizio render disabled with 'soon' marker", async ({
+test("[OHW-106] Export and Ricalcola render disabled with 'soon' marker", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
   await page.getByTestId("toolbar-menu-trigger").click();
-  for (const id of [
-    "menu-item-export-pdf",
-    "menu-item-renumber",
-    "menu-item-title-page",
-  ]) {
+  for (const id of ["menu-item-export-pdf", "menu-item-renumber"]) {
     const item = page.getByTestId(id);
     await expect(item).toBeDisabled();
     await expect(item).toContainText(/soon/i);
   }
+});
+
+// ─── OHW-FP11  Frontespizio is visible to owners ─────────────────────────────
+
+test("[OHW-FP11] Frontespizio menu item is visible and enabled for project owner", async ({
+  page,
+}) => {
+  await openScreenplay(page, projectId);
+  await page.getByTestId("toolbar-menu-trigger").click();
+  const item = page.getByTestId("menu-item-title-page");
+  await expect(item).toBeVisible();
+  await expect(item).toBeEnabled();
 });
