@@ -1,5 +1,8 @@
 # Spec 14 — Title Page / Frontespizio
 
+> **Superseded by [07b — Screenplay Front Page](07b-screenplay-front-page.md).**
+> Riconciliata con [07](07-title-page-legacy.md) in un'unica spec attiva. Tenuta come storico: le colonne `title_page_*` su `projects` e i `DraftColors` di questa spec sono adottati da 07b.
+
 ## Goal
 
 Ogni progetto può definire un **frontespizio** (title page) secondo la convenzione standard dell'industria. Il frontespizio compare come prima pagina nel PDF esportato — sia della sceneggiatura (Spec 05 fountain export) sia dei documenti narrativi (Spec 04c), quando applicabile. È un dato strutturato del progetto, non un documento editabile a mano.

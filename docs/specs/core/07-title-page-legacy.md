@@ -1,5 +1,8 @@
 # Spec 07 — Title Page (Frontespizio)
 
+> **Superseded by [07b — Screenplay Front Page](07b-screenplay-front-page.md).**
+> Riconciliata con [14](14-title-page.md) in un'unica spec attiva. Tenuta come storico per tracciare le decisioni originali (storage JSONB su `screenplays`, parser import) confluite in 07b.
+
 ## Context
 
 Screenplays ship with a title page: central block with title, author, contacts; bottom row with left / center / right footer fields (draft date, revisions, production company). Spec 05c's PDF import currently doesn't touch the title page — this spec makes it first-class:
