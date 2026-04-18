@@ -14,6 +14,8 @@ export const VersionScopeSchema = z.discriminatedUnion("kind", [
     kind: z.literal("document"),
     documentId: z.string().uuid(),
     docType: DocumentTypeSchema,
+    canEdit: z.boolean(),
+    currentVersionId: z.string().uuid().nullable(),
   }),
 ]);
 
@@ -22,7 +24,6 @@ export type VersionScope = z.infer<typeof VersionScopeSchema>;
 export const VersionItemSchema = z.object({
   id: z.string().uuid(),
   label: z.string().nullable(),
-  isAuto: z.boolean(),
   createdAt: z.string(),
   createdByName: z.string().nullable(),
 });

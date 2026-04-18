@@ -26,10 +26,14 @@ interface VersionsListProps {
   isLoading: boolean;
   error?: string | null;
   activeId?: string | null;
+  /** Whether the current user can mutate versions (owner/editor). Defaults to true. */
+  canEdit?: boolean;
   /** Called when clicking a row (enter view / restore) */
   onSelect?: (item: VersionListItem) => void;
-  onCreate: (label: string) => void;
+  onCreate?: (label: string) => void;
   isCreating?: boolean;
+  onCreateFromScratch?: () => void;
+  isCreatingFromScratch?: boolean;
   onRename: (id: string, label: string) => void;
   isRenaming?: boolean;
   onDelete: (id: string) => void;
@@ -40,6 +44,7 @@ interface VersionsListProps {
   onUpdateColor?: (id: string, color: DraftRevisionColor | null) => void;
   /** Set/clear the revision date for a version */
   onUpdateDate?: (id: string, date: string | null) => void;
+  onCompare?: () => void;
 }
 
 export function VersionsList({
@@ -47,9 +52,12 @@ export function VersionsList({
   isLoading,
   error,
   activeId,
+  canEdit = true,
   onSelect,
   onCreate,
   isCreating,
+  onCreateFromScratch,
+  isCreatingFromScratch,
   onRename,
   isRenaming,
   onDelete,
@@ -58,6 +66,7 @@ export function VersionsList({
   isDuplicating,
   onUpdateColor,
   onUpdateDate,
+  onCompare,
 }: VersionsListProps) {
   const [creating, setCreating] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -83,7 +92,7 @@ export function VersionsList({
 
   const handleCreate = () => {
     const label = newLabel.trim();
-    if (!label) return;
+    if (!label || !onCreate) return;
     onCreate(label);
     setNewLabel("");
     setCreating(false);
@@ -105,53 +114,79 @@ export function VersionsList({
   return (
     <div className={styles.root}>
       <div className={styles.toolbar}>
-        {creating ? (
-          <div className={styles.createForm}>
-            <input
-              ref={newInputRef}
-              className={styles.labelInput}
-              type="text"
-              placeholder="Nome versione"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreate();
-                if (e.key === "Escape") {
-                  setCreating(false);
-                  setNewLabel("");
-                }
-              }}
-              maxLength={100}
-              data-testid="versions-new-label-input"
-            />
-            <button
-              type="button"
-              className={styles.btnPrimary}
-              onClick={handleCreate}
-              disabled={isCreating || !newLabel.trim()}
-              data-testid="versions-new-save"
-            >
-              {isCreating ? "…" : "Salva"}
-            </button>
-            <button
-              type="button"
-              className={styles.btnGhost}
-              onClick={() => {
-                setCreating(false);
-                setNewLabel("");
-              }}
-            >
-              Annulla
-            </button>
-          </div>
-        ) : (
+        {canEdit && (
+          <>
+            {onCreate &&
+              (creating ? (
+                <div className={styles.createForm}>
+                  <input
+                    ref={newInputRef}
+                    className={styles.labelInput}
+                    type="text"
+                    placeholder="Nome versione"
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreate();
+                      if (e.key === "Escape") {
+                        setCreating(false);
+                        setNewLabel("");
+                      }
+                    }}
+                    maxLength={100}
+                    data-testid="versions-new-label-input"
+                  />
+                  <button
+                    type="button"
+                    className={styles.btnPrimary}
+                    onClick={handleCreate}
+                    disabled={isCreating || !newLabel.trim()}
+                    data-testid="versions-new-save"
+                  >
+                    {isCreating ? "…" : "Salva"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnGhost}
+                    onClick={() => {
+                      setCreating(false);
+                      setNewLabel("");
+                    }}
+                  >
+                    Annulla
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.btnNew}
+                  onClick={() => setCreating(true)}
+                  data-testid="versions-new-trigger"
+                >
+                  + Nuova versione
+                </button>
+              ))}
+            {onCreateFromScratch && !creating && (
+              <button
+                type="button"
+                className={styles.btnNew}
+                onClick={onCreateFromScratch}
+                disabled={isCreatingFromScratch}
+                data-testid="versions-new-scratch"
+              >
+                {isCreatingFromScratch ? "…" : "+ Nuova versione vuota"}
+              </button>
+            )}
+          </>
+        )}
+        {onCompare && items.length >= 2 && (
           <button
             type="button"
-            className={styles.btnNew}
-            onClick={() => setCreating(true)}
-            data-testid="versions-new-trigger"
+            className={styles.btnGhost}
+            onClick={onCompare}
+            data-testid="versions-compare-trigger"
           >
-            + Nuova versione
+            ⇄ Confronta versioni
           </button>
         )}
       </div>
@@ -276,18 +311,20 @@ export function VersionsList({
                           Attiva
                         </span>
                       )}
-                      <button
-                        type="button"
-                        className={styles.pencilBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startRename(item);
-                        }}
-                        aria-label={`Rinomina ${item.label ?? "versione"}`}
-                        data-testid={`version-rename-${item.id}`}
-                      >
-                        ✎
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className={styles.pencilBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startRename(item);
+                          }}
+                          aria-label={`Rinomina ${item.label ?? "versione"}`}
+                          data-testid={`version-rename-${item.id}`}
+                        >
+                          ✎
+                        </button>
+                      )}
                     </div>
                     {onUpdateColor && colorPickerFor === item.id && (
                       <div
@@ -373,7 +410,7 @@ export function VersionsList({
                   </div>
 
                   <div className={styles.rowActions}>
-                    {onDuplicate && (
+                    {canEdit && onDuplicate && (
                       <button
                         type="button"
                         className={styles.btnGhost}
@@ -387,19 +424,21 @@ export function VersionsList({
                         Duplica
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className={styles.btnDanger}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingId(item.id);
-                      }}
-                      disabled={deleteDisabled}
-                      title={deleteTitle}
-                      data-testid={`version-delete-${item.id}`}
-                    >
-                      Elimina
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className={styles.btnDanger}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingId(item.id);
+                        }}
+                        disabled={deleteDisabled}
+                        title={deleteTitle}
+                        data-testid={`version-delete-${item.id}`}
+                      >
+                        Elimina
+                      </button>
+                    )}
                   </div>
                 </li>
               );
