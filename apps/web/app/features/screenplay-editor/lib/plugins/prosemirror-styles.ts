@@ -229,6 +229,14 @@ export const injectProseMirrorStyles = (): void => {
       cursor: not-allowed;
     }
 
+    .pm-heading .scene-menu-item-danger {
+      color: #c0392b;
+    }
+
+    .pm-heading .scene-menu-item-danger:hover:not(:disabled) {
+      background: #fdecea;
+    }
+
     .pm-heading .scene-menu-divider {
       margin: 4px 0;
       border: 0;

@@ -23,6 +23,7 @@ import {
   dispatchConflict,
   dispatchSceneNumberToast,
   hasConflict,
+  removeHeading,
   resequenceFrom,
   resequenceFromHere,
   setSceneNumberLocked,
@@ -254,6 +255,21 @@ class HeadingNodeView implements NodeView {
 
   private openMenu() {
     const locked = Boolean(this.node.attrs["scene_number_locked"]);
+    const pos = this.getPos();
+    // "Remove heading" is disabled only when this is the sole scene of the
+    // doc — body merges into the previous scene if one exists, otherwise
+    // into the next scene; either way body content is preserved.
+    const removeDisabled = (() => {
+      if (pos === undefined) return true;
+      const $sceneStart = this.view.state.doc.resolve(pos - 1);
+      const sceneNode = $sceneStart.nodeAfter;
+      if (!sceneNode) return true;
+      const sceneEnd = pos - 1 + sceneNode.nodeSize;
+      const $sceneEnd = this.view.state.doc.resolve(sceneEnd);
+      const hasNeighbour =
+        $sceneStart.nodeBefore !== null || $sceneEnd.nodeAfter !== null;
+      return !hasNeighbour;
+    })();
     const menu = document.createElement("div");
     menu.className = "scene-menu";
     menu.setAttribute("role", "menu");
@@ -265,6 +281,7 @@ class HeadingNodeView implements NodeView {
           testid: string;
           onClick: () => void;
           disabled?: boolean;
+          variant?: "danger";
         }
       | "divider"
     > = [
@@ -282,9 +299,9 @@ class HeadingNodeView implements NodeView {
         disabled: !locked,
         onClick: () => {
           this.closeMenu();
-          const pos = this.getPos();
-          if (pos === undefined) return;
-          unlockSceneNumber(this.view, pos);
+          const p = this.getPos();
+          if (p === undefined) return;
+          unlockSceneNumber(this.view, p);
         },
       },
       "divider",
@@ -293,9 +310,23 @@ class HeadingNodeView implements NodeView {
         testid: "scene-menu-resequence-from",
         onClick: () => {
           this.closeMenu();
-          const pos = this.getPos();
-          if (pos === undefined) return;
-          const r = resequenceFrom(this.view, pos);
+          const p = this.getPos();
+          if (p === undefined) return;
+          const r = resequenceFrom(this.view, p);
+          if (!r.ok) dispatchSceneNumberToast(r.reason);
+        },
+      },
+      "divider",
+      {
+        label: "Remove heading",
+        testid: "scene-menu-remove-heading",
+        disabled: removeDisabled,
+        variant: "danger",
+        onClick: () => {
+          this.closeMenu();
+          const p = this.getPos();
+          if (p === undefined) return;
+          const r = removeHeading(this.view, p);
           if (!r.ok) dispatchSceneNumberToast(r.reason);
         },
       },
@@ -310,7 +341,10 @@ class HeadingNodeView implements NodeView {
       }
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "scene-menu-item";
+      btn.className =
+        item.variant === "danger"
+          ? "scene-menu-item scene-menu-item-danger"
+          : "scene-menu-item";
       btn.textContent = item.label;
       btn.setAttribute("role", "menuitem");
       btn.setAttribute("data-testid", item.testid);

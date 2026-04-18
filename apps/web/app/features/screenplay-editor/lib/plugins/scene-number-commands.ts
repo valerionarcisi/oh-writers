@@ -10,7 +10,7 @@
  * popover + block 5's toolbar reuse them.
  */
 import type { EditorView } from "prosemirror-view";
-import type { Node as PmNode } from "prosemirror-model";
+import { Fragment, type Node as PmNode } from "prosemirror-model";
 import { resequenceAll } from "@oh-writers/domain";
 
 export interface HeadingInfo {
@@ -150,6 +150,80 @@ export const resequenceFrom = (
       scene_number: nextNumber,
     });
   });
+  view.dispatch(tr);
+  return { ok: true };
+};
+
+/**
+ * Remove the heading at `pos`. The body (action / dialogue / etc.) of the
+ * scene is preserved by merging into a neighbouring scene — never lost.
+ *
+ * - With a previous scene → body is appended to the previous scene's body.
+ * - Without a previous scene but with a next scene → body is prepended to
+ *   the next scene's body (slotted right after the next scene's heading).
+ *   This handles the synthetic pre-heading case: its content folds into
+ *   the first real scene.
+ * - Last remaining scene of the doc → refused; the schema requires at
+ *   least one scene/transition, so we can't drop the only one.
+ */
+export const removeHeading = (
+  view: EditorView,
+  pos: number,
+): { ok: true } | { ok: false; reason: string } => {
+  const doc = view.state.doc;
+  const headingNode = doc.nodeAt(pos);
+  if (!headingNode || headingNode.type.name !== "heading") {
+    return { ok: false, reason: "heading not found" };
+  }
+  const sceneStart = pos - 1;
+  const $sceneStart = doc.resolve(sceneStart);
+  const sceneNode = $sceneStart.nodeAfter;
+  if (!sceneNode || sceneNode.type.name !== "scene") {
+    return { ok: false, reason: "scene not found" };
+  }
+  const sceneEnd = sceneStart + sceneNode.nodeSize;
+
+  const carriedBody: PmNode[] = [];
+  sceneNode.content.forEach((child, _offset, index) => {
+    if (index === 0) return;
+    carriedBody.push(child);
+  });
+
+  const prevScene = $sceneStart.nodeBefore;
+  if (prevScene && prevScene.type.name === "scene") {
+    const prevSceneStart = sceneStart - prevScene.nodeSize;
+    const mergedContent = prevScene.content.append(Fragment.from(carriedBody));
+    const merged = prevScene.type.create(prevScene.attrs, mergedContent);
+    const tr = view.state.tr.replaceWith(prevSceneStart, sceneEnd, merged);
+    view.dispatch(tr);
+    return { ok: true };
+  }
+
+  const $sceneEnd = doc.resolve(sceneEnd);
+  const nextScene = $sceneEnd.nodeAfter;
+  if (!nextScene || nextScene.type.name !== "scene") {
+    return {
+      ok: false,
+      reason: "Can't remove the only scene's heading.",
+    };
+  }
+  const nextSceneEnd = sceneEnd + nextScene.nodeSize;
+  const nextHeading = nextScene.content.firstChild;
+  if (!nextHeading) {
+    return { ok: false, reason: "next scene has no heading" };
+  }
+  const nextBody: PmNode[] = [];
+  nextScene.content.forEach((child, _offset, index) => {
+    if (index === 0) return;
+    nextBody.push(child);
+  });
+  const mergedNextContent = Fragment.from([
+    nextHeading,
+    ...carriedBody,
+    ...nextBody,
+  ]);
+  const mergedNext = nextScene.type.create(nextScene.attrs, mergedNextContent);
+  const tr = view.state.tr.replaceWith(sceneStart, nextSceneEnd, mergedNext);
   view.dispatch(tr);
   return { ok: true };
 };
