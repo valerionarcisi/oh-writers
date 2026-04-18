@@ -5,8 +5,13 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
-import { projects } from "@oh-writers/db/schema";
+import {
+  projects,
+  screenplays,
+  screenplayVersions,
+} from "@oh-writers/db/schema";
 import type { TeamMember } from "@oh-writers/db/schema";
+import type { DraftRevisionColor } from "@oh-writers/domain";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { isOwner, getMembership } from "~/server/permissions";
@@ -150,6 +155,8 @@ export const updateTitlePage = createServerFn({ method: "POST" })
 export { EMPTY_TITLE_PAGE };
 
 // ─── New state-based API (spec 07b: PM doc + draft date + color) ──────────────
+// Spec 06e: draftDate / draftColor are now derived from the screenplay's
+// current version. The title page is read-only for those two fields.
 
 export type TitlePageStateView = {
   projectTitle: string;
@@ -158,12 +165,37 @@ export type TitlePageStateView = {
   isOwner: boolean;
 };
 
-const toTitlePageState = (
+const loadCurrentVersionMeta = async (
+  db: Awaited<ReturnType<typeof getDb>>,
+  projectId: string,
+): Promise<{ draftDate: string | null; draftColor: DraftColor | null }> => {
+  const row = await db
+    .select({
+      draftDate: screenplayVersions.draftDate,
+      draftColor: screenplayVersions.draftColor,
+    })
+    .from(screenplays)
+    .innerJoin(
+      screenplayVersions,
+      eq(screenplayVersions.id, screenplays.currentVersionId),
+    )
+    .where(eq(screenplays.projectId, projectId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+
+  return {
+    draftDate: row?.draftDate ?? null,
+    draftColor: (row?.draftColor as DraftColor | null) ?? null,
+  };
+};
+
+const buildTitlePageState = (
   row: typeof projects.$inferSelect,
+  meta: { draftDate: string | null; draftColor: DraftColor | null },
 ): TitlePageState => ({
   doc: row.titlePageDoc ?? null,
-  draftDate: row.titlePageDraftDate,
-  draftColor: row.titlePageDraftColor as DraftColor | null,
+  draftDate: meta.draftDate,
+  draftColor: meta.draftColor,
 });
 
 export const getTitlePageState = createServerFn({ method: "GET" })
@@ -195,11 +227,12 @@ export const getTitlePageState = createServerFn({ method: "GET" })
       }
 
       const owner = isOwner(project, user.id, membership);
+      const meta = await loadCurrentVersionMeta(db, data.projectId);
 
       return toShape(
         ok({
           projectTitle: project.title,
-          state: toTitlePageState(project),
+          state: buildTitlePageState(project, meta),
           canEdit: owner,
           isOwner: owner,
         }),
@@ -251,30 +284,32 @@ export const updateTitlePageState = createServerFn({ method: "POST" })
       const { state } = data;
       const nextTitle = extractTitle(state.doc).trim();
 
-      return toShape(
-        await ResultAsync.fromPromise(
-          db
-            .update(projects)
-            .set({
-              titlePageDoc: state.doc as Record<
-                string,
-                NonNullable<unknown>
-              > | null,
-              titlePageDraftDate: state.draftDate,
-              titlePageDraftColor: state.draftColor,
-              ...(nextTitle.length > 0 ? { title: nextTitle } : {}),
-              updatedAt: new Date(),
-            })
-            .where(eq(projects.id, data.projectId))
-            .returning()
-            .then((rows) => rows[0] ?? null),
-          (e) => new DbError("updateTitlePageState", e),
-        ).andThen((updated) =>
-          updated
-            ? ok(toTitlePageState(updated))
-            : err(new ProjectNotFoundError(data.projectId)),
-        ),
+      // Spec 06e: draftDate / draftColor live on the screenplay version now.
+      // The PM editor on the title page only persists the doc + the project
+      // title; any draft meta in the input is ignored.
+      const updateResult = await ResultAsync.fromPromise(
+        db
+          .update(projects)
+          .set({
+            titlePageDoc: state.doc as Record<
+              string,
+              NonNullable<unknown>
+            > | null,
+            ...(nextTitle.length > 0 ? { title: nextTitle } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(projects.id, data.projectId))
+          .returning()
+          .then((rows) => rows[0] ?? null),
+        (e) => new DbError("updateTitlePageState", e),
       );
+      if (updateResult.isErr()) return toShape(err(updateResult.error));
+      const updated = updateResult.value;
+      if (!updated)
+        return toShape(err(new ProjectNotFoundError(data.projectId)));
+
+      const meta = await loadCurrentVersionMeta(db, data.projectId);
+      return toShape(ok(buildTitlePageState(updated, meta)));
     },
   );
 

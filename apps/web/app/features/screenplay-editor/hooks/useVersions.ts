@@ -8,6 +8,7 @@ import {
   deleteVersion,
   renameVersion,
   duplicateVersion,
+  updateVersionMeta,
   versionsQueryOptions,
   versionQueryOptions,
 } from "../server/versions.server";
@@ -17,6 +18,7 @@ import type {
   DeleteVersionData,
   RenameVersionData,
   DuplicateVersionData,
+  UpdateVersionMetaData,
 } from "../screenplay-versions.schema";
 
 export { versionsQueryOptions, versionQueryOptions };
@@ -99,6 +101,22 @@ export const useDuplicateVersion = (screenplayId: string) => {
   });
 };
 
+export const useUpdateVersionMeta = (screenplayId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateVersionMetaData) =>
+      unwrapResult(await updateVersionMeta({ data: input })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["versions", screenplayId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["projects"],
+      });
+    },
+  });
+};
+
 export {
   listVersions,
   getVersion,
@@ -107,4 +125,5 @@ export {
   deleteVersion,
   renameVersion,
   duplicateVersion,
+  updateVersionMeta,
 };

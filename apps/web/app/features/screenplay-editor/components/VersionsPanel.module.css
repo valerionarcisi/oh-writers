@@ -211,3 +211,100 @@
   gap: var(--space-2, 0.5rem);
   flex-shrink: 0;
 }
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  flex-wrap: wrap;
+}
+
+.swatchBtn {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #2a2a2f);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover {
+    outline: 2px solid var(--color-accent, #6366f1);
+    outline-offset: 2px;
+  }
+}
+
+.swatchEmpty {
+  font-size: 0.7rem;
+  color: var(--color-text-muted, #9a9aa3);
+  line-height: 1;
+}
+
+.colorPicker {
+  display: flex;
+  gap: var(--space-1, 0.25rem);
+  padding: var(--space-2, 0.5rem);
+  background: var(--color-bg, #0f0f12);
+  border: 1px solid var(--color-border, #2a2a2f);
+  border-radius: var(--radius-md, 8px);
+  margin-block-start: var(--space-1, 0.25rem);
+  flex-wrap: wrap;
+  inline-size: max-content;
+  max-inline-size: 100%;
+}
+
+.swatch {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #2a2a2f);
+  cursor: pointer;
+  padding: 0;
+
+  &[aria-pressed="true"] {
+    outline: 2px solid var(--color-accent, #6366f1);
+    outline-offset: 2px;
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.swatchClear {
+  background: transparent;
+  color: var(--color-text-muted, #9a9aa3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.draftDateLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #9a9aa3);
+}
+
+.dateInput {
+  background: var(--color-bg, #0f0f12);
+  border: 1px solid var(--color-border, #2a2a2f);
+  border-radius: var(--radius-md, 8px);
+  padding: 0 var(--space-2, 0.5rem);
+  color: var(--color-text, #e8e8ea);
+  font: inherit;
+  font-size: 0.8rem;
+  color-scheme: dark;
+}

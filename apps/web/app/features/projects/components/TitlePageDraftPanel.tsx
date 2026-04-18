@@ -1,82 +1,62 @@
-import { DRAFT_COLOR_VALUES, type DraftColor } from "../title-page.schema";
+import { Link } from "@tanstack/react-router";
+import type { DraftRevisionColor } from "@oh-writers/domain";
+import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "../draft-color-palette";
 import styles from "./TitlePageDraftPanel.module.css";
 
-const COLOR_HEX: Record<DraftColor, string> = {
-  white: "#ffffff",
-  blue: "#a8c8ff",
-  pink: "#ffc6dd",
-  yellow: "#fff3a8",
-  green: "#bfe8c0",
-  goldenrod: "#dab14a",
-  buff: "#f1e0c4",
-  salmon: "#f5a89a",
-  cherry: "#d04e5a",
-  tan: "#c9a37a",
-};
-
 interface TitlePageDraftPanelProps {
+  projectId: string;
   draftDate: string | null;
-  draftColor: DraftColor | null;
-  disabled?: boolean;
-  onChangeDate: (date: string | null) => void;
-  onChangeColor: (color: DraftColor | null) => void;
+  draftColor: DraftRevisionColor | null;
 }
 
 export function TitlePageDraftPanel({
+  projectId,
   draftDate,
   draftColor,
-  disabled = false,
-  onChangeDate,
-  onChangeColor,
 }: TitlePageDraftPanelProps) {
   return (
     <aside className={styles.panel} data-testid="title-page-draft-panel">
-      <h2 className={styles.heading}>Draft</h2>
+      <h2 className={styles.heading}>Current draft</h2>
 
       <div className={styles.field}>
-        <label className={styles.label} htmlFor="tp-draft-date">
-          Date
-        </label>
-        <input
-          id="tp-draft-date"
-          type="date"
-          className={styles.input}
-          value={draftDate ?? ""}
-          disabled={disabled}
-          data-testid="tp-draft-date"
-          onChange={(e) => onChangeDate(e.target.value || null)}
-        />
+        <span className={styles.label}>Date</span>
+        <span className={styles.readonly} data-testid="tp-draft-date-readonly">
+          {draftDate ?? "—"}
+        </span>
       </div>
 
       <div className={styles.field}>
         <span className={styles.label}>Color</span>
-        <div className={styles.swatchRow} role="group" aria-label="Draft color">
-          {DRAFT_COLOR_VALUES.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={styles.swatch}
-              style={{ background: COLOR_HEX[color] }}
-              aria-label={color}
-              aria-pressed={draftColor === color}
-              disabled={disabled}
-              data-testid={`tp-draft-color-${color}`}
-              onClick={() => onChangeColor(color)}
-            />
-          ))}
-          <button
-            type="button"
-            className={`${styles.swatch} ${styles.swatchClear}`}
-            aria-label="Clear color"
-            aria-pressed={draftColor === null}
-            disabled={disabled}
-            data-testid="tp-draft-color-clear"
-            onClick={() => onChangeColor(null)}
-          >
-            ×
-          </button>
+        <div className={styles.colorReadonly}>
+          <span
+            className={styles.swatchReadonly}
+            style={{
+              background: draftColor
+                ? DRAFT_COLOR_HEX[draftColor]
+                : "transparent",
+            }}
+            data-testid="tp-draft-color-readonly"
+            aria-label={
+              draftColor ? `Draft color: ${draftColor}` : "No draft color"
+            }
+          />
+          <span className={styles.colorName}>
+            {draftColor ? DRAFT_COLOR_LABEL[draftColor] : "Not set"}
+          </span>
         </div>
       </div>
+
+      <p className={styles.hint}>
+        Date and color belong to the current screenplay version.
+      </p>
+      <Link
+        to="/projects/$id/screenplay"
+        params={{ id: projectId }}
+        className={styles.link}
+        data-testid="tp-draft-edit-versions-link"
+      >
+        Edit in Versions →
+      </Link>
     </aside>
   );
 }

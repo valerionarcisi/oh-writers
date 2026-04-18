@@ -8,7 +8,12 @@ import {
   projects,
   teamMembers,
 } from "@oh-writers/db/schema";
-import { TeamRoles } from "@oh-writers/domain";
+import {
+  TeamRoles,
+  suggestNextColor,
+  FIRST_DRAFT_COLOR,
+  type DraftRevisionColor,
+} from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -23,6 +28,7 @@ import {
   DeleteVersionInput,
   RenameVersionInput,
   DuplicateVersionInput,
+  UpdateVersionMetaInput,
 } from "../screenplay-versions.schema";
 import type { VersionView } from "../screenplay-versions.schema";
 import type { ScreenplayView } from "./screenplay.server";
@@ -54,6 +60,27 @@ const nextVersionNumber = (db: DbOrTx, screenplayId: string): Promise<number> =>
     .where(eq(screenplayVersions.screenplayId, screenplayId))
     .then((rows) => (rows[0]?.max ?? 0) + 1);
 
+const todayIsoDate = (): string => new Date().toISOString().slice(0, 10);
+
+// Suggest the next revision color by reading existing colors for the
+// screenplay (sorted by version number ascending) and walking the cycle.
+const pickNextColorFor = async (
+  db: DbOrTx,
+  screenplayId: string,
+): Promise<DraftRevisionColor> => {
+  const rows = await db
+    .select({
+      color: screenplayVersions.draftColor,
+      number: screenplayVersions.number,
+    })
+    .from(screenplayVersions)
+    .where(eq(screenplayVersions.screenplayId, screenplayId))
+    .orderBy(screenplayVersions.number);
+  return suggestNextColor(
+    rows.map((r) => r.color as DraftRevisionColor | null),
+  );
+};
+
 export const ensureFirstVersion = async (
   db: DbOrTx,
   screenplayId: string,
@@ -79,6 +106,8 @@ export const ensureFirstVersion = async (
     label: "Versione 1",
     content: screenplay.content,
     pageCount: screenplay.pageCount,
+    draftColor: FIRST_DRAFT_COLOR,
+    draftDate: todayIsoDate(),
     createdBy: userId,
   });
 };
@@ -259,7 +288,10 @@ export const createManualVersion = createServerFn({ method: "POST" })
 
       return toShape(
         await ResultAsync.fromPromise(
-          nextVersionNumber(db, data.screenplayId).then((number) =>
+          Promise.all([
+            nextVersionNumber(db, data.screenplayId),
+            pickNextColorFor(db, data.screenplayId),
+          ]).then(([number, draftColor]) =>
             db
               .insert(screenplayVersions)
               .values({
@@ -268,6 +300,8 @@ export const createManualVersion = createServerFn({ method: "POST" })
                 label: data.label,
                 content: screenplay.content,
                 pageCount: screenplay.pageCount,
+                draftColor,
+                draftDate: todayIsoDate(),
                 createdBy: user.id,
               })
               .returning()
@@ -428,7 +462,10 @@ export const duplicateVersion = createServerFn({ method: "POST" })
 
       return toShape(
         await ResultAsync.fromPromise(
-          nextVersionNumber(db, source.screenplayId).then((number) =>
+          Promise.all([
+            nextVersionNumber(db, source.screenplayId),
+            pickNextColorFor(db, source.screenplayId),
+          ]).then(([number, draftColor]) =>
             db
               .insert(screenplayVersions)
               .values({
@@ -437,6 +474,8 @@ export const duplicateVersion = createServerFn({ method: "POST" })
                 label: data.label,
                 content: source.content,
                 pageCount: source.pageCount,
+                draftColor,
+                draftDate: todayIsoDate(),
                 createdBy: user.id,
               })
               .returning()
@@ -445,6 +484,52 @@ export const duplicateVersion = createServerFn({ method: "POST" })
           (e) => new DbError("duplicateVersion", e),
         ).andThen((v) =>
           v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
+        ),
+      );
+    },
+  );
+
+// ─── Update version meta (color + date) ───────────────────────────────────────
+
+export const updateVersionMeta = createServerFn({ method: "POST" })
+  .validator(UpdateVersionMetaInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      if (access.isErr()) return toShape(err(access.error));
+
+      const patch: Partial<{
+        draftColor: string | null;
+        draftDate: string | null;
+      }> = {};
+      if (Object.prototype.hasOwnProperty.call(data, "draftColor"))
+        patch.draftColor = data.draftColor ?? null;
+      if (Object.prototype.hasOwnProperty.call(data, "draftDate"))
+        patch.draftDate = data.draftDate ?? null;
+
+      if (Object.keys(patch).length === 0)
+        return toShape(ok(stripYjsSnapshot(access.value)));
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db
+            .update(screenplayVersions)
+            .set(patch)
+            .where(eq(screenplayVersions.id, data.versionId))
+            .returning()
+            .then((rows) => rows[0] ?? null),
+          (e) => new DbError("updateVersionMeta", e),
+        ).andThen((row) =>
+          row
+            ? ok(stripYjsSnapshot(row))
+            : err(new VersionNotFoundError(data.versionId)),
         ),
       );
     },

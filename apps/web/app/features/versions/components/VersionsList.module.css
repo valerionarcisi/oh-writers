@@ -219,6 +219,10 @@
 .sub {
   font-size: 0.75rem;
   color: var(--color-fg-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .rowActions {
@@ -273,4 +277,88 @@
   display: flex;
   gap: var(--space-2);
   justify-content: flex-end;
+}
+
+.swatchBtn {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+.swatchEmpty {
+  font-size: 0.65rem;
+  color: var(--color-fg-muted);
+  line-height: 1;
+}
+
+.colorPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin-block-start: var(--space-1);
+  background: var(--color-bg);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  inline-size: max-content;
+  max-inline-size: 100%;
+}
+
+.swatch {
+  inline-size: 1.4rem;
+  block-size: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  padding: 0;
+
+  &[aria-pressed="true"] {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.swatchClear {
+  background: transparent;
+  color: var(--color-fg-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.draftDateLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-fg-muted);
+}
+
+.dateInput {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-2);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--text-xs);
+  color-scheme: dark;
 }

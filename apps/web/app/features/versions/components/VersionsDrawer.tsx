@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { DocumentType } from "@oh-writers/domain";
+import type { DocumentType, DraftRevisionColor } from "@oh-writers/domain";
 import { Drawer } from "./Drawer";
 import { VersionsList } from "./VersionsList";
 import type { VersionListItem } from "./VersionsList";
@@ -10,6 +10,7 @@ import {
   useRenameVersion,
   useDeleteVersion,
   useDuplicateVersion,
+  useUpdateVersionMeta,
 } from "~/features/screenplay-editor/hooks/useVersions";
 import {
   useDocumentVersions,
@@ -32,6 +33,7 @@ function ScreenplayVersionsList({
   const rename = useRenameVersion(screenplayId);
   const del = useDeleteVersion(screenplayId);
   const duplicate = useDuplicateVersion(screenplayId);
+  const updateMeta = useUpdateVersionMeta(screenplayId);
   const [error, setError] = useState<string | null>(null);
 
   const versions = result?.isOk ? result.value : [];
@@ -46,6 +48,8 @@ function ScreenplayVersionsList({
       v.pageCount != null
         ? `${v.pageCount} ${v.pageCount === 1 ? "pagina" : "pagine"}`
         : undefined,
+    draftColor: (v.draftColor ?? null) as DraftRevisionColor | null,
+    draftDate: v.draftDate ?? null,
   }));
 
   const handleCreate = useCallback(
@@ -93,6 +97,28 @@ function ScreenplayVersionsList({
     [duplicate],
   );
 
+  const handleUpdateColor = useCallback(
+    (id: string, color: DraftRevisionColor | null) => {
+      setError(null);
+      updateMeta.mutate(
+        { versionId: id, draftColor: color },
+        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+      );
+    },
+    [updateMeta],
+  );
+
+  const handleUpdateDate = useCallback(
+    (id: string, date: string | null) => {
+      setError(null);
+      updateMeta.mutate(
+        { versionId: id, draftDate: date },
+        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+      );
+    },
+    [updateMeta],
+  );
+
   return (
     <VersionsList
       items={items}
@@ -107,6 +133,8 @@ function ScreenplayVersionsList({
       isDeleting={del.isPending}
       onDuplicate={handleDuplicate}
       isDuplicating={duplicate.isPending}
+      onUpdateColor={handleUpdateColor}
+      onUpdateDate={handleUpdateDate}
     />
   );
 }

@@ -1,5 +1,22 @@
 import { z } from "zod";
 import type { ScreenplayVersion } from "@oh-writers/db";
+import { DRAFT_REVISION_COLORS } from "@oh-writers/domain";
+
+export const DraftColorEnum = z.enum(
+  DRAFT_REVISION_COLORS as unknown as [string, ...string[]],
+);
+
+const DateString = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD");
+
+export const UpdateVersionMetaInput = z.object({
+  versionId: z.string().uuid(),
+  draftColor: DraftColorEnum.nullable().optional(),
+  draftDate: DateString.nullable().optional(),
+});
+
+export type UpdateVersionMetaData = z.infer<typeof UpdateVersionMetaInput>;
 
 export const ListVersionsInput = z.object({
   screenplayId: z.string().uuid(),

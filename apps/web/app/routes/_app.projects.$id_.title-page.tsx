@@ -6,7 +6,7 @@ import {
   useTitlePageState,
   useUpdateTitlePageState,
 } from "~/features/projects";
-import type { TitlePageState, DraftColor } from "~/features/projects";
+import type { TitlePageState } from "~/features/projects";
 import styles from "./_app.projects.$id_.title-page.module.css";
 
 const SAVE_DEBOUNCE_MS = 800;
@@ -89,14 +89,6 @@ function TitlePageRouteInner({
     setLocal((prev) => ({ ...prev, doc }));
   };
 
-  const handleDateChange = (draftDate: string | null) => {
-    setLocal((prev) => ({ ...prev, draftDate }));
-  };
-
-  const handleColorChange = (draftColor: DraftColor | null) => {
-    setLocal((prev) => ({ ...prev, draftColor }));
-  };
-
   return (
     <div className={styles.page}>
       <div className={styles.breadcrumb}>
@@ -124,11 +116,9 @@ function TitlePageRouteInner({
           onDocChange={handleDocChange}
         />
         <TitlePageDraftPanel
+          projectId={projectId}
           draftDate={local.draftDate}
           draftColor={local.draftColor}
-          disabled={!canEdit}
-          onChangeDate={handleDateChange}
-          onChangeColor={handleColorChange}
         />
       </div>
 
