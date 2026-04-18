@@ -65,6 +65,11 @@ export function VersionsList({
   const [renameLabel, setRenameLabel] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
+  const [pendingColor, setPendingColor] = useState<{
+    id: string;
+    from: DraftRevisionColor | null;
+    to: DraftRevisionColor | null;
+  } | null>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
@@ -292,35 +297,65 @@ export function VersionsList({
                         onClick={(e) => e.stopPropagation()}
                         data-testid={`version-color-picker-${item.id}`}
                       >
-                        {DRAFT_REVISION_COLORS.map((color) => (
+                        <div className={styles.swatchGrid}>
+                          {DRAFT_REVISION_COLORS.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              className={styles.swatch}
+                              style={{ background: DRAFT_COLOR_HEX[color] }}
+                              aria-label={DRAFT_COLOR_LABEL[color]}
+                              aria-pressed={item.draftColor === color}
+                              title={DRAFT_COLOR_LABEL[color]}
+                              data-testid={`version-color-${item.id}-${color}`}
+                              onClick={() => {
+                                if (item.draftColor === color) {
+                                  setColorPickerFor(null);
+                                  return;
+                                }
+                                setPendingColor({
+                                  id: item.id,
+                                  from: item.draftColor ?? null,
+                                  to: color,
+                                });
+                              }}
+                            />
+                          ))}
                           <button
-                            key={color}
                             type="button"
-                            className={styles.swatch}
-                            style={{ background: DRAFT_COLOR_HEX[color] }}
-                            aria-label={DRAFT_COLOR_LABEL[color]}
-                            aria-pressed={item.draftColor === color}
-                            title={DRAFT_COLOR_LABEL[color]}
-                            data-testid={`version-color-${item.id}-${color}`}
+                            className={`${styles.swatch} ${styles.swatchClear}`}
+                            aria-label="Clear color"
+                            aria-pressed={!item.draftColor}
+                            data-testid={`version-color-${item.id}-clear`}
                             onClick={() => {
-                              onUpdateColor(item.id, color);
-                              setColorPickerFor(null);
+                              if (!item.draftColor) {
+                                setColorPickerFor(null);
+                                return;
+                              }
+                              setPendingColor({
+                                id: item.id,
+                                from: item.draftColor,
+                                to: null,
+                              });
                             }}
-                          />
-                        ))}
-                        <button
-                          type="button"
-                          className={`${styles.swatch} ${styles.swatchClear}`}
-                          aria-label="Clear color"
-                          aria-pressed={!item.draftColor}
-                          data-testid={`version-color-${item.id}-clear`}
-                          onClick={() => {
-                            onUpdateColor(item.id, null);
-                            setColorPickerFor(null);
-                          }}
-                        >
-                          ×
-                        </button>
+                          >
+                            ×
+                          </button>
+                        </div>
+                        {onUpdateDate && (
+                          <label className={styles.draftDateLabel}>
+                            <span>Draft date</span>
+                            <input
+                              type="date"
+                              className={styles.dateInput}
+                              value={item.draftDate ?? ""}
+                              data-testid={`version-draft-date-${item.id}`}
+                              onChange={(e) =>
+                                onUpdateDate(item.id, e.target.value || null)
+                              }
+                            />
+                          </label>
+                        )}
                       </div>
                     )}
                     <div className={styles.sub}>
@@ -332,24 +367,8 @@ export function VersionsList({
                           minute: "2-digit",
                         })}
                         {item.sub ? ` · ${item.sub}` : ""}
+                        {item.draftDate ? ` · Draft ${item.draftDate}` : ""}
                       </span>
-                      {onUpdateDate && (
-                        <label
-                          className={styles.draftDateLabel}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span>· Draft</span>
-                          <input
-                            type="date"
-                            className={styles.dateInput}
-                            value={item.draftDate ?? ""}
-                            data-testid={`version-draft-date-${item.id}`}
-                            onChange={(e) =>
-                              onUpdateDate(item.id, e.target.value || null)
-                            }
-                          />
-                        </label>
-                      )}
                     </div>
                   </div>
 
@@ -388,6 +407,56 @@ export function VersionsList({
           </ul>
         )}
       </div>
+
+      {pendingColor !== null && (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Conferma cambio colore"
+          data-testid="version-color-confirm"
+        >
+          <div className={styles.confirmBox}>
+            <p className={styles.confirmText}>
+              Cambiare il revision color da{" "}
+              <strong>
+                {pendingColor.from
+                  ? DRAFT_COLOR_LABEL[pendingColor.from]
+                  : "(nessuno)"}
+              </strong>{" "}
+              a{" "}
+              <strong>
+                {pendingColor.to
+                  ? DRAFT_COLOR_LABEL[pendingColor.to]
+                  : "(nessuno)"}
+              </strong>
+              ? Il valore fa parte del revision cycle hollywoodiano.
+            </p>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.btnGhost}
+                onClick={() => setPendingColor(null)}
+                data-testid="version-color-confirm-cancel"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                className={styles.btnPrimary}
+                onClick={() => {
+                  onUpdateColor?.(pendingColor.id, pendingColor.to);
+                  setPendingColor(null);
+                  setColorPickerFor(null);
+                }}
+                data-testid="version-color-confirm-ok"
+              >
+                Conferma
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deletingId !== null && (
         <div
