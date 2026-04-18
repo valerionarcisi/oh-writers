@@ -17,6 +17,12 @@ import {
   type DraftColor,
 } from "../title-page.schema";
 import {
+  UpdateTitlePageStateInput,
+  EMPTY_TITLE_PAGE_STATE,
+  type TitlePageState,
+} from "../title-page-state.schema";
+import { extractTitle } from "../title-page-pm/title-extract";
+import {
   ProjectNotFoundError,
   ForbiddenError,
   DbError,
@@ -142,3 +148,134 @@ export const updateTitlePage = createServerFn({ method: "POST" })
   );
 
 export { EMPTY_TITLE_PAGE };
+
+// ─── New state-based API (spec 07b: PM doc + draft date + color) ──────────────
+
+export type TitlePageStateView = {
+  projectTitle: string;
+  state: TitlePageState;
+  canEdit: boolean;
+  isOwner: boolean;
+};
+
+const toTitlePageState = (
+  row: typeof projects.$inferSelect,
+): TitlePageState => ({
+  doc: row.titlePageDoc ?? null,
+  draftDate: row.titlePageDraftDate,
+  draftColor: row.titlePageDraftColor as DraftColor | null,
+});
+
+export const getTitlePageState = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<TitlePageStateView, ProjectNotFoundError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const projectResult = await ResultAsync.fromPromise(
+        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
+        (e) => new DbError("getTitlePageState", e),
+      );
+      if (projectResult.isErr()) return toShape(err(projectResult.error));
+
+      const project = projectResult.value;
+      if (!project)
+        return toShape(err(new ProjectNotFoundError(data.projectId)));
+
+      let membership: TeamMember | null = null;
+      if (project.teamId) {
+        const memberResult = await getMembership(db, project.teamId, user.id);
+        if (memberResult.isErr()) return toShape(err(memberResult.error));
+        membership = memberResult.value;
+      }
+
+      const owner = isOwner(project, user.id, membership);
+
+      return toShape(
+        ok({
+          projectTitle: project.title,
+          state: toTitlePageState(project),
+          canEdit: owner,
+          isOwner: owner,
+        }),
+      );
+    },
+  );
+
+export const titlePageStateQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "title-page-state"] as const,
+    queryFn: () => getTitlePageState({ data: { projectId } }),
+  });
+
+export const updateTitlePageState = createServerFn({ method: "POST" })
+  .validator(UpdateTitlePageStateInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        TitlePageState,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const projectResult = await ResultAsync.fromPromise(
+        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
+        (e) => new DbError("updateTitlePageState", e),
+      );
+      if (projectResult.isErr()) return toShape(err(projectResult.error));
+
+      const project = projectResult.value;
+      if (!project)
+        return toShape(err(new ProjectNotFoundError(data.projectId)));
+
+      let membership: TeamMember | null = null;
+      if (project.teamId) {
+        const memberResult = await getMembership(db, project.teamId, user.id);
+        if (memberResult.isErr()) return toShape(err(memberResult.error));
+        membership = memberResult.value;
+      }
+
+      if (!isOwner(project, user.id, membership)) {
+        return toShape(err(new ForbiddenError("update title page")));
+      }
+
+      const { state } = data;
+      const nextTitle = extractTitle(state.doc).trim();
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db
+            .update(projects)
+            .set({
+              titlePageDoc: state.doc as Record<
+                string,
+                NonNullable<unknown>
+              > | null,
+              titlePageDraftDate: state.draftDate,
+              titlePageDraftColor: state.draftColor,
+              ...(nextTitle.length > 0 ? { title: nextTitle } : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(projects.id, data.projectId))
+            .returning()
+            .then((rows) => rows[0] ?? null),
+          (e) => new DbError("updateTitlePageState", e),
+        ).andThen((updated) =>
+          updated
+            ? ok(toTitlePageState(updated))
+            : err(new ProjectNotFoundError(data.projectId)),
+        ),
+      );
+    },
+  );
+
+export { EMPTY_TITLE_PAGE_STATE };

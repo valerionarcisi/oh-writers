@@ -11,7 +11,12 @@ const DraftColorEnum = z.enum(
 
 // PM doc shape is enforced client-side by the PM schema; on the wire we accept
 // any plain JSON object and let the client rebuild + re-validate via PMNode.fromJSON.
-const TitlePageDocSchema = z.record(z.unknown());
+// Index value type matches Drizzle's jsonb $type (NonNullable<unknown>) so the
+// state shape is wire-compatible with the projects.title_page_doc column.
+const TitlePageDocSchema: z.ZodType<Record<string, NonNullable<unknown>>> =
+  z.record(z.unknown()) as unknown as z.ZodType<
+    Record<string, NonNullable<unknown>>
+  >;
 
 export const TitlePageStateSchema = z.object({
   doc: TitlePageDocSchema.nullable().default(null),
