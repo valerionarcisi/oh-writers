@@ -19,6 +19,8 @@ export interface NarrativePdfInput {
   logline: string;
   synopsis: string;
   treatment: string;
+  /** Cover page is opt-in (Spec 04c). Default false. */
+  includeCoverPage?: boolean;
 }
 
 // Industry-standard margin: 2.5cm ≈ 72pt (1in). pdfkit default is 72; we make
@@ -91,7 +93,9 @@ export const buildNarrativePdf = (input: NarrativePdfInput): Promise<Buffer> =>
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    writeCoverPage(doc, input);
+    if (input.includeCoverPage) {
+      writeCoverPage(doc, input);
+    }
 
     const sections: Array<[title: string, body: string]> = [
       ["Logline", input.logline],

@@ -15,7 +15,8 @@ import {
   type DocumentView,
 } from "../server/documents.server";
 import type { SaveDocumentData } from "../documents.schema";
-import { base64ToBlob, downloadBlob } from "../lib/download";
+import { base64ToBlob } from "../lib/download";
+import { openPdfPreview } from "../lib/pdf-preview";
 
 export type SaveDocumentMutation = UseMutationResult<
   DocumentView,
@@ -127,12 +128,14 @@ export const useAutoSave = (
 
 export const useExportNarrativePdf = () =>
   useMutation({
-    mutationFn: async (projectId: string) => {
-      const result = unwrapResult(
-        await exportNarrativePdf({ data: { projectId } }),
-      );
+    mutationFn: async (input: {
+      projectId: string;
+      includeTitlePage: boolean;
+    }) => {
+      const result = unwrapResult(await exportNarrativePdf({ data: input }));
       const blob = base64ToBlob(result.pdfBase64, "application/pdf");
-      downloadBlob(blob, result.filename);
+      const url = URL.createObjectURL(blob);
+      openPdfPreview(url, result.filename);
       return result;
     },
   });

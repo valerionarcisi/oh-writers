@@ -15,6 +15,7 @@ import {
   serializeOutline,
   LOGLINE_MAX,
 } from "../documents.schema";
+import { ExportPdfModal } from "./ExportPdfModal";
 import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
@@ -174,7 +175,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     contentFor(DocumentTypes.SYNOPSIS, synopsis).trim().length === 0 &&
     contentFor(DocumentTypes.TREATMENT, treatment).trim().length === 0;
   const exportPdf = useExportNarrativePdf();
-  const handleExport = () => exportPdf.mutate(document.projectId);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const handleExport = () => setIsExportModalOpen(true);
+  const handleGenerate = ({
+    includeTitlePage,
+  }: {
+    includeTitlePage: boolean;
+  }) => {
+    exportPdf.mutate(
+      { projectId: document.projectId, includeTitlePage },
+      { onSuccess: () => setIsExportModalOpen(false) },
+    );
+  };
 
   return (
     <div className={styles.page}>
@@ -424,6 +436,14 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         </div>
         {mode === "assisted" && <AIAssistantPanel type={type} />}
       </div>
+      {isExportModalOpen && (
+        <ExportPdfModal
+          canIncludeTitlePage={true}
+          isPending={exportPdf.isPending}
+          onClose={() => setIsExportModalOpen(false)}
+          onGenerate={handleGenerate}
+        />
+      )}
       {(isSynopsis || isTreatment) && (
         <div
           className={styles.stickyFooter}

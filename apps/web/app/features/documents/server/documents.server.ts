@@ -289,6 +289,7 @@ export const saveDocument = createServerFn({ method: "POST" })
 
 export const ExportNarrativePdfInput = z.object({
   projectId: z.string().uuid(),
+  includeTitlePage: z.boolean().default(false),
 });
 
 export const exportNarrativePdf = createServerFn({ method: "POST" })
@@ -373,6 +374,7 @@ export const exportNarrativePdf = createServerFn({ method: "POST" })
         projectTitle: project.title,
         author: project.titlePageAuthor,
         draftDate: project.titlePageDraftDate,
+        includeCoverPage: data.includeTitlePage,
         logline: byType.get(DocumentTypes.LOGLINE) ?? "",
         synopsis: byType.get(DocumentTypes.SYNOPSIS) ?? "",
         treatment: byType.get(DocumentTypes.TREATMENT) ?? "",
