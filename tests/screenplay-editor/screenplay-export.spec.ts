@@ -106,6 +106,45 @@ test.describe("Screenplay Export — Spec 05j", () => {
     expect(parsed.text).toContain("Written by");
   });
 
+  test("[OHW-236] Export PDF disabled when screenplay is empty", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(`${BASE_URL}/projects/new`);
+    await page.waitForLoadState("networkidle");
+    const titleInput = page.getByRole("textbox", { name: /title/i });
+    await expect(titleInput).toBeVisible({ timeout: 10_000 });
+    await titleInput.fill(`Empty Screenplay ${Date.now()}`);
+    await page.getByRole("combobox", { name: /format/i }).selectOption("short");
+    await page.getByRole("button", { name: /create project/i }).click();
+    await page.waitForURL(
+      (url) => /\/projects\/[0-9a-f-]{36}$/.test(url.pathname),
+      { timeout: 15_000 },
+    );
+    const match = page.url().match(/\/projects\/([0-9a-f-]{36})$/);
+    const projectId = match?.[1];
+    if (!projectId) throw new Error("could not extract new project id");
+
+    await page.goto(SCREENPLAY_PATH(projectId));
+    const button = page.getByTestId("screenplay-export-pdf");
+    await expect(button).toBeVisible({ timeout: 15_000 });
+    await expect(button).toBeDisabled();
+  });
+
+  // [OHW-235] Cover-page checkbox disabled when title page not compiled:
+  // skipped — current modal accepts the toggle unconditionally and the
+  // server falls back to the project title only when author/draftDate are
+  // null, so a "soft" empty cover still renders. Wiring the title-page
+  // gating belongs to the title-page UX work (Spec 14) once that lands.
+  test.skip("[OHW-235] cover checkbox disabled when title page empty", () => {
+    void TEST_TEAM_PROJECT_ID;
+  });
+
+  // [OHW-238] Non-member ForbiddenError: skipped — same rationale as
+  // OHW-229 (no third-user fixture); guard logic mirrors exportNarrativePdf.
+  test.skip("[OHW-238] non-member: server rejects exportScreenplayPdf", () => {
+    void TEST_TEAM_PROJECT_ID;
+  });
+
   // [OHW-237] Viewer-on-team-project export: skipped because the seeded
   // team project has no screenplay row (only narrative docs). The same
   // canRead guard is exercised by exportNarrativePdf's OHW-228 test.
