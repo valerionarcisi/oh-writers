@@ -113,6 +113,8 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/09 — Save indicator** (Cmd/Ctrl+S shipped)
 - **core/14 — Title page**
 - **core/20 — Shooting script PDF import**
+- **core/04c — Narrative export** (logline + synopsis + treatment → PDF, opt-in cover page, preview tab)
+- **core/05j — Screenplay export** (Fountain → industry-standard PDF via afterwriting, opt-in cover page, preview tab)
 
 ### MVP — the minimum viable pilot product
 
@@ -158,7 +160,6 @@ Once the pilot loop is working, in priority order:
 ### Archived / absorbed / won't do
 
 - **core/04b — Outline drag & drop** — absorbed into core/04 narrative editor, nice-to-have
-- **core/04c — Narrative export** — folded into a future unified export spec covering PDF, FDX, FCPXML
 - **core/04d — Tiptap rich-text editor** — superseded by 04e ProseMirror, spec retired
 - **core/10b — Version viewing marker** — absorbed into core/06 versioning
 - **core/11b — Versions row popover** — absorbed into core/06 versioning
