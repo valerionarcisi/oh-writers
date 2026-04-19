@@ -2,7 +2,9 @@
 
 ## Goal
 
-Lo sceneggiatore esporta i tre documenti narrativi (**logline**, **sinossi**, **trattamento**) in un **singolo PDF** condivisibile con produttori, agenti, concorsi. Export è on-demand: un click in toolbar, il PDF viene generato server-side e restituito come download.
+Lo sceneggiatore esporta i tre documenti narrativi (**logline**, **sinossi**, **trattamento**) in un **singolo PDF** condivisibile con produttori, agenti, concorsi. Export è on-demand: un click in toolbar, il PDF viene generato server-side e **aperto in una nuova tab del browser** (preview), da cui l'utente decide se scaricare o stampare.
+
+L'**outline** è intenzionalmente escluso: è un documento di lavoro interno (drag&drop di scene/atti, vedi 04b), non destinato al pitching esterno. Se in futuro emergerà l'esigenza di un export "working doc bundle" si valuterà uno spec dedicato.
 
 Scope **intenzionalmente stretto**: questa spec copre solo l'export documentale testuale. Il moodboard/storyboard visuale è **Spec 19** (separata). L'export della sceneggiatura Fountain→PDF resta in **Spec 05/afterwriting**, indipendente da questa.
 
@@ -42,7 +44,9 @@ Aggiunta dipendenza richiede approvazione utente (confermata in chat `a`).
 
 ### Template PDF
 
-**Una pagina coperta / title page** (se Spec 14 è implementata, altrimenti salto) + **sezioni testuali** con gerarchia:
+**Title page opt-in via checkbox** in un piccolo modale che precede l'export (default: **off**). Quando attivata, la prima pagina è la title page (Spec 14). Quando disattivata o non disponibile, il PDF parte direttamente dalla LOGLINE.
+
+Layout sezioni testuali con gerarchia:
 
 ```
 ──────────────────────────────────
@@ -77,6 +81,8 @@ TREATMENT
 ### Trigger
 
 - Bottone **`Export PDF`** nella toolbar di `NarrativeEditor` — visibile su qualsiasi delle 3 pagine narrative (logline/synopsis/treatment), genera **sempre tutti e tre** (non solo quella corrente)
+- Click → apre un piccolo modale con singolo checkbox `Includi title page` (default off, disabilitato/nascosto se la title page non è compilata) + bottone `Genera`
+- Click su `Genera` → il PDF viene aperto in una nuova tab (`window.open(blobUrl, "_blank")`); la tab usa il viewer PDF nativo del browser, da lì l'utente scarica o stampa
 - Disabilitato se tutti e tre i documenti sono vuoti
 - Nascosto in read-only mode (viewer)
 
@@ -84,7 +90,12 @@ TREATMENT
 
 ```ts
 export const exportNarrativePdf = createServerFn({ method: "POST" })
-  .validator(z.object({ projectId: z.string().uuid() }))
+  .validator(
+    z.object({
+      projectId: z.string().uuid(),
+      includeTitlePage: z.boolean().default(false),
+    }),
+  )
   .handler(
     async ({
       data,
@@ -108,18 +119,22 @@ Ritorna base64 perché `createServerFn` non streamma binary nativamente. Il clie
 ```ts
 export const useExportNarrativePdf = () =>
   useMutation({
-    mutationFn: async (projectId: string) => {
-      const result = unwrapResult(
-        await exportNarrativePdf({ data: { projectId } }),
-      );
-      // Decode base64, build Blob, trigger browser download
+    mutationFn: async (input: {
+      projectId: string;
+      includeTitlePage: boolean;
+    }) => {
+      const result = unwrapResult(await exportNarrativePdf({ data: input }));
+      // Decode base64 → Blob → object URL → open in new tab
       const blob = base64ToBlob(result.pdfBase64, "application/pdf");
-      downloadBlob(blob, result.filename);
+      const url = URL.createObjectURL(blob);
+      openPdfPreview(url, result.filename);
     },
   });
 ```
 
-Il download è via `<a download>` dinamico — browser-only API isolata in `features/documents/lib/download.ts` (framework-agnostic wrapper per futuro Expo companion).
+L'apertura della tab è isolata in `features/documents/lib/pdf-preview.ts` (browser-only wrapper, framework-agnostic per futuro Expo companion che userà invece `expo-sharing` o un PDFView nativo).
+
+`openPdfPreview` usa `window.open(url, "_blank")` e revoca l'object URL dopo un timeout (es. 60s) per evitare leak. Se il browser blocca il popup (raro perché è dentro un click handler) → fallback a `<a target="_blank">` programmatico.
 
 ### Permission
 
@@ -131,13 +146,15 @@ Il download è via `<a download>` dinamico — browser-only API isolata in `feat
 
 Prossimo ID libero: **OHW-225** (dopo 04b).
 
-| ID      | User story                                                                                         |
-| ------- | -------------------------------------------------------------------------------------------------- |
-| OHW-225 | Owner su logline clicca `Export PDF` → download parte, file `.pdf` scaricato                       |
-| OHW-226 | PDF contiene almeno le sezioni `LOGLINE`, `SYNOPSIS`, `TREATMENT` con il contenuto dei 3 documenti |
-| OHW-227 | Se tutti e 3 i docs sono vuoti → bottone `Export PDF` disabilitato                                 |
-| OHW-228 | Viewer su team project vede il bottone `Export PDF` (non è bloccato dal role guard — è read op)    |
-| OHW-229 | Server rifiuta `exportNarrativePdf` per progetto di altri utenti non membri → ForbiddenError       |
+| ID      | User story                                                                                                        |
+| ------- | ----------------------------------------------------------------------------------------------------------------- |
+| OHW-225 | Owner su logline clicca `Export PDF` → modale con checkbox title page, click `Genera` → si apre nuova tab con PDF |
+| OHW-226 | PDF contiene almeno le sezioni `LOGLINE`, `SYNOPSIS`, `TREATMENT` con il contenuto dei 3 documenti                |
+| OHW-227 | Se tutti e 3 i docs sono vuoti → bottone `Export PDF` disabilitato                                                |
+| OHW-228 | Viewer su team project vede il bottone `Export PDF` (non è bloccato dal role guard — è read op)                   |
+| OHW-229 | Server rifiuta `exportNarrativePdf` per progetto di altri utenti non membri → ForbiddenError                      |
+| OHW-230 | Se title page non è compilata, il checkbox `Includi title page` è disabilitato nel modale                         |
+| OHW-231 | Con `includeTitlePage: true` e title page compilata, la prima pagina del PDF è la title page                      |
 
 ## Implementation order (TDD)
 
@@ -157,9 +174,11 @@ Prossimo ID libero: **OHW-225** (dopo 04b).
 apps/web/app/features/documents/
 ├── server/documents.server.ts              ← +exportNarrativePdf server fn
 ├── lib/pdf-narrative.ts                    ← NEW, buildNarrativePdf(...) pure-ish (stream → buffer)
-├── lib/download.ts                         ← NEW, browser-isolated downloadBlob helper
+├── lib/pdf-preview.ts                      ← NEW, browser-isolated openPdfPreview helper
 ├── hooks/useDocument.ts                    ← +useExportNarrativePdf mutation
-└── components/NarrativeEditor.tsx          ← +Export PDF button
+└── components/
+    ├── NarrativeEditor.tsx                 ← +Export PDF button
+    └── ExportPdfModal.tsx                  ← NEW, title-page checkbox + Genera
 
 tests/documents/
 └── narrative-export.spec.ts                ← NEW, OHW-225..229
@@ -169,5 +188,5 @@ apps/web/package.json                       ← +pdfkit, +@types/pdfkit
 
 ## Open questions
 
-- Inclusione frontespizio (Spec 14) nel PDF: opt-in via checkbox in un modale prima del download, o always-on se la title page è compilata? Decisione dipende da UX landing di Spec 14 — riapriamo quando Spec 14 è approvata.
 - Font embedding per caratteri accentati: `Times-Roman` di pdfkit include Latin-1 base; se emergono problemi con accenti o lingue non-latine → embedding TTF (es. DejaVu).
+- Revoca dell'object URL: il timeout 60s è arbitrario — se l'utente ha la tab aperta e ricarica oltre quel tempo perde il PDF. Da verificare in QA se è davvero un problema o se 60s coprono il 99% dei casi.
