@@ -37,6 +37,10 @@ interface ScreenplayToolbarProps {
   /** True when the signed-in user owns the project. Gates Owner-only entries
    *  (e.g. Frontespizio per spec 07b). */
   isOwner: boolean;
+  /** Opens the PDF export modal (Spec 05j). The button is disabled when
+   *  the screenplay has no content. */
+  onOpenExportPdf?: () => void;
+  isExportingPdf?: boolean;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -89,6 +93,8 @@ export function ScreenplayToolbar({
   onResequenceAll,
   canEdit,
   isOwner,
+  onOpenExportPdf,
+  isExportingPdf = false,
 }: ScreenplayToolbarProps) {
   const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   return (
@@ -135,6 +141,17 @@ export function ScreenplayToolbar({
             lastSavedAt={lastSavedAt}
             onFlush={onFlushSave}
           />
+        )}
+        {onOpenExportPdf && (
+          <button
+            type="button"
+            className={styles.focusBtn}
+            onClick={onOpenExportPdf}
+            disabled={!hasContent || isExportingPdf}
+            data-testid="screenplay-export-pdf"
+          >
+            {isExportingPdf ? "Exporting…" : "Export PDF"}
+          </button>
         )}
         <button
           className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ""}`}

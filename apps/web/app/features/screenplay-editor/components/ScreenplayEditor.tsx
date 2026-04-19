@@ -13,6 +13,8 @@ import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
+import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
+import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { useVersionsDrawer } from "~/features/versions";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
@@ -292,6 +294,19 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     return () => window.removeEventListener(SCENE_NUMBER_TOAST_EVENT, handler);
   }, []);
 
+  const exportPdf = useExportScreenplayPdf();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const handleGenerateExport = ({
+    includeCoverPage,
+  }: {
+    includeCoverPage: boolean;
+  }) => {
+    exportPdf.mutate(
+      { screenplayId: screenplay.id, includeCoverPage },
+      { onSuccess: () => setIsExportModalOpen(false) },
+    );
+  };
+
   const onResequenceAll = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -357,6 +372,8 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onResequenceAll={onResequenceAll}
           canEdit={screenplay.canEdit ?? false}
           isOwner={screenplay.isOwner ?? false}
+          onOpenExportPdf={() => setIsExportModalOpen(true)}
+          isExportingPdf={exportPdf.isPending}
         />
       )}
       {!isFocusMode && isViewing && (
@@ -407,6 +424,13 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
             scene {currentSceneIndex ?? "—"}/{totalScenes}
           </span>
         </div>
+      )}
+      {isExportModalOpen && (
+        <ExportScreenplayPdfModal
+          isPending={exportPdf.isPending}
+          onClose={() => setIsExportModalOpen(false)}
+          onGenerate={handleGenerateExport}
+        />
       )}
       {conflict ? (
         <SceneNumberConflictModal
