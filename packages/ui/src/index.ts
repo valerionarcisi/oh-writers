@@ -17,3 +17,8 @@ export type {
   BannerVariant,
   BannerAction,
 } from "./components/Banner";
+export { ContextMenu } from "./components/ContextMenu";
+export type {
+  ContextMenuProps,
+  ContextMenuItem,
+} from "./components/ContextMenu";
