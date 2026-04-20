@@ -4,3 +4,4 @@ export * from "./schemas/index.js";
 export * from "./scene-numbers.js";
 export * from "./scene-heading.js";
 export * from "./revision-color.js";
+export * from "./breakdown/index.js";
