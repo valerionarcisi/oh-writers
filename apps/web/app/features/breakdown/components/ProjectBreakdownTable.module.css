@@ -1,0 +1,9 @@
+.staleCell {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.status {
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+}

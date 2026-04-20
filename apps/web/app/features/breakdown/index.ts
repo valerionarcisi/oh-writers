@@ -1,5 +1,6 @@
 export {
   getBreakdownForScene,
+  getBreakdownContext,
   getProjectBreakdown,
   getProjectBreakdownRows,
   getStaleScenes,
@@ -9,6 +10,8 @@ export {
   setOccurrenceStatus,
   type SceneOccurrenceWithElement,
   type ProjectBreakdownRow,
+  type BreakdownContext,
+  type BreakdownSceneSummary,
 } from "./server/breakdown.server";
 export {
   suggestBreakdownForScene,

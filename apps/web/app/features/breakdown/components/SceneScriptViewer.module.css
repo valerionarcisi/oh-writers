@@ -1,0 +1,25 @@
+.viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  user-select: text;
+}
+
+.heading {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.body {
+  line-height: 1.6;
+  color: var(--color-text);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  padding: var(--space-4);
+}

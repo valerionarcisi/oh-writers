@@ -29,6 +29,7 @@ import { Route as AppProjectsIdScreenplayIndexImport } from "./routes/_app.proje
 import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
 import { Route as AppProjectsIdScreenplayDiffV1V2Import } from "./routes/_app.projects.$id_.screenplay.diff.$v1.$v2";
+import { Route as AppProjectsIdBreakdownImport } from "./routes/_app.projects.$id_.breakdown";
 
 // Create/Update Routes
 
@@ -88,6 +89,12 @@ const AppProjectsIdTitlePageRoute = AppProjectsIdTitlePageImport.update({
 const AppProjectsIdSynopsisRoute = AppProjectsIdSynopsisImport.update({
   id: "/projects/$id_/synopsis",
   path: "/projects/$id/synopsis",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppProjectsIdBreakdownRoute = AppProjectsIdBreakdownImport.update({
+  id: "/projects/$id_/breakdown",
+  path: "/projects/$id/breakdown",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -231,6 +238,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdSynopsisImport;
       parentRoute: typeof AppImport;
     };
+    "/_app/projects/$id_/breakdown": {
+      id: "/_app/projects/$id_/breakdown";
+      path: "/projects/$id/breakdown";
+      fullPath: "/projects/$id/breakdown";
+      preLoaderRoute: typeof AppProjectsIdBreakdownImport;
+      parentRoute: typeof AppImport;
+    };
     "/_app/projects/$id_/title-page": {
       id: "/_app/projects/$id_/title-page";
       path: "/projects/$id/title-page";
@@ -321,6 +335,7 @@ interface AppRouteChildren {
   AppProjectsIdScreenplayRoute: typeof AppProjectsIdScreenplayRouteWithChildren;
   AppProjectsIdSettingsRoute: typeof AppProjectsIdSettingsRoute;
   AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute;
+  AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute;
   AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute;
   AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute;
 }
@@ -334,6 +349,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsIdScreenplayRoute: AppProjectsIdScreenplayRouteWithChildren,
   AppProjectsIdSettingsRoute: AppProjectsIdSettingsRoute,
   AppProjectsIdSynopsisRoute: AppProjectsIdSynopsisRoute,
+  AppProjectsIdBreakdownRoute: AppProjectsIdBreakdownRoute,
   AppProjectsIdTitlePageRoute: AppProjectsIdTitlePageRoute,
   AppProjectsIdTreatmentRoute: AppProjectsIdTreatmentRoute,
 };
@@ -353,6 +369,7 @@ export interface FileRoutesByFullPath {
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
   "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
+  "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
@@ -373,6 +390,7 @@ export interface FileRoutesByTo {
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
+  "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
@@ -395,6 +413,7 @@ export interface FileRoutesById {
   "/_app/projects/$id_/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
   "/_app/projects/$id_/settings": typeof AppProjectsIdSettingsRoute;
   "/_app/projects/$id_/synopsis": typeof AppProjectsIdSynopsisRoute;
+  "/_app/projects/$id_/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/_app/projects/$id_/title-page": typeof AppProjectsIdTitlePageRoute;
   "/_app/projects/$id_/treatment": typeof AppProjectsIdTreatmentRoute;
   "/_app/projects/$id_/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
@@ -418,6 +437,7 @@ export interface FileRouteTypes {
     | "/projects/$id/screenplay"
     | "/projects/$id/settings"
     | "/projects/$id/synopsis"
+    | "/projects/$id/breakdown"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
     | "/projects/$id/screenplay/versions"
@@ -437,6 +457,7 @@ export interface FileRouteTypes {
     | "/projects/$id/outline"
     | "/projects/$id/settings"
     | "/projects/$id/synopsis"
+    | "/projects/$id/breakdown"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
     | "/projects/$id/screenplay/versions"
@@ -457,6 +478,7 @@ export interface FileRouteTypes {
     | "/_app/projects/$id_/screenplay"
     | "/_app/projects/$id_/settings"
     | "/_app/projects/$id_/synopsis"
+    | "/_app/projects/$id_/breakdown"
     | "/_app/projects/$id_/title-page"
     | "/_app/projects/$id_/treatment"
     | "/_app/projects/$id_/screenplay/versions"
@@ -510,6 +532,7 @@ export const routeTree = rootRoute
         "/_app/projects/$id_/screenplay",
         "/_app/projects/$id_/settings",
         "/_app/projects/$id_/synopsis",
+        "/_app/projects/$id_/breakdown",
         "/_app/projects/$id_/title-page",
         "/_app/projects/$id_/treatment"
       ]
@@ -555,6 +578,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/$id_/synopsis": {
       "filePath": "_app.projects.$id_.synopsis.tsx",
+      "parent": "/_app"
+    },
+    "/_app/projects/$id_/breakdown": {
+      "filePath": "_app.projects.$id_.breakdown.tsx",
       "parent": "/_app"
     },
     "/_app/projects/$id_/title-page": {

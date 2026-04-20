@@ -1,0 +1,56 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.active {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.number {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 2ch;
+}
+
+.heading {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}
+
+.staleBadge {
+  margin-inline-start: auto;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-3);
+}

@@ -598,3 +598,74 @@ export const setOccurrenceStatus = createServerFn({ method: "POST" })
       return toShape(updated);
     },
   );
+
+// ─── listScenesForBreakdown — minimal scene list for the TOC + script panes ──
+
+export interface BreakdownSceneSummary {
+  id: string;
+  number: number;
+  heading: string;
+  intExt: "INT" | "EXT" | "INT/EXT";
+  location: string;
+  timeOfDay: string | null;
+  notes: string | null;
+}
+
+export interface BreakdownContext {
+  projectId: string;
+  screenplayVersionId: string;
+  scenes: BreakdownSceneSummary[];
+}
+
+export const getBreakdownContext = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<BreakdownContext, ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+      const accessResult = await resolveBreakdownAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      if (!canViewBreakdown(accessResult.value))
+        return toShape(err(new ForbiddenError("view breakdown")));
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const screenplay = await db.query.screenplays.findFirst({
+            where: (s, { eq: e }) => e(s.projectId, data.projectId),
+          });
+          if (!screenplay) {
+            return {
+              projectId: data.projectId,
+              screenplayVersionId: "",
+              scenes: [] as BreakdownSceneSummary[],
+            };
+          }
+          const sceneRows = await db.query.scenes.findMany({
+            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+            orderBy: (sc, { asc }) => [asc(sc.number)],
+          });
+          return {
+            projectId: data.projectId,
+            screenplayVersionId: screenplay.currentVersionId ?? "",
+            scenes: sceneRows.map((s) => ({
+              id: s.id,
+              number: s.number,
+              heading: s.heading,
+              intExt: s.intExt,
+              location: s.location,
+              timeOfDay: s.timeOfDay,
+              notes: s.notes,
+            })),
+          };
+        })(),
+        (e) => new DbError("getBreakdownContext", e),
+      );
+      return toShape(result);
+    },
+  );
