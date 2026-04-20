@@ -6,3 +6,4 @@ export * from "./document-versions";
 export * from "./screenplays";
 export * from "./scenes";
 export * from "./predictions";
+export * from "./breakdown";

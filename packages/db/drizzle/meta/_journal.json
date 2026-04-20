@@ -71,6 +71,13 @@
       "when": 1777502000000,
       "tag": "0007_add_screenplay_version_revision_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777503000000,
+      "tag": "0008_breakdown",
+      "breakpoints": true
     }
   ]
 }
