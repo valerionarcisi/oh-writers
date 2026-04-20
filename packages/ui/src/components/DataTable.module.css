@@ -1,0 +1,47 @@
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-fg);
+
+  th,
+  td {
+    text-align: start;
+    padding: var(--space-2) var(--space-3);
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  thead th {
+    background: var(--color-overlay);
+    font-weight: var(--weight-semibold);
+    color: var(--color-fg-secondary);
+    user-select: none;
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+  }
+
+  tbody tr:hover {
+    background: var(--color-elevated);
+  }
+}
+
+.sortable {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: -2px;
+  }
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-fg-secondary);
+  padding-block: var(--space-6);
+}

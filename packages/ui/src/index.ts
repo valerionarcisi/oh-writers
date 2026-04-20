@@ -22,3 +22,5 @@ export type {
   ContextMenuProps,
   ContextMenuItem,
 } from "./components/ContextMenu";
+export { DataTable } from "./components/DataTable";
+export type { DataTableProps, Column } from "./components/DataTable";
