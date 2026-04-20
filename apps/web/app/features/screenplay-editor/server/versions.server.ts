@@ -7,7 +7,13 @@ import {
   screenplays,
   projects,
   teamMembers,
+  breakdownElements,
+  breakdownOccurrences,
+  breakdownSceneState,
+  scenes,
 } from "@oh-writers/db/schema";
+import { hashSceneText } from "~/features/breakdown/lib/hash-scene";
+import { findElementInText } from "~/features/breakdown/lib/re-match";
 import {
   TeamRoles,
   suggestNextColor,
@@ -291,8 +297,15 @@ export const createManualVersion = createServerFn({ method: "POST" })
           Promise.all([
             nextVersionNumber(db, data.screenplayId),
             pickNextColorFor(db, data.screenplayId),
-          ]).then(([number, draftColor]) =>
-            db
+          ]).then(async ([number, draftColor]) => {
+            const prevVersion = await db
+              .select({ id: screenplayVersions.id })
+              .from(screenplayVersions)
+              .where(eq(screenplayVersions.screenplayId, data.screenplayId))
+              .orderBy(desc(screenplayVersions.number))
+              .limit(1);
+            const prevVersionId = prevVersion[0]?.id ?? null;
+            const inserted = await db
               .insert(screenplayVersions)
               .values({
                 screenplayId: data.screenplayId,
@@ -305,8 +318,16 @@ export const createManualVersion = createServerFn({ method: "POST" })
                 createdBy: user.id,
               })
               .returning()
-              .then((rows) => rows[0]),
-          ),
+              .then((rows) => rows[0]);
+            if (inserted && prevVersionId) {
+              await cloneBreakdownToNewVersionInline(
+                db,
+                prevVersionId,
+                inserted.id,
+              );
+            }
+            return inserted;
+          }),
           (e) => new DbError("createManualVersion", e),
         ).andThen((v) =>
           v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
@@ -314,6 +335,73 @@ export const createManualVersion = createServerFn({ method: "POST" })
       );
     },
   );
+
+/**
+ * Clone breakdown occurrences from a previous screenplay version into a
+ * newly-created version, flagging occurrences whose element text no longer
+ * appears in the scene text as `isStale`. Mirrors the stand-alone
+ * `cloneBreakdownToVersion` server fn but runs inline so version creation
+ * and breakdown carry-over are a single write surface.
+ */
+const cloneBreakdownToNewVersionInline = async (
+  db: Db,
+  fromVersionId: string,
+  toVersionId: string,
+): Promise<void> => {
+  const sourceRows = await db
+    .select({
+      occ: breakdownOccurrences,
+      el: breakdownElements,
+      scene: scenes,
+    })
+    .from(breakdownOccurrences)
+    .innerJoin(
+      breakdownElements,
+      eq(breakdownOccurrences.elementId, breakdownElements.id),
+    )
+    .innerJoin(scenes, eq(scenes.id, breakdownOccurrences.sceneId))
+    .where(eq(breakdownOccurrences.screenplayVersionId, fromVersionId));
+
+  if (sourceRows.length === 0) return;
+
+  const sceneHashes = new Map<string, string>();
+  for (const r of sourceRows) {
+    const sceneText = r.scene.heading + "\n" + (r.scene.notes ?? "");
+    const isStale = !findElementInText(r.el.name, sceneText);
+    await db
+      .insert(breakdownOccurrences)
+      .values({
+        elementId: r.el.id,
+        screenplayVersionId: toVersionId,
+        sceneId: r.scene.id,
+        quantity: r.occ.quantity,
+        note: r.occ.note,
+        cesareStatus: r.occ.cesareStatus,
+        isStale,
+      })
+      .onConflictDoNothing();
+    if (!sceneHashes.has(r.scene.id)) {
+      sceneHashes.set(r.scene.id, hashSceneText(sceneText));
+    }
+  }
+
+  for (const [sceneId, hash] of sceneHashes) {
+    await db
+      .insert(breakdownSceneState)
+      .values({
+        sceneId,
+        screenplayVersionId: toVersionId,
+        textHash: hash,
+      })
+      .onConflictDoUpdate({
+        target: [
+          breakdownSceneState.sceneId,
+          breakdownSceneState.screenplayVersionId,
+        ],
+        set: { textHash: hash },
+      });
+  }
+};
 
 // ─── Restore version ──────────────────────────────────────────────────────────
 

@@ -16,6 +16,7 @@ import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
 import { VersionViewingBanner } from "./VersionViewingBanner";
+import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
 import { SceneNumberConflictModal } from "./SceneNumberConflictModal";
@@ -374,6 +375,12 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           isOwner={screenplay.isOwner ?? false}
           onOpenExportPdf={() => setIsExportModalOpen(true)}
           isExportingPdf={exportPdf.isPending}
+        />
+      )}
+      {!isFocusMode && !isViewing && (
+        <SceneStaleBadge
+          projectId={screenplay.projectId}
+          versionId={screenplay.currentVersionId ?? null}
         />
       )}
       {!isFocusMode && isViewing && (
