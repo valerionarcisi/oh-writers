@@ -9,8 +9,18 @@ import {
   screenplayVersions,
   teams,
   teamMembers,
+  scenes,
+  breakdownElements,
+  breakdownOccurrences,
 } from "../schema/index";
 import { and, eq } from "drizzle-orm";
+import {
+  TEAM_PROJECT_BREAKDOWN_SCENES,
+  TEST_BREAKDOWN_ELEMENT_ID,
+  TEST_BREAKDOWN_OCCURRENCE_ID,
+  SEEDED_BREAKDOWN_ELEMENT_NAME,
+  SEEDED_BREAKDOWN_ELEMENT_CATEGORY,
+} from "./fixtures/breakdown-fixtures";
 import {
   NON_FA_RIDERE_FOUNTAIN,
   NON_FA_RIDERE_LOGLINE,
@@ -40,6 +50,8 @@ const TEST_PROJECT_ID = "00000000-0000-4000-a000-000000000010";
 const TEST_TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 const TEST_SCREENPLAY_ID = "00000000-0000-4000-a000-000000000020";
 const TEST_TEAM_ID = "00000000-0000-4000-a000-000000000030";
+const TEST_TEAM_SCREENPLAY_ID = "00000000-0000-4000-a000-000000000022";
+const TEST_TEAM_SCREENPLAY_VERSION_ID = "00000000-0000-4000-a000-000000000023";
 
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
@@ -329,6 +341,8 @@ export async function seed() {
 
   await seedFirstDocumentVersions(TEST_TEAM_PROJECT_ID, TEST_USER_ID);
 
+  await seedTeamProjectBreakdownFixtures();
+
   console.log("  -> Team project + documents created");
 
   // ─── 9. Valerio's personal dev account ─────────────────────────────────
@@ -552,6 +566,84 @@ export async function seed() {
   console.log("  Login: valerio@ohwriters.dev / valerio123");
   console.log("  Viewer: collab@ohwriters.dev / collab123");
   console.log("");
+}
+
+// ─── Spec 10 — Breakdown fixtures for the team project ─────────────────────
+// Seeds: a screenplay row + initial version + 2 scene rows + one accepted
+// breakdown element/occurrence so the /breakdown route renders meaningful
+// data on first load. Idempotent.
+async function seedTeamProjectBreakdownFixtures() {
+  await db
+    .insert(screenplays)
+    .values({
+      id: TEST_TEAM_SCREENPLAY_ID,
+      projectId: TEST_TEAM_PROJECT_ID,
+      title: "Team Thriller",
+      content: "",
+      pageCount: 1,
+      createdBy: TEST_USER_ID,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(screenplayVersions)
+    .values({
+      id: TEST_TEAM_SCREENPLAY_VERSION_ID,
+      screenplayId: TEST_TEAM_SCREENPLAY_ID,
+      label: "v1",
+      number: 1,
+      content: "",
+      pageCount: 1,
+      createdBy: TEST_USER_ID,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .update(screenplays)
+    .set({ currentVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID })
+    .where(eq(screenplays.id, TEST_TEAM_SCREENPLAY_ID));
+
+  for (const s of TEAM_PROJECT_BREAKDOWN_SCENES) {
+    await db
+      .insert(scenes)
+      .values({
+        id: s.id,
+        screenplayId: TEST_TEAM_SCREENPLAY_ID,
+        number: s.number,
+        heading: s.heading,
+        intExt: s.intExt,
+        location: s.location,
+        timeOfDay: s.timeOfDay,
+        notes: s.notes,
+      })
+      .onConflictDoNothing();
+  }
+
+  await db
+    .insert(breakdownElements)
+    .values({
+      id: TEST_BREAKDOWN_ELEMENT_ID,
+      projectId: TEST_TEAM_PROJECT_ID,
+      category: SEEDED_BREAKDOWN_ELEMENT_CATEGORY,
+      name: SEEDED_BREAKDOWN_ELEMENT_NAME,
+      description: null,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(breakdownOccurrences)
+    .values({
+      id: TEST_BREAKDOWN_OCCURRENCE_ID,
+      elementId: TEST_BREAKDOWN_ELEMENT_ID,
+      sceneId: TEAM_PROJECT_BREAKDOWN_SCENES[0]!.id,
+      screenplayVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID,
+      quantity: 1,
+      cesareStatus: "accepted" as const,
+      isStale: false,
+    })
+    .onConflictDoNothing();
+
+  console.log("  -> Team project breakdown fixtures seeded");
 }
 
 // Only auto-run when this file is the entrypoint (tsx src/seed/index.ts).
