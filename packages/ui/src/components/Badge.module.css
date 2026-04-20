@@ -38,3 +38,17 @@
   color: var(--color-fg-secondary);
   border-color: var(--color-border-strong);
 }
+
+.count {
+  background: var(--color-overlay);
+  color: var(--color-fg-secondary);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 1.5em;
+  justify-content: center;
+}
+
+.stale {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
