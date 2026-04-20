@@ -11,3 +11,9 @@ export { Dialog } from "./components/Dialog";
 export { Toast } from "./components/Toast";
 export { Tag } from "./components/Tag";
 export type { TagProps, TagVariant } from "./components/Tag";
+export { Banner } from "./components/Banner";
+export type {
+  BannerProps,
+  BannerVariant,
+  BannerAction,
+} from "./components/Banner";

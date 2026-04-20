@@ -194,4 +194,12 @@
   --cat-set-dress: oklch(0.72 0.13 180); /* teal */
   --cat-equipment: oklch(0.55 0.1 60); /* brown */
   --cat-locations: oklch(0.7 0.05 250); /* neutral grey-blue */
+
+  /* Cesare AI accent (used by Banner cesare variant + ghost suggestions) */
+  --color-cesare: oklch(0.75 0.18 290);
+  --color-cesare-subtle: color-mix(
+    in oklch,
+    oklch(0.75 0.18 290) 12%,
+    transparent
+  );
 }
