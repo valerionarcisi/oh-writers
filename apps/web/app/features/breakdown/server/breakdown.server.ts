@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
 import {
   breakdownElements,
@@ -116,6 +116,7 @@ export const getBreakdownForScene = createServerFn({ method: "GET" })
                 data.screenplayVersionId,
               ),
               isNull(breakdownElements.archivedAt),
+              ne(breakdownOccurrences.cesareStatus, "ignored"),
             ),
           ),
         (e) => new DbError("getBreakdownForScene/loadOccs", e),
@@ -225,31 +226,38 @@ export const getProjectBreakdownRows = (
       ),
     (e) => new DbError("getProjectBreakdown", e),
   ).map((rows) => {
-    const byElement = new Map<string, ProjectBreakdownRow>();
+    type Agg = ProjectBreakdownRow & { _totalOccs: number };
+    const byElement = new Map<string, Agg>();
     for (const r of rows) {
       const key = r.el.id;
-      const elementParsed = parseElement(r.el);
+      const isIgnored = r.occ?.cesareStatus === "ignored";
+      const counts = r.occ && r.scene && !isIgnored;
       const existing = byElement.get(key);
       if (!existing) {
         byElement.set(key, {
-          element: elementParsed,
-          totalQuantity: r.occ?.quantity ?? 0,
-          scenesPresent:
-            r.occ && r.scene
-              ? [{ sceneId: r.scene.id, sceneNumber: r.scene.number }]
-              : [],
-          hasStale: r.occ?.isStale ?? false,
+          element: parseElement(r.el),
+          totalQuantity: counts ? r.occ!.quantity : 0,
+          scenesPresent: counts
+            ? [{ sceneId: r.scene!.id, sceneNumber: r.scene!.number }]
+            : [],
+          hasStale: counts ? r.occ!.isStale : false,
+          _totalOccs: r.occ ? 1 : 0,
         });
-      } else if (r.occ && r.scene) {
-        existing.totalQuantity += r.occ.quantity;
-        existing.scenesPresent.push({
-          sceneId: r.scene.id,
-          sceneNumber: r.scene.number,
-        });
-        if (r.occ.isStale) existing.hasStale = true;
+      } else {
+        if (r.occ) existing._totalOccs += 1;
+        if (counts) {
+          existing.totalQuantity += r.occ!.quantity;
+          existing.scenesPresent.push({
+            sceneId: r.scene!.id,
+            sceneNumber: r.scene!.number,
+          });
+          if (r.occ!.isStale) existing.hasStale = true;
+        }
       }
     }
-    return [...byElement.values()];
+    return [...byElement.values()]
+      .filter((row) => row._totalOccs === 0 || row.scenesPresent.length > 0)
+      .map(({ _totalOccs: _omit, ...r }) => r);
   });
 
 export const getProjectBreakdown = createServerFn({ method: "GET" })
