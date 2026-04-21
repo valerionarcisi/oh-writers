@@ -622,6 +622,7 @@ export interface BreakdownSceneSummary {
 export interface BreakdownContext {
   projectId: string;
   screenplayVersionId: string;
+  versionContent: string; // fountain snapshot della version corrente; "" se nessuna version
   scenes: BreakdownSceneSummary[];
   canEdit: boolean;
 }
@@ -649,21 +650,28 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
           const screenplay = await db.query.screenplays.findFirst({
             where: (s, { eq: e }) => e(s.projectId, data.projectId),
           });
-          if (!screenplay) {
+          if (!screenplay || !screenplay.currentVersionId) {
             return {
               projectId: data.projectId,
               screenplayVersionId: "",
+              versionContent: "",
               scenes: [] as BreakdownSceneSummary[],
               canEdit,
             };
           }
-          const sceneRows = await db.query.scenes.findMany({
-            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
-            orderBy: (sc, { asc }) => [asc(sc.number)],
-          });
+          const [version, sceneRows] = await Promise.all([
+            db.query.screenplayVersions.findFirst({
+              where: (v, { eq: e }) => e(v.id, screenplay.currentVersionId!),
+            }),
+            db.query.scenes.findMany({
+              where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+              orderBy: (sc, { asc }) => [asc(sc.number)],
+            }),
+          ]);
           return {
             projectId: data.projectId,
-            screenplayVersionId: screenplay.currentVersionId ?? "",
+            screenplayVersionId: screenplay.currentVersionId,
+            versionContent: version?.content ?? "",
             scenes: sceneRows.map((s) => ({
               id: s.id,
               number: s.number,
