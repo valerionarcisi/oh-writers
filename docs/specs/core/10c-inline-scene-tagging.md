@@ -1,6 +1,6 @@
 # Spec 10c — Inline scene tagging in middle column
 
-> **Status:** approved, ready for implementation plan
+> **Status:** implemented (2026-04-21)
 > **Depends on:** Spec 10 (Breakdown), Spec 05 (Screenplay editor / ProseMirror)
 > **Date:** 2026-04-21
 

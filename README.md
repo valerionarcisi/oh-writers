@@ -116,6 +116,7 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/04c — Narrative export** (logline + synopsis + treatment → PDF, opt-in cover page, preview tab)
 - **core/05j — Screenplay export** (Fountain → industry-standard PDF via afterwriting, opt-in cover page, preview tab)
 - **core/10 — Scene Breakdown** (cast/props/locations/VFX/vehicles/extras/sound/wardrobe/SPFX/stunts/animals/makeup/set-dressing/notes per scene + per project, Cesare ghost suggestions with rate-limit, PDF/CSV export, version-aware with 3-tier stale awareness, auto-clone on new screenplay version)
+- **core/10c — Inline scene tagging in middle column** (read-only ProseMirror reader of the full screenplay in the breakdown center column, inline highlight per category, ghost dashed underline for pending Cesare suggestions, floating selection toolbar with 14 categories, TOC scroll-to-scene)
 
 ### MVP — the minimum viable pilot product
 
