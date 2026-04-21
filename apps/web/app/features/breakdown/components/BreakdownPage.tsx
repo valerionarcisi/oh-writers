@@ -13,26 +13,25 @@ import styles from "./BreakdownPage.module.css";
 
 interface Props {
   projectId: string;
-  canEdit?: boolean;
 }
 
 type TabId = "per-scene" | "per-project";
 
-export function BreakdownPage({ projectId, canEdit = true }: Props) {
+export function BreakdownPage({ projectId }: Props) {
   return (
     <Suspense fallback={<div className={styles.status}>Caricamento…</div>}>
-      <BreakdownPageContent projectId={projectId} canEdit={canEdit} />
+      <BreakdownPageContent projectId={projectId} />
     </Suspense>
   );
 }
 
 interface ContentProps {
   projectId: string;
-  canEdit: boolean;
 }
 
-function BreakdownPageContent({ projectId, canEdit }: ContentProps) {
+function BreakdownPageContent({ projectId }: ContentProps) {
   const { data: ctx } = useSuspenseQuery(breakdownContextOptions(projectId));
+  const canEdit = ctx.canEdit;
   const [activeTab, setActiveTab] = useState<TabId>("per-scene");
   const [activeSceneId, setActiveSceneId] = useState<string | null>(
     ctx.scenes[0]?.id ?? null,

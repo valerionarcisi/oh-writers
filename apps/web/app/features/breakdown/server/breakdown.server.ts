@@ -615,6 +615,7 @@ export interface BreakdownContext {
   projectId: string;
   screenplayVersionId: string;
   scenes: BreakdownSceneSummary[];
+  canEdit: boolean;
 }
 
 export const getBreakdownContext = createServerFn({ method: "GET" })
@@ -634,6 +635,7 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
       if (!canViewBreakdown(accessResult.value))
         return toShape(err(new ForbiddenError("view breakdown")));
 
+      const canEdit = canEditBreakdown(accessResult.value);
       const result = await ResultAsync.fromPromise(
         (async () => {
           const screenplay = await db.query.screenplays.findFirst({
@@ -644,6 +646,7 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
               projectId: data.projectId,
               screenplayVersionId: "",
               scenes: [] as BreakdownSceneSummary[],
+              canEdit,
             };
           }
           const sceneRows = await db.query.scenes.findMany({
@@ -662,6 +665,7 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
               timeOfDay: s.timeOfDay,
               notes: s.notes,
             })),
+            canEdit,
           };
         })(),
         (e) => new DbError("getBreakdownContext", e),
