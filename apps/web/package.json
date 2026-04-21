@@ -12,6 +12,7 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.65.0",
     "@monaco-editor/react": "4.7.0",
     "@oh-writers/db": "workspace:*",
     "@oh-writers/domain": "workspace:*",
