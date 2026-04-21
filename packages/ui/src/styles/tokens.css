@@ -195,6 +195,22 @@
   --cat-equipment: oklch(0.55 0.1 60); /* brown */
   --cat-locations: oklch(0.7 0.05 250); /* neutral grey-blue */
 
+  /* Breakdown category background highlights (alpha 0.18 for overlays) */
+  --cat-cast-bg: oklch(from var(--cat-cast) l c h / 0.18);
+  --cat-extras-bg: oklch(from var(--cat-extras) l c h / 0.18);
+  --cat-stunts-bg: oklch(from var(--cat-stunts) l c h / 0.18);
+  --cat-props-bg: oklch(from var(--cat-props) l c h / 0.18);
+  --cat-vehicles-bg: oklch(from var(--cat-vehicles) l c h / 0.18);
+  --cat-wardrobe-bg: oklch(from var(--cat-wardrobe) l c h / 0.18);
+  --cat-makeup-bg: oklch(from var(--cat-makeup) l c h / 0.18);
+  --cat-sfx-bg: oklch(from var(--cat-sfx) l c h / 0.18);
+  --cat-vfx-bg: oklch(from var(--cat-vfx) l c h / 0.18);
+  --cat-sound-bg: oklch(from var(--cat-sound) l c h / 0.18);
+  --cat-animals-bg: oklch(from var(--cat-animals) l c h / 0.18);
+  --cat-set-dress-bg: oklch(from var(--cat-set-dress) l c h / 0.18);
+  --cat-equipment-bg: oklch(from var(--cat-equipment) l c h / 0.18);
+  --cat-locations-bg: oklch(from var(--cat-locations) l c h / 0.18);
+
   /* Cesare AI accent (used by Banner cesare variant + ghost suggestions) */
   --color-cesare: oklch(0.75 0.18 290);
   --color-cesare-subtle: color-mix(
