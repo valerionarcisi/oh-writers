@@ -1,0 +1,70 @@
+.reader {
+  block-size: 100%;
+  inline-size: 100%;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--color-fg-secondary);
+}
+
+.highlight {
+  border-radius: var(--radius-sm);
+  padding-inline: 2px;
+  background: transparent;
+
+  &[data-cat="cast"] {
+    background: var(--cat-cast-bg);
+  }
+  &[data-cat="extras"] {
+    background: var(--cat-extras-bg);
+  }
+  &[data-cat="stunts"] {
+    background: var(--cat-stunts-bg);
+  }
+  &[data-cat="props"] {
+    background: var(--cat-props-bg);
+  }
+  &[data-cat="vehicles"] {
+    background: var(--cat-vehicles-bg);
+  }
+  &[data-cat="wardrobe"] {
+    background: var(--cat-wardrobe-bg);
+  }
+  &[data-cat="makeup"] {
+    background: var(--cat-makeup-bg);
+  }
+  &[data-cat="sfx"] {
+    background: var(--cat-sfx-bg);
+  }
+  &[data-cat="vfx"] {
+    background: var(--cat-vfx-bg);
+  }
+  &[data-cat="sound"] {
+    background: var(--cat-sound-bg);
+  }
+  &[data-cat="animals"] {
+    background: var(--cat-animals-bg);
+  }
+  &[data-cat="set_dress"] {
+    background: var(--cat-set-dress-bg);
+  }
+  &[data-cat="equipment"] {
+    background: var(--cat-equipment-bg);
+  }
+  &[data-cat="locations"] {
+    background: var(--cat-locations-bg);
+  }
+  &[data-stale="true"] {
+    opacity: 0.4;
+  }
+}
+
+.ghost {
+  border-block-end: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding-inline: 2px;
+  cursor: pointer;
+}
