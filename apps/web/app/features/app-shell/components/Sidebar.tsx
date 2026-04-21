@@ -173,18 +173,20 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
               {!isCollapsed && (
                 <div className={styles.sectionLabel}>Production</div>
               )}
-              <span
-                className={`${styles.navLink} ${styles.disabled}`}
-                title="Breakdown (coming soon)"
+              <Link
+                to="/projects/$id/breakdown"
+                params={{ id: projectId }}
+                className={styles.navLink}
+                activeProps={{
+                  className: `${styles.navLink} ${styles.active}`,
+                }}
+                title="Breakdown"
               >
                 <Layers size={ICON_SIZE} strokeWidth={ICON_STROKE} />
                 {!isCollapsed && (
-                  <>
-                    <span className={styles.navLabel}>Breakdown</span>
-                    <span className={styles.soon}>soon</span>
-                  </>
+                  <span className={styles.navLabel}>Breakdown</span>
                 )}
-              </span>
+              </Link>
               <span
                 className={`${styles.navLink} ${styles.disabled}`}
                 title="Schedule (coming soon)"

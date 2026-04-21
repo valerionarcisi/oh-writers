@@ -81,6 +81,61 @@ const VALERIO_VIEWER_EMAIL = "collab@ohwriters.dev";
 const VALERIO_VIEWER_PASSWORD = "collab123";
 const VALERIO_VIEWER_NAME = "Collaboratore";
 
+// ─── Scene heading parser (seed-only) ─────────────────────────────────────
+// Mirrors the live editor's heading detection just enough to materialise the
+// `scenes` rows the /breakdown route reads from. Not exhaustive — covers
+// every heading present in the bundled Fountain fixtures.
+const SCENE_HEAD_RE =
+  /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?\/EST\.?|EST\.?\/INT\.?|I\/E|INT\.?|EXT\.?|EST\.?)\s+(.*)$/;
+
+function parseSceneHeading(raw: string): {
+  intExt: "INT" | "EXT" | "INT/EXT";
+  location: string;
+  timeOfDay: string | null;
+} | null {
+  const m = SCENE_HEAD_RE.exec(raw.trim());
+  if (!m) return null;
+  const prefix = m[1]!.replace(/\./g, "");
+  const rest = m[2]!.trim();
+  const intExt =
+    prefix === "INT" ? "INT" : prefix === "EXT" ? "EXT" : "INT/EXT";
+  const parts = rest.split(/\s+-\s+/);
+  let timeOfDay: string | null = null;
+  let location = rest;
+  if (parts.length >= 2) {
+    timeOfDay = parts[parts.length - 1]!.trim();
+    location = parts.slice(0, -1).join(" - ").trim();
+  }
+  return { intExt, location, timeOfDay };
+}
+
+async function seedScenesFromFountain(
+  screenplayId: string,
+  fountainText: string,
+): Promise<number> {
+  const lines = fountainText.split("\n");
+  let n = 0;
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (!/^(INT|EXT|EST|I\/E)/.test(trimmed)) continue;
+    const parsed = parseSceneHeading(trimmed);
+    if (!parsed) continue;
+    n += 1;
+    await db
+      .insert(scenes)
+      .values({
+        screenplayId,
+        number: n,
+        heading: trimmed,
+        intExt: parsed.intExt,
+        location: parsed.location,
+        timeOfDay: parsed.timeOfDay,
+      })
+      .onConflictDoNothing();
+  }
+  return n;
+}
+
 // Snapshot each seeded narrative document with non-empty content into a
 // "Versione 1" row so the Versions popover is never empty on first open.
 // Mirrors the screenplayVersions seed block below.
@@ -235,7 +290,23 @@ export async function seed() {
     })
     .onConflictDoNothing();
 
-  console.log("  -> Manual version created");
+  const testScreenplayVersion = await db.query.screenplayVersions.findFirst({
+    where: (v, { and: a, eq: e }) =>
+      a(e(v.screenplayId, TEST_SCREENPLAY_ID), e(v.number, 1)),
+  });
+  if (testScreenplayVersion) {
+    await db
+      .update(screenplays)
+      .set({ currentVersionId: testScreenplayVersion.id })
+      .where(eq(screenplays.id, TEST_SCREENPLAY_ID));
+  }
+
+  const testScenesCount = await seedScenesFromFountain(
+    TEST_SCREENPLAY_ID,
+    NON_FA_RIDERE_FOUNTAIN,
+  );
+
+  console.log(`  -> Manual version + ${testScenesCount} scenes created`);
 
   // 6. Viewer user — for E2E role-guard tests (Spec 04, block 2)
   const hashedViewerPassword = await hashPassword(TEST_VIEWER_PASSWORD);
@@ -474,9 +545,27 @@ export async function seed() {
     })
     .onConflictDoNothing();
 
+  const valerioScreenplayVersion = await db.query.screenplayVersions.findFirst({
+    where: (v, { and: a, eq: e }) =>
+      a(e(v.screenplayId, VALERIO_SCREENPLAY_ID), e(v.number, 1)),
+  });
+  if (valerioScreenplayVersion) {
+    await db
+      .update(screenplays)
+      .set({ currentVersionId: valerioScreenplayVersion.id })
+      .where(eq(screenplays.id, VALERIO_SCREENPLAY_ID));
+  }
+
+  const valerioScenesCount = await seedScenesFromFountain(
+    VALERIO_SCREENPLAY_ID,
+    NON_FA_RIDERE_FOUNTAIN,
+  );
+
   await seedFirstDocumentVersions(VALERIO_PERSONAL_PROJECT_ID, VALERIO_USER_ID);
 
-  console.log("  -> Valerio personal project + screenplay + version created");
+  console.log(
+    `  -> Valerio personal project + screenplay + version + ${valerioScenesCount} scenes created`,
+  );
 
   // Team project: Valerio = owner, collaborator = viewer. Lets you see
   // role-guard behaviour (viewer is read-only on every mutation).

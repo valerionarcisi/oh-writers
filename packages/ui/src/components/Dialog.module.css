@@ -5,6 +5,9 @@
   max-inline-size: min(480px, 90vw);
   max-block-size: 85vh;
   overflow: visible;
+  /* Center via the dialog-as-modal pattern: <dialog open> uses
+     position:fixed and inset:0, so margin:auto centers both axes. */
+  margin: auto;
 }
 
 .dialog::backdrop {
