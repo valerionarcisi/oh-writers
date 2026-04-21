@@ -115,6 +115,7 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/20 — Shooting script PDF import**
 - **core/04c — Narrative export** (logline + synopsis + treatment → PDF, opt-in cover page, preview tab)
 - **core/05j — Screenplay export** (Fountain → industry-standard PDF via afterwriting, opt-in cover page, preview tab)
+- **core/10 — Scene Breakdown** (cast/props/locations/VFX/vehicles/extras/sound/wardrobe/SPFX/stunts/animals/makeup/set-dressing/notes per scene + per project, Cesare ghost suggestions with rate-limit, PDF/CSV export, version-aware with 3-tier stale awareness, auto-clone on new screenplay version)
 
 ### MVP — the minimum viable pilot product
 
@@ -124,7 +125,6 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 
 - **core/07b — Screenplay front page** (editor route shipped da spec 14, renderer export shipped da 05j; resta solo il parser import PDF Pass 0 per estrarre la title page dai PDF importati)
 - **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
-- **core/10 — Breakdown** (cast, props, locations, VFX, vehicles, extras, sound FX — per scene, kept in sync with the script)
 - **core/11 — Budget** (line items from breakdown, totals — no AI risk prediction yet)
 - **core/12 — Shooting schedule** with **one country template (Italy)** — working days, holidays, night shifts, minimum rest
 - **core/12 — Call sheet generation** from schedule + breakdown (absorbed from "Ideas" list)
@@ -294,8 +294,12 @@ GITHUB_CLIENT_SECRET=
 
 # ── Anthropic (optional) ──────────────────────────────────────────────────
 ANTHROPIC_API_KEY=
-# Required for AI narrative assistant and scene predictions.
-# Leave empty and set MOCK_AI=true to develop without it.
+# Required for AI narrative assistant, scene predictions, and Cesare
+# breakdown suggestions. Leave empty and set MOCK_AI=true to develop
+# without it. The `@anthropic-ai/sdk` package is dynamically imported
+# only when MOCK_AI is unset, so it is an optional install — run
+# `pnpm install @anthropic-ai/sdk` in `apps/web` before disabling
+# MOCK_AI in production.
 
 # ── WebSocket server ──────────────────────────────────────────────────────
 WS_PORT=1234

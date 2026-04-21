@@ -29,19 +29,19 @@ Niente codice esistente in `apps/web/app/features/breakdown/` (cartella da crear
 
 ## Decisioni chiave (recap brainstorm)
 
-| Aspetto                   | Scelta                                                                                                                 |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **AI**                    | Cesare-from-day-one, Haiku 4.5, prompt caching, MOCK_AI in dev/test, default per-scena, rate-limit "all-script"        |
-| **Pattern Cesare**        | Ghost suggestions inline (border tratteggiato + opacity 0.6 + ✨), `cesare_status: pending/accepted/ignored`, mai chat |
-| **Categorie**             | 14 MM-standard (vedi tabella sotto)                                                                                    |
-| **Element model**         | Registry globale per progetto + occorrenze per `(scene_id, screenplay_version_id)` (Hybrid C)                          |
-| **Highlight storage**     | Solo `(scene_id, element_id)` — re-match runtime per nome, no offset                                                   |
-| **Tag UX**                | Selezione testo in script readonly → context-menu "Tagga come…"                                                        |
-| **Versioning**            | Element registry è per-progetto (rinomine cascade); occorrenze per-versione (snapshot per ogni screenplay_version)     |
-| **Stale awareness**       | 3 livelli — L1 hash + re-match on view · L2 badge passivo nell'editor · L3 banner alla creazione nuova versione        |
-| **Permessi**              | Read = chi vede il progetto. Write = stesso permission set dello screenplay (owner + editor)                           |
-| **Export v1**             | PDF MM-style (Per scena + Per progetto) + CSV (Per progetto). No JSON, no FDX.                                         |
-| **Cancellazione element** | Soft delete (`archived_at`), recuperabile                                                                              |
+| Aspetto                   | Scelta                                                                                                                                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AI**                    | Cesare-from-day-one, Haiku 4.5, prompt caching, MOCK_AI in dev/test, default per-scena, rate-limit per-scena (`cesare:scene:<sceneId>`, 60s cooldown). `@anthropic-ai/sdk` è dynamic-imported e opzionale: con `MOCK_AI=true` non serve installarlo. |
+| **Pattern Cesare**        | Ghost suggestions inline (border tratteggiato + opacity 0.6 + ✨), `cesare_status: pending/accepted/ignored`, mai chat                                                                                                                               |
+| **Categorie**             | 14 MM-standard (vedi tabella sotto)                                                                                                                                                                                                                  |
+| **Element model**         | Registry globale per progetto + occorrenze per `(scene_id, screenplay_version_id)` (Hybrid C)                                                                                                                                                        |
+| **Highlight storage**     | Solo `(scene_id, element_id)` — re-match runtime per nome, no offset                                                                                                                                                                                 |
+| **Tag UX**                | Selezione testo in script readonly → context-menu "Tagga come…"                                                                                                                                                                                      |
+| **Versioning**            | Element registry è per-progetto (rinomine cascade); occorrenze per-versione (snapshot per ogni screenplay_version)                                                                                                                                   |
+| **Stale awareness**       | 3 livelli — L1 hash + re-match on view · L2 badge passivo nell'editor · L3 banner alla creazione nuova versione                                                                                                                                      |
+| **Permessi**              | Read = chi vede il progetto. Write = stesso permission set dello screenplay (owner + editor)                                                                                                                                                         |
+| **Export v1**             | PDF MM-style (Per scena + Per progetto) + CSV (Per progetto). No JSON, no FDX.                                                                                                                                                                       |
+| **Cancellazione element** | Soft delete (`archived_at`), recuperabile                                                                                                                                                                                                            |
 
 ### Categorie elementi (14, MM-standard)
 
@@ -207,8 +207,8 @@ export const breakdownSceneState = pgTable(
 
 - **Element** vive a livello `projectId`: rinomine, descrizioni, archiviazioni si propagano automaticamente a tutte le versioni dello screenplay.
 - **Occurrence** vive a livello `(elementId, screenplayVersionId, sceneId)`: ogni screenplay version ha il suo set di occorrenze.
-- **Alla creazione di una nuova screenplay version**: server fn `cloneBreakdownToVersion(fromVersionId, toVersionId)` clona le occorrenze, ricalcola `textHash`, esegue re-match runtime, marca `isStale=true` quelle che non matchano più. L'utente vede subito cosa è da rivedere.
-- L'azione di clonazione è **opt-in**: alla creazione di nuova versione, banner `[L3] Importa breakdown da vN?` (default Sì). Spec 06 (versioning) deve esporre l'hook `onVersionCreated`.
+- **Alla creazione di una nuova screenplay version**: la clonazione è **automatica e inline** alla transazione di `createManualVersion` (vedi `cloneBreakdownToNewVersionInline` in `features/screenplay-editor/server/versions.server.ts`). Le occorrenze vengono clonate, `textHash` ricalcolato, re-match runtime eseguito, `isStale=true` impostato per quelle che non matchano più. L'utente vede subito cosa è da rivedere senza interrompere il flusso di salvataggio versione.
+- Il banner `[L3] Importa breakdown` è stato sostituito da `VersionImportBanner` informativo (non bloccante) che riassume il risultato del clone — la decisione "se importare" non è più richiesta perché l'auto-clone è il default. La server fn stand-alone `cloneBreakdownToVersion` resta esposta per riconciliazioni manuali e sync futuri ma non è invocata dalla UI.
 
 ## Permission model
 
@@ -443,18 +443,20 @@ Computazione **on-demand** (apertura breakdown view) — nessun overhead a write
 
 ### L2 — Badge passivo nello screenplay editor
 
-Server fn leggera `getStaleScenes(screenplayVersionId)` → array di `sceneId`. Editor la chiama una volta all'apertura. Badge `⚠ breakdown da rivedere` accanto al heading scena. Click → naviga al breakdown.
+Server fn leggera `getStaleScenes(screenplayVersionId)` → array di `sceneId`. L'editor monta il componente `SceneStaleBadge` come singolo indicatore sopra il heading di ciascuna scena stale: `⚠ breakdown da rivedere`. Click → naviga al breakdown.
 
-L'editor non sa nulla degli element specifici; solo "questa scena ha breakdown stale".
+L'editor non sa nulla degli element specifici; solo "questa scena ha breakdown stale". Il badge è l'unica superficie visiva L2 (no inline marker per ogni element).
 
 ### L3 — Banner alla creazione nuova versione
 
-Hook `onVersionCreated` (Spec 06) chiama `cloneBreakdownToVersion(prevVersionId, newVersionId)`:
+L'auto-clone è inline nella transazione di `createManualVersion` via `cloneBreakdownToNewVersionInline`:
 
 1. Copia tutte le occurrences della versione precedente
 2. Ricalcola hash + re-match per ogni scena
 3. Marca `isStale=true` quelle che non matchano
-4. Banner appare nella prossima apertura del breakdown della nuova versione
+4. `VersionImportBanner` appare nella prossima apertura del breakdown della nuova versione e riassume il numero di occorrenze clonate + count stale
+
+Nessun modal di conferma: l'import è il default. La server fn stand-alone `cloneBreakdownToVersion` resta disponibile per riconciliazioni manuali ma non è invocata dalla UI.
 
 ## Use cases E2E
 
@@ -494,18 +496,18 @@ Tag format: `[OHW-NNN]`. Tutti i test sono Playwright + MOCK_AI=true.
 
 ### Cesare
 
-| ID      | Titolo                                                                                                                            |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| OHW-257 | MOCK_AI=true: ritorno canned deterministico per fixture "scene-warehouse-12" (8 suggestions)                                      |
-| OHW-258 | "✨ Suggerisci scena" su scena già breakdown-ata: nuovi candidati appaiono come pending; accepted/ignored esistenti immutati      |
-| OHW-259 | "✨ Suggerisci tutto lo script": rate-limit max 1/5min per progetto; secondo click entro 5min mostra Toast "Riprova tra X minuti" |
+| ID      | Titolo                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| OHW-257 | MOCK_AI=true: ritorno canned deterministico per fixture "warehouse + Rick" (5 suggestions: cast/props/vehicles/animals/extras). Coperto da unit test su `mockCesareBreakdownForScene` in `apps/web/app/mocks/ai-responses.test.ts`.                                                                                                                                                                    |
+| OHW-258 | "✨ Suggerisci scena" su scena già breakdown-ata: nuovi candidati appaiono come pending; accepted/ignored esistenti immutati                                                                                                                                                                                                                                                                           |
+| OHW-259 | Rate-limit per-scena: chiave `cesare:scene:<sceneId>`, cooldown 60s. Secondo click entro 1 minuto ritorna `BreakdownRateLimitedError` con `retryAfterMs`. Coperto da unit test su `checkAndStampRateLimit` in `apps/web/app/features/breakdown/lib/rate-limit.test.ts`. La variante "Suggerisci tutto lo script" non è ancora wired: in roadmap come `suggestBreakdownForAllScenes` con cooldown 5min. |
 
 ### Versioning
 
-| ID      | Titolo                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| OHW-260 | Crea nuova screenplay version → modal "Importa breakdown da v{prev}?" → conferma → occurrences clonate, hash ricalcolato, isStale aggiornato     |
-| OHW-261 | Crea nuova screenplay version → modal "Importa breakdown" → rifiuta → nuova versione parte con breakdown vuoto, vecchia versione conserva il suo |
+| ID      | Titolo                                                                                                                                                                                                                                                                                         |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OHW-260 | Crea nuova screenplay version → auto-clone inline (`cloneBreakdownToNewVersionInline`) → occurrences clonate, hash ricalcolato, `isStale` aggiornato; banner `VersionImportBanner` informativo riassume il risultato                                                                           |
+| OHW-261 | (Spec aggiornata) — l'import non è più opt-in: l'auto-clone è il default. La server fn stand-alone `cloneBreakdownToVersion` resta esposta per riconciliazioni manuali e sync futuri ma non è invocata dalla UI. La path "nuova versione con breakdown vuoto" non è più supportata di default. |
 
 ## Edge cases
 
