@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Tabs } from "@oh-writers/ui";
 import { Suspense } from "react";
-import { breakdownContextOptions } from "../hooks/useBreakdown";
+import {
+  breakdownContextOptions,
+  breakdownForSceneOptions,
+  projectBreakdownOptions,
+} from "../hooks/useBreakdown";
 import { SceneTOC } from "./SceneTOC";
-import { SceneScriptViewer } from "./SceneScriptViewer";
+import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
+import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
+import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import { BreakdownPanel } from "./BreakdownPanel";
 import { ProjectBreakdownTable } from "./ProjectBreakdownTable";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
@@ -42,6 +48,27 @@ function BreakdownPageContent({ projectId }: ContentProps) {
   const activeScene =
     ctx.scenes.find((s) => s.id === activeSceneId) ?? ctx.scenes[0] ?? null;
 
+  const scriptReaderRef = useRef<ScriptReaderHandle>(null);
+
+  const { data: projectRows } = useQuery(
+    projectBreakdownOptions(projectId, versionId),
+  );
+
+  const elements: ElementForMatch[] = (projectRows ?? []).map((row) => ({
+    id: row.element.id,
+    name: row.element.name,
+    category: row.element.category,
+    isStale: row.hasStale,
+  }));
+
+  const { data: sceneData } = useQuery(
+    breakdownForSceneOptions(activeScene?.id ?? "", versionId),
+  );
+
+  const suggestions: CesareSuggestionLite[] = (sceneData ?? [])
+    .filter((d) => d.occurrence.cesareStatus === "pending")
+    .map((d) => ({ category: d.element.category, name: d.element.name }));
+
   return (
     <main className={styles.page} data-testid="breakdown-page">
       <header className={styles.header}>
@@ -74,15 +101,24 @@ function BreakdownPageContent({ projectId }: ContentProps) {
               scenes={ctx.scenes}
               versionId={versionId}
               activeSceneId={activeScene?.id ?? null}
-              onSceneSelect={setActiveSceneId}
+              onSceneSelect={(sceneId) => {
+                setActiveSceneId(sceneId);
+                const idx = ctx.scenes.findIndex((s) => s.id === sceneId);
+                if (idx >= 0) scriptReaderRef.current?.scrollToScene(idx + 1);
+              }}
             />
           </aside>
           <section className={styles.script} data-testid="breakdown-script">
-            <SceneScriptViewer
-              scene={activeScene}
+            <ScriptReader
+              ref={scriptReaderRef}
               projectId={projectId}
               versionId={versionId}
+              versionContent={ctx.versionContent}
+              scenes={ctx.scenes}
+              elements={elements}
+              suggestions={suggestions}
               canEdit={canEdit}
+              onActiveSceneChange={setActiveSceneId}
             />
           </section>
           <aside className={styles.panel} data-testid="breakdown-panel">
