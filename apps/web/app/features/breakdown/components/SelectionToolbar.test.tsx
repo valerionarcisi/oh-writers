@@ -40,6 +40,34 @@ describe("SelectionToolbar", () => {
     expect(onTag).toHaveBeenCalledWith("cast", "Filippo");
   });
 
+  it("uses placement=above by default and below when near top of viewport", () => {
+    const { rerender } = render(
+      <SelectionToolbar
+        x={0}
+        y={500}
+        selectedText="Filippo"
+        onTag={() => {}}
+        onDismiss={() => {}}
+      />,
+    );
+    expect(
+      screen.getByTestId("selection-toolbar").getAttribute("data-placement"),
+    ).toBe("above");
+
+    rerender(
+      <SelectionToolbar
+        x={0}
+        y={20}
+        selectedText="Filippo"
+        onTag={() => {}}
+        onDismiss={() => {}}
+      />,
+    );
+    expect(
+      screen.getByTestId("selection-toolbar").getAttribute("data-placement"),
+    ).toBe("below");
+  });
+
   it("calls onDismiss when Escape is pressed", () => {
     const onDismiss = vi.fn();
     render(
