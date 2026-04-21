@@ -4,11 +4,16 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from "react";
+import { createPortal } from "react-dom";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
 import { ReadOnlyScreenplayView } from "../../screenplay-editor/components/ReadOnlyScreenplayView";
-import { useAddBreakdownElement } from "../hooks/useBreakdown";
+import {
+  useAddBreakdownElement,
+  useSetOccurrenceStatus,
+} from "../hooks/useBreakdown";
 import {
   buildHighlightPlugin,
   highlightPluginKey,
@@ -30,7 +35,10 @@ import {
 } from "../lib/pm-plugins/map-suggestions";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { BreakdownSceneSummary } from "../server/breakdown.server";
+import { GhostPopover } from "./GhostPopover";
 import styles from "./ScriptReader.module.css";
+
+const SCROLL_DEBOUNCE_MS = 150;
 
 export interface ScriptReaderHandle {
   scrollToScene: (index: number) => void;
@@ -44,7 +52,14 @@ interface Props {
   elements: ElementForMatch[];
   suggestions: CesareSuggestionLite[];
   canEdit: boolean;
+  activeSceneId: string | null;
   onActiveSceneChange?: (sceneId: string | null) => void;
+}
+
+interface PopoverState {
+  occurrenceId: string;
+  x: number;
+  y: number;
 }
 
 export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
@@ -57,17 +72,38 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
       elements,
       suggestions,
       canEdit,
+      activeSceneId,
       onActiveSceneChange,
     } = props;
 
     const viewRef = useRef<EditorView | null>(null);
     const add = useAddBreakdownElement(projectId, versionId);
+    const setStatus = useSetOccurrenceStatus(activeSceneId ?? "", versionId);
+
+    // Refs avoid stale closures inside the once-built PM plugins.
+    const scenesRef = useRef(scenes);
+    const addRef = useRef(add);
+    const projectIdRef = useRef(projectId);
+    const versionIdRef = useRef(versionId);
+    const onActiveSceneChangeRef = useRef(onActiveSceneChange);
+    useEffect(() => {
+      scenesRef.current = scenes;
+      addRef.current = add;
+      projectIdRef.current = projectId;
+      versionIdRef.current = versionId;
+      onActiveSceneChangeRef.current = onActiveSceneChange;
+    });
+
+    const [popover, setPopover] = useState<PopoverState | null>(null);
+    const lastActiveSceneRef = useRef<string | null>(activeSceneId);
 
     const ghostElements = useMemo(
       () => mapSuggestionsToElements(suggestions),
       [suggestions],
     );
 
+    // Plugins are built once per mount; data updates flow via meta transactions
+    // and via refs read inside callbacks.
     const pluginsExtra = useMemo<Plugin[]>(() => {
       const list: Plugin[] = [
         buildHighlightPlugin({
@@ -87,15 +123,17 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
               if (!view) return;
               const sceneIndex = findSceneIndexAtPos(view.state.doc, fromPos);
               const scene =
-                sceneIndex !== null ? scenes[sceneIndex - 1] : undefined;
+                sceneIndex !== null
+                  ? scenesRef.current[sceneIndex - 1]
+                  : undefined;
               if (!scene) return;
-              add.mutate({
-                projectId,
+              addRef.current.mutate({
+                projectId: projectIdRef.current,
                 category,
                 name: text,
                 occurrence: {
                   sceneId: scene.id,
-                  screenplayVersionId: versionId,
+                  screenplayVersionId: versionIdRef.current,
                   quantity: 1,
                 },
               });
@@ -128,14 +166,76 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
           const view = viewRef.current;
           if (!view) return;
           scrollFn(view, index);
-          if (onActiveSceneChange) {
-            const scene = scenes[index - 1];
-            onActiveSceneChange(scene?.id ?? null);
-          }
+          const scene = scenesRef.current[index - 1];
+          lastActiveSceneRef.current = scene?.id ?? null;
+          onActiveSceneChangeRef.current?.(scene?.id ?? null);
         },
       }),
-      [scenes, onActiveSceneChange],
+      [],
     );
+
+    // Ghost click → popover; scroll → debounced onActiveSceneChange.
+    const handleViewReady = (view: EditorView) => {
+      viewRef.current = view;
+      const scrollContainer = view.dom.parentElement;
+      if (!scrollContainer) return;
+
+      const handleClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        const ghost = target?.closest<HTMLElement>("[data-ghost='true']");
+        const occurrenceId = ghost?.getAttribute("data-occurrence-id");
+        if (!ghost || !occurrenceId) return;
+        const rect = ghost.getBoundingClientRect();
+        setPopover({
+          occurrenceId,
+          x: rect.left,
+          y: rect.bottom + 4,
+        });
+      };
+      scrollContainer.addEventListener("click", handleClick);
+
+      let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+      const handleScroll = () => {
+        if (scrollTimer) clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          const v = viewRef.current;
+          if (!v) return;
+          const rect = scrollContainer.getBoundingClientRect();
+          const probe = v.posAtCoords({
+            left: rect.left + 16,
+            top: rect.top + 8,
+          });
+          if (!probe) return;
+          const sceneIndex = findSceneIndexAtPos(v.state.doc, probe.pos);
+          if (sceneIndex === null) return;
+          const scene = scenesRef.current[sceneIndex - 1];
+          const sid = scene?.id ?? null;
+          if (sid !== lastActiveSceneRef.current) {
+            lastActiveSceneRef.current = sid;
+            onActiveSceneChangeRef.current?.(sid);
+          }
+        }, SCROLL_DEBOUNCE_MS);
+      };
+      scrollContainer.addEventListener("scroll", handleScroll, {
+        passive: true,
+      });
+
+      // Stash cleanup on the view for the unmount effect to find.
+      (view as unknown as { _ohwCleanup?: () => void })._ohwCleanup = () => {
+        scrollContainer.removeEventListener("click", handleClick);
+        scrollContainer.removeEventListener("scroll", handleScroll);
+        if (scrollTimer) clearTimeout(scrollTimer);
+      };
+    };
+
+    useEffect(() => {
+      return () => {
+        const v = viewRef.current as
+          | (EditorView & { _ohwCleanup?: () => void })
+          | null;
+        v?._ohwCleanup?.();
+      };
+    }, []);
 
     if (!versionContent) {
       return (
@@ -145,15 +245,44 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
       );
     }
 
+    const acceptGhost = () => {
+      if (!popover) return;
+      setStatus.mutate({
+        occurrenceIds: [popover.occurrenceId],
+        status: "accepted",
+      });
+      setPopover(null);
+    };
+
+    const ignoreGhost = () => {
+      if (!popover) return;
+      setStatus.mutate({
+        occurrenceIds: [popover.occurrenceId],
+        status: "ignored",
+      });
+      setPopover(null);
+    };
+
     return (
-      <ReadOnlyScreenplayView
-        content={versionContent}
-        pluginsExtra={pluginsExtra}
-        onReady={(view) => {
-          viewRef.current = view;
-        }}
-        className={styles.reader}
-      />
+      <>
+        <ReadOnlyScreenplayView
+          content={versionContent}
+          pluginsExtra={pluginsExtra}
+          onReady={handleViewReady}
+          className={styles.reader}
+        />
+        {popover &&
+          createPortal(
+            <GhostPopover
+              x={popover.x}
+              y={popover.y}
+              onAccept={acceptGhost}
+              onIgnore={ignoreGhost}
+              onDismiss={() => setPopover(null)}
+            />,
+            document.body,
+          )}
+      </>
     );
   },
 );

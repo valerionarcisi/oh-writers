@@ -6,6 +6,8 @@ export interface ElementForMatch {
   name: string;
   category: BreakdownCategory;
   isStale: boolean;
+  /** When set, propagated as data-occurrence-id on the decoration (ghost only). */
+  occurrenceId?: string;
 }
 
 export interface OccurrenceRange {
@@ -14,6 +16,7 @@ export interface OccurrenceRange {
   elementId: string;
   category: BreakdownCategory;
   isStale: boolean;
+  occurrenceId?: string;
 }
 
 const escapeRegex = (s: string): string =>
@@ -53,6 +56,7 @@ export function findOccurrencesInDoc(
           elementId: el.id,
           category: el.category,
           isStale: el.isStale,
+          occurrenceId: el.occurrenceId,
         });
       }
     }

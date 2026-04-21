@@ -7,8 +7,8 @@ import {
 describe("mapSuggestionsToElements", () => {
   it("flattens suggestions into ElementForMatch list", () => {
     const suggestions: CesareSuggestionLite[] = [
-      { category: "cast", name: "Bob" },
-      { category: "props", name: "knife" },
+      { category: "cast", name: "Bob", occurrenceId: "occ-1" },
+      { category: "props", name: "knife", occurrenceId: "occ-2" },
     ];
     const result = mapSuggestionsToElements(suggestions);
     expect(result).toHaveLength(2);
@@ -17,6 +17,7 @@ describe("mapSuggestionsToElements", () => {
       name: "Bob",
       category: "cast",
       isStale: false,
+      occurrenceId: "occ-1",
     });
     expect(first?.id).toContain("suggestion:");
   });

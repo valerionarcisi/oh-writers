@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+
+const FLIP_THRESHOLD_PX = 80;
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -36,6 +38,7 @@ export function SelectionToolbar({
       role="toolbar"
       aria-label="Tag selection"
       data-testid="selection-toolbar"
+      data-placement={y < FLIP_THRESHOLD_PX ? "below" : "above"}
     >
       {BREAKDOWN_CATEGORIES.map((cat) => (
         <button

@@ -9,6 +9,8 @@ export const selectionToolbarPluginKey = new PluginKey(
   "breakdown-selection-toolbar",
 );
 
+const DEFAULT_MAX_SELECTION_LENGTH = 200;
+
 export interface SelectionToolbarOptions {
   onTag: (category: BreakdownCategory, text: string, fromPos: number) => void;
   /** Max selection length to show the toolbar (avoid runaway selections). */
@@ -18,7 +20,7 @@ export interface SelectionToolbarOptions {
 export function buildSelectionToolbarPlugin(
   options: SelectionToolbarOptions,
 ): Plugin {
-  const maxLength = options.maxLength ?? 200;
+  const maxLength = options.maxLength ?? DEFAULT_MAX_SELECTION_LENGTH;
   return new Plugin({
     key: selectionToolbarPluginKey,
     view(view) {
@@ -27,11 +29,15 @@ export function buildSelectionToolbarPlugin(
       document.body.appendChild(container);
       let root: Root | null = createRoot(container);
       let mounted = false;
+      let lastFrom = -1;
+      let lastTo = -1;
 
       const dismiss = () => {
         if (!mounted) return;
         root?.render(createElement("div"));
         mounted = false;
+        lastFrom = -1;
+        lastTo = -1;
       };
 
       const update = (editorView: EditorView) => {
@@ -41,6 +47,9 @@ export function buildSelectionToolbarPlugin(
           dismiss();
           return;
         }
+        if (mounted && from === lastFrom && to === lastTo) return;
+        lastFrom = from;
+        lastTo = to;
         const coords = editorView.coordsAtPos(from);
         const x = (coords.left + coords.right) / 2;
         const y = coords.top;

@@ -67,7 +67,11 @@ function BreakdownPageContent({ projectId }: ContentProps) {
 
   const suggestions: CesareSuggestionLite[] = (sceneData ?? [])
     .filter((d) => d.occurrence.cesareStatus === "pending")
-    .map((d) => ({ category: d.element.category, name: d.element.name }));
+    .map((d) => ({
+      category: d.element.category,
+      name: d.element.name,
+      occurrenceId: d.occurrence.id,
+    }));
 
   return (
     <main className={styles.page} data-testid="breakdown-page">
@@ -118,6 +122,7 @@ function BreakdownPageContent({ projectId }: ContentProps) {
               elements={elements}
               suggestions={suggestions}
               canEdit={canEdit}
+              activeSceneId={activeScene?.id ?? null}
               onActiveSceneChange={setActiveSceneId}
             />
           </section>

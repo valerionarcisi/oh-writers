@@ -12,7 +12,7 @@
 
 .highlight {
   border-radius: var(--radius-sm);
-  padding-inline: 2px;
+  padding-inline: var(--space-0-5);
   background: transparent;
 
   &[data-cat="cast"] {
@@ -65,6 +65,6 @@
 .ghost {
   border-block-end: 1px dashed var(--color-border);
   border-radius: var(--radius-sm);
-  padding-inline: 2px;
+  padding-inline: var(--space-0-5);
   cursor: pointer;
 }

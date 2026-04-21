@@ -4,6 +4,8 @@ import type { ElementForMatch } from "./find-occurrences";
 export interface CesareSuggestionLite {
   category: BreakdownCategory;
   name: string;
+  /** Backing breakdown_occurrences.id used to Accept/Ignore from the reader. */
+  occurrenceId: string;
 }
 
 export function mapSuggestionsToElements(
@@ -14,5 +16,6 @@ export function mapSuggestionsToElements(
     name: s.name,
     category: s.category,
     isStale: false,
+    occurrenceId: s.occurrenceId,
   }));
 }

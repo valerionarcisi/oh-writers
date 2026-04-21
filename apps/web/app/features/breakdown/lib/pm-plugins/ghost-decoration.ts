@@ -31,6 +31,7 @@ function buildDecos(
         "data-cat": r.category,
         "data-ghost": "true",
         "data-element-id": r.elementId,
+        ...(r.occurrenceId ? { "data-occurrence-id": r.occurrenceId } : {}),
       }),
     ),
   );

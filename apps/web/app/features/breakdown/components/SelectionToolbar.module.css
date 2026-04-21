@@ -12,6 +12,10 @@
   max-inline-size: 360px;
   /* Translate so the toolbar appears centered above the selection origin. */
   transform: translate(-50%, calc(-100% - var(--space-2)));
+
+  &[data-placement="below"] {
+    transform: translate(-50%, var(--space-2));
+  }
 }
 
 .btn {
