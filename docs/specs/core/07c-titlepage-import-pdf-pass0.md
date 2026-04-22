@@ -1,13 +1,14 @@
 # Spec 07c — PDF Import Pass 0 (title-page extraction)
 
 > **Status:** done (2026-04-22). 6/6 vitest + 3/3 Playwright (OHW-FP30/31/32) verdi.
+> **Depends on:** Spec 05c (PDF import pipeline), Spec 07b (front-page editor + `projects.title_page_doc`).
+> **Sub-spec of:** 07b (residual MVP work).
+>
 > **Implementation notes:**
 >
 > - Modal "Frontespizio importato dal PDF" costruito sul componente DS `<Dialog>` + `<Button variant="primary"|"ghost">` (zero markup custom, zero CSS module dedicato).
 > - Helper puro `apps/web/app/features/screenplay-editor/lib/title-page-from-pdf.ts` (no PM dependency) — riusabile da CLI/mobile in futuro.
 > - Hook `useImportPdf` espone `onTitlePageDetected?: (doc) => void`; `ScreenplayEditor` decide se applicare silenziosamente (front page vuoto) o aprire il confirm.
->   **Depends on:** Spec 05c (PDF import pipeline), Spec 07b (front-page editor + `projects.title_page_doc`).
->   **Sub-spec of:** 07b (residual MVP work).
 
 ## Goal
 
