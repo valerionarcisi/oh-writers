@@ -163,11 +163,18 @@ Riusa `canEditBreakdown` da `features/breakdown/lib/permissions.ts`.
 
 ### Playwright E2E (`tests/breakdown/inline-tagging.spec.ts`)
 
-- `[OHW-280]` select text → tag as Cast → highlight + chip nel pannello destro.
-- `[OHW-281]` ghost suggestion → click → Accetta → highlight diventa solido.
-- `[OHW-282]` TOC click → scroll-to-scene.
+- `[OHW-280]` select text → tag as Cast → highlight + chip nel pannello destro. **(known-failing: dblclick non commit a TextSelection PM in headless Chromium; il toolbar non appare in alcuni run. Da rivedere con un trigger manuale di selezione PM.)**
+- `[OHW-281]` viewer non vede toolbar (toolbar plugin disabilitato per ruolo VIEWER).
+- `[OHW-282]` TOC click → scroll-to-scene (selettore `.pm-heading`, threshold y < 600).
 - `[OHW-283]` stale occurrence renders dimmed (`data-stale="true"`).
-- `[OHW-284]` viewer non vede toolbar (toolbar plugin disabilitato).
+- `[OHW-284]` ghost ha `data-ghost="true"` + `data-cat` + `data-occurrence-id`.
+- `[OHW-285]` ghost click → popover → Accept rimuove `data-ghost` (diventa highlight).
+- `[OHW-286]` ghost click → popover → Ignore rimuove ghost.
+- `[OHW-287]` reader scroll aggiorna l'item attivo nella TOC. Il listener si aggancia a tutti gli ancestor con `overflow-y: auto|scroll` + `window` capture (defensive). Quando `findSceneIndexAtPos` restituisce un indice > `scenes.length` (PM può avere più heading nodes della tabella `scenes` in DB), si clamp all'ultima scena nota per evitare che `setActiveSceneId(null)` faccia fallback a `scenes[0]`.
+
+### Seed fixtures
+
+`packages/db/src/seed/fixtures/breakdown-fixtures.ts` aggiunge anche occorrenze **pending** (oltre alle accepted) per il team project, così OHW-285/286 trovano sempre `data-ghost="true"` da cliccare. Il seed usa `onConflictDoUpdate` per restare idempotente.
 
 ## Out of scope (rimandato a spec successive)
 

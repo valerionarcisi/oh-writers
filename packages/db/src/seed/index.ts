@@ -20,6 +20,8 @@ import {
   TEST_BREAKDOWN_OCCURRENCE_ID,
   SEEDED_BREAKDOWN_ELEMENT_NAME,
   SEEDED_BREAKDOWN_ELEMENT_CATEGORY,
+  SEEDED_PENDING_ELEMENT_CATEGORY,
+  SEEDED_PENDING_GHOSTS,
 } from "./fixtures/breakdown-fixtures";
 import {
   NON_FA_RIDERE_FOUNTAIN,
@@ -662,17 +664,26 @@ export async function seed() {
 // breakdown element/occurrence so the /breakdown route renders meaningful
 // data on first load. Idempotent.
 async function seedTeamProjectBreakdownFixtures() {
+  const nonFaRiderePmDoc = buildPmDocFromFountain(NON_FA_RIDERE_FOUNTAIN);
   await db
     .insert(screenplays)
     .values({
       id: TEST_TEAM_SCREENPLAY_ID,
       projectId: TEST_TEAM_PROJECT_ID,
       title: "Team Thriller",
-      content: "",
-      pageCount: 1,
+      content: NON_FA_RIDERE_FOUNTAIN,
+      pmDoc: nonFaRiderePmDoc,
+      pageCount: 13,
       createdBy: TEST_USER_ID,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: screenplays.id,
+      set: {
+        content: NON_FA_RIDERE_FOUNTAIN,
+        pmDoc: nonFaRiderePmDoc,
+        pageCount: 13,
+      },
+    });
 
   await db
     .insert(screenplayVersions)
@@ -681,17 +692,27 @@ async function seedTeamProjectBreakdownFixtures() {
       screenplayId: TEST_TEAM_SCREENPLAY_ID,
       label: "v1",
       number: 1,
-      content: "",
-      pageCount: 1,
+      content: NON_FA_RIDERE_FOUNTAIN,
+      pageCount: 13,
       createdBy: TEST_USER_ID,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: screenplayVersions.id,
+      set: {
+        content: NON_FA_RIDERE_FOUNTAIN,
+        pageCount: 13,
+      },
+    });
 
   await db
     .update(screenplays)
     .set({ currentVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID })
     .where(eq(screenplays.id, TEST_TEAM_SCREENPLAY_ID));
 
+  // Hardcoded scenes 1-2 (preserve stable IDs for helpers), then pad with
+  // fountain-parsed scenes so `scenesRef.length` in ScriptReader matches the
+  // PM doc heading count. Without this the scroll-driven TOC tracking falls
+  // off the end of the array past scene 2.
   for (const s of TEAM_PROJECT_BREAKDOWN_SCENES) {
     await db
       .insert(scenes)
@@ -704,6 +725,38 @@ async function seedTeamProjectBreakdownFixtures() {
         location: s.location,
         timeOfDay: s.timeOfDay,
         notes: s.notes,
+      })
+      .onConflictDoNothing();
+  }
+
+  const fountainHeadings: {
+    heading: string;
+    parsed: ReturnType<typeof parseSceneHeading>;
+  }[] = [];
+  for (const raw of NON_FA_RIDERE_FOUNTAIN.split("\n")) {
+    const trimmed = raw.trim();
+    if (!/^(INT|EXT|EST|I\/E)/.test(trimmed)) continue;
+    const parsed = parseSceneHeading(trimmed);
+    if (!parsed) continue;
+    fountainHeadings.push({ heading: trimmed, parsed });
+  }
+  let sceneNumber = TEAM_PROJECT_BREAKDOWN_SCENES.length;
+  for (
+    let i = TEAM_PROJECT_BREAKDOWN_SCENES.length;
+    i < fountainHeadings.length;
+    i++
+  ) {
+    sceneNumber += 1;
+    const h = fountainHeadings[i]!;
+    await db
+      .insert(scenes)
+      .values({
+        screenplayId: TEST_TEAM_SCREENPLAY_ID,
+        number: sceneNumber,
+        heading: h.heading,
+        intExt: h.parsed!.intExt,
+        location: h.parsed!.location,
+        timeOfDay: h.parsed!.timeOfDay,
       })
       .onConflictDoNothing();
   }
@@ -731,6 +784,34 @@ async function seedTeamProjectBreakdownFixtures() {
       isStale: false,
     })
     .onConflictDoNothing();
+
+  // Three pending ghosts so Spec 10c E2E can consume one per test
+  // (OHW-285 accept, OHW-286 ignore) without starving the next run.
+  for (const { occurrenceId, elementId, name } of SEEDED_PENDING_GHOSTS) {
+    await db
+      .insert(breakdownElements)
+      .values({
+        id: elementId,
+        projectId: TEST_TEAM_PROJECT_ID,
+        category: SEEDED_PENDING_ELEMENT_CATEGORY,
+        name,
+        description: null,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(breakdownOccurrences)
+      .values({
+        id: occurrenceId,
+        elementId,
+        sceneId: TEAM_PROJECT_BREAKDOWN_SCENES[0]!.id,
+        screenplayVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID,
+        quantity: 1,
+        cesareStatus: "pending" as const,
+        isStale: false,
+      })
+      .onConflictDoNothing();
+  }
 
   console.log("  -> Team project breakdown fixtures seeded");
 }

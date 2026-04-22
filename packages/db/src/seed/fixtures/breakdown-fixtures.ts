@@ -43,3 +43,29 @@ export const TEAM_PROJECT_BREAKDOWN_SCENES: SeededScene[] = [
 
 export const SEEDED_BREAKDOWN_ELEMENT_NAME = "Bloody knife";
 export const SEEDED_BREAKDOWN_ELEMENT_CATEGORY = "props" as const;
+
+// Pending Cesare suggestions seeded for Spec 10c E2E (ghost popover flow).
+// Each test (accept / ignore) consumes one ghost, so we seed more than one.
+// Element names must match tokens present in the seeded screenplay text.
+export const SEEDED_PENDING_ELEMENT_CATEGORY = "cast" as const;
+export const SEEDED_PENDING_GHOSTS: ReadonlyArray<{
+  occurrenceId: string;
+  elementId: string;
+  name: string;
+}> = [
+  {
+    occurrenceId: "00000000-0000-4000-a000-000000010104",
+    elementId: "00000000-0000-4000-a000-000000010204",
+    name: "Tea",
+  },
+  {
+    occurrenceId: "00000000-0000-4000-a000-000000010105",
+    elementId: "00000000-0000-4000-a000-000000010205",
+    name: "Milco",
+  },
+  {
+    occurrenceId: "00000000-0000-4000-a000-000000010106",
+    elementId: "00000000-0000-4000-a000-000000010206",
+    name: "Luca",
+  },
+];

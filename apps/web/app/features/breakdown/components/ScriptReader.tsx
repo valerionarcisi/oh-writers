@@ -175,10 +175,29 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
     );
 
     // Ghost click → popover; scroll → debounced onActiveSceneChange.
+    // Collect every ancestor with overflow-y: auto/scroll. The actual scroll
+    // may happen on any of them depending on layout (Breakdown nests a
+    // scrollable .script around a scrollable .reader); we listen on all.
+    const collectScrollAncestors = (start: HTMLElement): HTMLElement[] => {
+      const out: HTMLElement[] = [];
+      let el: HTMLElement | null = start;
+      while (el && el !== document.body) {
+        const oy = getComputedStyle(el).overflowY;
+        if (oy === "auto" || oy === "scroll") out.push(el);
+        el = el.parentElement;
+      }
+      return out;
+    };
+
     const handleViewReady = (view: EditorView) => {
       viewRef.current = view;
-      const scrollContainer = view.dom.parentElement;
-      if (!scrollContainer) return;
+      const initial = view.dom.parentElement;
+      if (!initial) return;
+      const scrollAncestors = collectScrollAncestors(initial);
+      // posAtCoords must be probed against the editor mount's viewport rect:
+      // that's the element whose content PM knows how to resolve. Using a
+      // higher ancestor risks landing in page chrome (header, sidebars).
+      const probeContainer = initial;
 
       const handleClick = (e: MouseEvent) => {
         const target = e.target as HTMLElement | null;
@@ -192,7 +211,7 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
           y: rect.bottom + 4,
         });
       };
-      scrollContainer.addEventListener("click", handleClick);
+      initial.addEventListener("click", handleClick);
 
       let scrollTimer: ReturnType<typeof setTimeout> | null = null;
       const handleScroll = () => {
@@ -200,7 +219,7 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
         scrollTimer = setTimeout(() => {
           const v = viewRef.current;
           if (!v) return;
-          const rect = scrollContainer.getBoundingClientRect();
+          const rect = probeContainer.getBoundingClientRect();
           const probe = v.posAtCoords({
             left: rect.left + 16,
             top: rect.top + 8,
@@ -208,7 +227,12 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
           if (!probe) return;
           const sceneIndex = findSceneIndexAtPos(v.state.doc, probe.pos);
           if (sceneIndex === null) return;
-          const scene = scenesRef.current[sceneIndex - 1];
+          // PM may report more heading nodes than the DB scenes table holds
+          // (e.g. when fountain parsing yields a trailing heading that wasn't
+          // persisted). Clamp to the last known scene to keep the TOC in sync.
+          const scenesNow = scenesRef.current;
+          const clamped = Math.min(sceneIndex, scenesNow.length);
+          const scene = scenesNow[clamped - 1];
           const sid = scene?.id ?? null;
           if (sid !== lastActiveSceneRef.current) {
             lastActiveSceneRef.current = sid;
@@ -216,14 +240,24 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
           }
         }, SCROLL_DEBOUNCE_MS);
       };
-      scrollContainer.addEventListener("scroll", handleScroll, {
+      for (const a of scrollAncestors) {
+        a.addEventListener("scroll", handleScroll, { passive: true });
+      }
+      // Defensive: also listen on the window capture phase so we catch
+      // scrolls on ancestors we didn't classify (e.g. <main> with an
+      // implicit scroll from flex/grid layout, or nested shells).
+      window.addEventListener("scroll", handleScroll, {
         passive: true,
+        capture: true,
       });
 
       // Stash cleanup on the view for the unmount effect to find.
       (view as unknown as { _ohwCleanup?: () => void })._ohwCleanup = () => {
-        scrollContainer.removeEventListener("click", handleClick);
-        scrollContainer.removeEventListener("scroll", handleScroll);
+        initial.removeEventListener("click", handleClick);
+        for (const a of scrollAncestors) {
+          a.removeEventListener("scroll", handleScroll);
+        }
+        window.removeEventListener("scroll", handleScroll, { capture: true });
         if (scrollTimer) clearTimeout(scrollTimer);
       };
     };
