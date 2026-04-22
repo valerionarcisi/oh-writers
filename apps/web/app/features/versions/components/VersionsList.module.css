@@ -243,42 +243,6 @@
   }
 }
 
-.confirmOverlay {
-  position: fixed;
-  inset: 0;
-  background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  backdrop-filter: blur(2px);
-}
-
-.confirmBox {
-  background: var(--color-surface);
-  border: var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-6);
-  max-inline-size: 360px;
-  inline-size: 90%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  box-shadow: var(--shadow-lg);
-}
-
-.confirmText {
-  font-size: var(--text-sm);
-  color: var(--color-fg);
-  margin: 0;
-}
-
-.confirmActions {
-  display: flex;
-  gap: var(--space-2);
-  justify-content: flex-end;
-}
-
 .swatchBtn {
   inline-size: 1.1rem;
   block-size: 1.1rem;

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { Dialog } from "@oh-writers/ui";
 import { buildSideBySideDiff } from "@oh-writers/utils";
 import type { DiffRow, DiffSegment } from "@oh-writers/utils";
 import styles from "./VersionCompareModal.module.css";
@@ -41,14 +42,6 @@ export function VersionCompareModal({
     initialRightId ?? fallbackRight,
   );
 
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
   const left = sorted.find((v) => v.id === leftId) ?? null;
   const right = sorted.find((v) => v.id === rightId) ?? null;
 
@@ -59,76 +52,62 @@ export function VersionCompareModal({
   );
 
   return (
-    <div
-      className={styles.overlay}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Compare versions"
+    <Dialog
+      isOpen
+      onClose={onClose}
+      title="Compare versions"
+      size="xl"
+      showCloseButton
       data-testid="version-compare-modal"
-      onClick={onClose}
     >
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>Compare versions</h2>
-          <button
-            type="button"
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="Close"
-            data-testid="version-compare-close"
+      <div className={styles.selectors}>
+        <label className={styles.selectorGroup}>
+          <span className={styles.selectorLabel}>Left</span>
+          <select
+            className={styles.select}
+            value={leftId ?? ""}
+            onChange={(e) => setLeftId(e.target.value)}
+            data-testid="version-compare-left"
           >
-            ✕
-          </button>
-        </header>
-        <div className={styles.selectors}>
-          <label className={styles.selectorGroup}>
-            <span className={styles.selectorLabel}>Left</span>
-            <select
-              className={styles.select}
-              value={leftId ?? ""}
-              onChange={(e) => setLeftId(e.target.value)}
-              data-testid="version-compare-left"
-            >
-              {sorted.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {displayLabel(v)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.selectorGroup}>
-            <span className={styles.selectorLabel}>Right</span>
-            <select
-              className={styles.select}
-              value={rightId ?? ""}
-              onChange={(e) => setRightId(e.target.value)}
-              data-testid="version-compare-right"
-            >
-              {sorted.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {displayLabel(v)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className={styles.diff} data-testid="version-compare-diff">
-          {!left || !right ? (
-            <p className={styles.empty}>Select two versions to compare.</p>
-          ) : rows.length === 0 ? (
-            <p className={styles.empty}>No differences.</p>
-          ) : (
-            <table className={styles.table}>
-              <tbody>
-                {rows.map((row, i) => (
-                  <DiffRowView key={i} row={row} />
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+            {sorted.map((v) => (
+              <option key={v.id} value={v.id}>
+                {displayLabel(v)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.selectorGroup}>
+          <span className={styles.selectorLabel}>Right</span>
+          <select
+            className={styles.select}
+            value={rightId ?? ""}
+            onChange={(e) => setRightId(e.target.value)}
+            data-testid="version-compare-right"
+          >
+            {sorted.map((v) => (
+              <option key={v.id} value={v.id}>
+                {displayLabel(v)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-    </div>
+      <div className={styles.diff} data-testid="version-compare-diff">
+        {!left || !right ? (
+          <p className={styles.empty}>Select two versions to compare.</p>
+        ) : rows.length === 0 ? (
+          <p className={styles.empty}>No differences.</p>
+        ) : (
+          <table className={styles.table}>
+            <tbody>
+              {rows.map((row, i) => (
+                <DiffRowView key={i} row={row} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </Dialog>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { Button, Dialog } from "@oh-writers/ui";
 import { useMenuPopover } from "../hooks/useMenuPopover";
 import { useImportPdf } from "../hooks/useImportPdf";
 import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
@@ -205,73 +206,57 @@ export function ToolbarMenu({
       )}
 
       {imp.status.type === "confirm" && (
-        <div
-          className={styles.confirmOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="import-confirm-title"
-          aria-describedby="import-confirm-body"
+        <Dialog
+          isOpen
+          onClose={imp.cancel}
+          title="Importa PDF"
           data-testid="import-confirm"
-          onClick={imp.cancel}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") imp.cancel();
-          }}
-        >
-          <div
-            className={styles.confirmBox}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="import-confirm-title" className={styles.confirmTitle}>
-              Importa PDF
-            </h2>
-            <p id="import-confirm-body" className={styles.confirmText}>
-              {nextVersionLabel && onCreateVersionThenImport
-                ? "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla."
-                : "Sostituire la sceneggiatura attuale con il contenuto importato?"}
-            </p>
-            <div className={styles.confirmActions}>
-              <button
-                type="button"
-                className={styles.ghostBtn}
+          actions={
+            <>
+              <Button
+                variant="ghost"
                 onClick={imp.cancel}
                 data-testid="import-confirm-cancel"
               >
                 Annulla
-              </button>
+              </Button>
               {nextVersionLabel && onCreateVersionThenImport ? (
                 <>
-                  <button
-                    type="button"
-                    className={styles.dangerBtn}
+                  <Button
+                    variant="danger"
                     onClick={imp.confirm}
                     data-testid="import-confirm-overwrite"
                   >
                     Sovrascrivi
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.confirmBtn}
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={imp.confirmWithVersion}
                     data-testid="import-confirm-new-version"
                     autoFocus
                   >
                     Salva come {nextVersionLabel} e importa
-                  </button>
+                  </Button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  className={styles.confirmBtn}
+                <Button
+                  variant="primary"
                   onClick={imp.confirm}
                   data-testid="import-confirm-ok"
                   autoFocus
                 >
                   Sostituisci
-                </button>
+                </Button>
               )}
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p>
+            {nextVersionLabel && onCreateVersionThenImport
+              ? "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla."
+              : "Sostituire la sceneggiatura attuale con il contenuto importato?"}
+          </p>
+        </Dialog>
       )}
     </div>
   );

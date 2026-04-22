@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Button, Dialog } from "@oh-writers/ui";
 import { SaveIndicator } from "./SaveIndicator";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { DraftMetaBadge } from "~/features/projects";
@@ -186,37 +187,22 @@ export function ScreenplayToolbar({
         />
       </div>
       {resequenceConfirmOpen && onResequenceAll ? (
-        <div
-          className={styles.confirmOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Resequence all scenes"
+        <Dialog
+          isOpen
+          onClose={() => setResequenceConfirmOpen(false)}
+          title="Resequence all scenes?"
           data-testid="resequence-confirm-modal"
-          onClick={() => setResequenceConfirmOpen(false)}
-        >
-          <div
-            className={styles.confirmModal}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className={styles.confirmTitle}>Resequence all scenes?</h2>
-            <p className={styles.confirmBody}>
-              This renumbers every scene from 1 upward based on the current
-              document order. Locked scenes keep their numbers — others get
-              assigned around them with letter suffixes if needed. This
-              can&apos;t be undone automatically.
-            </p>
-            <div className={styles.confirmFooter}>
-              <button
-                type="button"
-                className={styles.cancelBtn}
+          actions={
+            <>
+              <Button
+                variant="ghost"
                 data-testid="resequence-confirm-cancel"
                 onClick={() => setResequenceConfirmOpen(false)}
               >
                 Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.primaryBtn}
+              </Button>
+              <Button
+                variant="primary"
                 data-testid="resequence-confirm-apply"
                 onClick={() => {
                   onResequenceAll();
@@ -224,10 +210,17 @@ export function ScreenplayToolbar({
                 }}
               >
                 Resequence
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </>
+          }
+        >
+          <p>
+            This renumbers every scene from 1 upward based on the current
+            document order. Locked scenes keep their numbers — others get
+            assigned around them with letter suffixes if needed. This can&apos;t
+            be undone automatically.
+          </p>
+        </Dialog>
       ) : null}
     </div>
   );

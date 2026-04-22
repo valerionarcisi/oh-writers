@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Button, Dialog } from "@oh-writers/ui";
 import {
   DRAFT_REVISION_COLORS,
   type DraftRevisionColor,
@@ -448,71 +449,70 @@ export function VersionsList({
       </div>
 
       {pendingColor !== null && (
-        <div
-          className={styles.confirmOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Conferma cambio colore"
+        <Dialog
+          isOpen
+          onClose={() => setPendingColor(null)}
+          title="Conferma cambio colore"
           data-testid="version-color-confirm"
-        >
-          <div className={styles.confirmBox}>
-            <p className={styles.confirmText}>
-              Cambiare il revision color da{" "}
-              <strong>
-                {pendingColor.from
-                  ? DRAFT_COLOR_LABEL[pendingColor.from]
-                  : "(nessuno)"}
-              </strong>{" "}
-              a{" "}
-              <strong>
-                {pendingColor.to
-                  ? DRAFT_COLOR_LABEL[pendingColor.to]
-                  : "(nessuno)"}
-              </strong>
-              ? Il valore fa parte del revision cycle hollywoodiano.
-            </p>
-            <div className={styles.confirmActions}>
-              <button
-                type="button"
-                className={styles.btnGhost}
+          actions={
+            <>
+              <Button
+                variant="ghost"
                 onClick={() => setPendingColor(null)}
                 data-testid="version-color-confirm-cancel"
               >
                 Annulla
-              </button>
-              <button
-                type="button"
-                className={styles.btnPrimary}
+              </Button>
+              <Button
+                variant="primary"
                 onClick={() => {
                   onUpdateColor?.(pendingColor.id, pendingColor.to);
                   setPendingColor(null);
                   setColorPickerFor(null);
                 }}
                 data-testid="version-color-confirm-ok"
+                autoFocus
               >
                 Conferma
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Cambiare il revision color da{" "}
+            <strong>
+              {pendingColor.from
+                ? DRAFT_COLOR_LABEL[pendingColor.from]
+                : "(nessuno)"}
+            </strong>{" "}
+            a{" "}
+            <strong>
+              {pendingColor.to
+                ? DRAFT_COLOR_LABEL[pendingColor.to]
+                : "(nessuno)"}
+            </strong>
+            ? Il valore fa parte del revision cycle hollywoodiano.
+          </p>
+        </Dialog>
       )}
 
       {deletingId !== null && (
-        <div
-          className={styles.confirmOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Conferma eliminazione"
+        <Dialog
+          isOpen
+          onClose={() => setDeletingId(null)}
+          title="Conferma eliminazione"
           data-testid="version-delete-confirm"
-        >
-          <div className={styles.confirmBox}>
-            <p className={styles.confirmText}>
-              Eliminare questa versione? L&apos;operazione non è reversibile.
-            </p>
-            <div className={styles.confirmActions}>
-              <button
-                type="button"
-                className={styles.btnDanger}
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setDeletingId(null)}
+                data-testid="version-delete-confirm-cancel"
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="danger"
                 onClick={() => {
                   onDelete(deletingId);
                   setDeletingId(null);
@@ -521,18 +521,12 @@ export function VersionsList({
                 data-testid="version-delete-confirm-ok"
               >
                 Elimina
-              </button>
-              <button
-                type="button"
-                className={styles.btnGhost}
-                onClick={() => setDeletingId(null)}
-                data-testid="version-delete-confirm-cancel"
-              >
-                Annulla
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </>
+          }
+        >
+          <p>Eliminare questa versione? L&apos;operazione non è reversibile.</p>
+        </Dialog>
       )}
     </div>
   );
