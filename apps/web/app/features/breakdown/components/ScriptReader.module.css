@@ -1,8 +1,16 @@
+/*
+ * The breakdown page-card — mirrors the screenplay editor's .pageShell:
+ * US Letter proportions (816px) on a white background with a soft 1px shadow,
+ * sitting on the dark canvas of BreakdownPage .script.
+ */
 .reader {
-  block-size: 100%;
   inline-size: 100%;
-  overflow: auto;
+  max-inline-size: 816px;
+  background: #ffffff;
+  color: #111;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
   padding: var(--space-4);
+  flex-shrink: 0;
 }
 
 .empty {

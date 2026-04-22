@@ -2,13 +2,14 @@
  * "Non fa ridere" — full screenplay in Fountain format.
  * Written by Valerio Narcisi & Stefano Teodori.
  * Used as test fixture for E2E tests.
+ *
+ * NOTE: the title block (Title:/Credit:/Author:) lives in the project's
+ * `titlePageDoc` (see NON_FA_RIDERE_TITLE_PAGE_DOC below) — NOT in the body
+ * fountain. Mirroring the post-Spec-07c PDF import behaviour: front page on
+ * its own row, screenplay body starts at the first slugline.
  */
 
 export const NON_FA_RIDERE_FOUNTAIN = `\
-Title: NON FA RIDERE
-Credit: Written by
-Author: Valerio Narcisi & Stefano Teodori
-
 INT/EXT. ANGOLO OPEN GREZZO/FUORI DALLA PORTA - NOTTE
 
 JOHN (35) ha il microfono in mano. È in piedi in un angolo del ristorante adibito a palco. Dietro di lui c'è un grande striscione con scritto "OPEN GREZZO - UN OPEN MIC PROVINCIALE"
@@ -467,3 +468,33 @@ export const NON_FA_RIDERE_LOGLINE =
 
 export const NON_FA_RIDERE_SYNOPSIS =
   "Filippo, quarantenne frustrato, lavora come cameriere nella pizzeria del suocero Giulio. Di nascosto ha organizzato una serata di open mic comedy - l'Open Grezzo - nel ristorante. Mentre i comici si alternano sul palco, Filippo deve destreggiarsi tra clienti invadenti, la compagna Tea che lo rimprovera e le apparizioni del nonno morto che lo osserva con una pianta in mano. Quando finalmente sale sul palco, invece delle battute preparate, Filippo esplode in uno sfogo liberatorio sulla sua vita, le rinunce, il rapporto con Tea e lo sfruttamento del suocero. Il monologo finisce con un pugno da Giulio. In cucina, ferito, Filippo ride con il fantasma del nonno - l'unico momento di vera libertà della serata.";
+
+/**
+ * Title-page PM doc for the demo project. Mirrors the structure produced by
+ * Spec 07c Pass 0 (`extractTitlePageFromPdf`) so the Frontespizio editor and
+ * the PDF cover-page export both find the same data on disk.
+ */
+export const NON_FA_RIDERE_TITLE_PAGE_DOC: Record<
+  string,
+  NonNullable<unknown>
+> = {
+  type: "doc",
+  content: [
+    { type: "title", content: [{ type: "text", text: "NON FA RIDERE" }] },
+    {
+      type: "centerBlock",
+      content: [
+        { type: "para", content: [{ type: "text", text: "Written by" }] },
+        {
+          type: "para",
+          content: [
+            { type: "text", text: "Valerio Narcisi & Stefano Teodori" },
+          ],
+        },
+      ],
+    },
+    { type: "footerLeft", content: [{ type: "para" }] },
+    { type: "footerCenter", content: [{ type: "para" }] },
+    { type: "footerRight", content: [{ type: "para" }] },
+  ],
+};

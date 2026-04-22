@@ -27,6 +27,7 @@ import {
   NON_FA_RIDERE_FOUNTAIN,
   NON_FA_RIDERE_LOGLINE,
   NON_FA_RIDERE_SYNOPSIS,
+  NON_FA_RIDERE_TITLE_PAGE_DOC,
 } from "./fixtures/non-fa-ridere.fountain";
 import { buildPmDocFromFountain } from "./build-pm-doc";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
@@ -207,8 +208,16 @@ export async function seed() {
       genre: "comedy",
       format: "short",
       ownerId: TEST_USER_ID,
+      titlePageAuthor: "Valerio Narcisi & Stefano Teodori",
+      titlePageDoc: NON_FA_RIDERE_TITLE_PAGE_DOC,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: projects.id,
+      set: {
+        titlePageAuthor: "Valerio Narcisi & Stefano Teodori",
+        titlePageDoc: NON_FA_RIDERE_TITLE_PAGE_DOC,
+      },
+    });
 
   process.stdout.write("  -> Project created\n");
 
@@ -476,8 +485,18 @@ export async function seed() {
       titlePageContact: "valerio@ohwriters.dev",
       titlePageDraftColor: "white",
       titlePageNotes: "First draft — demo project for feature tour.",
+      titlePageDoc: NON_FA_RIDERE_TITLE_PAGE_DOC,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: projects.id,
+      set: {
+        titlePageAuthor: "Valerio Narcisi",
+        titlePageContact: "valerio@ohwriters.dev",
+        titlePageDraftColor: "white",
+        titlePageNotes: "First draft — demo project for feature tour.",
+        titlePageDoc: NON_FA_RIDERE_TITLE_PAGE_DOC,
+      },
+    });
 
   await db
     .insert(documents)
