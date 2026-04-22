@@ -1,8 +1,17 @@
 # Spec infra/07b — Design-system Dialog migration
 
-> **Status:** in progress (2026-04-22).
+> **Status:** done (2026-04-22). 15 file, +407/-721. 102/102 Playwright verdi su `tests/editor` + `tests/documents`. Typecheck OK su tutto il monorepo.
+>
 > **Depends on:** infra/07b — Design system.
 > **Trigger:** Spec 07c modal review showed 7 bespoke modals duplicating `<Dialog>` markup.
+>
+> **Implementation notes**
+>
+> - `Dialog` esteso con `size?: "sm"|"md"|"lg"|"xl"` (default `md`) e `showCloseButton?: boolean` (default `false`), backward compatible.
+> - Tutte e 7 le modali migrate (vedi Inventory): SceneNumberConflictModal, ExportPdfModal, ExportScreenplayPdfModal, VersionCompareModal (size `xl`), ToolbarMenu PDF replace confirm, ScreenplayToolbar Resequence confirm, VersionsList color + delete confirms (delete in variant `danger`).
+> - CSS module bespoke ripuliti — rimangono solo stili content-specific (choice cards, checkbox row, diff table, swatches). Cancellato `ImportedTitlePageConfirm.module.css`.
+> - Tutti i `data-testid` preservati 1-a-1 per non rompere gli E2E esistenti.
+> - Commit: `5e14214 [OHW] refactor(ui): migrate all bespoke modals to DS Dialog`.
 
 ## Goal
 
