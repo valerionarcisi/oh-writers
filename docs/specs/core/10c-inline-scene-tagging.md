@@ -163,7 +163,7 @@ Riusa `canEditBreakdown` da `features/breakdown/lib/permissions.ts`.
 
 ### Playwright E2E (`tests/breakdown/inline-tagging.spec.ts`)
 
-- `[OHW-280]` select text → tag as Cast → highlight + chip nel pannello destro. **(known-failing: dblclick non commit a TextSelection PM in headless Chromium; il toolbar non appare in alcuni run. Da rivedere con un trigger manuale di selezione PM.)**
+- `[OHW-280]` select text → tag as Cast → highlight + chip nel pannello destro. La selezione viene forzata via `Range` API + `selectionchange` event (dblclick nativo non commit reliably in headless Chromium); il bottone toolbar viene cliccato `force: true` perché la posizione `coordsAtPos` può cadere appena fuori dal viewport del reader.
 - `[OHW-281]` viewer non vede toolbar (toolbar plugin disabilitato per ruolo VIEWER).
 - `[OHW-282]` TOC click → scroll-to-scene (selettore `.pm-heading`, threshold y < 600).
 - `[OHW-283]` stale occurrence renders dimmed (`data-stale="true"`).

@@ -10,16 +10,40 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
     await expect(page.getByTestId("readonly-screenplay-view")).toBeVisible();
 
-    const target = page
-      .getByTestId("readonly-screenplay-view")
-      .getByText("Filippo", { exact: false })
-      .first();
-    await target.dblclick();
+    // dblclick + first-click both struggle to commit a PM TextSelection in
+    // headless Chromium. Force the selection via the DOM Range API at the
+    // reader level and dispatch selectionchange so PM picks it up.
+    const reader = page.getByTestId("readonly-screenplay-view");
+    await reader.waitFor({ state: "visible" });
+    await reader.evaluate((root) => {
+      const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let cur: Node | null = walk.nextNode();
+      while (cur) {
+        const t = cur.textContent ?? "";
+        const idx = t.indexOf("Filippo");
+        if (idx >= 0) {
+          const range = document.createRange();
+          range.setStart(cur, idx);
+          range.setEnd(cur, idx + "Filippo".length);
+          // Scroll the parent into view so the toolbar (anchored to selection
+          // coords) doesn't render off-screen in headless Chromium.
+          const parent = cur.parentElement ?? (cur as unknown as HTMLElement);
+          parent.scrollIntoView({ block: "center" });
+          const sel = window.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+          document.dispatchEvent(new Event("selectionchange"));
+          return;
+        }
+        cur = walk.nextNode();
+      }
+      throw new Error("Filippo text node not located in reader");
+    });
 
     const toolbar = page.getByTestId("selection-toolbar");
     await expect(toolbar).toBeVisible();
 
-    await page.getByTestId("selection-toolbar-cast").click();
+    await page.getByTestId("selection-toolbar-cast").click({ force: true });
 
     await expect(
       page.locator('[data-cat="cast"]').filter({ hasText: "Filippo" }).first(),
