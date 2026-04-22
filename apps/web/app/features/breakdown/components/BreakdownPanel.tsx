@@ -87,6 +87,14 @@ export function BreakdownPanel({
         )}
       </div>
 
+      {suggest.isError && canEdit && (
+        <p className={styles.error} role="alert">
+          {suggest.error instanceof Error
+            ? suggest.error.message
+            : "Cesare non è disponibile in questo momento."}
+        </p>
+      )}
+
       {pending.length > 0 && canEdit && (
         <CesareSuggestionBanner
           pendingCount={pending.length}

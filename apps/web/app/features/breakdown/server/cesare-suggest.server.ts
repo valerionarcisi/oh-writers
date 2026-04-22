@@ -114,16 +114,24 @@ export const suggestBreakdownForScene = createServerFn({ method: "POST" })
   );
 
 const callCesare = async (sceneText: string): Promise<CesareSuggestion[]> => {
+  // Fail fast with a readable message when the key is missing — otherwise the
+  // SDK throws an opaque "Could not resolve authentication method" deep in the
+  // call stack. Set MOCK_AI=true in dev if you don't want to call the API.
+  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  if (!apiKey || apiKey.length === 0) {
+    throw new Error(
+      "ANTHROPIC_API_KEY non configurata. Imposta la chiave in apps/web/.env oppure MOCK_AI=true.",
+    );
+  }
   // Real Anthropic call. Lazy-imported via string identifier so the SDK stays
   // optional in environments that only run with MOCK_AI=true (CI, local dev
-  // without a key). When MOCK_AI is unset and the SDK is missing, this throws
-  // at runtime — that's intentional, it surfaces a clear setup error.
+  // without a key).
   const sdkModule = "@anthropic-ai/sdk";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sdk: any = await import(/* @vite-ignore */ sdkModule);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Anthropic = (sdk.default ?? sdk) as any;
-  const client = new Anthropic({ apiKey: process.env["ANTHROPIC_API_KEY"]! });
+  const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 1024,

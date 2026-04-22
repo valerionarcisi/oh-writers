@@ -80,3 +80,13 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+.error {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--color-danger-bg, rgba(220, 38, 38, 0.08));
+  color: var(--color-danger, #dc2626);
+  border: 1px solid var(--color-danger, #dc2626);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
