@@ -3,7 +3,10 @@ import { Dialog } from "@oh-writers/ui";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
+  CAST_TIER_ORDER,
+  CAST_TIER_META,
   type BreakdownCategory,
+  type CastTier,
 } from "@oh-writers/domain";
 import { useAddBreakdownElement } from "../hooks/useBreakdown";
 import styles from "./AddElementModal.module.css";
@@ -16,6 +19,9 @@ interface Props {
   sceneId: string;
 }
 
+const DEFAULT_CATEGORY: BreakdownCategory = "cast";
+const DEFAULT_CAST_TIER: CastTier = "principal";
+
 export function AddElementModal({
   isOpen,
   onClose,
@@ -24,13 +30,15 @@ export function AddElementModal({
   sceneId,
 }: Props) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<BreakdownCategory>("props");
+  const [category, setCategory] = useState<BreakdownCategory>(DEFAULT_CATEGORY);
+  const [castTier, setCastTier] = useState<CastTier>(DEFAULT_CAST_TIER);
   const [quantity, setQuantity] = useState<number>(1);
   const add = useAddBreakdownElement(projectId, versionId);
 
   const reset = () => {
     setName("");
-    setCategory("props");
+    setCategory(DEFAULT_CATEGORY);
+    setCastTier(DEFAULT_CAST_TIER);
     setQuantity(1);
   };
 
@@ -43,6 +51,7 @@ export function AddElementModal({
         projectId,
         category,
         name: trimmed,
+        castTier: category === "cast" ? castTier : null,
         occurrence: {
           sceneId,
           screenplayVersionId: versionId,
@@ -112,6 +121,23 @@ export function AddElementModal({
             ))}
           </select>
         </label>
+        {category === "cast" && (
+          <label className={styles.field}>
+            <span className={styles.label}>Tier</span>
+            <select
+              className={styles.input}
+              data-testid="add-element-cast-tier"
+              value={castTier}
+              onChange={(e) => setCastTier(e.target.value as CastTier)}
+            >
+              {CAST_TIER_ORDER.map((t) => (
+                <option key={t} value={t}>
+                  {CAST_TIER_META[t].labelIt} · {CAST_TIER_META[t].labelEn}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className={styles.field}>
           <span className={styles.label}>Quantità</span>
           <input

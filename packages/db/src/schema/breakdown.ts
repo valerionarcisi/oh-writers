@@ -33,6 +33,14 @@ export type BreakdownCategoryDb = (typeof BREAKDOWN_CATEGORIES)[number];
 export const CESARE_STATUSES = ["pending", "accepted", "ignored"] as const;
 export type CesareStatusDb = (typeof CESARE_STATUSES)[number];
 
+export const CAST_TIERS_DB = [
+  "principal",
+  "supporting",
+  "day_player",
+  "featured_extra",
+] as const;
+export type CastTierDb = (typeof CAST_TIERS_DB)[number];
+
 export const breakdownElements = pgTable(
   "breakdown_elements",
   {
@@ -43,6 +51,7 @@ export const breakdownElements = pgTable(
     category: text("category", { enum: BREAKDOWN_CATEGORIES }).notNull(),
     name: text("name").notNull(),
     description: text("description"),
+    castTier: text("cast_tier", { enum: CAST_TIERS_DB }),
     archivedAt: timestamp("archived_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

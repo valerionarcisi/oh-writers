@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { BREAKDOWN_CATEGORIES } from "./categories.js";
+import { CAST_TIERS } from "./cast-tiers.js";
 
 export const BreakdownCategorySchema = z.enum(BREAKDOWN_CATEGORIES);
 export const CesareStatusSchema = z.enum(["pending", "accepted", "ignored"]);
+export const CastTierSchema = z.enum(CAST_TIERS);
 
 export const BreakdownElementSchema = z.object({
   id: z.string().uuid(),
@@ -10,6 +12,7 @@ export const BreakdownElementSchema = z.object({
   category: BreakdownCategorySchema,
   name: z.string().min(1).max(200),
   description: z.string().nullable(),
+  castTier: CastTierSchema.nullable(),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

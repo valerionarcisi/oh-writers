@@ -12,6 +12,7 @@ import {
   BreakdownCategorySchema,
   BreakdownElementSchema,
   BreakdownOccurrenceSchema,
+  CastTierSchema,
   CesareStatusSchema,
   type BreakdownElement,
 } from "@oh-writers/domain";
@@ -322,20 +323,26 @@ export const getStaleScenes = createServerFn({ method: "GET" })
 
 // ─── addBreakdownElement (manual add + optional occurrence) ──────────────────
 
-const AddElementInputSchema = z.object({
-  projectId: z.string().uuid(),
-  category: BreakdownCategorySchema,
-  name: z.string().min(1).max(200),
-  description: z.string().nullable().optional(),
-  occurrence: z
-    .object({
-      sceneId: z.string().uuid(),
-      screenplayVersionId: z.string().uuid(),
-      quantity: z.number().int().positive().default(1),
-      note: z.string().nullable().optional(),
-    })
-    .optional(),
-});
+const AddElementInputSchema = z
+  .object({
+    projectId: z.string().uuid(),
+    category: BreakdownCategorySchema,
+    name: z.string().min(1).max(200),
+    description: z.string().nullable().optional(),
+    castTier: CastTierSchema.nullable().optional(),
+    occurrence: z
+      .object({
+        sceneId: z.string().uuid(),
+        screenplayVersionId: z.string().uuid(),
+        quantity: z.number().int().positive().default(1),
+        note: z.string().nullable().optional(),
+      })
+      .optional(),
+  })
+  .refine((input) => input.castTier == null || input.category === "cast", {
+    message: "castTier può essere impostato solo su elementi di categoria cast",
+    path: ["castTier"],
+  });
 
 export const addBreakdownElement = createServerFn({ method: "POST" })
   .validator(AddElementInputSchema)
@@ -367,6 +374,7 @@ export const addBreakdownElement = createServerFn({ method: "POST" })
             category: data.category,
             name: data.name,
             description: data.description ?? null,
+            castTier: data.castTier ?? null,
           })
           .onConflictDoUpdate({
             target: [
@@ -374,7 +382,11 @@ export const addBreakdownElement = createServerFn({ method: "POST" })
               breakdownElements.category,
               breakdownElements.name,
             ],
-            set: { updatedAt: new Date(), archivedAt: null },
+            set: {
+              updatedAt: new Date(),
+              archivedAt: null,
+              ...(data.castTier !== undefined && { castTier: data.castTier }),
+            },
           })
           .returning(),
         (e) => new DbError("addBreakdownElement/upsert", e),
@@ -439,6 +451,7 @@ export const updateBreakdownElement = createServerFn({ method: "POST" })
       patch: z.object({
         name: z.string().min(1).max(200).optional(),
         description: z.string().nullable().optional(),
+        castTier: CastTierSchema.nullable().optional(),
       }),
     }),
   )
@@ -481,6 +494,9 @@ export const updateBreakdownElement = createServerFn({ method: "POST" })
             ...(data.patch.name !== undefined && { name: data.patch.name }),
             ...(data.patch.description !== undefined && {
               description: data.patch.description,
+            }),
+            ...(data.patch.castTier !== undefined && {
+              castTier: data.patch.castTier,
             }),
             updatedAt: new Date(),
           })
