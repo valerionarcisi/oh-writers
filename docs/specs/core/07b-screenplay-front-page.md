@@ -1,6 +1,6 @@
 # Spec 07b — Screenplay Front Page (standalone PM editor)
 
-**Status:** active. **Supersedes:** [07](07-title-page-legacy.md), [14](14-title-page.md).
+**Status:** active. **Supersedes:** [07](07-title-page-legacy.md), [14](14-title-page.md). **Sub-specs:** [07c — PDF import Pass 0](07c-titlepage-import-pdf-pass0.md) (extracts the front page from imported PDFs and feeds it into the same PM doc defined here).
 **Design history:** initial draft was a route-form; second draft was page-zero inline in the screenplay editor; **current (2026-04-18c)** is a standalone PM editor page that mirrors the printed front page 1-to-1.
 
 ## Goal

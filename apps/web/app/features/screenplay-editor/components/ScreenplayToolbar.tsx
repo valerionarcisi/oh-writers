@@ -4,6 +4,7 @@ import { SaveIndicator } from "./SaveIndicator";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { DraftMetaBadge } from "~/features/projects";
 import type { ElementType } from "../lib/fountain-element-detector";
+import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import styles from "./ScreenplayToolbar.module.css";
 
 interface ScreenplayToolbarProps {
@@ -41,6 +42,9 @@ interface ScreenplayToolbarProps {
    *  the screenplay has no content. */
   onOpenExportPdf?: () => void;
   isExportingPdf?: boolean;
+  /** Forwarded to ToolbarMenu → useImportPdf so the parent can react when
+   *  Pass 0 of the PDF import detects a title page. */
+  onTitlePageDetected?: (doc: TitlePageDocJSON) => void;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -95,6 +99,7 @@ export function ScreenplayToolbar({
   isOwner,
   onOpenExportPdf,
   isExportingPdf = false,
+  onTitlePageDetected,
 }: ScreenplayToolbarProps) {
   const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   return (
@@ -177,6 +182,7 @@ export function ScreenplayToolbar({
               : undefined
           }
           isOwner={isOwner}
+          onTitlePageDetected={onTitlePageDetected}
         />
       </div>
       {resequenceConfirmOpen && onResequenceAll ? (

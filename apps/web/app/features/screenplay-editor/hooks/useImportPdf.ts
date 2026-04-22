@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { importPdf } from "../server/pdf-import.server";
 import type { ImportPdfError } from "../pdf-import.errors";
+import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import { dispatchSceneNumberToast } from "../lib/plugins/scene-number-commands";
 
 // Count the `#...#` forced-scene-number markers in the imported Fountain.
@@ -21,7 +22,7 @@ const announceImport = (fountain: string): void => {
 
 type Status =
   | { type: "idle" }
-  | { type: "confirm"; fountain: string }
+  | { type: "confirm"; fountain: string; titlePageDoc: TitlePageDocJSON | null }
   | { type: "loading" }
   | { type: "error"; message: string };
 
@@ -31,6 +32,10 @@ interface UseImportPdfOptions {
   /** When provided and there are existing versions, the dialog offers a
    *  "save as new version then import" action in addition to plain overwrite. */
   onCreateVersionThenImport?: (fountain: string) => void;
+  /** Fires whenever Pass 0 detected a title page in the imported PDF. Callers
+   *  decide whether to apply it (potentially showing their own confirm dialog
+   *  when the project already has a non-empty front page). */
+  onTitlePageDetected?: (doc: TitlePageDocJSON) => void;
 }
 
 interface UseImportPdfResult {
@@ -73,6 +78,7 @@ export function useImportPdf({
   hasExistingContent,
   onImport,
   onCreateVersionThenImport,
+  onTitlePageDetected,
 }: UseImportPdfOptions): UseImportPdfResult {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState<Status>({ type: "idle" });
@@ -104,11 +110,14 @@ export function useImportPdf({
       return;
     }
 
+    const { fountain, titlePageDoc } = result.value;
+
     if (hasExistingContent) {
-      setStatus({ type: "confirm", fountain: result.value });
+      setStatus({ type: "confirm", fountain, titlePageDoc });
     } else {
-      onImport(result.value);
-      announceImport(result.value);
+      onImport(fountain);
+      announceImport(fountain);
+      if (titlePageDoc) onTitlePageDetected?.(titlePageDoc);
       setStatus({ type: "idle" });
     }
   };
@@ -117,6 +126,7 @@ export function useImportPdf({
     if (status.type !== "confirm") return;
     onImport(status.fountain);
     announceImport(status.fountain);
+    if (status.titlePageDoc) onTitlePageDetected?.(status.titlePageDoc);
     setStatus({ type: "idle" });
   };
 
@@ -128,6 +138,7 @@ export function useImportPdf({
       onImport(status.fountain);
     }
     announceImport(status.fountain);
+    if (status.titlePageDoc) onTitlePageDetected?.(status.titlePageDoc);
     setStatus({ type: "idle" });
   };
 

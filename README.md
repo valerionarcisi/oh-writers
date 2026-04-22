@@ -117,6 +117,7 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/05j — Screenplay export** (Fountain → industry-standard PDF via afterwriting, opt-in cover page, preview tab)
 - **core/10 — Scene Breakdown** (cast/props/locations/VFX/vehicles/extras/sound/wardrobe/SPFX/stunts/animals/makeup/set-dressing/notes per scene + per project, Cesare ghost suggestions with rate-limit, PDF/CSV export, version-aware with 3-tier stale awareness, auto-clone on new screenplay version)
 - **core/10c — Inline scene tagging in middle column** (read-only ProseMirror reader of the full screenplay in the breakdown center column, inline highlight per category, ghost dashed underline for pending Cesare suggestions, floating selection toolbar with 14 categories, TOC scroll-to-scene)
+- **core/07c — PDF import Pass 0 (title-page extraction)** (closes the residual MVP work on 07b: imported PDFs now feed both the screenplay body AND the front page; silent apply when front page is empty, "replace?" confirm via DS `<Dialog>` otherwise; OHW-FP30/31/32 verdi)
 
 ### MVP — the minimum viable pilot product
 
@@ -124,7 +125,6 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 
 **Core platform**
 
-- **core/07b — Screenplay front page** (editor route shipped da spec 14, renderer export shipped da 05j; resta solo il parser import PDF Pass 0 per estrarre la title page dai PDF importati)
 - **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
 - **core/11 — Budget** (line items from breakdown, totals — no AI risk prediction yet)
 - **core/12 — Shooting schedule** with **one country template (Italy)** — working days, holidays, night shifts, minimum rest

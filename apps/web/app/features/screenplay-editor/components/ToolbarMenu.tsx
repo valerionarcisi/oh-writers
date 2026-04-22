@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMenuPopover } from "../hooks/useMenuPopover";
 import { useImportPdf } from "../hooks/useImportPdf";
+import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import styles from "./ToolbarMenu.module.css";
 
 interface ToolbarMenuProps {
@@ -20,6 +21,9 @@ interface ToolbarMenuProps {
   /** True when the signed-in user owns this project. Gates the Frontespizio
    *  entry, which is Owner-only per spec 07b. */
   isOwner: boolean;
+  /** Fires when Pass 0 of the PDF import detected a title page. The parent
+   *  decides whether to apply it (potentially showing a replace-confirm). */
+  onTitlePageDetected?: (doc: TitlePageDocJSON) => void;
 }
 
 /**
@@ -42,6 +46,7 @@ export function ToolbarMenu({
   currentVersionLabel = null,
   onResequenceAll,
   isOwner,
+  onTitlePageDetected,
 }: ToolbarMenuProps) {
   const navigate = useNavigate();
   const openTitlePage = () =>
@@ -54,6 +59,7 @@ export function ToolbarMenu({
     hasExistingContent: hasContent,
     onImport,
     onCreateVersionThenImport,
+    onTitlePageDetected,
   });
 
   const runAndClose = (fn: () => void) => () => {

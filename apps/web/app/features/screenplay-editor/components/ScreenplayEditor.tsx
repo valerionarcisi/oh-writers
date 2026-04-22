@@ -19,6 +19,12 @@ import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
+import {
+  useTitlePageState,
+  useUpdateTitlePageState,
+} from "~/features/projects";
+import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
+import { ImportedTitlePageConfirm } from "./ImportedTitlePageConfirm";
 import { SceneNumberConflictModal } from "./SceneNumberConflictModal";
 import type { ConflictChoice } from "./SceneNumberConflictModal";
 import {
@@ -118,6 +124,48 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       );
     },
     [createVersion, screenplay.id, nextVersionLabel],
+  );
+
+  // Pass 0 of PDF import (Spec 07c): when the imported PDF carries a title
+  // page and the project's front page is empty we apply it transparently;
+  // when the project already has one the user must confirm the overwrite.
+  const titlePageQ = useTitlePageState(screenplay.projectId);
+  const updateTitlePage = useUpdateTitlePageState();
+  const [pendingTitlePage, setPendingTitlePage] =
+    useState<TitlePageDocJSON | null>(null);
+
+  const isExistingTitlePageEmpty = (() => {
+    const v = titlePageQ.data;
+    if (!v || !v.isOk) return true;
+    return v.value.state.doc === null;
+  })();
+
+  const applyImportedTitlePage = useCallback(
+    (doc: TitlePageDocJSON) => {
+      const current = titlePageQ.data?.isOk
+        ? titlePageQ.data.value.state
+        : null;
+      updateTitlePage.mutate({
+        projectId: screenplay.projectId,
+        state: {
+          doc: doc as unknown as Record<string, NonNullable<unknown>>,
+          draftDate: current?.draftDate ?? null,
+          draftColor: current?.draftColor ?? null,
+        },
+      });
+    },
+    [updateTitlePage, screenplay.projectId, titlePageQ.data],
+  );
+
+  const handleTitlePageDetected = useCallback(
+    (doc: TitlePageDocJSON) => {
+      if (isExistingTitlePageEmpty) {
+        applyImportedTitlePage(doc);
+      } else {
+        setPendingTitlePage(doc);
+      }
+    },
+    [applyImportedTitlePage, isExistingTitlePageEmpty],
   );
 
   const handleSetElement = useCallback((el: ElementType) => {
@@ -353,6 +401,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onSetElement={handleSetElement}
           onToggleFocusMode={() => setFocusMode((prev) => !prev)}
           onImport={setContent}
+          onTitlePageDetected={handleTitlePageDetected}
           nextVersionLabel={nextVersionLabel}
           onCreateVersionThenImport={
             nextVersionLabel ? handleCreateVersionThenImport : undefined
@@ -444,6 +493,15 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           current={conflict.current}
           proposed={conflict.proposed}
           onResolve={onConflictChoice}
+        />
+      ) : null}
+      {pendingTitlePage ? (
+        <ImportedTitlePageConfirm
+          onConfirm={() => {
+            applyImportedTitlePage(pendingTitlePage);
+            setPendingTitlePage(null);
+          }}
+          onCancel={() => setPendingTitlePage(null)}
         />
       ) : null}
       {toast ? (
