@@ -30,3 +30,7 @@ export type {
 } from "./components/DropdownMenu";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";
+export { Progress } from "./components/Progress";
+export type { ProgressProps } from "./components/Progress";
+export { StreamingProgressBanner } from "./components/StreamingProgressBanner";
+export type { StreamingProgressBannerProps } from "./components/StreamingProgressBanner";

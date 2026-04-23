@@ -1,0 +1,44 @@
+.progress {
+  display: block;
+  inline-size: 100%;
+  block-size: var(--space-1);
+  background: var(--color-surface);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.bar {
+  display: block;
+  block-size: 100%;
+  background: var(--color-accent);
+  border-radius: inherit;
+  inline-size: 0;
+  transition: inline-size 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}
+
+.indeterminate .bar {
+  inline-size: 30%;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate .bar {
+    animation: none;
+    inline-size: 100%;
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}

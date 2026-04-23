@@ -120,6 +120,18 @@ export const breakdownSceneState = pgTable(
   ],
 );
 
+export const breakdownVersionState = pgTable("breakdown_version_state", {
+  versionId: uuid("version_id")
+    .primaryKey()
+    .references(() => screenplayVersions.id, { onDelete: "cascade" }),
+  lastFullSpoglioRunAt: timestamp("last_full_spoglio_run_at"),
+  modelUsed: text("model_used"),
+  scenesTotal: integer("scenes_total"),
+  scenesDone: integer("scenes_done").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const breakdownRateLimits = pgTable(
   "breakdown_rate_limits",
   {
@@ -143,3 +155,6 @@ export type BreakdownSceneState = typeof breakdownSceneState.$inferSelect;
 export type NewBreakdownSceneState = typeof breakdownSceneState.$inferInsert;
 export type BreakdownRateLimit = typeof breakdownRateLimits.$inferSelect;
 export type NewBreakdownRateLimit = typeof breakdownRateLimits.$inferInsert;
+export type BreakdownVersionState = typeof breakdownVersionState.$inferSelect;
+export type NewBreakdownVersionState =
+  typeof breakdownVersionState.$inferInsert;

@@ -25,3 +25,19 @@ export class BreakdownRateLimitedError {
     this.message = `Rate limited; retry in ${Math.ceil(retryAfterMs / 1000)}s`;
   }
 }
+
+export class BreakdownVersionNotFoundError {
+  readonly _tag = "BreakdownVersionNotFoundError" as const;
+  readonly message: string;
+  constructor(readonly versionId: string) {
+    this.message = `Screenplay version not found: ${versionId}`;
+  }
+}
+
+export class LlmSpoglioFailedError {
+  readonly _tag = "LlmSpoglioFailedError" as const;
+  readonly message: string;
+  constructor(readonly cause: string) {
+    this.message = `LLM spoglio failed: ${cause}`;
+  }
+}
