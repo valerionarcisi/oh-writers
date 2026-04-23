@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { ResultAsync, err } from "neverthrow";
 import {
   breakdownElements,
@@ -159,6 +159,18 @@ const callCesare = async (sceneText: string): Promise<CesareSuggestion[]> => {
   return parsed.success ? parsed.data.suggestions : [];
 };
 
+/**
+ * Persist Cesare suggestions inside a single transaction so a race with
+ * auto-spoglio (Spec 10e — runs on BreakdownPage mount, writes the same
+ * three tables) can't half-finish and leave us with a 23505 unique-violation
+ * mid-loop. The occurrence insert uses `onConflictDoNothing` for the same
+ * reason: if auto-spoglio (or a double-click) already inserted the same
+ * (element, version, scene) tuple between our `findFirst` check and our
+ * insert, we want to swallow the duplicate, not blow up the whole batch.
+ *
+ * `newPending` only counts rows we actually inserted — the conflict path
+ * leaves `inserted` empty, which we treat as "already there, skip".
+ */
 const persistSuggestions = (
   db: Db,
   params: {
@@ -170,10 +182,10 @@ const persistSuggestions = (
   },
 ): ResultAsync<SuggestResult, DbError> =>
   ResultAsync.fromPromise(
-    (async () => {
+    db.transaction(async (tx) => {
       let newPending = 0;
       for (const s of params.suggestions) {
-        const [el] = await db
+        const [el] = await tx
           .insert(breakdownElements)
           .values({
             projectId: params.projectId,
@@ -191,29 +203,28 @@ const persistSuggestions = (
           })
           .returning();
         if (!el) continue;
-        const existing = await db.query.breakdownOccurrences.findFirst({
-          where: and(
-            eq(breakdownOccurrences.elementId, el.id),
-            eq(
+        const inserted = await tx
+          .insert(breakdownOccurrences)
+          .values({
+            elementId: el.id,
+            screenplayVersionId: params.screenplayVersionId,
+            sceneId: params.sceneId,
+            quantity: s.quantity,
+            cesareStatus: "pending",
+          })
+          .onConflictDoNothing({
+            target: [
+              breakdownOccurrences.elementId,
               breakdownOccurrences.screenplayVersionId,
-              params.screenplayVersionId,
-            ),
-            eq(breakdownOccurrences.sceneId, params.sceneId),
-          ),
-        });
-        if (existing) continue;
-        await db.insert(breakdownOccurrences).values({
-          elementId: el.id,
-          screenplayVersionId: params.screenplayVersionId,
-          sceneId: params.sceneId,
-          quantity: s.quantity,
-          cesareStatus: "pending",
-        });
-        newPending++;
+              breakdownOccurrences.sceneId,
+            ],
+          })
+          .returning();
+        if (inserted.length > 0) newPending++;
       }
       const hash = hashSceneText(params.sceneText);
       const now = new Date();
-      await db
+      await tx
         .insert(breakdownSceneState)
         .values({
           sceneId: params.sceneId,
@@ -229,6 +240,6 @@ const persistSuggestions = (
           set: { textHash: hash, lastCesareRunAt: now },
         });
       return { newPending, totalSuggested: params.suggestions.length };
-    })(),
+    }),
     (e) => new DbError("suggest/persist", e),
   );
