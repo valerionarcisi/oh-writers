@@ -277,6 +277,7 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never add AI signatures** to commits (`Co-Authored-By: Claude` or similar)
 - **Never import browser-only or Monaco APIs** inside `packages/domain`, `packages/utils`, or any other shared package — those must stay framework-agnostic so the future mobile companion can consume them
 - **Never hard-couple auth to cookies** — Better Auth must remain able to issue bearer tokens for mobile clients
+- **Never write code in Italian** — every identifier (variables, functions, types, files), every comment, every log message, every internal error message MUST be in English. UI copy shown to the user is Italian (the product is IT-localised); everything else is English. A function named `caricaSceneggiatura` or a comment `// gestisce errore` is a hard NO. This rule is non-negotiable so that future contributors, AI tooling, and English-speaking collaborators can read the codebase.
 
 ---
 
