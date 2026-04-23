@@ -4,10 +4,10 @@ import { buildExportPipeline } from "./export-pipeline.js";
 const FOUNTAIN = `Title: Test\n\nINT. UNO - GIORNO\n\nx\n\nEXT. DUE - SERA\n\ny\n\nINT. TRE - NOTTE\n\nz\n`;
 
 describe("buildExportPipeline", () => {
-  it("standard returns the input fountain unchanged + no overrides", () => {
+  it("standard returns the input fountain unchanged + scene numbers on both sides", () => {
     const r = buildExportPipeline("standard", { fountain: FOUNTAIN });
     expect(r.fountain).toBe(FOUNTAIN);
-    expect(r.invocation.cliSettings).toEqual([]);
+    expect(r.invocation.cliSettings).toContain("scenes_numbers=both");
     expect(r.invocation.profileOverrides).toEqual({});
   });
 
@@ -30,11 +30,16 @@ describe("buildExportPipeline", () => {
     expect(r.fountain).toBe("");
   });
 
-  it("ad_copy widens the right margin via profile overrides", () => {
+  it("ad_copy shrinks token-type max widths to free a wide right gutter", () => {
     const r = buildExportPipeline("ad_copy", { fountain: FOUNTAIN });
     expect(r.fountain).toBe(FOUNTAIN);
-    expect(r.invocation.profileOverrides.a4?.right_margin).toBe(2.5);
-    expect(r.invocation.profileOverrides.usletter?.right_margin).toBe(2.5);
+    const a4 = r.invocation.profileOverrides.a4;
+    expect(a4).toBeDefined();
+    // Default action.max on A4 is 58 — AD copy must wrap notably earlier.
+    const action = a4?.action as { max: number } | undefined;
+    expect(action?.max).toBeLessThanOrEqual(40);
+    const dialogue = a4?.dialogue as { max: number } | undefined;
+    expect(dialogue?.max).toBeLessThanOrEqual(30);
     expect(r.invocation.cliSettings).toContain("scenes_numbers=both");
   });
 

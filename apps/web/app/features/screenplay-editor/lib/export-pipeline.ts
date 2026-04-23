@@ -18,16 +18,28 @@ import {
   extractScenesFromFountain,
 } from "@oh-writers/domain";
 
+/**
+ * Value accepted under each profile key. Either a scalar override
+ * (e.g. `line_spacing: 2`) or a nested per-token-type config that the runner
+ * shallow-merges into the existing object (e.g. `action: { max: 40 }` keeps
+ * the default `feed`/`color`/etc. while overriding only `max`).
+ */
+export type ProfileOverrideValue =
+  | number
+  | boolean
+  | string
+  | Readonly<Record<string, number | boolean | string>>;
+
 export interface AwcInvocation {
   /** `key=value` pairs passed to afterwriting via `--setting`. */
   readonly cliSettings: readonly string[];
   /**
    * Patched into the relevant `print_profile` object in-process by the
    * runner BEFORE Bootstrap.init. Keys are profile names (`a4`/`usletter`),
-   * values are partial print-profile fields.
+   * values are partial print-profile fields (scalar or per-type-config).
    */
   readonly profileOverrides: Readonly<
-    Record<string, Readonly<Record<string, number | boolean | string>>>
+    Record<string, Readonly<Record<string, ProfileOverrideValue>>>
   >;
 }
 
@@ -41,8 +53,12 @@ export interface PipelineResult {
   readonly invocation: AwcInvocation;
 }
 
-const NO_PATCH: AwcInvocation = {
-  cliSettings: [],
+/**
+ * Standard production format. Industry default = scene numbers visible on
+ * BOTH sides of every slugline (afterwriting's built-in default is "none").
+ */
+const STANDARD_INVOCATION: AwcInvocation = {
+  cliSettings: ["scenes_numbers=both"],
   profileOverrides: {},
 };
 
@@ -59,13 +75,41 @@ const READING_COPY_INVOCATION: AwcInvocation = {
   },
 };
 
+/**
+ * AD copy = traditional "1st AD" working copy with a wide right margin for
+ * handwritten timing notes. afterwriting's `right_margin` is only used for
+ * centered/divider rendering, NOT for action/dialogue wrap — so we instead
+ * shrink each token-type's `max` (character count) to push body text to the
+ * left and free ~1.5" of right gutter on A4. The shallow-merge in the
+ * runner preserves the default `feed`/`italic`/etc.
+ */
 const AD_COPY_INVOCATION: AwcInvocation = {
   cliSettings: ["scenes_numbers=both"],
   profileOverrides: {
-    // ~2.5 inch right margin (default is 1) — the dialogue column stays
-    // put because dialogue feed is anchored to the left margin.
-    a4: { right_margin: 2.5 },
-    usletter: { right_margin: 2.5 },
+    a4: {
+      scene_heading: { max: 36 },
+      action: { max: 36 },
+      shot: { max: 36 },
+      character: { max: 24 },
+      dialogue: { max: 26 },
+      parenthetical: { max: 20 },
+      transition: { max: 36 },
+      synopsis: { max: 36 },
+      section: { max: 36 },
+      centered: { max: 36 },
+    },
+    usletter: {
+      scene_heading: { max: 38 },
+      action: { max: 38 },
+      shot: { max: 38 },
+      character: { max: 24 },
+      dialogue: { max: 26 },
+      parenthetical: { max: 20 },
+      transition: { max: 38 },
+      synopsis: { max: 38 },
+      section: { max: 38 },
+      centered: { max: 38 },
+    },
   },
 };
 
@@ -87,7 +131,7 @@ export const buildExportPipeline = (
 ): PipelineResult => {
   switch (format) {
     case "standard":
-      return { fountain: input.fountain, invocation: NO_PATCH };
+      return { fountain: input.fountain, invocation: STANDARD_INVOCATION };
     case "sides": {
       const selection = input.sceneSelection ?? [];
       const sliced = extractScenesFromFountain(input.fountain, selection);

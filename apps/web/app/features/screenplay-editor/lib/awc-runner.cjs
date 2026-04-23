@@ -43,10 +43,34 @@ require.config({
 // --- Apply profile-level overrides BEFORE Bootstrap reads them ---
 // Allow-list keeps the env-var contract narrow: only fields that Spec 05k
 // actually needs can be patched, even if a future caller passes more.
+//
+// Two shapes are supported:
+//   1. Scalar profile keys (line_spacing, lines_per_page, etc.) — assigned
+//      directly onto the print-profile object.
+//   2. Per-token-type configs (action, dialogue, character, …) — shallow-
+//      merged into the existing nested object so we keep `feed`/`italic`
+//      defaults while overriding `max` (which actually drives wrap width;
+//      `right_margin` only affects centered/divider rendering).
 const ALLOWED_PROFILE_KEYS = new Set([
   "right_margin",
+  "left_margin",
+  "top_margin",
   "line_spacing",
   "lines_per_page",
+  "font_size",
+]);
+
+const ALLOWED_TYPE_KEYS = new Set([
+  "scene_heading",
+  "action",
+  "shot",
+  "character",
+  "dialogue",
+  "parenthetical",
+  "transition",
+  "centered",
+  "synopsis",
+  "section",
 ]);
 
 try {
@@ -59,8 +83,23 @@ try {
       if (!target) continue;
       const patch = overrides[profileName];
       for (const key of Object.keys(patch)) {
-        if (!ALLOWED_PROFILE_KEYS.has(key)) continue;
-        target[key] = patch[key];
+        const value = patch[key];
+        if (
+          ALLOWED_TYPE_KEYS.has(key) &&
+          value &&
+          typeof value === "object" &&
+          target[key] &&
+          typeof target[key] === "object"
+        ) {
+          // Replace with a fresh merged object so the override never mutates
+          // the shared in-process default — keeps the runner safe to call
+          // twice in the same Node process if it's ever loaded as a library.
+          target[key] = { ...target[key], ...value };
+          continue;
+        }
+        if (ALLOWED_PROFILE_KEYS.has(key)) {
+          target[key] = value;
+        }
       }
     }
   }

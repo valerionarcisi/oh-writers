@@ -10,6 +10,11 @@ import {
 import { createPortal } from "react-dom";
 import styles from "./DropdownMenu.module.css";
 
+/** Minimum gap kept between the menu and the viewport edge. */
+const VIEWPORT_MARGIN = 8;
+/** Vertical gap between the trigger and the menu. */
+const MENU_OFFSET = 4;
+
 export interface DropdownMenuItem {
   label: string;
   description?: string;
@@ -45,18 +50,59 @@ export function DropdownMenu({
     null,
   );
   const triggerRef = useRef<HTMLSpanElement | null>(null);
-  const menuRef = useRef<HTMLUListElement>(null);
+  const menuRef = useRef<HTMLUListElement | null>(null);
   const menuId = useId();
 
   const close = useCallback(() => setOpen(false), []);
 
+  /**
+   * Place the menu under the trigger, clamping to the viewport so it never
+   * overflows. Flips to above the trigger if there isn't enough room below.
+   * Reads from `triggerRef` and `menuRef`; returns early if either is unset.
+   */
+  const reposition = useCallback(() => {
+    if (!triggerRef.current || !menuRef.current) return;
+    const trigger = triggerRef.current.getBoundingClientRect();
+    const menu = menuRef.current.getBoundingClientRect();
+
+    const desiredLeft =
+      align === "end" ? trigger.right - menu.width : trigger.left;
+    const left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(desiredLeft, window.innerWidth - menu.width - VIEWPORT_MARGIN),
+    );
+
+    let top = trigger.bottom + MENU_OFFSET;
+    const overflowsBottom =
+      top + menu.height > window.innerHeight - VIEWPORT_MARGIN;
+    if (overflowsBottom) {
+      const flipped = trigger.top - menu.height - MENU_OFFSET;
+      top = flipped >= VIEWPORT_MARGIN ? flipped : VIEWPORT_MARGIN;
+    }
+
+    setCoords({ top, left });
+  }, [align]);
+
+  /**
+   * The menu is rendered every render while open (initially off-screen so
+   * it can be measured), then `reposition` runs in a layout effect and on
+   * window resize. Without the off-screen first paint we'd anchor against a
+   * 0-width menu and slide off the right edge with `align="end"`.
+   */
   useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const menuWidth = menuRef.current?.offsetWidth ?? 0;
-    const left = align === "end" ? rect.right - menuWidth : rect.left;
-    setCoords({ top: rect.bottom + 4, left });
-  }, [open, align]);
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    reposition();
+    const onResize = () => reposition();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+    };
+  }, [open, reposition]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,14 +135,18 @@ export function DropdownMenu({
       >
         {trigger}
       </span>
-      {open && typeof document !== "undefined" && coords
+      {open && typeof document !== "undefined"
         ? createPortal(
             <ul
               ref={menuRef}
               id={menuId}
               role="menu"
               className={styles.menu}
-              style={{ top: coords.top, left: coords.left }}
+              style={
+                coords
+                  ? { top: coords.top, left: coords.left }
+                  : { top: -9999, left: -9999, visibility: "hidden" }
+              }
               data-testid={rest["data-testid"]}
             >
               {items.map((item) => (
