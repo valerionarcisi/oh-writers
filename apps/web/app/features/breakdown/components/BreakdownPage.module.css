@@ -66,3 +66,40 @@
   padding: var(--space-4);
   color: var(--color-text-muted);
 }
+
+/* Spec 10e — banner shown while the auto-spoglio is running on first mount. */
+.autoSpoglioBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-block-end: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.autoSpoglioBanner::before {
+  content: "";
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: autoSpoglioPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes autoSpoglioPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .autoSpoglioBanner::before {
+    animation: none;
+  }
+}

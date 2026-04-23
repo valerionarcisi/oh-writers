@@ -10,6 +10,7 @@ export const BREAKDOWN_CATEGORIES = [
   "vfx",
   "sound",
   "animals",
+  "atmosphere",
   "set_dress",
   "equipment",
   "locations",
@@ -102,6 +103,13 @@ export const CATEGORY_META: Record<BreakdownCategory, CategoryMeta> = {
     labelEn: "Animals",
     colorToken: "--cat-animals",
     icon: "A",
+  },
+  atmosphere: {
+    id: "atmosphere",
+    labelIt: "Atmosfera",
+    labelEn: "Atmosphere",
+    colorToken: "--cat-atmosphere",
+    icon: "ATM",
   },
   set_dress: {
     id: "set_dress",

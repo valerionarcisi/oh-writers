@@ -15,6 +15,7 @@ import {
   setOccurrenceStatus,
 } from "../server/breakdown.server";
 import { suggestBreakdownForScene } from "../server/cesare-suggest.server";
+import { runAutoSpoglioForVersion } from "../server/auto-spoglio.server";
 import {
   exportBreakdownPdf,
   exportBreakdownCsv,
@@ -110,6 +111,27 @@ export const useSetOccurrenceStatus = (sceneId: string, versionId: string) => {
         queryKey: ["breakdown", "scene", sceneId, versionId],
       });
     },
+  });
+};
+
+/**
+ * Auto-spoglio (Spec 10e) — runs the RegEx extractors over every scene of
+ * the version. Idempotent server-side via text-hash short-circuit, so it's
+ * safe to call once per breakdown-page mount.
+ */
+export const useRunAutoSpoglio = (_projectId: string, versionId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrapResult(
+        await runAutoSpoglioForVersion({
+          data: { screenplayVersionId: versionId },
+        }),
+      ),
+    // Single broad invalidation: ["breakdown"] already covers the project
+    // breakdown query (its key starts with "breakdown"). A second invalidation
+    // would just re-fetch the same cache entries.
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
   });
 };
 

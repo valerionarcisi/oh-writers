@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Tabs } from "@oh-writers/ui";
 import { Suspense } from "react";
@@ -6,6 +6,7 @@ import {
   breakdownContextOptions,
   breakdownForSceneOptions,
   projectBreakdownOptions,
+  useRunAutoSpoglio,
 } from "../hooks/useBreakdown";
 import { SceneTOC } from "./SceneTOC";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
@@ -47,6 +48,23 @@ function BreakdownPageContent({ projectId }: ContentProps) {
   const versionId = ctx.screenplayVersionId;
   const activeScene =
     ctx.scenes.find((s) => s.id === activeSceneId) ?? ctx.scenes[0] ?? null;
+
+  // Spec 10e — run the auto-spoglio RegEx once per mount. The server
+  // short-circuits on unchanged text_hash, so a second mount is cheap.
+  // Only kicks in for editors; viewers skip (mutation requires edit access).
+  // The ref is the primary guard against StrictMode's double-invoke; the
+  // `isIdle` check is belt-and-braces against rapid remounts firing while
+  // a previous mutation is still in flight.
+  const autoSpoglio = useRunAutoSpoglio(projectId, versionId);
+  const autoSpoglioStartedRef = useRef(false);
+  useEffect(() => {
+    if (!canEdit) return;
+    if (versionId.length === 0) return;
+    if (autoSpoglioStartedRef.current) return;
+    if (!autoSpoglio.isIdle) return;
+    autoSpoglioStartedRef.current = true;
+    autoSpoglio.mutate();
+  }, [autoSpoglio, canEdit, versionId]);
 
   const scriptReaderRef = useRef<ScriptReaderHandle>(null);
 
@@ -97,6 +115,17 @@ function BreakdownPageContent({ projectId }: ContentProps) {
       </header>
 
       <VersionImportBanner projectId={projectId} versionId={versionId} />
+
+      {autoSpoglio.isPending && (
+        <div
+          className={styles.autoSpoglioBanner}
+          role="status"
+          data-testid="auto-spoglio-banner"
+        >
+          Auto-spoglio in corso… ({ctx.scenes.length}{" "}
+          {ctx.scenes.length === 1 ? "scena" : "scene"})
+        </div>
+      )}
 
       {activeTab === "per-scene" ? (
         <div className={styles.split}>

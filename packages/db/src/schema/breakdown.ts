@@ -23,6 +23,7 @@ export const BREAKDOWN_CATEGORIES = [
   "vfx",
   "sound",
   "animals",
+  "atmosphere",
   "set_dress",
   "equipment",
   "locations",
@@ -108,6 +109,7 @@ export const breakdownSceneState = pgTable(
       .references(() => scenes.id, { onDelete: "cascade" }),
     textHash: text("text_hash").notNull(),
     lastCesareRunAt: timestamp("last_cesare_run_at"),
+    lastAutoSpoglioRunAt: timestamp("last_auto_spoglio_run_at"),
     pageEighths: integer("page_eighths"),
   },
   (t) => [

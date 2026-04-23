@@ -192,6 +192,7 @@
   --cat-vfx: oklch(0.78 0.13 230); /* light blue */
   --cat-sound: oklch(0.65 0.2 25); /* red */
   --cat-animals: oklch(0.7 0.2 330); /* magenta */
+  --cat-atmosphere: oklch(0.78 0.06 220); /* pale steel-blue (rain/fog/snow) */
   --cat-set-dress: oklch(0.72 0.13 180); /* teal */
   --cat-equipment: oklch(0.55 0.1 60); /* brown */
   --cat-locations: oklch(0.7 0.05 250); /* neutral grey-blue */
@@ -208,6 +209,7 @@
   --cat-vfx-bg: oklch(from var(--cat-vfx) l c h / 0.18);
   --cat-sound-bg: oklch(from var(--cat-sound) l c h / 0.18);
   --cat-animals-bg: oklch(from var(--cat-animals) l c h / 0.18);
+  --cat-atmosphere-bg: oklch(from var(--cat-atmosphere) l c h / 0.18);
   --cat-set-dress-bg: oklch(from var(--cat-set-dress) l c h / 0.18);
   --cat-equipment-bg: oklch(from var(--cat-equipment) l c h / 0.18);
   --cat-locations-bg: oklch(from var(--cat-locations) l c h / 0.18);

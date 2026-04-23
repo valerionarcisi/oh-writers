@@ -7,8 +7,8 @@ import {
 } from "./index.js";
 
 describe("breakdown schemas", () => {
-  it("has 14 categories", () => {
-    expect(BREAKDOWN_CATEGORIES).toHaveLength(14);
+  it("has 15 categories (incl. atmosphere added in Spec 10e)", () => {
+    expect(BREAKDOWN_CATEGORIES).toHaveLength(15);
   });
 
   it("CATEGORY_META has entry for each category", () => {

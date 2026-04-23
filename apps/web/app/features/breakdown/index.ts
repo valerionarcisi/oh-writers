@@ -17,6 +17,12 @@ export {
   suggestBreakdownForScene,
   type SuggestResult,
 } from "./server/cesare-suggest.server";
+export {
+  runAutoSpoglioForScene,
+  runAutoSpoglioForVersion,
+  type AutoSpoglioResult,
+  type AutoSpoglioVersionResult,
+} from "./server/auto-spoglio.server";
 export { cloneBreakdownToVersion } from "./server/clone-version.server";
 export { exportBreakdownPdf, exportBreakdownCsv } from "./server/export.server";
 export {
