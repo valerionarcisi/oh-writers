@@ -42,4 +42,55 @@ Filì venni!
   it("returns empty array when both heading and body are empty", () => {
     expect(extractAll({ heading: "", body: "" })).toEqual([]);
   });
+
+  describe("English screenplay coverage", () => {
+    // Documents what the IT-tuned extractors actually do on English text.
+    // Cast (CAPS cues) and Locations (INT./EXT. sluglines) are
+    // language-agnostic. The Italian lemma extractors (props, vehicles,
+    // animals, atmosphere, makeup, stunts, extras, sound-IT-words) return
+    // nothing on English bodies — by design (Spec 10e, EN extractors v2).
+    // The only sound match that survives is "V.O." / "(V.O.)" since the stem
+    // is the literal Fountain marker.
+    const heading = "INT. OLD HOUSE - KITCHEN - MOMENTS LATER";
+    const body = `A yellowed note is taped to the refrigerator. Elena pulls it off.
+
+ELENA (V.O.)
+If you are reading this, I am gone.
+
+She folds the note and puts it in her pocket.
+`;
+
+    it("detects English CHARACTER cues", () => {
+      const items = extractAll({ heading, body });
+      expect(
+        items.find((i) => i.category === "cast" && i.name === "Elena"),
+      ).toBeDefined();
+    });
+
+    it("parses English INT./EXT. sluglines", () => {
+      const items = extractAll({ heading, body });
+      const loc = items.find((i) => i.category === "locations");
+      expect(loc?.name).toContain("Old House");
+    });
+
+    it("detects (V.O.) marker as Sound regardless of language", () => {
+      const items = extractAll({ heading, body });
+      expect(
+        items.find((i) => i.category === "sound" && i.name === "Voice Over"),
+      ).toBeDefined();
+    });
+
+    it("does NOT extract IT-only props from English text (no false positives)", () => {
+      const items = extractAll({ heading, body });
+      expect(items.filter((i) => i.category === "props")).toEqual([]);
+    });
+
+    it("does not misclassify FADE OUT./THE END. as cast", () => {
+      const items = extractAll({
+        heading: "EXT. OLD HOUSE - DAWN",
+        body: "Lights on in every window.\n\nFADE OUT.\n\nTHE END.\n",
+      });
+      expect(items.filter((i) => i.category === "cast")).toEqual([]);
+    });
+  });
 });

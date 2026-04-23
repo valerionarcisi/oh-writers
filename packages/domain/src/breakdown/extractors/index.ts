@@ -9,4 +9,5 @@ export * from "./extract-atmosphere.js";
 export * from "./extract-makeup.js";
 export * from "./extract-stunts.js";
 export * from "./extract-extras.js";
+export * from "./extract-props.js";
 export * from "./extract-all.js";

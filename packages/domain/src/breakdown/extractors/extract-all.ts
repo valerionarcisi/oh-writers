@@ -17,6 +17,7 @@ import { extractAtmosphere } from "./extract-atmosphere.js";
 import { extractMakeup } from "./extract-makeup.js";
 import { extractStunts } from "./extract-stunts.js";
 import { extractExtras } from "./extract-extras.js";
+import { extractProps } from "./extract-props.js";
 
 export interface ExtractAllInput {
   /** Scene heading (slugline). Empty string disables location extraction. */
@@ -38,4 +39,5 @@ export const extractAll = ({
   ...extractMakeup(body),
   ...extractStunts(body),
   ...extractExtras(body),
+  ...extractProps(body),
 ];

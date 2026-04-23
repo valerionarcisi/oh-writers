@@ -62,6 +62,24 @@ describe("extractCast", () => {
     expect(items.find((i) => i.name === "Vecchia 1")).toBeDefined();
   });
 
+  it("does not treat transitions/end markers as characters", () => {
+    // "FADE OUT.", "THE END.", "CUT TO:" all look like CHARACTER cues but are
+    // Fountain transitions or terminal markers — they must be filtered.
+    const body = `Action line.\n\nFADE OUT.\n\nTHE END.\n`;
+    expect(extractCast(body)).toEqual([]);
+  });
+
+  it("does not treat 'TO:' transition lines as characters", () => {
+    const body = `Action.\n\nSMASH CUT TO:\n\nELENA\nHello.\n`;
+    const items = extractCast(body);
+    expect(items.map((i) => i.name)).toEqual(["Elena"]);
+  });
+
+  it("does not treat Italian transitions (DISSOLVENZA, FINE) as characters", () => {
+    const body = `Azione.\n\nDISSOLVENZA.\n\nFINE.\n`;
+    expect(extractCast(body)).toEqual([]);
+  });
+
   it("does not treat ALL-CAPS lines mid-action paragraph as characters", () => {
     // "BANG! POI SILENZIO." is shouted action, not a cue:
     // it sits inside an action paragraph (no preceding blank line).

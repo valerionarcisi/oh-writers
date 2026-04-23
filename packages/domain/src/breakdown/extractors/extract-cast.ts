@@ -39,6 +39,62 @@ const CAPS_LINE = /^[A-Z0-9\s.\-'()/:]+$/;
 // Must contain at least one A-Z letter (skip "1." / "...")
 const HAS_LETTER = /[A-Z]/;
 
+// Lines we must NOT treat as a CHARACTER cue even if they look like one.
+// Fountain transitions and end-of-script markers are ALL-CAPS, are preceded
+// by blank lines, and are often followed by another non-empty line — so they
+// pass every other heuristic. Bilingual list (EN + IT) so the same extractor
+// handles both languages.
+const TRANSITION_OR_TERMINAL = new Set([
+  // English transitions
+  "FADE IN",
+  "FADE IN:",
+  "FADE OUT",
+  "FADE OUT.",
+  "FADE OUT:",
+  "FADE TO BLACK",
+  "FADE TO BLACK.",
+  "FADE TO BLACK:",
+  "CUT TO",
+  "CUT TO:",
+  "SMASH CUT",
+  "SMASH CUT TO",
+  "SMASH CUT TO:",
+  "DISSOLVE TO",
+  "DISSOLVE TO:",
+  "MATCH CUT TO",
+  "MATCH CUT TO:",
+  "JUMP CUT TO",
+  "JUMP CUT TO:",
+  "TIME CUT",
+  "TIME CUT:",
+  "BACK TO SCENE",
+  "BACK TO SCENE:",
+  "INTERCUT",
+  "INTERCUT:",
+  "THE END",
+  "THE END.",
+  "END",
+  "END.",
+  // Italian transitions / end markers
+  "DISSOLVENZA",
+  "DISSOLVENZA.",
+  "DISSOLVENZA:",
+  "STACCO",
+  "STACCO:",
+  "STACCO SU",
+  "STACCO SU:",
+  "FINE",
+  "FINE.",
+  "TITOLI DI CODA",
+]);
+
+const isTransitionOrTerminal = (line: string): boolean => {
+  if (TRANSITION_OR_TERMINAL.has(line)) return true;
+  // Generic Fountain transition rule: line ending with "TO:" is a transition.
+  if (/\sTO:$/.test(line)) return true;
+  return false;
+};
+
 const stripParenthetical = (line: string): string =>
   line.replace(/\([^)]*\)/g, "").trim();
 
@@ -52,6 +108,7 @@ export const extractCast: Extractor = (sceneBody) => {
     if (SLUGLINE_PREFIXES.test(raw)) continue;
     if (!CAPS_LINE.test(raw)) continue;
     if (!HAS_LETTER.test(raw)) continue;
+    if (isTransitionOrTerminal(raw)) continue;
 
     // Must be preceded by a blank line (or be the first non-empty line)
     // — Fountain CHARACTER cue rule. Filters ALL-CAPS action like
