@@ -96,6 +96,46 @@
   border-block-end: 1px solid var(--color-border);
 }
 
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.dialogPrimary,
+.dialogSecondary {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font: inherit;
+  border: 1px solid var(--color-border);
+}
+
+.dialogSecondary {
+  background: transparent;
+  color: var(--color-text);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.dialogPrimary {
+  background: var(--color-accent);
+  color: var(--color-on-accent, var(--color-text));
+  border-color: var(--color-accent);
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+}
+
+.dialogMeta {
+  margin-block-start: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .split {
   display: grid;
   grid-template-columns: 240px 1fr 360px;

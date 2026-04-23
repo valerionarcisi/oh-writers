@@ -5,9 +5,16 @@ import type { CesareSuggestion } from "@oh-writers/domain";
  * Returns one breakdown entry per (1-based) scene number we receive.
  * Used in tests and when MOCK_AI=true.
  *
- * Heuristic: every CAPS word becomes a "cast" item with confidence 0.9,
- * up to 3 per scene. If the body mentions "bottle" / "bottiglia" we
- * also add a high-confidence Bottiglia prop. Deterministic by design.
+ * Heuristic: CAPS words in the **body only** become "cast" items with
+ * confidence 0.9, up to 3 per scene. The scene heading is intentionally
+ * excluded — otherwise slugline tokens like INT/EXT/NOTTE/GIORNO and the
+ * location name would all become fake cast members, which is exactly what
+ * real Sonnet would never do. A short stoplist also catches Fountain
+ * slugline tokens that leak into the body (e.g. "INT/EXT" continuations)
+ * and common IT/EN time-of-day markers shouted in action lines.
+ *
+ * If the body mentions "bottle" / "bottiglia" we also add a high-confidence
+ * Bottiglia prop. Deterministic by design.
  */
 export interface MockSceneBreakdown {
   sceneNumber: number;
@@ -19,13 +26,35 @@ export interface MockSceneBreakdown {
   }[];
 }
 
+const CAST_STOPWORDS = new Set<string>([
+  "INT",
+  "EXT",
+  "EST",
+  "INT/EXT",
+  "I/E",
+  "DAY",
+  "NIGHT",
+  "MORNING",
+  "EVENING",
+  "GIORNO",
+  "NOTTE",
+  "MATTINA",
+  "SERA",
+  "POMERIGGIO",
+  "ALBA",
+  "TRAMONTO",
+]);
+
 export const mockFullScriptBreakdown = (
   scenes: { sceneNumber: number; heading: string; body: string }[],
 ): MockSceneBreakdown[] =>
   scenes.map((scene) => {
-    const text = `${scene.heading}\n${scene.body}`;
     const caps = [
-      ...new Set([...text.matchAll(/\b[A-Z]{3,}\b/g)].map((m) => m[0])),
+      ...new Set(
+        [...scene.body.matchAll(/\b[A-Z]{3,}\b/g)]
+          .map((m) => m[0])
+          .filter((token) => !CAST_STOPWORDS.has(token)),
+      ),
     ].slice(0, 3);
     const items: MockSceneBreakdown["items"] = caps.map((name) => ({
       name: name.charAt(0) + name.slice(1).toLowerCase(),
@@ -33,7 +62,7 @@ export const mockFullScriptBreakdown = (
       quantity: 1,
       confidence: 0.9,
     }));
-    if (/bottl|bottigli/i.test(text)) {
+    if (/bottl|bottigli/i.test(scene.body)) {
       items.push({
         name: "Bottiglia",
         category: "props",

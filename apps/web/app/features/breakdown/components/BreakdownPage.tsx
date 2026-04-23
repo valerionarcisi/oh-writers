@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Tabs, StreamingProgressBanner } from "@oh-writers/ui";
+import { Dialog, Tabs, StreamingProgressBanner } from "@oh-writers/ui";
 import { Suspense } from "react";
 import {
   breakdownContextOptions,
@@ -47,6 +47,7 @@ function BreakdownPageContent({ projectId }: ContentProps) {
   );
   const [exportOpen, setExportOpen] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [confirmRespoglioOpen, setConfirmRespoglioOpen] = useState(false);
   const aiMenuWrapRef = useRef<HTMLDivElement>(null);
 
   const versionId = ctx.screenplayVersionId;
@@ -82,7 +83,7 @@ function BreakdownPageContent({ projectId }: ContentProps) {
     if (llmSpoglioStartedRef.current) return;
     if (!llmSpoglio.isIdle) return;
     llmSpoglioStartedRef.current = true;
-    llmSpoglio.mutate();
+    llmSpoglio.mutate({ force: false });
   }, [llmSpoglio, canEdit, versionId]);
 
   const { data: progress } = useSpoglioProgress(versionId);
@@ -105,16 +106,17 @@ function BreakdownPageContent({ projectId }: ContentProps) {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [aiMenuOpen]);
 
-  const handleFullRespoglio = () => {
+  const handleOpenRespoglioConfirm = () => {
     setAiMenuOpen(false);
-    // Estimated cost is shown so editors don't accidentally trigger a paid run
-    // on a long script. ~$0.08 is the spec-10g Sonnet 4 estimate.
-    const ok = window.confirm(
-      "Avviare lo spoglio AI dell'intera versione? Costo stimato: ~$0.08, durata ~45s.",
-    );
-    if (!ok) return;
+    setConfirmRespoglioOpen(true);
+  };
+
+  const handleConfirmFullRespoglio = () => {
+    setConfirmRespoglioOpen(false);
     llmSpoglioStartedRef.current = true;
-    llmSpoglio.mutate();
+    // `force: true` resets the version-state row server-side so the polling
+    // banner reappears even if the mount-time auto-run had already completed.
+    llmSpoglio.mutate({ force: true });
   };
 
   const scriptReaderRef = useRef<ScriptReaderHandle>(null);
@@ -178,7 +180,7 @@ function BreakdownPageContent({ projectId }: ContentProps) {
                     role="menuitem"
                     className={styles.aiRespoglioMenuItem}
                     data-testid="ai-respoglio-full"
-                    onClick={handleFullRespoglio}
+                    onClick={handleOpenRespoglioConfirm}
                   >
                     <span className={styles.aiRespoglioMenuItemLabel}>
                       Ri-spogliare l&apos;intera versione
@@ -280,6 +282,42 @@ function BreakdownPageContent({ projectId }: ContentProps) {
         isOpen={exportOpen}
         onClose={() => setExportOpen(false)}
       />
+
+      <Dialog
+        isOpen={confirmRespoglioOpen}
+        onClose={() => setConfirmRespoglioOpen(false)}
+        title="Ri-spogliare l'intera versione?"
+        data-testid="ai-respoglio-confirm"
+        size="sm"
+        actions={
+          <div className={styles.dialogActions}>
+            <button
+              type="button"
+              className={styles.dialogSecondary}
+              data-testid="ai-respoglio-cancel"
+              onClick={() => setConfirmRespoglioOpen(false)}
+            >
+              Annulla
+            </button>
+            <button
+              type="button"
+              className={styles.dialogPrimary}
+              data-testid="ai-respoglio-confirm-cta"
+              onClick={handleConfirmFullRespoglio}
+            >
+              Avvia spoglio AI
+            </button>
+          </div>
+        }
+      >
+        <p>
+          Sonnet rielaborerà ogni scena della versione corrente. Le voci già
+          accettate o ignorate restano invariate.
+        </p>
+        <p className={styles.dialogMeta}>
+          Costo stimato: ~$0.08 · Durata stimata: ~45 s
+        </p>
+      </Dialog>
     </main>
   );
 }

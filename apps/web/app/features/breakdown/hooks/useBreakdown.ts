@@ -150,12 +150,23 @@ export const useRunAutoSpoglio = (_projectId: string, versionId: string) => {
 export const useStreamFullSpoglio = (versionId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () =>
+    mutationFn: async (variables?: { force?: boolean }) =>
       unwrapResult(
         await streamFullSpoglio({
-          data: { screenplayVersionId: versionId },
+          data: {
+            screenplayVersionId: versionId,
+            force: variables?.force ?? false,
+          },
         }),
       ),
+    onMutate: () => {
+      // Force the polling banner to wake up immediately so the user sees the
+      // progress UI within ~1.5 s of pressing the trigger, instead of waiting
+      // for the in-flight tick to elapse on a stale `scenesTotal: null`.
+      void qc.invalidateQueries({
+        queryKey: ["spoglio-progress", versionId],
+      });
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["breakdown"] });
       void qc.invalidateQueries({

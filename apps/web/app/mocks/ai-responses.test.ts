@@ -68,6 +68,49 @@ describe("mockFullScriptBreakdown", () => {
     expect(cast.every((c) => c.confidence >= 0.8)).toBe(true);
   });
 
+  it("[OHW-258-bug] never emits cast items derived from the scene heading", () => {
+    const out = mockFullScriptBreakdown([
+      {
+        sceneNumber: 1,
+        heading: "INT/EXT. ANGOLO OPEN GREZZO/FUORI DALLA PORTA - NOTTE",
+        body: "Marco entra. Apre la porta.",
+      },
+    ]);
+    const castNames = (out[0]?.items ?? [])
+      .filter((i) => i.category === "cast")
+      .map((c) => c.name);
+    // None of the slugline tokens should leak into the cast list.
+    for (const forbidden of [
+      "Int",
+      "Ext",
+      "Angolo",
+      "Open",
+      "Grezzo",
+      "Notte",
+      "Fuori",
+      "Dalla",
+      "Porta",
+    ]) {
+      expect(castNames).not.toContain(forbidden);
+    }
+  });
+
+  it("filters known IT/EN slugline + time-of-day stopwords even when present in body", () => {
+    const out = mockFullScriptBreakdown([
+      {
+        sceneNumber: 1,
+        heading: "INT. STANZA - NOTTE",
+        body: "MARIA grida: 'NOTTE FONDA!'. GIORNO arriva.",
+      },
+    ]);
+    const castNames = (out[0]?.items ?? [])
+      .filter((i) => i.category === "cast")
+      .map((c) => c.name);
+    expect(castNames).toContain("Maria");
+    expect(castNames).not.toContain("Notte");
+    expect(castNames).not.toContain("Giorno");
+  });
+
   it("adds a 'Bottiglia' prop when the body mentions a bottle", () => {
     const out = mockFullScriptBreakdown([
       {

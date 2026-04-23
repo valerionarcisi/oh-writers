@@ -71,7 +71,16 @@ const isAllowedCategory = (raw: unknown): raw is BreakdownCategoryDb =>
 // ──────────────────────────────────────────────────────────────────────
 
 export const streamFullSpoglio = createServerFn({ method: "POST" })
-  .validator(z.object({ screenplayVersionId: z.string().uuid() }))
+  .validator(
+    z.object({
+      screenplayVersionId: z.string().uuid(),
+      // Manual re-run from the "Ri-spogliare con AI" dropdown sends `force: true`
+      // so the cache short-circuit is bypassed and the version-state row is reset
+      // before the new Sonnet run starts. The mount-time auto-run leaves it
+      // unset (or false) so re-opening the breakdown is a cheap no-op.
+      force: z.boolean().optional().default(false),
+    }),
+  )
   .handler(
     async ({
       data,
@@ -127,7 +136,11 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
       const cachedState = await db.query.breakdownVersionState.findFirst({
         where: eq(breakdownVersionState.versionId, data.screenplayVersionId),
       });
-      if (cachedState?.lastFullSpoglioRunAt && cachedState.modelUsed) {
+      if (
+        !data.force &&
+        cachedState?.lastFullSpoglioRunAt &&
+        cachedState.modelUsed
+      ) {
         return toShape(
           ok({
             scenesProcessed: cachedState.scenesDone,
