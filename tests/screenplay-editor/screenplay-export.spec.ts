@@ -26,6 +26,11 @@ const openScreenplayExportAndGenerate = async (
   await expect(triggerButton).toBeEnabled();
   await triggerButton.click();
 
+  // Spec 05k — the trigger opens a dropdown of formats; choose Standard.
+  const menu = page.getByTestId("screenplay-export-menu");
+  await expect(menu).toBeVisible({ timeout: 5_000 });
+  await menu.getByRole("menuitem", { name: /^Standard/ }).click();
+
   const modal = page.getByTestId("screenplay-export-modal");
   await expect(modal).toBeVisible({ timeout: 5_000 });
 

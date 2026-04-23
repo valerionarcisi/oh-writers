@@ -115,6 +115,7 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/20 — Shooting script PDF import**
 - **core/04c — Narrative export** (logline + synopsis + treatment → PDF, opt-in cover page, preview tab)
 - **core/05j — Screenplay export** (Fountain → industry-standard PDF via afterwriting, opt-in cover page, preview tab)
+- **core/05k — Production export formats** (5 industry formats — Standard, Sides, AD copy, Reading copy, One scene per page — via single Export dropdown; per-format pre-processing pipeline + custom `awc-runner.cjs` for nested print-profile overrides; Sides modal with scene multi-select; filename slug per format)
 - **core/10 — Scene Breakdown** (cast/props/locations/VFX/vehicles/extras/sound/wardrobe/SPFX/stunts/animals/makeup/set-dressing/notes per scene + per project, Cesare ghost suggestions with rate-limit, PDF/CSV export, version-aware with 3-tier stale awareness, auto-clone on new screenplay version)
 - **core/10c — Inline scene tagging in middle column** (read-only ProseMirror reader of the full screenplay in the breakdown center column, inline highlight per category, ghost dashed underline for pending Cesare suggestions, floating selection toolbar with 14 categories, TOC scroll-to-scene)
 - **core/10e — Auto-spoglio via RegEx** (zero-click breakdown population on first open: pure-function extractors over 9 categories — cast, locations, vehicles, animals, sound, atmosphere, makeup, stunts, extras — confidence-based default status, idempotent via `text_hash`, fan-out from the breakdown page)

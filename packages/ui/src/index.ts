@@ -22,5 +22,11 @@ export type {
   ContextMenuProps,
   ContextMenuItem,
 } from "./components/ContextMenu";
+export { DropdownMenu } from "./components/DropdownMenu";
+export type {
+  DropdownMenuProps,
+  DropdownMenuItem,
+  DropdownMenuAlign,
+} from "./components/DropdownMenu";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";

@@ -15,6 +15,7 @@ import { ProseMirrorView } from "./ProseMirrorView";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
+import type { ExportFormat } from "@oh-writers/domain";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
@@ -344,15 +345,23 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
   }, []);
 
   const exportPdf = useExportScreenplayPdf();
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat | null>(null);
   const handleGenerateExport = ({
     includeCoverPage,
+    sceneNumbers,
   }: {
     includeCoverPage: boolean;
+    sceneNumbers?: string[];
   }) => {
+    if (!exportFormat) return;
     exportPdf.mutate(
-      { screenplayId: screenplay.id, includeCoverPage },
-      { onSuccess: () => setIsExportModalOpen(false) },
+      {
+        screenplayId: screenplay.id,
+        includeCoverPage,
+        format: exportFormat,
+        sceneNumbers,
+      },
+      { onSuccess: () => setExportFormat(null) },
     );
   };
 
@@ -422,7 +431,7 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onResequenceAll={onResequenceAll}
           canEdit={screenplay.canEdit ?? false}
           isOwner={screenplay.isOwner ?? false}
-          onOpenExportPdf={() => setIsExportModalOpen(true)}
+          onOpenExportPdf={(f) => setExportFormat(f)}
           isExportingPdf={exportPdf.isPending}
         />
       )}
@@ -481,10 +490,12 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           </span>
         </div>
       )}
-      {isExportModalOpen && (
+      {exportFormat && (
         <ExportScreenplayPdfModal
           isPending={exportPdf.isPending}
-          onClose={() => setIsExportModalOpen(false)}
+          format={exportFormat}
+          screenplayId={screenplay.id}
+          onClose={() => setExportFormat(null)}
           onGenerate={handleGenerateExport}
         />
       )}

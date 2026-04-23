@@ -43,12 +43,12 @@ Implementazione: `extractScenesFromFountain(fountain, sceneNumbers[])` ritaglia 
 
 Margine destro **molto ampio** per appunti a mano del primo aiuto regista.
 
-- Margine destro 4cm (vs 2.5cm standard) → larghezza dialogo invariata (l'azione si stringe).
-- Scene numbers visibili sx + dx (US convention).
-- Header con titolo + revision marker.
+- Margine destro 2.5 inch (vs 1 inch standard) → larghezza dialogo invariata (l'azione si stringe).
+- Scene numbers visibili sx + dx (US convention) — `--setting scenes_numbers=both`.
+- Header con titolo + revision marker (futuro: spec 07b).
 - Numerazione pagine `1.`, `1A.`, `2.` come da spec 07b.
 
-Implementazione: nuovo CSS theme passato ad afterwriting via flag `--config <path>` con `print_profile.right_margin = 4` (afterwriting supporta override via JSON config).
+Implementazione: afterwriting **non** espone override delle proprietà interne di `print_profile` via `--config` o `--setting`. Per modificare `right_margin` (proprietà nested) usiamo un thin Node wrapper `awc-runner.js` che boota afterwriting in-process, fa `Object.assign(print_profiles.a4, overrides)` PRIMA di `Bootstrap.init`, e poi prosegue come `awc.js`. Gli overrides arrivano via env var `OHW_PROFILE_OVERRIDES` (JSON).
 
 ### 3. Reading copy
 
@@ -56,21 +56,20 @@ Doppia interlinea per facilitare la lettura veloce di un reader esterno.
 
 - Line-height `2.0` (vs 1.0 standard).
 - Pagine moltiplicano (~doppie del normale).
-- Scene numbers nascosti (un reader non li usa).
-- Cover page **sempre inclusa**.
+- Scene numbers nascosti (un reader non li usa) — default `scenes_numbers=none`.
+- Cover page **sempre inclusa** (default `defaultIncludeCoverPage=true`).
 
-Implementazione: afterwriting `print_profile.line_spacing = 2.0`.
+Implementazione: stesso `awc-runner.js` di AD copy — `Object.assign(print_profiles.a4, { line_spacing: 2 })` via env var. Comprime anche `lines_per_page` proporzionalmente per evitare che afterwriting calcoli pagine sballate.
 
 ### 4. One scene per page
 
 Ogni scena inizia su una pagina nuova, anche se è di poche righe.
 
-- Inserisce un Fountain `===` (page break) prima di ogni scene heading (escluso il primo).
 - Scene numbers visibili.
 - Margini standard.
 - Cover page opzionale (default sì).
 
-Implementazione: `insertPageBreaksBetweenScenes(fountain)` — operazione puramente testuale sul fountain.
+Implementazione: usiamo direttamente la setting nativa di afterwriting `each_scene_on_new_page=true` (via `--setting`). Più pulito di iniettare `===` nel fountain (che lascerebbe artefatti se l'utente esporta di nuovo lo stesso draft poi ripreso).
 
 ## Architecture
 

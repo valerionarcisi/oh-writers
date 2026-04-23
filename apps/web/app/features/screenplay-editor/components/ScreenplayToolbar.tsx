@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Button, Dialog } from "@oh-writers/ui";
+import { Button, Dialog, DropdownMenu } from "@oh-writers/ui";
+import {
+  EXPORT_FORMATS,
+  EXPORT_FORMAT_META,
+  type ExportFormat,
+} from "@oh-writers/domain";
 import { SaveIndicator } from "./SaveIndicator";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { DraftMetaBadge } from "~/features/projects";
@@ -39,9 +44,9 @@ interface ScreenplayToolbarProps {
   /** True when the signed-in user owns the project. Gates Owner-only entries
    *  (e.g. Frontespizio per spec 07b). */
   isOwner: boolean;
-  /** Opens the PDF export modal (Spec 05j). The button is disabled when
-   *  the screenplay has no content. */
-  onOpenExportPdf?: () => void;
+  /** Opens the PDF export modal for the chosen format (Spec 05j+05k). The
+   *  trigger is disabled when the screenplay has no content. */
+  onOpenExportPdf?: (format: ExportFormat) => void;
   isExportingPdf?: boolean;
   /** Forwarded to ToolbarMenu → useImportPdf so the parent can react when
    *  Pass 0 of the PDF import detects a title page. */
@@ -149,15 +154,28 @@ export function ScreenplayToolbar({
           />
         )}
         {onOpenExportPdf && (
-          <button
-            type="button"
-            className={styles.focusBtn}
-            onClick={onOpenExportPdf}
-            disabled={!hasContent || isExportingPdf}
-            data-testid="screenplay-export-pdf"
-          >
-            {isExportingPdf ? "Exporting…" : "Export PDF"}
-          </button>
+          <DropdownMenu
+            align="end"
+            data-testid="screenplay-export-menu"
+            trigger={
+              <button
+                type="button"
+                className={styles.focusBtn}
+                disabled={!hasContent || isExportingPdf}
+                data-testid="screenplay-export-pdf"
+              >
+                {isExportingPdf ? "Exporting…" : "Export PDF ▾"}
+              </button>
+            }
+            items={EXPORT_FORMATS.map((f) => {
+              const meta = EXPORT_FORMAT_META[f];
+              return {
+                label: meta.labelIt,
+                description: meta.descriptionIt,
+                onClick: () => onOpenExportPdf(f),
+              };
+            })}
+          />
         )}
         <button
           className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ""}`}
