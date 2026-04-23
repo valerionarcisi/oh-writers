@@ -209,6 +209,12 @@ E un test orchestrator:
 - Aggiunta categoria `atmosphere` non breaking (text column).
 - Backfill: al deploy, per ogni progetto esistente, opzionalmente lanciare un job di auto-spoglio. v1: lazy on first open.
 
+## Lessons learned (post-ship)
+
+- `seedScenesFromFountain` originariamente popolava solo l'heading (`scene.notes = null`). Risultato: gli extractors body-based (cast, vehicles, sound, …) non avevano testo da analizzare e l'utente vedeva solo le `locations` (extractor heading-based). Fix: la seed ora fa due passi — indicizza tutti gli heading line, poi per ognuno slice il body fra heading[i]+1 e heading[i+1] e lo salva in `scene.notes`. Su "Non fa ridere" scena 1 questo passa da 2 occurrences a 15 (cast 7 + locations 2 + sound 3 + extras 1 + vehicles 1 + animals 1).
+- Lezione architetturale: in produzione `scene.notes` viene riempito al save dell'editor (ProseMirror → DB scene rows), ma c'è ancora rischio di dropout se la pipeline editor→scene-row si rompe. Spec 10g (futuro) potrebbe valutare se l'auto-spoglio debba leggere direttamente dal `pmDoc` della versione invece che da `scene.notes`, eliminando la dipendenza da quella materializzazione.
+- Migration mancante in DB locale (`0010_add_auto_spoglio_state.sql`) ha causato 500 silenti su `getBreakdownForScene/loadState` perché il select includeva `lastAutoSpoglioRunAt`. Lezione operativa: aggiungere check di `pnpm db:migrate` allo script `dev:reset` o a un `predev` hook, così un nuovo dev non incappa nello stesso problema.
+
 ## Out of scope
 
 - EN extractors (lemma IT only in v1).

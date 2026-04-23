@@ -129,6 +129,7 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 **Core platform**
 
 - **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
+- **core/10f — Breakdown table view** (Movie-Magic-style editable table + scene × element matrix; in-place editing, bulk operations, URL-persisted filters)
 - **core/11 — Budget** (line items from breakdown, totals — no AI risk prediction yet)
 - **core/12 — Shooting schedule** with **one country template (Italy)** — working days, holidays, night shifts, minimum rest
 - **core/12 — Call sheet generation** from schedule + breakdown (absorbed from "Ideas" list)

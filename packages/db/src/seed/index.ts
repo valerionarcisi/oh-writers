@@ -117,26 +117,43 @@ async function seedScenesFromFountain(
   fountainText: string,
 ): Promise<number> {
   const lines = fountainText.split("\n");
-  let n = 0;
-  for (const raw of lines) {
-    const trimmed = raw.trim();
+  // Two-pass so each scene gets the body that lives between its heading and
+  // the next heading. Auto-spoglio (Spec 10e) reads `scene.notes` as the
+  // scene text — without the body it can only extract the location from the
+  // slugline, which is exactly the "vedo solo location" symptom users hit.
+  const headingIndices: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim();
     if (!/^(INT|EXT|EST|I\/E)/.test(trimmed)) continue;
-    const parsed = parseSceneHeading(trimmed);
-    if (!parsed) continue;
-    n += 1;
+    if (!parseSceneHeading(trimmed)) continue;
+    headingIndices.push(i);
+  }
+  for (let n = 0; n < headingIndices.length; n++) {
+    const start = headingIndices[n]!;
+    const end = headingIndices[n + 1] ?? lines.length;
+    const heading = lines[start]!.trim();
+    const parsed = parseSceneHeading(heading)!;
+    const body = lines
+      .slice(start + 1, end)
+      .join("\n")
+      .trim();
     await db
       .insert(scenes)
       .values({
         screenplayId,
-        number: n,
-        heading: trimmed,
+        number: n + 1,
+        heading,
         intExt: parsed.intExt,
         location: parsed.location,
         timeOfDay: parsed.timeOfDay,
+        notes: body.length > 0 ? body : null,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [scenes.screenplayId, scenes.number],
+        set: { notes: body.length > 0 ? body : null },
+      });
   }
-  return n;
+  return headingIndices.length;
 }
 
 // Snapshot each seeded narrative document with non-empty content into a
