@@ -331,3 +331,25 @@ Dashboard interno (futuro Spec) mostrerà cost/film/utente per identificare anom
 1. **Backfill progetti pre-flag** → **on-demand** (nessun re-spoglio automatico al primo open; l'AD usa "Ri-spogliare con AI" se vuole). Evita costi a sorpresa per progetti riaperti dopo mesi.
 2. **Hard cap costi per utente/mese** → **nessuna quota in MVP**. Monitoriamo costi 1 mese via tabella `breakdown_version_state.model_used` + log Anthropic, poi revisione.
 3. **Cesare manuale fallback** → **sempre visibile**, indipendente da confidence score. L'AD ha sempre il diritto di forzare un re-pass o un'estrazione manuale.
+
+## Implementation status (2026-04-23)
+
+**Landed:**
+
+- DS atoms: `Progress` + `StreamingProgressBanner` with pure-math extraction (`progress-math.ts`) and 8 unit tests.
+- Schema: migration `0011_add_breakdown_version_state.sql` + `breakdownVersionState` Drizzle pgTable.
+- Errors: `BreakdownVersionNotFoundError` + `LlmSpoglioFailedError` in `breakdown.errors.ts`.
+- Streaming parser: `parse-scene-stream.ts` — string-aware brace counter that yields complete scene objects from a partial JSON tool_use buffer; 11 unit tests cover empty, partial, complete, multiple scenes, cursor advancement, escaped quotes, malformed-skip, whitespace.
+- Prompt + tool definition: `llm-spoglio-prompt.ts` with `SONNET_MODEL`, `HAIKU_MODEL`, `statusForConfidence` mapping; 4 unit tests.
+- Server: `streamFullSpoglio` createServerFn — feature-flag gate, access check, cache short-circuit on `lastFullSpoglioRunAt`, scene fan-out via `sceneIdByNumber`, per-scene transactional persistence via `persistSceneItems`, progress bumps on `breakdownVersionState`. `getSpoglioProgress` createServerFn polled by client.
+- MOCK_AI fixture: `mockFullScriptBreakdown` (CAPS-derived cast + Bottiglia prop on bottle mention); 4 unit tests.
+- Client hooks: `useStreamFullSpoglio`, `useSpoglioProgress` with `refetchInterval` that disables on `isComplete`.
+- BreakdownPage wiring: mount-time fire of `llmSpoglio.mutate()` (guarded by `llmSpoglioStartedRef`), `StreamingProgressBanner` driven by polling, "Ri-spogliare con AI ▾" dropdown next to Export with cost-confirm prompt.
+- E2E (`tests/breakdown/llm-import-spoglio.spec.ts`): 4 active UI-affordance tests (dropdown visible/operable for editor, dropdown opens, viewer cannot see it, banner stays hidden when flag off) — all green. OHW-330..335 round-trip tests are scaffolded as `.skip` with explanatory comments.
+
+**Deferred to a follow-up slice (Spec 10g.2):**
+
+- Haiku per-scene incremental re-spoglio on edit debounce (test OHW-332).
+- Round-trip MOCK_AI=true E2E suite (OHW-330, 331, 333, 335) — blocked on a dedicated Playwright web-server config that injects `MOCK_AI=true` and `LLM_FIRST_BREAKDOWN=true` (the current `playwright.config.ts` cannot toggle env per test).
+- Anthropic 5xx route-mock harness for OHW-334.
+- Cost-monitoring `logSpoglioRun` telemetry sink — server fn currently records `modelUsed` on the state row but does not yet emit token/cost metrics.

@@ -14,7 +14,8 @@
   border-block-end: 1px solid var(--color-border);
 }
 
-.exportTrigger {
+.exportTrigger,
+.aiRespoglioTrigger {
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
@@ -26,6 +27,73 @@
   &:hover {
     background: var(--color-surface-hover);
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.aiRespoglioWrap {
+  position: relative;
+}
+
+.aiRespoglioMenu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-end: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 280px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-1);
+}
+
+.aiRespoglioMenuItem {
+  text-align: start;
+  background: transparent;
+  color: var(--color-text);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font: inherit;
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.aiRespoglioMenuItemLabel {
+  display: block;
+  color: var(--color-text);
+}
+
+.aiRespoglioMenuItemHint {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-block-start: var(--space-1);
+}
+
+.llmBannerWrap {
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--color-border);
 }
 
 .split {

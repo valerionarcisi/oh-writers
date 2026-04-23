@@ -1,6 +1,7 @@
 import {
   queryOptions,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
@@ -16,6 +17,10 @@ import {
 } from "../server/breakdown.server";
 import { suggestBreakdownForScene } from "../server/cesare-suggest.server";
 import { runAutoSpoglioForVersion } from "../server/auto-spoglio.server";
+import {
+  streamFullSpoglio,
+  getSpoglioProgress,
+} from "../server/llm-spoglio.server";
 import {
   exportBreakdownPdf,
   exportBreakdownCsv,
@@ -134,6 +139,54 @@ export const useRunAutoSpoglio = (_projectId: string, versionId: string) => {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
   });
 };
+
+/**
+ * Spec 10g — fire the Sonnet full-script breakdown for a version. The
+ * server fn early-returns when the env-var feature flag is off, so this
+ * hook can be called unconditionally from the BreakdownPage alongside
+ * the regex baseline. Successful runs invalidate the breakdown queries
+ * so newly-persisted occurrences appear without a manual refresh.
+ */
+export const useStreamFullSpoglio = (versionId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrapResult(
+        await streamFullSpoglio({
+          data: { screenplayVersionId: versionId },
+        }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["breakdown"] });
+      void qc.invalidateQueries({
+        queryKey: ["spoglio-progress", versionId],
+      });
+    },
+  });
+};
+
+/**
+ * Spec 10g — polls the per-version progress row every 1.5 s while a run
+ * is active, then disables itself once `isComplete` flips to true. The
+ * BreakdownPage uses this to drive the StreamingProgressBanner without
+ * needing a websocket.
+ */
+export const spoglioProgressOptions = (versionId: string) =>
+  queryOptions({
+    queryKey: ["spoglio-progress", versionId] as const,
+    queryFn: async () =>
+      unwrapResult(
+        await getSpoglioProgress({
+          data: { screenplayVersionId: versionId },
+        }),
+      ),
+    enabled: versionId.length > 0,
+    refetchInterval: (query) => (query.state.data?.isComplete ? false : 1500),
+    staleTime: 0,
+  });
+
+export const useSpoglioProgress = (versionId: string) =>
+  useQuery(spoglioProgressOptions(versionId));
 
 export const useCesareSuggest = (sceneId: string, versionId: string) => {
   const qc = useQueryClient();

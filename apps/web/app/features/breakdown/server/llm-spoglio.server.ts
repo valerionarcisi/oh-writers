@@ -14,7 +14,7 @@
 
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, asc } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { ResultAsync, err, ok } from "neverthrow";
 import {
   breakdownElements,
@@ -62,11 +62,6 @@ export interface SpoglioProgress {
   modelUsed: string | null;
 }
 
-const sceneTextOf = (scene: {
-  heading: string;
-  notes: string | null;
-}): string => `${scene.heading}\n${scene.notes ?? ""}`;
-
 const isAllowedCategory = (raw: unknown): raw is BreakdownCategoryDb =>
   typeof raw === "string" &&
   (BREAKDOWN_CATEGORIES as readonly string[]).includes(raw);
@@ -91,6 +86,18 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
     > => {
       const user = await requireUser();
       const db = await getDb();
+
+      // Feature flag: only run when explicitly enabled via env var. When
+      // off, the call is a cheap no-op so the client can fire it
+      // unconditionally on mount alongside the regex baseline.
+      if (
+        process.env["LLM_FIRST_BREAKDOWN"] !== "true" &&
+        process.env["MOCK_AI"] !== "true"
+      ) {
+        return toShape(
+          ok({ scenesProcessed: 0, modelUsed: "disabled", cached: false }),
+        );
+      }
 
       const accessResult = await resolveBreakdownAccessByScreenplayVersion(
         db,

@@ -23,6 +23,12 @@ export {
   type AutoSpoglioResult,
   type AutoSpoglioVersionResult,
 } from "./server/auto-spoglio.server";
+export {
+  streamFullSpoglio,
+  getSpoglioProgress,
+  type StreamFullSpoglioResult,
+  type SpoglioProgress,
+} from "./server/llm-spoglio.server";
 export { cloneBreakdownToVersion } from "./server/clone-version.server";
 export { exportBreakdownPdf, exportBreakdownCsv } from "./server/export.server";
 export {
