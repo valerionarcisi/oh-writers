@@ -20,18 +20,17 @@ import {
  * Requires the dev server to run with MOCK_AI=true so that the generate
  * mutation resolves deterministically without calling Anthropic.
  *
- * The UI currently renders the editor defaults in English (Premise,
- * Protagonist & antagonist, Narrative arc, World, Ending). The Italian
- * labels ship via i18n labels prop — tests assert on whichever set is
- * actually rendered by the SubjectEditor today.
+ * The UI renders the editor defaults in Italian (Spec 04f mandates IT as
+ * the default runtime). SOGGETTO_INITIAL_TEMPLATE and SubjectEditor's
+ * defaultLabels both ship Italian strings; the tests assert on that set.
  */
 
 const SECTION_HEADINGS = [
-  "Premise",
-  "Protagonist & antagonist",
-  "Narrative arc",
-  "World",
-  "Ending",
+  "Premessa",
+  "Protagonista & antagonista",
+  "Arco narrativo",
+  "Mondo",
+  "Finale",
 ] as const;
 
 test.describe("[Spec 04f] Soggetto — page flow", () => {
@@ -84,7 +83,7 @@ test.describe("[Spec 04f] Soggetto — page flow", () => {
     const editor = page.getByTestId("subject-editor").locator(".ProseMirror");
     const premiseHeading = editor.getByRole("heading", {
       level: 2,
-      name: "Premise",
+      name: "Premessa",
     });
     await expect(premiseHeading).toBeVisible();
 
@@ -98,7 +97,7 @@ test.describe("[Spec 04f] Soggetto — page flow", () => {
               root.querySelectorAll("h2"),
             ) as HTMLElement[];
             const premise = headings.find(
-              (h) => h.textContent?.trim() === "Premise",
+              (h) => h.textContent?.trim() === "Premessa",
             );
             if (!premise) return 0;
             let sibling = premise.nextElementSibling;
