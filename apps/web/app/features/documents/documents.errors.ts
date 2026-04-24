@@ -11,8 +11,26 @@ export class DocumentNotFoundError {
   }
 }
 
+export class SubjectNotFoundError {
+  readonly _tag = "SubjectNotFoundError" as const;
+  readonly message: string;
+
+  constructor(readonly projectId: string) {
+    this.message = `Soggetto not found for project ${projectId}`;
+  }
+}
+
+export class SubjectRateLimitedError {
+  readonly _tag = "SubjectRateLimitedError" as const;
+  readonly message = "Rate limited: try again shortly";
+
+  constructor(readonly retryAfterMs: number) {}
+}
+
 export type DocumentsError =
   | DocumentNotFoundError
+  | SubjectNotFoundError
+  | SubjectRateLimitedError
   | ForbiddenError
   | ValidationError
   | DbError;

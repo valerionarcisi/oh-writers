@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DocumentTypes } from "@oh-writers/domain";
+import { DocumentTypes, SUBJECT_SECTIONS } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
 
 // ─── Per-type content caps ────────────────────────────────────────────────────
@@ -79,3 +79,37 @@ export const parseOutline = (raw: string): OutlineContent => {
 
 export const serializeOutline = (content: OutlineContent): string =>
   JSON.stringify(content);
+
+// ─── Soggetto (04f) ───────────────────────────────────────────────────────────
+
+export const SubjectSectionSchema = z.enum(SUBJECT_SECTIONS);
+
+export const GenerateSubjectSectionInputSchema = z.object({
+  projectId: z.string().uuid(),
+  section: SubjectSectionSchema,
+});
+export type GenerateSubjectSectionInput = z.infer<
+  typeof GenerateSubjectSectionInputSchema
+>;
+
+export const GenerateLoglineInputSchema = z.object({
+  projectId: z.string().uuid(),
+});
+export type GenerateLoglineInput = z.infer<typeof GenerateLoglineInputSchema>;
+
+export const SiaeAuthorSchema = z.object({
+  fullName: z.string().min(1).max(200),
+  taxCode: z.string().max(16).nullable(),
+});
+export type SiaeAuthor = z.infer<typeof SiaeAuthorSchema>;
+
+export const SiaeExportInputSchema = z.object({
+  projectId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  authors: z.array(SiaeAuthorSchema).min(1),
+  declaredGenre: z.string().max(100),
+  estimatedDurationMinutes: z.number().int().min(1).max(600),
+  compilationDate: z.string().date(),
+  depositNotes: z.string().max(500).nullable(),
+});
+export type SiaeExportInput = z.infer<typeof SiaeExportInputSchema>;
