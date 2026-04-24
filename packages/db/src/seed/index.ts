@@ -27,6 +27,13 @@ import {
   NON_FA_RIDERE_SYNOPSIS,
 } from "./fixtures/non-fa-ridere.fountain";
 import { buildPmDocFromFountain } from "./build-pm-doc";
+
+// Mirror of `SOGGETTO_INITIAL_TEMPLATE` from `@oh-writers/domain`
+// (packages/domain/src/subject/template.ts). Inlined here to keep the db
+// package's `rootDir: src` contract intact — importing across package
+// sources would drag the entire domain tree into tsc.
+const SOGGETTO_INITIAL_TEMPLATE =
+  "## Premessa\n\n## Protagonista & antagonista\n\n## Arco narrativo\n\n## Mondo\n\n## Finale\n";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { randomBytes, bytesToHex } from "@noble/hashes/utils.js";
 
@@ -223,6 +230,13 @@ export async function seed() {
       },
       {
         projectId: TEST_PROJECT_ID,
+        type: "soggetto" as const,
+        title: "Soggetto",
+        content: SOGGETTO_INITIAL_TEMPLATE,
+        createdBy: TEST_USER_ID,
+      },
+      {
+        projectId: TEST_PROJECT_ID,
         type: "synopsis" as const,
         title: "Synopsis",
         content: NON_FA_RIDERE_SYNOPSIS,
@@ -388,6 +402,13 @@ export async function seed() {
       },
       {
         projectId: TEST_TEAM_PROJECT_ID,
+        type: "soggetto" as const,
+        title: "Soggetto",
+        content: SOGGETTO_INITIAL_TEMPLATE,
+        createdBy: TEST_USER_ID,
+      },
+      {
+        projectId: TEST_TEAM_PROJECT_ID,
         type: "synopsis" as const,
         title: "Synopsis",
         content: "",
@@ -485,6 +506,13 @@ export async function seed() {
         type: "logline" as const,
         title: "Logline",
         content: NON_FA_RIDERE_LOGLINE,
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_PERSONAL_PROJECT_ID,
+        type: "soggetto" as const,
+        title: "Soggetto",
+        content: SOGGETTO_INITIAL_TEMPLATE,
         createdBy: VALERIO_USER_ID,
       },
       {
@@ -619,6 +647,13 @@ export async function seed() {
         title: "Logline",
         content:
           "Una detective insonne insegue un killer seriale in una città dove il suono è stato bandito.",
+        createdBy: VALERIO_USER_ID,
+      },
+      {
+        projectId: VALERIO_TEAM_PROJECT_ID,
+        type: "soggetto" as const,
+        title: "Soggetto",
+        content: SOGGETTO_INITIAL_TEMPLATE,
         createdBy: VALERIO_USER_ID,
       },
       {
