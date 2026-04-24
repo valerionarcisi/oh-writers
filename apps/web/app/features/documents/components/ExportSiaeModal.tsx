@@ -1,4 +1,5 @@
-// TODO: i18n — English defaults; production Soggetto flow is Italian-only.
+// IT is the default runtime language (Spec 04f). SIAE export is Italian-only
+// by spec; English labels are not shipped — override via the `labels` prop.
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { match } from "ts-pattern";
 import { Button, Dialog, FormField, Input } from "@oh-writers/ui";
@@ -41,22 +42,22 @@ export interface ExportSiaeModalProps {
 }
 
 const DEFAULT_LABELS: ExportSiaeModalLabels = {
-  heading: "Export SIAE deposit PDF",
-  titleLabel: "Title",
-  genreLabel: "Declared genre",
-  durationLabel: "Estimated duration (minutes)",
-  dateLabel: "Compilation date",
-  notesLabel: "Deposit notes (optional)",
-  notesPlaceholder: "Notes included on the cover page…",
-  authorsHeading: "Authors",
-  addAuthor: "+ Add author",
-  removeAuthor: "Remove",
-  fullNamePlaceholder: "Full name",
-  taxCodePlaceholder: "Tax code (optional)",
-  submit: "Generate PDF",
-  submitting: "Generating…",
-  cancel: "Cancel",
-  genericError: "Something went wrong. Please retry.",
+  heading: "Esporta PDF per deposito SIAE",
+  titleLabel: "Titolo",
+  genreLabel: "Genere dichiarato",
+  durationLabel: "Durata stimata (minuti)",
+  dateLabel: "Data di compilazione",
+  notesLabel: "Note di deposito (opzionale)",
+  notesPlaceholder: "Note incluse nella copertina…",
+  authorsHeading: "Autori",
+  addAuthor: "+ Aggiungi autore",
+  removeAuthor: "Rimuovi",
+  fullNamePlaceholder: "Nome completo",
+  taxCodePlaceholder: "Codice fiscale (opzionale)",
+  submit: "Genera PDF",
+  submitting: "Generazione…",
+  cancel: "Annulla",
+  genericError: "Qualcosa è andato storto. Riprova.",
 };
 
 type FieldErrors = {
@@ -163,15 +164,16 @@ export function ExportSiaeModal({
         const copy = match(tagged)
           .with(
             { _tag: "SubjectNotFoundError" },
-            () => "Soggetto not ready: write some content before exporting.",
+            () =>
+              "Soggetto non pronto: scrivi del contenuto prima di esportare.",
           )
           .with(
             { _tag: "ForbiddenError" },
-            () => "You do not have permission to export this project.",
+            () => "Non hai i permessi per esportare questo progetto.",
           )
           .with(
             { _tag: "ValidationError" },
-            () => "The SIAE form contains invalid values.",
+            () => "Il modulo SIAE contiene valori non validi.",
           )
           .with({ _tag: "DbError" }, () => l.genericError)
           .otherwise(() => l.genericError);

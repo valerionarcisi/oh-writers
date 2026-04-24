@@ -34,15 +34,17 @@ export interface SubjectEditorLabels {
   readonly confirmReplace: string;
 }
 
+// IT is the default runtime language (Spec 04f). Callers can still pass
+// English labels explicitly via the `labels` prop for a future i18n switch.
 const defaultLabels: SubjectEditorLabels = {
-  generate: "Generate",
-  generating: "Generating…",
+  generate: "Genera",
+  generating: "Generazione…",
   cartelle: "cartelle",
-  pageOf: (n, total) => `page ${n} of ${total}`,
-  words: "words",
-  softWarning: "You are entering treatment territory.",
-  dismissWarning: "Dismiss warning",
-  confirmReplace: "Replace existing section body?",
+  pageOf: (n, total) => `pagina ${n} di ${total}`,
+  words: "parole",
+  softWarning: "Stai entrando nel territorio del trattamento.",
+  dismissWarning: "Nascondi avviso",
+  confirmReplace: "Sostituire il contenuto esistente della sezione?",
 };
 
 export interface SubjectEditorProps {
@@ -167,11 +169,11 @@ export function SubjectEditor({
         })
         .with({ ok: false, error: { _tag: "SubjectRateLimitedError" } }, () => {
           // TODO: surface via shared toast
-          window.alert("Rate limited — try again in a moment.");
+          window.alert("Troppe richieste — riprova tra un istante.");
         })
         .with({ ok: false, error: P.any }, () => {
           // TODO: surface via shared toast
-          window.alert("Generation failed. Please retry.");
+          window.alert("Generazione fallita. Riprova.");
         })
         .exhaustive();
     },

@@ -19,15 +19,17 @@ export interface LoglineBlockLabels {
   readonly rateLimited: string;
 }
 
+// IT is the default runtime language (Spec 04f).
 const defaultLabels: LoglineBlockLabels = {
   heading: "Logline",
-  extract: "Extract from soggetto",
-  extracting: "Extracting\u2026",
-  accept: "Accept",
-  reject: "Reject",
-  placeholder: "A [protagonist] must [goal] before [stakes]\u2026",
+  extract: "Estrai dal soggetto",
+  extracting: "Estrazione\u2026",
+  accept: "Accetta",
+  reject: "Rifiuta",
+  placeholder:
+    "Un [protagonista] deve [obiettivo] prima di [posta in gioco]\u2026",
   counter: (used, max) => `${used} / ${max}`,
-  rateLimited: "Cesare is catching her breath \u2014 try again in a moment.",
+  rateLimited: "Cesare sta prendendo fiato \u2014 riprova tra un istante.",
 };
 
 export interface LoglineBlockProps {
@@ -76,7 +78,7 @@ export function LoglineBlock({
       }))
       .with({ ok: false, error: P.any }, () => ({
         kind: "error" as const,
-        message: "Could not extract logline.",
+        message: "Impossibile estrarre la logline.",
       }))
       .exhaustive();
 

@@ -30,17 +30,25 @@ describe("insertSectionBody", () => {
     expect(out).toBe(md);
   });
 
-  it("matches the English heading variant when present (template default)", () => {
+  it("inserts under the IT-labeled template heading (default)", () => {
     const out = insertSectionBody(
       SOGGETTO_INITIAL_TEMPLATE,
       "premise",
       "Generated.",
     );
-    expect(out).toContain("## Premise");
+    expect(out).toContain("## Premessa");
     expect(out).toContain("Generated.");
     const generatedIdx = out.indexOf("Generated.");
-    const protagonistIdx = out.indexOf("## Protagonist & antagonist");
+    const protagonistIdx = out.indexOf("## Protagonista & antagonista");
     expect(generatedIdx).toBeLessThan(protagonistIdx);
+  });
+
+  it("still matches EN heading variants for legacy documents", () => {
+    const legacy =
+      "## Premise\n\n## Protagonist & antagonist\n\n## Narrative arc\n";
+    const out = insertSectionBody(legacy, "arc", "Testo arco.");
+    expect(out).toContain("## Narrative arc");
+    expect(out).toContain("Testo arco.");
   });
 
   it("trims trailing whitespace from the body before insertion", () => {

@@ -1,4 +1,5 @@
-// TODO: i18n — user-facing copy is English until the shared i18n layer lands.
+// IT is the default runtime language (Spec 04f). Hook up the shared i18n
+// layer later to surface English copy for non-IT users.
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
@@ -27,7 +28,7 @@ function SoggettoPage() {
   const logline = useDocument(id, DocumentTypes.LOGLINE);
 
   if (soggetto.isLoading || logline.isLoading) {
-    return <div className={styles.status}>Loading…</div>;
+    return <div className={styles.status}>Caricamento…</div>;
   }
   if (!soggetto.data || !logline.data) return null;
 
@@ -37,11 +38,11 @@ function SoggettoPage() {
       match(error)
         .with({ _tag: "DocumentNotFoundError" }, () => ({
           ok: false as const,
-          message: "Soggetto document not found.",
+          message: "Documento soggetto non trovato.",
         }))
         .with({ _tag: "DbError" }, () => ({
           ok: false as const,
-          message: "Could not load soggetto. Please retry.",
+          message: "Impossibile caricare il soggetto. Riprova.",
         }))
         .exhaustive(),
     )
@@ -53,11 +54,11 @@ function SoggettoPage() {
       match(error)
         .with({ _tag: "DocumentNotFoundError" }, () => ({
           ok: false as const,
-          message: "Logline document not found.",
+          message: "Documento logline non trovato.",
         }))
         .with({ _tag: "DbError" }, () => ({
           ok: false as const,
-          message: "Could not load logline. Please retry.",
+          message: "Impossibile caricare la logline. Riprova.",
         }))
         .exhaustive(),
     )
@@ -137,7 +138,7 @@ function SoggettoPageReady({
           disabled={exportDocx.isPending}
           data-testid="soggetto-export"
         >
-          {exportDocx.isPending ? "Exporting…" : "Export"}
+          {exportDocx.isPending ? "Esportazione…" : "Esporta"}
         </button>
         <button
           type="button"
@@ -145,7 +146,7 @@ function SoggettoPageReady({
           onClick={() => setIsSiaeOpen(true)}
           data-testid="soggetto-export-siae"
         >
-          Export SIAE
+          Esporta SIAE
         </button>
       </div>
       <ExportSiaeModal

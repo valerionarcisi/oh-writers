@@ -8,13 +8,13 @@ describe("SOGGETTO_INITIAL_TEMPLATE", () => {
   });
 
   it("lists headings in the canonical order", () => {
-    const premise = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Premise");
+    const premise = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Premessa");
     const protagonist = SOGGETTO_INITIAL_TEMPLATE.indexOf(
-      "## Protagonist & antagonist",
+      "## Protagonista & antagonista",
     );
-    const arc = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Narrative arc");
-    const world = SOGGETTO_INITIAL_TEMPLATE.indexOf("## World");
-    const ending = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Ending");
+    const arc = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Arco narrativo");
+    const world = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Mondo");
+    const ending = SOGGETTO_INITIAL_TEMPLATE.indexOf("## Finale");
 
     expect(premise).toBeGreaterThanOrEqual(0);
     expect(premise).toBeLessThan(protagonist);
