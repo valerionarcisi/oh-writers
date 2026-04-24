@@ -1,4 +1,9 @@
 export { NarrativeEditor } from "./components/NarrativeEditor";
+export { SubjectEditor } from "./components/SubjectEditor";
+export type {
+  SubjectEditorProps,
+  SubjectEditorLabels,
+} from "./components/SubjectEditor";
 export { TextEditor } from "./components/TextEditor";
 export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
