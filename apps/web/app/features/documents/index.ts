@@ -16,6 +16,12 @@ export { SaveStatus } from "./components/SaveStatus";
 export * from "./hooks/useDocument";
 export * from "./hooks/useExportSubjectDocx";
 export { ExportPdfModal } from "./components/ExportPdfModal";
+export { ExportSiaeModal } from "./components/ExportSiaeModal";
+export type {
+  ExportSiaeModalProps,
+  ExportSiaeModalLabels,
+} from "./components/ExportSiaeModal";
+export * from "./hooks/useExportSubjectSiae";
 export * from "./hooks/useGenerateSubjectSection";
 export * from "./hooks/useExtractLoglineFromSubject";
 export * from "./documents.errors";

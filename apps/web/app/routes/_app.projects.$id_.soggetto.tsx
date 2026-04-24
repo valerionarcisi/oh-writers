@@ -5,6 +5,7 @@ import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import {
   ExportPdfModal,
+  ExportSiaeModal,
   LoglineBlock,
   SubjectEditor,
   useAutoSave,
@@ -12,6 +13,7 @@ import {
   useExportSubjectDocx,
   useSaveDocument,
 } from "~/features/documents";
+import { useProject } from "~/features/projects";
 import type { DocumentViewWithPermission } from "~/features/documents/server/documents.server";
 import styles from "./_app.projects.$id_.editor.module.css";
 
@@ -91,6 +93,17 @@ function SoggettoPageReady({
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isSiaeOpen, setIsSiaeOpen] = useState(false);
+  const projectQuery = useProject(projectId);
+  const projectOk =
+    projectQuery.data && projectQuery.data.isOk
+      ? projectQuery.data.value
+      : null;
+  const siaeDefaults = {
+    title: projectOk?.title ?? "",
+    declaredGenre: projectOk?.genre ?? "",
+    ownerFullName: null as string | null,
+  };
 
   const saveSoggetto = useSaveDocument();
   const saveLogline = useSaveDocument();
@@ -126,7 +139,21 @@ function SoggettoPageReady({
         >
           {exportDocx.isPending ? "Exporting…" : "Export"}
         </button>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={() => setIsSiaeOpen(true)}
+          data-testid="soggetto-export-siae"
+        >
+          Export SIAE
+        </button>
       </div>
+      <ExportSiaeModal
+        isOpen={isSiaeOpen}
+        onClose={() => setIsSiaeOpen(false)}
+        projectId={projectId}
+        defaults={siaeDefaults}
+      />
       {isExportOpen && (
         <ExportPdfModal
           canIncludeTitlePage={false}
