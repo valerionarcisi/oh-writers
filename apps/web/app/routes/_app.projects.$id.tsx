@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Badge, Button } from "@oh-writers/ui";
+import { DOCUMENT_PIPELINE, type DocumentType } from "@oh-writers/domain";
 import {
   useProject,
   useArchiveProject,
@@ -9,6 +10,11 @@ import {
   ProgressBar,
 } from "~/features/projects";
 import styles from "./_app.projects.$id.module.css";
+
+const pipelineIndex = (type: string): number => {
+  const idx = DOCUMENT_PIPELINE.indexOf(type as DocumentType);
+  return idx === -1 ? DOCUMENT_PIPELINE.length : idx;
+};
 
 export const Route = createFileRoute("/_app/projects/$id")({
   component: ProjectPage,
@@ -27,7 +33,10 @@ function ProjectPage() {
   if (!result.isOk)
     return <div className={styles.statusError}>Project not found.</div>;
 
-  const { documents, screenplay, ...project } = result.value;
+  const { documents: rawDocuments, screenplay, ...project } = result.value;
+  const documents = [...rawDocuments].sort(
+    (a, b) => pipelineIndex(a.type) - pipelineIndex(b.type),
+  );
   const completedDocs = documents.filter(
     (d: { content: string }) => d.content.length > 0,
   ).length;
@@ -121,7 +130,7 @@ function ProjectPage() {
       <div className={styles.section}>
         <ProgressBar
           value={completedDocs}
-          max={4}
+          max={DOCUMENT_PIPELINE.length}
           label="Narrative development"
         />
       </div>

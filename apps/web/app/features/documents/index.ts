@@ -27,3 +27,4 @@ export * from "./hooks/useExtractLoglineFromSubject";
 export * from "./documents.errors";
 export * from "./documents.schema";
 export type { DocumentView } from "./server/documents.server";
+export { DOCUMENT_LABELS } from "./lib/document-display";
