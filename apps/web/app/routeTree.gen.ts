@@ -21,6 +21,7 @@ import { Route as AppProjectsIdImport } from "./routes/_app.projects.$id";
 import { Route as AppProjectsIdTreatmentImport } from "./routes/_app.projects.$id_.treatment";
 import { Route as AppProjectsIdTitlePageImport } from "./routes/_app.projects.$id_.title-page";
 import { Route as AppProjectsIdSynopsisImport } from "./routes/_app.projects.$id_.synopsis";
+import { Route as AppProjectsIdSoggettoImport } from "./routes/_app.projects.$id_.soggetto";
 import { Route as AppProjectsIdSettingsImport } from "./routes/_app.projects.$id_.settings";
 import { Route as AppProjectsIdScreenplayImport } from "./routes/_app.projects.$id_.screenplay";
 import { Route as AppProjectsIdOutlineImport } from "./routes/_app.projects.$id_.outline";
@@ -89,6 +90,12 @@ const AppProjectsIdTitlePageRoute = AppProjectsIdTitlePageImport.update({
 const AppProjectsIdSynopsisRoute = AppProjectsIdSynopsisImport.update({
   id: "/projects/$id_/synopsis",
   path: "/projects/$id/synopsis",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppProjectsIdSoggettoRoute = AppProjectsIdSoggettoImport.update({
+  id: "/projects/$id_/soggetto",
+  path: "/projects/$id/soggetto",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -245,6 +252,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdSynopsisImport;
       parentRoute: typeof AppImport;
     };
+    "/_app/projects/$id_/soggetto": {
+      id: "/_app/projects/$id_/soggetto";
+      path: "/projects/$id/soggetto";
+      fullPath: "/projects/$id/soggetto";
+      preLoaderRoute: typeof AppProjectsIdSoggettoImport;
+      parentRoute: typeof AppImport;
+    };
     "/_app/projects/$id_/title-page": {
       id: "/_app/projects/$id_/title-page";
       path: "/projects/$id/title-page";
@@ -335,6 +349,7 @@ interface AppRouteChildren {
   AppProjectsIdOutlineRoute: typeof AppProjectsIdOutlineRoute;
   AppProjectsIdScreenplayRoute: typeof AppProjectsIdScreenplayRouteWithChildren;
   AppProjectsIdSettingsRoute: typeof AppProjectsIdSettingsRoute;
+  AppProjectsIdSoggettoRoute: typeof AppProjectsIdSoggettoRoute;
   AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute;
   AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute;
   AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute;
@@ -349,6 +364,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsIdOutlineRoute: AppProjectsIdOutlineRoute,
   AppProjectsIdScreenplayRoute: AppProjectsIdScreenplayRouteWithChildren,
   AppProjectsIdSettingsRoute: AppProjectsIdSettingsRoute,
+  AppProjectsIdSoggettoRoute: AppProjectsIdSoggettoRoute,
   AppProjectsIdSynopsisRoute: AppProjectsIdSynopsisRoute,
   AppProjectsIdTitlePageRoute: AppProjectsIdTitlePageRoute,
   AppProjectsIdTreatmentRoute: AppProjectsIdTreatmentRoute,
@@ -369,6 +385,7 @@ export interface FileRoutesByFullPath {
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
   "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
+  "/projects/$id/soggetto": typeof AppProjectsIdSoggettoRoute;
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
@@ -390,6 +407,7 @@ export interface FileRoutesByTo {
   "/projects/$id/logline": typeof AppProjectsIdLoglineRoute;
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
+  "/projects/$id/soggetto": typeof AppProjectsIdSoggettoRoute;
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
@@ -413,6 +431,7 @@ export interface FileRoutesById {
   "/_app/projects/$id_/outline": typeof AppProjectsIdOutlineRoute;
   "/_app/projects/$id_/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
   "/_app/projects/$id_/settings": typeof AppProjectsIdSettingsRoute;
+  "/_app/projects/$id_/soggetto": typeof AppProjectsIdSoggettoRoute;
   "/_app/projects/$id_/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/_app/projects/$id_/title-page": typeof AppProjectsIdTitlePageRoute;
   "/_app/projects/$id_/treatment": typeof AppProjectsIdTreatmentRoute;
@@ -437,6 +456,7 @@ export interface FileRouteTypes {
     | "/projects/$id/outline"
     | "/projects/$id/screenplay"
     | "/projects/$id/settings"
+    | "/projects/$id/soggetto"
     | "/projects/$id/synopsis"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
@@ -457,6 +477,7 @@ export interface FileRouteTypes {
     | "/projects/$id/logline"
     | "/projects/$id/outline"
     | "/projects/$id/settings"
+    | "/projects/$id/soggetto"
     | "/projects/$id/synopsis"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
@@ -478,6 +499,7 @@ export interface FileRouteTypes {
     | "/_app/projects/$id_/outline"
     | "/_app/projects/$id_/screenplay"
     | "/_app/projects/$id_/settings"
+    | "/_app/projects/$id_/soggetto"
     | "/_app/projects/$id_/synopsis"
     | "/_app/projects/$id_/title-page"
     | "/_app/projects/$id_/treatment"
