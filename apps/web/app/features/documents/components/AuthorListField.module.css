@@ -1,0 +1,41 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.heading {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+
+  & > :nth-child(1) {
+    flex: 2 1 0;
+  }
+
+  & > :nth-child(2) {
+    flex: 1 1 0;
+  }
+}
+
+.removeBtn {
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.addBtn {
+  align-self: flex-start;
+}

@@ -57,6 +57,24 @@
   color: var(--color-text);
 }
 
+.fieldset {
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.legend {
+  padding-inline: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .checkboxRow input[disabled] + span {
   color: var(--color-text-muted);
 }
