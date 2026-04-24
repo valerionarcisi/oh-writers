@@ -293,6 +293,7 @@ function DocumentVersionsList({
 const SCOPE_TITLES = {
   screenplay: "Versioni screenplay",
   logline: "Versioni logline",
+  soggetto: "Versioni soggetto",
   synopsis: "Versioni sinossi",
   outline: "Versioni scaletta",
   treatment: "Versioni trattamento",

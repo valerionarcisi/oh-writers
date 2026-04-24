@@ -30,12 +30,21 @@ export type Format = (typeof Formats)[keyof typeof Formats];
 
 export const DocumentTypes = {
   LOGLINE: "logline",
+  SOGGETTO: "soggetto",
   SYNOPSIS: "synopsis",
   OUTLINE: "outline",
   TREATMENT: "treatment",
 } as const;
 
 export type DocumentType = (typeof DocumentTypes)[keyof typeof DocumentTypes];
+
+export const DOCUMENT_PIPELINE = [
+  DocumentTypes.LOGLINE,
+  DocumentTypes.SOGGETTO,
+  DocumentTypes.SYNOPSIS,
+  DocumentTypes.OUTLINE,
+  DocumentTypes.TREATMENT,
+] as const;
 
 export const PredictionTypes = {
   PRODUCTION_COST: "production_cost",

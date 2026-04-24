@@ -13,6 +13,11 @@ const AI_ACTIONS: Record<DocumentType, string[]> = {
     "Make it more concise",
     "Strengthen the conflict",
   ],
+  [DocumentTypes.SOGGETTO]: [
+    "Expand a paragraph",
+    "Tighten the premise",
+    "Clarify the theme",
+  ],
   [DocumentTypes.SYNOPSIS]: [
     "Expand a paragraph",
     "Suggest a scene to add",

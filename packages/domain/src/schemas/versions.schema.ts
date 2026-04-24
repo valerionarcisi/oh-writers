@@ -3,6 +3,7 @@ import { DocumentTypes } from "../constants.js";
 
 export const DocumentTypeSchema = z.enum([
   DocumentTypes.LOGLINE,
+  DocumentTypes.SOGGETTO,
   DocumentTypes.SYNOPSIS,
   DocumentTypes.OUTLINE,
   DocumentTypes.TREATMENT,

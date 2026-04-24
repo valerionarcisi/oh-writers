@@ -15,6 +15,7 @@ export const TREATMENT_MAX = 200_000;
 
 export const ContentMaxByType: Record<DocumentType, number> = {
   [DocumentTypes.LOGLINE]: LOGLINE_MAX,
+  [DocumentTypes.SOGGETTO]: SYNOPSIS_MAX,
   [DocumentTypes.SYNOPSIS]: SYNOPSIS_MAX,
   [DocumentTypes.TREATMENT]: TREATMENT_MAX,
   [DocumentTypes.OUTLINE]: Number.POSITIVE_INFINITY,
@@ -31,6 +32,7 @@ export const GetDocumentInput = z.object({
   projectId: z.string().uuid(),
   type: z.enum([
     DocumentTypes.LOGLINE,
+    DocumentTypes.SOGGETTO,
     DocumentTypes.SYNOPSIS,
     DocumentTypes.OUTLINE,
     DocumentTypes.TREATMENT,

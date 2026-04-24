@@ -23,7 +23,7 @@ export const documents = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     type: text("type", {
-      enum: ["logline", "synopsis", "outline", "treatment"],
+      enum: ["logline", "soggetto", "synopsis", "outline", "treatment"],
     }).notNull(),
     title: text("title").notNull(),
     content: text("content").notNull().default(""),
