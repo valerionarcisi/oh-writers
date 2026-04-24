@@ -26,3 +26,9 @@ export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";
 export { InlineGenerateButton } from "./components/InlineGenerateButton";
 export type { InlineGenerateButtonProps } from "./components/InlineGenerateButton";
+export { SubjectFooter } from "./components/SubjectFooter";
+export type {
+  SubjectFooterProps,
+  SubjectFooterLabels,
+  SubjectLength,
+} from "./components/SubjectFooter";
