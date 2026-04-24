@@ -5,6 +5,11 @@ export type {
   SubjectEditorLabels,
 } from "./components/SubjectEditor";
 export { TextEditor } from "./components/TextEditor";
+export { LoglineBlock } from "./components/LoglineBlock";
+export type {
+  LoglineBlockProps,
+  LoglineBlockLabels,
+} from "./components/LoglineBlock";
 export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
 export { SaveStatus } from "./components/SaveStatus";
