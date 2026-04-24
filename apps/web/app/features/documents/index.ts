@@ -4,6 +4,8 @@ export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
 export { SaveStatus } from "./components/SaveStatus";
 export * from "./hooks/useDocument";
+export * from "./hooks/useGenerateSubjectSection";
+export * from "./hooks/useExtractLoglineFromSubject";
 export * from "./documents.errors";
 export * from "./documents.schema";
 export type { DocumentView } from "./server/documents.server";
