@@ -24,3 +24,5 @@ export type {
 } from "./components/ContextMenu";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";
+export { InlineGenerateButton } from "./components/InlineGenerateButton";
+export type { InlineGenerateButtonProps } from "./components/InlineGenerateButton";
