@@ -14,13 +14,13 @@ Note: the user-facing term is `Soggetto` (kept in Italian as the industry-standa
 
 ## Document pipeline — new order
 
-| Order | Type        | Notes                                                                  |
-| ----- | ----------- | ---------------------------------------------------------------------- |
-| 1     | `logline`   | Scalar field on the project (max 500 chars). Co-edited in `/soggetto`. |
-| 2     | `soggetto`  | **New.** 2–5 cartelle, prose with Markdown headings.                   |
-| 3     | `synopsis`  | Unchanged. Useful for pressbook and short pitch.                       |
-| 4     | `outline`   | Unchanged.                                                             |
-| 5     | `treatment` | Unchanged.                                                             |
+| Order | Type        | Notes                                                                                           |
+| ----- | ----------- | ----------------------------------------------------------------------------------------------- |
+| 1     | `logline`   | Stored as `DocumentTypes.LOGLINE` versioned document (max 500 chars). Co-edited in `/soggetto`. |
+| 2     | `soggetto`  | **New.** 2–5 cartelle, prose with Markdown headings.                                            |
+| 3     | `synopsis`  | Unchanged. Useful for pressbook and short pitch.                                                |
+| 4     | `outline`   | Unchanged.                                                                                      |
+| 5     | `treatment` | Unchanged.                                                                                      |
 
 The order is made **explicit** via an exported constant `DOCUMENT_PIPELINE` in `packages/domain/src/constants.ts`. All UIs (dashboard, sidebar, wizard) read from there — zero hardcoding of the order anywhere else.
 
@@ -147,7 +147,7 @@ Minimal extensions:
 
 ### Logline field
 
-Above the editor, existing `TextEditor` component (max 500). Saves onto the project (`logline` is a column on `projects`, not a versioned document — confirm in `project.schema.ts`).
+Above the editor, the `LoglineBlock` component (max 500). Persisted as a `DocumentTypes.LOGLINE` document via `useSaveDocument` — same pipeline as the standalone `/logline` route. The soggetto route auto-saves both documents with the shared `useAutoSave` hook.
 
 Button **✨ extract** next to the label: calls `generateLoglineFromSubject`, opens a popover with the suggestion; accept → overwrite the field, reject → close.
 
