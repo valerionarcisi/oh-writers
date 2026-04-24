@@ -6,6 +6,7 @@ import {
   FileText,
   BookOpen,
   ListTree,
+  NotebookText,
   ScrollText,
   Settings,
   Layers,
@@ -15,10 +16,25 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  type LucideIcon,
 } from "lucide-react";
+import {
+  DOCUMENT_PIPELINE,
+  DocumentTypes,
+  type DocumentType,
+} from "@oh-writers/domain";
+import { DOCUMENT_LABELS } from "~/features/documents";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
 import styles from "./Sidebar.module.css";
+
+const DOCUMENT_ICONS: Record<DocumentType, LucideIcon> = {
+  [DocumentTypes.LOGLINE]: PenLine,
+  [DocumentTypes.SOGGETTO]: NotebookText,
+  [DocumentTypes.SYNOPSIS]: BookOpen,
+  [DocumentTypes.OUTLINE]: ListTree,
+  [DocumentTypes.TREATMENT]: ScrollText,
+};
 
 const ICON_SIZE = 18;
 const ICON_STROKE = 1.5;
@@ -100,58 +116,26 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
               {!isCollapsed && (
                 <div className={styles.sectionLabel}>Writing</div>
               )}
-              <Link
-                to={`/projects/${projectId}/logline` as string}
-                className={styles.navLink}
-                activeProps={{
-                  className: `${styles.navLink} ${styles.active}`,
-                }}
-                title="Logline"
-              >
-                <PenLine size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                {!isCollapsed && (
-                  <span className={styles.navLabel}>Logline</span>
-                )}
-              </Link>
-              <Link
-                to={`/projects/${projectId}/synopsis` as string}
-                className={styles.navLink}
-                activeProps={{
-                  className: `${styles.navLink} ${styles.active}`,
-                }}
-                title="Synopsis"
-              >
-                <BookOpen size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                {!isCollapsed && (
-                  <span className={styles.navLabel}>Synopsis</span>
-                )}
-              </Link>
-              <Link
-                to={`/projects/${projectId}/outline` as string}
-                className={styles.navLink}
-                activeProps={{
-                  className: `${styles.navLink} ${styles.active}`,
-                }}
-                title="Outline"
-              >
-                <ListTree size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                {!isCollapsed && (
-                  <span className={styles.navLabel}>Outline</span>
-                )}
-              </Link>
-              <Link
-                to={`/projects/${projectId}/treatment` as string}
-                className={styles.navLink}
-                activeProps={{
-                  className: `${styles.navLink} ${styles.active}`,
-                }}
-                title="Treatment"
-              >
-                <ScrollText size={ICON_SIZE} strokeWidth={ICON_STROKE} />
-                {!isCollapsed && (
-                  <span className={styles.navLabel}>Treatment</span>
-                )}
-              </Link>
+              {DOCUMENT_PIPELINE.map((type) => {
+                const Icon = DOCUMENT_ICONS[type];
+                const label = DOCUMENT_LABELS[type];
+                return (
+                  <Link
+                    key={type}
+                    to={`/projects/${projectId}/${type}` as string}
+                    className={styles.navLink}
+                    activeProps={{
+                      className: `${styles.navLink} ${styles.active}`,
+                    }}
+                    title={label}
+                  >
+                    <Icon size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+                    {!isCollapsed && (
+                      <span className={styles.navLabel}>{label}</span>
+                    )}
+                  </Link>
+                );
+              })}
               <Link
                 to="/projects/$id/screenplay"
                 params={{ id: projectId }}
