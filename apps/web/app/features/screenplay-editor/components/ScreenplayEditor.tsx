@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
@@ -111,6 +112,20 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       : null;
   const nextVersionLabel =
     versionsCount > 0 ? `Versione ${versionsCount + 1}` : null;
+  const versionsLoadError: string | null =
+    versionsResult && !versionsResult.isOk
+      ? match(versionsResult.error)
+          .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+          .with(
+            { _tag: "ForbiddenError" },
+            () => "You cannot access these versions.",
+          )
+          .with(
+            { _tag: "DbError" },
+            () => "Could not load versions. Please retry.",
+          )
+          .exhaustive()
+      : null;
 
   const createVersion = useCreateManualVersion();
   const handleCreateVersionThenImport = useCallback(
@@ -137,8 +152,15 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
 
   const isExistingTitlePageEmpty = (() => {
     const v = titlePageQ.data;
-    if (!v || !v.isOk) return true;
-    return v.value.state.doc === null;
+    if (!v) return true;
+    return match(v)
+      .with({ isOk: true }, ({ value }) => value.state.doc === null)
+      .with(
+        { isOk: false, error: { _tag: "ProjectNotFoundError" } },
+        () => true,
+      )
+      .with({ isOk: false, error: { _tag: "DbError" } }, () => false)
+      .exhaustive();
   })();
 
   const applyImportedTitlePage = useCallback(
@@ -202,6 +224,15 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     const result = versionQuery.data;
     if (!result) return;
     if (!result.isOk) {
+      const message = match(result.error)
+        .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+        .with({ _tag: "ForbiddenError" }, () => "You cannot view this version.")
+        .with(
+          { _tag: "DbError" },
+          () => "Could not load the version. Please retry.",
+        )
+        .exhaustive();
+      setToast(message);
       setPendingView(null);
       return;
     }
@@ -434,6 +465,15 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onOpenExportPdf={(f) => setExportFormat(f)}
           isExportingPdf={exportPdf.isPending}
         />
+      )}
+      {!isFocusMode && versionsLoadError && (
+        <div
+          role="alert"
+          className={styles.toast}
+          data-testid="versions-load-error"
+        >
+          {versionsLoadError}
+        </div>
       )}
       {!isFocusMode && !isViewing && (
         <SceneStaleBadge
