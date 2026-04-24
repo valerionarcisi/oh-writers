@@ -4,10 +4,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import {
+  ExportPdfModal,
   LoglineBlock,
   SubjectEditor,
   useAutoSave,
   useDocument,
+  useExportSubjectDocx,
   useSaveDocument,
 } from "~/features/documents";
 import type { DocumentViewWithPermission } from "~/features/documents/server/documents.server";
@@ -88,9 +90,11 @@ function SoggettoPageReady({
 }: SoggettoPageReadyProps) {
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const saveSoggetto = useSaveDocument();
   const saveLogline = useSaveDocument();
+  const exportDocx = useExportSubjectDocx();
 
   useAutoSave(
     saveSoggetto,
@@ -102,8 +106,36 @@ function SoggettoPageReady({
 
   const canEdit = soggettoDoc.canEdit && loglineDoc.canEdit;
 
+  const handleExport = (opts: { format: "pdf" | "docx" }) => {
+    if (opts.format !== "docx") return;
+    exportDocx.mutate(
+      { projectId },
+      { onSuccess: () => setIsExportOpen(false) },
+    );
+  };
+
   return (
     <main data-testid="soggetto-page">
+      <div className={styles.toolbar} data-testid="soggetto-toolbar">
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={() => setIsExportOpen(true)}
+          disabled={exportDocx.isPending}
+          data-testid="soggetto-export"
+        >
+          {exportDocx.isPending ? "Exporting…" : "Export"}
+        </button>
+      </div>
+      {isExportOpen && (
+        <ExportPdfModal
+          canIncludeTitlePage={false}
+          isPending={exportDocx.isPending}
+          availableFormats={["docx"]}
+          onClose={() => setIsExportOpen(false)}
+          onGenerate={handleExport}
+        />
+      )}
       <LoglineBlock
         projectId={projectId}
         logline={loglineContent === "" ? null : loglineContent}
