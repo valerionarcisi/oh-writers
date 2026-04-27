@@ -25,6 +25,7 @@ import {
 } from "../lib/subject-prompt";
 import { checkAndStampRateLimit } from "../../breakdown/lib/rate-limit";
 import { mockSubjectSection } from "~/mocks/ai-responses";
+import { callHaiku, extractText } from "~/features/ai";
 
 const COOLDOWN_MS = 30_000;
 const HAIKU_MODEL = "claude-haiku-4-5";
@@ -145,41 +146,18 @@ const callAnthropic = (
   maxTokens: number,
   operation: string,
 ): ResultAsync<string, DbError> =>
-  ResultAsync.fromPromise(
-    (async () => {
-      const sdkModule = "@anthropic-ai/sdk";
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sdk: any = await import(/* @vite-ignore */ sdkModule);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Anthropic = (sdk.default ?? sdk) as any;
-      const client = new Anthropic({
-        apiKey: process.env["ANTHROPIC_API_KEY"]!,
-      });
-      const response = await client.messages.create({
-        model: HAIKU_MODEL,
-        max_tokens: maxTokens,
-        system: [
-          {
-            type: "text",
-            text: payload.system,
-            cache_control: { type: "ephemeral" },
-          },
-          {
-            type: "text",
-            text: JSON.stringify(payload.fewShot),
-            cache_control: { type: "ephemeral" },
-          },
-        ],
-        messages: [{ role: "user", content: payload.user }],
-      });
-      const block = response.content.find(
-        (b: { type: string }) => b.type === "text",
-      );
-      if (!block || block.type !== "text") return "";
-      return (block.text as string).trim();
-    })(),
-    (e) => new DbError(operation, e),
-  );
+  callHaiku(
+    {
+      system: payload.system,
+      fewShot: payload.fewShot,
+      user: payload.user,
+      model: HAIKU_MODEL,
+      maxTokens,
+    },
+    operation,
+  )
+    .map((res) => extractText(res.content) ?? "")
+    .mapErr((e) => new DbError(operation, e.cause ?? e.message));
 
 const truncateLogline = (raw: string): string => {
   const trimmed = raw.trim().replace(/^["«»"']+|["«»"']+$/g, "");
