@@ -247,18 +247,19 @@ export const createManualVersion = createServerFn({ method: "POST" })
 
       return toShape(
         await ResultAsync.fromPromise(
-          Promise.all([
-            nextVersionNumber(db, data.screenplayId),
-            pickNextColorFor(db, data.screenplayId),
-          ]).then(async ([number, draftColor]) => {
-            const prevVersion = await db
+          db.transaction(async (tx) => {
+            const [number, draftColor] = await Promise.all([
+              nextVersionNumber(tx, data.screenplayId),
+              pickNextColorFor(tx, data.screenplayId),
+            ]);
+            const prevVersion = await tx
               .select({ id: screenplayVersions.id })
               .from(screenplayVersions)
               .where(eq(screenplayVersions.screenplayId, data.screenplayId))
               .orderBy(desc(screenplayVersions.number))
               .limit(1);
             const prevVersionId = prevVersion[0]?.id ?? null;
-            const inserted = await db
+            const inserted = await tx
               .insert(screenplayVersions)
               .values({
                 screenplayId: data.screenplayId,
@@ -274,7 +275,7 @@ export const createManualVersion = createServerFn({ method: "POST" })
               .then((rows) => rows[0]);
             if (inserted && prevVersionId) {
               await cloneBreakdownToNewVersionInline(
-                db,
+                tx,
                 prevVersionId,
                 inserted.id,
               );
@@ -297,11 +298,11 @@ export const createManualVersion = createServerFn({ method: "POST" })
  * and breakdown carry-over are a single write surface.
  */
 const cloneBreakdownToNewVersionInline = async (
-  db: Db,
+  tx: DbOrTx,
   fromVersionId: string,
   toVersionId: string,
 ): Promise<void> => {
-  const sourceRows = await db
+  const sourceRows = await tx
     .select({
       occ: breakdownOccurrences,
       el: breakdownElements,
@@ -318,40 +319,43 @@ const cloneBreakdownToNewVersionInline = async (
   if (sourceRows.length === 0) return;
 
   const sceneHashes = new Map<string, string>();
-  for (const r of sourceRows) {
+  const occurrenceValues = sourceRows.map((r) => {
     const sceneText = r.scene.heading + "\n" + (r.scene.notes ?? "");
-    const isStale = !findElementInText(r.el.name, sceneText);
-    await db
-      .insert(breakdownOccurrences)
-      .values({
-        elementId: r.el.id,
-        screenplayVersionId: toVersionId,
-        sceneId: r.scene.id,
-        quantity: r.occ.quantity,
-        note: r.occ.note,
-        cesareStatus: r.occ.cesareStatus,
-        isStale,
-      })
-      .onConflictDoNothing();
     if (!sceneHashes.has(r.scene.id)) {
       sceneHashes.set(r.scene.id, hashSceneText(sceneText));
     }
-  }
+    return {
+      elementId: r.el.id,
+      screenplayVersionId: toVersionId,
+      sceneId: r.scene.id,
+      quantity: r.occ.quantity,
+      note: r.occ.note,
+      cesareStatus: r.occ.cesareStatus,
+      isStale: !findElementInText(r.el.name, sceneText),
+    };
+  });
 
-  for (const [sceneId, hash] of sceneHashes) {
-    await db
+  await tx
+    .insert(breakdownOccurrences)
+    .values(occurrenceValues)
+    .onConflictDoNothing();
+
+  const sceneStateValues = Array.from(sceneHashes, ([sceneId, hash]) => ({
+    sceneId,
+    screenplayVersionId: toVersionId,
+    textHash: hash,
+  }));
+
+  if (sceneStateValues.length > 0) {
+    await tx
       .insert(breakdownSceneState)
-      .values({
-        sceneId,
-        screenplayVersionId: toVersionId,
-        textHash: hash,
-      })
+      .values(sceneStateValues)
       .onConflictDoUpdate({
         target: [
           breakdownSceneState.sceneId,
           breakdownSceneState.screenplayVersionId,
         ],
-        set: { textHash: hash },
+        set: { textHash: sql`excluded.text_hash` },
       });
   }
 };
