@@ -1,12 +1,11 @@
 import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { and, desc, eq } from "drizzle-orm";
-import { documents, documentVersions, projects } from "@oh-writers/db/schema";
+import { documents, documentVersions } from "@oh-writers/db/schema";
 import { DocumentTypes, type Genre } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
-import { canEdit, getMembership } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
 import {
   GenerateSubjectSectionInputSchema,
   GenerateLoglineInputSchema,
@@ -58,29 +57,29 @@ interface LoadedProject {
   readonly isArchived: boolean;
 }
 
-const loadProject = (
+// Wraps the shared access helper, remapping ProjectNotFoundError →
+// SubjectNotFoundError so the public error contract of the AI server
+// functions is unchanged. ForbiddenError flows through verbatim.
+const requireSubjectEditAccess = (
   db: Db,
   projectId: string,
-): ResultAsync<LoadedProject, SubjectNotFoundError | DbError> =>
-  ResultAsync.fromPromise(
-    db.query.projects
-      .findFirst({ where: eq(projects.id, projectId) })
-      .then((row) => row ?? null),
-    (e): SubjectNotFoundError | DbError =>
-      new DbError("subject-ai/loadProject", e),
-  ).andThen((row) =>
-    row
-      ? ok({
-          id: row.id,
-          title: row.title,
-          genre: row.genre as Genre | null,
-          format: row.format,
-          teamId: row.teamId,
-          ownerId: row.ownerId,
-          isArchived: row.isArchived,
-        })
-      : err(new SubjectNotFoundError(projectId)),
-  );
+): ResultAsync<LoadedProject, SubjectAiError> =>
+  requireProjectAccess(db, projectId, "edit")
+    .map(({ project }) => ({
+      id: project.id,
+      title: project.title,
+      genre: project.genre as Genre | null,
+      format: project.format,
+      teamId: project.teamId,
+      ownerId: project.ownerId,
+      isArchived: project.isArchived,
+    }))
+    .mapErr(
+      (e): SubjectAiError =>
+        e._tag === "ProjectNotFoundError"
+          ? new SubjectNotFoundError(projectId)
+          : e,
+    );
 
 const loadLogline = (
   db: Db,
@@ -131,23 +130,6 @@ const loadCurrentSoggetto = (
     })(),
     (e) => new DbError("subject-ai/loadSoggetto", e),
   );
-
-const ensureCanEdit = (
-  db: Db,
-  project: LoadedProject,
-  userId: string,
-): ResultAsync<LoadedProject, ForbiddenError | DbError> => {
-  const membership$ = project.teamId
-    ? getMembership(db, project.teamId, userId)
-    : ResultAsync.fromSafePromise<null, DbError>(Promise.resolve(null));
-  return membership$.andThen((membership) =>
-    canEdit(project, userId, membership)
-      ? ok<LoadedProject, ForbiddenError | DbError>(project)
-      : err<LoadedProject, ForbiddenError | DbError>(
-          new ForbiddenError("generate subject"),
-        ),
-  );
-};
 
 const stampRateLimit = (
   db: Db,
@@ -223,11 +205,9 @@ export const generateSubjectSection = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<ResultShape<{ text: string }, SubjectAiError>> => {
-      const user = await requireUser();
       const db = await getDb();
 
-      const chain = await loadProject(db, data.projectId)
-        .andThen((project) => ensureCanEdit(db, project, user.id))
+      const chain = await requireSubjectEditAccess(db, data.projectId)
         .andThen((project) =>
           stampRateLimit(db, project.id, `subject:${data.section}`).map(
             () => project,
@@ -270,11 +250,9 @@ export const generateLoglineFromSubject = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<ResultShape<{ logline: string }, SubjectAiError>> => {
-      const user = await requireUser();
       const db = await getDb();
 
-      const chain = await loadProject(db, data.projectId)
-        .andThen((project) => ensureCanEdit(db, project, user.id))
+      const chain = await requireSubjectEditAccess(db, data.projectId)
         .andThen((project) =>
           stampRateLimit(db, project.id, "subject:logline-extract").map(
             () => project,

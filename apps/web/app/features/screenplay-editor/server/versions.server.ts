@@ -5,8 +5,6 @@ import { queryOptions } from "@tanstack/react-query";
 import {
   screenplayVersions,
   screenplays,
-  projects,
-  teamMembers,
   breakdownElements,
   breakdownOccurrences,
   breakdownSceneState,
@@ -15,7 +13,6 @@ import {
 import { hashSceneText } from "~/features/breakdown/lib/hash-scene";
 import { findElementInText } from "~/features/breakdown/lib/re-match";
 import {
-  TeamRoles,
   suggestNextColor,
   FIRST_DRAFT_COLOR,
   type DraftRevisionColor,
@@ -25,6 +22,7 @@ import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
+import { requireProjectAccess } from "~/server/access";
 import { stripYjsSnapshot } from "~/server/helpers";
 import {
   ListVersionsInput,
@@ -123,10 +121,13 @@ export const ensureFirstVersion = async (
 // `screenplayId`. Returns the screenplay row on success so callers can reuse
 // it without a second query.
 
+// Loads the screenplay, then delegates project + membership + canEdit to the
+// shared `requireProjectAccess` helper. ProjectNotFoundError is remapped to
+// VersionNotFoundError to preserve the public error contract — callers of
+// the version endpoints discriminate on `_tag === "VersionNotFoundError"`.
 const resolveScreenplayAccess = (
   db: Db,
   screenplayId: string,
-  userId: string,
 ): ResultAsync<
   typeof screenplays.$inferSelect,
   VersionNotFoundError | ForbiddenError | DbError
@@ -137,56 +138,29 @@ const resolveScreenplayAccess = (
       .then((row) => row ?? null),
     (e) => new DbError("resolveScreenplayAccess.screenplay", e),
   )
-    .andThen((s) => (s ? ok(s) : err(new VersionNotFoundError(screenplayId))))
-    .andThen((s) =>
-      ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, s.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("resolveScreenplayAccess.project", e),
-      ).map((p) => ({ s, p })),
+    .andThen(
+      (
+        s,
+      ): ResultAsync<
+        typeof screenplays.$inferSelect,
+        VersionNotFoundError | ForbiddenError | DbError
+      > => (s ? okAsync(s) : errAsync(new VersionNotFoundError(screenplayId))),
     )
-    .andThen(({ s, p }) => {
-      if (!p) return errAsync(new VersionNotFoundError(s.projectId));
-
-      // Personal project — owner only
-      if (p.ownerId !== null) {
-        return p.ownerId === userId
-          ? okAsync(s)
-          : errAsync(new ForbiddenError("access screenplay versions"));
-      }
-
-      // Team project — owner or editor
-      if (!p.teamId)
-        return errAsync(new ForbiddenError("access screenplay versions"));
-
-      return ResultAsync.fromPromise(
-        db.query.teamMembers
-          .findFirst({
-            where: and(
-              eq(teamMembers.teamId, p.teamId),
-              eq(teamMembers.userId, userId),
-            ),
-          })
-          .then((row) => row ?? null),
-        (e) => new DbError("resolveScreenplayAccess.membership", e),
-      ).andThen((member) => {
-        if (!member)
-          return err(new ForbiddenError("access screenplay versions"));
-        const canEdit =
-          member.role === TeamRoles.OWNER || member.role === TeamRoles.EDITOR;
-        return canEdit
-          ? ok(s)
-          : err(new ForbiddenError("access screenplay versions"));
-      });
-    });
+    .andThen((s) =>
+      requireProjectAccess(db, s.projectId, "edit")
+        .map(() => s)
+        .mapErr((e): VersionNotFoundError | ForbiddenError | DbError =>
+          e._tag === "ProjectNotFoundError"
+            ? new VersionNotFoundError(s.projectId)
+            : e,
+        ),
+    );
 
 // Same helper but resolves from a versionId — avoids an extra query in the
 // callers that already need the version row.
 const resolveVersionAccess = (
   db: Db,
   versionId: string,
-  userId: string,
 ): ResultAsync<
   typeof screenplayVersions.$inferSelect,
   VersionNotFoundError | ForbiddenError | DbError
@@ -197,10 +171,15 @@ const resolveVersionAccess = (
       .then((row) => row ?? null),
     (e) => new DbError("resolveVersionAccess.find", e),
   )
-    .andThen((v) => (v ? ok(v) : err(new VersionNotFoundError(versionId))))
-    .andThen((v) =>
-      resolveScreenplayAccess(db, v.screenplayId, userId).map(() => v),
-    );
+    .andThen(
+      (
+        v,
+      ): ResultAsync<
+        typeof screenplayVersions.$inferSelect,
+        VersionNotFoundError | ForbiddenError | DbError
+      > => (v ? okAsync(v) : errAsync(new VersionNotFoundError(versionId))),
+    )
+    .andThen((v) => resolveScreenplayAccess(db, v.screenplayId).map(() => v));
 
 // ─── List versions ────────────────────────────────────────────────────────────
 
@@ -218,11 +197,7 @@ export const listVersions = createServerFn({ method: "GET" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveScreenplayAccess(
-        db,
-        data.screenplayId,
-        user.id,
-      );
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
       if (access.isErr()) return toShape(err(access.error));
 
       return toShape(
@@ -258,7 +233,7 @@ export const getVersion = createServerFn({ method: "GET" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
 
       return toShape(ok(stripYjsSnapshot(access.value)));
@@ -284,11 +259,7 @@ export const createManualVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveScreenplayAccess(
-        db,
-        data.screenplayId,
-        user.id,
-      );
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
       if (access.isErr()) return toShape(err(access.error));
       const screenplay = access.value;
 
@@ -419,7 +390,7 @@ export const restoreVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
       const version = access.value;
 
@@ -467,7 +438,7 @@ export const deleteVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
       const version = access.value;
 
@@ -510,7 +481,7 @@ export const renameVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
 
       return toShape(
@@ -544,7 +515,7 @@ export const duplicateVersion = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
       const source = access.value;
 
@@ -590,7 +561,7 @@ export const updateVersionMeta = createServerFn({ method: "POST" })
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
 
       const patch: Partial<{

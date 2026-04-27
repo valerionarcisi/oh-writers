@@ -10,17 +10,11 @@ import {
   AlignmentType,
   TextRun,
 } from "docx";
-import {
-  documents,
-  documentVersions,
-  projects,
-  users,
-} from "@oh-writers/db/schema";
+import { documents, documentVersions, users } from "@oh-writers/db/schema";
 import { DocumentTypes } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
-import { canEdit, getMembership } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
 import {
   DbError,
   ForbiddenError,
@@ -54,10 +48,11 @@ export const parseSoggettoMarkdown = (content: string): ParsedBlock[] => {
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter((block) => block.length > 0)
-    .map((block): ParsedBlock =>
-      block.startsWith("## ")
-        ? { kind: "heading", level: 2, text: block.slice(3).trim() }
-        : { kind: "paragraph", text: block },
+    .map(
+      (block): ParsedBlock =>
+        block.startsWith("## ")
+          ? { kind: "heading", level: 2, text: block.slice(3).trim() }
+          : { kind: "paragraph", text: block },
     );
 };
 
@@ -74,9 +69,7 @@ export const buildSoggettoDocxSections = (
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 2400, after: 400 },
-      children: [
-        new TextRun({ text: project.title, bold: true, size: 48 }),
-      ],
+      children: [new TextRun({ text: project.title, bold: true, size: 48 })],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -119,37 +112,41 @@ interface LoadedProject {
   readonly isArchived: boolean;
 }
 
-const loadProject = (
+type DocxAccessError = SubjectNotFoundError | ForbiddenError | DbError;
+
+const requireDocxExportAccess = (
   db: Db,
   projectId: string,
-): ResultAsync<LoadedProject, SubjectNotFoundError | DbError> =>
-  ResultAsync.fromPromise(
-    (async () => {
-      const project = await db.query.projects.findFirst({
-        where: eq(projects.id, projectId),
-      });
-      if (!project) return null;
-      let ownerName: string | null = null;
-      if (project.ownerId) {
-        const owner = await db.query.users.findFirst({
-          where: eq(users.id, project.ownerId),
-        });
-        ownerName = owner?.name ?? null;
-      }
-      return {
-        id: project.id,
-        title: project.title,
-        teamId: project.teamId,
-        ownerId: project.ownerId,
-        ownerName,
-        isArchived: project.isArchived,
-      } satisfies LoadedProject;
-    })(),
-    (e): SubjectNotFoundError | DbError =>
-      new DbError("subject-export-docx/loadProject", e),
-  ).andThen((row) =>
-    row ? ok(row) : err(new SubjectNotFoundError(projectId)),
-  );
+): ResultAsync<LoadedProject, DocxAccessError> =>
+  requireProjectAccess(db, projectId, "edit")
+    .mapErr(
+      (e): DocxAccessError =>
+        e._tag === "ProjectNotFoundError"
+          ? new SubjectNotFoundError(projectId)
+          : e,
+    )
+    .andThen(({ project }) =>
+      ResultAsync.fromPromise(
+        (async () => {
+          let ownerName: string | null = null;
+          if (project.ownerId) {
+            const owner = await db.query.users.findFirst({
+              where: eq(users.id, project.ownerId),
+            });
+            ownerName = owner?.name ?? null;
+          }
+          return {
+            id: project.id,
+            title: project.title,
+            teamId: project.teamId,
+            ownerId: project.ownerId,
+            ownerName,
+            isArchived: project.isArchived,
+          } satisfies LoadedProject;
+        })(),
+        (e): DocxAccessError => new DbError("subject-export-docx/owner", e),
+      ),
+    );
 
 // Duplicated from subject-ai.server.ts to keep this module self-contained.
 // A follow-up task should DRY this into a shared loader in the documents
@@ -186,23 +183,6 @@ const loadCurrentSoggetto = (
     (e) => new DbError("subject-export-docx/loadSoggetto", e),
   );
 
-const ensureCanExport = (
-  db: Db,
-  project: LoadedProject,
-  userId: string,
-): ResultAsync<LoadedProject, ForbiddenError | DbError> => {
-  const membership$ = project.teamId
-    ? getMembership(db, project.teamId, userId)
-    : ResultAsync.fromSafePromise<null, DbError>(Promise.resolve(null));
-  return membership$.andThen((membership) =>
-    canEdit(project, userId, membership)
-      ? ok<LoadedProject, ForbiddenError | DbError>(project)
-      : err<LoadedProject, ForbiddenError | DbError>(
-          new ForbiddenError("export soggetto"),
-        ),
-  );
-};
-
 // ─── Public contract ──────────────────────────────────────────────────────────
 
 const DOCX_MIME =
@@ -219,11 +199,9 @@ export const exportSubjectDocx = createServerFn({ method: "POST" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
     async ({ data }): Promise<ResultShape<ExportPayload, ExportError>> => {
-      const user = await requireUser();
       const db = await getDb();
 
-      const chain = await loadProject(db, data.projectId)
-        .andThen((project) => ensureCanExport(db, project, user.id))
+      const chain = await requireDocxExportAccess(db, data.projectId)
         .andThen((project) =>
           loadCurrentSoggetto(db, project.id).map(
             (soggetto) => ({ project, soggetto }) as const,
@@ -239,7 +217,9 @@ export const exportSubjectDocx = createServerFn({ method: "POST" })
             sections: [{ properties: {}, children: sections }],
           });
           return ResultAsync.fromPromise(
-            Packer.toBuffer(doc).then((buf) => Buffer.from(buf).toString("base64")),
+            Packer.toBuffer(doc).then((buf) =>
+              Buffer.from(buf).toString("base64"),
+            ),
             (e): ExportError => new DbError("docx:pack", e),
           ).map(
             (base64): ExportPayload => ({

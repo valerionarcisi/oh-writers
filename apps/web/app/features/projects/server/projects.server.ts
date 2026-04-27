@@ -14,6 +14,7 @@ import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "~/features/screenplay-editor/server/versions.server";
 import { canEdit, isOwner, getMembership } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
 import { CreateProjectInput, UpdateProjectInput } from "../projects.schema";
 import {
   ProjectNotFoundError,
@@ -231,29 +232,10 @@ export const updateProject = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<Project, ProjectNotFoundError | ForbiddenError | DbError>
     > => {
-      const user = await requireUser();
       const db = await getDb();
 
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
-        (e) => new DbError("updateProject", e),
-      );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new ProjectNotFoundError(data.projectId)));
-
-      let membership: TeamMember | null = null;
-      if (project.teamId) {
-        const memberResult = await getMembership(db, project.teamId, user.id);
-        if (memberResult.isErr()) return toShape(err(memberResult.error));
-        membership = memberResult.value;
-      }
-
-      if (!canEdit(project, user.id, membership)) {
-        return toShape(err(new ForbiddenError("update project")));
-      }
+      const access = await requireProjectAccess(db, data.projectId, "edit");
+      if (access.isErr()) return toShape(err(access.error));
 
       return toShape(
         await ResultAsync.fromPromise(

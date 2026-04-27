@@ -2,12 +2,11 @@ import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { and, desc, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
-import { documents, documentVersions, projects } from "@oh-writers/db/schema";
+import { documents, documentVersions } from "@oh-writers/db/schema";
 import { DocumentTypes, CHARS_PER_CARTELLA } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
-import { canEdit, getMembership } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
 import {
   SiaeExportInputSchema,
   type SiaeExportInput,
@@ -208,29 +207,29 @@ interface LoadedProject {
   readonly isArchived: boolean;
 }
 
-const loadProject = (
+type SiaeAccessError = SubjectNotFoundError | ForbiddenError | DbError;
+
+const requireSiaeEditAccess = (
   db: Db,
   projectId: string,
-): ResultAsync<LoadedProject, SubjectNotFoundError | DbError> =>
-  ResultAsync.fromPromise(
-    db.query.projects
-      .findFirst({ where: eq(projects.id, projectId) })
-      .then((row) => row ?? null),
-    (e) => new DbError("subject-siae/loadProject", e),
-  ).andThen((row) =>
-    row
-      ? ok<LoadedProject, SubjectNotFoundError | DbError>({
-          id: row.id,
-          title: row.title,
-          logline: null,
-          teamId: row.teamId,
-          ownerId: row.ownerId,
-          isArchived: row.isArchived,
-        })
-      : err<LoadedProject, SubjectNotFoundError | DbError>(
-          new SubjectNotFoundError(projectId),
-        ),
-  );
+): ResultAsync<LoadedProject, SiaeAccessError> =>
+  requireProjectAccess(db, projectId, "edit")
+    .map(
+      ({ project }): LoadedProject => ({
+        id: project.id,
+        title: project.title,
+        logline: null,
+        teamId: project.teamId,
+        ownerId: project.ownerId,
+        isArchived: project.isArchived,
+      }),
+    )
+    .mapErr(
+      (e): SiaeAccessError =>
+        e._tag === "ProjectNotFoundError"
+          ? new SubjectNotFoundError(projectId)
+          : e,
+    );
 
 const loadLogline = (
   db: Db,
@@ -288,23 +287,6 @@ const loadSoggetto = (
         ),
   );
 
-const ensureCanEdit = (
-  db: Db,
-  project: LoadedProject,
-  userId: string,
-): ResultAsync<LoadedProject, ForbiddenError | DbError> => {
-  const membership$ = project.teamId
-    ? getMembership(db, project.teamId, userId)
-    : ResultAsync.fromSafePromise<null, DbError>(Promise.resolve(null));
-  return membership$.andThen((membership) =>
-    canEdit(project, userId, membership)
-      ? ok<LoadedProject, ForbiddenError | DbError>(project)
-      : err<LoadedProject, ForbiddenError | DbError>(
-          new ForbiddenError("export subject SIAE"),
-        ),
-  );
-};
-
 // ─── Server function ─────────────────────────────────────────────────────────
 
 type SiaeExportError = SubjectNotFoundError | ForbiddenError | DbError;
@@ -321,11 +303,9 @@ export const exportSubjectSiae = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<ResultShape<SiaeExportPayload, SiaeExportError>> => {
-      const user = await requireUser();
       const db = await getDb();
 
-      const chain = await loadProject(db, data.projectId)
-        .andThen((project) => ensureCanEdit(db, project, user.id))
+      const chain = await requireSiaeEditAccess(db, data.projectId)
         .andThen((project) =>
           ResultAsync.combine([
             loadLogline(db, project.id),
