@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { Badge, Button } from "@oh-writers/ui";
+import { Badge, Button, useConfirmDialog } from "@oh-writers/ui";
 import { DOCUMENT_PIPELINE, type DocumentType } from "@oh-writers/domain";
 import {
   useProject,
@@ -53,6 +53,7 @@ function ProjectPageContent({
   const archiveProject = useArchiveProject();
   const restoreProject = useRestoreProject();
   const deleteProject = useDeleteProject();
+  const { confirm } = useConfirmDialog();
 
   const { documents: rawDocuments, screenplay, ...project } = projectData;
   const documents = [...rawDocuments].sort(
@@ -71,11 +72,18 @@ function ProjectPageContent({
   };
 
   const handleDelete = () => {
-    if (!window.confirm("Delete this project? This cannot be undone.")) return;
-    deleteProject.mutate(
-      { projectId: id },
-      { onSuccess: () => navigate({ to: "/dashboard" }) },
-    );
+    void confirm({
+      title: "Delete project?",
+      message: "Delete this project? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      deleteProject.mutate(
+        { projectId: id },
+        { onSuccess: () => navigate({ to: "/dashboard" }) },
+      );
+    });
   };
 
   return (

@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { Button } from "@oh-writers/ui";
+import { Button, useConfirmDialog } from "@oh-writers/ui";
 import {
   useProject,
   useUpdateProject,
@@ -47,6 +47,7 @@ function ProjectSettingsContent({
   const archiveProject = useArchiveProject();
   const restoreProject = useRestoreProject();
   const deleteProject = useDeleteProject();
+  const { confirm } = useConfirmDialog();
 
   const { documents: _docs, screenplay: _sp, ...project } = projectData;
 
@@ -77,14 +78,18 @@ function ProjectSettingsContent({
   };
 
   const handleDelete = () => {
-    if (
-      !window.confirm("Delete this project permanently? This cannot be undone.")
-    )
-      return;
-    deleteProject.mutate(
-      { projectId: id },
-      { onSuccess: () => navigate({ to: "/dashboard" }) },
-    );
+    void confirm({
+      title: "Delete project?",
+      message: "Delete this project permanently? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      deleteProject.mutate(
+        { projectId: id },
+        { onSuccess: () => navigate({ to: "/dashboard" }) },
+      );
+    });
   };
 
   return (

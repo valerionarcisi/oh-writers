@@ -14,7 +14,12 @@ import {
   SOGGETTO_INITIAL_TEMPLATE,
   type SubjectSection,
 } from "@oh-writers/domain";
-import { InlineGenerateButton, SubjectFooter } from "@oh-writers/ui";
+import {
+  InlineGenerateButton,
+  SubjectFooter,
+  useToast,
+  useConfirmDialog,
+} from "@oh-writers/ui";
 import type { SubjectFooterLabels } from "@oh-writers/ui";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { createCartellaMarkerPlugin } from "../lib/cartella-marker-plugin";
@@ -147,12 +152,20 @@ export function SubjectEditor({
   }, [recomputeOverlays]);
 
   const generate = useGenerateSubjectSection();
+  const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
 
   const onGenerate = useCallback(
     async (section: SubjectSection) => {
       const existingBody = extractSectionBody(content, section);
       if (existingBody.length > 0) {
-        const confirmed = window.confirm(l.confirmReplace);
+        const confirmed = await confirm({
+          title: "Sostituire la sezione?",
+          message: l.confirmReplace,
+          confirmLabel: "Sostituisci",
+          cancelLabel: "Annulla",
+          destructive: true,
+        });
         if (!confirmed) return;
       }
       setPendingSection(section);
@@ -168,16 +181,28 @@ export function SubjectEditor({
           onChange(next);
         })
         .with({ ok: false, error: { _tag: "SubjectRateLimitedError" } }, () => {
-          // TODO: surface via shared toast
-          window.alert("Troppe richieste — riprova tra un istante.");
+          showToast({
+            message: "Troppe richieste — riprova tra un istante.",
+            variant: "warning",
+          });
         })
         .with({ ok: false, error: P.any }, () => {
-          // TODO: surface via shared toast
-          window.alert("Generazione fallita. Riprova.");
+          showToast({
+            message: "Generazione fallita. Riprova.",
+            variant: "error",
+          });
         })
         .exhaustive();
     },
-    [content, generate, l.confirmReplace, onChange, projectId],
+    [
+      content,
+      generate,
+      l.confirmReplace,
+      onChange,
+      projectId,
+      confirm,
+      showToast,
+    ],
   );
 
   const lengthInfo = analyzeSubjectLength(content);
