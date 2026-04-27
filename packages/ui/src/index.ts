@@ -15,6 +15,16 @@ export type {
   ToastVariant,
   UseToast,
 } from "./components/ToastProvider";
+export { ConfirmDialog } from "./components/ConfirmDialog";
+export type { ConfirmDialogProps } from "./components/ConfirmDialog";
+export {
+  ConfirmDialogProvider,
+  useConfirmDialog,
+} from "./components/ConfirmDialogProvider";
+export type {
+  ConfirmOptions,
+  UseConfirmDialog,
+} from "./components/ConfirmDialogProvider";
 export { Tag } from "./components/Tag";
 export type { TagProps, TagVariant } from "./components/Tag";
 export { Banner } from "./components/Banner";
