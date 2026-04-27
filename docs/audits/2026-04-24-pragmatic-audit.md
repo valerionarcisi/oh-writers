@@ -1,93 +1,81 @@
-# Pragmatic Programmer Audit — 2026-04-24
+# Pragmatic Programmer Audit — 2026-04-24 (post-cleanup)
 
 Scope: `apps/web/app/features/**`, `apps/web/app/routes/**`, `packages/domain/**`, `packages/utils/**`. Read-only.
 
-Counts: 2 `: any`, 2 `@ts-expect-error`, 4 `TODO` (no FIXME), 13 raw `if (!result.isOk)` in routes/components, 0 naked `console.*` in scope, 9 `try {` blocks, 3 `.catch()` in feature `.tsx`/`.ts`.
+Counts: 0 `: any`, 2 `@ts-expect-error`, 2 `TODO` (no FIXME), 1 raw `if (!result.isOk)` in scope, 0 `console.*`, 9 `try {` blocks, 3 `.catch()` (2 outcome adapters + 1 tmp-cleanup). 5 DRY clusters carry over.
 
 ## Broken windows
 
 ### `any` / type escapes
 
-- `apps/web/app/features/documents/server/subject-ai.server.ts:170,172` — `const sdk: any = await import(...)` then `(sdk.default ?? sdk) as any`. Same pattern at `apps/web/app/features/breakdown/server/cesare-suggest.server.ts:123,125`. Both leak the dynamic-import escape into module scope; should be a single typed `loadAnthropic()` helper returning the constructor.
-- `apps/web/app/features/documents/lib/pdf-narrative.test.ts:2` and `apps/web/app/features/screenplay-editor/server/pdf-import.server.ts:42` — `@ts-expect-error` for `pdf-parse/lib/pdf-parse.js`. Acceptable per `feedback-pdf-parse-import` memory, but a single `.d.ts` shim under `apps/web/app/types/` would remove both.
+- Resolved across the board. No `: any` in scope. Both prior offenders (`subject-ai.server.ts`, `cesare-suggest.server.ts`) now route through the typed `apps/web/app/features/ai/anthropic-client.ts` (`loadAnthropic` returns `AnthropicConstructor`).
+- `apps/web/app/features/documents/lib/pdf-narrative.test.ts:2` and `apps/web/app/features/screenplay-editor/server/pdf-import.server.ts:42` still use `@ts-expect-error` for `pdf-parse/lib/pdf-parse.js`. Acceptable per `feedback-pdf-parse-import` memory; a single `.d.ts` shim under `apps/web/app/types/` would still remove both.
 
 ### TODO / FIXME
 
-- `apps/web/app/features/documents/components/AuthorListField.tsx:1,2` — i18n + "promote to packages/ui once a second caller emerges". Tracer-bullet seam.
-- `apps/web/app/features/documents/components/SubjectEditor.tsx:171,175` — `// TODO: surface via shared toast` — twice in the same `match()`. Confirms missing toast primitive (see Orthogonality below).
+- `apps/web/app/features/documents/components/AuthorListField.tsx:1,2` — i18n + "promote to packages/ui once a second caller emerges". Tracer-bullet seam, unchanged from prior audit.
+- The two `// TODO: surface via shared toast` in `SubjectEditor.tsx` are gone — toast primitive now exists (`useToast`, see Positive patterns).
 
 ### try/catch masking domain errors
 
-- `apps/web/app/features/documents/documents.schema.ts:73` — `parseOutline` swallows `JSON.parse` error and returns `emptyOutline()`. Domain conditions (corrupted persisted outline) collapse silently into "no acts". Should return `Result<OutlineContent, ParseError>` and let the caller decide.
-- `apps/web/app/features/projects/title-page-pm/title-extract.ts:14` — `extractFromJson` swallows `PMNode.fromJSON` and returns `""`. Same pattern: invalid persisted ProseMirror doc treated identically to empty title.
-- `apps/web/app/features/screenplay-editor/server/pdf-import.server.ts:46` — `try/catch` around `pdfParse`, the `catch` does pattern-matching on `e.message` containing `"encrypt"` to pick `EncryptedPdfError` vs `InvalidPdfError`. Stringly-typed branching on a third-party error message is fragile; wrap with `ResultAsync.fromPromise` and inspect the error type once.
-- `apps/web/app/features/screenplay-editor/hooks/useImportPdf.ts:93` — `try { base64 = await toBase64(file); } catch { setStatus error }`. `toBase64` is internal — make it return `Result` so the call site uses `match`.
+- `apps/web/app/features/documents/documents.schema.ts:73` — `parseOutline` still swallows `JSON.parse` and returns `emptyOutline()`. Corrupted persisted outline is indistinguishable from "no acts". Should return `Result<OutlineContent, ParseError>`. Unchanged.
+- `apps/web/app/features/projects/title-page-pm/title-extract.ts:14` — `extractFromJson` swallows `PMNode.fromJSON` and returns `""`. Same shape as above. Unchanged.
+- `apps/web/app/features/screenplay-editor/server/pdf-import.server.ts:46-55` — `try/catch` around `pdfParse`, branches on `e.message` containing `"encrypt"` to pick `EncryptedPdfError` vs `InvalidPdfError`. Stringly-typed branch on a third-party error message is fragile; wrap with `ResultAsync.fromPromise` and inspect the error type once. Unchanged.
+- `apps/web/app/features/screenplay-editor/hooks/useImportPdf.ts:94` — `try { base64 = await toBase64(file); } catch { setStatus error }`. `toBase64` is internal — make it return `Result`. Unchanged.
+- `packages/domain/src/scene-numbers.ts:280-287` — `try { fillGap } catch (e) { if (e instanceof ResequenceConflictError) return err; throw e; }`. Mixes domain Result with thrown sentinel; `fillGap` should itself return `Result<number[], ResequenceConflictError>` so the orchestrator stays exception-free.
 
 ### Result discrimination without ts-pattern
 
-13 occurrences of raw `if (!result.isOk)` in route loaders / components — none use `match().exhaustive()` even though the codebase elsewhere does. Files:
-
-- `apps/web/app/routes/_app.projects.$id.tsx:33`
-- `apps/web/app/routes/_app.projects.$id_.logline.tsx:17`
-- `apps/web/app/routes/_app.projects.$id_.outline.tsx:16`
-- `apps/web/app/routes/_app.projects.$id_.synopsis.tsx:16`
-- `apps/web/app/routes/_app.projects.$id_.treatment.tsx:16`
-- `apps/web/app/routes/_app.projects.$id_.title-page.tsx:26`
-- `apps/web/app/routes/_app.projects.$id_.settings.tsx:29`
-- `apps/web/app/routes/_app.projects.$id_.screenplay.index.tsx:15`
-- `apps/web/app/routes/_app.projects.$id_.screenplay.versions.tsx:18`
-- `apps/web/app/routes/_app.projects.$id_.screenplay.versions.$vId.tsx:18`
-- `apps/web/app/features/screenplay-editor/components/VersionsList.tsx:29`
-- `apps/web/app/features/screenplay-editor/components/ScreenplayEditor.tsx:155`
-- `apps/web/app/features/screenplay-editor/hooks/useImportPdf.ts:102`
-
-All collapse the error case into a single generic message, losing the discriminated-error advantage. The CLAUDE.md example for `match(result).with({ isErr: true, error: { _tag: ... } })` is documented but not used in routes.
+Down from 13 to 1 in scope: `apps/web/app/features/projects/components/DraftMetaBadge.tsx:12` — `if (!result || !result.isOk) return null;`. Acceptable (it's "no badge on either error or loading"), but writing it as `match` would mirror the rest of the codebase. All route loaders flagged previously now go through `DocumentRoutePage`/equivalents.
 
 ### Silent error swallowing
 
-- `apps/web/app/features/screenplay-editor/lib/pdf-screenplay.ts:38` — `await rm(dir, { recursive: true, force: true }).catch(() => undefined)`. Acceptable for tmp cleanup, but no log → impossible to detect tmp-dir leaks.
-- `apps/web/app/features/screenplay-editor/lib/plugins/paginator.ts:63,160,169` — three `try { coordsAtPos } catch { continue/return fallback }`. Documented as "view hasn't painted yet" — fine, but the three sites should share one helper `safeCoordsAtPos(view, pos): Coords | null`.
+- `apps/web/app/features/screenplay-editor/lib/pdf-screenplay.ts:38` — `await rm(dir, …).catch(() => undefined)`. Acceptable for tmp cleanup but still no log → tmp-dir leaks would go unnoticed. Unchanged.
+- `apps/web/app/features/screenplay-editor/lib/plugins/paginator.ts:63,160,169` — three `try { coordsAtPos } catch { …fallback }` inside one file. Documented as "view hasn't painted yet" — fine, but the three sites should still share one helper `safeCoordsAtPos(view, pos): Coords | null`. Unchanged.
 
 ## DRY violations (3+)
 
-1. **Anthropic SDK lazy-load + system-prompt cache_control boilerplate** — `subject-ai.server.ts:161-200` and `cesare-suggest.server.ts:116-152`. Both: dynamic-import via string identifier, `(sdk.default ?? sdk) as any`, `new Anthropic({ apiKey: process.env["ANTHROPIC_API_KEY"]! })`, two-block system with `cache_control: { type: "ephemeral" }`, find content block, return `.text` or empty. **Extract** `apps/web/app/features/ai/anthropic-client.ts` exposing `callHaiku({ system, fewShot, user, maxTokens, tools? }): ResultAsync<AnthropicResponse, DbError>`. Will become 3+ occurrences as soon as Cesare/budget/schedule predictions land (memory: `project-positioning-ad-and-competitors`).
-
-2. **Mutation outcome → `{ ok, value | error }` adapter** — `SubjectEditor.tsx:159-162` and `LoglineBlock.tsx:65-68`. Identical `.mutateAsync(...).then(value => ({ ok: true, value })).catch(error => ({ ok: false, error }))` pattern, immediately followed by a `match()` on `_tag: "SubjectRateLimitedError"`. **Extract** `mutationToOutcome(promise): Promise<Outcome<T, E>>` in `packages/utils`. Currently 2; will hit 3 with the next AI feature.
-
-3. **Document editor route page** — `_app.projects.$id_.logline.tsx`, `_app.projects.$id_.outline.tsx`, `_app.projects.$id_.synopsis.tsx`, `_app.projects.$id_.treatment.tsx` are byte-for-byte identical except the `DocumentTypes.X` constant and the route path. **Extract** `apps/web/app/features/documents/components/DocumentRoutePage.tsx({ id, type })` — each route file shrinks to 6 lines.
-
-4. **Route loader `if (!result.isOk)` + status div** — same 3 lines `if (isLoading) ... if (!result) return null; if (!result.isOk) return <div className={styles.statusError}>...` in 4 narrative-doc route pages plus title-page/settings/screenplay-versions. Bundle into the shared component above.
-
-5. **`window.confirm` for destructive ops** — 5 sites: `_app.projects.$id_.settings.tsx:62`, `_app.projects.$id.tsx:53`, `SubjectEditor.tsx:155`, `VersionsDrawer.tsx:234`, `ProjectBreakdownTable.tsx:128`. Native dialog is inconsistent with the design system and untestable from Playwright. **Extract** `useConfirmDialog()` in `packages/ui` returning a promise-based modal.
+1. **Mutation outcome → `{ ok, value | error }` adapter** — `SubjectEditor.tsx:172-175` and `LoglineBlock.tsx:65-68`. Identical `.mutateAsync(...).then(value => ({ ok: true, value })).catch(error => ({ ok: false, error }))` followed by a `match()` on `_tag`. Currently 2 occurrences; one more AI mutation will hit the 3+ threshold. Extract `mutationToOutcome` in `packages/utils`.
+2. **Hardcoded IT toast/error fallback strings** — `SubjectEditor.tsx:185` (`"Troppe richieste — riprova tra un istante."`), `LoglineBlock.tsx:81` (`"Impossibile estrarre la logline."`), `SubjectEditor.tsx:163,165` (`"Sostituire la sezione?"`, `"Sostituisci"`/`"Annulla"`). Should be in the labels record the rest of the component already accepts. See Domain-language drift.
+3. **Coords-fallback in paginator** — `paginator.ts:63,160,169` are 3 occurrences inside one file. Extract `safeCoordsAtPos` locally.
+4. **JSON-parse-then-fallback-to-empty** — `documents.schema.ts:73` (`parseOutline`) and `title-extract.ts:14` (`extractFromJson`) both wrap a parser in `try { … } catch { return EMPTY }`. Two occurrences only, but the shape is identical: turn into `parseOrEmpty<T>(raw, parser, empty)` once a third caller appears (likely with the next persisted PM doc — synopsis or treatment).
+5. _(Cleared)_ — Anthropic-SDK boilerplate, `window.confirm` calls, document-route boilerplate, and route-loader `if (!result.isOk)` blocks all consolidated; not a DRY hotspot anymore.
 
 ## Orthogonality hotspots
 
-1. **Adding a new `DocumentType`** touches: `documents.schema.ts` (Zod), `narrative-schema.ts`, `narrative-html.ts`, `pdf-narrative.ts`, a new route file under `apps/web/app/routes/_app.projects.$id_.<type>.tsx`, `app-shell` sidebar nav, `seed/*`. The route file is pure boilerplate (DRY #3) — collapsing it is the cheapest win to bring this from ~7 files to ~5.
-
-2. **Toast notifications** — every error path currently picks one of: `setStatus({type:"error"})` (PDF import), `setPopover({kind:"error"})` (Logline), `window.alert` (Subject), inline `<div className={styles.statusError}>` (route loaders). Five mechanisms for the same concept. Two `// TODO: surface via shared toast` confirm the missing primitive. Add `useToast()` in `packages/ui` and migrate.
-
-3. **AI call sites** — `subject-ai`, `cesare-suggest`. Each duplicates: lazy SDK import, env-var read, prompt-cache control, mock-mode branch (`process.env["MOCK_AI"] === "true"` in `cesare-suggest.server.ts:101` mirrors `subject-ai.server.ts`'s mock path). Centralizing DRY #1 also centralizes the mock toggle.
-
-4. **Persistence stripping (`stripYjsState` / `stripYjsSnapshot`)** is correctly centralized in `apps/web/app/server/helpers.ts` and used by 4 server files — positive baseline; AI-client centralization should follow the same template.
-
-5. **`safeCoordsAtPos` helper** — `paginator.ts` lines 63, 160, 169 are 3 occurrences inside a single file. Local extraction, low-cost orthogonality win.
+1. **AuthorListField stuck at "tracer bullet"** — two TODOs at the top still acknowledge: defaults are English, callers pass IT overrides, component will move to `packages/ui` "once a second caller emerges". The seam is real; either commit by adding a second caller and promoting, or delete the TODOs and accept feature-locality.
+2. **Toast vs. inline status vs. popover** — toast primitive (`useToast`) and `useConfirmDialog` are now in `packages/ui` and used by 7 sites. Remaining inconsistency: `useImportPdf.ts:97-105` still uses an inline `setStatus({type:"error"})` state machine rather than the shared toast for "Could not read the file." Migrate the import-error path to `showToast` for cross-feature consistency.
+3. **`scene-numbers.ts:280-287`** — `fillGap` throws `ResequenceConflictError` while the surrounding orchestrator already returns `Result`. The boundary between thrown and returned errors leaks into a domain-layer file. Pull the error-as-value contract all the way down.
+4. **PDF-parse error classification** — `pdf-import.server.ts` does string-match on `e.message`. The `EncryptedPdfError` vs `InvalidPdfError` distinction is a domain-relevant outcome of an external boundary; encapsulate `pdfParse` in a `parsePdf(buffer): ResultAsync<string, EncryptedPdfError | InvalidPdfError>` adapter and keep the server function clean.
+5. _(Positive baseline)_ — `DocumentRoutePage` (`apps/web/app/features/documents/components/DocumentRoutePage.tsx`) collapses 4 route files to 6 lines each. Adding a fifth narrative document type is now a one-route-file change. Model citizen for orthogonality.
 
 ## Domain-language drift
 
-- Italian-language UI strings inline in `SubjectEditor.tsx:172,176` (`"Troppe richieste — riprova tra un istante."`, `"Generazione fallita. Riprova."`) and `LoglineBlock.tsx:81` (`"Impossibile estrarre la logline."`) live next to English defaults from `defaultLabels`. Memory `feedback-i18n-it-en` requires bilingual via i18n with English in code. These hardcoded IT strings should move into the labels record the rest of the component already accepts.
-- `ProjectBreakdownTable.tsx:128` — `"Archiviare questo elemento?"` (IT) inside a generic confirm. Same drift.
-- `AuthorListField.tsx` — TODO acknowledges defaults are English while callers pass IT overrides. Symptom of the missing i18n layer.
+- `apps/web/app/features/documents/components/SubjectEditor.tsx:163-167,185` — IT inline strings (`"Sostituire la sezione?"`, `"Sostituisci"`, `"Annulla"`, `"Troppe richieste — riprova tra un istante."`) hardcoded next to English `defaultLabels`. Same anti-pattern flagged previously, partially migrated to labels but rate-limit + confirm still inline.
+- `apps/web/app/features/documents/components/LoglineBlock.tsx:81` — `"Impossibile estrarre la logline."` still inline despite a `LoglineBlockLabels` record being threaded through the component.
+- `AuthorListField.tsx` — TODO confirms defaults-EN-callers-IT split. Symptom of the missing i18n layer (memory: `feedback-i18n-it-en`).
 
 ## Noted but acceptable
 
-- All 9 `try {` blocks in scope are either swallowing-with-fallback in render-path code (paginator coords) or wrapping third-party SDKs at a clear boundary (pdf-parse, ProseMirror's `fromJSON`). The four flagged above (DRY #1, schema parsers, pdf-import, useImportPdf) are the ones masking domain Result errors.
-- `process.env["KEY"]!` non-null assertions for `ANTHROPIC_API_KEY` are acceptable per "fail fast on programming errors" — but only after centralizing (DRY #1) so the read happens once at module init with a real `throw new Error(...)`, not per call.
-- `console.*` is absent in scope; logging belongs in `packages/db/src/seed/*` (out of scope) — clean.
+- `@ts-expect-error` × 2 on `pdf-parse/lib/pdf-parse.js` — required by the import-path workaround documented in memory.
+- `pdf-screenplay.ts:38` — tmp-dir `.catch(() => undefined)`. Best-effort cleanup; not a domain error.
+- 3 `try` blocks in `paginator.ts` — render-path defensive code for a third-party library that throws synchronously; would benefit from extraction (DRY #3) but not from a Result wrap.
+- `process.env["ANTHROPIC_API_KEY"]` read in `anthropic-client.ts:91` with a `throw` on missing — correct fail-fast for a programming/env error, centralized to one place.
 
 ## Positive patterns
 
-- 56 `match(...)` usages across 17 files in `features/**` — exhaustive matching is the rule, not the exception. The 13 raw `if (!result.isOk)` in routes are the visible exception.
-- `requireUser()` (256 calls across 31 files) and `getDb()` are uniformly entry-pointed — auth/permission enforcement is orthogonal to feature logic.
-- `stripYjsState` / `stripYjsSnapshot` centralized in `apps/web/app/server/helpers.ts` — model citizen for "centralize, don't scatter".
-- Domain errors are plain value objects with `_tag` (per CLAUDE.md), enabling JSON-safe `ResultShape` round-trips.
-- Feature folders are self-contained; cross-feature imports go through `index.ts` barrels (verified via `~/features/documents` style).
+- **Anthropic SDK centralization** — `apps/web/app/features/ai/anthropic-client.ts` exposes a typed `callHaiku(...): ResultAsync<HaikuResult, AnthropicError>` plus `extractText`/`extractToolUse` helpers. Removed both `: any` escapes flagged previously and made future AI features (Cesare, budget, schedule) drop-in. Deep module: small interface, real value inside.
+- **Route consolidation** — 4 narrative-document route files (`logline`, `outline`, `synopsis`, `treatment`) are now 10-line shells calling `DocumentRoutePage`. Killed DRY #3 + most of the raw `if (!result.isOk)` cluster from the prior audit.
+- **`useToast` + `useConfirmDialog` in `packages/ui`** — replaces 5 sites of `window.confirm`/`window.alert` and the two TODO-toast comments. Promise-based confirm is Playwright-testable.
+- **Feature barrels intact** — cross-feature imports go through `index.ts`; no reach-around imports detected.
+- **`requireUser` / `getDb` / `stripYjsState`** — still uniformly used; orthogonality of auth and persistence is preserved.
+
+## Resolution of the prior audit's top 5
+
+1. **Anthropic SDK `: any` × 4** — RESOLVED via `features/ai/anthropic-client.ts`.
+2. **13 raw `if (!result.isOk)` in routes** — RESOLVED (down to 1 in scope, in `DraftMetaBadge`, and intentional).
+3. **Document-route file boilerplate (DRY #3)** — RESOLVED via `DocumentRoutePage`.
+4. **`window.confirm` × 5 (DRY #5)** — RESOLVED via `useConfirmDialog` from `packages/ui`.
+5. **Two `TODO: surface via shared toast`** — RESOLVED via `useToast`.
+
+Carry-overs: schema/title-page swallow-and-return-empty, paginator `safeCoordsAtPos`, pdf-import string-match, `useImportPdf` `toBase64` try/catch, AuthorListField TODOs, IT string drift in `SubjectEditor`/`LoglineBlock`, and the new `scene-numbers.ts` thrown-error-in-Result boundary.
