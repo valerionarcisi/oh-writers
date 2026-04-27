@@ -11,7 +11,7 @@
     "dev:check": "bash scripts/dev-check.sh",
     "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
     "typecheck": "pnpm --recursive typecheck",
-    "lint": "pnpm --recursive lint",
+    "lint": "eslint apps/web/app --max-warnings 0",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
@@ -28,11 +28,16 @@
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",
+    "@typescript-eslint/parser": "8.59.0",
     "eslint": "10.0.2",
+    "eslint-import-resolver-typescript": "4.4.4",
+    "eslint-plugin-import-x": "4.16.2",
+    "eslint-plugin-react-hooks": "7.1.1",
     "lint-staged": "15.5.2",
     "prettier": "3.8.1",
     "tsx": "4.19.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.0"
   },
   "lint-staged": {
     "*.{ts,tsx,css,json,md}": [
