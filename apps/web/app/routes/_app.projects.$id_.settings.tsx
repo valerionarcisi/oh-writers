@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import { Button } from "@oh-writers/ui";
 import {
   useProject,
@@ -9,27 +10,45 @@ import {
   useDeleteProject,
   ProjectForm,
 } from "~/features/projects";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.settings.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/settings")({
   component: ProjectSettingsPage,
 });
 
+type ProjectQueryData = NonNullable<ReturnType<typeof useProject>["data"]>;
+type ProjectValue = Extract<ProjectQueryData, { isOk: true }>["value"];
+
 function ProjectSettingsPage() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
   const { data: result, isLoading } = useProject(id);
+
+  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (!result) return null;
+
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <ProjectSettingsContent id={id} project={value} />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
+}
+
+function ProjectSettingsContent({
+  id,
+  project: projectData,
+}: {
+  id: string;
+  project: ProjectValue;
+}) {
+  const navigate = useNavigate();
   const updateProject = useUpdateProject();
   const archiveProject = useArchiveProject();
   const restoreProject = useRestoreProject();
   const deleteProject = useDeleteProject();
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
-  if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Project not found.</div>;
-
-  const { documents: _docs, screenplay: _sp, ...project } = result.value;
+  const { documents: _docs, screenplay: _sp, ...project } = projectData;
 
   const canEdit = !project.isArchived;
 

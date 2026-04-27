@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import { Badge, Button } from "@oh-writers/ui";
 import { DOCUMENT_PIPELINE, type DocumentType } from "@oh-writers/domain";
 import {
@@ -9,6 +10,7 @@ import {
   DocumentCard,
   ProgressBar,
 } from "~/features/projects";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id.module.css";
 
 const pipelineIndex = (type: string): number => {
@@ -22,18 +24,37 @@ export const Route = createFileRoute("/_app/projects/$id")({
 
 function ProjectPage() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
   const { data: result, isLoading } = useProject(id);
+
+  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (!result) return null;
+
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <ProjectPageContent id={id} project={value} />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
+}
+
+type ProjectQueryData = NonNullable<ReturnType<typeof useProject>["data"]>;
+type ProjectValue = Extract<ProjectQueryData, { isOk: true }>["value"];
+
+interface ProjectPageContentProps {
+  id: string;
+  project: ProjectValue;
+}
+
+function ProjectPageContent({
+  id,
+  project: projectData,
+}: ProjectPageContentProps) {
+  const navigate = useNavigate();
   const archiveProject = useArchiveProject();
   const restoreProject = useRestoreProject();
   const deleteProject = useDeleteProject();
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
-  if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Project not found.</div>;
-
-  const { documents: rawDocuments, screenplay, ...project } = result.value;
+  const { documents: rawDocuments, screenplay, ...project } = projectData;
   const documents = [...rawDocuments].sort(
     (a, b) => pipelineIndex(a.type) - pipelineIndex(b.type),
   );

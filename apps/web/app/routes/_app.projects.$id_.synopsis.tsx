@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import { NarrativeEditor, useDocument } from "~/features/documents";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/synopsis")({
@@ -13,10 +15,11 @@ function SynopsisEditorPage() {
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Document not found.</div>;
 
-  return (
-    <NarrativeEditor document={result.value} type={DocumentTypes.SYNOPSIS} />
-  );
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <NarrativeEditor document={value} type={DocumentTypes.SYNOPSIS} />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
 }

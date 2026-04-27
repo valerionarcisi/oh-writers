@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
@@ -152,11 +153,14 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     if (!pendingView) return;
     const result = versionQuery.data;
     if (!result) return;
-    if (!result.isOk) {
+    const snapshot = match(result)
+      .with({ isOk: true }, ({ value }) => value)
+      .with({ isOk: false }, () => null)
+      .exhaustive();
+    if (!snapshot) {
       setPendingView(null);
       return;
     }
-    const snapshot = result.value;
     // Remember live draft only on first entry into view mode
     const savedContent =
       viewing.kind === "viewing" ? viewing.savedContent : content;

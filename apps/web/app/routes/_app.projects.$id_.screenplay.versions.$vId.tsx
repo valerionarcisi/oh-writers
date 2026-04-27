@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import { VersionViewer } from "~/features/screenplay-editor/components/VersionViewer";
 import { useVersion } from "~/features/screenplay-editor/hooks/useVersions";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute(
@@ -15,8 +17,11 @@ function VersionViewerPage() {
 
   if (isLoading) return <div className={styles.status}>Loading version…</div>;
   if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Version not found.</div>;
 
-  return <VersionViewer projectId={id} version={result.value} />;
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <VersionViewer projectId={id} version={value} />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
 }

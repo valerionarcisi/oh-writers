@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { match } from "ts-pattern";
 import { importPdf } from "../server/pdf-import.server";
 import type { ImportPdfError } from "../pdf-import.errors";
 import { dispatchSceneNumberToast } from "../lib/plugins/scene-number-commands";
@@ -99,18 +100,20 @@ export function useImportPdf({
 
     const result = await importPdf({ data: { fileName: file.name, base64 } });
 
-    if (!result.isOk) {
-      setStatus({ type: "error", message: errorMessage(result.error) });
-      return;
-    }
-
-    if (hasExistingContent) {
-      setStatus({ type: "confirm", fountain: result.value });
-    } else {
-      onImport(result.value);
-      announceImport(result.value);
-      setStatus({ type: "idle" });
-    }
+    match(result)
+      .with({ isOk: false }, ({ error }) => {
+        setStatus({ type: "error", message: errorMessage(error) });
+      })
+      .with({ isOk: true }, ({ value }) => {
+        if (hasExistingContent) {
+          setStatus({ type: "confirm", fountain: value });
+        } else {
+          onImport(value);
+          announceImport(value);
+          setStatus({ type: "idle" });
+        }
+      })
+      .exhaustive();
   };
 
   const confirm = () => {

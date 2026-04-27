@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import {
   TitlePageEditor,
   TitlePageDraftPanel,
@@ -7,6 +8,7 @@ import {
   useUpdateTitlePageState,
 } from "~/features/projects";
 import type { TitlePageState } from "~/features/projects";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.title-page.module.css";
 
 const SAVE_DEBOUNCE_MS = 800;
@@ -23,27 +25,21 @@ function TitlePageRoute() {
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
-  if (!result.isOk) {
-    const message =
-      result.error._tag === "ProjectNotFoundError"
-        ? "Project not found."
-        : "Could not load the title page. Please retry.";
-    return <div className={styles.statusError}>{message}</div>;
-  }
 
-  const { projectTitle, state, canEdit } = result.value;
-
-  return (
-    <TitlePageRouteInner
-      projectId={id}
-      projectTitle={projectTitle}
-      initialState={state}
-      canEdit={canEdit}
-      onClose={() => navigate({ to: "/projects/$id", params: { id } })}
-      saveError={update.error?.message ?? null}
-      onSave={(next) => update.mutate({ projectId: id, state: next })}
-    />
-  );
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <TitlePageRouteInner
+        projectId={id}
+        projectTitle={value.projectTitle}
+        initialState={value.state}
+        canEdit={value.canEdit}
+        onClose={() => navigate({ to: "/projects/$id", params: { id } })}
+        saveError={update.error?.message ?? null}
+        onSave={(next) => update.mutate({ projectId: id, state: next })}
+      />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
 }
 
 interface InnerProps {
