@@ -9,6 +9,7 @@ export { VersionsPanel } from "./components/VersionsPanel";
 export { VersionViewingBanner } from "./components/VersionViewingBanner";
 export { VersionViewer } from "./components/VersionViewer";
 export { VersionDiff } from "./components/VersionDiff";
+export { ReadOnlyScreenplayView } from "./components/ReadOnlyScreenplayView";
 
 // Hooks
 export {
@@ -24,9 +25,12 @@ export {
   useDeleteVersion,
   useRenameVersion,
   useDuplicateVersion,
+  useUpdateVersionMeta,
   versionsQueryOptions,
   versionQueryOptions,
 } from "./hooks/useVersions";
+export { useMenuPopover } from "./hooks/useMenuPopover";
+export { ensureFirstVersion } from "./server/versions.server";
 
 // Server
 export {
@@ -69,3 +73,5 @@ export type { ImportPdfError } from "./pdf-import.errors";
 
 // Lib — PDF import
 export { fountainFromPdf } from "./lib/fountain-from-pdf";
+export { fountainToDoc } from "./lib/fountain-to-doc";
+export { schema as screenplaySchema } from "./lib/schema";

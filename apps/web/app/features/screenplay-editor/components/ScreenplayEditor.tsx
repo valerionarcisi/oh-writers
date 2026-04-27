@@ -117,6 +117,11 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       ? match(versionsResult.error)
           .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
           .with(
+            { _tag: "ScreenplayNotFoundError" },
+            () => "Screenplay not found.",
+          )
+          .with({ _tag: "ProjectNotFoundError" }, () => "Project not found.")
+          .with(
             { _tag: "ForbiddenError" },
             () => "You cannot access these versions.",
           )
@@ -223,20 +228,14 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     if (!pendingView) return;
     const result = versionQuery.data;
     if (!result) return;
-    if (!result.isOk) {
-      const message = match(result.error)
-        .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
-        .with({ _tag: "ForbiddenError" }, () => "You cannot view this version.")
-        .with(
-          { _tag: "DbError" },
-          () => "Could not load the version. Please retry.",
-        )
-        .exhaustive();
-      setToast(message);
+    const snapshot = match(result)
+      .with({ isOk: true }, ({ value }) => value)
+      .with({ isOk: false }, () => null)
+      .exhaustive();
+    if (!snapshot) {
       setPendingView(null);
       return;
     }
-    const snapshot = result.value;
     // Remember live draft only on first entry into view mode
     const savedContent =
       viewing.kind === "viewing" ? viewing.savedContent : content;

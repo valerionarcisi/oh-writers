@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@oh-writers/ui";
-import { staleScenesOptions } from "~/features/breakdown/hooks/useBreakdown";
+import { staleScenesOptions } from "~/features/breakdown";
 import styles from "./SceneStaleBadge.module.css";
 
 interface Props {

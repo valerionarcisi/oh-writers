@@ -6,3 +6,4 @@ export * from "./scene-heading.js";
 export * from "./revision-color.js";
 export * from "./breakdown/index.js";
 export * from "./screenplay/index.js";
+export * from "./subject/index.js";

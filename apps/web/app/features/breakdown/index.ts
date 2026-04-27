@@ -36,3 +36,6 @@ export {
   canViewBreakdown,
   type BreakdownPermissionContext,
 } from "./lib/permissions";
+export { BreakdownPage } from "./components/BreakdownPage";
+export { staleScenesOptions } from "./hooks/useBreakdown";
+export { findElementInText } from "./lib/re-match";

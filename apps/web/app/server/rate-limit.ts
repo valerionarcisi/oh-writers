@@ -1,12 +1,16 @@
 import { ResultAsync, err, ok, type Result } from "neverthrow";
 import { and, eq } from "drizzle-orm";
 import { breakdownRateLimits } from "@oh-writers/db/schema";
-import { DbError } from "@oh-writers/utils";
-import { BreakdownRateLimitedError } from "../breakdown.errors";
+import { DbError, RateLimitedError } from "@oh-writers/utils";
 import type { Db } from "~/server/db";
 
-type RateLimitErr = BreakdownRateLimitedError | DbError;
+type RateLimitErr = RateLimitedError | DbError;
 
+// Cross-cutting helper. Lives in ~/server because it's infrastructure, not
+// breakdown-specific — even though the underlying table is named
+// `breakdownRateLimits` for historical reasons (the table predates the
+// extraction). Keyed by (projectId, action) so distinct features can share
+// the same backing table without colliding.
 export const checkAndStampRateLimit = (
   db: Db,
   projectId: string,
@@ -28,7 +32,7 @@ export const checkAndStampRateLimit = (
       const now = Date.now();
       if (row && now - row.lastInvokedAt.getTime() < cooldownMs) {
         const retryAfterMs = cooldownMs - (now - row.lastInvokedAt.getTime());
-        return err(new BreakdownRateLimitedError(retryAfterMs));
+        return err(new RateLimitedError(retryAfterMs));
       }
       return ResultAsync.fromPromise(
         db

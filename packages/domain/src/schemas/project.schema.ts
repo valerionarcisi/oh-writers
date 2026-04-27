@@ -36,6 +36,7 @@ export const DocumentSchema = z.object({
   projectId: z.string().uuid(),
   type: z.enum([
     DocumentTypes.LOGLINE,
+    DocumentTypes.SOGGETTO,
     DocumentTypes.SYNOPSIS,
     DocumentTypes.OUTLINE,
     DocumentTypes.TREATMENT,

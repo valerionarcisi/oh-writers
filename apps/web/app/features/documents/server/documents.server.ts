@@ -11,7 +11,8 @@ import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
-import { canEdit, getMembership } from "~/server/permissions";
+import { canEdit } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
 import {
   SaveDocumentInput,
   GetDocumentInput,
@@ -23,7 +24,7 @@ import {
   ValidationError,
   DbError,
 } from "../documents.errors";
-import { ProjectNotFoundError } from "../../projects/projects.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,26 +142,30 @@ export const getDocument = createServerFn({ method: "GET" })
         if (versionResult.value) liveContent = versionResult.value.content;
       }
 
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, data.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("getDocument.project", e),
+      const accessResult = await requireProjectAccess(
+        db,
+        data.projectId,
+        "view",
       );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-      const project = projectResult.value;
-      if (!project) {
-        return toShape(
-          err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
-        );
+      if (accessResult.isErr()) {
+        // Map ProjectNotFound back to DocumentNotFound to keep the public
+        // contract: GETs by (projectId, type) report missing-document either
+        // way (project absence ⇒ document is unreachable for this caller).
+        const e = accessResult.error;
+        if (e._tag === "ProjectNotFoundError") {
+          return toShape(
+            err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
+          );
+        }
+        if (e._tag === "ForbiddenError") {
+          return toShape(
+            err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
+          );
+        }
+        return toShape(err(e));
       }
-
-      const membershipResult = project.teamId
-        ? await getMembership(db, project.teamId, user.id)
-        : ok(null);
-      if (membershipResult.isErr()) return toShape(err(membershipResult.error));
-
-      const permission = canEdit(project, user.id, membershipResult.value);
+      const { project, membership } = accessResult.value;
+      const permission = canEdit(project, user.id, membership);
 
       return toShape(
         ok({
@@ -219,31 +224,16 @@ export const saveDocument = createServerFn({ method: "POST" })
         );
       }
 
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, doc.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("saveDocument.project", e),
+      const accessResult = await requireProjectAccess(
+        db,
+        doc.projectId,
+        "edit",
       );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new DocumentNotFoundError(data.documentId)));
-      if (project.isArchived) {
-        return toShape(
-          err(new ForbiddenError("save document: project is archived")),
-        );
-      }
-
-      // Role guard — viewers (and non-members on team projects) cannot save.
-      const membershipResult = project.teamId
-        ? await getMembership(db, project.teamId, user.id)
-        : ok(null);
-      if (membershipResult.isErr()) return toShape(err(membershipResult.error));
-      if (!canEdit(project, user.id, membershipResult.value)) {
-        return toShape(
-          err(new ForbiddenError("save document: insufficient role")),
-        );
+      if (accessResult.isErr()) {
+        const e = accessResult.error;
+        if (e._tag === "ProjectNotFoundError")
+          return toShape(err(new DocumentNotFoundError(data.documentId)));
+        return toShape(err(e));
       }
 
       // Write to the active version row (Spec 06b). documents.updatedAt is
@@ -303,34 +293,15 @@ export const exportNarrativePdf = createServerFn({ method: "POST" })
         ProjectNotFoundError | ForbiddenError | DbError
       >
     > => {
-      const user = await requireUser();
       const db = await getDb();
 
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, data.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("exportNarrativePdf.project", e),
+      const accessResult = await requireProjectAccess(
+        db,
+        data.projectId,
+        "view",
       );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new ProjectNotFoundError(data.projectId)));
-
-      // Read-permission: personal owner, or any team member (viewer included).
-      const membershipResult = project.teamId
-        ? await getMembership(db, project.teamId, user.id)
-        : ok(null);
-      if (membershipResult.isErr()) return toShape(err(membershipResult.error));
-      const membership = membershipResult.value;
-      const isPersonalOwner =
-        project.teamId === null && project.ownerId === user.id;
-      const canRead = isPersonalOwner || membership !== null;
-      if (!canRead) {
-        return toShape(
-          err(new ForbiddenError("export narrative: not a project member")),
-        );
-      }
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      const { project } = accessResult.value;
 
       const docsResult = await ResultAsync.fromPromise(
         db.query.documents.findMany({

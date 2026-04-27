@@ -8,6 +8,7 @@ import {
   useRestoreVersion,
 } from "../hooks/useVersions";
 import type { VersionView } from "../screenplay-versions.schema";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./VersionsList.module.css";
 
 interface VersionsListProps {
@@ -17,6 +18,33 @@ interface VersionsListProps {
 
 export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
   const { data: result, isLoading } = useVersions(screenplayId);
+
+  if (isLoading) return <div className={styles.status}>Loading versions…</div>;
+  if (!result) return null;
+
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <VersionsListContent
+        projectId={projectId}
+        screenplayId={screenplayId}
+        versions={value}
+      />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
+}
+
+interface VersionsListContentProps {
+  projectId: string;
+  screenplayId: string;
+  versions: ReadonlyArray<VersionView>;
+}
+
+function VersionsListContent({
+  projectId,
+  screenplayId,
+  versions,
+}: VersionsListContentProps) {
   const createVersion = useCreateManualVersion();
   const deleteVersion = useDeleteVersion(screenplayId);
   const restoreVersion = useRestoreVersion();
@@ -24,22 +52,6 @@ export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
   const [labelInput, setLabelInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  if (isLoading) return <div className={styles.status}>Loading versions…</div>;
-  if (!result) return null;
-  if (!result.isOk) {
-    const message = match(result.error)
-      .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
-      .with(
-        { _tag: "ForbiddenError" },
-        () => "You cannot access these versions.",
-      )
-      .with({ _tag: "DbError" }, () => "Could not load versions. Please retry.")
-      .exhaustive();
-    return <div className={styles.statusError}>{message}</div>;
-  }
-
-  const versions = result.value;
 
   const handleCreate = () => {
     if (!labelInput.trim()) return;

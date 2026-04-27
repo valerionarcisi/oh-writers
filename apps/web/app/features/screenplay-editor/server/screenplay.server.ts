@@ -2,23 +2,19 @@ import { createServerFn } from "@tanstack/start";
 import { ok, err, ResultAsync } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
-import {
-  screenplays,
-  screenplayVersions,
-  projects,
-} from "@oh-writers/db/schema";
+import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { Screenplay } from "@oh-writers/db";
-import type { TeamMember } from "@oh-writers/db/schema";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "./versions.server";
-import { canEdit, isOwner, getMembership } from "~/server/permissions";
+import { canEdit, isOwner } from "~/server/permissions";
+import { requireProjectAccess } from "~/server/access";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
+  ProjectNotFoundError,
   ForbiddenError,
   DbError,
 } from "../screenplay.errors";
@@ -43,10 +39,23 @@ export const getScreenplay = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<ScreenplayView, ScreenplayNotFoundError | DbError>
+      ResultShape<
+        ScreenplayView,
+        | ScreenplayNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
     > => {
-      const user = await requireUser();
       const db = await getDb();
+
+      const accessResult = await requireProjectAccess(
+        db,
+        data.projectId,
+        "view",
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      const { user, project, membership } = accessResult.value;
 
       const result = await ResultAsync.fromPromise(
         db.query.screenplays
@@ -60,25 +69,6 @@ export const getScreenplay = createServerFn({ method: "GET" })
         return toShape(err(new ScreenplayNotFoundError(data.projectId)));
       }
 
-      // Compute canEdit from the owning project + membership so the client
-      // can disable version mutations + save path for viewers.
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, data.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("getScreenplay.project", e),
-      );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-      const project = projectResult.value;
-      if (!project) {
-        return toShape(err(new ScreenplayNotFoundError(data.projectId)));
-      }
-      let membership: TeamMember | null = null;
-      if (project.teamId) {
-        const memberResult = await getMembership(db, project.teamId, user.id);
-        if (memberResult.isErr()) return toShape(err(memberResult.error));
-        membership = memberResult.value;
-      }
       const canUserEdit = canEdit(project, user.id, membership);
       const isUserOwner = isOwner(project, user.id, membership);
 
@@ -130,10 +120,12 @@ export const saveScreenplay = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         ScreenplayView,
-        ScreenplayNotFoundError | ForbiddenError | DbError
+        | ScreenplayNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
     > => {
-      await requireUser();
       const pageCount = estimatePageCount(data.content);
       const db = await getDb();
 
@@ -148,21 +140,8 @@ export const saveScreenplay = createServerFn({ method: "POST" })
       if (!s)
         return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
 
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, s.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("saveScreenplay.project", e),
-      );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
-      if (project.isArchived) {
-        return toShape(
-          err(new ForbiddenError("save screenplay: project is archived")),
-        );
-      }
+      const accessResult = await requireProjectAccess(db, s.projectId, "edit");
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
 
       // Spec 06b: the active version row is the source of truth. Auto-version
       // snapshots are gone — saving just writes to the current version.

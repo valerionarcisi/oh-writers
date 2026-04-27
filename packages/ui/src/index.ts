@@ -9,6 +9,22 @@ export { Kbd } from "./components/Kbd";
 export { Tabs } from "./components/Tabs";
 export { Dialog } from "./components/Dialog";
 export { Toast } from "./components/Toast";
+export { ToastProvider, useToast } from "./components/ToastProvider";
+export type {
+  ToastOptions,
+  ToastVariant,
+  UseToast,
+} from "./components/ToastProvider";
+export { ConfirmDialog } from "./components/ConfirmDialog";
+export type { ConfirmDialogProps } from "./components/ConfirmDialog";
+export {
+  ConfirmDialogProvider,
+  useConfirmDialog,
+} from "./components/ConfirmDialogProvider";
+export type {
+  ConfirmOptions,
+  UseConfirmDialog,
+} from "./components/ConfirmDialogProvider";
 export { Tag } from "./components/Tag";
 export type { TagProps, TagVariant } from "./components/Tag";
 export { Banner } from "./components/Banner";
@@ -34,3 +50,11 @@ export { Progress } from "./components/Progress";
 export type { ProgressProps } from "./components/Progress";
 export { StreamingProgressBanner } from "./components/StreamingProgressBanner";
 export type { StreamingProgressBannerProps } from "./components/StreamingProgressBanner";
+export { InlineGenerateButton } from "./components/InlineGenerateButton";
+export type { InlineGenerateButtonProps } from "./components/InlineGenerateButton";
+export { SubjectFooter } from "./components/SubjectFooter";
+export type {
+  SubjectFooterProps,
+  SubjectFooterLabels,
+  SubjectLength,
+} from "./components/SubjectFooter";

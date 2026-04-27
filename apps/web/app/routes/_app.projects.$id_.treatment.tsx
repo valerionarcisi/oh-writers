@@ -1,31 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { NarrativeEditor, useDocument } from "~/features/documents";
-import styles from "./_app.projects.$id_.editor.module.css";
+import { DocumentRoutePage } from "~/features/documents";
 
 export const Route = createFileRoute("/_app/projects/$id_/treatment")({
-  component: TreatmentEditorPage,
+  component: () => {
+    const { id } = Route.useParams();
+    return <DocumentRoutePage type={DocumentTypes.TREATMENT} projectId={id} />;
+  },
 });
-
-function TreatmentEditorPage() {
-  const { id } = Route.useParams();
-  const { data: result, isLoading } = useDocument(id, DocumentTypes.TREATMENT);
-
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
-  if (!result) return null;
-
-  return match(result)
-    .with({ isOk: true }, ({ value }) => (
-      <NarrativeEditor document={value} type={DocumentTypes.TREATMENT} />
-    ))
-    .with({ isOk: false, error: { _tag: "DocumentNotFoundError" } }, () => (
-      <div className={styles.statusError}>Document not found.</div>
-    ))
-    .with({ isOk: false, error: { _tag: "DbError" } }, () => (
-      <div className={styles.statusError}>
-        Could not load the document. Please retry.
-      </div>
-    ))
-    .exhaustive();
-}

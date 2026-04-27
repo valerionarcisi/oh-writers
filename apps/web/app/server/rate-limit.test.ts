@@ -71,8 +71,8 @@ describe("checkAndStampRateLimit", () => {
     );
     expect(result.isErr()).toBe(true);
     if (!result.isErr()) return;
-    expect(result.error._tag).toBe("BreakdownRateLimitedError");
-    if (result.error._tag !== "BreakdownRateLimitedError") return;
+    expect(result.error._tag).toBe("RateLimitedError");
+    if (result.error._tag !== "RateLimitedError") return;
     expect(result.error.retryAfterMs).toBeGreaterThan(50_000);
     expect(result.error.retryAfterMs).toBeLessThanOrEqual(cooldown);
   });

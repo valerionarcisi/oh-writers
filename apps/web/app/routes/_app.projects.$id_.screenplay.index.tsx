@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import { ScreenplayEditor, useScreenplay } from "~/features/screenplay-editor";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
@@ -12,8 +14,11 @@ function ScreenplayEditorPage() {
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Screenplay not found.</div>;
 
-  return <ScreenplayEditor screenplay={result.value} />;
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <ScreenplayEditor screenplay={value} />
+    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
+    .exhaustive();
 }

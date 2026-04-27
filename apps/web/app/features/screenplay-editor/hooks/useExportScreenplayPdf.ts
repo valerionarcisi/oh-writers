@@ -2,8 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import type { ExportFormat } from "@oh-writers/domain";
 import { exportScreenplayPdf } from "../server/screenplay-export.server";
-import { base64ToBlob } from "~/features/documents/lib/download";
-import { openPdfPreview } from "~/features/documents/lib/pdf-preview";
+import { base64ToBlob, openPdfPreview } from "~/features/documents";
 
 export interface ExportScreenplayPdfInput {
   screenplayId: string;

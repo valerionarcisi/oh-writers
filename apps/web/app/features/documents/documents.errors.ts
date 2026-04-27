@@ -1,6 +1,11 @@
-import { ForbiddenError, DbError, ValidationError } from "@oh-writers/utils";
+import {
+  ForbiddenError,
+  DbError,
+  ValidationError,
+  RateLimitedError,
+} from "@oh-writers/utils";
 
-export { ForbiddenError, DbError, ValidationError };
+export { ForbiddenError, DbError, ValidationError, RateLimitedError };
 
 export class DocumentNotFoundError {
   readonly _tag = "DocumentNotFoundError" as const;
@@ -11,8 +16,19 @@ export class DocumentNotFoundError {
   }
 }
 
+export class SubjectNotFoundError {
+  readonly _tag = "SubjectNotFoundError" as const;
+  readonly message: string;
+
+  constructor(readonly projectId: string) {
+    this.message = `Soggetto not found for project ${projectId}`;
+  }
+}
+
 export type DocumentsError =
   | DocumentNotFoundError
+  | SubjectNotFoundError
+  | RateLimitedError
   | ForbiddenError
   | ValidationError
   | DbError;

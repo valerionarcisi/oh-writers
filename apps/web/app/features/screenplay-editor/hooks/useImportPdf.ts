@@ -112,21 +112,22 @@ export function useImportPdf({
 
     const result = await importPdf({ data: { fileName: file.name, base64 } });
 
-    if (!result.isOk) {
-      setStatus({ type: "error", message: errorMessage(result.error) });
-      return;
-    }
-
-    const { fountain, titlePageDoc } = result.value;
-
-    if (hasExistingContent) {
-      setStatus({ type: "confirm", fountain, titlePageDoc });
-    } else {
-      onImport(fountain);
-      announceImport(fountain);
-      if (titlePageDoc) onTitlePageDetected?.(titlePageDoc);
-      setStatus({ type: "idle" });
-    }
+    match(result)
+      .with({ isOk: false }, ({ error }) => {
+        setStatus({ type: "error", message: errorMessage(error) });
+      })
+      .with({ isOk: true }, ({ value }) => {
+        const { fountain, titlePageDoc } = value;
+        if (hasExistingContent) {
+          setStatus({ type: "confirm", fountain, titlePageDoc });
+        } else {
+          onImport(fountain);
+          announceImport(fountain);
+          if (titlePageDoc) onTitlePageDetected?.(titlePageDoc);
+          setStatus({ type: "idle" });
+        }
+      })
+      .exhaustive();
   };
 
   const confirm = () => {

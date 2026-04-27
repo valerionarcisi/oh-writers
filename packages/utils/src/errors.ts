@@ -30,6 +30,18 @@ export class DbError {
   }
 }
 
+// Cross-cutting rate-limit signal. Emitted by the shared rate-limit helper
+// (apps/web/app/server/rate-limit.ts) and rendered uniformly by
+// ResultErrorView. Features that want a distinct UX can .mapErr to a
+// feature-tagged variant, but by default the generic tag is enough — the
+// retry copy is identical across the product.
+export class RateLimitedError {
+  readonly _tag = "RateLimitedError" as const;
+  readonly message = "Rate limited: try again shortly";
+
+  constructor(readonly retryAfterMs: number) {}
+}
+
 // Input that passes Zod shape validation but violates a domain-level
 // constraint (length cap depending on discriminator, business-rule limit, etc.)
 // that Zod alone cannot express without refetching DB state.

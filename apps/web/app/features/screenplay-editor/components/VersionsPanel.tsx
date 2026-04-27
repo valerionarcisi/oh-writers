@@ -13,10 +13,7 @@ import {
   useUpdateVersionMeta,
 } from "../hooks/useVersions";
 import type { VersionView } from "../screenplay-versions.schema";
-import {
-  DRAFT_COLOR_HEX,
-  DRAFT_COLOR_LABEL,
-} from "../../projects/draft-color-palette";
+import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
 import styles from "./VersionsPanel.module.css";
 
 interface VersionsPanelProps {
@@ -70,6 +67,11 @@ export function VersionsPanel({
     result && !result.isOk
       ? match(result.error)
           .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+          .with(
+            { _tag: "ScreenplayNotFoundError" },
+            () => "Screenplay not found.",
+          )
+          .with({ _tag: "ProjectNotFoundError" }, () => "Project not found.")
           .with(
             { _tag: "ForbiddenError" },
             () => "You cannot access these versions.",

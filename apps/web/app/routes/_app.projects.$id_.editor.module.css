@@ -9,3 +9,32 @@
   color: var(--color-danger);
   font-size: var(--text-sm);
 }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border);
+}
+
+.saveBtn {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: var(--border);
+  border-color: var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

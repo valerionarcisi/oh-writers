@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fountainToDoc } from "../../../screenplay-editor/lib/fountain-to-doc";
+import { fountainToDoc } from "~/features/screenplay-editor";
 import { findOccurrencesInDoc, type ElementForMatch } from "./find-occurrences";
 
 const SAMPLE = `INT. KITCHEN - DAY

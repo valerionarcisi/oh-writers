@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/start";
-import { LoginForm } from "~/features/auth/components/LoginForm";
+import { LoginForm } from "~/features/auth";
 import styles from "./_auth.module.css";
 
 const fetchLoginData = createServerFn({ method: "GET" }).handler(async () => {

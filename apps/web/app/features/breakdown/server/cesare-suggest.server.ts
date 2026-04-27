@@ -12,25 +12,25 @@ import {
   SuggestionListSchema,
   type CesareSuggestion,
 } from "@oh-writers/domain";
-import { toShape, type ResultShape } from "@oh-writers/utils";
+import { hashText, toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
 import {
-  BreakdownRateLimitedError,
   BreakdownSceneNotFoundError,
   DbError,
   ForbiddenError,
+  RateLimitedError,
 } from "../breakdown.errors";
 import { canEditBreakdown } from "../lib/permissions";
-import { hashSceneText } from "../lib/hash-scene";
 import {
   CESARE_SYSTEM_PROMPT,
   FEW_SHOT_EXAMPLES,
   CESARE_TOOL_DEFINITION,
 } from "../lib/cesare-prompt";
-import { checkAndStampRateLimit } from "../lib/rate-limit";
+import { checkAndStampRateLimit } from "~/server/rate-limit";
 import { mockCesareBreakdownForScene } from "~/mocks/ai-responses";
 import { resolveBreakdownAccessByScene } from "./breakdown-access";
+import { callHaiku, extractToolUse } from "~/features/ai";
 
 export interface SuggestResult {
   newPending: number;
@@ -58,7 +58,7 @@ export const suggestBreakdownForScene = createServerFn({ method: "POST" })
       ResultShape<
         SuggestResult,
         | BreakdownSceneNotFoundError
-        | BreakdownRateLimitedError
+        | RateLimitedError
         | ForbiddenError
         | DbError
       >
@@ -113,49 +113,29 @@ export const suggestBreakdownForScene = createServerFn({ method: "POST" })
     },
   );
 
+// Real Anthropic call via the shared helper. The helper lazy-imports the
+// SDK, so MOCK_AI environments without a key never load it. When MOCK_AI is
+// unset and the SDK is missing, the helper's underlying import throws and
+// the AnthropicError surfaces here as a thrown error — preserving the prior
+// "fail fast on missing setup" contract of this call site.
+const TOOL_NAME = "submit_breakdown_suggestions";
+
 const callCesare = async (sceneText: string): Promise<CesareSuggestion[]> => {
-  // Fail fast with a readable message when the key is missing — otherwise the
-  // SDK throws an opaque "Could not resolve authentication method" deep in the
-  // call stack. Set MOCK_AI=true in dev if you don't want to call the API.
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
-  if (!apiKey || apiKey.length === 0) {
-    throw new Error(
-      "ANTHROPIC_API_KEY non configurata. Imposta la chiave in apps/web/.env oppure MOCK_AI=true.",
-    );
-  }
-  // Real Anthropic call. Lazy-imported via string identifier so the SDK stays
-  // optional in environments that only run with MOCK_AI=true (CI, local dev
-  // without a key).
-  const sdkModule = "@anthropic-ai/sdk";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sdk: any = await import(/* @vite-ignore */ sdkModule);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Anthropic = (sdk.default ?? sdk) as any;
-  const client = new Anthropic({ apiKey });
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 1024,
-    system: [
-      {
-        type: "text",
-        text: CESARE_SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-      {
-        type: "text",
-        text: JSON.stringify(FEW_SHOT_EXAMPLES),
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    tools: [CESARE_TOOL_DEFINITION],
-    tool_choice: { type: "tool", name: "submit_breakdown_suggestions" },
-    messages: [{ role: "user", content: sceneText }],
-  });
-  const toolUse = response.content.find(
-    (b: { type: string }) => b.type === "tool_use",
+  const result = await callHaiku(
+    {
+      system: CESARE_SYSTEM_PROMPT,
+      fewShot: FEW_SHOT_EXAMPLES,
+      user: sceneText,
+      maxTokens: 1024,
+      tools: [CESARE_TOOL_DEFINITION],
+      toolChoice: { type: "tool", name: TOOL_NAME },
+    },
+    "cesare/suggest",
   );
-  if (!toolUse || toolUse.type !== "tool_use") return [];
-  const parsed = SuggestionListSchema.safeParse(toolUse.input);
+  if (result.isErr()) throw new Error(result.error.message);
+  const input = extractToolUse(result.value.content, TOOL_NAME);
+  if (input === null) return [];
+  const parsed = SuggestionListSchema.safeParse(input);
   return parsed.success ? parsed.data.suggestions : [];
 };
 
@@ -222,7 +202,7 @@ const persistSuggestions = (
           .returning();
         if (inserted.length > 0) newPending++;
       }
-      const hash = hashSceneText(params.sceneText);
+      const hash = hashText(params.sceneText);
       const now = new Date();
       await tx
         .insert(breakdownSceneState)

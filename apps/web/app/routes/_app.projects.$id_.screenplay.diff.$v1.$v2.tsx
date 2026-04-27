@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { match } from "ts-pattern";
-import { VersionDiff } from "~/features/screenplay-editor/components/VersionDiff";
-import { useVersion } from "~/features/screenplay-editor/hooks/useVersions";
-import { screenplayQueryOptions } from "~/features/screenplay-editor";
+import {
+  VersionDiff,
+  useVersion,
+  screenplayQueryOptions,
+} from "~/features/screenplay-editor";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute(
@@ -11,32 +14,6 @@ export const Route = createFileRoute(
 )({
   component: DiffPage,
 });
-
-const versionErrorMessage = (
-  error:
-    | { _tag: "VersionNotFoundError" }
-    | { _tag: "ForbiddenError" }
-    | { _tag: "DbError" },
-): string =>
-  match(error)
-    .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
-    .with({ _tag: "ForbiddenError" }, () => "You cannot view this version.")
-    .with(
-      { _tag: "DbError" },
-      () => "Could not load the version. Please retry.",
-    )
-    .exhaustive();
-
-const screenplayErrorMessage = (
-  error: { _tag: "ScreenplayNotFoundError" } | { _tag: "DbError" },
-): string =>
-  match(error)
-    .with({ _tag: "ScreenplayNotFoundError" }, () => "Screenplay not found.")
-    .with(
-      { _tag: "DbError" },
-      () => "Could not load the screenplay. Please retry.",
-    )
-    .exhaustive();
 
 function DiffPage() {
   const { id, v1, v2 } = Route.useParams();
@@ -63,11 +40,7 @@ function DiffPage() {
   const oldData = oldVersionQuery.data;
   if (!oldData) return null;
   if (!oldData.isOk) {
-    return (
-      <div className={styles.statusError}>
-        {versionErrorMessage(oldData.error)}
-      </div>
-    );
+    return <ResultErrorView error={oldData.error} />;
   }
   const oldVersion = oldData.value;
 
@@ -83,11 +56,7 @@ function DiffPage() {
           newLabel="Current"
         />
       ))
-      .with({ isOk: false }, ({ error }) => (
-        <div className={styles.statusError}>
-          {screenplayErrorMessage(error)}
-        </div>
-      ))
+      .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
       .exhaustive();
   }
 
@@ -102,8 +71,6 @@ function DiffPage() {
         newLabel={value.label ?? "Auto-save"}
       />
     ))
-    .with({ isOk: false }, ({ error }) => (
-      <div className={styles.statusError}>{versionErrorMessage(error)}</div>
-    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
     .exhaustive();
 }

@@ -61,6 +61,7 @@ interface NarrativeEditorProps {
 
 const DOCUMENT_LABELS: Record<DocumentType, string> = {
   [DocumentTypes.LOGLINE]: "Logline",
+  [DocumentTypes.SOGGETTO]: "Soggetto",
   [DocumentTypes.SYNOPSIS]: "Synopsis",
   [DocumentTypes.OUTLINE]: "Outline",
   [DocumentTypes.TREATMENT]: "Treatment",
@@ -68,6 +69,7 @@ const DOCUMENT_LABELS: Record<DocumentType, string> = {
 
 const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
   [DocumentTypes.LOGLINE]: "A [protagonist] must [goal] before [stakes]…",
+  [DocumentTypes.SOGGETTO]: "Begin your soggetto here…",
   [DocumentTypes.SYNOPSIS]: "Begin your synopsis here…",
   [DocumentTypes.OUTLINE]: "",
   [DocumentTypes.TREATMENT]: "Begin your treatment here…",

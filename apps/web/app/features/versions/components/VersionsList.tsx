@@ -4,10 +4,7 @@ import {
   DRAFT_REVISION_COLORS,
   type DraftRevisionColor,
 } from "@oh-writers/domain";
-import {
-  DRAFT_COLOR_HEX,
-  DRAFT_COLOR_LABEL,
-} from "~/features/projects/draft-color-palette";
+import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
 import styles from "./VersionsList.module.css";
 
 export interface VersionListItem {

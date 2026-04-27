@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { VersionsList } from "~/features/screenplay-editor/components/VersionsList";
-import { useScreenplay } from "~/features/screenplay-editor";
+import { VersionsList, useScreenplay } from "~/features/screenplay-editor";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/screenplay/versions")(
@@ -21,13 +21,6 @@ function VersionsPage() {
     .with({ isOk: true }, ({ value }) => (
       <VersionsList projectId={id} screenplayId={value.id} />
     ))
-    .with({ isOk: false, error: { _tag: "ScreenplayNotFoundError" } }, () => (
-      <div className={styles.statusError}>Screenplay not found.</div>
-    ))
-    .with({ isOk: false, error: { _tag: "DbError" } }, () => (
-      <div className={styles.statusError}>
-        Could not load the screenplay. Please retry.
-      </div>
-    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
     .exhaustive();
 }

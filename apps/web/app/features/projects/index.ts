@@ -15,3 +15,4 @@ export * from "./projects.errors";
 export * from "./projects.schema";
 export * from "./title-page.schema";
 export * from "./title-page-state.schema";
+export { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "./draft-color-palette";

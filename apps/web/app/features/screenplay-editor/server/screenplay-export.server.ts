@@ -20,6 +20,7 @@ import { getDb } from "~/server/db";
 import { getMembership } from "~/server/permissions";
 import {
   ScreenplayNotFoundError,
+  ProjectNotFoundError,
   ForbiddenError,
   DbError,
 } from "../screenplay.errors";
@@ -60,7 +61,10 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         { pdfBase64: string; filename: string; format: string },
-        ScreenplayNotFoundError | ForbiddenError | DbError
+        | ScreenplayNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
     > => {
       const user = await requireUser();
@@ -86,7 +90,7 @@ export const exportScreenplayPdf = createServerFn({ method: "POST" })
       if (projectResult.isErr()) return toShape(err(projectResult.error));
       const project = projectResult.value;
       if (!project)
-        return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
+        return toShape(err(new ProjectNotFoundError(screenplay.projectId)));
 
       // Read access mirrors getDocument / exportNarrativePdf — personal
       // owners and any team member (viewer included).

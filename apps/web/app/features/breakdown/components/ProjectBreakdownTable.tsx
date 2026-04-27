@@ -1,6 +1,12 @@
 import { useMemo, useState, type MouseEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DataTable, Tag, ContextMenu, type Column } from "@oh-writers/ui";
+import {
+  DataTable,
+  Tag,
+  ContextMenu,
+  useConfirmDialog,
+  type Column,
+} from "@oh-writers/ui";
 import { CATEGORY_META } from "@oh-writers/domain";
 import {
   projectBreakdownOptions,
@@ -36,6 +42,7 @@ export function ProjectBreakdownTable({
   );
   const update = useUpdateBreakdownElement();
   const archive = useArchiveBreakdownElement();
+  const { confirm } = useConfirmDialog();
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -125,8 +132,14 @@ export function ProjectBreakdownTable({
             {
               label: "Archivia",
               onClick: () => {
-                if (!window.confirm("Archiviare questo elemento?")) return;
-                archive.mutate({ elementId: menu.row.id });
+                void confirm({
+                  title: "Archiviare elemento?",
+                  message: "Archiviare questo elemento?",
+                  confirmLabel: "Archivia",
+                  destructive: true,
+                }).then((ok) => {
+                  if (ok) archive.mutate({ elementId: menu.row.id });
+                });
               },
             },
           ]}

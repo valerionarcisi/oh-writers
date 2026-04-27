@@ -25,8 +25,8 @@ import {
   DbError,
   ForbiddenError,
 } from "../breakdown.errors";
+import { hashText } from "@oh-writers/utils";
 import { canEditBreakdown, canViewBreakdown } from "../lib/permissions";
-import { hashSceneText } from "../lib/hash-scene";
 import { findElementInText } from "../lib/re-match";
 import {
   resolveBreakdownAccessByProjectId,
@@ -122,7 +122,7 @@ export const getBreakdownForScene = createServerFn({ method: "GET" })
           ),
         (e) => new DbError("getBreakdownForScene/loadOccs", e),
       ).andThen((rows) => {
-        const currentHash = hashSceneText(sceneTextOf(scene));
+        const currentHash = hashText(sceneTextOf(scene));
         return ResultAsync.fromPromise(
           db.query.breakdownSceneState
             .findFirst({

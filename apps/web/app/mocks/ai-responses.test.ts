@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { SUBJECT_SECTIONS } from "@oh-writers/domain";
 import {
   mockCesareBreakdownForScene,
   mockFullScriptBreakdown,
+  mockSubjectSection,
 } from "./ai-responses";
 
 describe("mockCesareBreakdownForScene", () => {
@@ -130,5 +132,57 @@ describe("mockFullScriptBreakdown", () => {
       { sceneNumber: 1, heading: "interno casa", body: "una scena tranquilla" },
     ]);
     expect(out[0]?.items).toEqual([]);
+  });
+});
+
+describe("mockSubjectSection", () => {
+  it("returns non-empty prose for every section with null genre", () => {
+    for (const section of SUBJECT_SECTIONS) {
+      const out = mockSubjectSection(section, null);
+      expect(out.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("is deterministic — same inputs produce identical output", () => {
+    for (const section of SUBJECT_SECTIONS) {
+      expect(mockSubjectSection(section, null)).toBe(
+        mockSubjectSection(section, null),
+      );
+      expect(mockSubjectSection(section, "thriller")).toBe(
+        mockSubjectSection(section, "thriller"),
+      );
+    }
+  });
+
+  it("returns a thriller-specific premise different from default", () => {
+    expect(mockSubjectSection("premise", "thriller")).not.toBe(
+      mockSubjectSection("premise", null),
+    );
+  });
+
+  it("returns a drama-specific premise different from default", () => {
+    expect(mockSubjectSection("premise", "drama")).not.toBe(
+      mockSubjectSection("premise", null),
+    );
+  });
+
+  it("falls back to default when the genre has no specific override", () => {
+    expect(mockSubjectSection("world", "comedy")).toBe(
+      mockSubjectSection("world", null),
+    );
+  });
+
+  it("always contains at least one period (is prose)", () => {
+    for (const section of SUBJECT_SECTIONS) {
+      expect(mockSubjectSection(section, null)).toContain(".");
+    }
+  });
+
+  it("never contains placeholder strings like TODO or lorem", () => {
+    for (const section of SUBJECT_SECTIONS) {
+      const out = mockSubjectSection(section, null).toLowerCase();
+      expect(out).not.toContain("todo");
+      expect(out).not.toContain("lorem");
+    }
   });
 });

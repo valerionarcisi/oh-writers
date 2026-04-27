@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { EditorState } from "prosemirror-state";
+import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import { buildNarrativePlugins } from "../lib/narrative-plugins";
@@ -14,6 +14,7 @@ interface NarrativeProseMirrorViewProps {
   placeholder?: string;
   enableHeadings?: boolean;
   readOnly?: boolean;
+  extraPlugins?: ReadonlyArray<Plugin>;
 }
 
 export function NarrativeProseMirrorView({
@@ -24,6 +25,7 @@ export function NarrativeProseMirrorView({
   placeholder,
   enableHeadings = false,
   readOnly = false,
+  extraPlugins,
 }: NarrativeProseMirrorViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -41,7 +43,10 @@ export function NarrativeProseMirrorView({
 
     const state = EditorState.create({
       doc: initialDoc,
-      plugins: buildNarrativePlugins(schema, { placeholder }),
+      plugins: [
+        ...buildNarrativePlugins(schema, { placeholder }),
+        ...(extraPlugins ?? []),
+      ],
     });
 
     const view = new EditorView(mountRef.current, {
@@ -85,7 +90,7 @@ export function NarrativeProseMirrorView({
     // Re-mount only on the structural toggles. value changes are handled by
     // the second effect below to avoid resetting the caret on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, enableHeadings, placeholder]);
+  }, [readOnly, enableHeadings, placeholder, extraPlugins]);
 
   useEffect(() => {
     const view = viewRef.current;

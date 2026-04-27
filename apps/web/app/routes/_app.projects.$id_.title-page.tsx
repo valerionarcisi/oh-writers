@@ -8,6 +8,7 @@ import {
   useUpdateTitlePageState,
 } from "~/features/projects";
 import type { TitlePageState } from "~/features/projects";
+import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.title-page.module.css";
 
 const SAVE_DEBOUNCE_MS = 800;
@@ -37,14 +38,7 @@ function TitlePageRoute() {
         onSave={(next) => update.mutate({ projectId: id, state: next })}
       />
     ))
-    .with({ isOk: false, error: { _tag: "ProjectNotFoundError" } }, () => (
-      <div className={styles.statusError}>Project not found.</div>
-    ))
-    .with({ isOk: false, error: { _tag: "DbError" } }, () => (
-      <div className={styles.statusError}>
-        Could not load the title page. Please retry.
-      </div>
-    ))
+    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
     .exhaustive();
 }
 

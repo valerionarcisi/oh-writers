@@ -9,7 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
-import { ReadOnlyScreenplayView } from "../../screenplay-editor/components/ReadOnlyScreenplayView";
+import { ReadOnlyScreenplayView } from "~/features/screenplay-editor";
 import {
   useAddBreakdownElement,
   useSetOccurrenceStatus,

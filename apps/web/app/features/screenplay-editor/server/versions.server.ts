@@ -5,17 +5,14 @@ import { queryOptions } from "@tanstack/react-query";
 import {
   screenplayVersions,
   screenplays,
-  projects,
-  teamMembers,
   breakdownElements,
   breakdownOccurrences,
   breakdownSceneState,
   scenes,
 } from "@oh-writers/db/schema";
-import { hashSceneText } from "~/features/breakdown/lib/hash-scene";
-import { findElementInText } from "~/features/breakdown/lib/re-match";
+import { findElementInText } from "~/features/breakdown";
+import { hashText } from "@oh-writers/utils";
 import {
-  TeamRoles,
   suggestNextColor,
   FIRST_DRAFT_COLOR,
   type DraftRevisionColor,
@@ -25,6 +22,7 @@ import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import type { Db } from "~/server/db";
+import { requireProjectAccess } from "~/server/access";
 import { stripYjsSnapshot } from "~/server/helpers";
 import {
   ListVersionsInput,
@@ -45,6 +43,8 @@ import {
   ForbiddenError,
   DbError,
 } from "../screenplay-versions.errors";
+import { ScreenplayNotFoundError } from "../screenplay.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 
 export type { VersionView };
 
@@ -123,84 +123,58 @@ export const ensureFirstVersion = async (
 // `screenplayId`. Returns the screenplay row on success so callers can reuse
 // it without a second query.
 
+// Loads the screenplay, then delegates project + membership + canEdit to the
+// shared `requireProjectAccess` helper. Each not-found case keeps its own
+// tag — the previous version remapped everything to `VersionNotFoundError`,
+// which made it impossible for callers to tell a deleted project from a
+// missing screenplay or version row.
+type ScreenplayAccessError =
+  | ScreenplayNotFoundError
+  | ProjectNotFoundError
+  | ForbiddenError
+  | DbError;
+
 const resolveScreenplayAccess = (
   db: Db,
   screenplayId: string,
-  userId: string,
-): ResultAsync<
-  typeof screenplays.$inferSelect,
-  VersionNotFoundError | ForbiddenError | DbError
-> =>
+): ResultAsync<typeof screenplays.$inferSelect, ScreenplayAccessError> =>
   ResultAsync.fromPromise(
     db.query.screenplays
       .findFirst({ where: eq(screenplays.id, screenplayId) })
       .then((row) => row ?? null),
     (e) => new DbError("resolveScreenplayAccess.screenplay", e),
   )
-    .andThen((s) => (s ? ok(s) : err(new VersionNotFoundError(screenplayId))))
-    .andThen((s) =>
-      ResultAsync.fromPromise(
-        db.query.projects
-          .findFirst({ where: eq(projects.id, s.projectId) })
-          .then((row) => row ?? null),
-        (e) => new DbError("resolveScreenplayAccess.project", e),
-      ).map((p) => ({ s, p })),
+    .andThen(
+      (
+        s,
+      ): ResultAsync<typeof screenplays.$inferSelect, ScreenplayAccessError> =>
+        s ? okAsync(s) : errAsync(new ScreenplayNotFoundError(screenplayId)),
     )
-    .andThen(({ s, p }) => {
-      if (!p) return errAsync(new VersionNotFoundError(s.projectId));
-
-      // Personal project — owner only
-      if (p.ownerId !== null) {
-        return p.ownerId === userId
-          ? okAsync(s)
-          : errAsync(new ForbiddenError("access screenplay versions"));
-      }
-
-      // Team project — owner or editor
-      if (!p.teamId)
-        return errAsync(new ForbiddenError("access screenplay versions"));
-
-      return ResultAsync.fromPromise(
-        db.query.teamMembers
-          .findFirst({
-            where: and(
-              eq(teamMembers.teamId, p.teamId),
-              eq(teamMembers.userId, userId),
-            ),
-          })
-          .then((row) => row ?? null),
-        (e) => new DbError("resolveScreenplayAccess.membership", e),
-      ).andThen((member) => {
-        if (!member)
-          return err(new ForbiddenError("access screenplay versions"));
-        const canEdit =
-          member.role === TeamRoles.OWNER || member.role === TeamRoles.EDITOR;
-        return canEdit
-          ? ok(s)
-          : err(new ForbiddenError("access screenplay versions"));
-      });
-    });
+    .andThen((s) => requireProjectAccess(db, s.projectId, "edit").map(() => s));
 
 // Same helper but resolves from a versionId — avoids an extra query in the
 // callers that already need the version row.
+type VersionAccessError = VersionNotFoundError | ScreenplayAccessError;
+
 const resolveVersionAccess = (
   db: Db,
   versionId: string,
-  userId: string,
-): ResultAsync<
-  typeof screenplayVersions.$inferSelect,
-  VersionNotFoundError | ForbiddenError | DbError
-> =>
+): ResultAsync<typeof screenplayVersions.$inferSelect, VersionAccessError> =>
   ResultAsync.fromPromise(
     db.query.screenplayVersions
       .findFirst({ where: eq(screenplayVersions.id, versionId) })
       .then((row) => row ?? null),
     (e) => new DbError("resolveVersionAccess.find", e),
   )
-    .andThen((v) => (v ? ok(v) : err(new VersionNotFoundError(versionId))))
-    .andThen((v) =>
-      resolveScreenplayAccess(db, v.screenplayId, userId).map(() => v),
-    );
+    .andThen(
+      (
+        v,
+      ): ResultAsync<
+        typeof screenplayVersions.$inferSelect,
+        VersionAccessError
+      > => (v ? okAsync(v) : errAsync(new VersionNotFoundError(versionId))),
+    )
+    .andThen((v) => resolveScreenplayAccess(db, v.screenplayId).map(() => v));
 
 // ─── List versions ────────────────────────────────────────────────────────────
 
@@ -209,20 +183,11 @@ export const listVersions = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<
-        VersionView[],
-        VersionNotFoundError | ForbiddenError | DbError
-      >
-    > => {
+    }): Promise<ResultShape<VersionView[], VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveScreenplayAccess(
-        db,
-        data.screenplayId,
-        user.id,
-      );
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
       if (access.isErr()) return toShape(err(access.error));
 
       return toShape(
@@ -250,15 +215,11 @@ export const versionsQueryOptions = (screenplayId: string) =>
 export const getVersion = createServerFn({ method: "GET" })
   .validator(GetVersionInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
 
       return toShape(ok(stripYjsSnapshot(access.value)));
@@ -276,36 +237,29 @@ export const versionQueryOptions = (versionId: string) =>
 export const createManualVersion = createServerFn({ method: "POST" })
   .validator(CreateManualVersionInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveScreenplayAccess(
-        db,
-        data.screenplayId,
-        user.id,
-      );
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
       if (access.isErr()) return toShape(err(access.error));
       const screenplay = access.value;
 
       return toShape(
         await ResultAsync.fromPromise(
-          Promise.all([
-            nextVersionNumber(db, data.screenplayId),
-            pickNextColorFor(db, data.screenplayId),
-          ]).then(async ([number, draftColor]) => {
-            const prevVersion = await db
+          db.transaction(async (tx) => {
+            const [number, draftColor] = await Promise.all([
+              nextVersionNumber(tx, data.screenplayId),
+              pickNextColorFor(tx, data.screenplayId),
+            ]);
+            const prevVersion = await tx
               .select({ id: screenplayVersions.id })
               .from(screenplayVersions)
               .where(eq(screenplayVersions.screenplayId, data.screenplayId))
               .orderBy(desc(screenplayVersions.number))
               .limit(1);
             const prevVersionId = prevVersion[0]?.id ?? null;
-            const inserted = await db
+            const inserted = await tx
               .insert(screenplayVersions)
               .values({
                 screenplayId: data.screenplayId,
@@ -321,7 +275,7 @@ export const createManualVersion = createServerFn({ method: "POST" })
               .then((rows) => rows[0]);
             if (inserted && prevVersionId) {
               await cloneBreakdownToNewVersionInline(
-                db,
+                tx,
                 prevVersionId,
                 inserted.id,
               );
@@ -344,11 +298,11 @@ export const createManualVersion = createServerFn({ method: "POST" })
  * and breakdown carry-over are a single write surface.
  */
 const cloneBreakdownToNewVersionInline = async (
-  db: Db,
+  tx: DbOrTx,
   fromVersionId: string,
   toVersionId: string,
 ): Promise<void> => {
-  const sourceRows = await db
+  const sourceRows = await tx
     .select({
       occ: breakdownOccurrences,
       el: breakdownElements,
@@ -365,40 +319,43 @@ const cloneBreakdownToNewVersionInline = async (
   if (sourceRows.length === 0) return;
 
   const sceneHashes = new Map<string, string>();
-  for (const r of sourceRows) {
+  const occurrenceValues = sourceRows.map((r) => {
     const sceneText = r.scene.heading + "\n" + (r.scene.notes ?? "");
-    const isStale = !findElementInText(r.el.name, sceneText);
-    await db
-      .insert(breakdownOccurrences)
-      .values({
-        elementId: r.el.id,
-        screenplayVersionId: toVersionId,
-        sceneId: r.scene.id,
-        quantity: r.occ.quantity,
-        note: r.occ.note,
-        cesareStatus: r.occ.cesareStatus,
-        isStale,
-      })
-      .onConflictDoNothing();
     if (!sceneHashes.has(r.scene.id)) {
-      sceneHashes.set(r.scene.id, hashSceneText(sceneText));
+      sceneHashes.set(r.scene.id, hashText(sceneText));
     }
-  }
+    return {
+      elementId: r.el.id,
+      screenplayVersionId: toVersionId,
+      sceneId: r.scene.id,
+      quantity: r.occ.quantity,
+      note: r.occ.note,
+      cesareStatus: r.occ.cesareStatus,
+      isStale: !findElementInText(r.el.name, sceneText),
+    };
+  });
 
-  for (const [sceneId, hash] of sceneHashes) {
-    await db
+  await tx
+    .insert(breakdownOccurrences)
+    .values(occurrenceValues)
+    .onConflictDoNothing();
+
+  const sceneStateValues = Array.from(sceneHashes, ([sceneId, hash]) => ({
+    sceneId,
+    screenplayVersionId: toVersionId,
+    textHash: hash,
+  }));
+
+  if (sceneStateValues.length > 0) {
+    await tx
       .insert(breakdownSceneState)
-      .values({
-        sceneId,
-        screenplayVersionId: toVersionId,
-        textHash: hash,
-      })
+      .values(sceneStateValues)
       .onConflictDoUpdate({
         target: [
           breakdownSceneState.sceneId,
           breakdownSceneState.screenplayVersionId,
         ],
-        set: { textHash: hash },
+        set: { textHash: sql`excluded.text_hash` },
       });
   }
 };
@@ -410,16 +367,11 @@ export const restoreVersion = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<
-        ScreenplayView,
-        VersionNotFoundError | ForbiddenError | DbError
-      >
-    > => {
+    }): Promise<ResultShape<ScreenplayView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
       const version = access.value;
 
@@ -456,18 +408,12 @@ export const deleteVersion = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<
-        void,
-        | VersionNotFoundError
-        | CannotDeleteLastManualError
-        | ForbiddenError
-        | DbError
-      >
+      ResultShape<void, VersionAccessError | CannotDeleteLastManualError>
     > => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
       const version = access.value;
 
@@ -502,15 +448,12 @@ export const renameVersion = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<
-        VersionView,
-        VersionNotFoundError | InvalidLabelError | ForbiddenError | DbError
-      >
+      ResultShape<VersionView, VersionAccessError | InvalidLabelError>
     > => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
 
       return toShape(
@@ -536,15 +479,11 @@ export const renameVersion = createServerFn({ method: "POST" })
 export const duplicateVersion = createServerFn({ method: "POST" })
   .validator(DuplicateVersionInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
       const source = access.value;
 
@@ -582,15 +521,11 @@ export const duplicateVersion = createServerFn({ method: "POST" })
 export const updateVersionMeta = createServerFn({ method: "POST" })
   .validator(UpdateVersionMetaInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
-      const access = await resolveVersionAccess(db, data.versionId, user.id);
+      const access = await resolveVersionAccess(db, data.versionId);
       if (access.isErr()) return toShape(err(access.error));
 
       const patch: Partial<{

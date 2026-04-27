@@ -15,17 +15,18 @@ import {
   useDeleteVersion,
   useDuplicateVersion,
   useUpdateVersionMeta,
-} from "~/features/screenplay-editor/hooks/useVersions";
+} from "~/features/screenplay-editor";
 import {
-  useVersions as useDocVersions,
-  useCreateVersionFromScratch,
-  useDuplicateVersion as useDuplicateDocVersion,
-  useRenameVersion as useRenameDocVersion,
+  useDocumentVersions as useDocVersions,
+  useCreateDocumentVersionFromScratch as useCreateVersionFromScratch,
+  useDuplicateDocumentVersion as useDuplicateDocVersion,
+  useRenameDocumentVersion as useRenameDocVersion,
   useSwitchToVersion,
   useDeleteDocumentVersion,
-} from "~/features/documents/hooks/useVersions";
-import { VersionCompareModal } from "~/features/documents/components/VersionCompareModal";
-import type { VersionCompareItem } from "~/features/documents/components/VersionCompareModal";
+  VersionCompareModal,
+  type VersionCompareItem,
+} from "~/features/documents";
+import { useConfirmDialog } from "@oh-writers/ui";
 
 // ─── Screenplay scope ─────────────────────────────────────────────────────────
 
@@ -46,6 +47,11 @@ function ScreenplayVersionsList({
     result && !result.isOk
       ? match(result.error)
           .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+          .with(
+            { _tag: "ScreenplayNotFoundError" },
+            () => "Screenplay not found.",
+          )
+          .with({ _tag: "ProjectNotFoundError" }, () => "Project not found.")
           .with(
             { _tag: "ForbiddenError" },
             () => "You cannot access these versions.",
@@ -183,6 +189,7 @@ function DocumentVersionsList({
   const rename = useRenameDocVersion(documentId);
   const switchTo = useSwitchToVersion(documentId);
   const del = useDeleteDocumentVersion(documentId);
+  const { confirm } = useConfirmDialog();
   const loadError: string | null =
     result && !result.isOk
       ? match(result.error)
@@ -259,17 +266,21 @@ function DocumentVersionsList({
   );
 
   const handleSelect = useCallback(
-    (item: VersionListItem) => {
+    async (item: VersionListItem) => {
       if (item.id === activeId) return;
       // If the editor has unsaved edits, switching version would silently
       // throw them away (the active doc reloads from the server). Ask first,
       // and on confirm flush so the in-progress edits are preserved as the
       // current version's last state before the pointer moves.
       if (dirtyHook?.isDirty()) {
-        const ok = window.confirm(
-          "Hai modifiche non salvate. Vuoi salvarle prima di passare a un'altra versione? (Annulla per scartarle e procedere)",
-        );
-        if (ok) dirtyHook.flush();
+        const save = await confirm({
+          title: "Modifiche non salvate",
+          message:
+            "Hai modifiche non salvate. Vuoi salvarle prima di passare a un'altra versione? (Annulla per scartarle e procedere)",
+          confirmLabel: "Salva",
+          cancelLabel: "Scarta",
+        });
+        if (save) dirtyHook.flush();
       }
       setError(null);
       switchTo.mutate(item.id, {
@@ -277,7 +288,7 @@ function DocumentVersionsList({
         onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
       });
     },
-    [switchTo, activeId, dirtyHook],
+    [switchTo, activeId, dirtyHook, confirm],
   );
 
   const handleDelete = useCallback(
@@ -298,7 +309,7 @@ function DocumentVersionsList({
         error={error}
         activeId={activeId}
         canEdit={canEdit}
-        onSelect={handleSelect}
+        onSelect={(item) => void handleSelect(item)}
         onCreateFromScratch={canEdit ? handleCreateFromScratch : undefined}
         isCreatingFromScratch={createScratch.isPending}
         onRename={handleRename}
@@ -328,6 +339,7 @@ function DocumentVersionsList({
 const SCOPE_TITLES = {
   screenplay: "Versioni screenplay",
   logline: "Versioni logline",
+  soggetto: "Versioni soggetto",
   synopsis: "Versioni sinossi",
   outline: "Versioni scaletta",
   treatment: "Versioni trattamento",

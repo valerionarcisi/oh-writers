@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { schema } from "../../../screenplay-editor/lib/schema";
-import { fountainToDoc } from "../../../screenplay-editor/lib/fountain-to-doc";
+import {
+  screenplaySchema as schema,
+  fountainToDoc,
+} from "~/features/screenplay-editor";
 import { findSceneNodePosition, findSceneIndexAtPos } from "./scene-anchors";
 
 const SAMPLE = `INT. KITCHEN - DAY
