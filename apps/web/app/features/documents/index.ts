@@ -1,4 +1,5 @@
 export { NarrativeEditor } from "./components/NarrativeEditor";
+export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { SubjectEditor } from "./components/SubjectEditor";
 export type {
   SubjectEditorProps,
