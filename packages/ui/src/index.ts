@@ -9,6 +9,12 @@ export { Kbd } from "./components/Kbd";
 export { Tabs } from "./components/Tabs";
 export { Dialog } from "./components/Dialog";
 export { Toast } from "./components/Toast";
+export { ToastProvider, useToast } from "./components/ToastProvider";
+export type {
+  ToastOptions,
+  ToastVariant,
+  UseToast,
+} from "./components/ToastProvider";
 export { Tag } from "./components/Tag";
 export type { TagProps, TagVariant } from "./components/Tag";
 export { Banner } from "./components/Banner";
