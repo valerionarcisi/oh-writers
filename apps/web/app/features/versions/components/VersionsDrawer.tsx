@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { match } from "ts-pattern";
 import type { DocumentType, DraftRevisionColor } from "@oh-writers/domain";
 import { Drawer } from "./Drawer";
 import { VersionsList } from "./VersionsList";
@@ -41,7 +42,24 @@ function ScreenplayVersionsList({
   const del = useDeleteVersion(screenplayId);
   const duplicate = useDuplicateVersion(screenplayId);
   const updateMeta = useUpdateVersionMeta(screenplayId);
-  const [error, setError] = useState<string | null>(null);
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+          .with(
+            { _tag: "ForbiddenError" },
+            () => "You cannot access these versions.",
+          )
+          .with(
+            { _tag: "DbError" },
+            () => "Could not load versions. Please retry.",
+          )
+          .exhaustive()
+      : null;
+  const [error, setError] = useState<string | null>(loadError);
+  useEffect(() => {
+    if (loadError) setError(loadError);
+  }, [loadError]);
 
   const versions = result?.isOk ? result.value : [];
   const items: VersionListItem[] = versions.map((v) => ({
@@ -165,7 +183,24 @@ function DocumentVersionsList({
   const rename = useRenameDocVersion(documentId);
   const switchTo = useSwitchToVersion(documentId);
   const del = useDeleteDocumentVersion(documentId);
-  const [error, setError] = useState<string | null>(null);
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "DocumentNotFoundError" }, () => "Document not found.")
+          .with(
+            { _tag: "ForbiddenError" },
+            () => "You cannot access these versions.",
+          )
+          .with(
+            { _tag: "DbError" },
+            () => "Could not load versions. Please retry.",
+          )
+          .exhaustive()
+      : null;
+  const [error, setError] = useState<string | null>(loadError);
+  useEffect(() => {
+    if (loadError) setError(loadError);
+  }, [loadError]);
   const [compareOpen, setCompareOpen] = useState(false);
 
   // Track active version locally so it updates immediately after a mutation.

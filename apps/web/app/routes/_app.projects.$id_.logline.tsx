@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import { NarrativeEditor } from "~/features/documents";
 import { useDocument } from "~/features/documents";
@@ -14,10 +15,18 @@ function LoglineEditorPage() {
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Document not found.</div>;
 
-  return (
-    <NarrativeEditor document={result.value} type={DocumentTypes.LOGLINE} />
-  );
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <NarrativeEditor document={value} type={DocumentTypes.LOGLINE} />
+    ))
+    .with({ isOk: false, error: { _tag: "DocumentNotFoundError" } }, () => (
+      <div className={styles.statusError}>Document not found.</div>
+    ))
+    .with({ isOk: false, error: { _tag: "DbError" } }, () => (
+      <div className={styles.statusError}>
+        Could not load the document. Please retry.
+      </div>
+    ))
+    .exhaustive();
 }

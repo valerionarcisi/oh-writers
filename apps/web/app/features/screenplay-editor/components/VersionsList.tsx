@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import {
   useVersions,
   useCreateManualVersion,
@@ -26,8 +27,17 @@ export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
 
   if (isLoading) return <div className={styles.status}>Loading versions…</div>;
   if (!result) return null;
-  if (!result.isOk)
-    return <div className={styles.statusError}>Failed to load versions.</div>;
+  if (!result.isOk) {
+    const message = match(result.error)
+      .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+      .with(
+        { _tag: "ForbiddenError" },
+        () => "You cannot access these versions.",
+      )
+      .with({ _tag: "DbError" }, () => "Could not load versions. Please retry.")
+      .exhaustive();
+    return <div className={styles.statusError}>{message}</div>;
+  }
 
   const versions = result.value;
 

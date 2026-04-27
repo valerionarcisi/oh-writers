@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import {
   TitlePageEditor,
   TitlePageDraftPanel,
@@ -23,27 +24,28 @@ function TitlePageRoute() {
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
-  if (!result.isOk) {
-    const message =
-      result.error._tag === "ProjectNotFoundError"
-        ? "Project not found."
-        : "Could not load the title page. Please retry.";
-    return <div className={styles.statusError}>{message}</div>;
-  }
 
-  const { projectTitle, state, canEdit } = result.value;
-
-  return (
-    <TitlePageRouteInner
-      projectId={id}
-      projectTitle={projectTitle}
-      initialState={state}
-      canEdit={canEdit}
-      onClose={() => navigate({ to: "/projects/$id", params: { id } })}
-      saveError={update.error?.message ?? null}
-      onSave={(next) => update.mutate({ projectId: id, state: next })}
-    />
-  );
+  return match(result)
+    .with({ isOk: true }, ({ value }) => (
+      <TitlePageRouteInner
+        projectId={id}
+        projectTitle={value.projectTitle}
+        initialState={value.state}
+        canEdit={value.canEdit}
+        onClose={() => navigate({ to: "/projects/$id", params: { id } })}
+        saveError={update.error?.message ?? null}
+        onSave={(next) => update.mutate({ projectId: id, state: next })}
+      />
+    ))
+    .with({ isOk: false, error: { _tag: "ProjectNotFoundError" } }, () => (
+      <div className={styles.statusError}>Project not found.</div>
+    ))
+    .with({ isOk: false, error: { _tag: "DbError" } }, () => (
+      <div className={styles.statusError}>
+        Could not load the title page. Please retry.
+      </div>
+    ))
+    .exhaustive();
 }
 
 interface InnerProps {

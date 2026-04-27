@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { match } from "ts-pattern";
 import {
   DRAFT_REVISION_COLORS,
   type DraftRevisionColor,
@@ -65,6 +66,20 @@ export function VersionsPanel({
   if (!isOpen) return null;
 
   const versions: VersionView[] = result && result.isOk ? result.value : [];
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+          .with(
+            { _tag: "ForbiddenError" },
+            () => "You cannot access these versions.",
+          )
+          .with(
+            { _tag: "DbError" },
+            () => "Could not load versions. Please retry.",
+          )
+          .exhaustive()
+      : null;
 
   const handleCreate = () => {
     const label = newLabel.trim();
@@ -222,6 +237,16 @@ export function VersionsPanel({
       {error && (
         <div className={styles.error} role="alert">
           {error}
+        </div>
+      )}
+
+      {loadError && (
+        <div
+          className={styles.error}
+          role="alert"
+          data-testid="versions-load-error"
+        >
+          {loadError}
         </div>
       )}
 

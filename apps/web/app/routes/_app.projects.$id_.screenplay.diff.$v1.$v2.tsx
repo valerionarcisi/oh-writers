@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { match } from "ts-pattern";
 import { VersionDiff } from "~/features/screenplay-editor/components/VersionDiff";
 import { useVersion } from "~/features/screenplay-editor/hooks/useVersions";
 import { screenplayQueryOptions } from "~/features/screenplay-editor";
@@ -10,6 +11,32 @@ export const Route = createFileRoute(
 )({
   component: DiffPage,
 });
+
+const versionErrorMessage = (
+  error:
+    | { _tag: "VersionNotFoundError" }
+    | { _tag: "ForbiddenError" }
+    | { _tag: "DbError" },
+): string =>
+  match(error)
+    .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+    .with({ _tag: "ForbiddenError" }, () => "You cannot view this version.")
+    .with(
+      { _tag: "DbError" },
+      () => "Could not load the version. Please retry.",
+    )
+    .exhaustive();
+
+const screenplayErrorMessage = (
+  error: { _tag: "ScreenplayNotFoundError" } | { _tag: "DbError" },
+): string =>
+  match(error)
+    .with({ _tag: "ScreenplayNotFoundError" }, () => "Screenplay not found.")
+    .with(
+      { _tag: "DbError" },
+      () => "Could not load the screenplay. Please retry.",
+    )
+    .exhaustive();
 
 function DiffPage() {
   const { id, v1, v2 } = Route.useParams();
@@ -33,38 +60,50 @@ function DiffPage() {
 
   if (isLoading) return <div className={styles.status}>Loading diff…</div>;
 
-  if (!oldVersionQuery.data?.isOk) {
-    return <div className={styles.statusError}>Version not found.</div>;
+  const oldData = oldVersionQuery.data;
+  if (!oldData) return null;
+  if (!oldData.isOk) {
+    return (
+      <div className={styles.statusError}>
+        {versionErrorMessage(oldData.error)}
+      </div>
+    );
   }
-
-  const oldVersion = oldVersionQuery.data.value;
+  const oldVersion = oldData.value;
 
   if (v2 === "current") {
-    if (!screenplayQuery.data?.isOk) {
-      return <div className={styles.statusError}>Screenplay not found.</div>;
-    }
-    return (
+    const spData = screenplayQuery.data;
+    if (!spData) return null;
+    return match(spData)
+      .with({ isOk: true }, ({ value }) => (
+        <VersionDiff
+          projectId={id}
+          oldVersion={oldVersion}
+          newContent={value.content}
+          newLabel="Current"
+        />
+      ))
+      .with({ isOk: false }, ({ error }) => (
+        <div className={styles.statusError}>
+          {screenplayErrorMessage(error)}
+        </div>
+      ))
+      .exhaustive();
+  }
+
+  const newData = newVersionQuery.data;
+  if (!newData) return null;
+  return match(newData)
+    .with({ isOk: true }, ({ value }) => (
       <VersionDiff
         projectId={id}
         oldVersion={oldVersion}
-        newContent={screenplayQuery.data.value.content}
-        newLabel="Current"
+        newContent={value.content}
+        newLabel={value.label ?? "Auto-save"}
       />
-    );
-  }
-
-  if (!newVersionQuery.data?.isOk) {
-    return <div className={styles.statusError}>Version not found.</div>;
-  }
-
-  const newVersion = newVersionQuery.data.value;
-
-  return (
-    <VersionDiff
-      projectId={id}
-      oldVersion={oldVersion}
-      newContent={newVersion.content}
-      newLabel={newVersion.label ?? "Auto-save"}
-    />
-  );
+    ))
+    .with({ isOk: false }, ({ error }) => (
+      <div className={styles.statusError}>{versionErrorMessage(error)}</div>
+    ))
+    .exhaustive();
 }

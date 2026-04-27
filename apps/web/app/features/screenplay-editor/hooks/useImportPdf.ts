@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { match } from "ts-pattern";
 import { importPdf } from "../server/pdf-import.server";
 import type { ImportPdfError } from "../pdf-import.errors";
 import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
@@ -55,7 +56,13 @@ interface UseImportPdfResult {
   cancel: () => void;
 }
 
-const errorMessage = (error: ImportPdfError): string => error.message;
+const errorMessage = (error: ImportPdfError): string =>
+  match(error)
+    .with({ _tag: "InvalidPdfError" }, (e) => e.message)
+    .with({ _tag: "EncryptedPdfError" }, (e) => e.message)
+    .with({ _tag: "EmptyPdfError" }, (e) => e.message)
+    .with({ _tag: "FileTooLargeError" }, (e) => e.message)
+    .exhaustive();
 
 /** Reads a File as a base64-encoded string (without the data-URL prefix). */
 const toBase64 = (file: File): Promise<string> =>
