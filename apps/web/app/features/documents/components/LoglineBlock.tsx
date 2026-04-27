@@ -72,7 +72,7 @@ export function LoglineBlock({
         kind: "suggestion" as const,
         text: value.logline,
       }))
-      .with({ ok: false, error: { _tag: "SubjectRateLimitedError" } }, () => ({
+      .with({ ok: false, error: { _tag: "RateLimitedError" } }, () => ({
         kind: "error" as const,
         message: l.rateLimited,
       }))

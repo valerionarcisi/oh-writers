@@ -1,6 +1,11 @@
-import { ForbiddenError, DbError, ValidationError } from "@oh-writers/utils";
+import {
+  ForbiddenError,
+  DbError,
+  ValidationError,
+  RateLimitedError,
+} from "@oh-writers/utils";
 
-export { ForbiddenError, DbError, ValidationError };
+export { ForbiddenError, DbError, ValidationError, RateLimitedError };
 
 export class BreakdownSceneNotFoundError {
   readonly _tag = "BreakdownSceneNotFoundError" as const;
@@ -15,13 +20,5 @@ export class BreakdownElementNotFoundError {
   readonly message: string;
   constructor(readonly elementId: string) {
     this.message = `Breakdown element not found: ${elementId}`;
-  }
-}
-
-export class BreakdownRateLimitedError {
-  readonly _tag = "BreakdownRateLimitedError" as const;
-  readonly message: string;
-  constructor(readonly retryAfterMs: number) {
-    this.message = `Rate limited; retry in ${Math.ceil(retryAfterMs / 1000)}s`;
   }
 }

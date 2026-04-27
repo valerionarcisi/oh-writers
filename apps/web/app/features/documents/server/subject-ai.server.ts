@@ -14,8 +14,8 @@ import {
 import {
   DbError,
   ForbiddenError,
+  RateLimitedError,
   SubjectNotFoundError,
-  SubjectRateLimitedError,
 } from "../documents.errors";
 import {
   buildSubjectSectionPrompt,
@@ -23,7 +23,7 @@ import {
   type SubjectPromptPayload,
   type SubjectPromptProject,
 } from "../lib/subject-prompt";
-import { checkAndStampRateLimit } from "../../breakdown/lib/rate-limit";
+import { checkAndStampRateLimit } from "~/server/rate-limit";
 import { mockSubjectSection } from "~/mocks/ai-responses";
 import { callHaiku, extractText } from "~/features/ai";
 
@@ -33,20 +33,9 @@ const LOGLINE_HARD_CAP = 500;
 
 type SubjectAiError =
   | SubjectNotFoundError
-  | SubjectRateLimitedError
+  | RateLimitedError
   | ForbiddenError
   | DbError;
-
-// The breakdown rate-limit helper returns BreakdownRateLimitedError; the
-// documents domain has its own SubjectRateLimitedError with identical shape.
-// We remap at the boundary so callers never see breakdown-tagged errors.
-const mapRateLimitError = (error: {
-  _tag: string;
-  retryAfterMs?: number;
-}): SubjectRateLimitedError | DbError =>
-  error._tag === "BreakdownRateLimitedError"
-    ? new SubjectRateLimitedError(error.retryAfterMs ?? COOLDOWN_MS)
-    : (error as DbError);
 
 interface LoadedProject {
   readonly id: string;
@@ -136,10 +125,8 @@ const stampRateLimit = (
   db: Db,
   projectId: string,
   action: string,
-): ResultAsync<void, SubjectRateLimitedError | DbError> =>
-  checkAndStampRateLimit(db, projectId, action, COOLDOWN_MS).mapErr(
-    mapRateLimitError,
-  );
+): ResultAsync<void, RateLimitedError | DbError> =>
+  checkAndStampRateLimit(db, projectId, action, COOLDOWN_MS);
 
 const callAnthropic = (
   payload: SubjectPromptPayload,

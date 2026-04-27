@@ -1,6 +1,11 @@
-import { ForbiddenError, DbError, ValidationError } from "@oh-writers/utils";
+import {
+  ForbiddenError,
+  DbError,
+  ValidationError,
+  RateLimitedError,
+} from "@oh-writers/utils";
 
-export { ForbiddenError, DbError, ValidationError };
+export { ForbiddenError, DbError, ValidationError, RateLimitedError };
 
 export class DocumentNotFoundError {
   readonly _tag = "DocumentNotFoundError" as const;
@@ -20,17 +25,10 @@ export class SubjectNotFoundError {
   }
 }
 
-export class SubjectRateLimitedError {
-  readonly _tag = "SubjectRateLimitedError" as const;
-  readonly message = "Rate limited: try again shortly";
-
-  constructor(readonly retryAfterMs: number) {}
-}
-
 export type DocumentsError =
   | DocumentNotFoundError
   | SubjectNotFoundError
-  | SubjectRateLimitedError
+  | RateLimitedError
   | ForbiddenError
   | ValidationError
   | DbError;

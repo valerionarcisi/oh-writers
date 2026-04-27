@@ -65,7 +65,7 @@ export const toErrorView = (error: TaggedError): ErrorView =>
       title: "Conflitto di ordinamento",
       message: "L'ordine delle scene è cambiato. Ricarica e riprova.",
     }))
-    .with("SubjectRateLimitedError", "BreakdownRateLimitedError", () => ({
+    .with("RateLimitedError", () => ({
       title: "Troppe richieste",
       message: "Hai raggiunto il limite di richieste. Riprova tra un istante.",
     }))

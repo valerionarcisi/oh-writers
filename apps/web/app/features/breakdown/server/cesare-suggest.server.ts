@@ -16,10 +16,10 @@ import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
 import {
-  BreakdownRateLimitedError,
   BreakdownSceneNotFoundError,
   DbError,
   ForbiddenError,
+  RateLimitedError,
 } from "../breakdown.errors";
 import { canEditBreakdown } from "../lib/permissions";
 import { hashSceneText } from "../lib/hash-scene";
@@ -28,7 +28,7 @@ import {
   FEW_SHOT_EXAMPLES,
   CESARE_TOOL_DEFINITION,
 } from "../lib/cesare-prompt";
-import { checkAndStampRateLimit } from "../lib/rate-limit";
+import { checkAndStampRateLimit } from "~/server/rate-limit";
 import { mockCesareBreakdownForScene } from "~/mocks/ai-responses";
 import { resolveBreakdownAccessByScene } from "./breakdown-access";
 import { callHaiku, extractToolUse } from "~/features/ai";
@@ -59,7 +59,7 @@ export const suggestBreakdownForScene = createServerFn({ method: "POST" })
       ResultShape<
         SuggestResult,
         | BreakdownSceneNotFoundError
-        | BreakdownRateLimitedError
+        | RateLimitedError
         | ForbiddenError
         | DbError
       >

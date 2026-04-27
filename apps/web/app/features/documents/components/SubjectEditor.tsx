@@ -180,7 +180,7 @@ export function SubjectEditor({
           const next = insertSectionBody(content, section, value.text);
           onChange(next);
         })
-        .with({ ok: false, error: { _tag: "SubjectRateLimitedError" } }, () => {
+        .with({ ok: false, error: { _tag: "RateLimitedError" } }, () => {
           showToast({
             message: "Troppe richieste — riprova tra un istante.",
             variant: "warning",
