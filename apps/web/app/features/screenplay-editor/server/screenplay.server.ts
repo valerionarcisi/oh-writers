@@ -14,6 +14,7 @@ import { requireProjectAccess } from "~/server/access";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
 import {
   ScreenplayNotFoundError,
+  ProjectNotFoundError,
   ForbiddenError,
   DbError,
 } from "../screenplay.errors";
@@ -38,7 +39,13 @@ export const getScreenplay = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<ScreenplayView, ScreenplayNotFoundError | DbError>
+      ResultShape<
+        ScreenplayView,
+        | ScreenplayNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
     > => {
       const db = await getDb();
 
@@ -47,14 +54,7 @@ export const getScreenplay = createServerFn({ method: "GET" })
         data.projectId,
         "view",
       );
-      if (accessResult.isErr()) {
-        const e = accessResult.error;
-        if (e._tag === "ProjectNotFoundError")
-          return toShape(err(new ScreenplayNotFoundError(data.projectId)));
-        if (e._tag === "ForbiddenError")
-          return toShape(err(new ScreenplayNotFoundError(data.projectId)));
-        return toShape(err(e));
-      }
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
       const { user, project, membership } = accessResult.value;
 
       const result = await ResultAsync.fromPromise(
@@ -120,7 +120,10 @@ export const saveScreenplay = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         ScreenplayView,
-        ScreenplayNotFoundError | ForbiddenError | DbError
+        | ScreenplayNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
     > => {
       const pageCount = estimatePageCount(data.content);
@@ -138,12 +141,7 @@ export const saveScreenplay = createServerFn({ method: "POST" })
         return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
 
       const accessResult = await requireProjectAccess(db, s.projectId, "edit");
-      if (accessResult.isErr()) {
-        const e = accessResult.error;
-        if (e._tag === "ProjectNotFoundError")
-          return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
-        return toShape(err(e));
-      }
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
 
       // Spec 06b: the active version row is the source of truth. Auto-version
       // snapshots are gone — saving just writes to the current version.

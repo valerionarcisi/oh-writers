@@ -43,6 +43,8 @@ import {
   ForbiddenError,
   DbError,
 } from "../screenplay-versions.errors";
+import { ScreenplayNotFoundError } from "../screenplay.errors";
+import { ProjectNotFoundError } from "~/features/projects/projects.errors";
 
 export type { VersionView };
 
@@ -122,16 +124,20 @@ export const ensureFirstVersion = async (
 // it without a second query.
 
 // Loads the screenplay, then delegates project + membership + canEdit to the
-// shared `requireProjectAccess` helper. ProjectNotFoundError is remapped to
-// VersionNotFoundError to preserve the public error contract — callers of
-// the version endpoints discriminate on `_tag === "VersionNotFoundError"`.
+// shared `requireProjectAccess` helper. Each not-found case keeps its own
+// tag — the previous version remapped everything to `VersionNotFoundError`,
+// which made it impossible for callers to tell a deleted project from a
+// missing screenplay or version row.
+type ScreenplayAccessError =
+  | ScreenplayNotFoundError
+  | ProjectNotFoundError
+  | ForbiddenError
+  | DbError;
+
 const resolveScreenplayAccess = (
   db: Db,
   screenplayId: string,
-): ResultAsync<
-  typeof screenplays.$inferSelect,
-  VersionNotFoundError | ForbiddenError | DbError
-> =>
+): ResultAsync<typeof screenplays.$inferSelect, ScreenplayAccessError> =>
   ResultAsync.fromPromise(
     db.query.screenplays
       .findFirst({ where: eq(screenplays.id, screenplayId) })
@@ -141,30 +147,19 @@ const resolveScreenplayAccess = (
     .andThen(
       (
         s,
-      ): ResultAsync<
-        typeof screenplays.$inferSelect,
-        VersionNotFoundError | ForbiddenError | DbError
-      > => (s ? okAsync(s) : errAsync(new VersionNotFoundError(screenplayId))),
+      ): ResultAsync<typeof screenplays.$inferSelect, ScreenplayAccessError> =>
+        s ? okAsync(s) : errAsync(new ScreenplayNotFoundError(screenplayId)),
     )
-    .andThen((s) =>
-      requireProjectAccess(db, s.projectId, "edit")
-        .map(() => s)
-        .mapErr((e): VersionNotFoundError | ForbiddenError | DbError =>
-          e._tag === "ProjectNotFoundError"
-            ? new VersionNotFoundError(s.projectId)
-            : e,
-        ),
-    );
+    .andThen((s) => requireProjectAccess(db, s.projectId, "edit").map(() => s));
 
 // Same helper but resolves from a versionId — avoids an extra query in the
 // callers that already need the version row.
+type VersionAccessError = VersionNotFoundError | ScreenplayAccessError;
+
 const resolveVersionAccess = (
   db: Db,
   versionId: string,
-): ResultAsync<
-  typeof screenplayVersions.$inferSelect,
-  VersionNotFoundError | ForbiddenError | DbError
-> =>
+): ResultAsync<typeof screenplayVersions.$inferSelect, VersionAccessError> =>
   ResultAsync.fromPromise(
     db.query.screenplayVersions
       .findFirst({ where: eq(screenplayVersions.id, versionId) })
@@ -176,7 +171,7 @@ const resolveVersionAccess = (
         v,
       ): ResultAsync<
         typeof screenplayVersions.$inferSelect,
-        VersionNotFoundError | ForbiddenError | DbError
+        VersionAccessError
       > => (v ? okAsync(v) : errAsync(new VersionNotFoundError(versionId))),
     )
     .andThen((v) => resolveScreenplayAccess(db, v.screenplayId).map(() => v));
@@ -188,12 +183,7 @@ export const listVersions = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<
-        VersionView[],
-        VersionNotFoundError | ForbiddenError | DbError
-      >
-    > => {
+    }): Promise<ResultShape<VersionView[], VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
@@ -225,11 +215,7 @@ export const versionsQueryOptions = (screenplayId: string) =>
 export const getVersion = createServerFn({ method: "GET" })
   .validator(GetVersionInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
@@ -251,11 +237,7 @@ export const versionQueryOptions = (versionId: string) =>
 export const createManualVersion = createServerFn({ method: "POST" })
   .validator(CreateManualVersionInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
@@ -381,12 +363,7 @@ export const restoreVersion = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<
-      ResultShape<
-        ScreenplayView,
-        VersionNotFoundError | ForbiddenError | DbError
-      >
-    > => {
+    }): Promise<ResultShape<ScreenplayView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
@@ -427,13 +404,7 @@ export const deleteVersion = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<
-        void,
-        | VersionNotFoundError
-        | CannotDeleteLastManualError
-        | ForbiddenError
-        | DbError
-      >
+      ResultShape<void, VersionAccessError | CannotDeleteLastManualError>
     > => {
       const user = await requireUser();
       const db = await getDb();
@@ -473,10 +444,7 @@ export const renameVersion = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<
-        VersionView,
-        VersionNotFoundError | InvalidLabelError | ForbiddenError | DbError
-      >
+      ResultShape<VersionView, VersionAccessError | InvalidLabelError>
     > => {
       const user = await requireUser();
       const db = await getDb();
@@ -507,11 +475,7 @@ export const renameVersion = createServerFn({ method: "POST" })
 export const duplicateVersion = createServerFn({ method: "POST" })
   .validator(DuplicateVersionInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
@@ -553,11 +517,7 @@ export const duplicateVersion = createServerFn({ method: "POST" })
 export const updateVersionMeta = createServerFn({ method: "POST" })
   .validator(UpdateVersionMetaInput)
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<VersionView, VersionNotFoundError | ForbiddenError | DbError>
-    > => {
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
       const user = await requireUser();
       const db = await getDb();
 
