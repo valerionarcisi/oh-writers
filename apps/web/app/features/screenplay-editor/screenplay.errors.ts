@@ -1,5 +1,5 @@
 import { ForbiddenError, DbError } from "@oh-writers/utils";
-import { ProjectNotFoundError } from "~/features/projects/projects.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 
 export { ForbiddenError, DbError, ProjectNotFoundError };
 

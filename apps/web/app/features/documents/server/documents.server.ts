@@ -24,7 +24,7 @@ import {
   ValidationError,
   DbError,
 } from "../documents.errors";
-import { ProjectNotFoundError } from "../../projects/projects.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

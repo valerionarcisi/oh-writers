@@ -10,7 +10,7 @@ import {
   breakdownSceneState,
   scenes,
 } from "@oh-writers/db/schema";
-import { findElementInText } from "~/features/breakdown/lib/re-match";
+import { findElementInText } from "~/features/breakdown";
 import { hashText } from "@oh-writers/utils";
 import {
   suggestNextColor,
@@ -44,7 +44,7 @@ import {
   DbError,
 } from "../screenplay-versions.errors";
 import { ScreenplayNotFoundError } from "../screenplay.errors";
-import { ProjectNotFoundError } from "~/features/projects/projects.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 
 export type { VersionView };
 

@@ -24,9 +24,12 @@ export {
   useDeleteVersion,
   useRenameVersion,
   useDuplicateVersion,
+  useUpdateVersionMeta,
   versionsQueryOptions,
   versionQueryOptions,
 } from "./hooks/useVersions";
+export { useMenuPopover } from "./hooks/useMenuPopover";
+export { ensureFirstVersion } from "./server/versions.server";
 
 // Server
 export {

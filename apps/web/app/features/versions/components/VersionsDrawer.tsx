@@ -14,17 +14,17 @@ import {
   useDeleteVersion,
   useDuplicateVersion,
   useUpdateVersionMeta,
-} from "~/features/screenplay-editor/hooks/useVersions";
+} from "~/features/screenplay-editor";
 import {
-  useVersions as useDocVersions,
-  useCreateVersionFromScratch,
-  useDuplicateVersion as useDuplicateDocVersion,
-  useRenameVersion as useRenameDocVersion,
+  useDocumentVersions as useDocVersions,
+  useCreateDocumentVersionFromScratch as useCreateVersionFromScratch,
+  useDuplicateDocumentVersion as useDuplicateDocVersion,
+  useRenameDocumentVersion as useRenameDocVersion,
   useSwitchToVersion,
   useDeleteDocumentVersion,
-} from "~/features/documents/hooks/useVersions";
-import { VersionCompareModal } from "~/features/documents/components/VersionCompareModal";
-import type { VersionCompareItem } from "~/features/documents/components/VersionCompareModal";
+  VersionCompareModal,
+  type VersionCompareItem,
+} from "~/features/documents";
 import { useConfirmDialog } from "@oh-writers/ui";
 
 // ─── Screenplay scope ─────────────────────────────────────────────────────────

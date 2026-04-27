@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { match, P } from "ts-pattern";
 import { InlineGenerateButton } from "@oh-writers/ui";
-import { useMenuPopover } from "~/features/screenplay-editor/hooks/useMenuPopover";
+import { useMenuPopover } from "~/features/screenplay-editor";
 import { useExtractLoglineFromSubject } from "../hooks/useExtractLoglineFromSubject";
 import styles from "./LoglineBlock.module.css";
 

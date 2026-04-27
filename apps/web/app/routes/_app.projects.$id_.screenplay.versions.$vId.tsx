@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { VersionViewer } from "~/features/screenplay-editor/components/VersionViewer";
-import { useVersion } from "~/features/screenplay-editor/hooks/useVersions";
+import { VersionViewer, useVersion } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 

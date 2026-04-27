@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "@oh-writers/ui";
 import { useExportBreakdown } from "../hooks/useBreakdown";
-import { openPdfPreview } from "~/features/documents/lib/pdf-preview";
+import { openPdfPreview } from "~/features/documents";
 import { downloadCsv } from "../lib/download-csv";
 import styles from "./ExportBreakdownModal.module.css";
 

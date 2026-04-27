@@ -4,7 +4,7 @@ import { projects } from "@oh-writers/db/schema";
 import type { Project, TeamMember } from "@oh-writers/db/schema";
 import type { TeamRole } from "@oh-writers/domain";
 import { DbError, ForbiddenError } from "@oh-writers/utils";
-import { ProjectNotFoundError } from "~/features/projects/projects.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 import { requireUser, type AppUser } from "~/server/context";
 import { canEdit, getMembership } from "~/server/permissions";
 import type { Db } from "~/server/db";

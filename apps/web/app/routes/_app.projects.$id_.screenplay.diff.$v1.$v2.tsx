@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { VersionDiff } from "~/features/screenplay-editor/components/VersionDiff";
-import { useVersion } from "~/features/screenplay-editor/hooks/useVersions";
-import { screenplayQueryOptions } from "~/features/screenplay-editor";
+import {
+  VersionDiff,
+  useVersion,
+  screenplayQueryOptions,
+} from "~/features/screenplay-editor";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute(

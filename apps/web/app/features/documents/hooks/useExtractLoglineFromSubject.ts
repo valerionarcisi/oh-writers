@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
-import { projectQueryOptions } from "../../projects/server/projects.server";
+import { projectQueryOptions } from "~/features/projects";
 import { generateLoglineFromSubject } from "../server/subject-ai.server";
 
 // Returns the proposed logline from the Soggetto; does NOT persist.

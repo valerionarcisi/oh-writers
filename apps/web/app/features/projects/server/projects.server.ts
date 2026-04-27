@@ -12,7 +12,7 @@ import type { Project, Document, Screenplay } from "@oh-writers/db";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
-import { ensureFirstVersion } from "~/features/screenplay-editor/server/versions.server";
+import { ensureFirstVersion } from "~/features/screenplay-editor";
 import { canEdit, isOwner, getMembership } from "~/server/permissions";
 import { requireProjectAccess } from "~/server/access";
 import { CreateProjectInput, UpdateProjectInput } from "../projects.schema";

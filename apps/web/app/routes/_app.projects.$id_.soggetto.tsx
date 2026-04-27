@@ -15,7 +15,7 @@ import {
   useSaveDocument,
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
-import type { DocumentViewWithPermission } from "~/features/documents/server/documents.server";
+import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/soggetto")({

@@ -12,10 +12,7 @@ import {
   useUpdateVersionMeta,
 } from "../hooks/useVersions";
 import type { VersionView } from "../screenplay-versions.schema";
-import {
-  DRAFT_COLOR_HEX,
-  DRAFT_COLOR_LABEL,
-} from "../../projects/draft-color-palette";
+import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
 import styles from "./VersionsPanel.module.css";
 
 interface VersionsPanelProps {
