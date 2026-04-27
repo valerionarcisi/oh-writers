@@ -251,6 +251,9 @@ importers:
       '@types/diff':
         specifier: ^8.0.0
         version: 8.0.0
+      '@types/node':
+        specifier: 22.14.0
+        version: 22.14.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3

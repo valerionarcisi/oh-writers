@@ -10,8 +10,8 @@ import {
   breakdownSceneState,
   scenes,
 } from "@oh-writers/db/schema";
-import { hashSceneText } from "~/features/breakdown/lib/hash-scene";
 import { findElementInText } from "~/features/breakdown/lib/re-match";
+import { hashText } from "@oh-writers/utils";
 import {
   suggestNextColor,
   FIRST_DRAFT_COLOR,
@@ -322,7 +322,7 @@ const cloneBreakdownToNewVersionInline = async (
   const occurrenceValues = sourceRows.map((r) => {
     const sceneText = r.scene.heading + "\n" + (r.scene.notes ?? "");
     if (!sceneHashes.has(r.scene.id)) {
-      sceneHashes.set(r.scene.id, hashSceneText(sceneText));
+      sceneHashes.set(r.scene.id, hashText(sceneText));
     }
     return {
       elementId: r.el.id,

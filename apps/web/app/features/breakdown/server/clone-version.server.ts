@@ -8,12 +8,11 @@ import {
   breakdownElements,
   scenes,
 } from "@oh-writers/db/schema";
-import { toShape, type ResultShape } from "@oh-writers/utils";
+import { hashText, toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { DbError, ForbiddenError } from "../breakdown.errors";
 import { canEditBreakdown } from "../lib/permissions";
-import { hashSceneText } from "../lib/hash-scene";
 import { findElementInText } from "../lib/re-match";
 import { resolveBreakdownAccessByScreenplayVersion } from "./breakdown-access";
 
@@ -87,7 +86,7 @@ export const cloneBreakdownToVersion = createServerFn({ method: "POST" })
             cloned++;
 
             if (!sceneHashes.has(r.scene.id)) {
-              sceneHashes.set(r.scene.id, hashSceneText(sceneText));
+              sceneHashes.set(r.scene.id, hashText(sceneText));
             }
           }
 

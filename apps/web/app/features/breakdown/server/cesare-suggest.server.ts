@@ -12,7 +12,7 @@ import {
   SuggestionListSchema,
   type CesareSuggestion,
 } from "@oh-writers/domain";
-import { toShape, type ResultShape } from "@oh-writers/utils";
+import { hashText, toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
 import {
@@ -22,7 +22,6 @@ import {
   RateLimitedError,
 } from "../breakdown.errors";
 import { canEditBreakdown } from "../lib/permissions";
-import { hashSceneText } from "../lib/hash-scene";
 import {
   CESARE_SYSTEM_PROMPT,
   FEW_SHOT_EXAMPLES,
@@ -192,7 +191,7 @@ const persistSuggestions = (
         });
         newPending++;
       }
-      const hash = hashSceneText(params.sceneText);
+      const hash = hashText(params.sceneText);
       const now = new Date();
       await db
         .insert(breakdownSceneState)
