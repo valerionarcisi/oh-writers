@@ -8,6 +8,7 @@ import {
   breakdownSceneState,
   scenes,
   screenplays,
+  screenplayVersions,
 } from "@oh-writers/db/schema";
 import { ensureFirstVersion } from "~/features/screenplay-editor";
 import { syncScenesFromFountain } from "~/features/screenplay-editor/server/scenes-sync";
@@ -714,9 +715,25 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
               canEdit,
             };
           }
-          const version = await db.query.screenplayVersions.findFirst({
+          let version = await db.query.screenplayVersions.findFirst({
             where: (v, { eq: e }) => e(v.id, currentVersionId),
           });
+
+          // Heal stale data: if v1 was snapshotted while screenplays.content
+          // was still empty (race between import-create and import-save) but
+          // screenplays.content has since been written, copy it forward so
+          // the breakdown viewer and auto-spoglio see the same fountain.
+          if (
+            version &&
+            version.content.length === 0 &&
+            screenplay.content.length > 0
+          ) {
+            await db
+              .update(screenplayVersions)
+              .set({ content: screenplay.content })
+              .where(eq(screenplayVersions.id, version.id));
+            version = { ...version, content: screenplay.content };
+          }
 
           // One-shot backfill for screenplays imported before saveScreenplay
           // started mirroring fountain into the scenes table. If we have
