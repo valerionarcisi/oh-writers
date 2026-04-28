@@ -83,11 +83,17 @@ Behaviour:
 
 ### 4.4 Initial template (placeholder editoriale)
 
-`packages/domain/src/subject/template.ts` exports `SOGGETTO_INITIAL_TEMPLATE` (name reused, value replaced). New value is plain narrative prose — no `= CARTELLA …` markers, no semantic structure. Suggested content:
+`packages/domain/src/subject/template.ts` exports `SOGGETTO_INITIAL_TEMPLATE` (name reused, value replaced). New value is plain narrative prose — no `= CARTELLA …` markers, no semantic structure.
 
-> Scrivi qui il tuo soggetto. Inizia dalla situazione di partenza: chi è il protagonista, in che mondo vive, qual è la sua mancanza o desiderio. Poi racconta cosa cambia.
+Coerente con il pattern del placeholder della logline (`LoglineBlock`: `"Un [protagonista] deve [obiettivo] prima di [posta in gioco]…"`), il template del soggetto è un esempio breve ma realistico — l'utente lo legge, capisce il registro, lo cancella e scrive il proprio. Proposta di contenuto:
+
+> Milano, fine anni Novanta. **Marta**, trentacinque anni, traduttrice freelance, vive sola in un bilocale che le sta troppo stretto. Ha smesso da tempo di credere di poter cambiare qualcosa: lavora, paga l'affitto, evita di pensare a suo padre — un uomo che non vede da quindici anni e di cui ha appena ricevuto la notizia della morte.
 >
-> Non ci sono regole di formato. Usa i titoli (H1) se vuoi dividere il testo, oppure scrivi tutto di seguito.
+> Tornata al paese per il funerale, Marta scopre che il padre le ha lasciato in eredità una vecchia libreria. Decide di venderla in fretta e ripartire. Ma il giorno prima della firma, tra gli scatoloni, trova un manoscritto inedito firmato da sua madre — morta quando lei aveva sette anni.
+>
+> Leggendolo, Marta capisce che la storia di sua madre era ben diversa da quella che le era stata raccontata. Decide di restare un altro giorno. Poi un altro. Riapre la libreria, cerca chi ha conosciuto sua madre, ricostruisce un'identità che non sapeva di aver perso. La firma del rogito le scivola di mano: la libreria non si vende più.
+>
+> _Cancella questo testo e scrivi il tuo soggetto. Puoi usare i titoli (H1) per dividere atti o capitoli, oppure scrivere tutto di seguito — il formato è libero._
 
 The user can delete it entirely on first edit.
 
@@ -122,18 +128,25 @@ New column on `projects`:
 ALTER TABLE projects ADD COLUMN siae_metadata jsonb;
 ```
 
-Drizzle schema in `packages/db/schema/projects.ts` adds `siaeMetadata: jsonb('siae_metadata')`. Zod schema in `packages/domain/src/projects/siae.ts`:
+Drizzle schema in `packages/db/schema/projects.ts` adds `siaeMetadata: jsonb('siae_metadata')`.
+
+**Field set: TBD — verify against the actual SIAE deposit form before implementation.** I campi reali del modulo OLAF / deposito SIAE non sono noti al momento della stesura. Il primo step del piano di implementazione è recuperare il modulo ufficiale (sito SIAE / sezione OLAF / un esempio di deposito già fatto da Valerio o da un autore di riferimento) e aggiornare questa sezione prima di scrivere il codice.
+
+Set di partenza tentativo (da confermare):
 
 ```ts
+// packages/domain/src/projects/siae.ts — SCHEMA TENTATIVO, DA VERIFICARE
 export const SiaeMetadataSchema = z.object({
-  title: z.string().min(1).max(200),
-  declaredGenre: z.string().min(1).max(100),
-  ownerFullName: z.string().min(1).max(200),
-  synopsisShort: z.string().min(1).max(500),
+  title: z.string().min(1),
+  declaredGenre: z.string().min(1),
+  ownerFullName: z.string().min(1),
+  synopsisShort: z.string().min(1),
   subjectExtended: z.string().min(1),
 });
 export type SiaeMetadata = z.infer<typeof SiaeMetadataSchema>;
 ```
+
+I limiti `.max(...)` sono volutamente omessi finché non sono confermati dal modulo SIAE: meglio nessun limite che un limite inventato.
 
 Migration: `pnpm db:migrate:create add_projects_siae_metadata`.
 
@@ -199,6 +212,7 @@ Rewrite `tests/soggetto/soggetto-flow.spec.ts`:
 
 ## 9. Implementation order
 
+0. **Recuperare il modulo SIAE reale** e fissare il set di campi definitivo in §4.7 (aggiornare la spec). Senza questo step lo schema Zod e la modale rimangono fittizi.
 1. Add `siae_metadata` column + migration + Zod schema.
 2. Implement `subject-siae-metadata.server.ts` (CRUD) and `useSiaeMetadata` / `useSaveSiaeMetadata` hooks.
 3. Refactor `subject-export-siae.server.ts` to read from `siae_metadata` instead of parsing the document. Update `useExportSubjectSiae`.
@@ -224,4 +238,5 @@ None at spec time. Any ambiguity discovered during implementation must be flagge
 
 - AI assistance on the soggetto: Cesare ghost suggestions inline, or a premium "man in the loop" assisted mode. Separate spec.
 - Live collaboration on the soggetto (Yjs) — currently single-author. Separate spec when the need arises.
-- Cartelle counter in the toolbar of other narrative documents, if useful.
+
+> **Nota:** il contatore cartelle è dentro Spec 21, non un future work. Vedi §4.5 e §9 step 6.
