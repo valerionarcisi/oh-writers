@@ -7,7 +7,9 @@ import {
   breakdownOccurrences,
   breakdownSceneState,
   scenes,
+  screenplays,
 } from "@oh-writers/db/schema";
+import { ensureFirstVersion } from "~/features/screenplay-editor";
 import {
   BreakdownCategorySchema,
   BreakdownElementSchema,
@@ -666,7 +668,43 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
           const screenplay = await db.query.screenplays.findFirst({
             where: (s, { eq: e }) => e(s.projectId, data.projectId),
           });
-          if (!screenplay || !screenplay.currentVersionId) {
+          if (!screenplay) {
+            return {
+              projectId: data.projectId,
+              screenplayVersionId: "",
+              versionContent: "",
+              scenes: [] as BreakdownSceneSummary[],
+              canEdit,
+            };
+          }
+          // Lazy-create v1 if the screenplay row exists but no version was
+          // ever pointed to. This recovers projects whose import path created
+          // the screenplay but never triggered saveScreenplay (which is what
+          // normally calls ensureFirstVersion + updates currentVersionId).
+          // Without this, the breakdown gets stuck on "Nessuna versione".
+          let currentVersionId = screenplay.currentVersionId;
+          if (!currentVersionId) {
+            await ensureFirstVersion(db, screenplay.id, user.id);
+            const refreshed = await db.query.screenplays.findFirst({
+              where: (s, { eq: e }) => e(s.id, screenplay.id),
+            });
+            if (refreshed?.currentVersionId) {
+              currentVersionId = refreshed.currentVersionId;
+            } else {
+              const v = await db.query.screenplayVersions.findFirst({
+                where: (v, { eq: e }) => e(v.screenplayId, screenplay.id),
+                orderBy: (v, { asc }) => [asc(v.number)],
+              });
+              if (v) {
+                await db
+                  .update(screenplays)
+                  .set({ currentVersionId: v.id })
+                  .where(eq(screenplays.id, screenplay.id));
+                currentVersionId = v.id;
+              }
+            }
+          }
+          if (!currentVersionId) {
             return {
               projectId: data.projectId,
               screenplayVersionId: "",
@@ -677,7 +715,7 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
           }
           const [version, sceneRows] = await Promise.all([
             db.query.screenplayVersions.findFirst({
-              where: (v, { eq: e }) => e(v.id, screenplay.currentVersionId!),
+              where: (v, { eq: e }) => e(v.id, currentVersionId),
             }),
             db.query.scenes.findMany({
               where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
@@ -686,7 +724,7 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
           ]);
           return {
             projectId: data.projectId,
-            screenplayVersionId: screenplay.currentVersionId,
+            screenplayVersionId: currentVersionId,
             versionContent: version?.content ?? "",
             scenes: sceneRows.map((s) => ({
               id: s.id,

@@ -102,7 +102,7 @@ export const getProjectById = createServerFn({ method: "GET" })
     }): Promise<
       ResultShape<ProjectWithDocuments, ProjectNotFoundError | DbError>
     > => {
-      await requireUser();
+      const user = await requireUser();
       const db = await getDb();
 
       const projectResult = await ResultAsync.fromPromise(
@@ -114,6 +114,30 @@ export const getProjectById = createServerFn({ method: "GET" })
       const project = projectResult.value;
       if (!project)
         return toShape(err(new ProjectNotFoundError(data.projectId)));
+
+      // Backfill any DocumentType rows missing from this project. Pre-04f
+      // projects (and any future pipeline-type added after a project's
+      // creation) won't have a row for every type — onConflictDoNothing keeps
+      // this idempotent and cheap. Without this, the Overview cards grid
+      // silently drops the missing card (e.g. Soggetto on legacy projects).
+      const backfillResult = await ResultAsync.fromPromise(
+        db
+          .insert(documents)
+          .values(
+            Object.values(DocumentTypes).map((type) => ({
+              projectId: project.id,
+              type,
+              title: type.charAt(0).toUpperCase() + type.slice(1),
+              content: "",
+              createdBy: user.id,
+            })),
+          )
+          .onConflictDoNothing({
+            target: [documents.projectId, documents.type],
+          }),
+        (e) => new DbError("getProjectById.backfill", e),
+      );
+      if (backfillResult.isErr()) return toShape(err(backfillResult.error));
 
       const relatedResult = await ResultAsync.fromPromise(
         Promise.all([

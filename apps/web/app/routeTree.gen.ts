@@ -245,18 +245,18 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdSettingsImport;
       parentRoute: typeof AppImport;
     };
-    "/_app/projects/$id_/synopsis": {
-      id: "/_app/projects/$id_/synopsis";
-      path: "/projects/$id/synopsis";
-      fullPath: "/projects/$id/synopsis";
-      preLoaderRoute: typeof AppProjectsIdSynopsisImport;
-      parentRoute: typeof AppImport;
-    };
     "/_app/projects/$id_/soggetto": {
       id: "/_app/projects/$id_/soggetto";
       path: "/projects/$id/soggetto";
       fullPath: "/projects/$id/soggetto";
       preLoaderRoute: typeof AppProjectsIdSoggettoImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/projects/$id_/synopsis": {
+      id: "/_app/projects/$id_/synopsis";
+      path: "/projects/$id/synopsis";
+      fullPath: "/projects/$id/synopsis";
+      preLoaderRoute: typeof AppProjectsIdSynopsisImport;
       parentRoute: typeof AppImport;
     };
     "/_app/projects/$id_/title-page": {
@@ -554,6 +554,7 @@ export const routeTree = rootRoute
         "/_app/projects/$id_/outline",
         "/_app/projects/$id_/screenplay",
         "/_app/projects/$id_/settings",
+        "/_app/projects/$id_/soggetto",
         "/_app/projects/$id_/synopsis",
         "/_app/projects/$id_/title-page",
         "/_app/projects/$id_/treatment"
@@ -600,6 +601,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/$id_/settings": {
       "filePath": "_app.projects.$id_.settings.tsx",
+      "parent": "/_app"
+    },
+    "/_app/projects/$id_/soggetto": {
+      "filePath": "_app.projects.$id_.soggetto.tsx",
       "parent": "/_app"
     },
     "/_app/projects/$id_/synopsis": {

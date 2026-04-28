@@ -90,9 +90,36 @@ export const getDocument = createServerFn({ method: "GET" })
       const user = await requireUser();
       const db = await getDb();
 
+      // Access check first: a 404 on the project must short-circuit before we
+      // would otherwise auto-create a row for a project the caller can't see.
+      const accessResult = await requireProjectAccess(
+        db,
+        data.projectId,
+        "view",
+      );
+      if (accessResult.isErr()) {
+        // Map ProjectNotFound/Forbidden back to DocumentNotFound to keep the
+        // public contract uniform: GETs by (projectId, type) report
+        // missing-document either way (project absence ⇒ doc unreachable).
+        const e = accessResult.error;
+        if (e._tag === "ProjectNotFoundError" || e._tag === "ForbiddenError") {
+          return toShape(
+            err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
+          );
+        }
+        return toShape(err(e));
+      }
+      const { project, membership } = accessResult.value;
+      const permission = canEdit(project, user.id, membership);
+
+      // Find-or-create the document row. Pre-04f projects (and any future
+      // pipeline-type added after a project's creation) won't have a row for
+      // every DocumentType yet — we lazily insert it on first access instead
+      // of forcing a backfill migration. The first-version snapshot follows
+      // the same lazy pattern (ensureFirstDocumentVersion).
       const result = await ResultAsync.fromPromise(
         db.transaction(async (tx) => {
-          const existing = await tx.query.documents
+          let row = await tx.query.documents
             .findFirst({
               where: and(
                 eq(documents.projectId, data.projectId),
@@ -102,19 +129,34 @@ export const getDocument = createServerFn({ method: "GET" })
                 ),
               ),
             })
-            .then((row) => row ?? null);
-          if (!existing) return null;
-          if (!existing.currentVersionId) {
+            .then((r) => r ?? null);
+          if (!row) {
+            const docType =
+              data.type as (typeof documents.$inferSelect)["type"];
+            const [inserted] = await tx
+              .insert(documents)
+              .values({
+                projectId: data.projectId,
+                type: docType,
+                title: docType.charAt(0).toUpperCase() + docType.slice(1),
+                content: "",
+                createdBy: user.id,
+              })
+              .returning();
+            if (!inserted) return null;
+            row = inserted;
+          }
+          if (!row.currentVersionId) {
             const versionId = await ensureFirstDocumentVersion(
               tx,
-              existing.id,
+              row.id,
               user.id,
             );
             if (versionId) {
-              return { ...existing, currentVersionId: versionId };
+              return { ...row, currentVersionId: versionId };
             }
           }
-          return existing;
+          return row;
         }),
         (e) => new DbError("getDocument", e),
       );
@@ -141,31 +183,6 @@ export const getDocument = createServerFn({ method: "GET" })
         if (versionResult.isErr()) return toShape(err(versionResult.error));
         if (versionResult.value) liveContent = versionResult.value.content;
       }
-
-      const accessResult = await requireProjectAccess(
-        db,
-        data.projectId,
-        "view",
-      );
-      if (accessResult.isErr()) {
-        // Map ProjectNotFound back to DocumentNotFound to keep the public
-        // contract: GETs by (projectId, type) report missing-document either
-        // way (project absence ⇒ document is unreachable for this caller).
-        const e = accessResult.error;
-        if (e._tag === "ProjectNotFoundError") {
-          return toShape(
-            err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
-          );
-        }
-        if (e._tag === "ForbiddenError") {
-          return toShape(
-            err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
-          );
-        }
-        return toShape(err(e));
-      }
-      const { project, membership } = accessResult.value;
-      const permission = canEdit(project, user.id, membership);
 
       return toShape(
         ok({
