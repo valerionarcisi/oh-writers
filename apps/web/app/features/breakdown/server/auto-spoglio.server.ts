@@ -37,7 +37,7 @@ import {
   ForbiddenError,
 } from "../breakdown.errors";
 import { canEditBreakdown } from "../lib/permissions";
-import { hashText as hashSceneText } from "@oh-writers/utils";
+import { hashText as hashSceneText } from "@oh-writers/utils/hash";
 import { resolveBreakdownAccessByScene } from "./breakdown-access";
 
 export interface AutoSpoglioResult {

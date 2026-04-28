@@ -8,7 +8,8 @@ import {
   breakdownElements,
   scenes,
 } from "@oh-writers/db/schema";
-import { hashText, toShape, type ResultShape } from "@oh-writers/utils";
+import { toShape, type ResultShape } from "@oh-writers/utils";
+import { hashText } from "@oh-writers/utils/hash";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
 import { DbError, ForbiddenError } from "../breakdown.errors";

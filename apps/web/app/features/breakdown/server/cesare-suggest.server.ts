@@ -12,7 +12,8 @@ import {
   SuggestionListSchema,
   type CesareSuggestion,
 } from "@oh-writers/domain";
-import { hashText, toShape, type ResultShape } from "@oh-writers/utils";
+import { toShape, type ResultShape } from "@oh-writers/utils";
+import { hashText } from "@oh-writers/utils/hash";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
 import {

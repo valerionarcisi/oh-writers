@@ -25,7 +25,7 @@ import {
   DbError,
   ForbiddenError,
 } from "../breakdown.errors";
-import { hashText } from "@oh-writers/utils";
+import { hashText } from "@oh-writers/utils/hash";
 import { canEditBreakdown, canViewBreakdown } from "../lib/permissions";
 import { findElementInText } from "../lib/re-match";
 import {

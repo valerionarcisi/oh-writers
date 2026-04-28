@@ -11,7 +11,7 @@ import {
   scenes,
 } from "@oh-writers/db/schema";
 import { findElementInText } from "~/features/breakdown";
-import { hashText } from "@oh-writers/utils";
+import { hashText } from "@oh-writers/utils/hash";
 import {
   suggestNextColor,
   FIRST_DRAFT_COLOR,
