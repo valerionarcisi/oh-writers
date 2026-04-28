@@ -10,6 +10,7 @@ import {
   screenplays,
 } from "@oh-writers/db/schema";
 import { ensureFirstVersion } from "~/features/screenplay-editor";
+import { syncScenesFromFountain } from "~/features/screenplay-editor/server/scenes-sync";
 import {
   BreakdownCategorySchema,
   BreakdownElementSchema,
@@ -713,15 +714,25 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
               canEdit,
             };
           }
-          const [version, sceneRows] = await Promise.all([
-            db.query.screenplayVersions.findFirst({
-              where: (v, { eq: e }) => e(v.id, currentVersionId),
-            }),
-            db.query.scenes.findMany({
+          const version = await db.query.screenplayVersions.findFirst({
+            where: (v, { eq: e }) => e(v.id, currentVersionId),
+          });
+
+          // One-shot backfill for screenplays imported before saveScreenplay
+          // started mirroring fountain into the scenes table. If we have
+          // version content but zero scenes, parse + insert once. New saves
+          // already keep this in sync via syncScenesFromFountain.
+          let sceneRows = await db.query.scenes.findMany({
+            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+            orderBy: (sc, { asc }) => [asc(sc.number)],
+          });
+          if (sceneRows.length === 0 && version?.content) {
+            await syncScenesFromFountain(db, screenplay.id, version.content);
+            sceneRows = await db.query.scenes.findMany({
               where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
               orderBy: (sc, { asc }) => [asc(sc.number)],
-            }),
-          ]);
+            });
+          }
           return {
             projectId: data.projectId,
             screenplayVersionId: currentVersionId,

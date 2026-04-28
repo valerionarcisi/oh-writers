@@ -9,6 +9,7 @@ import type { ResultShape } from "@oh-writers/utils";
 import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "./versions.server";
+import { syncScenesFromFountain } from "./scenes-sync";
 import { canEdit, isOwner } from "~/server/permissions";
 import { requireProjectAccess } from "~/server/access";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
@@ -170,6 +171,12 @@ export const saveScreenplay = createServerFn({ method: "POST" })
             // count + insert are atomic — prevents duplicate "Versione 1"
             // rows from concurrent saves.
             await ensureFirstVersion(tx, updated.id, s.createdBy);
+
+            // Mirror fountain into the `scenes` table so the breakdown route
+            // (and Spec 10e auto-spoglio) sees the imported / edited scenes
+            // without a separate user action. Without this, PDF imports land
+            // in screenplays.content but the breakdown stays empty forever.
+            await syncScenesFromFountain(tx, updated.id, data.content);
 
             return updated;
           }),
