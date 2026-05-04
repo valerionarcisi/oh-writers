@@ -1,5 +1,7 @@
 # Spec 04f — Soggetto
 
+> **Superseded (partially) by Spec 21.** The section-based editor (`= CARTELLA …` markers, per-section "Genera" buttons) and `SubjectSection` are removed. The soggetto is now a free-narrative editor (`FreeNarrativeEditor`). SIAE export and the cartelle counter remain. See `docs/specs/core/21-soggetto-free-editor.md` for the replacement implementation.
+
 Extends **Spec 04** (Narrative Editor) with a new document type: the **soggetto**, the narrative core of the project in the Italian screenwriting tradition.
 
 Generic PDF/Markdown export stays in **04c**. The SIAE-style export defined here is specific to the soggetto.
