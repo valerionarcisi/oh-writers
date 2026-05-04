@@ -36,17 +36,21 @@ Replace the section-based `SubjectEditor` (with `= CARTELLA …` markers and per
 ```
 apps/web/app/features/documents/
 ├── components/
-│   ├── FreeNarrativeEditor.tsx           [NEW] wrapper over NarrativeEditor
-│   └── FreeNarrativeEditor.module.css    [NEW] page frame, cartelle counter
-├── lib/
-│   └── cartelle-counter.ts               [NEW] pure: charCount → cartelle
+│   ├── FreeNarrativeEditor.tsx              [NEW] wrapper over NarrativeEditor
+│   ├── FreeNarrativeEditor.module.css       [NEW] page frame, cartelle counter
+│   └── ExportSiaeModal.tsx                  [MODIFY] prefill from saved metadata
 ├── hooks/
-│   ├── useSiaeMetadata.ts                [NEW] read/save siae_metadata
-│   └── useExportSubjectSiae.ts           [REFACTOR] takes form payload
+│   └── useSiaeMetadata.ts                   [NEW] read/save persisted SiaeFormState
 └── server/
-    ├── subject-export-siae.server.ts     [REFACTOR] no more subject-headings
-    └── subject-siae-metadata.server.ts   [NEW] CRUD for siae_metadata
+    └── subject-siae-metadata.server.ts      [NEW] CRUD for siae_metadata column
 ```
+
+> **Già esistenti, NON tocchiamo:**
+>
+> - `analyzeSubjectLength` (cartelle/words/chars/pages) in `packages/domain/src/subject/length.ts` — riusato dal counter inline.
+> - `SiaeExportInputSchema`, `buildSiaeInitialState`, `toSiaeExportInput` — la modale è già form-based.
+> - `subject-export-siae.server.ts` — non importa `subject-headings` (lo cita solo in un commento). Resta com'è.
+> - `subject-export-docx.server.ts` — parsa `## heading` libero, funziona già con il nuovo formato senza modifiche.
 
 ### 4.2 Files to delete (after route swap)
 
@@ -55,11 +59,14 @@ apps/web/app/features/documents/
 - `apps/web/app/features/documents/lib/cartella-marker-plugin.ts` + test
 - `apps/web/app/features/documents/lib/subject-insert.ts` + test
 - `apps/web/app/features/documents/lib/subject-headings.ts` + test
-- `apps/web/app/features/documents/server/subject-ai.server.ts` + test (only `generateSubjectSection`; verify no other consumers)
-- `apps/web/app/features/documents/lib/subject-prompt.ts` + test (consumed only by `subject-ai.server.ts`)
-- Exports of the above in `apps/web/app/features/documents/index.ts`
-- `SubjectSection` type and the `sections.ts` module in `packages/domain/src/subject/` (verify no remaining consumer; the SIAE export is the last known one and gets refactored in step 3).
-- `SOGGETTO_INITIAL_TEMPLATE` is **not** deleted: the constant name and export path are reused, only the value changes (see 4.4). Anything that imports the constant (seed, route) keeps compiling.
+- `apps/web/app/features/documents/lib/subject-prompt.ts` + test
+- `apps/web/app/features/documents/server/subject-ai.server.ts` + test (the `generateSubjectSection` server fn — no other consumers)
+- `apps/web/app/features/documents/components/AIAssistantPanel.tsx` if and only if it is exclusively driven by `useGenerateSubjectSection` (verify during implementation; if it has other consumers, leave it).
+- `SubjectSectionSchema` in `apps/web/app/features/documents/documents.schema.ts` (used only by the deleted hook).
+- `packages/domain/src/subject/sections.ts` (+ test) — `SUBJECT_SECTIONS` and `SubjectSection`. Last known consumers (`subject-insert`, `subject-headings`, `documents.schema.SubjectSectionSchema`, `mocks/ai-responses.test.ts`) all go away in this spec.
+- `apps/web/app/mocks/ai-responses.ts` — the `subjectSection` branch and any related mock; tests in `ai-responses.test.ts` adapted accordingly.
+- All exports of the above in `apps/web/app/features/documents/index.ts`.
+- `SOGGETTO_INITIAL_TEMPLATE` in `packages/domain/src/subject/template.ts` is **not** deleted: the constant name and export path are reused, only the value changes (see 4.4). Importers (seed in `packages/db/src/seed/index.ts` × 4, route, tests) keep compiling. The local copy of the template inside `packages/db/src/seed/index.ts` (currently a hard-coded mirror) is updated to match the new value.
 
 ### 4.3 `FreeNarrativeEditor` component
 
