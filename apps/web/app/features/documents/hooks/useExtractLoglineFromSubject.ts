@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import { projectQueryOptions } from "~/features/projects";
-import { generateLoglineFromSubject } from "../server/subject-ai.server";
+import { generateLoglineFromSubject } from "../server/logline-from-subject.server";
 
 // Returns the proposed logline from the Soggetto; does NOT persist.
 // The caller decides whether to accept and saves via the project-update mutation.

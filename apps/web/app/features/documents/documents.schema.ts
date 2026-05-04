@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DocumentTypes, SUBJECT_SECTIONS } from "@oh-writers/domain";
+import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
 
 // ─── Per-type content caps ────────────────────────────────────────────────────
@@ -79,18 +79,6 @@ export const parseOutline = (raw: string): OutlineContent => {
 
 export const serializeOutline = (content: OutlineContent): string =>
   JSON.stringify(content);
-
-// ─── Soggetto (04f) ───────────────────────────────────────────────────────────
-
-export const SubjectSectionSchema = z.enum(SUBJECT_SECTIONS);
-
-export const GenerateSubjectSectionInputSchema = z.object({
-  projectId: z.string().uuid(),
-  section: SubjectSectionSchema,
-});
-export type GenerateSubjectSectionInput = z.infer<
-  typeof GenerateSubjectSectionInputSchema
->;
 
 export const GenerateLoglineInputSchema = z.object({
   projectId: z.string().uuid(),

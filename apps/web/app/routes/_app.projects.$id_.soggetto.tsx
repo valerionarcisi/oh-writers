@@ -7,8 +7,8 @@ import { DocumentTypes } from "@oh-writers/domain";
 import {
   ExportPdfModal,
   ExportSiaeModal,
+  FreeNarrativeEditor,
   LoglineBlock,
-  SubjectEditor,
   useAutoSave,
   useDocument,
   useExportSubjectDocx,
@@ -171,8 +171,7 @@ function SoggettoPageReady({
         onChange={setLoglineContent}
         testId="logline-block"
       />
-      <SubjectEditor
-        projectId={projectId}
+      <FreeNarrativeEditor
         content={soggettoContent}
         onChange={setSoggettoContent}
         canEdit={canEdit}

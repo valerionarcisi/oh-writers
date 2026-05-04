@@ -1,7 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  SubjectSectionSchema,
-  GenerateSubjectSectionInputSchema,
   SiaeExportInputSchema,
   type SiaeExportInput,
 } from "./documents.schema";
@@ -19,34 +17,6 @@ const makeValid = (
   compilationDate: "2026-04-24",
   depositNotes: null,
   ...overrides,
-});
-
-describe("SubjectSectionSchema", () => {
-  it("accepts a known section", () => {
-    expect(SubjectSectionSchema.parse("premise")).toBe("premise");
-  });
-
-  it("rejects an unknown section", () => {
-    expect(() => SubjectSectionSchema.parse("bogus")).toThrow();
-  });
-});
-
-describe("GenerateSubjectSectionInputSchema", () => {
-  it("accepts valid input", () => {
-    const result = GenerateSubjectSectionInputSchema.safeParse({
-      projectId: VALID_UUID,
-      section: "arc",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects non-uuid projectId", () => {
-    const result = GenerateSubjectSectionInputSchema.safeParse({
-      projectId: "not-a-uuid",
-      section: "arc",
-    });
-    expect(result.success).toBe(false);
-  });
 });
 
 describe("SiaeExportInputSchema", () => {

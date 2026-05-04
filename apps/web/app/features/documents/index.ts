@@ -1,10 +1,7 @@
 export { NarrativeEditor } from "./components/NarrativeEditor";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
-export { SubjectEditor } from "./components/SubjectEditor";
-export type {
-  SubjectEditorProps,
-  SubjectEditorLabels,
-} from "./components/SubjectEditor";
+export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
+export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
 export { TextEditor } from "./components/TextEditor";
 export { LoglineBlock } from "./components/LoglineBlock";
 export type {
@@ -23,7 +20,6 @@ export type {
   ExportSiaeModalLabels,
 } from "./components/ExportSiaeModal";
 export * from "./hooks/useExportSubjectSiae";
-export * from "./hooks/useGenerateSubjectSection";
 export * from "./hooks/useExtractLoglineFromSubject";
 export * from "./documents.errors";
 export * from "./documents.schema";
