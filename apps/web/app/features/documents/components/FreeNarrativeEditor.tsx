@@ -10,6 +10,8 @@ export interface FreeNarrativeEditorProps {
   readonly canEdit: boolean;
   readonly initialTemplate?: string;
   readonly testId?: string;
+  /** When true, renders only the editor + counter with no card wrapper. */
+  readonly embedded?: boolean;
 }
 
 const stripHtmlTags = (html: string): string =>
@@ -24,6 +26,7 @@ export function FreeNarrativeEditor({
   canEdit,
   initialTemplate = SOGGETTO_INITIAL_TEMPLATE,
   testId,
+  embedded = false,
 }: FreeNarrativeEditorProps) {
   const seededRef = useRef(false);
 
@@ -41,20 +44,28 @@ export function FreeNarrativeEditor({
     return { cartelle: toCartelle(c), chars: c };
   }, [content]);
 
+  const inner = (
+    <>
+      <NarrativeProseMirrorView
+        value={content}
+        onChange={onChange}
+        enableHeadings={true}
+        readOnly={!canEdit}
+      />
+      <div className={styles.counter} aria-live="polite">
+        {cartelle} {cartelle === 1 ? "cartella" : "cartelle"} ·{" "}
+        {chars.toLocaleString("it-IT")} caratteri
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div data-testid={testId}>{inner}</div>;
+  }
+
   return (
     <div className={styles.root} data-testid={testId}>
-      <div className={styles.page}>
-        <NarrativeProseMirrorView
-          value={content}
-          onChange={onChange}
-          enableHeadings={true}
-          readOnly={!canEdit}
-        />
-        <div className={styles.counter} aria-live="polite">
-          {cartelle} {cartelle === 1 ? "cartella" : "cartelle"} ·{" "}
-          {chars.toLocaleString("it-IT")} caratteri
-        </div>
-      </div>
+      <div className={styles.page}>{inner}</div>
     </div>
   );
 }

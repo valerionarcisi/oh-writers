@@ -2,7 +2,6 @@
 // layer later to surface English copy for non-IT users.
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useSession } from "~/lib/auth-client";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import {
@@ -17,8 +16,9 @@ import {
   useSiaeMetadata,
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
+import { useSession } from "~/lib/auth-client";
 import type { DocumentViewWithPermission } from "~/features/documents";
-import styles from "./_app.projects.$id_.editor.module.css";
+import styles from "./_app.projects.$id_.soggetto.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/soggetto")({
   component: SoggettoPage,
@@ -136,7 +136,7 @@ function SoggettoPageReady({
   };
 
   return (
-    <main data-testid="soggetto-page">
+    <main className={styles.page} data-testid="soggetto-page">
       <div className={styles.toolbar} data-testid="soggetto-toolbar">
         <button
           type="button"
@@ -156,6 +156,7 @@ function SoggettoPageReady({
           Esporta SIAE
         </button>
       </div>
+
       <ExportSiaeModal
         isOpen={isSiaeOpen}
         onClose={() => setIsSiaeOpen(false)}
@@ -171,19 +172,27 @@ function SoggettoPageReady({
           onGenerate={handleExport}
         />
       )}
-      <LoglineBlock
-        projectId={projectId}
-        logline={loglineContent === "" ? null : loglineContent}
-        canEdit={canEdit}
-        onChange={setLoglineContent}
-        testId="logline-block"
-      />
-      <FreeNarrativeEditor
-        content={soggettoContent}
-        onChange={setSoggettoContent}
-        canEdit={canEdit}
-        testId="subject-editor"
-      />
+
+      <div className={styles.editorMain}>
+        <div className={styles.pageShell}>
+          <LoglineBlock
+            projectId={projectId}
+            logline={loglineContent === "" ? null : loglineContent}
+            canEdit={canEdit}
+            onChange={setLoglineContent}
+            testId="logline-block"
+          />
+          <hr className={styles.divider} />
+          <p className={styles.sectionLabel}>Soggetto</p>
+          <FreeNarrativeEditor
+            content={soggettoContent}
+            onChange={setSoggettoContent}
+            canEdit={canEdit}
+            embedded
+            testId="subject-editor"
+          />
+        </div>
+      </div>
     </main>
   );
 }

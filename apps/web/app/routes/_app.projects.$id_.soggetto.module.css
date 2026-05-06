@@ -1,0 +1,107 @@
+.page {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  block-size: 100%;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border);
+  background: var(--color-surface);
+}
+
+.saveBtn {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: var(--border);
+  border-color: var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.editorMain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  padding: var(--space-8) var(--space-6);
+  background: var(--color-bg);
+}
+
+/* White "paper" card — mirrors the pageShell used by Synopsis and Treatment. */
+.pageShell {
+  display: flex;
+  flex-direction: column;
+  inline-size: 100%;
+  max-inline-size: 720px;
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  padding-block: var(--space-8);
+  padding-inline: var(--space-10);
+  min-block-size: 80vh;
+  flex-shrink: 0;
+
+  /* Override design tokens so child components (LoglineBlock, FreeNarrativeEditor)
+   * render correctly on the white background without extra props. */
+  --color-surface: rgba(0, 0, 0, 0.04);
+  --color-surface-muted: rgba(0, 0, 0, 0.02);
+  --color-surface-hover: rgba(0, 0, 0, 0.06);
+  --color-surface-raised: rgba(0, 0, 0, 0.06);
+  --color-fg-primary: #1a1a1a;
+  --color-fg-secondary: #555;
+  --color-fg: #1a1a1a;
+  --color-text: #1a1a1a;
+  --color-text-muted: #888;
+  --border: 1px solid rgba(0, 0, 0, 0.12);
+  --color-warning: #b45309;
+  --color-error: #dc2626;
+  --color-accent: #0f766e;
+  --color-accent-fg: #ffffff;
+  --color-accent-hover: #0d6460;
+}
+
+.divider {
+  border: none;
+  border-block-start: 1px solid rgba(0, 0, 0, 0.08);
+  margin-block: var(--space-6);
+}
+
+.sectionLabel {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+  margin: 0 0 var(--space-4);
+}
+
+/* Status messages */
+.status {
+  padding: var(--space-8);
+  color: var(--color-fg-secondary);
+  font-size: var(--text-sm);
+}
+
+.statusError {
+  padding: var(--space-8);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
