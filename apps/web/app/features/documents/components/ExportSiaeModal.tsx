@@ -235,9 +235,10 @@ export function ExportSiaeModal({
               type="text"
               value={state.title}
               hasError={!!fieldErrors.title}
-              onChange={(e) =>
-                setState((p) => ({ ...p, title: e.currentTarget.value }))
-              }
+              onChange={(e) => {
+                const { value } = e.currentTarget;
+                setState((p) => ({ ...p, title: value }));
+              }}
               data-testid="siae-title-input"
             />
           </FormField>
@@ -252,12 +253,10 @@ export function ExportSiaeModal({
                 type="text"
                 value={state.declaredGenre}
                 hasError={!!fieldErrors.declaredGenre}
-                onChange={(e) =>
-                  setState((p) => ({
-                    ...p,
-                    declaredGenre: e.currentTarget.value,
-                  }))
-                }
+                onChange={(e) => {
+                  const { value } = e.currentTarget;
+                  setState((p) => ({ ...p, declaredGenre: value }));
+                }}
                 data-testid="siae-genre-input"
               />
             </FormField>
@@ -273,12 +272,13 @@ export function ExportSiaeModal({
                 max={600}
                 value={state.estimatedDurationMinutes}
                 hasError={!!fieldErrors.estimatedDurationMinutes}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const { value } = e.currentTarget;
                   setState((p) => ({
                     ...p,
-                    estimatedDurationMinutes: Number(e.currentTarget.value),
-                  }))
-                }
+                    estimatedDurationMinutes: Number(value),
+                  }));
+                }}
                 data-testid="siae-duration-input"
               />
             </FormField>
@@ -292,12 +292,10 @@ export function ExportSiaeModal({
                 type="date"
                 value={state.compilationDate}
                 hasError={!!fieldErrors.compilationDate}
-                onChange={(e) =>
-                  setState((p) => ({
-                    ...p,
-                    compilationDate: e.currentTarget.value,
-                  }))
-                }
+                onChange={(e) => {
+                  const { value } = e.currentTarget;
+                  setState((p) => ({ ...p, compilationDate: value }));
+                }}
                 data-testid="siae-date-input"
               />
             </FormField>
@@ -336,12 +334,10 @@ export function ExportSiaeModal({
               className={styles.textArea}
               value={state.depositNotes}
               placeholder={l.notesPlaceholder}
-              onChange={(e) =>
-                setState((p) => ({
-                  ...p,
-                  depositNotes: e.currentTarget.value,
-                }))
-              }
+              onChange={(e) => {
+                const { value } = e.currentTarget;
+                setState((p) => ({ ...p, depositNotes: value }));
+              }}
               data-testid="siae-notes-input"
             />
           </FormField>
