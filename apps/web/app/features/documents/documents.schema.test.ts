@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   SiaeExportInputSchema,
+  SiaeMetadataSchema,
   type SiaeExportInput,
+  type SiaeMetadata,
 } from "./documents.schema";
 
 const VALID_UUID = "123e4567-e89b-12d3-a456-426614174000";
@@ -68,6 +70,52 @@ describe("SiaeExportInputSchema", () => {
     expect(
       SiaeExportInputSchema.safeParse(
         makeValid({ compilationDate: "not-a-date" }),
+      ).success,
+    ).toBe(false);
+  });
+});
+
+const makeValidMetadata = (
+  overrides: Partial<SiaeMetadata> = {},
+): SiaeMetadata => ({
+  title: "Il regista di matrimoni",
+  authors: [{ fullName: "Marco Tullio Giordana", taxCode: null }],
+  declaredGenre: "commedia",
+  estimatedDurationMinutes: 105,
+  depositNotes: null,
+  ...overrides,
+});
+
+describe("SiaeMetadataSchema", () => {
+  it("accepts a valid metadata object", () => {
+    expect(SiaeMetadataSchema.safeParse(makeValidMetadata()).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects empty title", () => {
+    expect(
+      SiaeMetadataSchema.safeParse(makeValidMetadata({ title: "" })).success,
+    ).toBe(false);
+  });
+
+  it("rejects empty authors array", () => {
+    expect(
+      SiaeMetadataSchema.safeParse(makeValidMetadata({ authors: [] })).success,
+    ).toBe(false);
+  });
+
+  it("accepts null depositNotes", () => {
+    expect(
+      SiaeMetadataSchema.safeParse(makeValidMetadata({ depositNotes: null }))
+        .success,
+    ).toBe(true);
+  });
+
+  it("rejects estimatedDurationMinutes = 0", () => {
+    expect(
+      SiaeMetadataSchema.safeParse(
+        makeValidMetadata({ estimatedDurationMinutes: 0 }),
       ).success,
     ).toBe(false);
   });

@@ -101,3 +101,12 @@ export const SiaeExportInputSchema = z.object({
   depositNotes: z.string().max(500).nullable(),
 });
 export type SiaeExportInput = z.infer<typeof SiaeExportInputSchema>;
+
+export const SiaeMetadataSchema = z.object({
+  title: z.string().min(1).max(200),
+  authors: z.array(SiaeAuthorSchema).min(1),
+  declaredGenre: z.string().max(100),
+  estimatedDurationMinutes: z.number().int().min(1).max(600),
+  depositNotes: z.string().max(500).nullable(),
+});
+export type SiaeMetadata = z.infer<typeof SiaeMetadataSchema>;
