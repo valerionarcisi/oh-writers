@@ -61,6 +61,8 @@ export const projects = pgTable(
     titlePageNotes: text("title_page_notes"),
     titlePageDoc:
       jsonb("title_page_doc").$type<Record<string, NonNullable<unknown>>>(),
+    siaeMetadata:
+      jsonb("siae_metadata").$type<Record<string, NonNullable<unknown>>>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

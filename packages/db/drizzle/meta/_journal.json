@@ -99,6 +99,13 @@
       "when": 1777506000000,
       "tag": "0011_add_breakdown_version_state",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1746528000000,
+      "tag": "0012_add_siae_metadata",
+      "breakpoints": true
     }
   ]
 }
