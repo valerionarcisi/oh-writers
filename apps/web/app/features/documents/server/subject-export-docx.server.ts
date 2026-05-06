@@ -33,27 +33,49 @@ export type ParsedBlock =
   | { readonly kind: "heading"; readonly level: 2; readonly text: string }
   | { readonly kind: "paragraph"; readonly text: string };
 
+const stripHtml = (html: string): string => {
+  if (!html.includes("<")) return html;
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|h[1-6]|li|div|blockquote)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .trim();
+};
+
+const stripInlineMarkdown = (text: string): string =>
+  text
+    .replace(/\*\*(.+?)\*\*/gs, "$1")
+    .replace(/\*(.+?)\*/gs, "$1")
+    .replace(/_(.+?)_/gs, "$1")
+    .replace(/~~(.+?)~~/gs, "$1");
+
 /**
- * Minimal markdown parser for soggetto export.
- *
- * The soggetto is authored as plain-text paragraphs with optional `## heading`
- * lines used to separate the fixed sections (Premessa, Mondo, Personaggi, …).
- * We deliberately do not pull in a markdown lib — richer syntax is out of scope
- * and would encourage drift from the authoring UX.
+ * Minimal parser for soggetto export. Handles both HTML (ProseMirror output)
+ * and plain markdown. `## heading` lines become heading blocks, blank lines
+ * break paragraphs.
  */
 export const parseSoggettoMarkdown = (content: string): ParsedBlock[] => {
-  const trimmed = content.trim();
+  const plain = stripHtml(content);
+  const trimmed = plain.trim();
   if (trimmed.length === 0) return [];
   return trimmed
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter((block) => block.length > 0)
-    .map(
-      (block): ParsedBlock =>
-        block.startsWith("## ")
-          ? { kind: "heading", level: 2, text: block.slice(3).trim() }
-          : { kind: "paragraph", text: block },
-    );
+    .map((block): ParsedBlock => {
+      if (/^#{1,6}\s+/.test(block)) {
+        return {
+          kind: "heading",
+          level: 2,
+          text: stripInlineMarkdown(block.replace(/^#{1,6}\s+/, "").trim()),
+        };
+      }
+      return { kind: "paragraph", text: stripInlineMarkdown(block) };
+    });
 };
 
 interface ProjectForDocx {

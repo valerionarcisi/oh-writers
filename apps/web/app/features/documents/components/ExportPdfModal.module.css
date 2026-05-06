@@ -1,9 +1,56 @@
-.checkboxRow {
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--color-text);
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  inline-size: min(480px, calc(100vw - var(--space-8)));
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-block-end: var(--border);
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: var(--text-xl);
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-fg-secondary);
+
+  &:hover {
+    color: var(--color-fg);
+  }
+}
+
+.body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .fieldset {
@@ -19,17 +66,62 @@
 .legend {
   padding-inline: var(--space-1);
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  color: var(--color-fg-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.checkboxRow input[disabled] + span {
-  color: var(--color-text-muted);
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  & input[disabled] + span {
+    color: var(--color-fg-secondary);
+  }
 }
 
 .hint {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  margin-block-start: var(--space-2);
+  color: var(--color-fg-secondary);
+  margin-block-start: var(--space-1);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-block-start: var(--border);
+}
+
+.btn {
+  padding: var(--space-2) var(--space-4);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.btnPrimary {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  border-color: var(--color-accent);
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover, var(--color-accent));
+  }
 }

@@ -2,6 +2,7 @@
 // layer later to surface English copy for non-IT users.
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useSession } from "~/lib/auth-client";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import {
@@ -101,13 +102,14 @@ function SoggettoPageReady({
     projectQuery.data && projectQuery.data.isOk
       ? projectQuery.data.value
       : null;
+  const { data: session } = useSession();
   const siaeMetadataQuery = useSiaeMetadata(projectId);
   const savedMetadata =
     siaeMetadataQuery.data !== undefined ? siaeMetadataQuery.data : null;
   const siaeDefaults = {
     title: projectOk?.title ?? "",
     declaredGenre: projectOk?.genre ?? "",
-    ownerFullName: null as string | null,
+    ownerFullName: session?.user?.name ?? null,
     savedMetadata,
   };
 

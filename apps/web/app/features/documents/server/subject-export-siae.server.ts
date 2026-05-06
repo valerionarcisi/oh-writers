@@ -71,29 +71,52 @@ export interface ParsedMarkdownBlock {
   readonly text: string;
 }
 
-// Minimal markdown parser: `## heading` lines become heading blocks, blank
-// lines break paragraphs. Enough for the soggetto body. We intentionally do
-// not reuse the ProseMirror-based parser in subject-headings.ts: that one
-// walks a PM doc, while here we operate on the stored markdown string.
+// Strip HTML tags when ProseMirror-authored content is stored as HTML.
+const stripHtml = (html: string): string => {
+  if (!html.includes("<")) return html;
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|h[1-6]|li|div|blockquote)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .trim();
+};
+
+// Strip inline markdown syntax so asterisks/underscores don't appear in the PDF.
+const stripInlineMarkdown = (text: string): string =>
+  text
+    .replace(/\*\*(.+?)\*\*/gs, "$1")
+    .replace(/\*(.+?)\*/gs, "$1")
+    .replace(/_(.+?)_/gs, "$1")
+    .replace(/~~(.+?)~~/gs, "$1");
+
+// Minimal parser: `## heading` lines become heading blocks, blank lines break
+// paragraphs. Handles both HTML (ProseMirror output) and plain markdown.
 export const parseSubjectMarkdown = (
   raw: string,
 ): ReadonlyArray<ParsedMarkdownBlock> => {
-  if (!raw || raw.trim().length === 0) return [];
+  const plain = stripHtml(raw);
+  if (!plain || plain.trim().length === 0) return [];
   const blocks: ParsedMarkdownBlock[] = [];
   let buffer: string[] = [];
   const flush = () => {
     if (buffer.length === 0) return;
-    const text = buffer.join(" ").replace(/\s+/g, " ").trim();
+    const text = stripInlineMarkdown(
+      buffer.join(" ").replace(/\s+/g, " ").trim(),
+    );
     if (text.length > 0) blocks.push({ kind: "paragraph", text });
     buffer = [];
   };
-  for (const rawLine of raw.split(/\r?\n/)) {
+  for (const rawLine of plain.split(/\r?\n/)) {
     const line = rawLine.trimEnd();
     if (/^#{1,6}\s+/.test(line)) {
       flush();
       blocks.push({
         kind: "heading",
-        text: line.replace(/^#{1,6}\s+/, "").trim(),
+        text: stripInlineMarkdown(line.replace(/^#{1,6}\s+/, "").trim()),
       });
       continue;
     }
@@ -151,6 +174,7 @@ const renderBody = (doc: PDFKit.PDFDocument, markdown: string) => {
     return;
   }
   let offset = 0;
+  let lastCartella = 0;
   for (const block of blocks) {
     if (block.kind === "heading") {
       doc.moveDown(0.8);
@@ -168,12 +192,16 @@ const renderBody = (doc: PDFKit.PDFDocument, markdown: string) => {
         .text(block.text, { align: "left", paragraphGap: 8, lineGap: 2 });
     }
     offset += block.text.length + 1;
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor("#888")
-      .text(formatCartellaFooter(offset), { align: "right" });
-    doc.fillColor("#000");
+    const currentCartella = Math.floor(offset / CHARS_PER_CARTELLA) + 1;
+    if (currentCartella !== lastCartella) {
+      lastCartella = currentCartella;
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor("#888")
+        .text(formatCartellaFooter(offset), { align: "right" });
+      doc.fillColor("#000");
+    }
   }
 };
 
