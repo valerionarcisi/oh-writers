@@ -13,6 +13,7 @@ import {
   useDocument,
   useExportSubjectDocx,
   useSaveDocument,
+  useSiaeMetadata,
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
 import type { DocumentViewWithPermission } from "~/features/documents";
@@ -100,10 +101,14 @@ function SoggettoPageReady({
     projectQuery.data && projectQuery.data.isOk
       ? projectQuery.data.value
       : null;
+  const siaeMetadataQuery = useSiaeMetadata(projectId);
+  const savedMetadata =
+    siaeMetadataQuery.data !== undefined ? siaeMetadataQuery.data : null;
   const siaeDefaults = {
     title: projectOk?.title ?? "",
     declaredGenre: projectOk?.genre ?? "",
     ownerFullName: null as string | null,
+    savedMetadata,
   };
 
   const saveSoggetto = useSaveDocument();

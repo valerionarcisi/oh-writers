@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { match } from "ts-pattern";
 import { Button, Dialog, FormField, Input } from "@oh-writers/ui";
 import { useExportSubjectSiae } from "../hooks/useExportSubjectSiae";
+import { useSaveSiaeMetadata } from "../hooks/useSiaeMetadata";
 import { SiaeExportInputSchema } from "../documents.schema";
 import {
   buildSiaeInitialState,
   toSiaeExportInput,
+  toSiaeMetadata,
   type SiaeFormDefaults,
   type SiaeFormState,
 } from "../lib/siae-initial-state";
@@ -117,6 +119,7 @@ export function ExportSiaeModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const exportMutation = useExportSubjectSiae();
+  const saveMetadata = useSaveSiaeMetadata(projectId);
 
   // Reset the form whenever the modal opens so that reopening after a
   // cancellation does not leak stale state.
@@ -158,7 +161,10 @@ export function ExportSiaeModal({
     }
     setFieldErrors({});
     exportMutation.mutate(parsed.data, {
-      onSuccess: () => onClose(),
+      onSuccess: () => {
+        saveMetadata.mutate(toSiaeMetadata(state));
+        onClose();
+      },
       onError: (err) => {
         const tagged = err as unknown as { _tag?: string };
         const copy = match(tagged)
