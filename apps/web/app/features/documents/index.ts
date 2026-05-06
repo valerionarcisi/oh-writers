@@ -42,3 +42,8 @@ export {
 export { base64ToBlob, downloadBlob } from "./lib/download";
 export { openPdfPreview } from "./lib/pdf-preview";
 export { DOCUMENT_LABELS } from "./lib/document-display";
+export {
+  siaeMetadataQueryOptions,
+  useSiaeMetadata,
+  useSaveSiaeMetadata,
+} from "./hooks/useSiaeMetadata";
