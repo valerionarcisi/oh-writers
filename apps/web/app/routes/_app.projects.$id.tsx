@@ -1,7 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { Badge, Button, useConfirmDialog } from "@oh-writers/ui";
-import { DOCUMENT_PIPELINE, type DocumentType } from "@oh-writers/domain";
+import {
+  DOCUMENT_PIPELINE,
+  DocumentTypes,
+  type DocumentType,
+} from "@oh-writers/domain";
 import {
   useProject,
   useArchiveProject,
@@ -14,7 +18,9 @@ import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id.module.css";
 
 const pipelineIndex = (type: string): number => {
-  const idx = DOCUMENT_PIPELINE.indexOf(type as DocumentType);
+  const idx = DOCUMENT_PIPELINE.indexOf(
+    type as (typeof DOCUMENT_PIPELINE)[number],
+  );
   return idx === -1 ? DOCUMENT_PIPELINE.length : idx;
 };
 
@@ -56,9 +62,9 @@ function ProjectPageContent({
   const { confirm } = useConfirmDialog();
 
   const { documents: rawDocuments, screenplay, ...project } = projectData;
-  const documents = [...rawDocuments].sort(
-    (a, b) => pipelineIndex(a.type) - pipelineIndex(b.type),
-  );
+  const documents = [...rawDocuments]
+    .filter((d) => d.type !== DocumentTypes.LOGLINE)
+    .sort((a, b) => pipelineIndex(a.type) - pipelineIndex(b.type));
   const completedDocs = documents.filter(
     (d: { content: string }) => d.content.length > 0,
   ).length;

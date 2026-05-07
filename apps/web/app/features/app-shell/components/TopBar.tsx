@@ -97,8 +97,6 @@ function buildBreadcrumbs(
         label: "Settings",
         path: `/projects/${id}/settings`,
       });
-    } else if (lastRoute.includes("logline")) {
-      crumbs.push({ label: "Logline", path: `/projects/${id}/logline` });
     } else if (lastRoute.includes("synopsis")) {
       crumbs.push({ label: "Synopsis", path: `/projects/${id}/synopsis` });
     } else if (lastRoute.includes("outline")) {

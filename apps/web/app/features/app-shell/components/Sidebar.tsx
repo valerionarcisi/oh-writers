@@ -28,8 +28,7 @@ import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
 import styles from "./Sidebar.module.css";
 
-const DOCUMENT_ICONS: Record<DocumentType, LucideIcon> = {
-  [DocumentTypes.LOGLINE]: PenLine,
+const DOCUMENT_ICONS: Record<(typeof DOCUMENT_PIPELINE)[number], LucideIcon> = {
   [DocumentTypes.SOGGETTO]: NotebookText,
   [DocumentTypes.SYNOPSIS]: BookOpen,
   [DocumentTypes.OUTLINE]: ListTree,

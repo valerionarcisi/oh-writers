@@ -39,7 +39,6 @@ export const DocumentTypes = {
 export type DocumentType = (typeof DocumentTypes)[keyof typeof DocumentTypes];
 
 export const DOCUMENT_PIPELINE = [
-  DocumentTypes.LOGLINE,
   DocumentTypes.SOGGETTO,
   DocumentTypes.SYNOPSIS,
   DocumentTypes.OUTLINE,
