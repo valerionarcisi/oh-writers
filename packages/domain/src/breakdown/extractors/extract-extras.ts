@@ -1,5 +1,5 @@
 /**
- * Extras extractor — IT crowd / background patterns.
+ * Extras extractor — IT + EN crowd / background patterns.
  * Confidence ~50%, default `pending`.
  *
  * Each lemma's `display` becomes the breakdown element name; the stem is
@@ -9,6 +9,7 @@
 import { buildLemmaExtractor, type Lemma } from "./lemma-extractor.js";
 
 const LEMMAS: readonly Lemma[] = [
+  // Italian
   { display: "Folla", stem: "(una\\s+)?fol(la|le)" },
   { display: "Avventori", stem: "avventor[ei]" },
   { display: "Pubblico", stem: "pubblic[oi]" },
@@ -22,6 +23,24 @@ const LEMMAS: readonly Lemma[] = [
   { display: "Studenti", stem: "student[ei]" },
   { display: "Turisti", stem: "turist[ei]" },
   { display: "Operai", stem: "opera[ie]" },
+  // English
+  { display: "Crowd", stem: "crowds?" },
+  { display: "Audience", stem: "audiences?" },
+  { display: "Bystanders", stem: "bystanders?" },
+  { display: "Passersby", stem: "passersby?" },
+  { display: "Customers", stem: "customers?" },
+  { display: "Patrons", stem: "patrons?" },
+  { display: "Fans", stem: "fans?" },
+  { display: "Spectators", stem: "spectators?" },
+  { display: "Protesters", stem: "protesters?" },
+  { display: "Demonstrators", stem: "demonstrators?" },
+  { display: "People", stem: "people" },
+  { display: "Children", stem: "children" },
+  { display: "Kids", stem: "kids?" },
+  { display: "Tourists", stem: "tourists?" },
+  { display: "Workers", stem: "workers?" },
+  { display: "Extras", stem: "extras?" },
+  { display: "Background artists", stem: "background\\s+artists?" },
 ];
 
 export const extractExtras = buildLemmaExtractor({

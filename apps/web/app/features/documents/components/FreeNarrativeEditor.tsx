@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef } from "react";
-import { SOGGETTO_INITIAL_TEMPLATE } from "@oh-writers/domain";
+import { useMemo } from "react";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { toCartelle } from "../lib/cartelle-counter";
 import styles from "./FreeNarrativeEditor.module.css";
+
+const PLACEHOLDER =
+  "Scrivi il tuo soggetto. Usa ## per strutturarlo in sezioni (es. ## Premessa).";
 
 export interface FreeNarrativeEditorProps {
   readonly content: string;
   readonly onChange: (next: string) => void;
   readonly canEdit: boolean;
-  readonly initialTemplate?: string;
   readonly testId?: string;
   /** When true, renders only the editor + counter with no card wrapper. */
   readonly embedded?: boolean;
@@ -24,20 +25,9 @@ export function FreeNarrativeEditor({
   content,
   onChange,
   canEdit,
-  initialTemplate = SOGGETTO_INITIAL_TEMPLATE,
   testId,
   embedded = false,
 }: FreeNarrativeEditorProps) {
-  const seededRef = useRef(false);
-
-  useEffect(() => {
-    if (seededRef.current) return;
-    seededRef.current = true;
-    if (content === "") {
-      onChange(initialTemplate);
-    }
-  }, [content, initialTemplate, onChange]);
-
   const { cartelle, chars } = useMemo(() => {
     const plain = stripHtmlTags(content);
     const c = plain.length;
@@ -51,6 +41,7 @@ export function FreeNarrativeEditor({
         onChange={onChange}
         enableHeadings={true}
         readOnly={!canEdit}
+        placeholder={PLACEHOLDER}
       />
       <div className={styles.counter} aria-live="polite">
         {cartelle} {cartelle === 1 ? "cartella" : "cartelle"} ·{" "}

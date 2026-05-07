@@ -1,11 +1,12 @@
 /**
- * Animals extractor — IT lemma list.
+ * Animals extractor — IT + EN lemma list.
  * Confidence ~90%, default `accepted`.
  */
 
 import { buildLemmaExtractor, type Lemma } from "./lemma-extractor.js";
 
 const LEMMAS: readonly Lemma[] = [
+  // Italian
   { display: "Cane", stem: "can[ei]" },
   { display: "Cucciolo", stem: "cuccioli?" },
   { display: "Gatto", stem: "gatt[oi]" },
@@ -36,6 +37,34 @@ const LEMMAS: readonly Lemma[] = [
   { display: "Lupo", stem: "lup[oi]" },
   { display: "Volpe", stem: "volp[ei]" },
   { display: "Cervo", stem: "cerv[oi]" },
+  // English
+  { display: "Dog", stem: "dogs?" },
+  { display: "Puppy", stem: "puppies|puppy" },
+  { display: "Cat", stem: "cats?" },
+  { display: "Horse", stem: "horses?" },
+  { display: "Sheep", stem: "sheep" },
+  { display: "Cow", stem: "cows?" },
+  { display: "Bull", stem: "bulls?" },
+  { display: "Goat", stem: "goats?" },
+  { display: "Pig", stem: "pigs?" },
+  { display: "Chicken", stem: "chickens?" },
+  { display: "Rooster", stem: "roosters?" },
+  { display: "Duck", stem: "ducks?" },
+  { display: "Bird", stem: "birds?" },
+  { display: "Pigeon", stem: "pigeons?" },
+  { display: "Crow", stem: "crows?" },
+  { display: "Seagull", stem: "seagulls?" },
+  { display: "Mouse", stem: "mice|mouse" },
+  { display: "Rat", stem: "rats?" },
+  { display: "Rabbit", stem: "rabbits?" },
+  { display: "Snake", stem: "snakes?" },
+  { display: "Spider", stem: "spiders?" },
+  { display: "Bee", stem: "bees?" },
+  { display: "Fish", stem: "fish(es)?" },
+  { display: "Donkey", stem: "donkeys?" },
+  { display: "Wolf", stem: "wolves|wolf" },
+  { display: "Fox", stem: "fox(es)?" },
+  { display: "Deer", stem: "deer" },
 ];
 
 export const extractAnimals = buildLemmaExtractor({

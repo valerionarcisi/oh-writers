@@ -29,21 +29,32 @@ interface ParsedHeading {
   timeOfDay: string | null;
 }
 
-const parseHeading = (raw: string): ParsedHeading | null => {
+const parseHeading = (raw: string): ParsedHeading => {
   const m = HEADING_PARSE_RE.exec(raw.trim());
-  if (!m) return null;
-  const prefix = m[1]!.replace(/\./g, "").toUpperCase();
-  const rest = m[2]!.trim();
-  const intExt =
-    prefix === "INT" ? "INT" : prefix === "EXT" ? "EXT" : "INT/EXT";
-  const parts = rest.split(/\s+-\s+/);
-  let timeOfDay: string | null = null;
-  let location = rest;
-  if (parts.length >= 2) {
-    timeOfDay = parts[parts.length - 1]!.trim();
-    location = parts.slice(0, -1).join(" - ").trim();
+  if (m) {
+    const prefix = m[1]!.replace(/\./g, "").toUpperCase();
+    const rest = m[2]!.trim();
+    const intExt =
+      prefix === "INT" ? "INT" : prefix === "EXT" ? "EXT" : "INT/EXT";
+    const parts = rest.split(/\s+-\s+/);
+    let timeOfDay: string | null = null;
+    let location = rest;
+    if (parts.length >= 2) {
+      timeOfDay = parts[parts.length - 1]!.trim();
+      location = parts.slice(0, -1).join(" - ").trim();
+    }
+    return { intExt, location, timeOfDay };
   }
-  return { intExt, location, timeOfDay };
+  // Non-standard headings (INSERT, SERIES OF SHOTS, etc.): store as INT with
+  // the full heading text as the location so the DB row is created with the
+  // correct ordinal and the TOC/gutter stay in sync.
+  const parts = raw.trim().split(/\s+-\s+/);
+  return {
+    intExt: "INT",
+    location:
+      parts.length > 1 ? parts.slice(0, -1).join(" - ").trim() : raw.trim(),
+    timeOfDay: parts.length > 1 ? parts[parts.length - 1]!.trim() : null,
+  };
 };
 
 interface SceneRow {
@@ -72,7 +83,6 @@ export const extractSceneRows = (fountain: string): SceneRow[] => {
     const nextLineIdx = parsed[i + 1]?.lineIndex ?? lines.length;
     const heading = cur.heading;
     const headingParts = parseHeading(heading);
-    if (!headingParts) continue;
     const body = lines
       .slice(cur.lineIndex + 1, nextLineIdx)
       .join("\n")

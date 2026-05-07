@@ -1,5 +1,5 @@
 /**
- * Props extractor — IT lemma list.
+ * Props extractor — IT + EN lemma list.
  * Confidence ~50%, default `pending` (ghost tag).
  *
  * Spec 10e originally left `props` to Cesare on the grounds that props
@@ -22,6 +22,7 @@
 import { buildLemmaExtractor, type Lemma } from "./lemma-extractor.js";
 
 const LEMMAS: readonly Lemma[] = [
+  // Italian
   { display: "Microfono", stem: "microfon\\w*" },
   { display: "Vassoio", stem: "vassoi\\w*" },
   { display: "Bicchiere", stem: "bicchier\\w*" },
@@ -52,6 +53,39 @@ const LEMMAS: readonly Lemma[] = [
   { display: "Coltello", stem: "coltell\\w*" },
   { display: "Pala da pizza", stem: "pala\\s+da\\s+pizza" },
   { display: "Grembiule", stem: "grembiul\\w*" },
+  // English
+  { display: "Microphone", stem: "microphones?|mics?" },
+  { display: "Tray", stem: "trays?" },
+  { display: "Glass", stem: "glasses?" },
+  { display: "Bottle", stem: "bottles?" },
+  { display: "Shovel", stem: "shovels?" },
+  { display: "Broom", stem: "brooms?" },
+  { display: "Banner", stem: "banners?" },
+  { display: "Poster", stem: "posters?" },
+  { display: "Cigarette", stem: "cigarettes?" },
+  { display: "Lighter", stem: "lighters?" },
+  { display: "Scissors", stem: "scissors?" },
+  { display: "Phone", stem: "phones?" },
+  {
+    display: "Cell phone",
+    stem: "cell\\s+phones?|cellphones?|mobile\\s+phones?",
+  },
+  { display: "Keys", stem: "keys?" },
+  { display: "Umbrella", stem: "umbrellas?" },
+  { display: "Suitcase", stem: "suitcases?" },
+  { display: "Backpack", stem: "backpacks?" },
+  { display: "Purse", stem: "purses?" },
+  { display: "Watch", stem: "watches?" },
+  { display: "Glasses", stem: "eyeglasses?|spectacles?" },
+  { display: "Book", stem: "books?" },
+  { display: "Newspaper", stem: "newspapers?" },
+  { display: "Gun", stem: "guns?" },
+  { display: "Knife", stem: "knives|knife" },
+  { display: "Briefcase", stem: "briefcases?" },
+  { display: "Wallet", stem: "wallets?" },
+  { display: "Ring", stem: "rings?" },
+  { display: "Envelope", stem: "envelopes?" },
+  { display: "Document", stem: "documents?" },
 ];
 
 export const extractProps = buildLemmaExtractor({

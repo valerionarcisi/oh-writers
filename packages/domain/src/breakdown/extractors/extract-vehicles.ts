@@ -1,11 +1,12 @@
 /**
- * Vehicles extractor — IT lemma list.
+ * Vehicles extractor — IT + EN lemma list.
  * Confidence ~70%, default `pending` (ghost tag).
  */
 
 import { buildLemmaExtractor, type Lemma } from "./lemma-extractor.js";
 
 const LEMMAS: readonly Lemma[] = [
+  // Italian
   { display: "Macchina", stem: "macchin\\w*" },
   { display: "Auto", stem: "auto" },
   { display: "Suv", stem: "suv" },
@@ -37,6 +38,29 @@ const LEMMAS: readonly Lemma[] = [
   { display: "Limousine", stem: "limousine" },
   { display: "Caravan", stem: "caravan" },
   { display: "Camper", stem: "camper" },
+  // English
+  { display: "Car", stem: "cars?" },
+  { display: "Truck", stem: "trucks?" },
+  { display: "Van", stem: "vans?" },
+  { display: "Motorcycle", stem: "motor(cycle|bike)s?" },
+  { display: "Bicycle", stem: "bicycles?" },
+  { display: "Bike", stem: "bikes?" },
+  { display: "Cab", stem: "cabs?" },
+  { display: "Bus", stem: "bus(es)?" },
+  { display: "Train", stem: "trains?" },
+  { display: "Subway", stem: "subways?" },
+  { display: "Plane", stem: "planes?" },
+  { display: "Airplane", stem: "airplanes?" },
+  { display: "Helicopter", stem: "helicopters?" },
+  { display: "Boat", stem: "boats?" },
+  { display: "Ship", stem: "ships?" },
+  { display: "Ambulance", stem: "ambulances?" },
+  { display: "Hearse", stem: "hearses?" },
+  { display: "Tractor", stem: "tractors?" },
+  { display: "Limo", stem: "limos?" },
+  { display: "RV", stem: "rv" },
+  { display: "Police car", stem: "police\\s+cars?" },
+  { display: "Fire truck", stem: "fire\\s+trucks?" },
 ];
 
 export const extractVehicles = buildLemmaExtractor({
