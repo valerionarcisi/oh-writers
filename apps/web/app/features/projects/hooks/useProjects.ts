@@ -6,11 +6,13 @@ import {
   archiveProject,
   restoreProject,
   deleteProject,
+  setProjectLocale,
   personalProjectsQueryOptions,
   teamProjectsQueryOptions,
   projectQueryOptions,
 } from "../server/projects.server";
 import type { CreateProjectData, UpdateProjectData } from "../projects.schema";
+import type { Locale } from "@oh-writers/domain";
 
 export {
   personalProjectsQueryOptions,
@@ -94,6 +96,19 @@ export const useDeleteProject = () => {
       void queryClient.invalidateQueries({
         queryKey: ["projects", "personal"],
       });
+    },
+  });
+};
+
+export const useSetProjectLocale = (projectId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ locale }: { locale: Locale }) => {
+      unwrapResult(await setProjectLocale({ data: { projectId, locale } }));
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      void queryClient.invalidateQueries({ queryKey: ["breakdown"] });
     },
   });
 };

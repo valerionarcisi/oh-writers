@@ -1,20 +1,18 @@
 /**
- * Auto-spoglio server (Spec 10e).
+ * Auto-spoglio server (Spec 10e / 10i).
  *
- * Runs the RegEx extractors over a scene's text and persists the result as
- * `breakdown_elements` + `breakdown_occurrences`. Idempotent: re-running on
- * unchanged text is a cheap no-op (skipped via `text_hash` check).
+ * Deterministic pass: structured regex extractors (cast, location, vehicles,
+ * animals, sound, atmosphere, makeup, stunts, extras) + WordNet dictionary
+ * pass for physical props (replaces the old noisy regex props extractor).
+ * Persists results as `breakdown_elements` + `breakdown_occurrences`.
+ * Idempotent: re-running on unchanged text is a cheap no-op (`text_hash`).
  *
  * Confidence-based default `cesareStatus`:
- *   - High-confidence extractors (cast / locations / animals) land as
- *     `accepted` → visible immediately as a regular Tag.
- *   - Lower-confidence extractors (vehicles / sound / atmosphere / makeup
- *     / stunts / extras) land as `pending` → visible as ghost the user
- *     can accept or ignore.
+ *   - High-confidence extractors (cast / locations / animals) → `accepted`.
+ *   - Lower-confidence (vehicles / sound / atmosphere / makeup / stunts /
+ *     extras / WordNet props) → `pending` (ghost tag, user confirms).
  *
- * The function NEVER overwrites a manually-added or user-accepted occurrence:
- * once an occurrence exists for (element, scene, version), we leave its
- * `cesareStatus` and `quantity` untouched. This protects user intent.
+ * Never overwrites manually-added or user-accepted occurrences.
  */
 
 import { createServerFn } from "@tanstack/start";
@@ -26,8 +24,15 @@ import {
   breakdownOccurrences,
   breakdownSceneState,
   scenes,
+  projects,
 } from "@oh-writers/db/schema";
-import { extractAll, type ExtractedItem } from "@oh-writers/domain";
+import {
+  extractAll,
+  extractElements,
+  titleCase,
+  type ExtractedItem,
+  type Locale,
+} from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
@@ -126,16 +131,35 @@ export const runAutoSpoglioForScene = createServerFn({ method: "POST" })
         );
       }
 
-      const items = extractAll({
+      const locale = await resolveProjectLocale(db, projectId);
+
+      // Structured regex extractors (cast, location, vehicles, etc.) minus props.
+      // Props are now handled by the WordNet dictionary pass below.
+      const structuredItems = extractAll({
         heading: scene.heading,
         body: scene.notes ?? "",
+      }).filter((i) => i.category !== "props");
+
+      // WordNet dictionary pass — replaces the noisy regex props extractor.
+      const elementsResult = await extractElements({
+        sceneText: fullText,
+        locale,
       });
+      const propItems: ExtractedItem[] = elementsResult.isOk()
+        ? elementsResult.value.map((el) => ({
+            category: "props" as const,
+            name: titleCase(el.word),
+            quantity: 1,
+            defaultStatus: "pending" as const,
+            source: "wordnet" as const,
+          }))
+        : [];
 
       const persistResult = await persistExtracted(db, {
         projectId,
         screenplayVersionId: data.screenplayVersionId,
         sceneId: scene.id,
-        items,
+        items: [...structuredItems, ...propItems],
         textHash: currentHash,
       });
 
@@ -260,6 +284,17 @@ const persistExtracted = (
  */
 const ELEMENT_NEW_WINDOW_MS = 5_000;
 
+// Falls back to "it" when the project row is missing (should not happen).
+const resolveProjectLocale = async (
+  db: Db,
+  projectId: string,
+): Promise<Locale> => {
+  const project = await db.query.projects
+    .findFirst({ where: eq(projects.id, projectId) })
+    .catch(() => null);
+  return (project?.locale ?? "it") as Locale;
+};
+
 // ─── Fan-out: run auto-spoglio for an entire screenplay version ──────────────
 
 export interface AutoSpoglioVersionResult {
@@ -332,6 +367,7 @@ export const runAutoSpoglioForVersion = createServerFn({ method: "POST" })
       if (!canEditBreakdown(accessResult.value))
         return toShape(err(new ForbiddenError("run auto-spoglio")));
       const projectId = accessResult.value.projectId;
+      const locale = await resolveProjectLocale(db, projectId);
 
       let totalElementsAdded = 0;
       let totalOccurrencesAdded = 0;
@@ -357,15 +393,30 @@ export const runAutoSpoglioForVersion = createServerFn({ method: "POST" })
           continue;
         }
 
-        const items = extractAll({
+        const structuredItems = extractAll({
           heading: scene.heading,
           body: scene.notes ?? "",
+        }).filter((i) => i.category !== "props");
+
+        const elementsResult = await extractElements({
+          sceneText: fullText,
+          locale,
         });
+        const propItems: ExtractedItem[] = elementsResult.isOk()
+          ? elementsResult.value.map((el) => ({
+              category: "props" as const,
+              name: titleCase(el.word),
+              quantity: 1,
+              defaultStatus: "pending" as const,
+              source: "wordnet" as const,
+            }))
+          : [];
+
         const persisted = await persistExtracted(db, {
           projectId,
           screenplayVersionId: data.screenplayVersionId,
           sceneId: scene.id,
-          items,
+          items: [...structuredItems, ...propItems],
           textHash: currentHash,
         });
         if (persisted.isErr()) return toShape(err(persisted.error));

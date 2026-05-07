@@ -16,7 +16,7 @@
 
 import type { BreakdownCategory } from "../categories.js";
 
-export type ExtractedSource = "regex";
+export type ExtractedSource = "regex" | "wordnet";
 
 export interface ExtractedItem {
   readonly category: BreakdownCategory;

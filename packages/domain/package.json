@@ -7,12 +7,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dict:build": "tsx scripts/build-dictionaries.ts"
   },
   "dependencies": {
+    "compromise": "14.15.0",
+    "neverthrow": "8.2.0",
     "zod": "3.24.4"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "@types/node": "22.15.21",
+    "tsx": "4.19.4",
+    "typescript": "5.9.3",
+    "wordnet-db": "3.1.14"
   }
 }

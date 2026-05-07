@@ -3,7 +3,7 @@ import { ok, err, ResultAsync } from "neverthrow";
 import { eq, and, isNull } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { DocumentTypes, TeamRoles } from "@oh-writers/domain";
+import { DocumentTypes, TeamRoles, Locales } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { projects, documents, screenplays } from "@oh-writers/db/schema";
@@ -424,6 +424,38 @@ export const deleteProject = createServerFn({ method: "POST" })
             .then(() => undefined),
           (e) => new DbError("deleteProject", e),
         ),
+      );
+    },
+  );
+
+// ─── Set project locale ───────────────────────────────────────────────────────
+
+export const setProjectLocale = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      projectId: z.string().uuid(),
+      locale: z.enum([Locales.IT, Locales.EN]),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<void, ProjectNotFoundError | ForbiddenError | DbError>
+    > => {
+      const db = await getDb();
+      const access = await requireProjectAccess(db, data.projectId, "edit");
+      if (access.isErr()) return toShape(err(access.error));
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db
+            .update(projects)
+            .set({ locale: data.locale, updatedAt: new Date() })
+            .where(eq(projects.id, data.projectId))
+            .then(() => undefined),
+          (e) => new DbError("setProjectLocale", e),
+        ).map(() => undefined),
       );
     },
   );

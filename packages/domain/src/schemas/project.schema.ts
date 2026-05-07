@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Genres, Formats, DocumentTypes } from "../constants.js";
+import { Genres, Formats, DocumentTypes, Locales } from "../constants.js";
 
 export const ProjectSchema = z.object({
   id: z.string().uuid(),
@@ -27,6 +27,7 @@ export const ProjectSchema = z.object({
   ownerId: z.string().uuid().nullable(),
   teamId: z.string().uuid().nullable(),
   isArchived: z.boolean(),
+  locale: z.enum([Locales.IT, Locales.EN]).default(Locales.IT),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

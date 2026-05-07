@@ -38,6 +38,13 @@ export const DocumentTypes = {
 
 export type DocumentType = (typeof DocumentTypes)[keyof typeof DocumentTypes];
 
+export const Locales = {
+  IT: "it",
+  EN: "en",
+} as const;
+
+export type Locale = (typeof Locales)[keyof typeof Locales];
+
 export const DOCUMENT_PIPELINE = [
   DocumentTypes.SOGGETTO,
   DocumentTypes.SYNOPSIS,

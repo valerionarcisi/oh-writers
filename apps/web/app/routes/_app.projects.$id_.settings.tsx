@@ -2,9 +2,11 @@ import type { ComponentProps } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { Button, useConfirmDialog } from "@oh-writers/ui";
+import { Locales, type Locale } from "@oh-writers/domain";
 import {
   useProject,
   useUpdateProject,
+  useSetProjectLocale,
   useArchiveProject,
   useRestoreProject,
   useDeleteProject,
@@ -44,6 +46,7 @@ function ProjectSettingsContent({
 }) {
   const navigate = useNavigate();
   const updateProject = useUpdateProject();
+  const setLocale = useSetProjectLocale(id);
   const archiveProject = useArchiveProject();
   const restoreProject = useRestoreProject();
   const deleteProject = useDeleteProject();
@@ -102,23 +105,43 @@ function ProjectSettingsContent({
       <h1 className={styles.title}>Settings</h1>
 
       {canEdit ? (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Project details</h2>
-          <ProjectForm
-            initialValues={{
-              title: project.title,
-              format: project.format,
-              genre: project.genre ?? undefined,
-            }}
-            onSubmit={handleUpdate}
-            onCancel={() => navigate({ to: "/projects/$id", params: { id } })}
-            isSubmitting={updateProject.isPending}
-            submitLabel="Save changes"
-          />
-          {updateProject.error && (
-            <p className={styles.formError}>{updateProject.error.message}</p>
-          )}
-        </section>
+        <>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Project details</h2>
+            <ProjectForm
+              initialValues={{
+                title: project.title,
+                format: project.format,
+                genre: project.genre ?? undefined,
+              }}
+              onSubmit={handleUpdate}
+              onCancel={() => navigate({ to: "/projects/$id", params: { id } })}
+              isSubmitting={updateProject.isPending}
+              submitLabel="Save changes"
+            />
+            {updateProject.error && (
+              <p className={styles.formError}>{updateProject.error.message}</p>
+            )}
+          </section>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Lingua sceneggiatura</h2>
+            <select
+              className={styles.localeSelect}
+              value={project.locale ?? Locales.IT}
+              disabled={setLocale.isPending}
+              onChange={(e) =>
+                setLocale.mutate({ locale: e.target.value as Locale })
+              }
+              data-testid="locale-select"
+            >
+              <option value={Locales.IT}>Italiano</option>
+              <option value={Locales.EN}>English</option>
+            </select>
+            {setLocale.error && (
+              <p className={styles.formError}>{setLocale.error.message}</p>
+            )}
+          </section>
+        </>
       ) : (
         <p className={styles.readOnly}>
           You don't have edit access to this project.
