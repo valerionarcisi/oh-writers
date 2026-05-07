@@ -28,11 +28,11 @@ import {
 } from "@oh-writers/db/schema";
 import {
   extractAll,
-  extractElements,
   titleCase,
   type ExtractedItem,
   type Locale,
 } from "@oh-writers/domain";
+import { extractElements } from "@oh-writers/domain/breakdown/extract-elements";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
