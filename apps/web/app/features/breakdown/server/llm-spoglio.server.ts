@@ -62,6 +62,86 @@ export interface SpoglioProgress {
   modelUsed: string | null;
 }
 
+// Names the LLM occasionally hallucinates as breakdown elements: articles,
+// conjunctions, prepositions, and camera direction verbs. These are valid
+// English/Italian words but never valid production elements.
+const LLM_NAME_BLOCKLIST = new Set([
+  // EN articles / conjunctions / prepositions
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "by",
+  "from",
+  "as",
+  "is",
+  "it",
+  "its",
+  "be",
+  "are",
+  "was",
+  // IT articles / conjunctions / prepositions
+  "il",
+  "lo",
+  "la",
+  "le",
+  "gli",
+  "un",
+  "una",
+  "uno",
+  "e",
+  "o",
+  "ma",
+  "di",
+  "da",
+  "in",
+  "con",
+  "su",
+  "per",
+  "tra",
+  "fra",
+  // Camera direction verbs (appear in action text, not production elements)
+  "zooms",
+  "zoom",
+  "pans",
+  "pan",
+  "tilts",
+  "tilt",
+  "dollies",
+  "dolly",
+  "cuts",
+  "cut",
+  "fades",
+  "fade",
+  "tracks",
+  "track",
+  "follows",
+  "follow",
+  "reveals",
+  "reveal",
+  "holds",
+  "hold",
+  "rises",
+  "rise",
+  "moves",
+  "move",
+  "turns",
+  "turn",
+  "looks",
+  "look",
+  "pov",
+  "insert",
+]);
+
 const isAllowedCategory = (raw: unknown): raw is BreakdownCategoryDb =>
   typeof raw === "string" &&
   (BREAKDOWN_CATEGORIES as readonly string[]).includes(raw);
@@ -351,6 +431,8 @@ const persistSceneItems = (
         const confidence =
           typeof raw.confidence === "number" ? raw.confidence : 0;
         if (name.length === 0) continue;
+        if (name.length <= 2) continue;
+        if (LLM_NAME_BLOCKLIST.has(name.toLowerCase())) continue;
         if (!isAllowedCategory(raw.category)) continue;
 
         const status: CesareStatusDb | null = statusForConfidence(confidence);

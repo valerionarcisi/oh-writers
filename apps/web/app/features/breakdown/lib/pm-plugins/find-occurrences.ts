@@ -42,6 +42,9 @@ export function findOccurrencesInDoc(
   }));
 
   doc.descendants((node, pos) => {
+    // Skip character cue nodes — "JORDAN (V.O.)" is structural metadata,
+    // not content, so highlighting cast names there is noise.
+    if (node.type.name === "character") return false;
     if (!node.isText || !node.text) return true;
     const text = node.text;
     for (const { el, re } of patterns) {

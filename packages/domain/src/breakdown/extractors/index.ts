@@ -11,3 +11,4 @@ export * from "./extract-stunts.js";
 export * from "./extract-extras.js";
 export * from "./extract-props.js";
 export * from "./extract-all.js";
+export * from "./strip-fountain-dialogue.js";
