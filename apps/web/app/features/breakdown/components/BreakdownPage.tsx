@@ -88,10 +88,11 @@ function BreakdownPageContent({ projectId }: ContentProps) {
 
   const { data: progress } = useSpoglioProgress(versionId);
   const showLlmBanner =
-    progress !== undefined &&
-    progress.scenesTotal !== null &&
-    progress.scenesTotal > 0 &&
-    !progress.isComplete;
+    llmSpoglio.isPending ||
+    (progress !== undefined &&
+      progress.scenesTotal !== null &&
+      progress.scenesTotal > 0 &&
+      !progress.isComplete);
 
   // Close the AI re-spoglio menu on outside click.
   useEffect(() => {

@@ -300,6 +300,7 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
             "[streamFullSpoglio] persist failed for scene",
             parsed.sceneNumber,
             persistResult.error.message,
+            persistResult.error.dbCause,
           );
           return;
         }

@@ -26,6 +26,8 @@ Regole:
 6. I nomi vanno in Title Case, nella lingua della sceneggiatura.
 7. Una scena vuota o di sola transizione → items: [].
 8. Numera le scene partendo da 1, nell'ordine in cui appaiono nello script.
+9. Props, veicoli, animali, costumi: estraili SOLO dalle righe di azione (action lines), MAI dal dialogo. Un oggetto menzionato in una battuta ("mi passi la pistola") non è un prop di scena a meno che non appaia anche nell'azione. Il dialogo descrive cosa i personaggi dicono, non cosa il reparto oggetti di scena deve procurarsi.
+10. Non includere mai articoli ("the", "a", "il", "la"), congiunzioni o verbi di macchina (zoom, pan, dolly, cut, fade) come elementi.
 `.trim();
 
 export const LLM_SPOGLIO_TOOL_DEFINITION = {
