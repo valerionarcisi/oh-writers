@@ -301,6 +301,11 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
             parsed.sceneNumber,
             persistResult.error.message,
             persistResult.error.dbCause,
+            (
+              persistResult.error as unknown as {
+                cause?: { cause?: { message?: string } };
+              }
+            ).cause?.cause?.message,
           );
           return;
         }

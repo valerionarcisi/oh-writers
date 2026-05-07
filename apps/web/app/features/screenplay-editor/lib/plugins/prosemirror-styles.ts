@@ -265,26 +265,28 @@ export const injectProseMirrorStyles = (): void => {
       margin-block-end: 1em;
     }
 
-    /* ─── Character cue — ~3.7" from page left (2.2" from 1.5" margin) */
+    /* ─── Character cue — centered over the dialogue column ────── */
 
     .pm-character {
       display: block;
       text-transform: uppercase;
-      margin-inline-start: 2.2in;
+      max-inline-size: 3.5in;
+      margin-inline: auto;
+      text-align: start;
       margin-block-start: 1em;
       margin-block-end: 0;
     }
 
-    /* ─── Parenthetical — italic, indented ─────────────────── */
+    /* ─── Parenthetical — centered, narrower than dialogue ─────── */
 
     .pm-parenthetical {
       display: block;
       font-style: italic;
-      margin-inline-start: 1.6in;
       max-inline-size: 2in;
+      margin-inline: auto;
     }
 
-    /* ─── Dialogue — narrow column, centered (Italian convention) ─ */
+    /* ─── Dialogue — narrow column, centered ───────────────────── */
 
     .pm-dialogue {
       display: block;
@@ -323,6 +325,19 @@ export const injectProseMirrorStyles = (): void => {
     /* Focused empty block placeholder */
     .ProseMirror:focus .pm-action.ProseMirror-focused:empty::before {
       content: "Action…";
+    }
+
+    /* ─── Script search highlights ─────────────────────────── */
+
+    .pm-search-match {
+      background: rgba(255, 213, 0, 0.35);
+      border-radius: 2px;
+    }
+
+    .pm-search-current {
+      background: rgba(255, 160, 0, 0.6);
+      border-radius: 2px;
+      outline: 1px solid rgba(200, 120, 0, 0.5);
     }
   `;
 

@@ -193,6 +193,7 @@ export const spoglioProgressOptions = (versionId: string) =>
       ),
     enabled: versionId.length > 0,
     refetchInterval: (query) => (query.state.data?.isComplete ? false : 1500),
+    refetchOnWindowFocus: false,
     staleTime: 0,
   });
 

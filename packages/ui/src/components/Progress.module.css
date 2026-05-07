@@ -10,15 +10,33 @@
 .bar {
   display: block;
   block-size: 100%;
-  background: var(--color-accent);
   border-radius: inherit;
   inline-size: 0;
   transition: inline-size 200ms ease;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    color-mix(in srgb, var(--color-accent) 65%, white) 50%,
+    var(--color-accent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bar {
     transition: none;
+    background: var(--color-accent);
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
   }
 }
 

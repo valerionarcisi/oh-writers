@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -35,7 +36,14 @@ import {
 } from "../lib/pm-plugins/map-suggestions";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { BreakdownSceneSummary } from "../server/breakdown.server";
+import {
+  buildSearchPlugin,
+  searchPluginKey,
+  dispatchSearch,
+  scrollToMatch,
+} from "../lib/pm-plugins/search-plugin";
 import { GhostPopover } from "./GhostPopover";
+import { SearchBar } from "./SearchBar";
 import styles from "./ScriptReader.module.css";
 
 const SCROLL_DEBOUNCE_MS = 150;
@@ -95,6 +103,10 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
     });
 
     const [popover, setPopover] = useState<PopoverState | null>(null);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchIndex, setSearchIndex] = useState(0);
+    const [searchTotal, setSearchTotal] = useState(0);
     const lastActiveSceneRef = useRef<string | null>(activeSceneId);
 
     const ghostElements = useMemo(
@@ -102,10 +114,73 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
       [suggestions],
     );
 
+    const navigateSearch = useCallback((query: string, idx: number) => {
+      const view = viewRef.current;
+      if (!view) return;
+      dispatchSearch(view, query, idx);
+      const state = searchPluginKey.getState(view.state);
+      const total = state?.matches.length ?? 0;
+      setSearchTotal(total);
+      const match = state?.matches[Math.min(idx, total - 1)];
+      if (match) scrollToMatch(view, match);
+    }, []);
+
+    const handleSearchChange = useCallback(
+      (q: string) => {
+        setSearchQuery(q);
+        setSearchIndex(0);
+        navigateSearch(q, 0);
+      },
+      [navigateSearch],
+    );
+
+    const handleSearchNext = useCallback(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      const state = searchPluginKey.getState(view.state);
+      const total = state?.matches.length ?? 0;
+      if (total === 0) return;
+      const next = (searchIndex + 1) % total;
+      setSearchIndex(next);
+      navigateSearch(searchQuery, next);
+    }, [searchIndex, searchQuery, navigateSearch]);
+
+    const handleSearchPrev = useCallback(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      const state = searchPluginKey.getState(view.state);
+      const total = state?.matches.length ?? 0;
+      if (total === 0) return;
+      const prev = (searchIndex - 1 + total) % total;
+      setSearchIndex(prev);
+      navigateSearch(searchQuery, prev);
+    }, [searchIndex, searchQuery, navigateSearch]);
+
+    const handleSearchClose = useCallback(() => {
+      setSearchOpen(false);
+      setSearchQuery("");
+      setSearchIndex(0);
+      const view = viewRef.current;
+      if (view) dispatchSearch(view, "", 0);
+    }, []);
+
+    // Cmd+F / Ctrl+F → open search bar.
+    useEffect(() => {
+      const onKeyDown = (e: KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+          e.preventDefault();
+          setSearchOpen(true);
+        }
+      };
+      document.addEventListener("keydown", onKeyDown);
+      return () => document.removeEventListener("keydown", onKeyDown);
+    }, []);
+
     // Plugins are built once per mount; data updates flow via meta transactions
     // and via refs read inside callbacks.
     const pluginsExtra = useMemo<Plugin[]>(() => {
       const list: Plugin[] = [
+        buildSearchPlugin(),
         buildHighlightPlugin({
           initial: elements,
           className: styles.highlight ?? "highlight",
@@ -299,6 +374,17 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
 
     return (
       <>
+        {searchOpen && (
+          <SearchBar
+            query={searchQuery}
+            currentIndex={searchIndex}
+            total={searchTotal}
+            onChange={handleSearchChange}
+            onNext={handleSearchNext}
+            onPrev={handleSearchPrev}
+            onClose={handleSearchClose}
+          />
+        )}
         <ReadOnlyScreenplayView
           content={versionContent}
           pluginsExtra={pluginsExtra}
