@@ -47,7 +47,8 @@ export function ReadOnlyScreenplayView({
       state,
       editable: () => false,
       nodeViews: {
-        heading: (node, v, getPos) => createHeadingNodeView(node, v, getPos),
+        heading: (node, v, getPos) =>
+          createHeadingNodeView(node, v, getPos, { readOnly: true }),
       },
     });
 

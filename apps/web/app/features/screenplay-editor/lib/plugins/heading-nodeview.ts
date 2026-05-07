@@ -30,6 +30,10 @@ import {
   unlockSceneNumber,
 } from "./scene-number-commands";
 
+export interface HeadingNodeViewOptions {
+  readOnly?: boolean;
+}
+
 const VALID_SCENE_NUMBER = /^(\d+)([A-Z]?)$/;
 
 class HeadingNodeView implements NodeView {
@@ -39,6 +43,7 @@ class HeadingNodeView implements NodeView {
   private node: Node;
   private readonly view: EditorView;
   private readonly getPos: () => number | undefined;
+  private readonly readOnly: boolean;
 
   private readonly leftBtn: HTMLButtonElement;
   private readonly rightBtn: HTMLButtonElement;
@@ -57,10 +62,16 @@ class HeadingNodeView implements NodeView {
   // commits (blur fires when the modal steals focus).
   private awaitingResolve = false;
 
-  constructor(node: Node, view: EditorView, getPos: () => number | undefined) {
+  constructor(
+    node: Node,
+    view: EditorView,
+    getPos: () => number | undefined,
+    options: HeadingNodeViewOptions = {},
+  ) {
     this.node = node;
     this.view = view;
     this.getPos = getPos;
+    this.readOnly = options.readOnly ?? false;
 
     this.dom = document.createElement("h2");
     this.dom.className = "pm-heading";
@@ -73,7 +84,11 @@ class HeadingNodeView implements NodeView {
     this.slots.className = "pm-heading-slots";
     this.contentDOM = this.slots;
 
-    this.dom.append(this.leftBtn, this.menuBtn, this.slots, this.rightBtn);
+    if (this.readOnly) {
+      this.dom.append(this.leftBtn, this.slots, this.rightBtn);
+    } else {
+      this.dom.append(this.leftBtn, this.menuBtn, this.slots, this.rightBtn);
+    }
     this.syncAttrs();
   }
 
@@ -86,11 +101,13 @@ class HeadingNodeView implements NodeView {
     btn.setAttribute("aria-label", "Scene actions");
     btn.setAttribute("aria-haspopup", "menu");
     btn.contentEditable = "false";
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.toggleMenu();
-    });
+    if (!this.readOnly) {
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleMenu();
+      });
+    }
     return btn;
   }
 
@@ -101,12 +118,14 @@ class HeadingNodeView implements NodeView {
     btn.setAttribute("data-testid", "scene-number-edit-trigger");
     btn.setAttribute("aria-label", "Edit scene number");
     btn.contentEditable = "false";
-    // mousedown (not click) so PM doesn't steal focus before we react.
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.startEdit();
-    });
+    if (!this.readOnly) {
+      // mousedown (not click) so PM doesn't steal focus before we react.
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.startEdit();
+      });
+    }
     return btn;
   }
 
@@ -399,4 +418,5 @@ export const createHeadingNodeView = (
   node: Node,
   view: EditorView,
   getPos: () => number | undefined,
-): NodeView => new HeadingNodeView(node, view, getPos);
+  options: HeadingNodeViewOptions = {},
+): NodeView => new HeadingNodeView(node, view, getPos, options);
