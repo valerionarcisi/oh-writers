@@ -38,7 +38,7 @@ export function SceneTOC({
               data-testid={`scene-toc-item-${s.number}`}
               onClick={() => onSceneSelect(s.id)}
             >
-              <span className={styles.number}>{s.number}.</span>
+              <span className={styles.number}>{s.fountainNumber}.</span>
               <span className={styles.heading}>{s.heading}</span>
               {isStale && (
                 <Badge variant="stale" className={styles.staleBadge}>

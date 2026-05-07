@@ -70,7 +70,7 @@ export const extractSceneRows = (fountain: string): SceneRow[] => {
   for (let i = 0; i < parsed.length; i++) {
     const cur = parsed[i]!;
     const nextLineIdx = parsed[i + 1]?.lineIndex ?? lines.length;
-    const heading = lines[cur.lineIndex]!.trim();
+    const heading = cur.heading;
     const headingParts = parseHeading(heading);
     if (!headingParts) continue;
     const body = lines

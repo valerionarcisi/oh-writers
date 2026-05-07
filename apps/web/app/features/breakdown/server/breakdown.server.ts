@@ -18,6 +18,7 @@ import {
   BreakdownOccurrenceSchema,
   CastTierSchema,
   CesareStatusSchema,
+  listScenesInFountain,
   type BreakdownElement,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
@@ -632,6 +633,8 @@ export const setOccurrenceStatus = createServerFn({ method: "POST" })
 export interface BreakdownSceneSummary {
   id: string;
   number: number;
+  /** Explicit fountain scene number (from `#N#` marker, e.g. "2A"), or the ordinal as a string. */
+  fountainNumber: string;
   heading: string;
   intExt: "INT" | "EXT" | "INT/EXT";
   location: string;
@@ -750,13 +753,23 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
               orderBy: (sc, { asc }) => [asc(sc.number)],
             });
           }
+          const fountainContent = version?.content ?? "";
+          const fountainScenes = fountainContent
+            ? listScenesInFountain(fountainContent)
+            : [];
+          // Map ordinal index → explicit fountain number (e.g. "2A" from #2A#)
+          const fountainNumberByOrdinal = new Map<number, string>(
+            fountainScenes.map((fs) => [fs.index, fs.number]),
+          );
           return {
             projectId: data.projectId,
             screenplayVersionId: currentVersionId,
-            versionContent: version?.content ?? "",
+            versionContent: fountainContent,
             scenes: sceneRows.map((s) => ({
               id: s.id,
               number: s.number,
+              fountainNumber:
+                fountainNumberByOrdinal.get(s.number) ?? String(s.number),
               heading: s.heading,
               intExt: s.intExt,
               location: s.location,
