@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# _load-env.sh — Source .env into the current shell
+# _load-env.sh — Source apps/web/.env into the current shell
 # Usage: source scripts/_load-env.sh
 #
-# Exports every non-comment line from .env so child processes
-# (drizzle-kit, tsx, etc.) inherit DATABASE_URL and other vars.
+# apps/web/.env is the single source of truth for all environment variables.
+# Vinxi reads it automatically; scripts (drizzle-kit, tsx, etc.) use this
+# helper to inherit the same values so DATABASE_URL and friends stay in sync.
 
-if [[ ! -f ".env" ]]; then
-  echo "Warning: .env not found — environment variables may be missing." >&2
+ENV_FILE="apps/web/.env"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Warning: $ENV_FILE not found — environment variables may be missing." >&2
   return 0
 fi
 
 set -o allexport
-# shellcheck source=../.env
-source .env
+# shellcheck source=../apps/web/.env
+source "$ENV_FILE"
 set +o allexport

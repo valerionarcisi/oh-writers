@@ -30,10 +30,10 @@ if [[ "$node_version" -lt 22 ]]; then
   fail "Node.js 22+ required. Found: $(node -v 2>/dev/null || echo 'none')"
 fi
 
-if [[ ! -f ".env" ]]; then
-  warn ".env not found — copying from .env.example"
-  cp .env.example .env
-  warn "Review .env before continuing (secrets are placeholders)."
+if [[ ! -f "apps/web/.env" ]]; then
+  warn "apps/web/.env not found — copying from apps/web/.env.example"
+  cp apps/web/.env.example apps/web/.env
+  warn "Review apps/web/.env before continuing (secrets are placeholders)."
 fi
 
 ok "Prerequisites OK"
