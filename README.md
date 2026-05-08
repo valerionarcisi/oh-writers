@@ -121,6 +121,8 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/10e — Auto-spoglio via RegEx** (zero-click breakdown population on first open: pure-function extractors over 9 categories — cast, locations, vehicles, animals, sound, atmosphere, makeup, stunts, extras — confidence-based default status, idempotent via `text_hash`, fan-out from the breakdown page)
 - **core/07c — PDF import Pass 0 (title-page extraction)** (closes the residual MVP work on 07b: imported PDFs now feed both the screenplay body AND the front page; silent apply when front page is empty, "replace?" confirm via DS `<Dialog>` otherwise; OHW-FP30/31/32 verdi)
 - **infra/07b sub — Design-system Dialog migration** (DS `Dialog` esteso con `size`/`showCloseButton`; 7 modali bespoke + 4 inline confirm migrati al componente unico; -721/+407 LOC, 102/102 Playwright verdi)
+- **core/10h — Breakdown read-only UX** (scene headings in breakdown have no menu trigger; TOC auto-scrolls to active scene; regression guard for editable screenplay editor)
+- **core/10i — Breakdown dictionary pass** (WordNet artifact whitelist for EN+IT replaces noisy regex props extractor; `projects.locale` column; locale select in Settings; ghost suggestions filtered to physical artifacts only)
 
 ### MVP — the minimum viable pilot product
 
