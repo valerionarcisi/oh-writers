@@ -42,6 +42,7 @@ import {
   dispatchSearch,
   scrollToMatch,
 } from "../lib/pm-plugins/search-plugin";
+import { buildSceneTestidPlugin } from "../lib/pm-plugins/scene-testid-plugin";
 import { GhostPopover } from "./GhostPopover";
 import { SearchBar } from "./SearchBar";
 import styles from "./ScriptReader.module.css";
@@ -180,6 +181,7 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
     // and via refs read inside callbacks.
     const pluginsExtra = useMemo<Plugin[]>(() => {
       const list: Plugin[] = [
+        buildSceneTestidPlugin(),
         buildSearchPlugin(),
         buildHighlightPlugin({
           initial: elements,

@@ -113,6 +113,13 @@
       "when": 1746614400000,
       "tag": "0013_strip_fountain_scene_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1746700800000,
+      "tag": "0014_add_projects_locale",
+      "breakpoints": true
     }
   ]
 }
