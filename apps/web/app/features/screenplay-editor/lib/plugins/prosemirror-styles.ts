@@ -272,7 +272,7 @@ export const injectProseMirrorStyles = (): void => {
       text-transform: uppercase;
       max-inline-size: 3.5in;
       margin-inline: auto;
-      text-align: start;
+      text-align: center;
       margin-block-start: 1em;
       margin-block-end: 0;
     }
