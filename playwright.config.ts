@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} pnpm --filter @oh-writers/web dev`,
+      command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} LLM_FIRST_BREAKDOWN=false MOCK_AI=false pnpm --filter @oh-writers/web dev`,
       url: TEST_BASE_URL,
       // Always start a dedicated test server so it uses the test DB, never the dev DB.
       reuseExistingServer: false,

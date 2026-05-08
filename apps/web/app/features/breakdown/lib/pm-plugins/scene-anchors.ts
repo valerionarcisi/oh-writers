@@ -52,6 +52,6 @@ export function scrollToScene(view: EditorView, index: number): void {
   if (pos === null) return;
   const dom = view.nodeDOM(pos);
   if (dom instanceof HTMLElement) {
-    dom.scrollIntoView({ behavior: "smooth", block: "start" });
+    dom.scrollIntoView({ behavior: "instant", block: "start" });
   }
 }

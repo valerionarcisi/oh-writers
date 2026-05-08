@@ -1,6 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
+import {
+  navigateToBreakdown,
+  openSceneInBreakdown,
+  TEAM_PROJECT_ID,
+} from "./helpers";
 
 test.describe("[Spec 10c] Inline scene tagging", () => {
   test("[OHW-280] select text → tag as Cast → highlight + chip", async ({
@@ -115,6 +119,8 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
+    // Scene 2 ghosts survive the breakdown-ignore spec (which only clears scene 1).
+    await openSceneInBreakdown(page, 2);
 
     const ghost = page.locator('[data-ghost="true"]').first();
     await expect(ghost).toBeVisible();
@@ -129,6 +135,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
+    await openSceneInBreakdown(page, 2);
 
     const ghost = page.locator('[data-ghost="true"]').first();
     await expect(ghost).toBeVisible();
@@ -153,6 +160,7 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
+    await openSceneInBreakdown(page, 2);
 
     const ghost = page.locator('[data-ghost="true"]').first();
     await expect(ghost).toBeVisible();
@@ -194,10 +202,12 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
       .locator('[data-testid="readonly-screenplay-view"] .pm-heading')
       .first()
       .waitFor({ state: "visible" });
+    // The scrollable container is .script (data-testid="breakdown-script"),
+    // not the reader div itself (which has no overflow and grows to fit content).
     await page.waitForFunction(
       () => {
         const el = document.querySelector(
-          '[data-testid="readonly-screenplay-view"]',
+          '[data-testid="breakdown-script"]',
         ) as HTMLElement | null;
         return !!el && el.scrollHeight > el.clientHeight + 200;
       },
@@ -205,16 +215,16 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
       { timeout: 5000 },
     );
     const scrollInfo = await page.evaluate(() => {
-      const reader = document.querySelector(
-        '[data-testid="readonly-screenplay-view"]',
+      const script = document.querySelector(
+        '[data-testid="breakdown-script"]',
       ) as HTMLElement | null;
-      if (!reader) return null;
-      reader.scrollTop = reader.scrollHeight;
-      reader.dispatchEvent(new Event("scroll"));
+      if (!script) return null;
+      script.scrollTop = script.scrollHeight;
+      script.dispatchEvent(new Event("scroll", { bubbles: true }));
       return {
-        scrollTop: reader.scrollTop,
-        scrollHeight: reader.scrollHeight,
-        clientHeight: reader.clientHeight,
+        scrollTop: script.scrollTop,
+        scrollHeight: script.scrollHeight,
+        clientHeight: script.clientHeight,
       };
     });
     expect(scrollInfo, "expected reader to be scrollable").not.toBeNull();

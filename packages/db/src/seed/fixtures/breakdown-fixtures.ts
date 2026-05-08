@@ -45,10 +45,11 @@ export const SEEDED_BREAKDOWN_ELEMENT_NAME = "Bloody knife";
 export const SEEDED_BREAKDOWN_ELEMENT_CATEGORY = "props" as const;
 
 // Pending Cesare suggestions seeded for Spec 10c E2E (ghost popover flow).
-// Each test (accept / ignore) consumes one ghost, so we seed more than one.
-// Element names must match tokens present in the seeded screenplay text.
+// Scene-1 ghosts are consumed by the breakdown-ignore spec (which runs first
+// alphabetically). Scene-2 ghosts are reserved for OHW-284/285/286 so those
+// tests always find pending ghosts regardless of what earlier specs clear.
 export const SEEDED_PENDING_ELEMENT_CATEGORY = "cast" as const;
-export const SEEDED_PENDING_GHOSTS: ReadonlyArray<{
+export const SEEDED_PENDING_GHOSTS_SCENE1: ReadonlyArray<{
   occurrenceId: string;
   elementId: string;
   name: string;
@@ -69,3 +70,33 @@ export const SEEDED_PENDING_GHOSTS: ReadonlyArray<{
     name: "Luca",
   },
 ];
+
+// Scene-2 ghosts: stable across the full test suite because breakdown-ignore
+// only ever clears scene-1 ghosts (it calls openSceneInBreakdown(page, 1)).
+// Names MUST appear in the non-fa-ridere.fountain.ts text so the ghost
+// decoration plugin can find text matches to render.
+// Giulio (11×), Gemma (5×), Gianna (3×) all appear in the screenplay.
+export const SEEDED_PENDING_GHOSTS_SCENE2: ReadonlyArray<{
+  occurrenceId: string;
+  elementId: string;
+  name: string;
+}> = [
+  {
+    occurrenceId: "00000000-0000-4000-a000-000000010107",
+    elementId: "00000000-0000-4000-a000-000000010207",
+    name: "Giulio",
+  },
+  {
+    occurrenceId: "00000000-0000-4000-a000-000000010108",
+    elementId: "00000000-0000-4000-a000-000000010208",
+    name: "Gemma",
+  },
+  {
+    occurrenceId: "00000000-0000-4000-a000-000000010109",
+    elementId: "00000000-0000-4000-a000-000000010209",
+    name: "Gianna",
+  },
+];
+
+// Kept for backwards compat — points to scene-1 set.
+export const SEEDED_PENDING_GHOSTS = SEEDED_PENDING_GHOSTS_SCENE1;

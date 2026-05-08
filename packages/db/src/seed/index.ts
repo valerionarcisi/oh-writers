@@ -22,6 +22,8 @@ import {
   SEEDED_BREAKDOWN_ELEMENT_CATEGORY,
   SEEDED_PENDING_ELEMENT_CATEGORY,
   SEEDED_PENDING_GHOSTS,
+  SEEDED_PENDING_GHOSTS_SCENE2,
+  TEST_BREAKDOWN_SCENE_2_ID,
 } from "./fixtures/breakdown-fixtures";
 import {
   NON_FA_RIDERE_FOUNTAIN,
@@ -856,8 +858,9 @@ async function seedTeamProjectBreakdownFixtures() {
     })
     .onConflictDoNothing();
 
-  // Three pending ghosts so Spec 10c E2E can consume one per test
-  // (OHW-285 accept, OHW-286 ignore) without starving the next run.
+  // Scene-1 ghosts: consumed by breakdown-ignore spec (which runs first
+  // alphabetically). Also consumed individually by OHW-285/286 when
+  // running inline-tagging in isolation.
   for (const { occurrenceId, elementId, name } of SEEDED_PENDING_GHOSTS) {
     await db
       .insert(breakdownElements)
@@ -876,6 +879,38 @@ async function seedTeamProjectBreakdownFixtures() {
         id: occurrenceId,
         elementId,
         sceneId: TEAM_PROJECT_BREAKDOWN_SCENES[0]!.id,
+        screenplayVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID,
+        quantity: 1,
+        cesareStatus: "pending" as const,
+        isStale: false,
+      })
+      .onConflictDoNothing();
+  }
+
+  // Scene-2 ghosts: reserved for OHW-284/285/286 in the full suite run.
+  // breakdown-ignore only clears scene-1, so these survive to serve those tests.
+  for (const {
+    occurrenceId,
+    elementId,
+    name,
+  } of SEEDED_PENDING_GHOSTS_SCENE2) {
+    await db
+      .insert(breakdownElements)
+      .values({
+        id: elementId,
+        projectId: TEST_TEAM_PROJECT_ID,
+        category: SEEDED_PENDING_ELEMENT_CATEGORY,
+        name,
+        description: null,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(breakdownOccurrences)
+      .values({
+        id: occurrenceId,
+        elementId,
+        sceneId: TEST_BREAKDOWN_SCENE_2_ID,
         screenplayVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID,
         quantity: 1,
         cesareStatus: "pending" as const,

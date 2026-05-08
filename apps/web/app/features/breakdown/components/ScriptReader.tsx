@@ -297,9 +297,14 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
           const v = viewRef.current;
           if (!v) return;
           const rect = probeContainer.getBoundingClientRect();
+          // When an outer container (e.g. breakdown-script) scrolls and the
+          // reader top goes above the viewport, rect.top becomes negative and
+          // posAtCoords returns null. Clamp to the visible viewport top so
+          // the probe always lands inside the rendered editor content.
+          const probeTop = Math.max(rect.top, 0);
           const probe = v.posAtCoords({
             left: rect.left + 16,
-            top: rect.top + 8,
+            top: probeTop + 8,
           });
           if (!probe) return;
           const sceneIndex = findSceneIndexAtPos(v.state.doc, probe.pos);
