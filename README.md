@@ -123,6 +123,7 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **infra/07b sub — Design-system Dialog migration** (DS `Dialog` esteso con `size`/`showCloseButton`; 7 modali bespoke + 4 inline confirm migrati al componente unico; -721/+407 LOC, 102/102 Playwright verdi)
 - **core/10h — Breakdown read-only UX** (scene headings in breakdown have no menu trigger; TOC auto-scrolls to active scene; regression guard for editable screenplay editor)
 - **core/10i — Breakdown dictionary pass** (WordNet artifact whitelist for EN+IT replaces noisy regex props extractor; `projects.locale` column; locale select in Settings; ghost suggestions filtered to physical artifacts only)
+- **core/10f — Breakdown table view** (EditableCell + MatrixGrid DS components; Per-progetto tab rewritten with in-place name/category editing, bulk select/archive/recategorize, category chip + status + search filters; Matrice tab = scene×element crossplot with quantity popover, heatmap toggle, sticky headers; server: bulkUpdateBreakdownElements, addBreakdownOccurrence (upsert), removeBreakdownOccurrence with IDOR guards)
 
 ### MVP — the minimum viable pilot product
 
@@ -131,7 +132,6 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 **Core platform**
 
 - **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
-- **core/10f — Breakdown table view** (Movie-Magic-style editable table + scene × element matrix; in-place editing, bulk operations, URL-persisted filters)
 - **core/11 — Budget** (line items from breakdown, totals — no AI risk prediction yet)
 - **core/12 — Shooting schedule** with **one country template (Italy)** — working days, holidays, night shifts, minimum rest
 - **core/12 — Call sheet generation** from schedule + breakdown (absorbed from "Ideas" list)

@@ -1,6 +1,6 @@
 # Spec 10f — Breakdown table view (Movie Magic-style editable spreadsheet)
 
-> **Status:** open
+> **Status:** done (commit 5d3002a)
 > **Depends on:** Spec 10 (Breakdown), Spec 10c (Inline tagging), Spec 10e (Auto-spoglio regex)
 > **Date:** 2026-04-23
 
