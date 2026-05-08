@@ -13,6 +13,9 @@ import {
   addBreakdownElement,
   updateBreakdownElement,
   archiveBreakdownElement,
+  bulkUpdateBreakdownElements,
+  addBreakdownOccurrence,
+  removeBreakdownOccurrence,
   setOccurrenceStatus,
 } from "../server/breakdown.server";
 import { suggestBreakdownForScene } from "../server/cesare-suggest.server";
@@ -248,5 +251,35 @@ export const useExportBreakdown = () => {
         ),
       };
     },
+  });
+};
+
+export const useBulkUpdateBreakdownElements = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Parameters<typeof bulkUpdateBreakdownElements>[0]["data"],
+    ) => unwrapResult(await bulkUpdateBreakdownElements({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
+  });
+};
+
+export const useAddBreakdownOccurrence = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Parameters<typeof addBreakdownOccurrence>[0]["data"],
+    ) => unwrapResult(await addBreakdownOccurrence({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
+  });
+};
+
+export const useRemoveBreakdownOccurrence = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Parameters<typeof removeBreakdownOccurrence>[0]["data"],
+    ) => unwrapResult(await removeBreakdownOccurrence({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
   });
 };

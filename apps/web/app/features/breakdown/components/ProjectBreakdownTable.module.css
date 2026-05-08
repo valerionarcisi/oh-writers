@@ -1,9 +1,238 @@
-.staleCell {
-  opacity: 0.5;
-  text-decoration: line-through;
+.root {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  overflow: hidden;
 }
 
-.status {
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
   padding: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.searchInput {
+  inline-size: 220px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  color: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+}
+
+.catChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.catChip {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 99px;
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease,
+    border-color 100ms ease;
+
+  &:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+}
+
+.catChipActive {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent, var(--color-text));
+}
+
+.statusSelect {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  color: inherit;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+}
+
+/* ─── Bulk action bar ─────────────────────────────────────────────────────── */
+
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.bulkCount {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.bulkBtn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.bulkBtnDestructive {
+  color: var(--color-error, #d93025);
+  border-color: currentColor;
+
+  &:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+}
+
+.recatWrap {
+  position: relative;
+}
+
+/* ─── Table ───────────────────────────────────────────────────────────────── */
+
+.tableWrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  font-weight: 600;
+  background: var(--color-surface);
+  border-block-end: 2px solid var(--color-border);
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.checkCell {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  inline-size: 36px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  text-align: center;
+  background: var(--color-surface);
+  border-block-end: 2px solid var(--color-border);
+}
+
+.tr {
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.trSelected {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+}
+
+.td {
+  padding: var(--space-1) var(--space-3);
+  border-block-end: 1px solid var(--color-border-subtle, var(--color-border));
+  vertical-align: middle;
+}
+
+.tdNum {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyCell {
+  padding: var(--space-6) var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ─── Status indicators ──────────────────────────────────────────────────── */
+
+.staleIndicator {
+  color: var(--color-warning, #f5a623);
+  font-size: 1rem;
+}
+
+.okIndicator {
+  color: var(--color-success, #34a853);
+  font-size: 1rem;
+}
+
+.mutedText {
+  color: var(--color-text-muted);
+}
+
+/* ─── Loading / empty ────────────────────────────────────────────────────── */
+
+.status {
+  padding: var(--space-4);
   color: var(--color-text-muted);
 }

@@ -46,6 +46,14 @@ export type {
 } from "./components/DropdownMenu";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";
+export { EditableCell } from "./components/EditableCell";
+export type { EditableCellProps } from "./components/EditableCell";
+export { MatrixGrid } from "./components/MatrixGrid";
+export type {
+  MatrixGridProps,
+  MatrixColumn,
+  MatrixRow,
+} from "./components/MatrixGrid";
 export { Progress } from "./components/Progress";
 export type { ProgressProps } from "./components/Progress";
 export { StreamingProgressBanner } from "./components/StreamingProgressBanner";

@@ -1,0 +1,122 @@
+.wrapper {
+  overflow: auto;
+  max-block-size: 100%;
+  max-inline-size: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  inline-size: max-content;
+  min-inline-size: 100%;
+}
+
+/* Top-left corner — sticky on both axes */
+.cornerCell {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  background: var(--color-surface);
+  border-inline-end: 1px solid var(--color-border);
+  border-block-end: 2px solid var(--color-border);
+}
+
+/* Column headers — sticky to top */
+.colHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  border-block-end: 2px solid var(--color-border);
+  border-inline-end: 1px solid var(--color-border-subtle, var(--color-border));
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  text-align: center;
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
+}
+
+.colHeaderLabel {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colHeaderSublabel {
+  display: block;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Row headers — sticky to left */
+.rowHeader {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--color-surface);
+  border-inline-end: 2px solid var(--color-border);
+  border-block-end: 1px solid var(--color-border-subtle, var(--color-border));
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm, 0.875rem);
+  vertical-align: middle;
+  transition: background 80ms ease;
+}
+
+.rowHeaderLabel {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Group header rows */
+.groupRow {
+  background: var(--color-surface-raised, var(--color-surface));
+}
+
+.groupCell {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  border-block: 1px solid var(--color-border);
+  background: var(--color-surface-raised, var(--color-surface));
+}
+
+/* Data cells */
+.cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 var(--space-1);
+  border-inline-end: 1px solid var(--color-border-subtle, var(--color-border));
+  border-block-end: 1px solid var(--color-border-subtle, var(--color-border));
+  cursor: pointer;
+
+  &[data-heat="true"] {
+    background: color-mix(
+      in srgb,
+      var(--color-accent) calc(var(--heat) * 40%),
+      transparent
+    );
+  }
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.elementRow {
+  &:hover .rowHeader {
+    background: var(--color-surface-hover);
+  }
+}

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
 import {
   breakdownElements,
@@ -199,7 +199,12 @@ export const getBreakdownForScene = createServerFn({ method: "GET" })
 export interface ProjectBreakdownRow {
   element: z.infer<typeof BreakdownElementSchema>;
   totalQuantity: number;
-  scenesPresent: { sceneId: string; sceneNumber: number }[];
+  scenesPresent: {
+    sceneId: string;
+    sceneNumber: number;
+    quantity: number;
+    occurrenceId: string;
+  }[];
   hasStale: boolean;
 }
 
@@ -244,7 +249,14 @@ export const getProjectBreakdownRows = (
           element: parseElement(r.el),
           totalQuantity: counts ? r.occ!.quantity : 0,
           scenesPresent: counts
-            ? [{ sceneId: r.scene!.id, sceneNumber: r.scene!.number }]
+            ? [
+                {
+                  sceneId: r.scene!.id,
+                  sceneNumber: r.scene!.number,
+                  quantity: r.occ!.quantity,
+                  occurrenceId: r.occ!.id,
+                },
+              ]
             : [],
           hasStale: counts ? r.occ!.isStale : false,
           _totalOccs: r.occ ? 1 : 0,
@@ -256,6 +268,8 @@ export const getProjectBreakdownRows = (
           existing.scenesPresent.push({
             sceneId: r.scene!.id,
             sceneNumber: r.scene!.number,
+            quantity: r.occ!.quantity,
+            occurrenceId: r.occ!.id,
           });
           if (r.occ!.isStale) existing.hasStale = true;
         }
@@ -455,6 +469,7 @@ export const updateBreakdownElement = createServerFn({ method: "POST" })
       elementId: z.string().uuid(),
       patch: z.object({
         name: z.string().min(1).max(200).optional(),
+        category: BreakdownCategorySchema.optional(),
         description: z.string().nullable().optional(),
         castTier: CastTierSchema.nullable().optional(),
       }),
@@ -497,6 +512,9 @@ export const updateBreakdownElement = createServerFn({ method: "POST" })
           .update(breakdownElements)
           .set({
             ...(data.patch.name !== undefined && { name: data.patch.name }),
+            ...(data.patch.category !== undefined && {
+              category: data.patch.category,
+            }),
             ...(data.patch.description !== undefined && {
               description: data.patch.description,
             }),
@@ -781,6 +799,188 @@ export const getBreakdownContext = createServerFn({ method: "GET" })
         })(),
         (e) => new DbError("getBreakdownContext", e),
       );
+      return toShape(result);
+    },
+  );
+
+// ─── bulkUpdateBreakdownElements ──────────────────────────────────────────────
+
+export const bulkUpdateBreakdownElements = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      projectId: z.string().uuid(),
+      elementIds: z.array(z.string().uuid()).min(1).max(200),
+      patch: z.object({
+        category: BreakdownCategorySchema.optional(),
+        archivedAt: z.union([z.literal("now"), z.null()]).optional(),
+      }),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<{ updated: number }, ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const accessResult = await resolveBreakdownAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      if (!canEditBreakdown(accessResult.value))
+        return toShape(
+          err(new ForbiddenError("bulk update breakdown elements")),
+        );
+
+      const set: Partial<typeof breakdownElements.$inferInsert> = {
+        updatedAt: new Date(),
+      };
+      if (data.patch.category !== undefined) set.category = data.patch.category;
+      if (data.patch.archivedAt !== undefined)
+        set.archivedAt = data.patch.archivedAt === "now" ? new Date() : null;
+
+      const result = await ResultAsync.fromPromise(
+        db
+          .update(breakdownElements)
+          .set(set)
+          .where(
+            and(
+              eq(breakdownElements.projectId, data.projectId),
+              inArray(breakdownElements.id, data.elementIds),
+            ),
+          )
+          .returning({ id: breakdownElements.id }),
+        (e) => new DbError("bulkUpdateBreakdownElements", e),
+      ).map((rows) => ({ updated: rows.length }));
+
+      return toShape(result);
+    },
+  );
+
+// ─── addBreakdownOccurrence ────────────────────────────────────────────────────
+
+export const addBreakdownOccurrence = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      projectId: z.string().uuid(),
+      elementId: z.string().uuid(),
+      sceneId: z.string().uuid(),
+      screenplayVersionId: z.string().uuid(),
+      quantity: z.number().int().min(1).max(9999).default(1),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<{ id: string; quantity: number }, ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const accessResult = await resolveBreakdownAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      if (!canEditBreakdown(accessResult.value))
+        return toShape(err(new ForbiddenError("add breakdown occurrence")));
+
+      // Verify elementId belongs to the project before inserting to prevent IDOR.
+      const elResult = await ResultAsync.fromPromise(
+        db.query.breakdownElements.findFirst({
+          where: and(
+            eq(breakdownElements.id, data.elementId),
+            eq(breakdownElements.projectId, data.projectId),
+          ),
+        }),
+        (e) => new DbError("addBreakdownOccurrence/verify-element", e),
+      );
+      if (elResult.isErr()) return toShape(err(elResult.error));
+      if (!elResult.value)
+        return toShape(err(new ForbiddenError("add breakdown occurrence")));
+
+      const result = await ResultAsync.fromPromise(
+        db
+          .insert(breakdownOccurrences)
+          .values({
+            elementId: data.elementId,
+            screenplayVersionId: data.screenplayVersionId,
+            sceneId: data.sceneId,
+            quantity: data.quantity,
+            cesareStatus: "accepted",
+          })
+          .onConflictDoUpdate({
+            target: [
+              breakdownOccurrences.elementId,
+              breakdownOccurrences.screenplayVersionId,
+              breakdownOccurrences.sceneId,
+            ],
+            set: {
+              quantity: sql`excluded.quantity`,
+              updatedAt: new Date(),
+            },
+          })
+          .returning({
+            id: breakdownOccurrences.id,
+            quantity: breakdownOccurrences.quantity,
+          }),
+        (e) => new DbError("addBreakdownOccurrence", e),
+      ).andThen(([row]) =>
+        row ? ok(row) : err(new DbError("addBreakdownOccurrence", "no row")),
+      );
+
+      return toShape(result);
+    },
+  );
+
+// ─── removeBreakdownOccurrence ─────────────────────────────────────────────────
+
+export const removeBreakdownOccurrence = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      projectId: z.string().uuid(),
+      occurrenceId: z.string().uuid(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<{ ok: true }, ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const accessResult = await resolveBreakdownAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+      if (!canEditBreakdown(accessResult.value))
+        return toShape(err(new ForbiddenError("remove breakdown occurrence")));
+
+      // Gate delete on project ownership via the element join to prevent IDOR.
+      const result = await ResultAsync.fromPromise(
+        db
+          .delete(breakdownOccurrences)
+          .where(
+            and(
+              eq(breakdownOccurrences.id, data.occurrenceId),
+              inArray(
+                breakdownOccurrences.elementId,
+                db
+                  .select({ id: breakdownElements.id })
+                  .from(breakdownElements)
+                  .where(eq(breakdownElements.projectId, data.projectId)),
+              ),
+            ),
+          ),
+        (e) => new DbError("removeBreakdownOccurrence", e),
+      ).map(() => ({ ok: true as const }));
+
       return toShape(result);
     },
   );

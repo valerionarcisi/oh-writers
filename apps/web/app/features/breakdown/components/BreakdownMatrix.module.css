@@ -1,0 +1,210 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  overflow: hidden;
+}
+
+/* ─── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.heatmapBtn {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease,
+    border-color 100ms ease;
+
+  &:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+}
+
+.heatmapBtnActive {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent, var(--color-text));
+}
+
+/* ─── Grid container ─────────────────────────────────────────────────────── */
+
+.gridWrap {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Cell buttons ───────────────────────────────────────────────────────── */
+
+.cellBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  color: inherit;
+  padding: 0;
+
+  &:hover {
+    color: var(--color-accent);
+  }
+}
+
+.cellBtnActive {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+
+.cellEmpty {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+}
+
+.cellPresent {
+  color: var(--color-success, #34a853);
+  font-size: 0.9rem;
+}
+
+.cellQty {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* ─── Popover overlay ────────────────────────────────────────────────────── */
+
+.popoverOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.popover {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, var(--shadow-md));
+  padding: var(--space-4);
+  min-inline-size: 220px;
+}
+
+.popoverForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.popoverLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+}
+
+.popoverInput {
+  inline-size: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  color: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+}
+
+.popoverActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.removeBtn,
+.cancelBtn,
+.submitBtn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.removeBtn {
+  background: transparent;
+  color: var(--color-error, #d93025);
+  border-color: currentColor;
+  margin-inline-end: auto;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+}
+
+.cancelBtn {
+  background: transparent;
+  color: var(--color-text);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+}
+
+.submitBtn {
+  background: var(--color-accent);
+  color: var(--color-on-accent, var(--color-text));
+  border-color: var(--color-accent);
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+}
+
+/* ─── Status text ────────────────────────────────────────────────────────── */
+
+.status {
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm, 0.875rem);
+}

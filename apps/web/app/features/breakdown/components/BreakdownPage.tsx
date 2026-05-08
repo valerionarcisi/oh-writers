@@ -16,6 +16,7 @@ import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import { BreakdownPanel } from "./BreakdownPanel";
 import { ProjectBreakdownTable } from "./ProjectBreakdownTable";
+import { BreakdownMatrix } from "./BreakdownMatrix";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import { VersionImportBanner } from "./VersionImportBanner";
 import styles from "./BreakdownPage.module.css";
@@ -24,7 +25,7 @@ interface Props {
   projectId: string;
 }
 
-type TabId = "per-scene" | "per-project";
+type TabId = "per-scene" | "per-project" | "matrice";
 
 export function BreakdownPage({ projectId }: Props) {
   return (
@@ -152,6 +153,7 @@ function BreakdownPageContent({ projectId }: ContentProps) {
           tabs={[
             { id: "per-scene", label: "Per scena" },
             { id: "per-project", label: "Per progetto" },
+            { id: "matrice", label: "Matrice" },
           ]}
           activeId={activeTab}
           onSelect={(id) => setActiveTab(id as TabId)}
@@ -230,7 +232,7 @@ function BreakdownPageContent({ projectId }: ContentProps) {
         </div>
       )}
 
-      {activeTab === "per-scene" ? (
+      {activeTab === "per-scene" && (
         <div className={styles.split}>
           <aside className={styles.toc} data-testid="breakdown-toc">
             <SceneTOC
@@ -267,11 +269,24 @@ function BreakdownPageContent({ projectId }: ContentProps) {
             />
           </aside>
         </div>
-      ) : (
+      )}
+
+      {activeTab === "per-project" && (
         <div className={styles.tableWrap}>
           <ProjectBreakdownTable
             projectId={projectId}
             versionId={versionId}
+            canEdit={canEdit}
+          />
+        </div>
+      )}
+
+      {activeTab === "matrice" && (
+        <div className={styles.tableWrap}>
+          <BreakdownMatrix
+            projectId={projectId}
+            versionId={versionId}
+            scenes={ctx.scenes}
             canEdit={canEdit}
           />
         </div>

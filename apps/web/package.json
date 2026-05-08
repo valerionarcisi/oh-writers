@@ -20,6 +20,7 @@
     "@oh-writers/utils": "workspace:*",
     "@tanstack/react-query": "5.90.21",
     "@tanstack/react-router": "1.120.20",
+    "@tanstack/react-virtual": "3.13.5",
     "@tanstack/start": "1.120.20",
     "@types/diff-match-patch": "1.0.36",
     "better-auth": "1.4.19",
