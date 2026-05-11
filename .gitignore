@@ -40,3 +40,4 @@ playwright/.cache/
 
 # Debug screenshots
 *.png
+.worktrees/
