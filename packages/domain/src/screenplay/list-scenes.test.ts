@@ -64,4 +64,56 @@ describe("listScenesInFountain", () => {
     const fountain = `Una conferenza INT. di routine.\n`;
     expect(listScenesInFountain(fountain)).toEqual([]);
   });
+
+  describe("non-standard sluglines", () => {
+    it("detects INSERT heading", () => {
+      const fountain = `INT. UFFICIO - GIORNO\n\nAzione.\n\nINSERT - SCONTRINO\n\nDettaglio.\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(2);
+      expect(scenes[1]?.heading).toBe("INSERT - SCONTRINO");
+      expect(scenes[1]?.number).toBe("2");
+    });
+
+    it("detects INTERCUT heading", () => {
+      const fountain = `INT. UFFICIO - GIORNO\n\nAzione.\n\nINTERCUT - UFFICIO/CASA\n\nSilenzio.\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(2);
+      expect(scenes[1]?.heading).toBe("INTERCUT - UFFICIO/CASA");
+    });
+
+    it("detects SERIES OF SHOTS heading", () => {
+      const fountain = `INT. UFFICIO - GIORNO\n\nAzione.\n\nSERIES OF SHOTS - 1969\n\nImmagini.\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(2);
+      expect(scenes[1]?.heading).toBe("SERIES OF SHOTS - 1969");
+    });
+
+    it("detects MONTAGE heading", () => {
+      const fountain = `INT. UFFICIO - GIORNO\n\nAzione.\n\nMONTAGE: TRAINING\n\nClip.\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(2);
+      expect(scenes[1]?.heading).toBe("MONTAGE: TRAINING");
+    });
+
+    it("detects FLASHBACK heading", () => {
+      const fountain = `INT. UFFICIO - GIORNO\n\nAzione.\n\nFLASHBACK - INFANZIA\n\nBambini.\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(2);
+      expect(scenes[1]?.heading).toBe("FLASHBACK - INFANZIA");
+    });
+
+    it("assigns correct ordinals across mixed standard and non-standard headings", () => {
+      const fountain = `INT. CUCINA - GIORNO\n\na\n\nINSERT - NOTA\n\nb\n\nEXT. STRADA - NOTTE\n\nc\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes.map((s) => s.number)).toEqual(["1", "2", "3"]);
+    });
+
+    it("extracts explicit scene number from non-standard heading", () => {
+      const fountain = `INTERCUT - LIVING ROOM/OFFICE #3-3B#\n\nAzione.\n`;
+      const scenes = listScenesInFountain(fountain);
+      expect(scenes).toHaveLength(1);
+      expect(scenes[0]?.number).toBe("3-3B");
+      expect(scenes[0]?.heading).toBe("INTERCUT - LIVING ROOM/OFFICE");
+    });
+  });
 });

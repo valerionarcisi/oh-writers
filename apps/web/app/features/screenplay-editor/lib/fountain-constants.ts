@@ -14,10 +14,12 @@ export const DIALOGUE_INDENT = "          ";
 // Scene-heading prefixes accepted by the tokenizer and element detector.
 // Supports English (INT./EXT.) and Italian (INT./EST.) conventions, plus
 // the common shorthand where the first period is dropped (INT/EXT., INT/EST.).
-// EST. = "esterno" (Italian for exterior).
-// Combined forms come first so they win over the bare forms in regex alternation.
+// EST. = "esterno" (Italian for exterior). Combined forms come first.
+// Non-standard sluglines (INSERT, INTERCUT, SERIES OF SHOTS, MONTAGE, FLASHBACK)
+// are accepted when followed by whitespace or end-of-line, matching the same set
+// as NON_STANDARD_HEADING_PREFIX in packages/domain/src/screenplay/list-scenes.ts.
 export const SCENE_HEADING_RE =
-  /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E|INSERT)\s/;
+  /^(?:INT\.?\/EXT\.|EXT\.?\/INT\.|INT\.?\/EST\.|EST\.?\/INT\.|INT\.|EXT\.|EST\.|I\/E|INSERT|INTERCUT|SERIES\s+OF\s+SHOTS|MONTAGE|FLASHBACK)(?:\s|$)/;
 
 // Canonical list of Fountain transitions. Order matters for UI display.
 export const FOUNTAIN_TRANSITIONS = [

@@ -7,6 +7,9 @@
  *
  * A "scene heading" in fountain is a line that:
  *   - Starts with one of: INT., EXT., EST., I/E., INT/EXT, INT./EXT (case-insensitive)
+ *   - OR starts with a non-standard slugline prefix: INSERT, INTERCUT, SERIES OF SHOTS,
+ *     MONTAGE, FLASHBACK (professional screenwriting conventions, also emitted by the
+ *     Oh Writers PDF importer)
  *   - OR is a "forced heading" beginning with "."
  *
  * For each detected heading we return:
@@ -28,7 +31,15 @@ export interface FountainScene {
   readonly lineIndex: number;
 }
 
-const HEADING_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT|INT\.\/EXT)\.?(\s|$)/i;
+const HEADING_PREFIX =
+  /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?\/EST\.?|EST\.?\/INT\.?|I\/E\.?|INT\.?|EXT\.?|EST\.?)(\s|$)/i;
+
+// Non-standard sluglines used by professional screenwriters and emitted by the
+// Oh Writers PDF importer. Accepted when followed by whitespace, a dash, colon,
+// or end-of-line — this keeps bare character names like "INTERCUT" from a
+// hypothetical cue from being misclassified.
+const NON_STANDARD_HEADING_PREFIX =
+  /^(INSERT|INTERCUT|SERIES\s+OF\s+SHOTS|MONTAGE|FLASHBACK)(\s|[-–—:]|$)/i;
 
 const SCENE_NUMBER_SUFFIX = /\s+#([^#]+)#\s*$/;
 
@@ -36,7 +47,7 @@ const isHeading = (rawLine: string): boolean => {
   const line = rawLine.trim();
   if (line.length === 0) return false;
   if (line.startsWith(".") && !line.startsWith("..")) return true;
-  return HEADING_PREFIX.test(line);
+  return HEADING_PREFIX.test(line) || NON_STANDARD_HEADING_PREFIX.test(line);
 };
 
 const stripForcedDot = (line: string): string =>
