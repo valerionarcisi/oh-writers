@@ -1,0 +1,58 @@
+.widget {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.totals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-block-start: 1px solid var(--color-border);
+  padding-block-start: var(--space-3);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--text-sm);
+}
+
+.totalLabel {
+  color: var(--color-text-muted);
+}
+
+.totalValue {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.grandRow {
+  border-block-start: 1px solid var(--color-border);
+  padding-block-start: var(--space-2);
+  margin-block-start: var(--space-1);
+}
+
+.grandLabel {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.grandValue {
+  font-size: var(--text-base);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}

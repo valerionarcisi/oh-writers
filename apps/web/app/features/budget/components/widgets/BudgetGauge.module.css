@@ -1,0 +1,25 @@
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.svg {
+  width: 88px;
+  height: 52px;
+}
+
+.arc {
+  transition: stroke-dashoffset 400ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
