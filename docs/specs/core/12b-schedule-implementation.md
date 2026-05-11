@@ -89,14 +89,17 @@ CREATE TABLE strips (
 
 ## UI Components
 
-- `SchedulePage` — route `/_app/projects/$id_/schedule`, empty state or board
-- `StripBoard` — horizontal scroll flex of columns
-- `ShootingDayColumn` — header (day#, date, type badge, page bar) + strips stack
-- `StripCard` — color band, scene#, INT/EXT, location, time, page count, lock toggle
+- `SchedulePage` — route `/_app/projects/$id_/schedule`, empty state or board; Giornate/Settimane view toggle
+- `StripBoard` — horizontal scroll flex of columns; week grouping mode (6 days/week) via `viewMode` prop
+- `ShootingDayColumn` — header (day#, date, type badge, page bar) + strips stack; column width 240px
+- `StripCard` — 8px color band + body (sceneNumber, location, heading, meta) + absolute lock button; page count badge (green/yellow/red pill); click opens `SceneDrawer`, drag reorders
+- `SceneDrawer` — slide-in panel from the right (360px); shows scene heading, INT/EXT/time/pages, then breakdown elements grouped by category in `BREAKDOWN_CATEGORIES` order; fetched lazily via `getBreakdownForScene` when a card is clicked
 - `UnscheduledTray` — collapsible, sorted by scene number
 - `PageCountBar` — colored progress bar (green/yellow/red)
 
-Drag-and-drop: HTML5 drag API (no library). `onDragStart` sets stripId in dataTransfer; `onDrop` on day column or tray calls `moveStrip`.
+Drag-and-drop: HTML5 drag API (no library). `onDragStart` sets stripId in dataTransfer; `onDrop` on day column or tray calls `moveStrip`. Click vs drag distinguished via `useRef<boolean>` — drag flag set on `onDragStart`, checked in `onClick`.
+
+`ScheduleView` includes `screenplayVersionId: string | null` (derived from the project's active screenplay) so the drawer can call `getBreakdownForScene`.
 
 ---
 
