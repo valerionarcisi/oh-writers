@@ -15,7 +15,10 @@ import {
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
+  CAST_TIERS,
+  CAST_TIER_META,
   type BreakdownCategory,
+  type CastTier,
 } from "@oh-writers/domain";
 import {
   projectBreakdownOptions,
@@ -214,7 +217,25 @@ export function ProjectBreakdownTable({
     setSelected(new Set());
   };
 
+  const commitCastTier = useCallback(
+    (elementId: string, tier: string) => {
+      update.mutate({
+        elementId,
+        patch: { castTier: (tier || null) as CastTier | null },
+      });
+    },
+    [update],
+  );
+
   // ─── helpers ──────────────────────────────────────────────────────────────
+  // Cast tier column is visible only when the cat filter is set exclusively to "cast".
+  const showCastTierCol = catFilter.size === 1 && catFilter.has("cast");
+
+  const castTierOptions = [
+    { value: "", label: "—" },
+    ...CAST_TIERS.map((t) => ({ value: t, label: CAST_TIER_META[t].labelIt })),
+  ];
+
   const sortIndicator = (key: SortKey) => {
     if (sortKey !== key) return null;
     return sortDir === "asc" ? " ↑" : " ↓";
@@ -381,13 +402,17 @@ export function ProjectBreakdownTable({
                 Quantità{sortIndicator("totalQuantity")}
               </th>
               <th className={styles.th}>Scene</th>
+              {showCastTierCol && <th className={styles.th}>Tier</th>}
               <th className={styles.th}>Stato</th>
             </tr>
           </thead>
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={canEdit ? 6 : 5} className={styles.emptyCell}>
+                <td
+                  colSpan={(canEdit ? 1 : 0) + 5 + (showCastTierCol ? 1 : 0)}
+                  className={styles.emptyCell}
+                >
                   Nessun elemento trovato.
                 </td>
               </tr>
@@ -459,6 +484,23 @@ export function ProjectBreakdownTable({
                 <td className={styles.td}>
                   <SceneList numbers={row.sceneNumbers} />
                 </td>
+                {showCastTierCol && (
+                  <td className={styles.td}>
+                    {canEdit ? (
+                      <EditableCell
+                        type="select"
+                        value={row.castTier ?? ""}
+                        options={castTierOptions}
+                        onCommit={(v) => commitCastTier(row.id, v)}
+                        data-testid={`cell-cast-tier-${row.id}`}
+                      />
+                    ) : row.castTier ? (
+                      (CAST_TIER_META[row.castTier as CastTier]?.labelIt ?? "—")
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                )}
                 <td className={styles.td}>
                   <StatusDot status={row.status} />
                 </td>
