@@ -1,6 +1,6 @@
 # Spec 11b — Budget implementation (rule-based, no AI)
 
-> **Status:** in progress — DB schema + domain + server functions done; UI pending
+> **Status:** in progress — DB schema + domain + server functions + dashboard UI done; scene chip filter, equipment/misc widgets, E2E tests pending
 > **Depends on:** Spec 10f (Breakdown table), Spec 11 (Budget product spec)
 > **Date:** 2026-05-11
 
@@ -376,7 +376,7 @@ SVG inline, `stroke-dashoffset` animato via CSS transition. Nessuna dipendenza e
 | #   | Cosa                                      | Migration |
 | --- | ----------------------------------------- | --------- |
 | ✅  | `budgets`, `budget_lines`, `budget_rates` | 0016      |
-| ⬜  | `budget_cast`, `budget_crew`              | 0017      |
+| ✅  | `budget_cast`, `budget_crew`              | 0017      |
 
 ---
 
