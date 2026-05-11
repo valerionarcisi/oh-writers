@@ -6,8 +6,12 @@ import {
   budgets,
   budgetLines,
   budgetRates,
+  budgetCast,
+  budgetCrew,
   projects,
   screenplays,
+  type BudgetCast,
+  type BudgetCrew,
 } from "@oh-writers/db/schema";
 import {
   BudgetSchema,
@@ -16,10 +20,12 @@ import {
   generateBudgetLines,
   computeBudgetSummary,
   lineEffectiveTotal,
+  CREW_ROLES,
   type Budget,
   type BudgetLine,
   type BudgetSummary,
   type RateKey,
+  type FiscalRegime,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -264,6 +270,47 @@ export const generateBudget = createServerFn({ method: "POST" })
             );
           }
 
+          // Populate cast from breakdown cast elements
+          await db.delete(budgetCast).where(eq(budgetCast.budgetId, budgetId));
+          const castRows = rows.filter((r) => r.element.category === "cast");
+          if (castRows.length > 0) {
+            await db.insert(budgetCast).values(
+              castRows.map((r, idx) => ({
+                budgetId,
+                elementId: r.element.id,
+                name: r.element.name,
+                days: String(shootingDays),
+                dayRate: "0",
+                fiscalRegime: "piva" as const,
+                mealAllowance: "0",
+                accommodation: "0",
+                sortOrder: idx,
+              })),
+            );
+          }
+
+          // Populate crew with defaults only on first generation
+          const existingCrewCount = await db.query.budgetCrew
+            .findMany({ where: eq(budgetCrew.budgetId, budgetId) })
+            .then((r) => r.length);
+          if (existingCrewCount === 0) {
+            await db.insert(budgetCrew).values(
+              CREW_ROLES.map((role, idx) => ({
+                budgetId,
+                roleKey: role.key,
+                name: role.labelIt,
+                department: role.department,
+                days: String(shootingDays),
+                dayRate: String(role.defaultDayRate),
+                fiscalRegime: "piva" as const,
+                mealAllowance: "0",
+                accommodation: "0",
+                enabled: true,
+                sortOrder: idx,
+              })),
+            );
+          }
+
           return loadBudgetWithLines(db, data.projectId);
         })(),
         (e) => new DbError("generateBudget/persist", e),
@@ -444,6 +491,326 @@ export const getBudgetSummary = createServerFn({ method: "GET" })
     },
   );
 
+// ─── getCastAndCrew ───────────────────────────────────────────────────────────
+
+export const getCastAndCrew = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { cast: BudgetCast[]; crew: BudgetCrew[] } | null,
+        ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canView(access.value))
+        return toShape(err(new ForbiddenError("view budget")));
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const budget = await db.query.budgets.findFirst({
+            where: eq(budgets.projectId, data.projectId),
+          });
+          if (!budget) return null;
+
+          const [cast, crew] = await Promise.all([
+            db.query.budgetCast.findMany({
+              where: eq(budgetCast.budgetId, budget.id),
+              orderBy: (t) => t.sortOrder,
+            }),
+            db.query.budgetCrew.findMany({
+              where: eq(budgetCrew.budgetId, budget.id),
+              orderBy: (t) => t.sortOrder,
+            }),
+          ]);
+          return { cast, crew };
+        })(),
+        (e) => new DbError("getCastAndCrew", e),
+      );
+
+      return toShape(result);
+    },
+  );
+
+// ─── updateBudgetCastRow ──────────────────────────────────────────────────────
+
+const CastPatchSchema = z.object({
+  days: z.number().min(0).optional(),
+  dayRate: z.number().min(0).optional(),
+  fiscalRegime: z.enum(["piva", "privato", "none"]).optional(),
+  mealAllowance: z.number().min(0).optional(),
+  accommodation: z.number().min(0).optional(),
+});
+
+export const updateBudgetCastRow = createServerFn({ method: "POST" })
+  .validator(z.object({ rowId: z.string().uuid(), patch: CastPatchSchema }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<BudgetCast, BudgetLockedError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const row = await db.query.budgetCast.findFirst({
+        where: eq(budgetCast.id, data.rowId),
+      });
+      if (!row)
+        return toShape(
+          err(new DbError("updateBudgetCastRow", "cast row not found")),
+        );
+
+      const budget = await db.query.budgets.findFirst({
+        where: eq(budgets.id, row.budgetId),
+      });
+      if (!budget)
+        return toShape(
+          err(new DbError("updateBudgetCastRow", "budget missing")),
+        );
+      if (budget.status === "locked")
+        return toShape(err(new BudgetLockedError()));
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        budget.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canEdit(access.value))
+        return toShape(err(new ForbiddenError("edit cast row")));
+
+      const set: Record<string, unknown> = { updatedAt: new Date() };
+      if (data.patch.days !== undefined) set.days = String(data.patch.days);
+      if (data.patch.dayRate !== undefined)
+        set.dayRate = String(data.patch.dayRate);
+      if (data.patch.fiscalRegime !== undefined)
+        set.fiscalRegime = data.patch.fiscalRegime;
+      if (data.patch.mealAllowance !== undefined)
+        set.mealAllowance = String(data.patch.mealAllowance);
+      if (data.patch.accommodation !== undefined)
+        set.accommodation = String(data.patch.accommodation);
+
+      const result = await ResultAsync.fromPromise(
+        db
+          .update(budgetCast)
+          .set(set)
+          .where(eq(budgetCast.id, data.rowId))
+          .returning()
+          .then(([r]) => r!),
+        (e) => new DbError("updateBudgetCastRow", e),
+      );
+      return toShape(result);
+    },
+  );
+
+// ─── updateBudgetCrewRow ──────────────────────────────────────────────────────
+
+const CrewPatchSchema = z.object({
+  days: z.number().min(0).optional(),
+  dayRate: z.number().min(0).optional(),
+  fiscalRegime: z.enum(["piva", "privato", "none"]).optional(),
+  mealAllowance: z.number().min(0).optional(),
+  accommodation: z.number().min(0).optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const updateBudgetCrewRow = createServerFn({ method: "POST" })
+  .validator(z.object({ rowId: z.string().uuid(), patch: CrewPatchSchema }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<BudgetCrew, BudgetLockedError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const row = await db.query.budgetCrew.findFirst({
+        where: eq(budgetCrew.id, data.rowId),
+      });
+      if (!row)
+        return toShape(
+          err(new DbError("updateBudgetCrewRow", "crew row not found")),
+        );
+
+      const budget = await db.query.budgets.findFirst({
+        where: eq(budgets.id, row.budgetId),
+      });
+      if (!budget)
+        return toShape(
+          err(new DbError("updateBudgetCrewRow", "budget missing")),
+        );
+      if (budget.status === "locked")
+        return toShape(err(new BudgetLockedError()));
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        budget.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canEdit(access.value))
+        return toShape(err(new ForbiddenError("edit crew row")));
+
+      const set: Record<string, unknown> = { updatedAt: new Date() };
+      if (data.patch.days !== undefined) set.days = String(data.patch.days);
+      if (data.patch.dayRate !== undefined)
+        set.dayRate = String(data.patch.dayRate);
+      if (data.patch.fiscalRegime !== undefined)
+        set.fiscalRegime = data.patch.fiscalRegime;
+      if (data.patch.mealAllowance !== undefined)
+        set.mealAllowance = String(data.patch.mealAllowance);
+      if (data.patch.accommodation !== undefined)
+        set.accommodation = String(data.patch.accommodation);
+      if (data.patch.enabled !== undefined) set.enabled = data.patch.enabled;
+
+      const result = await ResultAsync.fromPromise(
+        db
+          .update(budgetCrew)
+          .set(set)
+          .where(eq(budgetCrew.id, data.rowId))
+          .returning()
+          .then(([r]) => r!),
+        (e) => new DbError("updateBudgetCrewRow", e),
+      );
+      return toShape(result);
+    },
+  );
+
+// ─── addBudgetCrewRow ─────────────────────────────────────────────────────────
+
+export const addBudgetCrewRow = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      budgetId: z.string().uuid(),
+      name: z.string().min(1),
+      department: z.string().min(1),
+      days: z.number().min(0).default(1),
+      dayRate: z.number().min(0).default(0),
+      fiscalRegime: z.enum(["piva", "privato", "none"]).default("piva"),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<BudgetCrew, BudgetLockedError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const budget = await db.query.budgets.findFirst({
+        where: eq(budgets.id, data.budgetId),
+      });
+      if (!budget)
+        return toShape(
+          err(new DbError("addBudgetCrewRow", "budget not found")),
+        );
+      if (budget.status === "locked")
+        return toShape(err(new BudgetLockedError()));
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        budget.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canEdit(access.value))
+        return toShape(err(new ForbiddenError("add crew row")));
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const maxSort = await db.query.budgetCrew
+            .findMany({ where: eq(budgetCrew.budgetId, data.budgetId) })
+            .then((rows) =>
+              rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
+            );
+          const [inserted] = await db
+            .insert(budgetCrew)
+            .values({
+              budgetId: data.budgetId,
+              roleKey: null,
+              name: data.name,
+              department: data.department,
+              days: String(data.days),
+              dayRate: String(data.dayRate),
+              fiscalRegime: data.fiscalRegime,
+              mealAllowance: "0",
+              accommodation: "0",
+              enabled: true,
+              sortOrder: maxSort + 1,
+            })
+            .returning();
+          return inserted!;
+        })(),
+        (e) => new DbError("addBudgetCrewRow", e),
+      );
+      return toShape(result);
+    },
+  );
+
+// ─── removeBudgetCrewRow ──────────────────────────────────────────────────────
+
+export const removeBudgetCrewRow = createServerFn({ method: "POST" })
+  .validator(z.object({ rowId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<{ id: string }, BudgetLockedError | ForbiddenError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const row = await db.query.budgetCrew.findFirst({
+        where: eq(budgetCrew.id, data.rowId),
+      });
+      if (!row)
+        return toShape(
+          err(new DbError("removeBudgetCrewRow", "crew row not found")),
+        );
+
+      const budget = await db.query.budgets.findFirst({
+        where: eq(budgets.id, row.budgetId),
+      });
+      if (!budget)
+        return toShape(
+          err(new DbError("removeBudgetCrewRow", "budget missing")),
+        );
+      if (budget.status === "locked")
+        return toShape(err(new BudgetLockedError()));
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        budget.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canEdit(access.value))
+        return toShape(err(new ForbiddenError("remove crew row")));
+
+      const result = await ResultAsync.fromPromise(
+        db
+          .delete(budgetCrew)
+          .where(eq(budgetCrew.id, data.rowId))
+          .then(() => ({ id: data.rowId })),
+        (e) => new DbError("removeBudgetCrewRow", e),
+      );
+      return toShape(result);
+    },
+  );
+
 // ─── queryOptions helpers (client) ───────────────────────────────────────────
 
-export type { Budget, BudgetLine, BudgetSummary };
+export type { Budget, BudgetLine, BudgetSummary, BudgetCast, BudgetCrew };
