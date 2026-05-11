@@ -1,6 +1,6 @@
 # Spec 12b — Shooting Schedule implementation (rule-based, no AI)
 
-> **Status:** in progress
+> **Status:** ✅ done
 > **Depends on:** Spec 10f (Breakdown table), Spec 12 (Schedule product spec)
 > **Date:** 2026-05-11
 
