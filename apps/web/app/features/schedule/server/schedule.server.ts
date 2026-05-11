@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, asc } from "drizzle-orm";
+import { and, eq, asc, isNull } from "drizzle-orm";
 import { ResultAsync, ok, err, errAsync } from "neverthrow";
 import {
   schedules,
@@ -440,7 +440,34 @@ export const moveStrip = createServerFn({ method: "POST" })
         .andThen(({ strip, schedule }) =>
           ResultAsync.fromPromise(
             db.transaction(async (tx) => {
-              // Get all strips in the target day (or unscheduled)
+              const movingToDifferentDay =
+                strip.shootingDayId !== data.targetDayId;
+
+              // Re-index the source day (removes the strip from its old slot)
+              if (movingToDifferentDay && strip.shootingDayId !== null) {
+                const sourceStrips = await tx
+                  .select()
+                  .from(strips)
+                  .where(
+                    and(
+                      eq(strips.scheduleId, schedule.id),
+                      eq(strips.shootingDayId, strip.shootingDayId),
+                    ),
+                  )
+                  .orderBy(asc(strips.position));
+
+                const withoutMoved = sourceStrips.filter(
+                  (s) => s.id !== strip.id,
+                );
+                for (let i = 0; i < withoutMoved.length; i++) {
+                  await tx
+                    .update(strips)
+                    .set({ position: i, updatedAt: new Date() })
+                    .where(eq(strips.id, withoutMoved[i]!.id));
+                }
+              }
+
+              // Load current strips in the target day (excluding the moving strip)
               const targetStrips = await tx
                 .select()
                 .from(strips)
@@ -449,12 +476,11 @@ export const moveStrip = createServerFn({ method: "POST" })
                     eq(strips.scheduleId, schedule.id),
                     data.targetDayId
                       ? eq(strips.shootingDayId, data.targetDayId)
-                      : eq(strips.shootingDayId, strip.shootingDayId ?? ""),
+                      : isNull(strips.shootingDayId),
                   ),
                 )
                 .orderBy(asc(strips.position));
 
-              // Remove moving strip from current position, insert at target
               const withoutMoving = targetStrips.filter(
                 (s) => s.id !== strip.id,
               );
@@ -463,7 +489,7 @@ export const moveStrip = createServerFn({ method: "POST" })
                 shootingDayId: data.targetDayId,
               });
 
-              // Update the moved strip
+              // Update the moved strip's day and position
               await tx
                 .update(strips)
                 .set({
@@ -473,7 +499,7 @@ export const moveStrip = createServerFn({ method: "POST" })
                 })
                 .where(eq(strips.id, strip.id));
 
-              // Reindex other strips in the affected day
+              // Reindex all strips in the target day
               for (let i = 0; i < withoutMoving.length; i++) {
                 const s = withoutMoving[i]!;
                 if (s.id === strip.id) continue;

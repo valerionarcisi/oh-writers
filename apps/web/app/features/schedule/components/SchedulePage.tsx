@@ -30,7 +30,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const schedule = data?.isOk ? data.value : null;
 
   const invalidate = () =>
-    qc.invalidateQueries({ queryKey: ["schedule", projectId] });
+    qc.refetchQueries({ queryKey: ["schedule", projectId] });
 
   const generateMutation = useMutation({
     mutationFn: () =>
