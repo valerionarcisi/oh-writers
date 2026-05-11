@@ -170,18 +170,20 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
                   <span className={styles.navLabel}>Breakdown</span>
                 )}
               </Link>
-              <span
-                className={`${styles.navLink} ${styles.disabled}`}
-                title="Schedule (coming soon)"
+              <Link
+                to="/projects/$id/schedule"
+                params={{ id: projectId }}
+                className={styles.navLink}
+                activeProps={{
+                  className: `${styles.navLink} ${styles.active}`,
+                }}
+                title="Schedule"
               >
                 <Calendar size={ICON_SIZE} strokeWidth={ICON_STROKE} />
                 {!isCollapsed && (
-                  <>
-                    <span className={styles.navLabel}>Schedule</span>
-                    <span className={styles.soon}>soon</span>
-                  </>
+                  <span className={styles.navLabel}>Schedule</span>
                 )}
-              </span>
+              </Link>
               <span
                 className={`${styles.navLink} ${styles.disabled}`}
                 title="Budget (coming soon)"

@@ -16,16 +16,22 @@ import {
 } from "../server/schedule.server";
 import { StripBoard } from "./StripBoard";
 import { UnscheduledTray } from "./UnscheduledTray";
+import { SceneDrawer } from "./SceneDrawer";
+import type { StripView } from "../server/schedule.server";
 import styles from "./SchedulePage.module.css";
 
 interface SchedulePageProps {
   projectId: string;
 }
 
+type ViewMode = "days" | "weeks";
+
 export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("days");
+  const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
 
   const schedule = data?.isOk ? data.value : null;
 
@@ -100,10 +106,40 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     setDraggingStripId(null);
   };
 
+  const handleStripClick = (sceneId: string) => {
+    if (!schedule) return;
+    const allStrips = [
+      ...schedule.shootingDays.flatMap((d) => d.strips),
+      ...schedule.unscheduledStrips,
+    ];
+    const strip = allStrips.find((s) => s.sceneId === sceneId) ?? null;
+    setSelectedStrip(strip);
+  };
+
   return (
     <div className={styles.page} data-testid="schedule-page">
       <div className={styles.toolbar}>
         <h2 className={styles.toolbarTitle}>Piano di Lavorazione</h2>
+
+        {schedule && (
+          <div className={styles.viewToggle}>
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${viewMode === "days" ? styles.viewBtnActive : ""}`}
+              onClick={() => setViewMode("days")}
+            >
+              Giornate
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${viewMode === "weeks" ? styles.viewBtnActive : ""}`}
+              onClick={() => setViewMode("weeks")}
+            >
+              Settimane
+            </button>
+          </div>
+        )}
+
         <button
           type="button"
           className={styles.generateBtn}
@@ -128,6 +164,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
             <StripBoard
               schedule={schedule}
               draggingStripId={draggingStripId}
+              viewMode={viewMode}
               onDragStart={setDraggingStripId}
               onDrop={handleDrop}
               onLockToggle={(stripId) => lockMutation.mutate(stripId)}
@@ -136,6 +173,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
               }
               onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
               onAddDay={() => addDayMutation.mutate()}
+              onStripClick={handleStripClick}
             />
           </div>
           <UnscheduledTray
@@ -143,9 +181,16 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
             onDragStart={setDraggingStripId}
             onDrop={handleDropUnscheduled}
             onLockToggle={(stripId) => lockMutation.mutate(stripId)}
+            onStripClick={handleStripClick}
           />
         </>
       )}
+
+      <SceneDrawer
+        strip={selectedStrip}
+        screenplayVersionId={schedule?.screenplayVersionId ?? null}
+        onClose={() => setSelectedStrip(null)}
+      />
     </div>
   );
 }

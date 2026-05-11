@@ -8,6 +8,7 @@ interface UnscheduledTrayProps {
   onDragStart: (stripId: string) => void;
   onDrop: () => void;
   onLockToggle: (stripId: string) => void;
+  onStripClick?: (sceneId: string) => void;
 }
 
 export function UnscheduledTray({
@@ -15,6 +16,7 @@ export function UnscheduledTray({
   onDragStart,
   onDrop,
   onLockToggle,
+  onStripClick,
 }: UnscheduledTrayProps) {
   const [open, setOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
@@ -55,6 +57,7 @@ export function UnscheduledTray({
                 strip={strip}
                 onDragStart={onDragStart}
                 onLockToggle={onLockToggle}
+                onStripClick={onStripClick ?? (() => {})}
               />
             ))}
           </div>

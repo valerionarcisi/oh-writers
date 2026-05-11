@@ -64,6 +64,7 @@ export interface ScheduleView {
   startDate: string | null;
   countryCode: string;
   status: "draft" | "locked";
+  screenplayVersionId: string | null;
   shootingDays: ShootingDayView[];
   unscheduledStrips: StripView[];
 }
@@ -126,6 +127,11 @@ const loadScheduleView = async (
     where: eq(schedules.id, scheduleId),
   });
   if (!schedule) return null;
+
+  const screenplay = await db.query.screenplays.findFirst({
+    where: eq(screenplays.projectId, schedule.projectId),
+  });
+  const screenplayVersionId = screenplay?.currentVersionId ?? null;
 
   const days = await db
     .select()
@@ -206,6 +212,7 @@ const loadScheduleView = async (
     startDate: schedule.startDate,
     countryCode: schedule.countryCode,
     status: schedule.status as "draft" | "locked",
+    screenplayVersionId,
     shootingDays: dayViews,
     unscheduledStrips: unscheduled,
   };

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 import type { ShootingDayView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
 import { PageCountBar } from "./PageCountBar";
@@ -11,6 +12,7 @@ interface ShootingDayColumnProps {
   onLockToggle: (stripId: string) => void;
   onDateChange: (dayId: string, date: string | null) => void;
   onRemove: (dayId: string) => void;
+  onStripClick: (sceneId: string) => void;
 }
 
 export function ShootingDayColumn({
@@ -20,6 +22,7 @@ export function ShootingDayColumn({
   onLockToggle,
   onDateChange,
   onRemove,
+  onStripClick,
 }: ShootingDayColumnProps) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -59,7 +62,7 @@ export function ShootingDayColumn({
             data-testid={`remove-day-${day.dayNumber}`}
             onClick={() => onRemove(day.id)}
           >
-            ×
+            <X size={12} strokeWidth={2} />
           </button>
         </div>
         <input
@@ -85,6 +88,7 @@ export function ShootingDayColumn({
             strip={strip}
             onDragStart={onDragStart}
             onLockToggle={onLockToggle}
+            onStripClick={onStripClick}
           />
         ))}
       </div>

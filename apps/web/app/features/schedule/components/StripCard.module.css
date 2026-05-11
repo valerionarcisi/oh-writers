@@ -1,7 +1,7 @@
 .strip {
   display: flex;
   align-items: stretch;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -9,107 +9,165 @@
   user-select: none;
   transition:
     box-shadow 120ms ease,
+    border-color 120ms ease,
     opacity 120ms ease;
+  position: relative;
+
+  &:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-sm);
+  }
 
   &:active {
     cursor: grabbing;
   }
+
   &.dragging {
     opacity: 0.4;
   }
+
   &.locked {
-    cursor: not-allowed;
-    opacity: 0.6;
+    cursor: default;
+    opacity: 0.65;
   }
-}
 
-.colorBand {
-  width: 6px;
-  flex-shrink: 0;
-}
-
-/* Banner colors */
-.colorBand[data-color="white"] {
-  background: #e5e7eb;
-}
-.colorBand[data-color="yellow"] {
-  background: #fbbf24;
-}
-.colorBand[data-color="blue"] {
-  background: #60a5fa;
-}
-.colorBand[data-color="green"] {
-  background: #34d399;
-}
-.colorBand[data-color="red"] {
-  background: #f87171;
-}
-.colorBand[data-color="pink"] {
-  background: #f472b6;
-}
-.colorBand[data-color="grey"] {
-  background: #9ca3af;
-}
-
-.body {
-  flex: 1;
-  padding: var(--space-1) var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.sceneNumber {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--color-text-subtle);
-}
-
-.location {
-  font-size: var(--text-xs);
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 500;
-}
-
-.meta {
-  font-size: 10px;
-  color: var(--color-text-subtle);
-  display: flex;
-  gap: var(--space-1);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  padding-inline-end: var(--space-1);
-  opacity: 0;
-  transition: opacity 120ms ease;
-
-  .strip:hover & {
+  /* Show lock button on hover */
+  &:hover .lockBtn {
     opacity: 1;
   }
 }
 
-.lockBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text-subtle);
+/* ─── Color band ─── */
+.colorBand {
+  width: 8px;
+  flex-shrink: 0;
+}
+
+.colorBand[data-color="white"] {
+  background: rgba(255, 255, 255, 0.25);
+}
+.colorBand[data-color="yellow"] {
+  background: #f59e0b;
+}
+.colorBand[data-color="blue"] {
+  background: #3b82f6;
+}
+.colorBand[data-color="green"] {
+  background: #22c55e;
+}
+.colorBand[data-color="red"] {
+  background: #ef4444;
+}
+.colorBand[data-color="pink"] {
+  background: #ec4899;
+}
+.colorBand[data-color="grey"] {
+  background: #6b7280;
+}
+
+/* ─── Body ─── */
+.body {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sceneNumber {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-fg-secondary);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.pageCount {
   font-size: 10px;
-  padding: var(--space-1);
+  font-weight: var(--weight-semibold);
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+
+.pageCount[data-color="green"] {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+.pageCount[data-color="yellow"] {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.pageCount[data-color="red"] {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+.location {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: var(--leading-tight);
+}
+
+.heading {
+  font-size: var(--text-xs);
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: var(--leading-tight);
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-1);
+  font-size: 10px;
+  color: var(--color-fg-secondary);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+/* ─── Lock button ─── */
+.lockBtn {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  line-height: 1;
+  color: var(--color-fg-muted);
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease,
+    background 120ms ease;
 
   &:hover {
-    color: var(--color-text);
-    background: var(--color-surface-hover);
+    color: var(--color-fg);
+    background: var(--color-overlay);
   }
 }
 
-.lockIcon {
-  font-style: normal;
+.strip.locked .lockBtn {
+  opacity: 1;
+  color: var(--color-fg-secondary);
 }
