@@ -127,6 +127,13 @@
       "when": 1747008000000,
       "tag": "0015_add_occurrence_source",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1747094400000,
+      "tag": "0016_budget",
+      "breakpoints": true
     }
   ]
 }
