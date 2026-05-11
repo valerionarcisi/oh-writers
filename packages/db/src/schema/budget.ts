@@ -4,11 +4,15 @@ import {
   text,
   integer,
   numeric,
+  boolean,
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 import { breakdownElements } from "./breakdown";
+
+export const FISCAL_REGIMES = ["piva", "privato", "none"] as const;
+export type FiscalRegimeDb = (typeof FISCAL_REGIMES)[number];
 
 export const BUDGET_STATUSES = ["draft", "estimated", "locked"] as const;
 export type BudgetStatusDb = (typeof BUDGET_STATUSES)[number];
@@ -91,3 +95,50 @@ export type BudgetLine = typeof budgetLines.$inferSelect;
 export type NewBudgetLine = typeof budgetLines.$inferInsert;
 export type BudgetRate = typeof budgetRates.$inferSelect;
 export type NewBudgetRate = typeof budgetRates.$inferInsert;
+
+export const budgetCast = pgTable("budget_cast", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  budgetId: uuid("budget_id")
+    .notNull()
+    .references(() => budgets.id, { onDelete: "cascade" }),
+  elementId: uuid("element_id").references(() => breakdownElements.id, {
+    onDelete: "set null",
+  }),
+  name: text("name").notNull(),
+  days: numeric("days").notNull().default("1"),
+  dayRate: numeric("day_rate").notNull().default("0"),
+  fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
+    .notNull()
+    .default("piva"),
+  mealAllowance: numeric("meal_allowance").notNull().default("0"),
+  accommodation: numeric("accommodation").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const budgetCrew = pgTable("budget_crew", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  budgetId: uuid("budget_id")
+    .notNull()
+    .references(() => budgets.id, { onDelete: "cascade" }),
+  roleKey: text("role_key"),
+  name: text("name").notNull(),
+  department: text("department").notNull(),
+  days: numeric("days").notNull().default("1"),
+  dayRate: numeric("day_rate").notNull().default("0"),
+  fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
+    .notNull()
+    .default("piva"),
+  mealAllowance: numeric("meal_allowance").notNull().default("0"),
+  accommodation: numeric("accommodation").notNull().default("0"),
+  enabled: boolean("enabled").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type BudgetCast = typeof budgetCast.$inferSelect;
+export type NewBudgetCast = typeof budgetCast.$inferInsert;
+export type BudgetCrew = typeof budgetCrew.$inferSelect;
+export type NewBudgetCrew = typeof budgetCrew.$inferInsert;
