@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Tag,
@@ -70,11 +71,28 @@ export function ProjectBreakdownTable({
   const bulkUpdate = useBulkUpdateBreakdownElements();
   const { confirm } = useConfirmDialog();
 
-  // ─── filters ─────────────────────────────────────────────────────────────
+  // ─── URL-persisted filters ────────────────────────────────────────────────
+  const urlSearch = useSearch({
+    from: "/_app/projects/$id_/breakdown",
+  });
+  const navigate = useNavigate();
+
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const [catFilter, setCatFilter] = useState<Set<BreakdownCategory>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const [catFilter, setCatFilter] = useState<Set<BreakdownCategory>>(() => {
+    if (!urlSearch.cat) return new Set();
+    const cats = urlSearch.cat
+      .split(",")
+      .filter((c): c is BreakdownCategory =>
+        (BREAKDOWN_CATEGORIES as readonly string[]).includes(c),
+      );
+    return new Set(cats);
+  });
+
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    urlSearch.status ?? "all",
+  );
 
   // ─── sort ─────────────────────────────────────────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -246,6 +264,8 @@ export function ProjectBreakdownTable({
     setCatFilter((prev) => {
       const next = new Set(prev);
       next.has(cat) ? next.delete(cat) : next.add(cat);
+      const catParam = next.size > 0 ? [...next].join(",") : undefined;
+      void navigate({ to: ".", search: (s) => ({ ...s, cat: catParam }) });
       return next;
     });
   };
@@ -290,8 +310,16 @@ export function ProjectBreakdownTable({
             className={styles.statusSelect}
             value={statusFilter}
             onChange={(e) => {
+              const val = e.target.value as StatusFilter;
               setSelected(new Set());
-              setStatusFilter(e.target.value as StatusFilter);
+              setStatusFilter(val);
+              void navigate({
+                to: ".",
+                search: (s) => ({
+                  ...s,
+                  status: val === "all" ? undefined : val,
+                }),
+              });
             }}
             data-testid="breakdown-status-filter"
           >
