@@ -27,6 +27,7 @@ import { Route as AppProjectsIdScreenplayImport } from "./routes/_app.projects.$
 import { Route as AppProjectsIdOutlineImport } from "./routes/_app.projects.$id_.outline";
 import { Route as AppProjectsIdBreakdownImport } from "./routes/_app.projects.$id_.breakdown";
 import { Route as AppProjectsIdBudgetImport } from "./routes/_app.projects.$id_.budget";
+import { Route as AppProjectsIdScheduleImport } from "./routes/_app.projects.$id_.schedule";
 import { Route as AppProjectsIdScreenplayIndexImport } from "./routes/_app.projects.$id_.screenplay.index";
 import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
@@ -129,6 +130,12 @@ const AppProjectsIdBudgetRoute = AppProjectsIdBudgetImport.update({
   getParentRoute: () => AppRoute,
 } as any);
 
+const AppProjectsIdScheduleRoute = AppProjectsIdScheduleImport.update({
+  id: "/projects/$id_/schedule",
+  path: "/projects/$id/schedule",
+  getParentRoute: () => AppRoute,
+} as any);
+
 const AppProjectsIdScreenplayIndexRoute =
   AppProjectsIdScreenplayIndexImport.update({
     id: "/",
@@ -222,6 +229,13 @@ declare module "@tanstack/react-router" {
       path: "/projects/$id/budget";
       fullPath: "/projects/$id/budget";
       preLoaderRoute: typeof AppProjectsIdBudgetImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/projects/$id_/schedule": {
+      id: "/_app/projects/$id_/schedule";
+      path: "/projects/$id/schedule";
+      fullPath: "/projects/$id/schedule";
+      preLoaderRoute: typeof AppProjectsIdScheduleImport;
       parentRoute: typeof AppImport;
     };
     "/_app/projects/$id_/outline": {
@@ -346,6 +360,7 @@ interface AppRouteChildren {
   AppProjectsNewRoute: typeof AppProjectsNewRoute;
   AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute;
   AppProjectsIdBudgetRoute: typeof AppProjectsIdBudgetRoute;
+  AppProjectsIdScheduleRoute: typeof AppProjectsIdScheduleRoute;
   AppProjectsIdOutlineRoute: typeof AppProjectsIdOutlineRoute;
   AppProjectsIdScreenplayRoute: typeof AppProjectsIdScreenplayRouteWithChildren;
   AppProjectsIdSettingsRoute: typeof AppProjectsIdSettingsRoute;
@@ -361,6 +376,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsNewRoute: AppProjectsNewRoute,
   AppProjectsIdBreakdownRoute: AppProjectsIdBreakdownRoute,
   AppProjectsIdBudgetRoute: AppProjectsIdBudgetRoute,
+  AppProjectsIdScheduleRoute: AppProjectsIdScheduleRoute,
   AppProjectsIdOutlineRoute: AppProjectsIdOutlineRoute,
   AppProjectsIdScreenplayRoute: AppProjectsIdScreenplayRouteWithChildren,
   AppProjectsIdSettingsRoute: AppProjectsIdSettingsRoute,
@@ -382,6 +398,7 @@ export interface FileRoutesByFullPath {
   "/projects/new": typeof AppProjectsNewRoute;
   "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
+  "/projects/$id/schedule": typeof AppProjectsIdScheduleRoute;
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
   "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
@@ -405,6 +422,7 @@ export interface FileRoutesByTo {
   "/projects/new": typeof AppProjectsNewRoute;
   "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
+  "/projects/$id/schedule": typeof AppProjectsIdScheduleRoute;
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
   "/projects/$id/soggetto": typeof AppProjectsIdSoggettoRoute;
@@ -428,6 +446,7 @@ export interface FileRoutesById {
   "/_app/projects/new": typeof AppProjectsNewRoute;
   "/_app/projects/$id_/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/_app/projects/$id_/budget": typeof AppProjectsIdBudgetRoute;
+  "/_app/projects/$id_/schedule": typeof AppProjectsIdScheduleRoute;
   "/_app/projects/$id_/outline": typeof AppProjectsIdOutlineRoute;
   "/_app/projects/$id_/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
   "/_app/projects/$id_/settings": typeof AppProjectsIdSettingsRoute;
@@ -453,6 +472,7 @@ export interface FileRouteTypes {
     | "/projects/new"
     | "/projects/$id/breakdown"
     | "/projects/$id/budget"
+    | "/projects/$id/schedule"
     | "/projects/$id/outline"
     | "/projects/$id/screenplay"
     | "/projects/$id/settings"
@@ -475,6 +495,7 @@ export interface FileRouteTypes {
     | "/projects/new"
     | "/projects/$id/breakdown"
     | "/projects/$id/budget"
+    | "/projects/$id/schedule"
     | "/projects/$id/outline"
     | "/projects/$id/settings"
     | "/projects/$id/soggetto"
@@ -496,6 +517,7 @@ export interface FileRouteTypes {
     | "/_app/projects/new"
     | "/_app/projects/$id_/breakdown"
     | "/_app/projects/$id_/budget"
+    | "/_app/projects/$id_/schedule"
     | "/_app/projects/$id_/outline"
     | "/_app/projects/$id_/screenplay"
     | "/_app/projects/$id_/settings"
@@ -551,6 +573,7 @@ export const routeTree = rootRoute
         "/_app/projects/new",
         "/_app/projects/$id_/breakdown",
         "/_app/projects/$id_/budget",
+        "/_app/projects/$id_/schedule",
         "/_app/projects/$id_/outline",
         "/_app/projects/$id_/screenplay",
         "/_app/projects/$id_/settings",
@@ -584,6 +607,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/$id_/budget": {
       "filePath": "_app.projects.$id_.budget.tsx",
+      "parent": "/_app"
+    },
+    "/_app/projects/$id_/schedule": {
+      "filePath": "_app.projects.$id_.schedule.tsx",
       "parent": "/_app"
     },
     "/_app/projects/$id_/outline": {

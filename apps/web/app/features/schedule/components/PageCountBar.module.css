@@ -1,0 +1,32 @@
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 300ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.fill[data-color="green"] {
+  background: #34d399;
+}
+.fill[data-color="yellow"] {
+  background: #fbbf24;
+}
+.fill[data-color="red"] {
+  background: #f87171;
+}
+
+.label {
+  font-size: 10px;
+  color: var(--color-text-subtle);
+  margin-block-start: 2px;
+}

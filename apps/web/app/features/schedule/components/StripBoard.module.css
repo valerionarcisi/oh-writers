@@ -1,0 +1,32 @@
+.board {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 500px;
+  padding-block-end: var(--space-4);
+}
+
+.addDayBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  align-self: flex-start;
+  margin-block-start: 44px; /* align with strip area below column header */
+  background: var(--color-surface-elevated);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-subtle);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+
+  &:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+}

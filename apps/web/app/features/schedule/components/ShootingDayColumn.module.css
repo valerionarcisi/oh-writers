@@ -1,0 +1,106 @@
+.column {
+  flex-shrink: 0;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.header {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dayNumber {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dayTypeBadge {
+  font-size: var(--text-xs);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  border: 1px solid var(--color-border);
+}
+
+.dayTypeBadge[data-type="travel"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+.dayTypeBadge[data-type="rest"] {
+  background: #dcfce7;
+  color: #166534;
+}
+.dayTypeBadge[data-type="prep"] {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.dateInput {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 120ms ease;
+
+  .header:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: var(--color-error);
+  }
+}
+
+.stripsArea {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 2px dashed transparent;
+  border-radius: var(--radius-md);
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+
+  &.dragOver {
+    border-color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  }
+}
