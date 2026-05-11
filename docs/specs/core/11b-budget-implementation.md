@@ -1,6 +1,6 @@
 # Spec 11b — Budget implementation (rule-based, no AI)
 
-> **Status:** in progress — DB schema + domain + server functions + dashboard UI done; scene chip filter, equipment/misc widgets, E2E tests pending
+> **Status:** ✅ done
 > **Depends on:** Spec 10f (Breakdown table), Spec 11 (Budget product spec)
 > **Date:** 2026-05-11
 

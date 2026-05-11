@@ -132,7 +132,7 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 **Core platform**
 
 - **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
-- **core/11 — Budget** ✅ dashboard UI (Cast + Crew widgets + gauge SVG) — scene filter + equipment/misc widgets pending
+- **core/11 — Budget** ✅ Cast/Crew/Equipment/Misc widgets, scene chip filter, editable settings, E2E tests
 - **core/12 — Shooting schedule** with **one country template (Italy)** — working days, holidays, night shifts, minimum rest
 - **core/12 — Call sheet generation** from schedule + breakdown (absorbed from "Ideas" list)
 - **core/16 — Multi-tenancy & billing** — Teams tier only, Enterprise handled manually in pre-demo phase
