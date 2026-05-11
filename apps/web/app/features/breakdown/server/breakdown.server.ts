@@ -206,6 +206,7 @@ export interface ProjectBreakdownRow {
     occurrenceId: string;
   }[];
   hasStale: boolean;
+  hasPending: boolean;
 }
 
 export const getProjectBreakdownRows = (
@@ -259,6 +260,7 @@ export const getProjectBreakdownRows = (
               ]
             : [],
           hasStale: counts ? r.occ!.isStale : false,
+          hasPending: counts ? r.occ!.cesareStatus === "pending" : false,
           _totalOccs: r.occ ? 1 : 0,
         });
       } else {
@@ -272,6 +274,7 @@ export const getProjectBreakdownRows = (
             occurrenceId: r.occ!.id,
           });
           if (r.occ!.isStale) existing.hasStale = true;
+          if (r.occ!.cesareStatus === "pending") existing.hasPending = true;
         }
       }
     }

@@ -32,6 +32,8 @@ interface Props {
   canEdit: boolean;
 }
 
+type ElementStatus = "stale" | "pending" | "accepted";
+
 interface TableRow {
   id: string;
   name: string;
@@ -39,11 +41,11 @@ interface TableRow {
   castTier: string | null;
   totalQuantity: number;
   sceneNumbers: number[];
-  hasStale: boolean;
+  status: ElementStatus;
   _raw: ProjectBreakdownRow;
 }
 
-type StatusFilter = "all" | "stale" | "ok";
+type StatusFilter = "all" | "stale" | "pending" | "ok";
 type SortKey = keyof Pick<TableRow, "name" | "category" | "totalQuantity">;
 type SortDir = "asc" | "desc";
 
@@ -112,7 +114,11 @@ export function ProjectBreakdownTable({
         sceneNumbers: r.scenesPresent
           .map((s) => s.sceneNumber)
           .sort((a, b) => a - b),
-        hasStale: r.hasStale,
+        status: (r.hasStale
+          ? "stale"
+          : r.hasPending
+            ? "pending"
+            : "accepted") as ElementStatus,
         _raw: r,
       })),
     [rows],
@@ -121,8 +127,10 @@ export function ProjectBreakdownTable({
   const filtered = useMemo(() => {
     let out = tableData;
     if (catFilter.size > 0) out = out.filter((r) => catFilter.has(r.category));
-    if (statusFilter === "stale") out = out.filter((r) => r.hasStale);
-    if (statusFilter === "ok") out = out.filter((r) => !r.hasStale);
+    if (statusFilter === "stale") out = out.filter((r) => r.status === "stale");
+    if (statusFilter === "pending")
+      out = out.filter((r) => r.status === "pending");
+    if (statusFilter === "ok") out = out.filter((r) => r.status === "accepted");
     if (deferredSearch.length > 0) {
       const q = deferredSearch.toLowerCase();
       out = out.filter((r) => r.name.toLowerCase().includes(q));
@@ -267,8 +275,9 @@ export function ProjectBreakdownTable({
             data-testid="breakdown-status-filter"
           >
             <option value="all">Tutti gli stati</option>
-            <option value="ok">Solo aggiornati</option>
-            <option value="stale">Solo obsoleti</option>
+            <option value="ok">✓ Accepted</option>
+            <option value="pending">• Pending</option>
+            <option value="stale">⚠ Obsoleti</option>
           </select>
         </div>
 
@@ -451,18 +460,7 @@ export function ProjectBreakdownTable({
                   <SceneList numbers={row.sceneNumbers} />
                 </td>
                 <td className={styles.td}>
-                  {row.hasStale ? (
-                    <span
-                      className={styles.staleIndicator}
-                      title="Alcune scene sono cambiate"
-                    >
-                      ⚠
-                    </span>
-                  ) : (
-                    <span className={styles.okIndicator} title="Aggiornato">
-                      ✓
-                    </span>
-                  )}
+                  <StatusDot status={row.status} />
                 </td>
               </tr>
             ))}
@@ -495,6 +493,29 @@ export function ProjectBreakdownTable({
         />
       )}
     </div>
+  );
+}
+
+function StatusDot({ status }: { status: ElementStatus }) {
+  if (status === "stale")
+    return (
+      <span
+        className={styles.staleIndicator}
+        title="Alcune scene sono cambiate"
+      >
+        ⚠
+      </span>
+    );
+  if (status === "pending")
+    return (
+      <span className={styles.pendingIndicator} title="In attesa di conferma">
+        •
+      </span>
+    );
+  return (
+    <span className={styles.okIndicator} title="Accettato">
+      ✓
+    </span>
   );
 }
 
