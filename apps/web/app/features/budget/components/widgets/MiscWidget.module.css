@@ -1,0 +1,73 @@
+.widget {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: var(--space-3);
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.total {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.chipName {
+  color: var(--color-text-muted);
+}
+
+.chipValue {
+  all: unset;
+  cursor: text;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.chipInput {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  width: 80px;
+  text-align: end;
+  outline: none;
+}

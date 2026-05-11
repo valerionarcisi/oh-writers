@@ -8,6 +8,9 @@ import {
   budgetRates,
   budgetCast,
   budgetCrew,
+  breakdownElements,
+  breakdownOccurrences,
+  scenes,
   projects,
   screenplays,
   type BudgetCast,
@@ -493,6 +496,8 @@ export const getBudgetSummary = createServerFn({ method: "GET" })
 
 // ─── getCastAndCrew ───────────────────────────────────────────────────────────
 
+export type CastSceneMap = Record<string, number[]>;
+
 export const getCastAndCrew = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
@@ -500,7 +505,11 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
       data,
     }): Promise<
       ResultShape<
-        { cast: BudgetCast[]; crew: BudgetCrew[] } | null,
+        {
+          cast: BudgetCast[];
+          crew: BudgetCrew[];
+          castSceneMap: CastSceneMap;
+        } | null,
         ForbiddenError | DbError
       >
     > => {
@@ -533,9 +542,70 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
               orderBy: (t) => t.sortOrder,
             }),
           ]);
-          return { cast, crew };
+
+          // Build castSceneMap: cast row id → scene numbers they appear in
+          const castSceneMap: CastSceneMap = {};
+          for (const row of cast) {
+            if (!row.elementId) {
+              castSceneMap[row.id] = [];
+              continue;
+            }
+            const occurrences = await db
+              .select({ sceneNumber: scenes.number })
+              .from(breakdownOccurrences)
+              .innerJoin(scenes, eq(breakdownOccurrences.sceneId, scenes.id))
+              .where(eq(breakdownOccurrences.elementId, row.elementId));
+            castSceneMap[row.id] = [
+              ...new Set(occurrences.map((o) => o.sceneNumber)),
+            ].sort((a, b) => a - b);
+          }
+
+          return { cast, crew, castSceneMap };
         })(),
         (e) => new DbError("getCastAndCrew", e),
+      );
+
+      return toShape(result);
+    },
+  );
+
+// ─── getProjectScenes ─────────────────────────────────────────────────────────
+
+export type SceneChip = { number: number; heading: string };
+
+export const getProjectScenes = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<SceneChip[], ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canView(access.value))
+        return toShape(err(new ForbiddenError("view budget")));
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const screenplay = await db.query.screenplays.findFirst({
+            where: eq(screenplays.projectId, data.projectId),
+          });
+          if (!screenplay?.currentVersionId) return [];
+
+          const rows = await db
+            .select({ number: scenes.number, heading: scenes.heading })
+            .from(scenes)
+            .where(eq(scenes.screenplayId, screenplay.id))
+            .orderBy(scenes.number);
+          return rows;
+        })(),
+        (e) => new DbError("getProjectScenes", e),
       );
 
       return toShape(result);

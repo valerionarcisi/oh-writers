@@ -1,20 +1,25 @@
+import { useState } from "react";
 import {
   useSuspenseQuery,
   useMutation,
   useQueryClient,
+  queryOptions,
 } from "@tanstack/react-query";
-import { queryOptions } from "@tanstack/react-query";
 import { resourceTotal } from "@oh-writers/domain";
 import type { FiscalRegime } from "@oh-writers/domain";
 import {
   getBudget,
   generateBudget,
   getCastAndCrew,
+  getProjectScenes,
+  updateBudgetSettings,
 } from "../server/budget.server";
 import { unwrapResult } from "@oh-writers/utils";
 import { TotalWidget } from "./widgets/TotalWidget";
 import { CastWidget } from "./widgets/CastWidget";
 import { CrewWidget } from "./widgets/CrewWidget";
+import { EquipmentWidget } from "./widgets/EquipmentWidget";
+import { MiscWidget } from "./widgets/MiscWidget";
 import styles from "./BudgetPage.module.css";
 
 const budgetQueryOptions = (projectId: string) =>
@@ -29,6 +34,12 @@ const castCrewQueryOptions = (projectId: string) =>
     queryFn: () => getCastAndCrew({ data: { projectId } }).then(unwrapResult),
   });
 
+const scenesQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["budget-scenes", projectId],
+    queryFn: () => getProjectScenes({ data: { projectId } }).then(unwrapResult),
+  });
+
 const parseNum = (v: string) => Number(v);
 
 interface BudgetPageProps {
@@ -39,6 +50,11 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const qc = useQueryClient();
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
+  const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
+
+  const [selectedScene, setSelectedScene] = useState<number | null>(null);
+  const [editingDays, setEditingDays] = useState(false);
+  const [editingContingency, setEditingContingency] = useState(false);
 
   const generateMutation = useMutation({
     mutationFn: () =>
@@ -49,21 +65,58 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
     },
   });
 
+  const settingsMutation = useMutation({
+    mutationFn: (patch: {
+      shootingDays?: number | null;
+      contingencyPercent?: number;
+    }) =>
+      updateBudgetSettings({
+        data: { budgetId: budget!.id, ...patch },
+      }).then(unwrapResult),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget", projectId] }),
+  });
+
   const cast = castCrew?.cast ?? [];
   const crew = castCrew?.crew ?? [];
+  const castSceneMap = castCrew?.castSceneMap ?? {};
+  const scenes = allScenes ?? [];
 
-  const castTotal = cast.reduce(
-    (sum, r) =>
-      sum +
-      resourceTotal({
-        days: parseNum(r.days),
-        dayRate: parseNum(r.dayRate),
-        fiscalRegime: r.fiscalRegime as FiscalRegime,
-        mealAllowance: parseNum(r.mealAllowance),
-        accommodation: parseNum(r.accommodation),
-      }),
-    0,
-  );
+  // Apply scene filter to cast (crew stays full — they work all days)
+  const filteredCast =
+    selectedScene === null
+      ? cast
+      : cast.filter((r) => (castSceneMap[r.id] ?? []).includes(selectedScene));
+
+  const sceneRatio = (rowId: string): number => {
+    if (selectedScene === null) return 1;
+    const rowScenes = castSceneMap[rowId] ?? [];
+    return rowScenes.length > 0 ? 1 / rowScenes.length : 0;
+  };
+
+  const castTotal =
+    selectedScene === null
+      ? filteredCast.reduce(
+          (sum, r) =>
+            sum +
+            resourceTotal({
+              days: parseNum(r.days),
+              dayRate: parseNum(r.dayRate),
+              fiscalRegime: r.fiscalRegime as FiscalRegime,
+              mealAllowance: parseNum(r.mealAllowance),
+              accommodation: parseNum(r.accommodation),
+            }),
+          0,
+        )
+      : filteredCast.reduce((sum, r) => {
+          const full = resourceTotal({
+            days: parseNum(r.days),
+            dayRate: parseNum(r.dayRate),
+            fiscalRegime: r.fiscalRegime as FiscalRegime,
+            mealAllowance: parseNum(r.mealAllowance),
+            accommodation: parseNum(r.accommodation),
+          });
+          return sum + full * sceneRatio(r.id);
+        }, 0);
 
   const crewTotal = crew
     .filter((r) => r.enabled)
@@ -80,43 +133,87 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       0,
     );
 
-  // equipment + misc totals from budget_lines
-  const equipmentTotal =
-    budget?.lines
-      .filter((l) => l.topSheet === "production")
-      .reduce(
-        (sum, l) => sum + (l.actual ?? l.rate ?? 0) * (l.quantity ?? 1),
-        0,
-      ) ?? 0;
+  const equipmentLines =
+    budget?.lines.filter((l) => l.topSheet === "production") ?? [];
+  const miscLines =
+    budget?.lines.filter((l) => l.topSheet === "contingency") ?? [];
 
-  const miscTotal =
-    budget?.lines
-      .filter((l) => l.topSheet === "contingency")
-      .reduce(
-        (sum, l) => sum + (l.actual ?? l.rate ?? 0) * (l.quantity ?? 1),
-        0,
-      ) ?? 0;
+  const equipmentTotal = equipmentLines.reduce(
+    (sum, l) => sum + (l.actual ?? (l.rate ?? 0) * (l.quantity ?? 1)),
+    0,
+  );
+  const miscTotal = miscLines.reduce(
+    (sum, l) => sum + (l.actual ?? (l.rate ?? 0) * (l.quantity ?? 1)),
+    0,
+  );
 
   const grandTotal = castTotal + crewTotal + equipmentTotal + miscTotal;
   const contingencyPercent = budget?.contingencyPercent ?? 10;
   const shootingDays = budget?.shootingDays ?? null;
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-testid="budget-page">
+      {/* Scene chip filter */}
+      {scenes.length > 0 && (
+        <div className={styles.sceneBar}>
+          <button
+            type="button"
+            className={`${styles.sceneChip} ${selectedScene === null ? styles.sceneChipActive : ""}`}
+            onClick={() => setSelectedScene(null)}
+          >
+            Tutte
+          </button>
+          {scenes.map((s) => (
+            <button
+              key={s.number}
+              type="button"
+              className={`${styles.sceneChip} ${selectedScene === s.number ? styles.sceneChipActive : ""}`}
+              onClick={() =>
+                setSelectedScene(selectedScene === s.number ? null : s.number)
+              }
+              title={s.heading}
+              data-testid={`scene-chip-${s.number}`}
+            >
+              Sc.{s.number}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Toolbar */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <span className={styles.toolbarLabel}>Giorni ripresa:</span>
-          <span className={styles.toolbarValue}>{shootingDays ?? "—"}</span>
+          <SettingField
+            value={shootingDays}
+            placeholder="—"
+            disabled={!budget}
+            onCommit={(v) => settingsMutation.mutate({ shootingDays: v })}
+            suffix=""
+            data-testid="shooting-days"
+          />
           <span className={styles.toolbarLabel}>Contingenza:</span>
-          <span className={styles.toolbarValue}>{contingencyPercent}%</span>
+          <SettingField
+            value={contingencyPercent}
+            placeholder="10"
+            disabled={!budget}
+            onCommit={(v) => settingsMutation.mutate({ contingencyPercent: v })}
+            suffix="%"
+            data-testid="contingency-percent"
+          />
         </div>
         <button
           type="button"
           className={styles.generateBtn}
           onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending}
+          data-testid="generate-budget-btn"
         >
-          {budget ? "Rigenera" : "Genera budget"}
+          {generateMutation.isPending
+            ? "Generando…"
+            : budget
+              ? "Rigenera"
+              : "Genera budget"}
         </button>
       </div>
 
@@ -139,7 +236,9 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
         </div>
         <div className={styles.mainCol}>
           <CastWidget
-            cast={cast}
+            cast={filteredCast}
+            castSceneMap={castSceneMap}
+            selectedScene={selectedScene}
             grandTotal={grandTotal}
             projectId={projectId}
           />
@@ -151,8 +250,82 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               projectId={projectId}
             />
           )}
+          {(equipmentLines.length > 0 || budget) && (
+            <EquipmentWidget
+              lines={equipmentLines}
+              grandTotal={grandTotal}
+              projectId={projectId}
+            />
+          )}
+          {miscLines.length > 0 && (
+            <MiscWidget
+              lines={miscLines}
+              total={miscTotal}
+              projectId={projectId}
+            />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function SettingField({
+  value,
+  placeholder,
+  disabled,
+  onCommit,
+  suffix,
+  ...rest
+}: {
+  value: number | null;
+  placeholder: string;
+  disabled: boolean;
+  onCommit: (v: number) => void;
+  suffix: string;
+  "data-testid"?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value ?? ""));
+
+  const commit = () => {
+    setEditing(false);
+    const n = parseFloat(draft);
+    if (!isNaN(n) && n >= 0) onCommit(n);
+  };
+
+  if (editing) {
+    return (
+      <input
+        className={styles.settingInput}
+        type="number"
+        value={draft}
+        autoFocus
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        {...rest}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={styles.settingBtn}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) {
+          setDraft(String(value ?? ""));
+          setEditing(true);
+        }
+      }}
+      {...rest}
+    >
+      {value !== null ? `${value}${suffix}` : placeholder}
+    </button>
   );
 }
