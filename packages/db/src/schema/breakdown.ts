@@ -34,6 +34,9 @@ export type BreakdownCategoryDb = (typeof BREAKDOWN_CATEGORIES)[number];
 export const CESARE_STATUSES = ["pending", "accepted", "ignored"] as const;
 export type CesareStatusDb = (typeof CESARE_STATUSES)[number];
 
+export const OCCURRENCE_SOURCES = ["regex", "cesare", "manual"] as const;
+export type OccurrenceSourceDb = (typeof OCCURRENCE_SOURCES)[number];
+
 export const CAST_TIERS_DB = [
   "principal",
   "supporting",
@@ -84,6 +87,7 @@ export const breakdownOccurrences = pgTable(
     cesareStatus: text("cesare_status", { enum: CESARE_STATUSES })
       .notNull()
       .default("accepted"),
+    source: text("source", { enum: OCCURRENCE_SOURCES }),
     isStale: boolean("is_stale").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

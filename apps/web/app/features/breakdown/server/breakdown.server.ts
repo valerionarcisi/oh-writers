@@ -20,6 +20,7 @@ import {
   CesareStatusSchema,
   listScenesInFountain,
   type BreakdownElement,
+  type OccurrenceSource,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -207,6 +208,7 @@ export interface ProjectBreakdownRow {
   }[];
   hasStale: boolean;
   hasPending: boolean;
+  latestSource: OccurrenceSource | null;
 }
 
 export const getProjectBreakdownRows = (
@@ -238,7 +240,10 @@ export const getProjectBreakdownRows = (
       ),
     (e) => new DbError("getProjectBreakdown", e),
   ).map((rows) => {
-    type Agg = ProjectBreakdownRow & { _totalOccs: number };
+    type Agg = ProjectBreakdownRow & {
+      _totalOccs: number;
+      _latestOccAt: Date | null;
+    };
     const byElement = new Map<string, Agg>();
     for (const r of rows) {
       const key = r.el.id;
@@ -261,10 +266,23 @@ export const getProjectBreakdownRows = (
             : [],
           hasStale: counts ? r.occ!.isStale : false,
           hasPending: counts ? r.occ!.cesareStatus === "pending" : false,
+          latestSource: r.occ
+            ? (r.occ.source as OccurrenceSource | null)
+            : null,
           _totalOccs: r.occ ? 1 : 0,
+          _latestOccAt: r.occ ? r.occ.createdAt : null,
         });
       } else {
-        if (r.occ) existing._totalOccs += 1;
+        if (r.occ) {
+          existing._totalOccs += 1;
+          if (
+            r.occ.createdAt &&
+            (!existing._latestOccAt || r.occ.createdAt > existing._latestOccAt)
+          ) {
+            existing._latestOccAt = r.occ.createdAt;
+            existing.latestSource = r.occ.source as OccurrenceSource | null;
+          }
+        }
         if (counts) {
           existing.totalQuantity += r.occ!.quantity;
           existing.scenesPresent.push({
@@ -280,7 +298,7 @@ export const getProjectBreakdownRows = (
     }
     return [...byElement.values()]
       .filter((row) => row._totalOccs === 0 || row.scenesPresent.length > 0)
-      .map(({ _totalOccs: _omit, ...r }) => r);
+      .map(({ _totalOccs: _omit, _latestOccAt: _omit2, ...r }) => r);
   });
 
 export const getProjectBreakdown = createServerFn({ method: "GET" })

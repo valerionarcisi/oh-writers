@@ -5,6 +5,8 @@ import { CAST_TIERS } from "./cast-tiers.js";
 export const BreakdownCategorySchema = z.enum(BREAKDOWN_CATEGORIES);
 export const CesareStatusSchema = z.enum(["pending", "accepted", "ignored"]);
 export const CastTierSchema = z.enum(CAST_TIERS);
+export const OccurrenceSourceSchema = z.enum(["regex", "cesare", "manual"]);
+export type OccurrenceSource = z.infer<typeof OccurrenceSourceSchema>;
 
 export const BreakdownElementSchema = z.object({
   id: z.string().uuid(),
@@ -27,6 +29,7 @@ export const BreakdownOccurrenceSchema = z.object({
   quantity: z.number().int().positive().default(1),
   note: z.string().nullable(),
   cesareStatus: CesareStatusSchema,
+  source: OccurrenceSourceSchema.nullable(),
   isStale: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

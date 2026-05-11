@@ -431,6 +431,7 @@ export function ProjectBreakdownTable({
               </th>
               <th className={styles.th}>Scene</th>
               {showCastTierCol && <th className={styles.th}>Tier</th>}
+              <th className={styles.th}>Origine</th>
               <th className={styles.th}>Stato</th>
             </tr>
           </thead>
@@ -438,7 +439,7 @@ export function ProjectBreakdownTable({
             {sorted.length === 0 && (
               <tr>
                 <td
-                  colSpan={(canEdit ? 1 : 0) + 5 + (showCastTierCol ? 1 : 0)}
+                  colSpan={(canEdit ? 1 : 0) + 6 + (showCastTierCol ? 1 : 0)}
                   className={styles.emptyCell}
                 >
                   Nessun elemento trovato.
@@ -529,6 +530,9 @@ export function ProjectBreakdownTable({
                     )}
                   </td>
                 )}
+                <td className={[styles.td, styles.mutedText].join(" ")}>
+                  <SourceBadge source={row._raw.latestSource} />
+                </td>
                 <td className={styles.td}>
                   <StatusDot status={row.status} />
                 </td>
@@ -587,6 +591,17 @@ function StatusDot({ status }: { status: ElementStatus }) {
       ✓
     </span>
   );
+}
+
+const SOURCE_LABEL: Record<string, string> = {
+  regex: "Regex",
+  cesare: "Cesare",
+  manual: "Manuale",
+};
+
+function SourceBadge({ source }: { source: string | null }) {
+  if (!source) return <span className={styles.mutedText}>—</span>;
+  return <span>{SOURCE_LABEL[source] ?? source}</span>;
 }
 
 function SceneList({ numbers }: { numbers: number[] }) {
