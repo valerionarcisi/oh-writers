@@ -1,6 +1,6 @@
 # Spec 10f — Breakdown table view (Movie Magic-style editable spreadsheet)
 
-> **Status:** partial — core done, 1 item pending (Colonna Origine requires DB migration)
+> **Status:** done
 > **Depends on:** Spec 10 (Breakdown), Spec 10c (Inline tagging), Spec 10e (Auto-spoglio regex)
 > **Date:** 2026-04-23
 
@@ -19,7 +19,7 @@
 
 - [x] **Bulk "Ricategorizza"** — dropdown nel toolbar selezione (appare quando ≥1 riga selezionata).
       Chiama `bulkUpdateBreakdownElements` già esistente. Già presente nell'implementazione.
-- [ ] **Colonna "Origine"** — regex / Cesare / manuale. Richiede migration DB (colonna `source` non esiste in `breakdownElements`). Da pianificare.
+- [x] **Colonna "Origine"** — regex / Cesare / manuale. `source` column added to `breakdownOccurrences` via migration `0015`. `latestSource` aggregated in `ProjectBreakdownRow`. Read-only `SourceBadge` in table. Commit `9145d71`.
 - [x] **Colonna "Cast tier"** — visibile solo quando il filtro categoria = cast. Implementato con `showCastTierCol` flag e `EditableCell` select.
 - [x] **Filtri persistiti in URL** — `?cat=cast,locations&status=pending`. Commit `9f4067d`.
 
