@@ -1,8 +1,27 @@
 # Spec 10f — Breakdown table view (Movie Magic-style editable spreadsheet)
 
-> **Status:** done (commit 5d3002a)
+> **Status:** partial — core done, 1 item pending (Colonna Origine requires DB migration)
 > **Depends on:** Spec 10 (Breakdown), Spec 10c (Inline tagging), Spec 10e (Auto-spoglio regex)
 > **Date:** 2026-04-23
+
+## Remaining work (as of 2026-05-08)
+
+### Critical for correctness
+
+- [x] **Colonna "Stato"** in Per progetto — accepted / pending / stale dots. `hasPending` aggiunto a
+      `ProjectBreakdownRow` (aggregato da `cesareStatus` sulle occorrenze). `StatusDot` mostra ✓/•/⚠.
+      Filtro status esteso con opzione "pending". Commit `fc18248`.
+- [x] **Scene mancanti dalla lista e dalla matrice** — `HEADING_PREFIX` in `list-scenes.ts` e
+      `SCENE_HEADING_RE` in `fountain-constants.ts` estesi con INSERT, INTERCUT, SERIES OF SHOTS,
+      MONTAGE, FLASHBACK. 7 nuovi test Vitest. Commit `84991fd`.
+
+### UX / ergonomia (non bloccanti per correttezza)
+
+- [x] **Bulk "Ricategorizza"** — dropdown nel toolbar selezione (appare quando ≥1 riga selezionata).
+      Chiama `bulkUpdateBreakdownElements` già esistente. Già presente nell'implementazione.
+- [ ] **Colonna "Origine"** — regex / Cesare / manuale. Richiede migration DB (colonna `source` non esiste in `breakdownElements`). Da pianificare.
+- [x] **Colonna "Cast tier"** — visibile solo quando il filtro categoria = cast. Implementato con `showCastTierCol` flag e `EditableCell` select.
+- [x] **Filtri persistiti in URL** — `?cat=cast,locations&status=pending`. Commit `9f4067d`.
 
 ## Goal
 
