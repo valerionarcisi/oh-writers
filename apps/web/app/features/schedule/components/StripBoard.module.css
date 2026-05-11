@@ -9,9 +9,8 @@
 /* ─── Weeks layout ─── */
 .weeksBoard {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-6);
-  min-height: 500px;
+  flex-direction: column;
+  gap: var(--space-8);
   padding-block-end: var(--space-4);
 }
 
@@ -28,12 +27,15 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
   padding-inline-start: var(--space-1);
+  padding-block-end: var(--space-1);
+  border-block-end: 1px solid var(--color-border);
 }
 
 .weekDays {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 /* ─── Add day button ─── */
