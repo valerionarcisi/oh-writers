@@ -8,6 +8,7 @@ export const navigateToSchedule = async (
   projectId: string,
 ): Promise<void> => {
   await page.goto(`${BASE_URL}/projects/${projectId}/schedule`);
+  await page.waitForLoadState("networkidle", { timeout: 15_000 });
   await page
     .getByTestId("generate-schedule-btn")
     .waitFor({ state: "visible", timeout: 15_000 });
@@ -16,11 +17,11 @@ export const navigateToSchedule = async (
 export const generateSchedule = async (page: Page): Promise<void> => {
   const btn = page.getByTestId("generate-schedule-btn");
   const text = await btn.textContent();
-  if (text?.trim() === "Genera pianificazione" || text?.trim() === "Rigenera") {
+  if (text?.trim() === "Genera pianificazione") {
     await btn.click();
-    // Wait until at least one strip appears or board is visible
-    await page
-      .getByTestId("strip-board")
-      .waitFor({ state: "visible", timeout: 15_000 });
   }
+  // Always wait for the board regardless of whether we just generated or not
+  await page
+    .getByTestId("strip-board")
+    .waitFor({ state: "visible", timeout: 30_000 });
 };

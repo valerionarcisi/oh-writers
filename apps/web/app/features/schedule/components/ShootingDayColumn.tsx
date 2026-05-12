@@ -55,7 +55,12 @@ export function ShootingDayColumn({
         title="Apri dettagli giorno"
       >
         <div className={styles.headerTop}>
-          <span className={styles.dayNumber}>Gg {day.dayNumber}</span>
+          <span
+            className={styles.dayNumber}
+            data-testid={`day-header-${day.dayNumber}`}
+          >
+            Gg {day.dayNumber}
+          </span>
           {day.dayType !== "shoot" && (
             <span className={styles.dayTypeBadge} data-type={day.dayType}>
               {dayTypeLabel[day.dayType]}

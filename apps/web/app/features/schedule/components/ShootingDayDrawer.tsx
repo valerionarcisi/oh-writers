@@ -84,6 +84,7 @@ export function ShootingDayDrawer({
       <aside
         className={`${styles.drawer} ${day ? styles.open : ""}`}
         onClick={(e) => e.stopPropagation()}
+        data-testid="day-drawer"
       >
         <div className={styles.drawerHeader}>
           <div className={styles.dayLabel}>
@@ -119,7 +120,11 @@ export function ShootingDayDrawer({
             <div className={styles.capacitySection}>
               <div className={styles.capacityLabel}>
                 <span>Capacità giornata</span>
-                <span className={styles.capacityValue} data-color={barColor}>
+                <span
+                  className={styles.capacityValue}
+                  data-color={barColor}
+                  data-testid="drawer-capacity-value"
+                >
                   {totalHours % 1 === 0
                     ? `${totalHours}h`
                     : `${totalHours.toFixed(1)}h`}{" "}
@@ -178,6 +183,7 @@ export function ShootingDayDrawer({
                         step="0.5"
                         value={inputs[strip.id] ?? ""}
                         placeholder={`${autoHours % 1 === 0 ? autoHours : autoHours.toFixed(1)}h`}
+                        data-testid={`strip-effort-${strip.id}`}
                         onChange={(e) =>
                           setInputs((prev) => ({
                             ...prev,

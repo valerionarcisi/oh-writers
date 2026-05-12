@@ -6,6 +6,70 @@ import {
   generateSchedule,
 } from "./helpers";
 
+test.describe("[Spec 12c] Schedule — day drawer + effort", () => {
+  test("[OHW-366] Click day header → day drawer opens", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToSchedule(page, SCHEDULE_PROJECT_ID);
+    await generateSchedule(page);
+
+    await page.getByTestId("day-header-1").click();
+
+    // drawer-capacity-value only renders when the drawer is open with a day loaded
+    await expect(page.getByTestId("drawer-capacity-value")).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
+  test("[OHW-367] Day drawer shows capacity bar and scene list", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToSchedule(page, SCHEDULE_PROJECT_ID);
+    await generateSchedule(page);
+
+    await page.getByTestId("day-header-1").click();
+
+    // Capacity value should follow pattern "Xh / 8h"
+    const capacityText = await page
+      .getByTestId("drawer-capacity-value")
+      .textContent({ timeout: 5_000 });
+    expect(capacityText).toMatch(/\d+(\.\d+)?h\s*\/\s*8h/);
+
+    // At least one effort input should be visible
+    const effortInputs = page.locator('[data-testid^="strip-effort-"]');
+    await expect(effortInputs.first()).toBeVisible();
+  });
+
+  test("[OHW-368] Edit effort → capacity bar updates", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToSchedule(page, SCHEDULE_PROJECT_ID);
+    await generateSchedule(page);
+
+    await page.getByTestId("day-header-1").click();
+
+    const firstInput = page.locator('[data-testid^="strip-effort-"]').first();
+    await expect(firstInput).toBeVisible({ timeout: 5_000 });
+
+    const capacityBefore = await page
+      .getByTestId("drawer-capacity-value")
+      .textContent();
+
+    // Set effort to 12h — guaranteed to differ from the default 1h/page auto value
+    await firstInput.fill("12");
+    await firstInput.press("Tab");
+
+    // Wait for the server round-trip to update the capacity display
+    await expect(page.getByTestId("drawer-capacity-value")).not.toHaveText(
+      capacityBefore ?? "",
+      { timeout: 5_000 },
+    );
+  });
+});
+
 test.describe("[Spec 12b] Schedule — strip board", () => {
   test("[OHW-361] Generate schedule → strip board renders with at least one shooting day", async ({
     authenticatedPage,

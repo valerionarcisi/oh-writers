@@ -1,6 +1,6 @@
 # Spec 12c — Scene Effort & Shooting Day Drawer
 
-> **Status:** in progress
+> **Status:** done
 > **Depends on:** Spec 12b (schedule implementation)
 > **Date:** 2026-05-11
 
