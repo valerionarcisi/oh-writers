@@ -153,33 +153,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
 
   return (
     <div className={styles.page} data-testid="budget-page">
-      {/* Scene chip filter */}
-      {scenes.length > 0 && (
-        <div className={styles.sceneBar}>
-          <button
-            type="button"
-            className={`${styles.sceneChip} ${selectedScene === null ? styles.sceneChipActive : ""}`}
-            onClick={() => setSelectedScene(null)}
-          >
-            Tutte
-          </button>
-          {scenes.map((s) => (
-            <button
-              key={s.number}
-              type="button"
-              className={`${styles.sceneChip} ${selectedScene === s.number ? styles.sceneChipActive : ""}`}
-              onClick={() =>
-                setSelectedScene(selectedScene === s.number ? null : s.number)
-              }
-              title={s.heading}
-              data-testid={`scene-chip-${s.number}`}
-            >
-              Sc.{s.number}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
@@ -201,6 +174,37 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             suffix="%"
             data-testid="contingency-percent"
           />
+          {scenes.length > 0 && (
+            <>
+              <div className={styles.toolbarDivider} />
+              <select
+                className={styles.sceneSelect}
+                value={selectedScene ?? ""}
+                onChange={(e) =>
+                  setSelectedScene(
+                    e.target.value ? Number(e.target.value) : null,
+                  )
+                }
+                data-testid="scene-select"
+              >
+                <option value="">Tutte le scene</option>
+                {scenes.map((s) => (
+                  <option key={s.number} value={s.number}>
+                    Sc.{s.number} — {s.heading}
+                  </option>
+                ))}
+              </select>
+              {selectedScene !== null && (
+                <span className={styles.sceneTotal}>
+                  {new Intl.NumberFormat("it-IT", {
+                    style: "currency",
+                    currency: "EUR",
+                    maximumFractionDigits: 0,
+                  }).format(castTotal)}
+                </span>
+              )}
+            </>
+          )}
         </div>
         <button
           type="button"
