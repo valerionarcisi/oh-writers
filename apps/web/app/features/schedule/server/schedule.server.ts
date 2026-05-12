@@ -13,6 +13,7 @@ import {
 import {
   generateStrips,
   assignDates,
+  resolveEffortHours,
   type CountryCode,
   type BannerColor,
 } from "@oh-writers/domain";
@@ -38,6 +39,8 @@ export interface StripView {
   position: number;
   bannerColor: BannerColor;
   isLocked: boolean;
+  estimatedHours: number | null;
+  resolvedHours: number;
   // Denormalized scene data for display
   sceneNumber: number;
   sceneHeading: string;
@@ -55,6 +58,7 @@ export interface ShootingDayView {
   notes: string | null;
   strips: StripView[];
   totalPageCount: number;
+  totalHours: number;
 }
 
 export interface ScheduleView {
@@ -147,6 +151,7 @@ const loadScheduleView = async (
       position: strips.position,
       bannerColor: strips.bannerColor,
       isLocked: strips.isLocked,
+      estimatedHours: strips.estimatedHours,
       sceneNumber: scenes.number,
       sceneHeading: scenes.heading,
       location: scenes.location,
@@ -160,23 +165,28 @@ const loadScheduleView = async (
     .where(eq(strips.scheduleId, scheduleId))
     .orderBy(asc(strips.position));
 
-  const toStripView = (s: (typeof allStrips)[number]): StripView => ({
-    id: s.id,
-    shootingDayId: s.shootingDayId,
-    sceneId: s.sceneId,
-    position: s.position,
-    bannerColor: s.bannerColor as BannerColor,
-    isLocked: s.isLocked,
-    sceneNumber: s.sceneNumber,
-    sceneHeading: s.sceneHeading,
-    location: s.location,
-    intExt: s.intExt,
-    timeOfDay: s.timeOfDay,
-    pageCount:
+  const toStripView = (s: (typeof allStrips)[number]): StripView => {
+    const pageCount =
       s.pageStart != null && s.pageEnd != null && s.pageEnd >= s.pageStart
         ? Math.max(1, s.pageEnd - s.pageStart)
-        : 1,
-  });
+        : 1;
+    return {
+      id: s.id,
+      shootingDayId: s.shootingDayId,
+      sceneId: s.sceneId,
+      position: s.position,
+      bannerColor: s.bannerColor as BannerColor,
+      isLocked: s.isLocked,
+      estimatedHours: s.estimatedHours,
+      resolvedHours: resolveEffortHours(pageCount, s.estimatedHours),
+      sceneNumber: s.sceneNumber,
+      sceneHeading: s.sceneHeading,
+      location: s.location,
+      intExt: s.intExt,
+      timeOfDay: s.timeOfDay,
+      pageCount,
+    };
+  };
 
   const stripsByDay = new Map<string, StripView[]>();
   const unscheduled: StripView[] = [];
@@ -202,6 +212,7 @@ const loadScheduleView = async (
       notes: d.notes,
       strips: dayStrips,
       totalPageCount: dayStrips.reduce((sum, s) => sum + s.pageCount, 0),
+      totalHours: dayStrips.reduce((sum, s) => sum + s.resolvedHours, 0),
     };
   });
 
@@ -310,6 +321,7 @@ export const generateSchedule = createServerFn({ method: "POST" })
               pageStart: s.pageStart,
               pageEnd: s.pageEnd,
               hasSpecialEffect: s.hasSpecialEffect,
+              estimatedHours: null,
             })),
           );
 
@@ -823,6 +835,76 @@ export const toggleStripLock = createServerFn({ method: "POST" })
           ResultAsync.fromPromise(
             loadScheduleView(db, scheduleId).then((v) => v!),
             (e) => new DbError("toggleStripLock/loadView", e),
+          ),
+        );
+
+      return toShape(result);
+    },
+  );
+
+export const updateStripEffort = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      stripId: z.string().uuid(),
+      estimatedHours: z.number().min(0.5).max(24).nullable(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<ScheduleView, ForbiddenError | StripNotFoundError | DbError>
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        db.query.strips
+          .findFirst({ where: eq(strips.id, data.stripId) })
+          .then((r) => r ?? null),
+        (e) => new DbError("updateStripEffort/loadStrip", e),
+      )
+        .andThen((strip) => {
+          if (!strip) return err(new StripNotFoundError(data.stripId));
+          return ok(strip);
+        })
+        .andThen((strip) =>
+          ResultAsync.fromPromise(
+            db.query.schedules
+              .findFirst({ where: eq(schedules.id, strip.scheduleId) })
+              .then((r) => r ?? null),
+            (e) => new DbError("updateStripEffort/loadSchedule", e),
+          ).andThen((schedule) => {
+            if (!schedule)
+              return err(
+                new DbError("updateStripEffort", "schedule not found"),
+              );
+            return ok({ strip, schedule });
+          }),
+        )
+        .andThen(({ strip, schedule }) =>
+          resolveAccess(db, user.id, schedule.projectId).andThen((access) => {
+            if (!canEdit(access))
+              return err(new ForbiddenError("update strip effort"));
+            return ok({ strip, schedule });
+          }),
+        )
+        .andThen(({ strip, schedule }) =>
+          ResultAsync.fromPromise(
+            db
+              .update(strips)
+              .set({
+                estimatedHours: data.estimatedHours,
+                updatedAt: new Date(),
+              })
+              .where(eq(strips.id, strip.id)),
+            (e) => new DbError("updateStripEffort/update", e),
+          ).map(() => schedule.id),
+        )
+        .andThen((scheduleId) =>
+          ResultAsync.fromPromise(
+            loadScheduleView(db, scheduleId).then((v) => v!),
+            (e) => new DbError("updateStripEffort/loadView", e),
           ),
         );
 

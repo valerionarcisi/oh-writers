@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   integer,
+  real,
   boolean,
   date,
   timestamp,
@@ -58,6 +59,7 @@ export const strips = pgTable("strips", {
     .notNull()
     .default("white"),
   isLocked: boolean("is_locked").notNull().default(false),
+  estimatedHours: real("estimated_hours"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

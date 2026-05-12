@@ -13,11 +13,13 @@ import {
   updateShootingDay,
   addShootingDay,
   removeShootingDay,
+  updateStripEffort,
 } from "../server/schedule.server";
 import { StripBoard } from "./StripBoard";
 import { UnscheduledTray } from "./UnscheduledTray";
 import { SceneDrawer } from "./SceneDrawer";
-import type { StripView } from "../server/schedule.server";
+import { ShootingDayDrawer } from "./ShootingDayDrawer";
+import type { StripView, ShootingDayView } from "../server/schedule.server";
 import styles from "./SchedulePage.module.css";
 
 interface SchedulePageProps {
@@ -32,6 +34,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("days");
   const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
+  const [selectedDay, setSelectedDay] = useState<ShootingDayView | null>(null);
 
   const schedule = data?.isOk ? data.value : null;
 
@@ -86,6 +89,21 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     onSuccess: invalidate,
   });
 
+  const effortMutation = useMutation({
+    mutationFn: (vars: { stripId: string; estimatedHours: number | null }) =>
+      updateStripEffort({ data: vars }).then(unwrapResult),
+    onSuccess: (updatedSchedule) => {
+      // Optimistically keep day drawer open with fresh data
+      if (selectedDay) {
+        const fresh = updatedSchedule.shootingDays.find(
+          (d) => d.id === selectedDay.id,
+        );
+        if (fresh) setSelectedDay(fresh);
+      }
+      invalidate();
+    },
+  });
+
   const handleDrop = (dayId: string, position: number) => {
     if (!draggingStripId) return;
     moveMutation.mutate({
@@ -114,6 +132,12 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     ];
     const strip = allStrips.find((s) => s.sceneId === sceneId) ?? null;
     setSelectedStrip(strip);
+  };
+
+  const handleDayClick = (dayId: string) => {
+    if (!schedule) return;
+    const day = schedule.shootingDays.find((d) => d.id === dayId) ?? null;
+    setSelectedDay(day);
   };
 
   return (
@@ -174,6 +198,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
               onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
               onAddDay={() => addDayMutation.mutate()}
               onStripClick={handleStripClick}
+              onDayClick={handleDayClick}
             />
           </div>
           <UnscheduledTray
@@ -190,6 +215,14 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         strip={selectedStrip}
         screenplayVersionId={schedule?.screenplayVersionId ?? null}
         onClose={() => setSelectedStrip(null)}
+      />
+
+      <ShootingDayDrawer
+        day={selectedDay}
+        onClose={() => setSelectedDay(null)}
+        onEffortChange={(stripId, estimatedHours) =>
+          effortMutation.mutate({ stripId, estimatedHours })
+        }
       />
     </div>
   );

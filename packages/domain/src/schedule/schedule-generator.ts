@@ -1,4 +1,4 @@
-import { TARGET_PAGES_PER_DAY } from "./page-count.js";
+import { DAILY_CAPACITY_HOURS, resolveEffortHours } from "./effort.js";
 
 export type BannerColor =
   | "white"
@@ -18,14 +18,16 @@ export interface SceneInput {
   pageStart: number | null;
   pageEnd: number | null;
   hasSpecialEffect: boolean;
+  estimatedHours: number | null;
 }
 
 export interface GeneratedStrip {
   sceneId: string;
-  dayIndex: number | null; // null = unscheduled
+  dayIndex: number | null;
   position: number;
   bannerColor: BannerColor;
   pageCount: number;
+  estimatedHours: number | null;
 }
 
 const scenePageCount = (s: SceneInput): number => {
@@ -58,16 +60,16 @@ export const generateStrips = (scenes: SceneInput[]): GeneratedStrip[] => {
 
   const result: GeneratedStrip[] = [];
   let dayIndex = 0;
-  let dayPages = 0;
+  let dayHours = 0;
   let positionInDay = 0;
 
   for (const scene of sorted) {
     const pages = scenePageCount(scene);
+    const hours = resolveEffortHours(pages, scene.estimatedHours);
 
-    // Start a new day when current day is full (but always fit at least one scene per day)
-    if (dayPages > 0 && dayPages + pages > TARGET_PAGES_PER_DAY) {
+    if (dayHours > 0 && dayHours + hours > DAILY_CAPACITY_HOURS) {
       dayIndex++;
-      dayPages = 0;
+      dayHours = 0;
       positionInDay = 0;
     }
 
@@ -77,9 +79,10 @@ export const generateStrips = (scenes: SceneInput[]): GeneratedStrip[] => {
       position: positionInDay,
       bannerColor: bannerColor(scene),
       pageCount: pages,
+      estimatedHours: scene.estimatedHours,
     });
 
-    dayPages += pages;
+    dayHours += hours;
     positionInDay++;
   }
 

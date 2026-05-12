@@ -15,6 +15,7 @@ interface StripBoardProps {
   onRemoveDay: (dayId: string) => void;
   onAddDay: () => void;
   onStripClick: (sceneId: string) => void;
+  onDayClick: (dayId: string) => void;
 }
 
 export function StripBoard({
@@ -27,6 +28,7 @@ export function StripBoard({
   onRemoveDay,
   onAddDay,
   onStripClick,
+  onDayClick,
 }: StripBoardProps) {
   if (viewMode === "weeks") {
     const weeks: Array<{
@@ -60,6 +62,7 @@ export function StripBoard({
                   onDateChange={onDateChange}
                   onRemove={onRemoveDay}
                   onStripClick={onStripClick}
+                  onDayClick={onDayClick}
                 />
               ))}
             </div>
@@ -90,6 +93,7 @@ export function StripBoard({
           onDateChange={onDateChange}
           onRemove={onRemoveDay}
           onStripClick={onStripClick}
+          onDayClick={onDayClick}
         />
       ))}
       <button

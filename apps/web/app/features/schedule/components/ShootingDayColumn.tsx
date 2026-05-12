@@ -13,6 +13,7 @@ interface ShootingDayColumnProps {
   onDateChange: (dayId: string, date: string | null) => void;
   onRemove: (dayId: string) => void;
   onStripClick: (sceneId: string) => void;
+  onDayClick: (dayId: string) => void;
 }
 
 export function ShootingDayColumn({
@@ -23,6 +24,7 @@ export function ShootingDayColumn({
   onDateChange,
   onRemove,
   onStripClick,
+  onDayClick,
 }: ShootingDayColumnProps) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -47,7 +49,11 @@ export function ShootingDayColumn({
 
   return (
     <div className={styles.column} data-testid={`day-column-${day.dayNumber}`}>
-      <div className={styles.header}>
+      <div
+        className={styles.header}
+        onClick={() => onDayClick(day.id)}
+        title="Apri dettagli giorno"
+      >
         <div className={styles.headerTop}>
           <span className={styles.dayNumber}>Gg {day.dayNumber}</span>
           {day.dayType !== "shoot" && (
@@ -55,12 +61,20 @@ export function ShootingDayColumn({
               {dayTypeLabel[day.dayType]}
             </span>
           )}
+          <span className={styles.hoursIndicator}>
+            {day.totalHours % 1 === 0
+              ? `${day.totalHours}h`
+              : `${day.totalHours.toFixed(1)}h`}
+          </span>
           <button
             type="button"
             className={styles.removeBtn}
             title="Rimuovi giorno"
             data-testid={`remove-day-${day.dayNumber}`}
-            onClick={() => onRemove(day.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(day.id);
+            }}
           >
             <X size={12} strokeWidth={2} />
           </button>
@@ -70,6 +84,7 @@ export function ShootingDayColumn({
           className={styles.dateInput}
           value={day.date ?? ""}
           data-testid={`day-date-${day.dayNumber}`}
+          onClick={(e) => e.stopPropagation()}
           onChange={(e) => onDateChange(day.id, e.target.value || null)}
         />
         <PageCountBar pages={day.totalPageCount} />
