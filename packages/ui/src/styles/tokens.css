@@ -221,4 +221,35 @@
     oklch(0.75 0.18 290) 12%,
     transparent
   );
+
+  /* ─── Production-feature aliases (shooting-plan, breakdown, schedule) ─── */
+  /* Text — `--color-text-muted` is intentionally brighter than --color-fg-secondary
+     to preserve readability on dense timeline UIs with small labels. */
+  --color-text: var(--color-fg);
+  --color-text-muted: #b8b5af;
+  --color-text-subtle: var(--color-fg-secondary);
+
+  /* Surfaces — `inset` is below `bg`, `hover`/`active` are above `surface` */
+  --color-surface-inset: #050505;
+  --color-surface-hover: #1e1e1e;
+  --color-surface-active: var(--color-overlay);
+
+  /* Semantic accents (full-saturation variants used for category coding) */
+  --color-accent-blue: var(--color-info);
+  --color-accent-green: var(--color-success);
+  --color-accent-red: var(--color-danger);
+  --color-accent-amber: var(--color-warning);
+  --color-accent-orange: #f97316;
+  --color-accent-purple: #8b5cf6;
+
+  /* Errors */
+  --color-error: var(--color-danger);
+  --color-error-subtle: var(--color-danger-subtle);
+
+  /* Foregrounds for colored backgrounds */
+  --color-on-accent: var(--color-accent-fg);
+  --color-on-error: var(--color-fg);
+
+  /* Borders */
+  --color-border-accent: var(--color-accent-border);
 }

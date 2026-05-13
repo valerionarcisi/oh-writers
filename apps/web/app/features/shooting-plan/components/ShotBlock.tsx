@@ -39,10 +39,12 @@ export function ShotBlock({
   return (
     <div
       className={styles.block}
-      style={{
-        inlineSize: `${Math.max(widthPct, 4)}%`,
-        borderInlineStartColor: color,
-      }}
+      style={
+        {
+          inlineSize: `${Math.max(widthPct, 4)}%`,
+          "--shot-color": color,
+        } as React.CSSProperties
+      }
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
