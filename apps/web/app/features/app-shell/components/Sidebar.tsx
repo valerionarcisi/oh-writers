@@ -11,6 +11,7 @@ import {
   Settings,
   Layers,
   Calendar,
+  Clapperboard,
   Euro,
   MapPin,
   PanelLeftClose,
@@ -182,6 +183,20 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
                 <Calendar size={ICON_SIZE} strokeWidth={ICON_STROKE} />
                 {!isCollapsed && (
                   <span className={styles.navLabel}>Schedule</span>
+                )}
+              </Link>
+              <Link
+                to="/projects/$id/shooting-plan"
+                params={{ id: projectId }}
+                className={styles.navLink}
+                activeProps={{
+                  className: `${styles.navLink} ${styles.active}`,
+                }}
+                title="Piano di Ripresa"
+              >
+                <Clapperboard size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+                {!isCollapsed && (
+                  <span className={styles.navLabel}>Piano di Ripresa</span>
                 )}
               </Link>
               <Link
