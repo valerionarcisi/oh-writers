@@ -7,3 +7,4 @@ export * from "./cesare-suggestions.js";
 export * from "./effort-weights.js";
 export * from "./shot-plan.js";
 export * from "./coverage-patterns.js";
+export * from "./recommend-pattern.js";
