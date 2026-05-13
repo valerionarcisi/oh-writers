@@ -5,3 +5,4 @@ export * from "./effort.js";
 export * from "./day-kpis.js";
 export * from "./cesare-suggestions.js";
 export * from "./effort-weights.js";
+export * from "./shot-plan.js";
