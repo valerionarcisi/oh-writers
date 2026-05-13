@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { scheduleQueryOptions } from "~/features/schedule/server/schedule.server";
-import { DayBalanceTimeline } from "./DayBalanceTimeline";
+import { scenesWithPlanSummaryQueryOptions } from "../server/shooting-plan.server";
 import { SceneShotTimeline } from "./SceneShotTimeline";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -9,24 +8,23 @@ interface ShootingPlanPageProps {
   projectId: string;
 }
 
+const formatMinutes = (m: number): string => {
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h === 0) return `${rem}m`;
+  if (rem === 0) return `${h}h`;
+  return `${h}h ${rem}m`;
+};
+
 export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
-  const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
-  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  const { data } = useSuspenseQuery(
+    scenesWithPlanSummaryQueryOptions(projectId),
+  );
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
 
-  const schedule = data?.isOk ? data.value : null;
-  const shootDays =
-    schedule?.shootingDays.filter((d) => d.dayType === "shoot") ?? [];
-  const selectedDay =
-    shootDays.find((d) => d.id === selectedDayId) ?? shootDays[0] ?? null;
-
-  if (!schedule) {
-    return (
-      <div className={styles.empty}>
-        <p>Genera prima uno schedule per pianificare le riprese.</p>
-      </div>
-    );
-  }
+  const scenes = data?.isOk ? data.value : [];
+  const selectedScene =
+    scenes.find((s) => s.sceneId === selectedSceneId) ?? null;
 
   return (
     <div className={styles.page}>
@@ -34,52 +32,58 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         <h1 className={styles.title}>Piano di Ripresa</h1>
       </header>
       <div className={styles.body}>
-        <aside className={styles.daySidebar}>
-          <div className={styles.sidebarLabel}>Giorni di ripresa</div>
-          {shootDays.map((day) => (
-            <button
-              key={day.id}
-              type="button"
-              className={styles.dayItem}
-              data-active={day.id === (selectedDay?.id ?? null) || undefined}
-              onClick={() => {
-                setSelectedDayId(day.id);
-                setSelectedSceneId(null);
-              }}
-            >
-              <span className={styles.dayName}>GG {day.dayNumber}</span>
-              <span className={styles.dayMeta}>{day.strips.length} scene</span>
-              <span className={styles.dayHours}>
-                {day.totalHours.toFixed(1)}h / 8h
-              </span>
-            </button>
-          ))}
+        <aside className={styles.sceneSidebar}>
+          <div className={styles.sidebarLabel}>Scene del progetto</div>
+          {scenes.length === 0 && (
+            <p className={styles.sidebarEmpty}>
+              Nessuna scena trovata. Importa una sceneggiatura per iniziare.
+            </p>
+          )}
+          {scenes.map((scene) => {
+            const isPlanned =
+              scene.totalMinutes !== null && scene.shotCount > 0;
+            return (
+              <button
+                key={scene.sceneId}
+                type="button"
+                className={styles.sceneItem}
+                data-active={scene.sceneId === selectedSceneId || undefined}
+                onClick={() => setSelectedSceneId(scene.sceneId)}
+              >
+                <span className={styles.sceneNumber}>
+                  SC.{scene.sceneNumber}
+                </span>
+                <span className={styles.sceneHeading}>
+                  {scene.intExt}. {scene.location}
+                </span>
+                <span
+                  className={styles.sceneStatus}
+                  data-planned={isPlanned || undefined}
+                >
+                  {isPlanned
+                    ? `● ${scene.shotCount} shot · ${formatMinutes(scene.totalMinutes ?? 0)}`
+                    : "○ non pianificata"}
+                </span>
+              </button>
+            );
+          })}
         </aside>
         <main className={styles.main}>
-          {selectedDay && (
-            <DayBalanceTimeline
-              day={selectedDay}
+          {selectedScene ? (
+            <SceneShotTimeline
+              key={selectedScene.sceneId}
+              sceneId={selectedScene.sceneId}
               projectId={projectId}
-              selectedSceneId={selectedSceneId}
-              onSelectScene={setSelectedSceneId}
+              sceneLabel={`SC.${selectedScene.sceneNumber} ${selectedScene.location}`}
             />
+          ) : (
+            <div className={styles.mainEmpty}>
+              <p>
+                Seleziona una scena dalla lista per iniziare a pianificare gli
+                shot.
+              </p>
+            </div>
           )}
-          {selectedSceneId &&
-            selectedDay &&
-            (() => {
-              const strip = selectedDay.strips.find(
-                (s) => s.sceneId === selectedSceneId,
-              );
-              if (!strip) return null;
-              return (
-                <SceneShotTimeline
-                  key={selectedSceneId}
-                  sceneId={selectedSceneId}
-                  projectId={projectId}
-                  sceneLabel={`SC.${strip.sceneNumber} ${strip.location}`}
-                />
-              );
-            })()}
         </main>
       </div>
     </div>
