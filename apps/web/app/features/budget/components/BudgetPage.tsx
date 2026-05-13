@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useSuspenseQuery,
+  useQuery,
   useMutation,
   useQueryClient,
   queryOptions,
@@ -12,14 +13,19 @@ import {
   generateBudget,
   getCastAndCrew,
   getProjectScenes,
+  getRateCard,
+  getDayCosts,
   updateBudgetSettings,
 } from "../server/budget.server";
 import { unwrapResult } from "@oh-writers/utils";
 import { TotalWidget } from "./widgets/TotalWidget";
 import { CastWidget } from "./widgets/CastWidget";
 import { CrewWidget } from "./widgets/CrewWidget";
-import { EquipmentWidget } from "./widgets/EquipmentWidget";
 import { MiscWidget } from "./widgets/MiscWidget";
+import { RateCardSection } from "./RateCardSection";
+import { CategoryLineWidget } from "./widgets/CategoryLineWidget";
+import { LocationsWidget, VehiclesWidget } from "./widgets/LocationsWidget";
+import { DayView } from "./widgets/DayView";
 import styles from "./BudgetPage.module.css";
 
 const budgetQueryOptions = (projectId: string) =>
@@ -40,7 +46,30 @@ const scenesQueryOptions = (projectId: string) =>
     queryFn: () => getProjectScenes({ data: { projectId } }).then(unwrapResult),
   });
 
+const rateCardQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["rate-card", projectId],
+    queryFn: () => getRateCard({ data: { projectId } }).then(unwrapResult),
+  });
+
+const dayCostsQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["budget-day-costs", projectId],
+    queryFn: () => getDayCosts({ data: { projectId } }).then(unwrapResult),
+  });
+
 const parseNum = (v: string) => Number(v);
+
+const PRODUCTION_CATEGORY_CONFIG = [
+  { linkedCategory: "equipment", icon: "🎬", title: "Fotografia" },
+  { linkedCategory: "sound", icon: "🎵", title: "Suono" },
+  { linkedCategory: "props", icon: "🏛", title: "Scenografia" },
+  { linkedCategory: "wardrobe", icon: "👗", title: "Costumi & Make-up" },
+  { linkedCategory: "extras", icon: "👥", title: "Comparse" },
+  { linkedCategory: "vfx", icon: "✨", title: "VFX / SFX" },
+  { linkedCategory: "stunts", icon: "🎯", title: "Stunt" },
+  { linkedCategory: "animals", icon: "🐾", title: "Animali" },
+] as const;
 
 interface BudgetPageProps {
   projectId: string;
@@ -51,10 +80,13 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
   const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
+  const { data: rateCardEntries } = useSuspenseQuery(
+    rateCardQueryOptions(projectId),
+  );
+  const { data: dayCosts } = useQuery(dayCostsQueryOptions(projectId));
 
+  const [view, setView] = useState<"category" | "day">("category");
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
-  const [editingDays, setEditingDays] = useState(false);
-  const [editingContingency, setEditingContingency] = useState(false);
 
   const generateMutation = useMutation({
     mutationFn: () =>
@@ -62,7 +94,9 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budget", projectId] });
       qc.invalidateQueries({ queryKey: ["budget-cast-crew", projectId] });
+      qc.invalidateQueries({ queryKey: ["budget-day-costs", projectId] });
     },
+    onError: () => {},
   });
 
   const settingsMutation = useMutation({
@@ -76,12 +110,19 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["budget", projectId] }),
   });
 
+  // Auto-generate on first visit when no budget exists and there are scenes
+  useEffect(() => {
+    if (!budget && scenes.length > 0 && !generateMutation.isPending) {
+      generateMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const cast = castCrew?.cast ?? [];
   const crew = castCrew?.crew ?? [];
   const castSceneMap = castCrew?.castSceneMap ?? {};
   const scenes = allScenes ?? [];
 
-  // Apply scene filter to cast (crew stays full — they work all days)
   const filteredCast =
     selectedScene === null
       ? cast
@@ -133,12 +174,24 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       0,
     );
 
-  const equipmentLines =
+  const productionLines =
     budget?.lines.filter((l) => l.topSheet === "production") ?? [];
   const miscLines =
     budget?.lines.filter((l) => l.topSheet === "contingency") ?? [];
 
-  const equipmentTotal = equipmentLines.reduce(
+  const locationLines = productionLines.filter(
+    (l) => l.linkedCategory === "locations",
+  );
+  const vehicleLines = productionLines.filter(
+    (l) => l.linkedCategory === "vehicles",
+  );
+
+  // Active element IDs — used to detect stale lines whose element was removed
+  const activeElementIds = new Set(
+    cast.map((r) => r.elementId).filter(Boolean) as string[],
+  );
+
+  const productionTotal = productionLines.reduce(
     (sum, l) => sum + (l.actual ?? (l.rate ?? 0) * (l.quantity ?? 1)),
     0,
   );
@@ -147,13 +200,13 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
     0,
   );
 
-  const grandTotal = castTotal + crewTotal + equipmentTotal + miscTotal;
+  const grandTotal = castTotal + crewTotal + productionTotal + miscTotal;
   const contingencyPercent = budget?.contingencyPercent ?? 10;
   const shootingDays = budget?.shootingDays ?? null;
+  const hasDayCosts = (dayCosts?.length ?? 0) > 0;
 
   return (
     <div className={styles.page} data-testid="budget-page">
-      {/* Toolbar */}
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <span className={styles.toolbarLabel}>Giorni ripresa:</span>
@@ -206,67 +259,144 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             </>
           )}
         </div>
-        <button
-          type="button"
-          className={styles.generateBtn}
-          onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending}
-          data-testid="generate-budget-btn"
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-3)",
+          }}
         >
-          {generateMutation.isPending
-            ? "Generando…"
-            : budget
-              ? "Rigenera"
-              : "Genera budget"}
-        </button>
+          <div className={styles.viewToggle}>
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${view === "category" ? styles.active : ""}`}
+              onClick={() => setView("category")}
+            >
+              Per categoria
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${view === "day" ? styles.active : ""}`}
+              onClick={() => setView("day")}
+              disabled={!hasDayCosts}
+              title={
+                !hasDayCosts
+                  ? "Pianifica le giornate nello schedule per attivare questa vista"
+                  : undefined
+              }
+            >
+              Per giornata
+            </button>
+          </div>
+          <button
+            type="button"
+            className={styles.generateBtn}
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            data-testid="generate-budget-btn"
+          >
+            {generateMutation.isPending
+              ? "Generando…"
+              : budget
+                ? "Rigenera"
+                : "Genera budget"}
+          </button>
+        </div>
       </div>
 
       {generateMutation.isError && (
         <div className={styles.error}>
-          Errore nella generazione. Verifica che il breakdown sia stato
-          completato.
+          {(generateMutation.error as { _tag?: string })?._tag ===
+          "NoBreakdownError"
+            ? "Completa prima il breakdown delle scene per generare il budget."
+            : "Errore nella generazione. Verifica che il breakdown sia stato completato."}
         </div>
       )}
+
+      <RateCardSection projectId={projectId} entries={rateCardEntries ?? []} />
 
       <div className={styles.grid}>
         <div className={styles.sideCol}>
           <TotalWidget
             castTotal={castTotal}
             crewTotal={crewTotal}
-            equipmentTotal={equipmentTotal}
+            productionLines={productionLines}
             miscTotal={miscTotal}
             contingencyPercent={contingencyPercent}
           />
         </div>
         <div className={styles.mainCol}>
-          <CastWidget
-            cast={filteredCast}
-            castSceneMap={castSceneMap}
-            selectedScene={selectedScene}
-            grandTotal={grandTotal}
-            projectId={projectId}
-          />
-          {(crew.length > 0 || budget) && (
-            <CrewWidget
-              crew={crew}
-              budgetId={budget?.id ?? ""}
-              grandTotal={grandTotal}
-              projectId={projectId}
-            />
-          )}
-          {(equipmentLines.length > 0 || budget) && (
-            <EquipmentWidget
-              lines={equipmentLines}
-              grandTotal={grandTotal}
-              projectId={projectId}
-            />
-          )}
-          {miscLines.length > 0 && (
-            <MiscWidget
-              lines={miscLines}
-              total={miscTotal}
-              projectId={projectId}
-            />
+          {view === "category" ? (
+            <>
+              <div className={styles.categoryGroup}>
+                <span className={styles.groupLabel}>Cast & Crew</span>
+                <CastWidget
+                  cast={filteredCast}
+                  castSceneMap={castSceneMap}
+                  selectedScene={selectedScene}
+                  grandTotal={grandTotal}
+                  projectId={projectId}
+                />
+                {(crew.length > 0 || budget) && (
+                  <CrewWidget
+                    crew={crew}
+                    budgetId={budget?.id ?? ""}
+                    grandTotal={grandTotal}
+                    projectId={projectId}
+                  />
+                )}
+              </div>
+
+              {budget && (
+                <div className={styles.categoryGroup}>
+                  <span className={styles.groupLabel}>
+                    Produzione — da breakdown
+                  </span>
+                  <LocationsWidget
+                    lines={locationLines}
+                    activeElementIds={activeElementIds}
+                    projectId={projectId}
+                  />
+                  <VehiclesWidget
+                    lines={vehicleLines}
+                    activeElementIds={activeElementIds}
+                    projectId={projectId}
+                  />
+                  {PRODUCTION_CATEGORY_CONFIG.map(
+                    ({ linkedCategory, icon, title }) => {
+                      const line =
+                        productionLines.find(
+                          (l) =>
+                            l.linkedCategory === linkedCategory &&
+                            l.linkedElementId === null,
+                        ) ?? null;
+                      if (!line) return null;
+                      const elementCount = Number(line.quantity ?? 0);
+                      return (
+                        <CategoryLineWidget
+                          key={linkedCategory}
+                          icon={icon}
+                          title={title}
+                          line={line}
+                          elementCount={elementCount}
+                          projectId={projectId}
+                        />
+                      );
+                    },
+                  )}
+                </div>
+              )}
+
+              {miscLines.length > 0 && (
+                <MiscWidget
+                  lines={miscLines}
+                  total={miscTotal}
+                  projectId={projectId}
+                />
+              )}
+            </>
+          ) : (
+            <DayView days={dayCosts ?? []} />
           )}
         </div>
       </div>
