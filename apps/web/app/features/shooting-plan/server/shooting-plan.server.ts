@@ -9,6 +9,8 @@ import {
   shots,
   transitionSlots,
   schedules,
+  breakdownElements,
+  breakdownOccurrences,
 } from "@oh-writers/db/schema";
 import {
   ShotEffortWeightsSchema,
@@ -20,6 +22,7 @@ import {
   type ShotSize,
   type CameraMovement,
   type TransitionType,
+  type BreakdownSummary,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -894,6 +897,62 @@ export const scenesWithPlanSummaryQueryOptions = (projectId: string) =>
   queryOptions({
     queryKey: ["shooting-plan", "scenes", projectId],
     queryFn: () => listScenesWithPlanSummary({ data: { projectId } }),
+  });
+
+export const getBreakdownSummary = createServerFn({ method: "GET" })
+  .validator(z.object({ sceneId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<BreakdownSummary, ForbiddenError | DbError>> => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const rows = await db
+            .select({
+              category: breakdownElements.category,
+              name: breakdownElements.name,
+            })
+            .from(breakdownOccurrences)
+            .innerJoin(
+              breakdownElements,
+              eq(breakdownOccurrences.elementId, breakdownElements.id),
+            )
+            .where(eq(breakdownOccurrences.sceneId, data.sceneId));
+
+          // Schema has no `hasDialogue` column; per spec fallback, every cast
+          // element occurring in the scene is treated as a speaking character.
+          const castWithDialogue = Array.from(
+            new Set(
+              rows.filter((r) => r.category === "cast").map((r) => r.name),
+            ),
+          );
+
+          const actionNoteCount = rows.filter(
+            (r) =>
+              r.category === "stunts" ||
+              r.category === "sfx" ||
+              r.category === "vfx",
+          ).length;
+
+          return {
+            castWithDialogue,
+            actionNoteCount,
+          } satisfies BreakdownSummary;
+        })(),
+        (e) => new DbError("getBreakdownSummary", e),
+      );
+
+      return toShape(result);
+    },
+  );
+
+export const breakdownSummaryQueryOptions = (sceneId: string) =>
+  queryOptions({
+    queryKey: ["shooting-plan", "breakdown-summary", sceneId],
+    queryFn: () => getBreakdownSummary({ data: { sceneId } }),
   });
 
 export const updateEffortWeights = createServerFn({ method: "POST" })
