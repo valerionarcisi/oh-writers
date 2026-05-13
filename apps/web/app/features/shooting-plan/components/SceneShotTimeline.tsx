@@ -43,8 +43,12 @@ export function SceneShotTimeline({
   const [dragShotId, setDragShotId] = useState<string | null>(null);
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
 
-  const invalidate = () =>
-    qc.invalidateQueries({ queryKey: ["shot-plan", sceneId] });
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["shot-plan", sceneId] });
+    void qc.invalidateQueries({
+      queryKey: ["shooting-plan", "scenes", projectId],
+    });
+  };
 
   const createMutation = useMutation({
     mutationFn: (name: string) =>
