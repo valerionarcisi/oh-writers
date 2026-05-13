@@ -15,6 +15,7 @@ import {
 import { ScenarioTabs } from "./ScenarioTabs";
 import { ShotBlock } from "./ShotBlock";
 import { TransitionBlock } from "./TransitionBlock";
+import { ShotDetailPanel } from "./ShotDetailPanel";
 import type {
   ShotView,
   TransitionSlotView,
@@ -196,7 +197,15 @@ export function SceneShotTimeline({
                   (s) => s.id === selectedShotId,
                 );
                 if (!shot) return null;
-                return null; // ShotDetailPanel will be wired in Task 11
+                return (
+                  <ShotDetailPanel
+                    shot={shot}
+                    shotPlanId={plan!.id}
+                    projectId={projectId}
+                    sceneId={sceneId}
+                    onClose={() => setSelectedShotId(null)}
+                  />
+                );
               })()}
           </div>
         </>
