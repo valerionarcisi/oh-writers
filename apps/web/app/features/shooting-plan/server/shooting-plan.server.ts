@@ -9,8 +9,6 @@ import {
   shots,
   transitionSlots,
   schedules,
-  strips,
-  scenes,
 } from "@oh-writers/db/schema";
 import {
   ShotEffortWeightsSchema,
@@ -239,64 +237,6 @@ const rebuildAutoTransitions = async (
       scenarioId,
       projectId,
     );
-  }
-};
-
-const syncStripEffort = async (
-  db: Db,
-  shotPlanId: string,
-  projectId: string,
-): Promise<void> => {
-  const plan = await db.query.shotPlans.findFirst({
-    where: eq(shotPlans.id, shotPlanId),
-  });
-  if (!plan?.activeScenarioId) return;
-
-  const schedule = await db.query.schedules.findFirst({
-    where: eq(schedules.projectId, projectId),
-  });
-  const rawWeights = schedule?.effortWeights ?? null;
-  const parsed = rawWeights
-    ? ShotEffortWeightsSchema.safeParse(rawWeights)
-    : null;
-  const weights = parsed?.success ? parsed.data : DEFAULT_SHOT_EFFORT_WEIGHTS;
-
-  const activeShots = await db
-    .select()
-    .from(shots)
-    .where(eq(shots.scenarioId, plan.activeScenarioId))
-    .orderBy(asc(shots.position));
-
-  const activeTransitions = await db
-    .select()
-    .from(transitionSlots)
-    .where(eq(transitionSlots.scenarioId, plan.activeScenarioId));
-
-  const totalMinutes = computeScenarioTotal(
-    activeShots.map((s) => ({
-      shotSize: s.shotSize as ShotSize,
-      cameraMovement: s.cameraMovement as CameraMovement,
-      estimatedMinutes: s.estimatedMinutes ?? null,
-    })),
-    activeTransitions.map((t) => ({
-      estimatedMinutes: t.estimatedMinutes ?? null,
-      ruleId: t.ruleId ?? null,
-    })),
-    weights,
-  );
-
-  const estimatedHours = totalMinutes / 60;
-
-  if (schedule) {
-    await db
-      .update(strips)
-      .set({ estimatedHours, updatedAt: new Date() })
-      .where(
-        and(
-          eq(strips.scheduleId, schedule.id),
-          eq(strips.sceneId, plan.sceneId),
-        ),
-      );
   }
 };
 
@@ -531,10 +471,9 @@ export const setActiveScenario = createServerFn({ method: "POST" })
             db
               .update(shotPlans)
               .set({ activeScenarioId: data.scenarioId, updatedAt: new Date() })
-              .where(eq(shotPlans.id, data.shotPlanId))
-              .then(() => syncStripEffort(db, data.shotPlanId, data.projectId)),
+              .where(eq(shotPlans.id, data.shotPlanId)),
             (e) => new DbError("setActiveScenario/update", e),
-          ),
+          ).map(() => undefined),
         );
 
       return toShape(result);
@@ -620,11 +559,6 @@ export const addShot = createServerFn({ method: "POST" })
           }
         }),
         (e) => new DbError("addShot/transaction", e),
-      ).andThen(() =>
-        ResultAsync.fromPromise(
-          syncStripEffort(db, data.shotPlanId, data.projectId),
-          (e) => new DbError("addShot/syncStrip", e),
-        ),
       );
 
       return toShape(result);
@@ -697,13 +631,7 @@ export const updateShot = createServerFn({ method: "POST" })
               .set({ ...data.patch, updatedAt: new Date() })
               .where(eq(shots.id, data.shotId)),
             (e) => new DbError("updateShot/update", e),
-          ),
-        )
-        .andThen(() =>
-          ResultAsync.fromPromise(
-            syncStripEffort(db, data.shotPlanId, data.projectId),
-            (e) => new DbError("updateShot/syncStrip", e),
-          ),
+          ).map(() => undefined),
         );
 
       return toShape(result);
@@ -741,13 +669,7 @@ export const deleteShot = createServerFn({ method: "POST" })
           ResultAsync.fromPromise(
             db.delete(shots).where(eq(shots.id, shot.id)),
             (e) => new DbError("deleteShot/delete", e),
-          ),
-        )
-        .andThen(() =>
-          ResultAsync.fromPromise(
-            syncStripEffort(db, data.shotPlanId, data.projectId),
-            (e) => new DbError("deleteShot/syncStrip", e),
-          ),
+          ).map(() => undefined),
         );
 
       return toShape(result);
@@ -784,11 +706,6 @@ export const reorderShots = createServerFn({ method: "POST" })
           );
         }),
         (e) => new DbError("reorderShots/transaction", e),
-      ).andThen(() =>
-        ResultAsync.fromPromise(
-          syncStripEffort(db, data.shotPlanId, data.projectId),
-          (e) => new DbError("reorderShots/syncStrip", e),
-        ),
       );
 
       return toShape(result);
@@ -822,12 +739,7 @@ export const addManualTransition = createServerFn({ method: "POST" })
           label: data.label ?? null,
         }),
         (e) => new DbError("addManualTransition/insert", e),
-      ).andThen(() =>
-        ResultAsync.fromPromise(
-          syncStripEffort(db, data.shotPlanId, data.projectId),
-          (e) => new DbError("addManualTransition/syncStrip", e),
-        ),
-      );
+      ).map(() => undefined);
 
       return toShape(result);
     },
@@ -859,12 +771,7 @@ export const updateTransition = createServerFn({ method: "POST" })
           .set({ ...data.patch, updatedAt: new Date() })
           .where(eq(transitionSlots.id, data.transitionId)),
         (e) => new DbError("updateTransition/update", e),
-      ).andThen(() =>
-        ResultAsync.fromPromise(
-          syncStripEffort(db, data.shotPlanId, data.projectId),
-          (e) => new DbError("updateTransition/syncStrip", e),
-        ),
-      );
+      ).map(() => undefined);
 
       return toShape(result);
     },
@@ -888,12 +795,7 @@ export const deleteTransition = createServerFn({ method: "POST" })
           .delete(transitionSlots)
           .where(eq(transitionSlots.id, data.transitionId)),
         (e) => new DbError("deleteTransition/delete", e),
-      ).andThen(() =>
-        ResultAsync.fromPromise(
-          syncStripEffort(db, data.shotPlanId, data.projectId),
-          (e) => new DbError("deleteTransition/syncStrip", e),
-        ),
-      );
+      ).map(() => undefined);
 
       return toShape(result);
     },
