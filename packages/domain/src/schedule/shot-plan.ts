@@ -6,10 +6,15 @@ import type {
 } from "./effort-weights.js";
 import { SHOT_SIZE_ORDER } from "./effort-weights.js";
 
-type ShotInput = {
+export type ShotInput = {
   shotSize: ShotSize;
   cameraMovement: CameraMovement;
   estimatedMinutes: number | null;
+};
+
+export type TransitionInput = {
+  estimatedMinutes: number | null;
+  ruleId: string | null;
 };
 
 export type ShotForTransition = {
@@ -101,4 +106,20 @@ export const inferTransitions = (
   }
 
   return transitions;
+};
+
+export const computeScenarioTotal = (
+  shots: ShotInput[],
+  transitions: TransitionInput[],
+  weights: ShotEffortWeights,
+): number => {
+  const shotsTotal = shots.reduce(
+    (sum, shot) => sum + resolveShotMinutes(shot, weights),
+    0,
+  );
+  const transitionsTotal = transitions.reduce(
+    (sum, t) => sum + (t.estimatedMinutes ?? 0),
+    0,
+  );
+  return shotsTotal + transitionsTotal;
 };
