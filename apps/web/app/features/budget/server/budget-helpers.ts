@@ -48,6 +48,8 @@ export const aggregateProductionLines = (
 ): SplitLines => {
   const perElement: GeneratedLine[] = [];
   const byKey = new Map<string, AggregatedLine>();
+  const rateAccumulator = new Map<string, number>();
+  const countAccumulator = new Map<string, number>();
 
   for (const line of lines) {
     const cat = line.linkedCategory;
@@ -59,11 +61,7 @@ export const aggregateProductionLines = (
     }
 
     const key = AGGREGATE_CATEGORY_KEY[cat] ?? cat;
-    const existing = byKey.get(key);
-    if (existing) {
-      existing.rate = (existing.rate ?? 0) + (line.rate ?? 0);
-      existing.elementCount += 1;
-    } else {
+    if (!byKey.has(key)) {
       byKey.set(key, {
         ...line,
         linkedElementId: null,
@@ -72,13 +70,23 @@ export const aggregateProductionLines = (
         quantity: 1,
         elementCount: 1,
       });
+      rateAccumulator.set(key, line.rate ?? 0);
+      countAccumulator.set(key, 1);
+    } else {
+      rateAccumulator.set(
+        key,
+        (rateAccumulator.get(key) ?? 0) + (line.rate ?? 0),
+      );
+      countAccumulator.set(key, (countAccumulator.get(key) ?? 0) + 1);
     }
   }
 
   // quantity = number of distinct elements collapsed into this line
   const aggregate = Array.from(byKey.values()).map((l) => ({
     ...l,
-    quantity: l.elementCount,
+    rate: rateAccumulator.get(l.linkedCategory!) ?? l.rate,
+    quantity: countAccumulator.get(l.linkedCategory!) ?? 1,
+    elementCount: countAccumulator.get(l.linkedCategory!) ?? 1,
   }));
 
   return { perElement, aggregate };

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
 import {
   budgets,
@@ -203,21 +203,38 @@ export const generateBudget = createServerFn({ method: "POST" })
         where: eq(budgets.projectId, data.projectId),
       });
 
-      const scheduledDayCount = await (async () => {
+      const scheduleInfo = await (async () => {
         const schedule = await db.query.schedules.findFirst({
           where: eq(schedules.projectId, data.projectId),
         });
         if (!schedule) return null;
-        const days = await db
+        const dayRows = await db
           .select({ id: shootingDays.id })
           .from(shootingDays)
           .where(eq(shootingDays.scheduleId, schedule.id));
-        return days.length > 0 ? days.length : null;
+        const stripRows = await db
+          .select({
+            shootingDayId: strips.shootingDayId,
+            sceneId: strips.sceneId,
+          })
+          .from(strips)
+          .where(eq(strips.scheduleId, schedule.id));
+        const sceneTodays = new Map<string, Set<string>>();
+        for (const s of stripRows) {
+          if (!s.shootingDayId) continue;
+          const set = sceneTodays.get(s.sceneId) ?? new Set();
+          set.add(s.shootingDayId);
+          sceneTodays.set(s.sceneId, set);
+        }
+        return {
+          dayCount: dayRows.length > 0 ? dayRows.length : null,
+          sceneTodays,
+        };
       })();
 
       const resolvedShootingDays =
         existingBudget?.shootingDays ??
-        scheduledDayCount ??
+        scheduleInfo?.dayCount ??
         estimateShootingDays(
           rows.reduce(
             (max, r) =>
@@ -281,54 +298,60 @@ export const generateBudget = createServerFn({ method: "POST" })
           const { perElement, aggregate } =
             aggregateProductionLines(generatedLines);
 
-          // 2. Compute schedule-based day counts for per-element lines (locations, vehicles)
-          const scheduleDataForLines = await (async () => {
-            const schedule = await db.query.schedules.findFirst({
-              where: eq(schedules.projectId, data.projectId),
-            });
-            if (!schedule) return null;
-            const stripRows = await db
-              .select({
-                shootingDayId: strips.shootingDayId,
-                sceneId: strips.sceneId,
-              })
-              .from(strips)
-              .where(eq(strips.scheduleId, schedule.id));
-            // map sceneId → set of shootingDayIds
-            const sceneTodays = new Map<string, Set<string>>();
-            for (const s of stripRows) {
-              if (!s.shootingDayId) continue;
-              const set = sceneTodays.get(s.sceneId) ?? new Set();
-              set.add(s.shootingDayId);
-              sceneTodays.set(s.sceneId, set);
+          // 2. Batch: fetch all occurrences for per-element elements in one query
+          const allPerElementIds = perElement
+            .map((l) => l.linkedElementId!)
+            .filter(Boolean);
+
+          const allOccurrences =
+            allPerElementIds.length > 0
+              ? await db
+                  .select({
+                    elementId: breakdownOccurrences.elementId,
+                    sceneId: breakdownOccurrences.sceneId,
+                  })
+                  .from(breakdownOccurrences)
+                  .where(
+                    inArray(breakdownOccurrences.elementId, allPerElementIds),
+                  )
+              : [];
+
+          // Build elementId → Set<shootingDayId> map
+          const elementDayMap = new Map<string, Set<string>>();
+          for (const occ of allOccurrences) {
+            const daySet = elementDayMap.get(occ.elementId) ?? new Set();
+            if (scheduleInfo) {
+              const days = scheduleInfo.sceneTodays.get(occ.sceneId);
+              if (days) for (const d of days) daySet.add(d);
             }
-            return { sceneTodays };
-          })();
+            elementDayMap.set(occ.elementId, daySet);
+          }
+
+          // Batch: fetch all existing per-element budget lines in one query
+          const existingPerElementLines =
+            allPerElementIds.length > 0
+              ? await db
+                  .select()
+                  .from(budgetLines)
+                  .where(
+                    and(
+                      eq(budgetLines.budgetId, budgetId),
+                      inArray(budgetLines.linkedElementId, allPerElementIds),
+                    ),
+                  )
+              : [];
+          const existingByElementId = new Map(
+            existingPerElementLines.map((l) => [l.linkedElementId!, l]),
+          );
 
           // 3. Upsert per-element lines (locations, vehicles), preserving actual
           for (const line of perElement) {
-            let qty = line.quantity;
-            if (scheduleDataForLines && line.linkedElementId) {
-              const occurrences = await db
-                .select({ sceneId: breakdownOccurrences.sceneId })
-                .from(breakdownOccurrences)
-                .where(
-                  eq(breakdownOccurrences.elementId, line.linkedElementId),
-                );
-              const daySet = new Set<string>();
-              for (const occ of occurrences) {
-                const days = scheduleDataForLines.sceneTodays.get(occ.sceneId);
-                if (days) for (const d of days) daySet.add(d);
-              }
-              qty = daySet.size > 0 ? daySet.size : line.quantity;
-            }
+            const daySet =
+              elementDayMap.get(line.linkedElementId!) ?? new Set();
+            const qty =
+              scheduleInfo && daySet.size > 0 ? daySet.size : line.quantity;
 
-            const existing = await db.query.budgetLines.findFirst({
-              where: and(
-                eq(budgetLines.budgetId, budgetId),
-                eq(budgetLines.linkedElementId, line.linkedElementId!),
-              ),
-            });
+            const existing = existingByElementId.get(line.linkedElementId!);
             if (existing) {
               await db
                 .update(budgetLines)
@@ -355,15 +378,30 @@ export const generateBudget = createServerFn({ method: "POST" })
             }
           }
 
+          // Batch: fetch all existing aggregate lines in one query
+          const aggregateCategories = aggregate
+            .map((l) => l.linkedCategory!)
+            .filter(Boolean);
+          const existingAggregateLines =
+            aggregateCategories.length > 0
+              ? await db
+                  .select()
+                  .from(budgetLines)
+                  .where(
+                    and(
+                      eq(budgetLines.budgetId, budgetId),
+                      inArray(budgetLines.linkedCategory, aggregateCategories),
+                      isNull(budgetLines.linkedElementId),
+                    ),
+                  )
+              : [];
+          const existingByCategory = new Map(
+            existingAggregateLines.map((l) => [l.linkedCategory!, l]),
+          );
+
           // 4. Upsert aggregate lines (one per collapsed category key), preserving actual
           for (const line of aggregate) {
-            const existing = await db.query.budgetLines.findFirst({
-              where: and(
-                eq(budgetLines.budgetId, budgetId),
-                eq(budgetLines.linkedCategory, line.linkedCategory!),
-                isNull(budgetLines.linkedElementId),
-              ),
-            });
+            const existing = existingByCategory.get(line.linkedCategory!);
             if (existing) {
               await db
                 .update(budgetLines)
