@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { eq, asc, and, inArray } from "drizzle-orm";
+import { eq, asc, and, inArray, sql } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
 import { queryOptions } from "@tanstack/react-query";
 import {
@@ -23,6 +23,8 @@ import {
   type CameraMovement,
   type TransitionType,
   type BreakdownSummary,
+  COVERAGE_PATTERNS,
+  PATTERN_IDS,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -954,6 +956,94 @@ export const breakdownSummaryQueryOptions = (sceneId: string) =>
     queryKey: ["shooting-plan", "breakdown-summary", sceneId],
     queryFn: () => getBreakdownSummary({ data: { sceneId } }),
   });
+
+export const applyPattern = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      scenarioId: z.string().uuid(),
+      patternId: z.enum(PATTERN_IDS),
+      atPosition: z.number().int().min(0).nullable().optional(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<void, ScenarioNotFoundError | ForbiddenError | DbError>
+    > => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const scenario = await db.query.shotPlanScenarios.findFirst({
+            where: eq(shotPlanScenarios.id, data.scenarioId),
+          });
+          if (!scenario) {
+            throw new ScenarioNotFoundError(data.scenarioId);
+          }
+
+          const shotPlan = await db.query.shotPlans.findFirst({
+            where: eq(shotPlans.id, scenario.shotPlanId),
+          });
+          if (!shotPlan) {
+            throw new ScenarioNotFoundError(data.scenarioId);
+          }
+
+          const pattern = COVERAGE_PATTERNS[data.patternId];
+          const existingShots = await db
+            .select()
+            .from(shots)
+            .where(eq(shots.scenarioId, data.scenarioId))
+            .orderBy(asc(shots.position));
+
+          const startPosition = data.atPosition ?? existingShots.length;
+
+          if (startPosition < existingShots.length) {
+            await db
+              .update(shots)
+              .set({
+                position: sql`${shots.position} + ${pattern.shots.length}`,
+              })
+              .where(
+                and(
+                  eq(shots.scenarioId, data.scenarioId),
+                  sql`${shots.position} >= ${startPosition}`,
+                ),
+              );
+          }
+
+          const newShots = pattern.shots.map((s, i) => ({
+            scenarioId: data.scenarioId,
+            position: startPosition + i,
+            shotSize: s.shotSize,
+            cameraMovement: s.cameraMovement,
+            estimatedMinutes: null,
+            notes: s.notesHint,
+            cameraLabel: "A" as const,
+          }));
+          await db.insert(shots).values(newShots);
+
+          await db
+            .update(shotPlanScenarios)
+            .set({ isSuggested: false })
+            .where(eq(shotPlanScenarios.id, data.scenarioId));
+
+          await rebuildAutoTransitions(
+            db,
+            data.scenarioId,
+            shotPlan.projectId,
+          );
+        })(),
+        (e) => {
+          if (e instanceof ScenarioNotFoundError) return e;
+          return new DbError("applyPattern", e);
+        },
+      );
+
+      return toShape(result);
+    },
+  );
 
 export const updateEffortWeights = createServerFn({ method: "POST" })
   .validator(
