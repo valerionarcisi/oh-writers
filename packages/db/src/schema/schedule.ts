@@ -7,6 +7,7 @@ import {
   boolean,
   date,
   timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 import { scenes } from "./scenes";
@@ -22,6 +23,7 @@ export const schedules = pgTable("schedules", {
   status: text("status", { enum: ["draft", "locked"] })
     .notNull()
     .default("draft"),
+  effortWeights: jsonb("effort_weights"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
