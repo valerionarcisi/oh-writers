@@ -1,8 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { resolveShotMinutes, inferTransitions } from "./shot-plan.js";
+import {
+  resolveShotMinutes,
+  inferTransitions,
+  computeScenarioTotal,
+} from "./shot-plan.js";
 import { DEFAULT_SHOT_EFFORT_WEIGHTS } from "./effort-weights.js";
 import type { ShotSize, CameraMovement } from "./effort-weights.js";
-import type { ShotForTransition } from "./shot-plan.js";
+import type {
+  ShotForTransition,
+  ShotInput,
+  TransitionInput,
+} from "./shot-plan.js";
 
 describe("resolveShotMinutes", () => {
   const w = DEFAULT_SHOT_EFFORT_WEIGHTS;
@@ -211,5 +219,61 @@ describe("inferTransitions", () => {
       w,
     );
     expect(result.every((t) => t.ruleId !== "shot_size_jump")).toBe(true);
+  });
+});
+
+describe("computeScenarioTotal", () => {
+  const w = DEFAULT_SHOT_EFFORT_WEIGHTS;
+
+  it("returns 0 for empty shots and transitions", () => {
+    expect(computeScenarioTotal([], [], w)).toBe(0);
+  });
+
+  it("sums auto-resolved shot minutes", () => {
+    const shots: ShotInput[] = [
+      { shotSize: "WS", cameraMovement: "STATIC", estimatedMinutes: null }, // 45
+      { shotSize: "MS", cameraMovement: "STATIC", estimatedMinutes: null }, // 25
+    ];
+    expect(computeScenarioTotal(shots, [], w)).toBe(70);
+  });
+
+  it("uses manual override when set", () => {
+    const shots: ShotInput[] = [
+      { shotSize: "WS", cameraMovement: "STATIC", estimatedMinutes: 99 },
+    ];
+    expect(computeScenarioTotal(shots, [], w)).toBe(99);
+  });
+
+  it("adds transition minutes", () => {
+    const shots: ShotInput[] = [
+      { shotSize: "MS", cameraMovement: "STATIC", estimatedMinutes: null }, // 25
+    ];
+    const transitions: TransitionInput[] = [
+      { estimatedMinutes: 20, ruleId: "rig_change" },
+    ];
+    expect(computeScenarioTotal(shots, transitions, w)).toBe(45);
+  });
+
+  it("treats null transition estimatedMinutes as 0", () => {
+    const shots: ShotInput[] = [
+      { shotSize: "MS", cameraMovement: "STATIC", estimatedMinutes: null }, // 25
+    ];
+    const transitions: TransitionInput[] = [
+      { estimatedMinutes: null, ruleId: "rig_change" },
+    ];
+    expect(computeScenarioTotal(shots, transitions, w)).toBe(25);
+  });
+
+  it("sums multiple shots and multiple transitions", () => {
+    const shots: ShotInput[] = [
+      { shotSize: "WS", cameraMovement: "DOLLY", estimatedMinutes: null }, // 90
+      { shotSize: "CU", cameraMovement: "STATIC", estimatedMinutes: null }, // 20
+      { shotSize: "MS", cameraMovement: "HANDHELD", estimatedMinutes: null }, // 15 (HANDHELD_ANY)
+    ];
+    const transitions: TransitionInput[] = [
+      { estimatedMinutes: 20, ruleId: "rig_change" },
+      { estimatedMinutes: 15, ruleId: "shot_size_jump" },
+    ];
+    expect(computeScenarioTotal(shots, transitions, w)).toBe(160);
   });
 });
