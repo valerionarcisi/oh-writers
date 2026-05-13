@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { scheduleQueryOptions } from "~/features/schedule/server/schedule.server";
 import { DayBalanceTimeline } from "./DayBalanceTimeline";
+import { SceneShotTimeline } from "./SceneShotTimeline";
 import styles from "./ShootingPlanPage.module.css";
 
 interface ShootingPlanPageProps {
@@ -63,6 +64,22 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
               onSelectScene={setSelectedSceneId}
             />
           )}
+          {selectedSceneId &&
+            selectedDay &&
+            (() => {
+              const strip = selectedDay.strips.find(
+                (s) => s.sceneId === selectedSceneId,
+              );
+              if (!strip) return null;
+              return (
+                <SceneShotTimeline
+                  key={selectedSceneId}
+                  sceneId={selectedSceneId}
+                  projectId={projectId}
+                  sceneLabel={`SC.${strip.sceneNumber} ${strip.location}`}
+                />
+              );
+            })()}
         </main>
       </div>
     </div>
