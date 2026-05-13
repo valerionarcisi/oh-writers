@@ -14,7 +14,7 @@ CREATE TABLE shot_plans (
 CREATE TABLE shot_plan_scenarios (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   shot_plan_id uuid NOT NULL REFERENCES shot_plans(id) ON DELETE CASCADE,
-  name         text NOT NULL DEFAULT 'Piano A',
+  name         text NOT NULL DEFAULT 'Plan A',
   position     integer NOT NULL DEFAULT 0,
   created_at   timestamptz NOT NULL DEFAULT now()
 );
@@ -51,3 +51,10 @@ ALTER TABLE shot_plans
   REFERENCES shot_plan_scenarios(id)
   ON DELETE SET NULL
   DEFERRABLE INITIALLY DEFERRED;
+
+CREATE INDEX ON shot_plans (project_id);
+CREATE INDEX ON shot_plan_scenarios (shot_plan_id);
+CREATE INDEX ON shots (scenario_id);
+CREATE INDEX ON shots (position);
+CREATE INDEX ON transition_slots (scenario_id);
+CREATE INDEX ON transition_slots (after_shot_id);
