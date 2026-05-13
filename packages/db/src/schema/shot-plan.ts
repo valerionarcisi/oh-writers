@@ -42,6 +42,7 @@ export const shotPlanScenarios = pgTable(
       .references(() => shotPlans.id, { onDelete: "cascade" }),
     name: text("name").notNull().default("Plan A"),
     position: integer("position").notNull().default(0),
+    isSuggested: boolean("is_suggested").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [index().on(t.shotPlanId)],
