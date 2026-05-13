@@ -49,7 +49,12 @@ import {
   DbError,
 } from "../budget.errors";
 import { resolveBudgetAccessByProjectId } from "./budget-access";
-import { aggregateProductionLines } from "./budget-helpers";
+import {
+  aggregateProductionLines,
+  computeDayCosts,
+  type PerElementLineCost,
+  type DayCost,
+} from "./budget-helpers";
 import { getProjectBreakdownRows } from "~/features/breakdown/server/breakdown.server";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1203,6 +1208,206 @@ export const deleteRateEntry = createServerFn({ method: "POST" })
           .then(() => ({ id: data.entryId })),
         (e) => new DbError("deleteRateEntry", e),
       );
+      return toShape(result);
+    },
+  );
+
+// ─── getDayCosts ──────────────────────────────────────────────────────────────
+
+export type { DayCost } from "./budget-helpers";
+
+export const getDayCosts = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<DayCost[], ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canView(access.value))
+        return toShape(err(new ForbiddenError("view budget")));
+
+      const result = await ResultAsync.fromPromise(
+        (async (): Promise<DayCost[]> => {
+          const schedule = await db.query.schedules.findFirst({
+            where: eq(schedules.projectId, data.projectId),
+          });
+          if (!schedule) return [];
+
+          const budget = await db.query.budgets.findFirst({
+            where: eq(budgets.projectId, data.projectId),
+          });
+          if (!budget) return [];
+
+          const dayRows = await db.query.shootingDays.findMany({
+            where: and(
+              eq(shootingDays.scheduleId, schedule.id),
+              eq(shootingDays.dayType, "shoot"),
+            ),
+            orderBy: (t) => t.dayNumber,
+          });
+          if (dayRows.length === 0) return [];
+
+          const stripRows = await db
+            .select({
+              shootingDayId: strips.shootingDayId,
+              sceneId: strips.sceneId,
+            })
+            .from(strips)
+            .where(eq(strips.scheduleId, schedule.id));
+
+          const dayScenes = new Map<string, string[]>();
+          for (const s of stripRows) {
+            if (!s.shootingDayId) continue;
+            const arr = dayScenes.get(s.shootingDayId) ?? [];
+            arr.push(s.sceneId);
+            dayScenes.set(s.shootingDayId, arr);
+          }
+
+          const castRows = await db.query.budgetCast.findMany({
+            where: eq(budgetCast.budgetId, budget.id),
+          });
+
+          const elementIds = castRows
+            .map((r) => r.elementId)
+            .filter((id): id is string => id !== null);
+
+          const castOccurrences =
+            elementIds.length > 0
+              ? await db
+                  .select({
+                    elementId: breakdownOccurrences.elementId,
+                    sceneId: breakdownOccurrences.sceneId,
+                  })
+                  .from(breakdownOccurrences)
+                  .where(inArray(breakdownOccurrences.elementId, elementIds))
+              : [];
+
+          const occsByElement = new Map<string, string[]>();
+          for (const occ of castOccurrences) {
+            const arr = occsByElement.get(occ.elementId) ?? [];
+            arr.push(occ.sceneId);
+            occsByElement.set(occ.elementId, arr);
+          }
+
+          const castCostsByScene: Record<string, number> = {};
+          for (const row of castRows) {
+            const sceneIds = row.elementId
+              ? (occsByElement.get(row.elementId) ?? [])
+              : [];
+            if (sceneIds.length === 0) continue;
+            const total =
+              Number(row.dayRate) * Number(row.days) +
+              Number(row.mealAllowance) +
+              Number(row.accommodation);
+            const perScene = total / sceneIds.length;
+            for (const sid of sceneIds) {
+              castCostsByScene[sid] = (castCostsByScene[sid] ?? 0) + perScene;
+            }
+          }
+
+          const crewRows = await db.query.budgetCrew.findMany({
+            where: and(
+              eq(budgetCrew.budgetId, budget.id),
+              eq(budgetCrew.enabled, true),
+            ),
+          });
+          const totalCrewCost = crewRows.reduce(
+            (sum, r) =>
+              sum +
+              Number(r.dayRate) * Number(r.days) +
+              Number(r.mealAllowance) +
+              Number(r.accommodation),
+            0,
+          );
+
+          const prodLines = await db.query.budgetLines.findMany({
+            where: and(
+              eq(budgetLines.budgetId, budget.id),
+              eq(budgetLines.topSheet, "production"),
+            ),
+          });
+
+          const perElementLineCosts: PerElementLineCost[] = [];
+          let otherLinesTotalCost = 0;
+
+          const prodElementIds = prodLines
+            .filter(
+              (l) =>
+                l.linkedElementId !== null &&
+                (l.linkedCategory === "locations" ||
+                  l.linkedCategory === "vehicles"),
+            )
+            .map((l) => l.linkedElementId as string);
+
+          const prodOccurrences =
+            prodElementIds.length > 0
+              ? await db
+                  .select({
+                    elementId: breakdownOccurrences.elementId,
+                    sceneId: breakdownOccurrences.sceneId,
+                  })
+                  .from(breakdownOccurrences)
+                  .where(
+                    inArray(breakdownOccurrences.elementId, prodElementIds),
+                  )
+              : [];
+
+          const prodOccsByElement = new Map<string, string[]>();
+          for (const occ of prodOccurrences) {
+            const arr = prodOccsByElement.get(occ.elementId) ?? [];
+            arr.push(occ.sceneId);
+            prodOccsByElement.set(occ.elementId, arr);
+          }
+
+          for (const line of prodLines) {
+            const effective =
+              line.actual !== null
+                ? Number(line.actual)
+                : Number(line.quantity ?? 1) * Number(line.rate ?? 0);
+
+            if (
+              line.linkedElementId &&
+              (line.linkedCategory === "locations" ||
+                line.linkedCategory === "vehicles")
+            ) {
+              perElementLineCosts.push({
+                linkedCategory: line.linkedCategory,
+                sceneIds: prodOccsByElement.get(line.linkedElementId) ?? [],
+                effectiveTotal: effective,
+              });
+            } else {
+              otherLinesTotalCost += effective;
+            }
+          }
+
+          const days = dayRows.map((d) => ({
+            id: d.id,
+            dayNumber: d.dayNumber,
+            date: d.date,
+            sceneIds: dayScenes.get(d.id) ?? [],
+          }));
+
+          return computeDayCosts({
+            days,
+            totalShootingDays: dayRows.length,
+            contingencyPercent: Number(budget.contingencyPercent),
+            castCostsByScene,
+            totalCrewCost,
+            perElementLineCosts,
+            otherLinesTotalCost,
+          });
+        })(),
+        (e) => new DbError("getDayCosts", e),
+      );
+
       return toShape(result);
     },
   );

@@ -91,3 +91,103 @@ export const aggregateProductionLines = (
 
   return { perElement, aggregate };
 };
+
+export type DayCostBreakdown = {
+  cast: number;
+  crew: number;
+  locations: number;
+  vehicles: number;
+  other: number;
+  contingency: number;
+};
+
+export type DayCost = {
+  dayId: string;
+  dayNumber: number;
+  date: string | null;
+  sceneIds: string[];
+  breakdown: DayCostBreakdown;
+  total: number;
+};
+
+export type PerElementLineCost = {
+  linkedCategory: string;
+  sceneIds: string[];
+  effectiveTotal: number;
+};
+
+export type DayCostInput = {
+  days: {
+    id: string;
+    dayNumber: number;
+    date: string | null;
+    sceneIds: string[];
+  }[];
+  totalShootingDays: number;
+  contingencyPercent: number;
+  castCostsByScene: Record<string, number>;
+  totalCrewCost: number;
+  perElementLineCosts: PerElementLineCost[];
+  otherLinesTotalCost: number;
+};
+
+export const computeDayCosts = (input: DayCostInput): DayCost[] => {
+  const {
+    days,
+    totalShootingDays,
+    contingencyPercent,
+    castCostsByScene,
+    totalCrewCost,
+    perElementLineCosts,
+    otherLinesTotalCost,
+  } = input;
+
+  const crewPerDay =
+    totalShootingDays > 0 ? totalCrewCost / totalShootingDays : 0;
+  const otherPerDay =
+    totalShootingDays > 0 ? otherLinesTotalCost / totalShootingDays : 0;
+
+  return days.map((day) => {
+    const sceneSet = new Set(day.sceneIds);
+
+    const cast = day.sceneIds.reduce(
+      (sum, sid) => sum + (castCostsByScene[sid] ?? 0),
+      0,
+    );
+
+    const locations = perElementLineCosts
+      .filter(
+        (l) =>
+          l.linkedCategory === "locations" &&
+          l.sceneIds.some((sid) => sceneSet.has(sid)),
+      )
+      .reduce((sum, l) => sum + l.effectiveTotal, 0);
+
+    const vehicles = perElementLineCosts
+      .filter(
+        (l) =>
+          l.linkedCategory === "vehicles" &&
+          l.sceneIds.some((sid) => sceneSet.has(sid)),
+      )
+      .reduce((sum, l) => sum + l.effectiveTotal, 0);
+
+    const subtotal = cast + crewPerDay + locations + vehicles + otherPerDay;
+    const contingency = subtotal * (contingencyPercent / 100);
+
+    return {
+      dayId: day.id,
+      dayNumber: day.dayNumber,
+      date: day.date,
+      sceneIds: day.sceneIds,
+      breakdown: {
+        cast,
+        crew: crewPerDay,
+        locations,
+        vehicles,
+        other: otherPerDay,
+        contingency,
+      },
+      total: subtotal + contingency,
+    };
+  });
+};
