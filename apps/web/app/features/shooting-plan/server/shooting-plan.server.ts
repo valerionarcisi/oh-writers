@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { eq, asc, and, inArray, sql } from "drizzle-orm";
-import { ResultAsync, ok, err } from "neverthrow";
+import { ResultAsync, ok, okAsync, err } from "neverthrow";
 import { queryOptions } from "@tanstack/react-query";
 import {
   shotPlans,
@@ -11,6 +11,7 @@ import {
   schedules,
   breakdownElements,
   breakdownOccurrences,
+  scenes,
 } from "@oh-writers/db/schema";
 import {
   ShotEffortWeightsSchema,
@@ -25,6 +26,7 @@ import {
   type BreakdownSummary,
   COVERAGE_PATTERNS,
   PATTERN_IDS,
+  recommendPattern,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -255,6 +257,61 @@ const rebuildAutoTransitions = async (
   }
 };
 
+// ─── View assembly ────────────────────────────────────────────────────────────
+
+const buildShotPlanView = async (
+  db: Db,
+  shotPlanId: string,
+): Promise<ShotPlanView> => {
+  const plan = await db.query.shotPlans.findFirst({
+    where: eq(shotPlans.id, shotPlanId),
+  });
+  if (!plan) {
+    throw new DbError(
+      "buildShotPlanView",
+      new Error(`Shot plan ${shotPlanId} not found`),
+    );
+  }
+
+  const weightsResult = await resolveWeights(db, plan.projectId);
+  if (weightsResult.isErr()) throw weightsResult.error;
+  const weights = weightsResult.value;
+
+  const scenarios = await db
+    .select()
+    .from(shotPlanScenarios)
+    .where(eq(shotPlanScenarios.shotPlanId, plan.id))
+    .orderBy(asc(shotPlanScenarios.position));
+
+  const scenarioIds = scenarios.map((s) => s.id);
+  const [rawShots, rawTransitions] =
+    scenarioIds.length === 0
+      ? [[] as (typeof shots.$inferSelect)[], [] as (typeof transitionSlots.$inferSelect)[]]
+      : await Promise.all([
+          db
+            .select()
+            .from(shots)
+            .where(inArray(shots.scenarioId, scenarioIds))
+            .orderBy(asc(shots.position)),
+          db
+            .select()
+            .from(transitionSlots)
+            .where(inArray(transitionSlots.scenarioId, scenarioIds)),
+        ]);
+
+  const scenarioViews = scenarios.map((scenario) =>
+    buildScenarioView(scenario, rawShots, rawTransitions, weights),
+  );
+
+  return {
+    id: plan.id,
+    projectId: plan.projectId,
+    sceneId: plan.sceneId,
+    activeScenarioId: plan.activeScenarioId,
+    scenarios: scenarioViews,
+  } satisfies ShotPlanView;
+};
+
 // ─── Read server functions ────────────────────────────────────────────────────
 
 export const getShotPlan = createServerFn({ method: "GET" })
@@ -271,72 +328,18 @@ export const getShotPlan = createServerFn({ method: "GET" })
       await requireUser();
       const db = await getDb();
 
-      const result = await resolveWeights(db, data.projectId).andThen(
-        (weights) =>
-          ResultAsync.fromPromise(
-            db.query.shotPlans
-              .findFirst({ where: eq(shotPlans.sceneId, data.sceneId) })
-              .then((r) => r ?? null),
-            (e) => new DbError("getShotPlan/loadPlan", e),
-          ).andThen((plan) => {
-            if (!plan) return ok(null);
-
-            return ResultAsync.fromPromise(
-              db
-                .select()
-                .from(shotPlanScenarios)
-                .where(eq(shotPlanScenarios.shotPlanId, plan.id))
-                .orderBy(asc(shotPlanScenarios.position)),
-              (e) => new DbError("getShotPlan/loadScenarios", e),
-            )
-              .andThen((scenarios) => {
-                const scenarioIds = scenarios.map((s) => s.id);
-                if (scenarioIds.length === 0) {
-                  return ok({
-                    plan,
-                    scenarios,
-                    rawShots: [],
-                    rawTransitions: [],
-                  });
-                }
-
-                return ResultAsync.fromPromise(
-                  Promise.all([
-                    db
-                      .select()
-                      .from(shots)
-                      .where(inArray(shots.scenarioId, scenarioIds))
-                      .orderBy(asc(shots.position)),
-                    db
-                      .select()
-                      .from(transitionSlots)
-                      .where(inArray(transitionSlots.scenarioId, scenarioIds)),
-                  ]),
-                  (e) => new DbError("getShotPlan/loadShotsTransitions", e),
-                ).andThen(([rawShots, rawTransitions]) =>
-                  ok({ plan, scenarios, rawShots, rawTransitions }),
-                );
-              })
-              .map(({ plan, scenarios, rawShots, rawTransitions }) => {
-                const scenarioViews = scenarios.map((scenario) =>
-                  buildScenarioView(
-                    scenario,
-                    rawShots,
-                    rawTransitions,
-                    weights,
-                  ),
-                );
-
-                return {
-                  id: plan.id,
-                  projectId: plan.projectId,
-                  sceneId: plan.sceneId,
-                  activeScenarioId: plan.activeScenarioId,
-                  scenarios: scenarioViews,
-                } satisfies ShotPlanView;
-              });
-          }),
-      );
+      const result = await ResultAsync.fromPromise(
+        db.query.shotPlans
+          .findFirst({ where: eq(shotPlans.sceneId, data.sceneId) })
+          .then((r) => r ?? null),
+        (e) => new DbError("getShotPlan/loadPlan", e),
+      ).andThen((plan) => {
+        if (!plan) return okAsync<ShotPlanView | null, DbError>(null);
+        return ResultAsync.fromPromise(
+          buildShotPlanView(db, plan.id),
+          (e) => (e instanceof DbError ? e : new DbError("getShotPlan/build", e)),
+        );
+      });
 
       return toShape(result);
     },
@@ -1039,6 +1042,126 @@ export const applyPattern = createServerFn({ method: "POST" })
           if (e instanceof ScenarioNotFoundError) return e;
           return new DbError("applyPattern", e);
         },
+      );
+
+      return toShape(result);
+    },
+  );
+
+export const getOrCreateInitialPlan = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      sceneId: z.string().uuid(),
+      projectId: z.string().uuid(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<ShotPlanView, ForbiddenError | DbError>> => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const existing = await db.query.shotPlans.findFirst({
+            where: eq(shotPlans.sceneId, data.sceneId),
+          });
+          if (existing) {
+            return await buildShotPlanView(db, existing.id);
+          }
+
+          const planRows = await db
+            .insert(shotPlans)
+            .values({
+              projectId: data.projectId,
+              sceneId: data.sceneId,
+              activeScenarioId: null,
+            })
+            .returning();
+          const plan = planRows[0]!;
+
+          const scenarioRows = await db
+            .insert(shotPlanScenarios)
+            .values({
+              shotPlanId: plan.id,
+              name: "Piano A",
+              position: 0,
+              isSuggested: true,
+            })
+            .returning();
+          const scenario = scenarioRows[0]!;
+
+          await db
+            .update(shotPlans)
+            .set({ activeScenarioId: scenario.id, updatedAt: new Date() })
+            .where(eq(shotPlans.id, plan.id));
+
+          const scene = await db.query.scenes.findFirst({
+            where: eq(scenes.id, data.sceneId),
+          });
+          if (!scene) {
+            throw new DbError(
+              "getOrCreateInitialPlan",
+              new Error(`Scene ${data.sceneId} not found`),
+            );
+          }
+
+          let breakdownSummary: BreakdownSummary | null = null;
+          const breakdownRows = await db
+            .select({
+              category: breakdownElements.category,
+              name: breakdownElements.name,
+            })
+            .from(breakdownOccurrences)
+            .innerJoin(
+              breakdownElements,
+              eq(breakdownOccurrences.elementId, breakdownElements.id),
+            )
+            .where(eq(breakdownOccurrences.sceneId, data.sceneId));
+
+          if (breakdownRows.length > 0) {
+            breakdownSummary = {
+              castWithDialogue: Array.from(
+                new Set(
+                  breakdownRows
+                    .filter((r) => r.category === "cast")
+                    .map((r) => r.name),
+                ),
+              ),
+              actionNoteCount: breakdownRows.filter(
+                (r) =>
+                  r.category === "stunts" ||
+                  r.category === "sfx" ||
+                  r.category === "vfx",
+              ).length,
+            };
+          }
+
+          const patternId = recommendPattern(breakdownSummary, {
+            pageStart: scene.pageStart,
+            pageEnd: scene.pageEnd,
+            hasSpecialEffect: scene.hasSpecialEffect,
+          });
+
+          const pattern = COVERAGE_PATTERNS[patternId];
+          const newShots = pattern.shots.map((s, i) => ({
+            scenarioId: scenario.id,
+            position: i,
+            shotSize: s.shotSize,
+            cameraMovement: s.cameraMovement,
+            estimatedMinutes: null,
+            notes: s.notesHint,
+            cameraLabel: "A" as const,
+          }));
+          await db.insert(shots).values(newShots);
+
+          await rebuildAutoTransitions(db, scenario.id, plan.projectId);
+
+          return await buildShotPlanView(db, plan.id);
+        })(),
+        (e) =>
+          e instanceof DbError ? e : new DbError("getOrCreateInitialPlan", e),
       );
 
       return toShape(result);
