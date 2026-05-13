@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { ResultAsync, ok, err } from "neverthrow";
 import {
   budgets,
@@ -8,13 +8,18 @@ import {
   budgetRates,
   budgetCast,
   budgetCrew,
+  projectRateCard,
   breakdownElements,
   breakdownOccurrences,
   scenes,
   projects,
   screenplays,
+  schedules,
+  shootingDays,
+  strips,
   type BudgetCast,
   type BudgetCrew,
+  type ProjectRateCard,
 } from "@oh-writers/db/schema";
 import {
   BudgetSchema,
@@ -24,11 +29,13 @@ import {
   computeBudgetSummary,
   lineEffectiveTotal,
   CREW_ROLES,
+  RATE_UNITS,
   type Budget,
   type BudgetLine,
   type BudgetSummary,
   type RateKey,
   type FiscalRegime,
+  type RateUnit,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -42,6 +49,7 @@ import {
   DbError,
 } from "../budget.errors";
 import { resolveBudgetAccessByProjectId } from "./budget-access";
+import { aggregateProductionLines } from "./budget-helpers";
 import { getProjectBreakdownRows } from "~/features/breakdown/server/breakdown.server";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -187,12 +195,29 @@ export const generateBudget = createServerFn({ method: "POST" })
       const rows = breakdownResult.value;
       if (rows.length === 0) return toShape(err(new NoBreakdownError()));
 
-      // resolve shooting days (use existing override if budget already exists)
+      // resolve shooting days:
+      // 1. manual override on existing budget wins
+      // 2. count actual days from schedule if one exists
+      // 3. fall back to estimate from scene count
       const existingBudget = await db.query.budgets.findFirst({
         where: eq(budgets.projectId, data.projectId),
       });
-      const shootingDays =
+
+      const scheduledDayCount = await (async () => {
+        const schedule = await db.query.schedules.findFirst({
+          where: eq(schedules.projectId, data.projectId),
+        });
+        if (!schedule) return null;
+        const days = await db
+          .select({ id: shootingDays.id })
+          .from(shootingDays)
+          .where(eq(shootingDays.scheduleId, schedule.id));
+        return days.length > 0 ? days.length : null;
+      })();
+
+      const resolvedShootingDays =
         existingBudget?.shootingDays ??
+        scheduledDayCount ??
         estimateShootingDays(
           rows.reduce(
             (max, r) =>
@@ -220,7 +245,7 @@ export const generateBudget = createServerFn({ method: "POST" })
             totalQuantity: r.totalQuantity,
             scenesPresent: r.scenesPresent,
           })),
-          shootingDays,
+          shootingDays: resolvedShootingDays,
         },
         rateOverrides,
       );
@@ -239,15 +264,12 @@ export const generateBudget = createServerFn({ method: "POST" })
                 updatedAt: new Date(),
               })
               .where(eq(budgets.id, budgetId));
-            await db
-              .delete(budgetLines)
-              .where(eq(budgetLines.budgetId, budgetId));
           } else {
             const [inserted] = await db
               .insert(budgets)
               .values({
                 projectId: data.projectId,
-                shootingDays,
+                shootingDays: resolvedShootingDays,
                 status: "estimated",
                 generatedAt: new Date(),
               })
@@ -255,40 +277,154 @@ export const generateBudget = createServerFn({ method: "POST" })
             budgetId = inserted!.id;
           }
 
-          if (generatedLines.length > 0) {
-            await db.insert(budgetLines).values(
-              generatedLines.map((l) => ({
+          // 1. Split generated lines into per-element and aggregate
+          const { perElement, aggregate } =
+            aggregateProductionLines(generatedLines);
+
+          // 2. Compute schedule-based day counts for per-element lines (locations, vehicles)
+          const scheduleDataForLines = await (async () => {
+            const schedule = await db.query.schedules.findFirst({
+              where: eq(schedules.projectId, data.projectId),
+            });
+            if (!schedule) return null;
+            const stripRows = await db
+              .select({
+                shootingDayId: strips.shootingDayId,
+                sceneId: strips.sceneId,
+              })
+              .from(strips)
+              .where(eq(strips.scheduleId, schedule.id));
+            // map sceneId → set of shootingDayIds
+            const sceneTodays = new Map<string, Set<string>>();
+            for (const s of stripRows) {
+              if (!s.shootingDayId) continue;
+              const set = sceneTodays.get(s.sceneId) ?? new Set();
+              set.add(s.shootingDayId);
+              sceneTodays.set(s.sceneId, set);
+            }
+            return { sceneTodays };
+          })();
+
+          // 3. Upsert per-element lines (locations, vehicles), preserving actual
+          for (const line of perElement) {
+            let qty = line.quantity;
+            if (scheduleDataForLines && line.linkedElementId) {
+              const occurrences = await db
+                .select({ sceneId: breakdownOccurrences.sceneId })
+                .from(breakdownOccurrences)
+                .where(
+                  eq(breakdownOccurrences.elementId, line.linkedElementId),
+                );
+              const daySet = new Set<string>();
+              for (const occ of occurrences) {
+                const days = scheduleDataForLines.sceneTodays.get(occ.sceneId);
+                if (days) for (const d of days) daySet.add(d);
+              }
+              qty = daySet.size > 0 ? daySet.size : line.quantity;
+            }
+
+            const existing = await db.query.budgetLines.findFirst({
+              where: and(
+                eq(budgetLines.budgetId, budgetId),
+                eq(budgetLines.linkedElementId, line.linkedElementId!),
+              ),
+            });
+            if (existing) {
+              await db
+                .update(budgetLines)
+                .set({
+                  quantity: String(qty),
+                  rate: String(line.rate ?? 0),
+                  updatedAt: new Date(),
+                })
+                .where(eq(budgetLines.id, existing.id));
+            } else {
+              await db.insert(budgetLines).values({
                 budgetId,
-                topSheet: l.topSheet,
-                name: l.name,
-                costType: l.costType,
-                quantity: String(l.quantity),
-                rate: String(l.rate),
+                topSheet: line.topSheet,
+                name: line.name,
+                costType: line.costType,
+                quantity: String(qty),
+                rate: String(line.rate ?? 0),
                 actual: null,
                 notes: null,
-                linkedElementId: l.linkedElementId,
-                linkedCategory: l.linkedCategory,
-                sortOrder: l.sortOrder,
-              })),
-            );
+                linkedElementId: line.linkedElementId,
+                linkedCategory: line.linkedCategory,
+                sortOrder: line.sortOrder,
+              });
+            }
           }
+
+          // 4. Upsert aggregate lines (one per collapsed category key), preserving actual
+          for (const line of aggregate) {
+            const existing = await db.query.budgetLines.findFirst({
+              where: and(
+                eq(budgetLines.budgetId, budgetId),
+                eq(budgetLines.linkedCategory, line.linkedCategory!),
+                isNull(budgetLines.linkedElementId),
+              ),
+            });
+            if (existing) {
+              await db
+                .update(budgetLines)
+                .set({
+                  quantity: String(line.quantity ?? 0),
+                  rate: String(line.rate ?? 0),
+                  updatedAt: new Date(),
+                })
+                .where(eq(budgetLines.id, existing.id));
+            } else {
+              await db.insert(budgetLines).values({
+                budgetId,
+                topSheet: line.topSheet,
+                name: line.name,
+                costType: line.costType,
+                quantity: String(line.quantity ?? 0),
+                rate: String(line.rate ?? 0),
+                actual: null,
+                notes: null,
+                linkedElementId: null,
+                linkedCategory: line.linkedCategory,
+                sortOrder: line.sortOrder,
+              });
+            }
+          }
+
+          // Load rate card for this project to pre-fill cast rates
+          const rateCardRows = await db.query.projectRateCard.findMany({
+            where: eq(projectRateCard.projectId, data.projectId),
+          });
+          const rateByName = new Map(
+            rateCardRows.map((r) => [r.name.toLowerCase(), r]),
+          );
 
           // Populate cast from breakdown cast elements
           await db.delete(budgetCast).where(eq(budgetCast.budgetId, budgetId));
           const castRows = rows.filter((r) => r.element.category === "cast");
           if (castRows.length > 0) {
             await db.insert(budgetCast).values(
-              castRows.map((r, idx) => ({
-                budgetId,
-                elementId: r.element.id,
-                name: r.element.name,
-                days: String(shootingDays),
-                dayRate: "0",
-                fiscalRegime: "piva" as const,
-                mealAllowance: "0",
-                accommodation: "0",
-                sortOrder: idx,
-              })),
+              castRows.map((r, idx) => {
+                const rate = rateByName.get(r.element.name.toLowerCase());
+                const units =
+                  rate?.rateUnit === "forfait" ? 1 : resolvedShootingDays;
+                return {
+                  budgetId,
+                  elementId: r.element.id,
+                  name: r.element.name,
+                  days: String(units),
+                  dayRate: rate ? String(rate.rateValue) : "0",
+                  rateUnit: (rate?.rateUnit ??
+                    "giornata") as (typeof RATE_UNITS)[number],
+                  fiscalRegime: (rate?.fiscalRegime ?? "piva") as FiscalRegime,
+                  mealAllowance: rate
+                    ? String(Number(rate.mealAllowance) * units)
+                    : "0",
+                  accommodation: rate
+                    ? String(Number(rate.accommodation) * units)
+                    : "0",
+                  sortOrder: idx,
+                };
+              }),
             );
           }
 
@@ -303,7 +439,7 @@ export const generateBudget = createServerFn({ method: "POST" })
                 roleKey: role.key,
                 name: role.labelIt,
                 department: role.department,
-                days: String(shootingDays),
+                days: String(resolvedShootingDays),
                 dayRate: String(role.defaultDayRate),
                 fiscalRegime: "piva" as const,
                 mealAllowance: "0",
@@ -532,7 +668,9 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
           });
           if (!budget) return null;
 
-          const [cast, crew] = await Promise.all([
+          const SLUGLINE_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT)\.?\b/i;
+
+          const [rawCast, crew] = await Promise.all([
             db.query.budgetCast.findMany({
               where: eq(budgetCast.budgetId, budget.id),
               orderBy: (t) => t.sortOrder,
@@ -542,6 +680,8 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
               orderBy: (t) => t.sortOrder,
             }),
           ]);
+          // strip breakdown noise: slugline tokens (Int, Ext, Est) misidentified as cast
+          const cast = rawCast.filter((r) => !SLUGLINE_PREFIX.test(r.name));
 
           // Build castSceneMap: cast row id → scene numbers they appear in
           const castSceneMap: CastSceneMap = {};
@@ -881,6 +1021,161 @@ export const removeBudgetCrewRow = createServerFn({ method: "POST" })
     },
   );
 
+// ─── getRateCard ──────────────────────────────────────────────────────────────
+
+export const getRateCard = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<ProjectRateCard[], ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+
+      const result = await ResultAsync.fromPromise(
+        db.query.projectRateCard.findMany({
+          where: eq(projectRateCard.projectId, data.projectId),
+          orderBy: (t, { asc }) => asc(t.sortOrder),
+        }),
+        (e) => new DbError("getRateCard", e),
+      );
+      return toShape(result);
+    },
+  );
+
+// ─── upsertRateEntry ──────────────────────────────────────────────────────────
+
+const RateEntrySchema = z.object({
+  projectId: z.string().uuid(),
+  name: z.string().min(1),
+  role: z.string().nullable().default(null),
+  rateUnit: z.enum(["giornata", "posa", "forfait"]).default("giornata"),
+  rateValue: z.number().min(0).default(0),
+  mealAllowance: z.number().min(0).default(0),
+  accommodation: z.number().min(0).default(0),
+  fiscalRegime: z.enum(["piva", "privato", "none"]).default("piva"),
+});
+
+export const upsertRateEntry = createServerFn({ method: "POST" })
+  .validator(RateEntrySchema)
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<ProjectRateCard, ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        data.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canEdit(access.value))
+        return toShape(err(new ForbiddenError("edit rate card")));
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const existing = await db.query.projectRateCard.findFirst({
+            where: and(
+              eq(projectRateCard.projectId, data.projectId),
+              eq(projectRateCard.name, data.name),
+            ),
+          });
+          if (existing) {
+            const [updated] = await db
+              .update(projectRateCard)
+              .set({
+                role: data.role,
+                rateUnit: data.rateUnit,
+                rateValue: String(data.rateValue),
+                mealAllowance: String(data.mealAllowance),
+                accommodation: String(data.accommodation),
+                fiscalRegime: data.fiscalRegime,
+                updatedAt: new Date(),
+              })
+              .where(eq(projectRateCard.id, existing.id))
+              .returning();
+            return updated!;
+          }
+          const maxSort = await db.query.projectRateCard
+            .findMany({ where: eq(projectRateCard.projectId, data.projectId) })
+            .then((rows) =>
+              rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
+            );
+          const [inserted] = await db
+            .insert(projectRateCard)
+            .values({
+              projectId: data.projectId,
+              name: data.name,
+              role: data.role,
+              rateUnit: data.rateUnit,
+              rateValue: String(data.rateValue),
+              mealAllowance: String(data.mealAllowance),
+              accommodation: String(data.accommodation),
+              fiscalRegime: data.fiscalRegime,
+              sortOrder: maxSort + 1,
+            })
+            .returning();
+          return inserted!;
+        })(),
+        (e) => new DbError("upsertRateEntry", e),
+      );
+      return toShape(result);
+    },
+  );
+
+// ─── deleteRateEntry ──────────────────────────────────────────────────────────
+
+export const deleteRateEntry = createServerFn({ method: "POST" })
+  .validator(z.object({ entryId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<{ id: string }, ForbiddenError | DbError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const entry = await db.query.projectRateCard.findFirst({
+        where: eq(projectRateCard.id, data.entryId),
+      });
+      if (!entry)
+        return toShape(err(new DbError("deleteRateEntry", "entry not found")));
+
+      const access = await resolveBudgetAccessByProjectId(
+        db,
+        user.id,
+        entry.projectId,
+      );
+      if (access.isErr()) return toShape(err(access.error));
+      if (!canEdit(access.value))
+        return toShape(err(new ForbiddenError("delete rate entry")));
+
+      const result = await ResultAsync.fromPromise(
+        db
+          .delete(projectRateCard)
+          .where(eq(projectRateCard.id, data.entryId))
+          .then(() => ({ id: data.entryId })),
+        (e) => new DbError("deleteRateEntry", e),
+      );
+      return toShape(result);
+    },
+  );
+
 // ─── queryOptions helpers (client) ───────────────────────────────────────────
 
-export type { Budget, BudgetLine, BudgetSummary, BudgetCast, BudgetCrew };
+export type {
+  Budget,
+  BudgetLine,
+  BudgetSummary,
+  BudgetCast,
+  BudgetCrew,
+  ProjectRateCard,
+};
