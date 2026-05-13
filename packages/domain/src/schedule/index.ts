@@ -2,3 +2,4 @@ export * from "./italy-calendar.js";
 export * from "./page-count.js";
 export * from "./schedule-generator.js";
 export * from "./effort.js";
+export * from "./effort-weights.js";
