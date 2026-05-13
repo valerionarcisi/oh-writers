@@ -320,6 +320,12 @@ Drag-and-drop: native HTML5 drag API (same pattern used in the strip board). No 
 
 ## DB Migration
 
+## Future — to explore
+
+**Storyboard**: once the shot list is established, a natural next step is attaching visual storyboard frames to individual shots (sketches, reference images, AI-generated frames). The shot list is the prerequisite — you need a structured list of shots before you can attach visuals to them. Not designed yet, not in scope for this spec.
+
+---
+
 Migration `0020_shot_plans.sql`:
 
 - `shot_plans` table
