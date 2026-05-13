@@ -37,6 +37,7 @@ import {
   ShotPlanNotFoundError,
   ScenarioNotFoundError,
   ShotNotFoundError,
+  InvalidReverseShotError,
 } from "../shooting-plan.errors";
 
 // ─── View types ───────────────────────────────────────────────────────────────
@@ -575,6 +576,11 @@ export const addShot = createServerFn({ method: "POST" })
               data.projectId,
             );
           }
+
+          await tx
+            .update(shotPlanScenarios)
+            .set({ isSuggested: false })
+            .where(eq(shotPlanScenarios.id, data.scenarioId));
         }),
         (e) => new DbError("addShot/transaction", e),
       );
@@ -642,12 +648,18 @@ export const updateShot = createServerFn({ method: "POST" })
           if (!shot) return err(new ShotNotFoundError(data.shotId));
           return ok(shot);
         })
-        .andThen(() =>
+        .andThen((shot) =>
           ResultAsync.fromPromise(
-            db
-              .update(shots)
-              .set({ ...data.patch, updatedAt: new Date() })
-              .where(eq(shots.id, data.shotId)),
+            (async () => {
+              await db
+                .update(shots)
+                .set({ ...data.patch, updatedAt: new Date() })
+                .where(eq(shots.id, data.shotId));
+              await db
+                .update(shotPlanScenarios)
+                .set({ isSuggested: false })
+                .where(eq(shotPlanScenarios.id, shot.scenarioId));
+            })(),
             (e) => new DbError("updateShot/update", e),
           ).map(() => undefined),
         );
@@ -685,7 +697,13 @@ export const deleteShot = createServerFn({ method: "POST" })
         })
         .andThen((shot) =>
           ResultAsync.fromPromise(
-            db.delete(shots).where(eq(shots.id, shot.id)),
+            (async () => {
+              await db
+                .update(shotPlanScenarios)
+                .set({ isSuggested: false })
+                .where(eq(shotPlanScenarios.id, shot.scenarioId));
+              await db.delete(shots).where(eq(shots.id, shot.id));
+            })(),
             (e) => new DbError("deleteShot/delete", e),
           ).map(() => undefined),
         );
@@ -716,6 +734,11 @@ export const reorderShots = createServerFn({ method: "POST" })
               .set({ position: i, updatedAt: new Date() })
               .where(eq(shots.id, data.orderedShotIds[i]!));
           }
+
+          await tx
+            .update(shotPlanScenarios)
+            .set({ isSuggested: false })
+            .where(eq(shotPlanScenarios.id, data.scenarioId));
 
           await rebuildAutoTransitions(
             tx as unknown as Db,
@@ -748,14 +771,20 @@ export const addManualTransition = createServerFn({ method: "POST" })
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
-        db.insert(transitionSlots).values({
-          scenarioId: data.scenarioId,
-          afterShotId: data.afterShotId,
-          type: data.type,
-          estimatedMinutes: data.estimatedMinutes ?? null,
-          isManual: true,
-          label: data.label ?? null,
-        }),
+        (async () => {
+          await db.insert(transitionSlots).values({
+            scenarioId: data.scenarioId,
+            afterShotId: data.afterShotId,
+            type: data.type,
+            estimatedMinutes: data.estimatedMinutes ?? null,
+            isManual: true,
+            label: data.label ?? null,
+          });
+          await db
+            .update(shotPlanScenarios)
+            .set({ isSuggested: false })
+            .where(eq(shotPlanScenarios.id, data.scenarioId));
+        })(),
         (e) => new DbError("addManualTransition/insert", e),
       ).map(() => undefined);
 
@@ -784,10 +813,21 @@ export const updateTransition = createServerFn({ method: "POST" })
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
-        db
-          .update(transitionSlots)
-          .set({ ...data.patch, updatedAt: new Date() })
-          .where(eq(transitionSlots.id, data.transitionId)),
+        (async () => {
+          const existing = await db.query.transitionSlots.findFirst({
+            where: eq(transitionSlots.id, data.transitionId),
+          });
+          await db
+            .update(transitionSlots)
+            .set({ ...data.patch, updatedAt: new Date() })
+            .where(eq(transitionSlots.id, data.transitionId));
+          if (existing) {
+            await db
+              .update(shotPlanScenarios)
+              .set({ isSuggested: false })
+              .where(eq(shotPlanScenarios.id, existing.scenarioId));
+          }
+        })(),
         (e) => new DbError("updateTransition/update", e),
       ).map(() => undefined);
 
@@ -809,9 +849,20 @@ export const deleteTransition = createServerFn({ method: "POST" })
       const db = await getDb();
 
       const result = await ResultAsync.fromPromise(
-        db
-          .delete(transitionSlots)
-          .where(eq(transitionSlots.id, data.transitionId)),
+        (async () => {
+          const existing = await db.query.transitionSlots.findFirst({
+            where: eq(transitionSlots.id, data.transitionId),
+          });
+          if (existing) {
+            await db
+              .update(shotPlanScenarios)
+              .set({ isSuggested: false })
+              .where(eq(shotPlanScenarios.id, existing.scenarioId));
+          }
+          await db
+            .delete(transitionSlots)
+            .where(eq(transitionSlots.id, data.transitionId));
+        })(),
         (e) => new DbError("deleteTransition/delete", e),
       ).map(() => undefined);
 
@@ -1333,6 +1384,96 @@ export const moveShot = createServerFn({ method: "POST" })
           if (e instanceof ShotNotFoundError) return e;
           if (e instanceof ScenarioNotFoundError) return e;
           return new DbError("moveShot", e);
+        },
+      );
+
+      return toShape(result);
+    },
+  );
+
+export const addReverseShot = createServerFn({ method: "POST" })
+  .validator(z.object({ shotId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        void,
+        ShotNotFoundError | InvalidReverseShotError | ForbiddenError | DbError
+      >
+    > => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const shot = await db.query.shots.findFirst({
+            where: eq(shots.id, data.shotId),
+          });
+          if (!shot) throw new ShotNotFoundError(data.shotId);
+
+          if (shot.shotSize !== "OTS" && shot.shotSize !== "MS") {
+            throw new InvalidReverseShotError(
+              "reverse shots only apply to OTS or MS",
+            );
+          }
+
+          const scenario = await db.query.shotPlanScenarios.findFirst({
+            where: eq(shotPlanScenarios.id, shot.scenarioId),
+          });
+          if (!scenario) throw new ShotNotFoundError(data.shotId);
+
+          const plan = await db.query.shotPlans.findFirst({
+            where: eq(shotPlans.id, scenario.shotPlanId),
+          });
+          if (!plan) throw new ShotNotFoundError(data.shotId);
+
+          const originalNote = shot.notes ?? "";
+          const lower = originalNote.toLowerCase();
+          let reverseNote: string;
+          if (lower.includes("contro")) {
+            reverseNote = originalNote.replace(/contro\s*campo/i, "campo");
+          } else if (lower.includes("campo")) {
+            reverseNote = "controcampo";
+          } else if (originalNote) {
+            reverseNote = `controcampo ${originalNote}`;
+          } else {
+            reverseNote = "controcampo";
+          }
+
+          const insertPosition = shot.position + 1;
+
+          await db
+            .update(shots)
+            .set({ position: sql`${shots.position} + 1` })
+            .where(
+              and(
+                eq(shots.scenarioId, shot.scenarioId),
+                sql`${shots.position} >= ${insertPosition}`,
+              ),
+            );
+
+          await db.insert(shots).values({
+            scenarioId: shot.scenarioId,
+            position: insertPosition,
+            shotSize: shot.shotSize,
+            cameraMovement: shot.cameraMovement,
+            estimatedMinutes: shot.estimatedMinutes,
+            notes: reverseNote,
+            cameraLabel: shot.cameraLabel,
+          });
+
+          await db
+            .update(shotPlanScenarios)
+            .set({ isSuggested: false })
+            .where(eq(shotPlanScenarios.id, shot.scenarioId));
+
+          await rebuildAutoTransitions(db, shot.scenarioId, plan.projectId);
+        })(),
+        (e) => {
+          if (e instanceof ShotNotFoundError) return e;
+          if (e instanceof InvalidReverseShotError) return e;
+          return new DbError("addReverseShot", e);
         },
       );
 

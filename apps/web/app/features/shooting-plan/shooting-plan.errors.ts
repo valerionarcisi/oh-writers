@@ -25,3 +25,11 @@ export class ShotNotFoundError {
     this.message = `Shot not found: ${id}`;
   }
 }
+
+export class InvalidReverseShotError {
+  readonly _tag = "InvalidReverseShotError" as const;
+  readonly message: string;
+  constructor(reason: string) {
+    this.message = `Cannot create reverse shot: ${reason}`;
+  }
+}
