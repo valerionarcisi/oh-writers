@@ -1,3 +1,4 @@
+import "../load-env";
 import { db } from "../client";
 import {
   users,
