@@ -52,41 +52,48 @@
   flex-direction: column;
   gap: var(--space-1);
   text-align: start;
-  padding: var(--space-2);
-  border: 1px solid transparent;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  transition: background 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 
   &:hover {
     background: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
   }
 
   &[data-active] {
-    background: var(--color-surface-active);
-    border-color: var(--color-border-strong);
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent-border);
   }
 }
 
 .sceneNumber {
   font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--color-text-muted);
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: var(--tracking-wide);
 }
 
 .sceneHeading {
   font-size: var(--font-size-sm);
-  color: var(--color-text);
+  font-weight: 500;
+  color: var(--color-fg);
+  line-height: var(--leading-tight);
 }
 
 .sceneStatus {
   font-size: var(--font-size-xs);
+  font-weight: 500;
   color: var(--color-text-muted);
 
   &[data-planned] {
-    color: var(--color-success);
+    color: var(--color-accent-green);
   }
 }
 
