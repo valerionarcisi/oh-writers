@@ -74,6 +74,16 @@ export interface ShotPlanView {
   scenarios: ScenarioView[];
 }
 
+export interface SceneWithPlanSummary {
+  sceneId: string;
+  sceneNumber: number;
+  sceneHeading: string;
+  intExt: "INT" | "EXT" | "INT/EXT";
+  location: string;
+  shotCount: number;
+  totalMinutes: number | null;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const resolveWeights = (
@@ -800,6 +810,91 @@ export const deleteTransition = createServerFn({ method: "POST" })
       return toShape(result);
     },
   );
+
+export const listScenesWithPlanSummary = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<SceneWithPlanSummary[], ForbiddenError | DbError>
+    > => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const screenplay = await db.query.screenplays.findFirst({
+            where: (s, { eq: e }) => e(s.projectId, data.projectId),
+            orderBy: (s, { desc }) => [desc(s.updatedAt)],
+          });
+          if (!screenplay) return [] as SceneWithPlanSummary[];
+
+          const sceneRows = await db.query.scenes.findMany({
+            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+            orderBy: (sc, { asc: a }) => [a(sc.number)],
+          });
+          if (sceneRows.length === 0) return [] as SceneWithPlanSummary[];
+
+          const sceneIds = sceneRows.map((s) => s.id);
+
+          const planRows = await db.query.shotPlans.findMany({
+            where: (p, { inArray: ia }) => ia(p.sceneId, sceneIds),
+          });
+
+          const activeScenarioIds = planRows
+            .map((p) => p.activeScenarioId)
+            .filter((id): id is string => id !== null);
+
+          const shotsByScenario = new Map<
+            string,
+            { count: number; minutes: number }
+          >();
+          if (activeScenarioIds.length > 0) {
+            const allShots = await db.query.shots.findMany({
+              where: (sh, { inArray: ia }) =>
+                ia(sh.scenarioId, activeScenarioIds),
+            });
+            for (const sh of allShots) {
+              const entry = shotsByScenario.get(sh.scenarioId) ?? {
+                count: 0,
+                minutes: 0,
+              };
+              entry.count += 1;
+              entry.minutes += sh.estimatedMinutes ?? 0;
+              shotsByScenario.set(sh.scenarioId, entry);
+            }
+          }
+
+          const planBySceneId = new Map(planRows.map((p) => [p.sceneId, p]));
+
+          return sceneRows.map((sc): SceneWithPlanSummary => {
+            const plan = planBySceneId.get(sc.id);
+            const activeId = plan?.activeScenarioId ?? null;
+            const summary = activeId ? shotsByScenario.get(activeId) : null;
+            return {
+              sceneId: sc.id,
+              sceneNumber: sc.number,
+              sceneHeading: sc.heading,
+              intExt: sc.intExt as "INT" | "EXT" | "INT/EXT",
+              location: sc.location,
+              shotCount: summary?.count ?? 0,
+              totalMinutes: summary ? summary.minutes : null,
+            };
+          });
+        })(),
+        (e) => new DbError("listScenesWithPlanSummary", e),
+      );
+
+      return toShape(result);
+    },
+  );
+
+export const scenesWithPlanSummaryQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["shooting-plan", "scenes", projectId],
+    queryFn: () => listScenesWithPlanSummary({ data: { projectId } }),
+  });
 
 export const updateEffortWeights = createServerFn({ method: "POST" })
   .validator(
