@@ -1210,3 +1210,132 @@ export const updateEffortWeights = createServerFn({ method: "POST" })
       return toShape(result);
     },
   );
+
+export const moveShot = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      shotId: z.string().uuid(),
+      targetScenarioId: z.string().uuid(),
+      position: z.number().int().min(0),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        void,
+        ShotNotFoundError | ScenarioNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const shot = await db.query.shots.findFirst({
+            where: eq(shots.id, data.shotId),
+          });
+          if (!shot) throw new ShotNotFoundError(data.shotId);
+
+          const target = await db.query.shotPlanScenarios.findFirst({
+            where: eq(shotPlanScenarios.id, data.targetScenarioId),
+          });
+          if (!target) throw new ScenarioNotFoundError(data.targetScenarioId);
+
+          const targetPlan = await db.query.shotPlans.findFirst({
+            where: eq(shotPlans.id, target.shotPlanId),
+          });
+          if (!targetPlan)
+            throw new ScenarioNotFoundError(data.targetScenarioId);
+          const projectId = targetPlan.projectId;
+
+          const sourceScenarioId = shot.scenarioId;
+
+          if (sourceScenarioId === data.targetScenarioId) {
+            const all = await db
+              .select()
+              .from(shots)
+              .where(eq(shots.scenarioId, sourceScenarioId))
+              .orderBy(asc(shots.position));
+            const filtered = all.filter((s) => s.id !== data.shotId);
+            const clampedPos = Math.min(data.position, filtered.length);
+            const newOrder = [
+              ...filtered.slice(0, clampedPos),
+              shot,
+              ...filtered.slice(clampedPos),
+            ];
+            for (let i = 0; i < newOrder.length; i++) {
+              if (newOrder[i]!.position !== i) {
+                await db
+                  .update(shots)
+                  .set({ position: i })
+                  .where(eq(shots.id, newOrder[i]!.id));
+              }
+            }
+          } else {
+            const targetShots = await db
+              .select()
+              .from(shots)
+              .where(eq(shots.scenarioId, data.targetScenarioId))
+              .orderBy(asc(shots.position));
+            const clampedPos = Math.min(data.position, targetShots.length);
+
+            await db
+              .update(shots)
+              .set({ position: sql`${shots.position} + 1` })
+              .where(
+                and(
+                  eq(shots.scenarioId, data.targetScenarioId),
+                  sql`${shots.position} >= ${clampedPos}`,
+                ),
+              );
+
+            await db
+              .update(shots)
+              .set({
+                scenarioId: data.targetScenarioId,
+                position: clampedPos,
+              })
+              .where(eq(shots.id, data.shotId));
+
+            const remaining = await db
+              .select()
+              .from(shots)
+              .where(eq(shots.scenarioId, sourceScenarioId))
+              .orderBy(asc(shots.position));
+            for (let i = 0; i < remaining.length; i++) {
+              if (remaining[i]!.position !== i) {
+                await db
+                  .update(shots)
+                  .set({ position: i })
+                  .where(eq(shots.id, remaining[i]!.id));
+              }
+            }
+          }
+
+          const scenariosToClear =
+            sourceScenarioId === data.targetScenarioId
+              ? [data.targetScenarioId]
+              : [sourceScenarioId, data.targetScenarioId];
+          for (const id of scenariosToClear) {
+            await db
+              .update(shotPlanScenarios)
+              .set({ isSuggested: false })
+              .where(eq(shotPlanScenarios.id, id));
+          }
+
+          for (const id of scenariosToClear) {
+            await rebuildAutoTransitions(db, id, projectId);
+          }
+        })(),
+        (e) => {
+          if (e instanceof ShotNotFoundError) return e;
+          if (e instanceof ScenarioNotFoundError) return e;
+          return new DbError("moveShot", e);
+        },
+      );
+
+      return toShape(result);
+    },
+  );
