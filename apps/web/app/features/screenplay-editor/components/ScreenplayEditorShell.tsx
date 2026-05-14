@@ -1,10 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Viewbar,
   ViewbarSep,
   ToggleChip,
   FloatingDock,
   MarginNote,
+  Icon,
 } from "@oh-writers/ui";
 import styles from "./ScreenplayEditorShell.module.css";
 
@@ -13,34 +15,7 @@ import styles from "./ScreenplayEditorShell.module.css";
 // existing editor. Wiring them to live screenplay state happens in a follow-up
 // spec — the toggles, scene index and Cesare notes are intentionally local.
 
-type UnderlineKey =
-  | "cast"
-  | "locations"
-  | "props"
-  | "costumes"
-  | "photography"
-  | "sound";
-
 type OverlayKey = "cesare" | "comments" | "sceneNumbers" | "revisions";
-
-const UNDERLINE_CHIPS: ReadonlyArray<{
-  key: UnderlineKey;
-  label: string;
-  color: string;
-  defaultOn: boolean;
-}> = [
-  { key: "cast", label: "Cast", color: "#6b3e7a", defaultOn: true },
-  { key: "locations", label: "Locations", color: "#9a5128", defaultOn: true },
-  { key: "props", label: "Props", color: "#8a5a1f", defaultOn: true },
-  { key: "costumes", label: "Costumi", color: "#8b3565", defaultOn: false },
-  {
-    key: "photography",
-    label: "Fotografia",
-    color: "#34487a",
-    defaultOn: false,
-  },
-  { key: "sound", label: "Suono", color: "#5a6b25", defaultOn: false },
-];
 
 const OVERLAY_CHIPS: ReadonlyArray<{
   key: OverlayKey;
@@ -115,6 +90,8 @@ const initialState = <K extends string>(
 
 export type ScreenplayEditorShellProps = {
   title: string;
+  /** Project id — used by dock actions to navigate to versions */
+  projectId: string;
   /** The Monaco/ProseMirror editor — rendered untouched in the center column */
   children: ReactNode;
   /** Optional override for the TOC content; falls back to demo data */
@@ -129,45 +106,42 @@ export type ScreenplayEditorShellProps = {
 
 export function ScreenplayEditorShell({
   title,
+  projectId,
   children,
   acts,
   eyebrow,
   versionLabel,
   cesareNoteCount = 4,
 }: ScreenplayEditorShellProps) {
-  const [underline, setUnderline] = useState<ToggleState<UnderlineKey>>(() =>
-    initialState(UNDERLINE_CHIPS),
-  );
+  const navigate = useNavigate();
   const [overlay, setOverlay] = useState<ToggleState<OverlayKey>>(() =>
     initialState(OVERLAY_CHIPS),
   );
+  const [cesareCollapsed, setCesareCollapsed] = useState(false);
 
   const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
   const eyebrowText = eyebrow ?? "Sc. 3 · Atto I · pag. 4 / 28";
   const versionText = versionLabel ?? "v3 · 14 mag 2026 ▾";
 
-  const toggleUnderline = (key: UnderlineKey) =>
-    setUnderline((s) => ({ ...s, [key]: !s[key] }));
   const toggleOverlay = (key: OverlayKey) =>
     setOverlay((s) => ({ ...s, [key]: !s[key] }));
+
+  const goToVersions = () =>
+    navigate({
+      to: "/projects/$id/screenplay/versions",
+      params: { id: projectId },
+    });
+
+  const layoutClass = [
+    styles.layout,
+    cesareCollapsed ? styles.layoutCesareCollapsed : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={styles.shell}>
       <Viewbar>
-        <span className={styles.viewbarLabel}>Sottolinea:</span>
-        {UNDERLINE_CHIPS.map((chip) => (
-          <ToggleChip
-            key={chip.key}
-            label={chip.label}
-            isOn={underline[chip.key]}
-            onToggle={() => toggleUnderline(chip.key)}
-            categoryColor={chip.color}
-            aria-label={`Sottolinea ${chip.label}`}
-          />
-        ))}
-
-        <ViewbarSep />
-
         <span className={styles.viewbarLabel}>Overlay:</span>
         {OVERLAY_CHIPS.map((chip) => (
           <ToggleChip
@@ -193,7 +167,7 @@ export function ScreenplayEditorShell({
         </button>
       </Viewbar>
 
-      <div className={styles.layout}>
+      <div className={layoutClass}>
         <aside
           className={styles.toc}
           aria-label="Indice delle scene"
@@ -236,25 +210,59 @@ export function ScreenplayEditorShell({
           <div className={styles.editorSlot}>{children}</div>
         </div>
 
-        <aside className={styles.margin} aria-label="Note di Cesare">
-          <div className={styles.marginLabel}>
-            Note di Cesare · {cesareNoteCount}
-          </div>
-
-          {overlay.cesare && (
+        <aside
+          className={[
+            styles.margin,
+            cesareCollapsed ? styles.marginCollapsed : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-label="Note di Cesare"
+        >
+          {cesareCollapsed ? (
+            <button
+              type="button"
+              className={styles.cesareExpand}
+              onClick={() => setCesareCollapsed(false)}
+              aria-label="Espandi note di Cesare"
+              title="Espandi note di Cesare"
+            >
+              <Icon name="comment" size={14} />
+              <span className={styles.cesareCount}>{cesareNoteCount}</span>
+            </button>
+          ) : (
             <>
-              <MarginNote
-                kind="dramaturg"
-                text="La scena chiude in 38 secondi con quattro battute. La transizione 'È bravo, eh? Ma non ride nessuno.' potrebbe portare più tensione: provo a estendere con una micro-azione di Francesco?"
-                onAccept={() => {}}
-                onIgnore={() => {}}
-              />
-              <MarginNote
-                kind="producer"
-                text="'Pizza fumante' e 'luce calda' non sono ancora nel breakdown. Vuoi che li aggiunga come props / VFX?"
-                onAccept={() => {}}
-                onIgnore={() => {}}
-              />
+              <header className={styles.marginHeader}>
+                <span className={styles.marginLabel}>
+                  Note di Cesare · {cesareNoteCount}
+                </span>
+                <button
+                  type="button"
+                  className={styles.cesareCollapse}
+                  onClick={() => setCesareCollapsed(true)}
+                  aria-label="Collassa note di Cesare"
+                  title="Collassa"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              </header>
+
+              {overlay.cesare && (
+                <>
+                  <MarginNote
+                    kind="dramaturg"
+                    text="La scena chiude in 38 secondi con quattro battute. La transizione 'È bravo, eh? Ma non ride nessuno.' potrebbe portare più tensione: provo a estendere con una micro-azione di Francesco?"
+                    onAccept={() => {}}
+                    onIgnore={() => {}}
+                  />
+                  <MarginNote
+                    kind="producer"
+                    text="'Pizza fumante' e 'luce calda' non sono ancora nel breakdown. Vuoi che li aggiunga come props / VFX?"
+                    onAccept={() => {}}
+                    onIgnore={() => {}}
+                  />
+                </>
+              )}
             </>
           )}
         </aside>
@@ -265,13 +273,17 @@ export function ScreenplayEditorShell({
         primaryAction={{
           label: "Esporta PDF",
           hotkey: "⌘E",
-          onClick: () => {},
+          onClick: () => {
+            // TODO: trigger real PDF export (handled elsewhere)
+            console.log("export pdf");
+          },
         }}
         secondaryActions={[
-          { label: "Versione", onClick: () => {} },
-          { label: "Confronta", onClick: () => {} },
+          { label: "Versione", onClick: goToVersions },
+          { label: "Confronta", onClick: goToVersions },
         ]}
         cesareNoteCount={cesareNoteCount}
+        onCesareClick={() => setCesareCollapsed(false)}
       />
     </div>
   );

@@ -57,7 +57,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  grid-template-columns: 280px minmax(0, 1fr) 220px;
   gap: var(--ds-space-8);
   max-inline-size: 1480px;
   inline-size: 100%;
@@ -66,8 +66,13 @@
   align-items: start;
 }
 
+.layoutCesareCollapsed {
+  grid-template-columns: 280px minmax(0, 1fr) 32px;
+}
+
 @container (max-width: 1100px) {
-  .layout {
+  .layout,
+  .layoutCesareCollapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -219,7 +224,22 @@
   inset-block-start: 96px;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-space-4);
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  background: var(--ds-surface-alt);
+  border-radius: var(--radius-md);
+}
+
+.marginCollapsed {
+  padding: var(--ds-space-1);
+  background: transparent;
+}
+
+.marginHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
 }
 
 .marginLabel {
@@ -239,4 +259,42 @@
   block-size: 6px;
   background: var(--ds-leaf, var(--ds-success));
   border-radius: 50%;
+}
+
+.cesareCollapse,
+.cesareExpand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-1);
+  background: transparent;
+  border: 0;
+  padding: var(--ds-space-1);
+  border-radius: var(--radius-sm);
+  color: var(--ds-text-3);
+  cursor: pointer;
+}
+
+.cesareCollapse:hover,
+.cesareExpand:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.cesareCollapse:focus-visible,
+.cesareExpand:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.cesareExpand {
+  flex-direction: column;
+  inline-size: 32px;
+  padding-block: var(--ds-space-2);
+}
+
+.cesareCount {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ds-text-2);
 }

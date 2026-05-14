@@ -21,7 +21,7 @@ function ScreenplayEditorPage() {
 
   return match(result)
     .with({ isOk: true }, ({ value }) => (
-      <ScreenplayEditorShell title={value.title}>
+      <ScreenplayEditorShell title={value.title} projectId={id}>
         <ScreenplayEditor screenplay={value} />
       </ScreenplayEditorShell>
     ))
