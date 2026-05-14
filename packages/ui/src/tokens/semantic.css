@@ -1,0 +1,96 @@
+/* packages/ui/src/tokens/semantic.css — layer 2 (semantic) + layer 3 (component) */
+/* Consumed by all DS-v2 components. Never reference --ds-linen-*, --ds-clay-*, --ds-leaf-* directly. */
+:root {
+  /* ── Layer 2: Semantic ─────────────────────────────────────── */
+
+  /* Backgrounds */
+  --ds-bg:           var(--ds-linen-50);
+  --ds-surface:      var(--ds-white);
+  --ds-surface-alt:  var(--ds-linen-100);
+  --ds-surface-deep: var(--ds-linen-200);
+
+  /* Text */
+  --ds-text:         var(--ds-linen-800);
+  --ds-text-2:       var(--ds-linen-700);
+  --ds-text-3:       var(--ds-linen-600);
+  --ds-text-mute:    var(--ds-linen-500);
+  --ds-text-faint:   var(--ds-linen-400);
+  --ds-text-on-dark: var(--ds-linen-50);
+
+  /* Lines */
+  --ds-line:      var(--ds-linen-300);
+  --ds-line-soft: var(--ds-linen-soft);
+
+  /* Brand bichromy */
+  --ds-action:       var(--ds-clay-500);
+  --ds-action-hover: var(--ds-clay-600);
+  --ds-action-soft:  var(--ds-clay-50);
+  --ds-agent:        var(--ds-leaf-500);
+  --ds-agent-soft:   var(--ds-leaf-50);
+
+  /* Status */
+  --ds-saved:    var(--ds-leaf-500);
+  --ds-saving:   var(--ds-clay-500);
+  --ds-warning:  var(--ds-clay-500);
+  --ds-success:  var(--ds-leaf-500);
+  --ds-info:     #34487a;
+
+  /* Typography stacks */
+  --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
+  --ds-font-display: "Fraunces", Georgia, serif;
+  --ds-font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+  --ds-font-script:  "Courier Prime", "Courier New", monospace;
+
+  /* Spacing — px-based, decoupled from rem */
+  --ds-space-1:  4px;
+  --ds-space-2:  8px;
+  --ds-space-3:  12px;
+  --ds-space-4:  16px;
+  --ds-space-5:  20px;
+  --ds-space-6:  24px;
+  --ds-space-8:  32px;
+  --ds-space-10: 48px;
+  --ds-space-12: 64px;
+
+  /* Radius */
+  --ds-radius-none: 0;
+  --ds-radius-sm:   4px;
+  --ds-radius-md:   8px;
+  --ds-radius-lg:   12px;
+  --ds-radius-pill: 100px;
+
+  /* Shadow — depth hierarchy */
+  --ds-shadow-0: 0 1px 2px rgba(28, 26, 23, 0.04);
+  --ds-shadow-1: 0 2px 4px rgba(28, 26, 23, 0.06);
+  --ds-shadow-2: 0 8px 24px -8px rgba(28, 26, 23, 0.12);
+  --ds-shadow-3: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+  --ds-shadow-4: 0 24px 64px -12px rgba(28, 26, 23, 0.3);
+
+  /* Motion */
+  --ds-ease:        cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ds-duration-1:  150ms;
+  --ds-duration-2:  200ms;
+  --ds-duration-3:  250ms;
+
+  /* ── Layer 3: Component-specific derived tokens ───────────── */
+  --ds-btn-primary-bg:    var(--ds-action);
+  --ds-btn-primary-fg:    var(--ds-text-on-dark);
+  --ds-btn-primary-hover: var(--ds-action-hover);
+
+  --ds-card-bg:     var(--ds-surface);
+  --ds-card-border: var(--ds-line);
+
+  --ds-dock-bg:     var(--ds-surface);
+  --ds-dock-shadow: var(--ds-shadow-3);
+
+  --ds-margin-note-rail: var(--ds-agent-soft);
+  --ds-margin-note-kind: var(--ds-agent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ds-duration-1: 0ms;
+    --ds-duration-2: 0ms;
+    --ds-duration-3: 0ms;
+  }
+}
