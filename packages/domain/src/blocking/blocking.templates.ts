@@ -1,14 +1,14 @@
 import type { Primitive } from "./blocking.types";
 
 export const BLOCKING_TEMPLATE_KEYS = [
-  "vuota",
-  "sala",
-  "pizzeria",
-  "cucina",
-  "ufficio",
-  "camera_da_letto",
-  "esterno_strada",
-  "auto_interno",
+  "empty",
+  "living_room",
+  "restaurant",
+  "kitchen",
+  "office",
+  "bedroom",
+  "exterior_street",
+  "car_interior",
 ] as const;
 export type BlockingTemplateKey = (typeof BLOCKING_TEMPLATE_KEYS)[number];
 
@@ -28,10 +28,10 @@ const walls = (w: number, h: number): Primitive[] => [
 ];
 
 export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> = {
-  vuota: { templateKey: "vuota", label: "Vuota", widthCm: 1000, heightCm: 800, primitives: [] },
+  empty: { templateKey: "empty", label: "Vuota", widthCm: 1000, heightCm: 800, primitives: [] },
 
-  sala: {
-    templateKey: "sala",
+  living_room: {
+    templateKey: "living_room",
     label: "Sala",
     widthCm: 1200,
     heightCm: 900,
@@ -43,8 +43,8 @@ export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> =
     ],
   },
 
-  pizzeria: {
-    templateKey: "pizzeria",
+  restaurant: {
+    templateKey: "restaurant",
     label: "Pizzeria / Ristorante",
     widthCm: 1400,
     heightCm: 1000,
@@ -61,8 +61,8 @@ export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> =
     ],
   },
 
-  cucina: {
-    templateKey: "cucina",
+  kitchen: {
+    templateKey: "kitchen",
     label: "Cucina",
     widthCm: 1000,
     heightCm: 700,
@@ -75,8 +75,8 @@ export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> =
     ],
   },
 
-  ufficio: {
-    templateKey: "ufficio",
+  office: {
+    templateKey: "office",
     label: "Ufficio",
     widthCm: 1000,
     heightCm: 800,
@@ -90,8 +90,8 @@ export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> =
     ],
   },
 
-  camera_da_letto: {
-    templateKey: "camera_da_letto",
+  bedroom: {
+    templateKey: "bedroom",
     label: "Camera da letto",
     widthCm: 900,
     heightCm: 700,
@@ -104,8 +104,8 @@ export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> =
     ],
   },
 
-  esterno_strada: {
-    templateKey: "esterno_strada",
+  exterior_street: {
+    templateKey: "exterior_street",
     label: "Esterno — Strada",
     widthCm: 1600,
     heightCm: 600,
@@ -117,8 +117,8 @@ export const BLOCKING_TEMPLATES: Record<BlockingTemplateKey, BlockingTemplate> =
     ],
   },
 
-  auto_interno: {
-    templateKey: "auto_interno",
+  car_interior: {
+    templateKey: "car_interior",
     label: "Interno auto",
     widthCm: 500,
     heightCm: 400,
