@@ -281,3 +281,137 @@
   flex-direction: column;
   gap: var(--ds-space-4);
 }
+
+/* ── Editable cells ── */
+.cellBtn {
+  all: unset;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--ds-font-mono);
+  padding: 2px 6px;
+  border-radius: var(--ds-radius-sm);
+  transition: background var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.cellInput {
+  width: 100px;
+  padding: 2px 6px;
+  border: 1px solid var(--ds-action);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  text-align: end;
+}
+
+/* ── Setting chips in viewbar ── */
+.chip {
+  all: unset;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--ds-radius-sm);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--ds-text-3);
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.chipLabel {
+  color: var(--ds-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+}
+
+.chipValue {
+  color: var(--ds-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chipInput {
+  width: 50px;
+  padding: 0 4px;
+  border: 1px solid var(--ds-action);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+}
+
+/* ── Scene filter ── */
+.sceneFilter {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  background: var(--ds-card-bg);
+  border: 1px solid var(--ds-card-border);
+  border-radius: var(--ds-radius-md);
+}
+
+.sceneFilterLabel {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+}
+
+.sceneSelect {
+  flex: 1;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: 13px;
+}
+
+/* ── Empty card ── */
+.emptyCard {
+  padding: var(--ds-space-8);
+  text-align: center;
+  color: var(--ds-text-faint);
+  background: var(--ds-card-bg);
+  border: 1px dashed var(--ds-card-border);
+  border-radius: var(--ds-radius-md);
+  font-size: 13px;
+}
