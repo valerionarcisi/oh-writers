@@ -1,0 +1,76 @@
+.menu {
+  inline-size: 280px;
+  padding: var(--space-1);
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: start;
+  padding: var(--space-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  &[data-recommended] {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent-border);
+  }
+
+  &:disabled {
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+  }
+}
+
+.itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.itemDesc {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.recommendedBadge {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-accent);
+  font-weight: var(--weight-bold);
+}
+
+.divider {
+  block-size: 1px;
+  background: var(--color-border);
+  margin-block: var(--space-1);
+}
