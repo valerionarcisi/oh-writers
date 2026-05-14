@@ -16,9 +16,10 @@ const SHOT_SIZE_COLORS: Record<string, string> = {
 
 interface ShotBlockProps {
   shot: ShotView;
-  totalMinutes: number;
+  widthPct: number;
   isSelected: boolean;
   onSelect: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -26,22 +27,21 @@ interface ShotBlockProps {
 
 export function ShotBlock({
   shot,
-  totalMinutes,
+  widthPct,
   isSelected,
   onSelect,
+  onContextMenu,
   onDragStart,
   onDragOver,
   onDrop,
 }: ShotBlockProps) {
-  const widthPct =
-    totalMinutes > 0 ? (shot.resolvedMinutes / totalMinutes) * 100 : 10;
   const color = SHOT_SIZE_COLORS[shot.shotSize] ?? "var(--color-accent)";
   return (
     <div
       className={styles.block}
       style={
         {
-          inlineSize: `${Math.max(widthPct, 4)}%`,
+          inlineSize: `${Math.max(widthPct, 1)}%`,
           "--shot-color": color,
         } as React.CSSProperties
       }
@@ -51,6 +51,7 @@ export function ShotBlock({
       onDrop={onDrop}
       data-selected={isSelected || undefined}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       title={`${shot.shotSize} ${shot.cameraMovement} — ${shot.resolvedMinutes}m`}
     >
       <span className={styles.size}>{shot.shotSize}</span>

@@ -169,7 +169,11 @@ export function SceneShotTimeline({
                       <ShotBlock
                         key={item.shot.id}
                         shot={item.shot}
-                        totalMinutes={totalMinutes}
+                        widthPct={
+                          totalMinutes > 0
+                            ? (item.shot.resolvedMinutes / totalMinutes) * 100
+                            : 10
+                        }
                         isSelected={item.shot.id === selectedShotId}
                         onSelect={() => setSelectedShotId(item.shot.id)}
                         onDragStart={() => setDragShotId(item.shot.id)}
@@ -180,6 +184,13 @@ export function SceneShotTimeline({
                       <TransitionBlock
                         key={item.transition.id}
                         transition={item.transition}
+                        widthPct={
+                          totalMinutes > 0
+                            ? ((item.transition.estimatedMinutes ?? 0) /
+                                totalMinutes) *
+                              100
+                            : 2
+                        }
                         onEdit={() => {}}
                       />
                     ),

@@ -72,6 +72,7 @@ export interface ScenarioView {
   shots: ShotView[];
   transitions: TransitionSlotView[];
   totalMinutes: number;
+  isSuggested: boolean;
 }
 
 export interface ShotPlanView {
@@ -175,6 +176,7 @@ const buildScenarioView = (
     shots: shotViews,
     transitions: transitionViews,
     totalMinutes,
+    isSuggested: scenario.isSuggested ?? false,
   };
 };
 
