@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import { FloatingDock } from "@oh-writers/ui";
@@ -14,7 +21,6 @@ import { estimatePageCount } from "../lib/page-counter";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
-import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
@@ -47,6 +53,15 @@ interface ScreenplayEditorProps {
    *  column and the floating dock pill share a single source of truth. */
   isCesareOn?: boolean;
   onToggleCesare?: (next: boolean) => void;
+  /** Reports the current cursor's block element type up to the route so the
+   *  viewbar chips reflect the same state. */
+  onCurrentElementChange?: (element: ElementType) => void;
+}
+
+/** Imperative handle exposed by the editor so the parent route can drive
+ *  toolbar actions from outside the editor's own subtree. */
+export interface ScreenplayEditorHandle {
+  setElement: (element: ElementType) => void;
 }
 
 type ViewingState =
@@ -76,11 +91,18 @@ const countHeadings = (doc: Record<string, unknown> | null): number => {
   return count;
 };
 
-export function ScreenplayEditor({
-  screenplay,
-  isCesareOn: isCesareOnProp,
-  onToggleCesare,
-}: ScreenplayEditorProps) {
+export const ScreenplayEditor = forwardRef<
+  ScreenplayEditorHandle,
+  ScreenplayEditorProps
+>(function ScreenplayEditor(
+  {
+    screenplay,
+    isCesareOn: isCesareOnProp,
+    onToggleCesare,
+    onCurrentElementChange,
+  },
+  ref,
+) {
   const [content, setContent] = useState(screenplay.content);
   const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
     (screenplay.pmDoc as Record<string, unknown> | null) ?? null,
@@ -212,17 +234,34 @@ export function ScreenplayEditor({
     [applyImportedTitlePage, isExistingTitlePageEmpty],
   );
 
-  const handleSetElement = useCallback((el: ElementType) => {
-    const view = viewRef.current;
-    if (!view) return;
-    setElement(el)(view.state, view.dispatch, view);
-    view.focus();
-    // Optimistic highlight — the dispatchTransaction listener in
-    // ProseMirrorView will re-derive the pill from the cursor's parent on
-    // the next selection change, which keeps it accurate when the user
-    // clicks into a different block type.
-    setCurrentElement(el);
-  }, []);
+  const handleSetElement = useCallback(
+    (el: ElementType) => {
+      const view = viewRef.current;
+      if (!view) return;
+      setElement(el)(view.state, view.dispatch, view);
+      view.focus();
+      // Optimistic highlight — the dispatchTransaction listener in
+      // ProseMirrorView will re-derive the pill from the cursor's parent on
+      // the next selection change, which keeps it accurate when the user
+      // clicks into a different block type.
+      setCurrentElement(el);
+      onCurrentElementChange?.(el);
+    },
+    [onCurrentElementChange],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      setElement: handleSetElement,
+    }),
+    [handleSetElement],
+  );
+
+  // Bubble up cursor-driven element changes (clicking into a different block).
+  useEffect(() => {
+    onCurrentElementChange?.(currentElement);
+  }, [currentElement, onCurrentElementChange]);
   // Fall back to the fountain-line estimate until the paginator emits its
   // first measurement (post-mount rAF). After that, pageInfo wins because
   // it matches the rendered page-break geometry.
@@ -453,7 +492,7 @@ export function ScreenplayEditor({
 
   return (
     <div className={`${styles.page} ${isFocusMode ? styles.focusMode : ""}`}>
-      {isFocusMode ? (
+      {isFocusMode && (
         <div className={styles.focusToolbar}>
           <button
             className={styles.focusExitBtn}
@@ -464,11 +503,6 @@ export function ScreenplayEditor({
             Exit Focus
           </button>
         </div>
-      ) : (
-        <ScreenplayToolbar
-          currentElement={currentElement}
-          onSetElement={handleSetElement}
-        />
       )}
       {!isFocusMode && versionsLoadError && (
         <div
@@ -604,4 +638,4 @@ export function ScreenplayEditor({
 
     </div>
   );
-}
+});

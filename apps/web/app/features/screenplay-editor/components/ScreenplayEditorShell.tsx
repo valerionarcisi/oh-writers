@@ -48,6 +48,10 @@ export type ScreenplayEditorShellProps = {
   /** Whether the Cesare overlay is currently on. Drives both the dock pill
    *  (in the editor) and the margin column visibility here. */
   isCesareOn?: boolean;
+  /** Optional slot rendered centered in the Viewbar — same position the
+   *  Breakdown V2 page uses for its 'Sottolinea' chips. The screenplay route
+   *  fills it with the element conversion chips (Scene/Action/Character/...). */
+  viewbarCenter?: ReactNode;
 };
 
 export function ScreenplayEditorShell({
@@ -58,6 +62,7 @@ export function ScreenplayEditorShell({
   cesareNoteCount = 0,
   cesareMargin,
   isCesareOn = true,
+  viewbarCenter,
 }: ScreenplayEditorShellProps) {
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
@@ -98,7 +103,7 @@ export function ScreenplayEditorShell({
     <div className={styles.shell}>
       <div className={styles.viewbarWrap}>
         <Viewbar>
-          <div className={styles.viewbarCenter} />
+          <div className={styles.viewbarCenter}>{viewbarCenter}</div>
 
           <div className={styles.viewbarRight}>
             {hasRealToc && (
