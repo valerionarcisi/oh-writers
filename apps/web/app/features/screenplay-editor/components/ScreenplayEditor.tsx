@@ -71,6 +71,10 @@ interface ScreenplayEditorProps {
  *  toolbar actions from outside the editor's own subtree. */
 export interface ScreenplayEditorHandle {
   setElement: (element: ElementType) => void;
+  /** Find the exact substring `find` in the screenplay and replace with
+   *  `replace`. Returns true when the substring was found and replaced.
+   *  Uses a single PM transaction so the browser's Cmd+Z undoes the apply. */
+  applyEdit: (find: string, replace: string) => boolean;
 }
 
 type ViewingState =
@@ -260,12 +264,67 @@ export const ScreenplayEditor = forwardRef<
     [onCurrentElementChange],
   );
 
+  const handleApplyEdit = useCallback(
+    (find: string, replace: string): boolean => {
+      const view = viewRef.current;
+      if (!view || !find) return false;
+      const docText = view.state.doc.textBetween(
+        0,
+        view.state.doc.content.size,
+        "\n",
+      );
+      const idx = docText.indexOf(find);
+      if (idx < 0) return false;
+      // Map plain-text indices back to PM positions by walking the doc.
+      // textBetween joins block contents with the second arg as the
+      // block-separator, so PM positions in text-space are offset by the
+      // structural boundary tokens. We use a coarse mapping that walks
+      // forward node-by-node, advancing the text cursor as we go.
+      let posStart = -1;
+      let posEnd = -1;
+      let textCursor = 0;
+      view.state.doc.descendants((n, pos) => {
+        if (posEnd >= 0) return false;
+        if (n.isText) {
+          const txt = n.text ?? "";
+          if (
+            posStart < 0 &&
+            textCursor + txt.length > idx &&
+            textCursor <= idx
+          ) {
+            posStart = pos + (idx - textCursor);
+          }
+          const end = idx + find.length;
+          if (textCursor + txt.length >= end && textCursor <= end) {
+            posEnd = pos + (end - textCursor);
+          }
+          textCursor += txt.length;
+        } else if (n.isBlock && n.content.size === 0) {
+          // empty block — counts as a "\n" separator in textBetween
+          textCursor += 1;
+        }
+        return true;
+      });
+      if (posStart < 0 || posEnd < 0) return false;
+      const tr = view.state.tr.replaceWith(
+        posStart,
+        posEnd,
+        view.state.schema.text(replace),
+      );
+      view.dispatch(tr);
+      view.focus();
+      return true;
+    },
+    [],
+  );
+
   useImperativeHandle(
     ref,
     () => ({
       setElement: handleSetElement,
+      applyEdit: handleApplyEdit,
     }),
-    [handleSetElement],
+    [handleSetElement, handleApplyEdit],
   );
 
   // Bubble up cursor-driven element changes (clicking into a different block).
@@ -283,6 +342,35 @@ export const ScreenplayEditor = forwardRef<
       sceneTotal: countHeadings(pmDoc),
     });
   }, [pageInfo, currentSceneIndex, pmDoc, onMetricsChange]);
+
+  // Scroll-based scene tracking: the cursor-based tracker fires only on
+  // selection changes, so a user who scrolls without clicking sees stale
+  // scene/page numbers. We watch the window scroll and report the heading
+  // closest to the top of the viewport as the current scene.
+  useEffect(() => {
+    const main = document.getElementById("main-content");
+    const onScroll = () => {
+      const headings = document.querySelectorAll<HTMLElement>(".pm-heading");
+      if (headings.length === 0) return;
+      const probe = 120; // y in viewport just below the TopBar + Viewbar
+      let activeIdx = 0;
+      for (let i = 0; i < headings.length; i += 1) {
+        const h = headings[i];
+        if (!h) break;
+        const r = h.getBoundingClientRect();
+        if (r.top <= probe) activeIdx = i;
+        else break;
+      }
+      setCurrentSceneIndex(activeIdx + 1);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    main?.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      main?.removeEventListener("scroll", onScroll);
+    };
+  }, [pmDoc]);
   // Fall back to the fountain-line estimate until the paginator emits its
   // first measurement (post-mount rAF). After that, pageInfo wins because
   // it matches the rendered page-break geometry.

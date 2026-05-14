@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -17,13 +17,17 @@ interface ScreenplayCesarePanelProps {
   pageTotal: number;
   sceneCurrent: number | null;
   sceneTotal: number;
+  /** When provided, suggestions with both `find` and `replace` show an
+   *  'Applica' button that calls this. Returns true when the edit was
+   *  applied (the suggestion is then removed from the list locally). */
+  onApplyEdit?: (find: string, replace: string) => boolean;
 }
 
 export function ScreenplayCesarePanel(props: ScreenplayCesarePanelProps) {
   return (
     <aside className={styles.panel} aria-label="Note di Cesare">
       <header className={styles.header}>
-        <span className={styles.label}>Cesare · polish</span>
+        <span className={styles.label}>Cesare</span>
       </header>
       <Suspense fallback={<p className={styles.loading}>Lettura in corso…</p>}>
         <PanelBody {...props} />
@@ -58,13 +62,30 @@ function PanelBody({
   pageTotal,
   sceneCurrent,
   sceneTotal,
+  onApplyEdit,
 }: ScreenplayCesarePanelProps) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const polishQ = useQuery(polishQueryOptions(screenplayId));
   const staleQ = useQuery(staleScenesOptions(versionId ?? ""));
-  const suggestions = polishQ.data?.suggestions ?? [];
+  const allSuggestions = polishQ.data?.suggestions ?? [];
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [flash, setFlash] = useState<string | null>(null);
+  const suggestions = allSuggestions.filter((s) => !appliedIds.has(s.id));
   const staleScenes = staleQ.data ?? [];
+
+  const handleApply = (id: string, find: string, replace: string) => {
+    if (!onApplyEdit) return;
+    const ok = onApplyEdit(find, replace);
+    if (ok) {
+      setAppliedIds((prev) => new Set(prev).add(id));
+      setFlash("Modifica applicata · Cmd+Z per annullare");
+      window.setTimeout(() => setFlash(null), 2400);
+    } else {
+      setFlash("Testo non trovato — ignorato");
+      window.setTimeout(() => setFlash(null), 2400);
+    }
+  };
 
   const handleOpenBreakdown = () => {
     void navigate({
@@ -110,31 +131,62 @@ function PanelBody({
           </button>
         </div>
 
+        {flash && <p className={styles.flash}>{flash}</p>}
+
         {suggestions.length > 0 && (
           <ul className={styles.suggestionList}>
-            {suggestions.slice(0, 5).map((s) => (
-              <li key={s.id} className={styles.suggestionRow}>
-                <span
-                  className={styles.kindDot}
-                  style={{ background: KIND_COLOR[s.kind] }}
-                  aria-hidden="true"
-                />
-                <div className={styles.suggestionBody}>
-                  <p className={styles.suggestionMeta}>
-                    <span
-                      className={styles.kindTag}
-                      style={{ color: KIND_COLOR[s.kind] }}
-                    >
-                      {KIND_LABEL[s.kind]}
-                    </span>
-                    <span className={styles.sceneTag} data-num>
-                      Sc. {s.scene}
-                    </span>
-                  </p>
-                  <p className={styles.suggestionMessage}>{s.message}</p>
-                </div>
-              </li>
-            ))}
+            {suggestions.map((s) => {
+              const canApply =
+                onApplyEdit !== undefined &&
+                typeof s.find === "string" &&
+                s.find.length > 0 &&
+                typeof s.replace === "string" &&
+                s.replace.length > 0;
+              return (
+                <li key={s.id} className={styles.suggestionRow}>
+                  <span
+                    className={styles.kindDot}
+                    style={{ background: KIND_COLOR[s.kind] }}
+                    aria-hidden="true"
+                  />
+                  <div className={styles.suggestionBody}>
+                    <p className={styles.suggestionMeta}>
+                      <span
+                        className={styles.kindTag}
+                        style={{ color: KIND_COLOR[s.kind] }}
+                      >
+                        {KIND_LABEL[s.kind]}
+                      </span>
+                      <span className={styles.sceneTag} data-num>
+                        Sc. {s.scene}
+                      </span>
+                    </p>
+                    <p className={styles.suggestionMessage}>{s.message}</p>
+                    {canApply && (
+                      <div className={styles.editPreview}>
+                        <span className={styles.editFind}>{s.find}</span>
+                        <span className={styles.editArrow} aria-hidden="true">
+                          →
+                        </span>
+                        <span className={styles.editReplace}>{s.replace}</span>
+                      </div>
+                    )}
+                    {canApply && (
+                      <button
+                        type="button"
+                        className={styles.applyBtn}
+                        onClick={() =>
+                          handleApply(s.id, s.find as string, s.replace as string)
+                        }
+                        data-testid={`cesare-apply-${s.id}`}
+                      >
+                        Applica
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
 

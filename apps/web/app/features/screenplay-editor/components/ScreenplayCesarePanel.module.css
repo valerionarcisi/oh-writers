@@ -9,6 +9,23 @@
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-md);
   align-self: start;
+  /* TopBar (48) + viewbar (40) + .layout padding-top (16) + bottom dock
+     (~64) → leave ~120px viewport margin so the panel always fits without
+     pushing the floating dock. Body scrolls internally past that point. */
+  max-block-size: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  overflow-y: auto;
+  /* Don't let the inner scrollbar paint over the right padding of .panel */
+  margin-inline-end: calc(var(--ds-space-2) * -1);
+  padding-inline-end: var(--ds-space-2);
 }
 
 .header {
@@ -43,12 +60,6 @@
   font-family: var(--ds-font-sans);
   font-size: 12px;
   color: var(--ds-text-3);
-}
-
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-space-4);
 }
 
 .metrics {
@@ -184,6 +195,80 @@
   font-size: 12px;
   line-height: 1.45;
   color: var(--ds-text-2);
+}
+
+.editPreview {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface-alt);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.editFind {
+  color: var(--ds-text-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--ds-text-faint, var(--ds-text-3));
+}
+
+.editArrow {
+  color: var(--ds-text-3);
+}
+
+.editReplace {
+  color: var(--ds-text);
+  font-weight: 500;
+}
+
+.applyBtn {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid var(--ds-action);
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.applyBtn:hover {
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark, #fff);
+}
+
+.applyBtn:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+.flash {
+  margin: 0;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-text);
+  color: var(--ds-surface);
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  text-align: center;
+  animation: cesareFlashIn 180ms var(--ds-ease);
+}
+
+@keyframes cesareFlashIn {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
 .stale {

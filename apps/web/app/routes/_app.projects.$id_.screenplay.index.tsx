@@ -55,11 +55,15 @@ function ScreenplayEditorPage() {
           isCesareOn ? (
             <ScreenplayCesarePanel
               projectId={id}
+              screenplayId={value.id}
               versionId={value.currentVersionId ?? null}
               pageCurrent={metrics.pageCurrent}
               pageTotal={metrics.pageTotal}
               sceneCurrent={metrics.sceneCurrent}
               sceneTotal={metrics.sceneTotal}
+              onApplyEdit={(find, replace) =>
+                editorRef.current?.applyEdit(find, replace) ?? false
+              }
             />
           ) : null
         }

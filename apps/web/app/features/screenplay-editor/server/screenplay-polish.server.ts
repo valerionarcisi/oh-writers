@@ -36,7 +36,13 @@ const PolishSuggestionSchema = z.object({
   /** Short message (≤ 140 chars), Italian, action-oriented. */
   message: z.string().min(1).max(280),
   /** Tiny snippet (≤ 80 chars) from the screenplay quoted by Cesare. */
-  snippet: z.string().max(160).nullable(),
+  snippet: z.string().max(160).nullable().optional(),
+  /** When Cesare proposes a concrete textual edit, `find` is the exact
+   *  substring to look for in the screenplay (must match verbatim) and
+   *  `replace` is the proposed replacement. The UI shows an 'Applica'
+   *  action only when both are present. PM's undo history handles reverse. */
+  find: z.string().max(400).nullable().optional(),
+  replace: z.string().max(800).nullable().optional(),
 });
 
 const PolishResponseSchema = z.object({
@@ -83,6 +89,18 @@ const POLISH_TOOL: {
             scene: { type: "integer", minimum: 1 },
             message: { type: "string", maxLength: 280 },
             snippet: { type: "string", maxLength: 160 },
+            find: {
+              type: "string",
+              maxLength: 400,
+              description:
+                "Sostringa esatta da cercare nel testo. Includere solo quando hai un edit puntuale da proporre.",
+            },
+            replace: {
+              type: "string",
+              maxLength: 800,
+              description:
+                "Testo che dovrebbe rimpiazzare 'find'. Solo quando hai un edit chiaro e applicabile.",
+            },
           },
           required: ["id", "kind", "severity", "scene", "message"],
         },
@@ -93,14 +111,23 @@ const POLISH_TOOL: {
 };
 
 const POLISH_SYSTEM_PROMPT = `Sei Cesare, dramaturg italiano sobrio. Stai leggendo una scrittura in formato Fountain.
-Restituisci da 3 a 6 suggerimenti di polish concreti, in italiano, ognuno ≤ 140 caratteri.
+Restituisci da 4 a 6 suggerimenti di polish concreti, in italiano, ognuno ≤ 140 caratteri.
 Riferisci ogni suggerimento alla scena (numero 1-indexato basato su INT./EXT.).
 Niente complimenti. Niente generiche "rivedi il dialogo": indica COSA e PERCHÉ.
-Esempi di good output:
-- pacing: "Scena 3: la battuta di JOHN dura 6 righe, perde il ritmo da open-mic — taglia metà o spezza con risata del pubblico."
-- format: "Scena 2: 'sarria' è dialetto: meta corsivo o (in dialetto) per il lettore."
-- action: "Scena 5: descrizione 'cucina, ferito, pugno' è telegrafica — un beat di mezza riga aiuta la regia."
-Non inventare elementi che non sono nel testo.`;
+
+REGOLA SUI FIND/REPLACE (importante):
+Per ogni suggerimento dove l'edit è esprimibile come sostituzione testuale puntuale, DEVI compilare entrambi:
+- find: la sostringa ESATTA presente nel testo (copia-incolla, verbatim, max 400 char)
+- replace: il testo proposto che la rimpiazza (max 800 char)
+Almeno metà dei suggerimenti deve includere find/replace. Solo note puramente strutturali (pacing globale, ordine scene, scelte registiche) possono ometterli.
+
+Esempi:
+- format: "Scena 2: 'sarria' è dialetto pugliese, marca con corsivo per il lettore." → find:"sarria", replace:"_sarria_"
+- style: "Scena 1: 'Nice Nice!' suona sciatto come tag — meglio 'Belli belli!'." → find:"Nice Nice!", replace:"Belli belli!"
+- dialogo: "Scena 1: 'Sottoscala pizzeria' è chunky — 'pizzeria Sottoscala' scorre meglio." → find:"Sottoscala pizzeria", replace:"pizzeria Sottoscala"
+- pacing: "Scena 3: la sequenza chiude troppo in fretta — un beat tra Tea e Filippo aiuta." (no find/replace, è strutturale)
+
+Non inventare elementi che non sono nel testo. Verifica che 'find' compaia letteralmente.`;
 
 export const getScreenplayPolish = createServerFn({ method: "GET" })
   .validator(z.object({ screenplayId: z.string().uuid() }))
@@ -148,17 +175,35 @@ const callPolish = async (content: string): Promise<PolishSuggestion[]> => {
       system: POLISH_SYSTEM_PROMPT,
       fewShot: [],
       user: trimmed,
-      maxTokens: 1024,
+      maxTokens: 1500,
       tools: [POLISH_TOOL],
       toolChoice: { type: "tool", name: POLISH_TOOL_NAME },
     },
     "cesare/polish",
   );
-  if (result.isErr()) return [];
+  if (result.isErr()) {
+    console.warn("[cesare/polish] callHaiku error:", result.error.message);
+    return [];
+  }
   const input = extractToolUse(result.value.content, POLISH_TOOL_NAME);
-  if (input === null) return [];
+  if (input === null) {
+    console.warn(
+      "[cesare/polish] no tool_use block, stop_reason:",
+      result.value.stopReason,
+    );
+    return [];
+  }
   const parsed = PolishResponseSchema.safeParse(input);
-  return parsed.success ? parsed.data.suggestions : [];
+  if (!parsed.success) {
+    console.warn(
+      "[cesare/polish] schema parse error:",
+      parsed.error.issues.slice(0, 3),
+      "raw:",
+      JSON.stringify(input).slice(0, 300),
+    );
+    return [];
+  }
+  return parsed.data.suggestions;
 };
 
 // ─── Mock fallback per MOCK_AI=true / chiave mancante ────────────────────────
