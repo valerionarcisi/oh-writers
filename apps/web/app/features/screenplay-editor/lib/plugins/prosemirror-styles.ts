@@ -111,10 +111,9 @@ export const injectProseMirrorStyles = (): void => {
      */
 
     .pm-heading .scene-number-btn {
-      /* Scene numbers are kept in the DOM (edits via the conflict modal rely
-         on the buttons), but hidden in the default view. They appear in the
-         printed/exported PDF based on the export modal's sceneNumbers option. */
-      display: none;
+      /* Scene numbers are displayed in the gutter so the writer can read and
+         re-number them inline. The renumber-from-here flow lives in the
+         right-click context menu and the ⋯ floating dock menu. */
       position: absolute;
       top: 0;
       padding: 0;
@@ -176,13 +175,9 @@ export const injectProseMirrorStyles = (): void => {
       text-transform: uppercase;
     }
 
-    /* ⋮ button next to the left scene number — opens the scene popover.
-       Hidden in the default view (scene numbers themselves are also hidden);
-       scene-level actions live in the floating dock and the right-click
-       context flow. The button stays in the DOM so the test harness and
-       future "show numbers" toggle can still reach it. */
+    /* ⋮ button next to the left scene number — opens the scene popover
+       (lock number, renumber from here, etc.). */
     .pm-heading .scene-number-menu-btn {
-      display: none;
       position: absolute;
       top: 0;
       left: -0.55in;

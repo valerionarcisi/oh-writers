@@ -55,6 +55,10 @@ function deriveSectionName(routeId: string): string {
 }
 
 const PROJECT_SECTIONS: ReadonlyArray<{ segment: string; label: string }> = [
+  { segment: "soggetto", label: "Soggetto" },
+  { segment: "synopsis", label: "Synopsis" },
+  { segment: "outline", label: "Outline" },
+  { segment: "treatment", label: "Treatment" },
   { segment: "screenplay", label: "Screenplay" },
   { segment: "breakdown", label: "Breakdown" },
   { segment: "schedule", label: "Schedule" },

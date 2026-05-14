@@ -2,7 +2,9 @@
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  /* Above the page viewbar (z-index:30) so the TopBar always covers chips
+     that sit just below it when the user scrolls. */
+  z-index: 40;
   display: flex;
   align-items: center;
   gap: var(--ds-space-2);
