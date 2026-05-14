@@ -169,6 +169,13 @@
       "when": 1747526400000,
       "tag": "0021_shot_plan_suggested",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1747612800000,
+      "tag": "0022_blocking",
+      "breakpoints": true
     }
   ]
 }
