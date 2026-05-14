@@ -1,4 +1,11 @@
+/* Legacy dark tokens (in use until each page is migrated to DS-v2) */
 @import "../../../../packages/ui/src/styles/tokens.css";
+
+/* DS-v2 Ambient — token architecture (linen default + dark variant + semantic + fonts) */
+@import "../../../../packages/ui/src/themes/linen.css";
+@import "../../../../packages/ui/src/themes/dark.css";
+@import "../../../../packages/ui/src/tokens/semantic.css";
+@import "../../../../packages/ui/src/fonts/fonts.css";
 
 *,
 *::before,
