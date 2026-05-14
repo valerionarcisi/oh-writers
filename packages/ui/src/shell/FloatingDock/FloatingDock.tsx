@@ -11,8 +11,10 @@ export type DockAction = {
 };
 
 export type FloatingDockProps = {
-  /** Page context label shown in mono uppercase: "BUDGET", "SCREENPLAY", "PIANO" */
-  label: string;
+  /** Optional page context label shown in mono uppercase ('BUDGET', 'SCREENPLAY').
+   *  When omitted, the dock collapses to actions only — saves horizontal
+   *  space on narrow viewports. Still used as the aria-label fallback. */
+  label?: string;
   /** Primary action (clay filled button) */
   primaryAction: DockAction;
   /** Secondary ghost actions */
@@ -45,7 +47,7 @@ export function FloatingDock({
   return (
     <div
       role="toolbar"
-      aria-label={`Azioni pagina ${label}`}
+      aria-label={label ? `Azioni pagina ${label}` : "Azioni pagina"}
       className={styles.dock}
     >
       {toast && (
@@ -58,10 +60,6 @@ export function FloatingDock({
           {toast}
         </span>
       )}
-
-      <span className={styles.label} aria-hidden="true">
-        {label}
-      </span>
 
       <button
         type="button"

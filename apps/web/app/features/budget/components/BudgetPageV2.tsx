@@ -602,7 +602,7 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
       </main>
 
       <FloatingDock
-        label="BUDGET"
+
         primaryAction={{
           label: generateMutation.isPending ? "Generando…" : "Rigenera",
           hotkey: "⌘R",

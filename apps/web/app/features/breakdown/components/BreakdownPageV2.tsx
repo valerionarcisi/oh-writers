@@ -706,7 +706,6 @@ function BreakdownPageV2Content({ projectId }: Props) {
 
       {/* ─── FLOATING DOCK ─── */}
       <FloatingDock
-        label="BREAKDOWN"
         primaryAction={{
           label: "Ri-spogliare con AI",
           hotkey: "⌘R",

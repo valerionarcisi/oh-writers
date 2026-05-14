@@ -78,11 +78,12 @@ const SECTION_GROUPS: ReadonlyArray<{
       { segment: "schedule", label: "Schedule", icon: "clock" },
     ],
   },
-  {
-    label: "Produzione",
-    items: [{ segment: "title-page", label: "Frontespizio", icon: "book" }],
-  },
 ];
+
+// `title-page` non vive nel section dropdown: il Frontespizio si raggiunge
+// solo dal menu ⋯ all'interno dell'editor Screenplay (è una proprietà di
+// quella sceneggiatura, non una sezione di progetto autonoma).
+const TITLE_PAGE_SEGMENT = "title-page";
 
 const ALL_SECTIONS = SECTION_GROUPS.flatMap((g) => g.items);
 
@@ -103,6 +104,7 @@ function buildSectionGroups(
 }
 
 function activeSegmentFromRouteId(routeId: string): string {
+  if (routeId.includes(TITLE_PAGE_SEGMENT)) return TITLE_PAGE_SEGMENT;
   for (const s of ALL_SECTIONS) {
     if (routeId.includes(s.segment)) return s.segment;
   }

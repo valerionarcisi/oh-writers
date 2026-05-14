@@ -17,6 +17,7 @@ import {
   useSiaeMetadata,
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
+import { useVersionsDrawer } from "~/features/versions";
 import { useSession } from "~/lib/auth-client";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -117,6 +118,26 @@ function SoggettoPageReady({
   const saveSoggetto = useSaveDocument();
   const saveLogline = useSaveDocument();
   const exportDocx = useExportSubjectDocx();
+  const {
+    state: drawerState,
+    open: openDrawer,
+    close: closeDrawer,
+  } = useVersionsDrawer();
+  const isVersionsOpen =
+    drawerState.isOpen &&
+    drawerState.scope?.kind === "document" &&
+    drawerState.scope.documentId === soggettoDoc.id;
+  const toggleVersions = () => {
+    if (isVersionsOpen) closeDrawer();
+    else
+      openDrawer({
+        kind: "document",
+        documentId: soggettoDoc.id,
+        docType: DocumentTypes.SOGGETTO,
+        canEdit: soggettoDoc.canEdit,
+        currentVersionId: soggettoDoc.currentVersionId ?? null,
+      });
+  };
 
   useAutoSave(
     saveSoggetto,
@@ -176,17 +197,14 @@ function SoggettoPageReady({
       </div>
 
       <FloatingDock
-        label="SOGGETTO"
         primaryAction={{
           label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
           hotkey: "⌘E",
           onClick: () => setIsExportOpen(true),
         }}
         secondaryActions={[
-          {
-            label: "Esporta SIAE",
-            onClick: () => setIsSiaeOpen(true),
-          },
+          { label: "Versioni", onClick: toggleVersions },
+          { label: "Esporta SIAE", onClick: () => setIsSiaeOpen(true) },
         ]}
       />
     </main>

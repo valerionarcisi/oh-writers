@@ -399,7 +399,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       )}
 
       <FloatingDock
-        label={DOCUMENT_LABELS[type].toUpperCase()}
         primaryAction={{
           label:
             isNarrative && exportPdf.isPending

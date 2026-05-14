@@ -589,7 +589,6 @@ export const ScreenplayEditor = forwardRef<
       ) : null}
       {!isFocusMode && (
         <FloatingDock
-          label="SCREENPLAY"
           primaryAction={{
             label: exportPdf.isPending ? "Esportando…" : "Esporta PDF",
             hotkey: "⌘E",
