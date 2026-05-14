@@ -1,0 +1,258 @@
+import { useRef, useState, useCallback, useEffect } from "react";
+import type { Primitive, ActorPosition, CameraPin } from "@oh-writers/domain";
+import { ActorPin, CameraPinEl } from "./BlockingPin";
+import styles from "./BlockingCanvas.module.css";
+
+const DISPLAY_W = 680;
+
+interface BlockingCanvasProps {
+  primitives: Primitive[];
+  actorPositions: ActorPosition[];
+  cameraPins: CameraPin[];
+  widthCm: number;
+  heightCm: number;
+  isSuggested?: boolean;
+  readOnly?: boolean;
+  selectedShotId?: string | null;
+  onActorMove?: (castId: string, x: number, y: number) => void;
+  onCameraMove?: (shotId: string, x: number, y: number) => void;
+  onPinClick?: (shotId: string) => void;
+}
+
+export function BlockingCanvas({
+  primitives,
+  actorPositions,
+  cameraPins,
+  widthCm,
+  heightCm,
+  readOnly = false,
+  selectedShotId,
+  onActorMove,
+  onCameraMove,
+  onPinClick,
+}: BlockingCanvasProps) {
+  const scale = DISPLAY_W / widthCm;
+  const displayH = heightCm * scale;
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragging = useRef<{
+    kind: "actor" | "camera";
+    id: string;
+    origX: number;
+    origY: number;
+  } | null>(null);
+
+  const [localActors, setLocalActors] = useState<ActorPosition[]>(actorPositions);
+  const [localCameras, setLocalCameras] = useState<CameraPin[]>(cameraPins);
+
+  // Sync external prop changes when no drag is in progress
+  useEffect(() => {
+    if (!dragging.current) setLocalActors(actorPositions);
+  }, [actorPositions]);
+
+  useEffect(() => {
+    if (!dragging.current) setLocalCameras(cameraPins);
+  }, [cameraPins]);
+
+  const toCanvasCm = useCallback(
+    (clientX: number, clientY: number): { x: number; y: number } => {
+      const svg = svgRef.current;
+      if (!svg) return { x: 0, y: 0 };
+      const rect = svg.getBoundingClientRect();
+      return {
+        x: Math.round((clientX - rect.left) / scale),
+        y: Math.round((clientY - rect.top) / scale),
+      };
+    },
+    [scale],
+  );
+
+  const handlePointerDown = useCallback(
+    (kind: "actor" | "camera", id: string, origX: number, origY: number) =>
+      (e: React.PointerEvent) => {
+        if (readOnly) return;
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        dragging.current = { kind, id, origX, origY };
+      },
+    [readOnly],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const d = dragging.current;
+      if (!d) return;
+      const { x, y } = toCanvasCm(e.clientX, e.clientY);
+      const clamped = {
+        x: Math.max(0, Math.min(widthCm, x)),
+        y: Math.max(0, Math.min(heightCm, y)),
+      };
+      if (d.kind === "actor") {
+        setLocalActors((prev) =>
+          prev.map((a) =>
+            a.castId === d.id ? { ...a, x: clamped.x, y: clamped.y } : a,
+          ),
+        );
+      } else {
+        setLocalCameras((prev) =>
+          prev.map((c) =>
+            c.shotId === d.id ? { ...c, x: clamped.x, y: clamped.y } : c,
+          ),
+        );
+      }
+    },
+    [toCanvasCm, widthCm, heightCm],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    const d = dragging.current;
+    if (!d) return;
+    if (d.kind === "actor") {
+      const actor = localActors.find((a) => a.castId === d.id);
+      if (actor && (actor.x !== d.origX || actor.y !== d.origY)) {
+        onActorMove?.(d.id, actor.x, actor.y);
+      }
+    } else {
+      const cam = localCameras.find((c) => c.shotId === d.id);
+      if (cam && (cam.x !== d.origX || cam.y !== d.origY)) {
+        onCameraMove?.(d.id, cam.x, cam.y);
+      }
+    }
+    dragging.current = null;
+  }, [localActors, localCameras, onActorMove, onCameraMove]);
+
+  return (
+    <svg
+      ref={svgRef}
+      className={styles.canvas}
+      viewBox={`0 0 ${DISPLAY_W} ${displayH}`}
+      width={DISPLAY_W}
+      height={displayH}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
+      <defs>
+        <marker
+          id="arrowhead-actor"
+          markerWidth="6"
+          markerHeight="6"
+          refX="3"
+          refY="3"
+          orient="auto"
+        >
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--color-accent-green)" />
+        </marker>
+        <marker
+          id="arrowhead-camera"
+          markerWidth="6"
+          markerHeight="6"
+          refX="3"
+          refY="3"
+          orient="auto"
+        >
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--color-accent-red)" />
+        </marker>
+      </defs>
+
+      {primitives.map((p, i) => {
+        if (p.type === "wall") {
+          return (
+            <rect
+              key={`p${i}`}
+              x={p.x * scale}
+              y={p.y * scale}
+              width={p.w * scale}
+              height={p.h * scale}
+              fill="var(--color-text-muted)"
+              opacity={0.6}
+            />
+          );
+        }
+        if (p.type === "furniture") {
+          return (
+            <g key={`p${i}`}>
+              <rect
+                x={p.x * scale}
+                y={p.y * scale}
+                width={p.w * scale}
+                height={p.h * scale}
+                fill="var(--color-surface)"
+                stroke="var(--color-border-strong)"
+                strokeWidth={1 * scale}
+                rx={2 * scale}
+              />
+              <text
+                x={(p.x + p.w / 2) * scale}
+                y={(p.y + p.h / 2) * scale + 4 * scale}
+                textAnchor="middle"
+                fontSize={Math.max(7, 9 * scale)}
+                fill="var(--color-text-muted)"
+                style={{ pointerEvents: "none", userSelect: "none" }}
+              >
+                {p.label}
+              </text>
+            </g>
+          );
+        }
+        if (p.type === "opening") {
+          return (
+            <g key={`p${i}`}>
+              <rect
+                x={p.x * scale}
+                y={p.y * scale}
+                width={p.w * scale}
+                height={p.h * scale}
+                fill="var(--color-bg)"
+                stroke="var(--color-accent)"
+                strokeWidth={1.5 * scale}
+              />
+              <text
+                x={(p.x + p.w / 2) * scale}
+                y={(p.y + p.h / 2) * scale + 4 * scale}
+                textAnchor="middle"
+                fontSize={Math.max(6, 7 * scale)}
+                fill="var(--color-accent)"
+                style={{ pointerEvents: "none", userSelect: "none" }}
+              >
+                {p.kind === "door" ? "▭" : "═"}
+              </text>
+            </g>
+          );
+        }
+        return null;
+      })}
+
+      {localActors.map((actor) => (
+        <ActorPin
+          key={actor.castId}
+          actor={actor}
+          scale={scale}
+          isReadOnly={readOnly}
+          onPointerDown={handlePointerDown(
+            "actor",
+            actor.castId,
+            actor.x,
+            actor.y,
+          )}
+        />
+      ))}
+
+      {localCameras.map((pin) => (
+        <CameraPinEl
+          key={pin.shotId}
+          pin={pin}
+          scale={scale}
+          isReadOnly={readOnly}
+          isSelected={pin.shotId === selectedShotId}
+          onPointerDown={handlePointerDown(
+            "camera",
+            pin.shotId,
+            pin.x,
+            pin.y,
+          )}
+          onClick={() => onPinClick?.(pin.shotId)}
+        />
+      ))}
+    </svg>
+  );
+}
