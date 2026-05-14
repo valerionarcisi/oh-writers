@@ -112,64 +112,27 @@ export function ToolbarMenu({
             <span className={styles.itemLabel}>Import PDF</span>
           </button>
 
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.item}
-            disabled
-            title="Disponibile a breve"
-            data-testid="menu-item-export-pdf"
-          >
-            <span className={styles.itemIcon} aria-hidden="true">
-              ⇩
-            </span>
-            <span className={styles.itemLabel}>Export PDF</span>
-            <span className={styles.comingSoon}>soon</span>
-          </button>
+          {onResequenceAll && (
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.item}
+              title="Renumber every scene based on document order"
+              onClick={runAndClose(onResequenceAll)}
+              data-testid="menu-item-renumber"
+            >
+              <span className={styles.itemIcon} aria-hidden="true">
+                #
+              </span>
+              <span className={styles.itemLabel}>
+                Ricalcola numerazione scene
+              </span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.item}
-            disabled={!onResequenceAll}
-            title={
-              onResequenceAll
-                ? "Renumber every scene based on document order"
-                : "Disponibile a breve"
-            }
-            onClick={onResequenceAll ? runAndClose(onResequenceAll) : undefined}
-            data-testid="menu-item-renumber"
-          >
-            <span className={styles.itemIcon} aria-hidden="true">
-              #
-            </span>
-            <span className={styles.itemLabel}>
-              Ricalcola numerazione scene
-            </span>
-            {!onResequenceAll && (
-              <span className={styles.comingSoon}>soon</span>
-            )}
-          </button>
-
-          <div className={styles.divider} aria-hidden="true" />
-
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.item}
-            onClick={runAndClose(onToggleVersions)}
-            aria-expanded={isVersionsPanelOpen}
-            data-testid="menu-item-versions"
-          >
-            <span className={styles.itemIcon} aria-hidden="true">
-              ⟲
-            </span>
-            <span className={styles.itemLabel}>Versioni</span>
-            {currentVersionLabel && (
-              <span className={styles.comingSoon}>{currentVersionLabel}</span>
-            )}
-          </button>
-
+          {isOwner && (
+            <div className={styles.divider} aria-hidden="true" />
+          )}
           {isOwner && (
             <button
               type="button"

@@ -176,8 +176,13 @@ export const injectProseMirrorStyles = (): void => {
       text-transform: uppercase;
     }
 
-    /* ⋮ button next to the left scene number — opens the scene popover. */
+    /* ⋮ button next to the left scene number — opens the scene popover.
+       Hidden in the default view (scene numbers themselves are also hidden);
+       scene-level actions live in the floating dock and the right-click
+       context flow. The button stays in the DOM so the test harness and
+       future "show numbers" toggle can still reach it. */
     .pm-heading .scene-number-menu-btn {
+      display: none;
       position: absolute;
       top: 0;
       left: -0.55in;

@@ -93,11 +93,11 @@
   overflow-y: auto;
   overflow-x: hidden;
   min-block-size: 0;
-  background: #2a2927;
+  background: var(--ds-surface);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-block: var(--space-8);
+  padding-block: var(--ds-space-4);
   padding-inline: 0;
 }
 
@@ -113,8 +113,7 @@
 .pageShell {
   inline-size: 100%;
   max-inline-size: 816px;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  background: var(--ds-surface);
   position: relative;
   flex-shrink: 0;
 }

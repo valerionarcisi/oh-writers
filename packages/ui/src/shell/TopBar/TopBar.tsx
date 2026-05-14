@@ -193,32 +193,36 @@ export function TopBar({
 
       {/* Right cluster */}
       <div className={styles.rightCluster}>
-        <button
-          type="button"
-          className={styles.iconBtn}
-          onClick={onSearch}
-          aria-label="Cerca ⌘K"
-          title="Cerca (⌘K)"
-        >
-          <Icon name="search" size={16} aria-hidden={true} />
-        </button>
+        {onSearch !== undefined && (
+          <button
+            type="button"
+            className={styles.iconBtn}
+            onClick={onSearch}
+            aria-label="Cerca ⌘K"
+            title="Cerca (⌘K)"
+          >
+            <Icon name="search" size={16} aria-hidden={true} />
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={styles.iconBtn}
-          onClick={onBell}
-          aria-label={
-            notificationCount > 0
-              ? `Notifiche — ${notificationCount} nuove`
-              : "Notifiche"
-          }
-          title="Notifiche"
-        >
-          <Icon name="bell" size={16} aria-hidden={true} />
-          {notificationCount > 0 && (
-            <span className={styles.bellBadge} aria-hidden="true" />
-          )}
-        </button>
+        {onBell !== undefined && (
+          <button
+            type="button"
+            className={styles.iconBtn}
+            onClick={onBell}
+            aria-label={
+              notificationCount > 0
+                ? `Notifiche — ${notificationCount} nuove`
+                : "Notifiche"
+            }
+            title="Notifiche"
+          >
+            <Icon name="bell" size={16} aria-hidden={true} />
+            {notificationCount > 0 && (
+              <span className={styles.bellBadge} aria-hidden="true" />
+            )}
+          </button>
+        )}
 
         {onAskCesare !== undefined && (
           <button
@@ -239,15 +243,25 @@ export function TopBar({
           <Presence users={presenceUsers} maxVisible={3} />
         )}
 
-        <button
-          type="button"
-          className={styles.avatarBtn}
-          onClick={onAvatarClick}
-          aria-label={`Account utente (${userInitials})`}
-          title="Account"
-        >
-          {userInitials}
-        </button>
+        {onAvatarClick !== undefined ? (
+          <button
+            type="button"
+            className={styles.avatarBtn}
+            onClick={onAvatarClick}
+            aria-label={`Account utente (${userInitials})`}
+            title="Account"
+          >
+            {userInitials}
+          </button>
+        ) : (
+          <span
+            className={styles.avatarBtn}
+            aria-label={`Account utente (${userInitials})`}
+            title="Account"
+          >
+            {userInitials}
+          </span>
+        )}
       </div>
     </header>
   );
