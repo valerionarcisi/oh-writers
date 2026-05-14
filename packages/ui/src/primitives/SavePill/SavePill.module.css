@@ -1,0 +1,46 @@
+/* packages/ui/src/primitives/SavePill/SavePill.module.css */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 3px var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  color: var(--ds-text-3);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.saved .dot {
+  background: var(--ds-agent);
+}
+
+.saving {
+  color: var(--ds-saving);
+}
+
+.saving .dot {
+  background: var(--ds-saving);
+  animation: pulse 1s var(--ds-ease) infinite;
+}
+
+.offline .dot {
+  background: var(--ds-text-mute);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saving .dot { animation: none; }
+}
