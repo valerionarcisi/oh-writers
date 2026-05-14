@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { blockingQueryOptions } from "../server/blocking.server";
-import { useBlocking } from "../hooks/useCesareBlocking";
+import { useBlocking } from "../hooks/useBlocking";
 import { BlockingCanvas } from "./BlockingCanvas";
 import { unwrapResult } from "@oh-writers/utils";
 import type { ActorPosition, CameraPin } from "@oh-writers/domain";
