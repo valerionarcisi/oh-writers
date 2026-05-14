@@ -1,0 +1,49 @@
+/* packages/ui/src/primitives/Presence/Presence.module.css */
+.list {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+
+.item {
+  margin-inline-end: -8px;
+}
+
+.item:first-child {
+  margin-inline-end: 0;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--ds-bg);
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+  font-family: var(--ds-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.overflow {
+  background: var(--ds-surface-deep);
+  color: var(--ds-text-3);
+  font-size: 8px;
+}
