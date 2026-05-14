@@ -1,45 +1,78 @@
-import { type ReactNode, useState, useCallback } from "react";
-import type { AppUser } from "~/server/context";
-import { Sidebar } from "./Sidebar";
-import { TopBar } from "./TopBar";
+import { type ReactNode, useEffect, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { TopBar, SkipLink } from "@oh-writers/ui";
+import type { SaveState } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
+import type { AppUser } from "~/server/context";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
   user: AppUser;
+  projectName?: string;
+  sectionName?: string;
+  saveState?: SaveState;
+  saveSecondsAgo?: number;
+  cesareNoteCount?: number;
   children: ReactNode;
 }
 
-const STORAGE_KEY = "ohw-sidebar-collapsed";
+const deriveInitials = (name: string): string =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
-const getInitialCollapsed = (): boolean => {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(STORAGE_KEY) === "true";
-};
+export function AppShell({
+  user,
+  projectName = "",
+  sectionName = "",
+  saveState = "saved",
+  saveSecondsAgo,
+  cesareNoteCount = 0,
+  children,
+}: AppShellProps) {
+  const router = useRouter();
+  const [isScrolled, setIsScrolled] = useState(false);
 
-export function AppShell({ user, children }: AppShellProps) {
-  const [isCollapsed, setIsCollapsed] = useState(getInitialCollapsed);
+  useEffect(() => {
+    const main = document.getElementById("main-content");
+    if (!main) return;
 
-  const toggleSidebar = useCallback(() => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
+    const onScroll = () => setIsScrolled(main.scrollTop > 0);
+    main.addEventListener("scroll", onScroll, { passive: true });
+    return () => main.removeEventListener("scroll", onScroll);
   }, []);
+
+  const handleBrandClick = () => {
+    void router.navigate({ to: "/dashboard" });
+  };
 
   return (
     <VersionsDrawerProvider>
-      <div className={styles.shell} data-collapsed={isCollapsed || undefined}>
-        <Sidebar
-          user={user}
-          isCollapsed={isCollapsed}
-          onToggle={toggleSidebar}
+      <div className={styles.shell}>
+        <SkipLink targetId="main-content" />
+        <TopBar
+          projectName={projectName}
+          sectionName={sectionName}
+          saveState={saveState}
+          saveSecondsAgo={saveSecondsAgo}
+          cesareNoteCount={cesareNoteCount}
+          userInitials={deriveInitials(user.name)}
+          presenceUsers={[]}
+          isScrolled={isScrolled}
+          onBrandClick={handleBrandClick}
+          onProjectClick={handleBrandClick}
+          onSectionClick={undefined}
+          onSearch={undefined}
+          onBell={undefined}
+          onAskCesare={undefined}
+          onAvatarClick={undefined}
         />
-        <div className={styles.content}>
-          <TopBar />
-          <main className={styles.main}>{children}</main>
-        </div>
+        <main id="main-content" className={styles.main}>
+          {children}
+        </main>
         <VersionsDrawer />
       </div>
     </VersionsDrawerProvider>
