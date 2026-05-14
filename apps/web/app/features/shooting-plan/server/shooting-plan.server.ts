@@ -579,10 +579,9 @@ export const addShot = createServerFn({ method: "POST" })
             );
           }
 
-          await tx
-            .update(shotPlanScenarios)
-            .set({ isSuggested: false })
-            .where(eq(shotPlanScenarios.id, data.scenarioId));
+          await tx.execute(
+            sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`,
+          );
         }),
         (e) => new DbError("addShot/transaction", e),
       );
@@ -657,10 +656,7 @@ export const updateShot = createServerFn({ method: "POST" })
                 .update(shots)
                 .set({ ...data.patch, updatedAt: new Date() })
                 .where(eq(shots.id, data.shotId));
-              await db
-                .update(shotPlanScenarios)
-                .set({ isSuggested: false })
-                .where(eq(shotPlanScenarios.id, shot.scenarioId));
+              await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`);
             })(),
             (e) => new DbError("updateShot/update", e),
           ).map(() => undefined),
@@ -700,10 +696,7 @@ export const deleteShot = createServerFn({ method: "POST" })
         .andThen((shot) =>
           ResultAsync.fromPromise(
             (async () => {
-              await db
-                .update(shotPlanScenarios)
-                .set({ isSuggested: false })
-                .where(eq(shotPlanScenarios.id, shot.scenarioId));
+              await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`);
               await db.delete(shots).where(eq(shots.id, shot.id));
             })(),
             (e) => new DbError("deleteShot/delete", e),
@@ -737,10 +730,7 @@ export const reorderShots = createServerFn({ method: "POST" })
               .where(eq(shots.id, data.orderedShotIds[i]!));
           }
 
-          await tx
-            .update(shotPlanScenarios)
-            .set({ isSuggested: false })
-            .where(eq(shotPlanScenarios.id, data.scenarioId));
+          await tx.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`);
 
           await rebuildAutoTransitions(
             tx as unknown as Db,
@@ -782,10 +772,7 @@ export const addManualTransition = createServerFn({ method: "POST" })
             isManual: true,
             label: data.label ?? null,
           });
-          await db
-            .update(shotPlanScenarios)
-            .set({ isSuggested: false })
-            .where(eq(shotPlanScenarios.id, data.scenarioId));
+          await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`);
         })(),
         (e) => new DbError("addManualTransition/insert", e),
       ).map(() => undefined);
@@ -824,10 +811,7 @@ export const updateTransition = createServerFn({ method: "POST" })
             .set({ ...data.patch, updatedAt: new Date() })
             .where(eq(transitionSlots.id, data.transitionId));
           if (existing) {
-            await db
-              .update(shotPlanScenarios)
-              .set({ isSuggested: false })
-              .where(eq(shotPlanScenarios.id, existing.scenarioId));
+            await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${existing.scenarioId}`);
           }
         })(),
         (e) => new DbError("updateTransition/update", e),
@@ -856,10 +840,7 @@ export const deleteTransition = createServerFn({ method: "POST" })
             where: eq(transitionSlots.id, data.transitionId),
           });
           if (existing) {
-            await db
-              .update(shotPlanScenarios)
-              .set({ isSuggested: false })
-              .where(eq(shotPlanScenarios.id, existing.scenarioId));
+            await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${existing.scenarioId}`);
           }
           await db
             .delete(transitionSlots)
@@ -1080,10 +1061,7 @@ export const applyPattern = createServerFn({ method: "POST" })
           }));
           await db.insert(shots).values(newShots);
 
-          await db
-            .update(shotPlanScenarios)
-            .set({ isSuggested: false })
-            .where(eq(shotPlanScenarios.id, data.scenarioId));
+          await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${data.scenarioId}`);
 
           await rebuildAutoTransitions(
             db,
@@ -1372,10 +1350,7 @@ export const moveShot = createServerFn({ method: "POST" })
               ? [data.targetScenarioId]
               : [sourceScenarioId, data.targetScenarioId];
           for (const id of scenariosToClear) {
-            await db
-              .update(shotPlanScenarios)
-              .set({ isSuggested: false })
-              .where(eq(shotPlanScenarios.id, id));
+            await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${id}`);
           }
 
           for (const id of scenariosToClear) {
@@ -1465,10 +1440,7 @@ export const addReverseShot = createServerFn({ method: "POST" })
             cameraLabel: shot.cameraLabel,
           });
 
-          await db
-            .update(shotPlanScenarios)
-            .set({ isSuggested: false })
-            .where(eq(shotPlanScenarios.id, shot.scenarioId));
+          await db.execute(sql`UPDATE shot_plan_scenarios SET is_suggested = false WHERE id = ${shot.scenarioId}`);
 
           await rebuildAutoTransitions(db, shot.scenarioId, plan.projectId);
         })(),

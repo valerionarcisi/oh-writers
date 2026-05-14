@@ -16,6 +16,21 @@ Replace `BlockingPlaceholder.tsx` (90px stub with 🎬 icon) with a real 2D top-
 
 ---
 
+## Deferred to 22c-phase-2
+
+The following were specified for 22c but deferred to a follow-up. They will be tracked in a `22c-phase-2` spec.
+
+- **Bidirectional sync — pin → shot direction.** Phase 1 only invalidates the blocking query when a shot list changes. The reverse (drawing a pin in the editor → creates a shot in the plan; pin deletion → toast confirming shot deletion) is deferred.
+- **Detach blocking UI.** The server fn (`detachBlocking`) exists, but the `Detach blocking` button in the card is rendered disabled. No user-facing way to fork actor positions per-plan yet.
+- **Cone rotation drag.** Camera pins can be moved but not rotated by dragging the cone arc. Direction is whatever Cesare assigned.
+- **Arrow draw (shift+drag).** Spec describes shift+drag to draw blocking/movement arrows. Not yet implemented.
+- **Door/window toggle in opening tool.** The opening tool in the blocking editor always creates a `kind: "door"` — no UI to switch to `kind: "window"` after placement.
+- **Layer toggles in fullscreen editor.** The Location / Attori / Camere checkboxes in the editor sidebar are decorative; toggling them has no effect on the canvas.
+- **Furniture popover for label entry.** The fullscreen editor uses `window.prompt()` to label a new furniture rect. Spec calls for a popover with breakdown propRef dropdown.
+- **Runtime Zod re-validation of jsonb reads.** The server casts jsonb columns to domain types via `as unknown as`. A future hardening pass should `safeParse` the data on read.
+
+---
+
 ## Data model
 
 Three new tables, one per layer.
@@ -151,7 +166,7 @@ Server function `getOrCreateBlocking(sceneId, planId)`:
 }
 ```
 
-Implemented via `buildCesareBlockingPrompt()` in `packages/domain/src/blocking/cesare-blocking.ts`. Uses Haiku + prompt caching (consistent with Cesare pattern). Mock available via `MOCK_AI=true`.
+Implemented via `buildCesareBlockingPrompt()` in `packages/domain/src/blocking/cesare-blocking-prompt.ts`. Uses Haiku + prompt caching (consistent with Cesare pattern). Mock available via `MOCK_AI=true`.
 
 ### Output (MVP — actor positions + camera placement)
 
@@ -296,7 +311,7 @@ saveCameraPin({ planSceneCamerasId, pin })
 deleteCameraPin({ planSceneCamerasId, shotId })
   → ResultShape<void, DbError | ForbiddenError>
 
-detachBlocking({ planId, sceneId })
+detachBlocking({ planSceneCamerasId, sceneBlockingId })
   → ResultShape<void, DbError | ForbiddenError>
 
 saveLocationPrimitives({ locationId, primitives })
@@ -313,12 +328,9 @@ All require `requireUser()` + project membership check.
 
 Manages bidirectional shot ↔ camera pin sync. Subscribes to shot list changes (via `useQueryClient` + `onSuccess` of shot mutations). On shot add → calls `getOrCreateBlocking` to trigger Cesare re-placement. On shot delete → shows confirmation toast.
 
-### `useCesareBlocking`
+### `useBlocking`
 
-Thin wrapper around `getOrCreateBlocking`. Exposes:
-```ts
-{ blocking, isSuggested, isLoading, refetch }
-```
+Thin wrapper around `getOrCreateBlocking`. Exposes mutation helpers for actor and camera pin updates.
 
 Used by `BlockingCard` to drive the `BlockingCanvas`.
 
