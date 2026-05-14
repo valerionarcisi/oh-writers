@@ -61,6 +61,20 @@ export function BlockingCard({
     }
   };
 
+  const handleCameraRotate = (shotId: string, coneDirection: number) => {
+    const updated: CameraPin[] = localCameras.map((c) =>
+      c.shotId === shotId ? { ...c, coneDirection } : c,
+    );
+    setLocalCameras(updated);
+    const pin = updated.find((c) => c.shotId === shotId);
+    if (pin) {
+      void moveCamera.mutateAsync({
+        planSceneCamerasId: blocking.planSceneCamerasId,
+        pin,
+      });
+    }
+  };
+
   return (
     <section
       className={styles.card}
@@ -123,6 +137,7 @@ export function BlockingCard({
             selectedShotId={selectedShotId}
             onActorMove={handleActorMove}
             onCameraMove={handleCameraMove}
+            onCameraRotate={handleCameraRotate}
             onPinClick={onShotSelect}
           />
           <div className={styles.legend}>

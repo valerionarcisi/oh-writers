@@ -1,6 +1,6 @@
 import type { ActorPosition, CameraPin } from "@oh-writers/domain";
 
-const CONE_RADIUS = 80;
+export const CONE_RADIUS = 80;
 
 function conePathD(
   cx: number,
@@ -89,6 +89,7 @@ interface CameraPinElProps {
   isReadOnly?: boolean;
   isSelected?: boolean;
   onPointerDown?: (e: React.PointerEvent) => void;
+  onRotateHandleDown?: (e: React.PointerEvent) => void;
   onClick?: () => void;
 }
 
@@ -98,17 +99,19 @@ export function CameraPinEl({
   isReadOnly,
   isSelected,
   onPointerDown,
+  onRotateHandleDown,
   onClick,
 }: CameraPinElProps) {
   const fs = Math.max(7, 9 * scale);
   const boxW = 36 * scale;
   const boxH = 24 * scale;
+  // Position of the rotation handle: at the tip of the cone direction
+  const handleR = CONE_RADIUS * scale;
+  const dir = (pin.coneDirection - 90) * (Math.PI / 180);
+  const handleX = pin.x * scale + handleR * Math.cos(dir);
+  const handleY = pin.y * scale + handleR * Math.sin(dir);
   return (
-    <g
-      style={{ cursor: isReadOnly ? "default" : "grab" }}
-      onPointerDown={isReadOnly ? undefined : onPointerDown}
-      onClick={onClick}
-    >
+    <g>
       <path
         d={conePathD(
           pin.x * scale,
@@ -133,27 +136,48 @@ export function CameraPinEl({
           markerEnd="url(#arrowhead-camera)"
         />
       )}
-      <rect
-        x={pin.x * scale - boxW / 2}
-        y={pin.y * scale - boxH / 2}
-        width={boxW}
-        height={boxH}
-        rx={3 * scale}
-        fill={isSelected ? "var(--color-accent)" : "var(--color-accent-red)"}
-        stroke={isSelected ? "var(--color-accent-border)" : "none"}
-        strokeWidth={2 * scale}
-      />
-      <text
-        x={pin.x * scale}
-        y={pin.y * scale + fs * 0.35}
-        textAnchor="middle"
-        fontSize={fs}
-        fill="white"
-        fontWeight={700}
-        style={{ pointerEvents: "none", userSelect: "none" }}
+      <g
+        style={{ cursor: isReadOnly ? "default" : "grab" }}
+        onPointerDown={isReadOnly ? undefined : onPointerDown}
+        onClick={onClick}
       >
-        {pin.label}
-      </text>
+        <rect
+          x={pin.x * scale - boxW / 2}
+          y={pin.y * scale - boxH / 2}
+          width={boxW}
+          height={boxH}
+          rx={3 * scale}
+          fill={isSelected ? "var(--color-accent)" : "var(--color-accent-red)"}
+          stroke={isSelected ? "var(--color-accent-border)" : "none"}
+          strokeWidth={2 * scale}
+        />
+        <text
+          x={pin.x * scale}
+          y={pin.y * scale + fs * 0.35}
+          textAnchor="middle"
+          fontSize={fs}
+          fill="white"
+          fontWeight={700}
+          style={{ pointerEvents: "none", userSelect: "none" }}
+        >
+          {pin.label}
+        </text>
+      </g>
+      {!isReadOnly && (
+        <circle
+          cx={handleX}
+          cy={handleY}
+          r={6 * scale}
+          fill="var(--color-accent-red)"
+          stroke="white"
+          strokeWidth={1.5 * scale}
+          opacity={0.95}
+          style={{ cursor: "grab" }}
+          onPointerDown={onRotateHandleDown}
+        >
+          <title>Trascina per ruotare la camera</title>
+        </circle>
+      )}
     </g>
   );
 }

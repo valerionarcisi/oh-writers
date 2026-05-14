@@ -16,6 +16,7 @@ interface BlockingCanvasProps {
   selectedShotId?: string | null;
   onActorMove?: (castId: string, x: number, y: number) => void;
   onCameraMove?: (shotId: string, x: number, y: number) => void;
+  onCameraRotate?: (shotId: string, coneDirection: number) => void;
   onPinClick?: (shotId: string) => void;
 }
 
@@ -29,18 +30,27 @@ export function BlockingCanvas({
   selectedShotId,
   onActorMove,
   onCameraMove,
+  onCameraRotate,
   onPinClick,
 }: BlockingCanvasProps) {
   const scale = DISPLAY_W / widthCm;
   const displayH = heightCm * scale;
 
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragging = useRef<{
-    kind: "actor" | "camera";
-    id: string;
-    origX: number;
-    origY: number;
-  } | null>(null);
+  const dragging = useRef<
+    | {
+        kind: "actor" | "camera";
+        id: string;
+        origX: number;
+        origY: number;
+      }
+    | {
+        kind: "rotate";
+        id: string;
+        origDirection: number;
+      }
+    | null
+  >(null);
 
   const [localActors, setLocalActors] = useState<ActorPosition[]>(actorPositions);
   const [localCameras, setLocalCameras] = useState<CameraPin[]>(cameraPins);
@@ -77,10 +87,39 @@ export function BlockingCanvas({
     [readOnly],
   );
 
+  const handleRotateDown = useCallback(
+    (shotId: string, origDirection: number) => (e: React.PointerEvent) => {
+      if (readOnly) return;
+      e.stopPropagation();
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      dragging.current = { kind: "rotate", id: shotId, origDirection };
+    },
+    [readOnly],
+  );
+
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       const d = dragging.current;
       if (!d) return;
+      if (d.kind === "rotate") {
+        const pin = localCameras.find((c) => c.shotId === d.id);
+        if (!pin) return;
+        const { x, y } = toCanvasCm(e.clientX, e.clientY);
+        const dx = x - pin.x;
+        const dy = y - pin.y;
+        // Convert atan2 (math angle, 0 = right, ccw) to our coneDirection
+        // (0 = up, cw). atan2(dy,dx) returns angle from +X axis cw in screen coords.
+        let deg = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+        if (deg < 0) deg += 360;
+        if (deg >= 360) deg -= 360;
+        const rounded = Math.round(deg);
+        setLocalCameras((prev) =>
+          prev.map((c) =>
+            c.shotId === d.id ? { ...c, coneDirection: rounded } : c,
+          ),
+        );
+        return;
+      }
       const { x, y } = toCanvasCm(e.clientX, e.clientY);
       const clamped = {
         x: Math.max(0, Math.min(widthCm, x)),
@@ -100,13 +139,18 @@ export function BlockingCanvas({
         );
       }
     },
-    [toCanvasCm, widthCm, heightCm],
+    [toCanvasCm, widthCm, heightCm, localCameras],
   );
 
   const handlePointerUp = useCallback(() => {
     const d = dragging.current;
     if (!d) return;
-    if (d.kind === "actor") {
+    if (d.kind === "rotate") {
+      const cam = localCameras.find((c) => c.shotId === d.id);
+      if (cam && cam.coneDirection !== d.origDirection) {
+        onCameraRotate?.(d.id, cam.coneDirection);
+      }
+    } else if (d.kind === "actor") {
       const actor = localActors.find((a) => a.castId === d.id);
       if (actor && (actor.x !== d.origX || actor.y !== d.origY)) {
         onActorMove?.(d.id, actor.x, actor.y);
@@ -118,7 +162,7 @@ export function BlockingCanvas({
       }
     }
     dragging.current = null;
-  }, [localActors, localCameras, onActorMove, onCameraMove]);
+  }, [localActors, localCameras, onActorMove, onCameraMove, onCameraRotate]);
 
   return (
     <svg
@@ -250,6 +294,7 @@ export function BlockingCanvas({
             pin.x,
             pin.y,
           )}
+          onRotateHandleDown={handleRotateDown(pin.shotId, pin.coneDirection)}
           onClick={() => onPinClick?.(pin.shotId)}
         />
       ))}
