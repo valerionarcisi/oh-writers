@@ -1,0 +1,78 @@
+/* packages/ui/src/primitives/Button/Button.module.css */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 0 var(--ds-space-3);
+  height: 34px;
+  border-radius: var(--ds-radius-md);
+  border: 1px solid transparent;
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease);
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.sm {
+  height: 28px;
+  padding: 0 var(--ds-space-2);
+  font-size: 12px;
+  border-radius: var(--ds-radius-sm);
+}
+
+.primary {
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-action-hover);
+  }
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ds-text-2);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+}
+
+.danger {
+  background: transparent;
+  color: var(--ds-action);
+  border-color: var(--ds-action);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-action-soft);
+  }
+}
+
+.hotkey {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  opacity: 0.6;
+  margin-inline-start: var(--ds-space-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button { transition: none; }
+}
