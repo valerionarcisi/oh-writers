@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BudgetPage } from "~/features/budget";
+import { BudgetPageV2 } from "~/features/budget";
 
 export const Route = createFileRoute("/_app/projects/$id_/budget")({
   component: BudgetRoute,
@@ -7,5 +7,5 @@ export const Route = createFileRoute("/_app/projects/$id_/budget")({
 
 function BudgetRoute() {
   const { id } = Route.useParams();
-  return <BudgetPage projectId={id} />;
+  return <BudgetPageV2 projectId={id} />;
 }
