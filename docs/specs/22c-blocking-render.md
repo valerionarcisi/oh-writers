@@ -22,7 +22,6 @@ The following were specified for 22c but deferred to a follow-up. They will be t
 
 - **Bidirectional sync — pin → shot direction.** Phase 1 only invalidates the blocking query when a shot list changes. The reverse (drawing a pin in the editor → creates a shot in the plan; pin deletion → toast confirming shot deletion) is deferred.
 - **Detach blocking UI.** The server fn (`detachBlocking`) exists, but the `Detach blocking` button in the card is rendered disabled. No user-facing way to fork actor positions per-plan yet.
-- **Cone rotation drag.** Camera pins can be moved but not rotated by dragging the cone arc. Direction is whatever Cesare assigned.
 - **Arrow draw (shift+drag).** Spec describes shift+drag to draw blocking/movement arrows. Not yet implemented.
 - **Door/window toggle in opening tool.** The opening tool in the blocking editor always creates a `kind: "door"` — no UI to switch to `kind: "window"` after placement.
 - **Layer toggles in fullscreen editor.** The Location / Attori / Camere checkboxes in the editor sidebar are decorative; toggling them has no effect on the canvas.
