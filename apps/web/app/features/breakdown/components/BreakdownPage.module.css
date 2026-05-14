@@ -5,6 +5,23 @@
   container-type: inline-size;
 }
 
+.viewbarWrap {
+  position: sticky;
+  inset-block-start: 48px;
+  z-index: 5;
+  background: var(--ds-bg);
+  border-block-end: 1px solid var(--ds-line);
+}
+
+.viewbarLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ds-text-mute);
+  margin-inline-end: var(--ds-space-2);
+}
+
 .header {
   display: flex;
   justify-content: space-between;

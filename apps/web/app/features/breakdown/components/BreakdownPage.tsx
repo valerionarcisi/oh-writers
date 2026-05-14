@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Dialog, Tabs, StreamingProgressBanner } from "@oh-writers/ui";
+import {
+  Dialog,
+  Tabs,
+  StreamingProgressBanner,
+  Viewbar,
+  ViewbarSep,
+  ToggleChip,
+} from "@oh-writers/ui";
 import { Suspense } from "react";
 import {
   breakdownContextOptions,
@@ -27,6 +34,66 @@ interface Props {
 
 type TabId = "per-scene" | "per-project" | "matrice";
 
+type UnderlineKey =
+  | "cast"
+  | "locations"
+  | "props"
+  | "costumes"
+  | "photography"
+  | "sound";
+
+const UNDERLINE_CHIPS: ReadonlyArray<{
+  key: UnderlineKey;
+  label: string;
+  color: string;
+  defaultOn: boolean;
+}> = [
+  {
+    key: "cast",
+    label: "Cast",
+    color: "var(--ds-cat-cast)",
+    defaultOn: true,
+  },
+  {
+    key: "locations",
+    label: "Locations",
+    color: "var(--ds-cat-locations)",
+    defaultOn: true,
+  },
+  {
+    key: "props",
+    label: "Props",
+    color: "var(--ds-cat-scenografia)",
+    defaultOn: true,
+  },
+  {
+    key: "costumes",
+    label: "Costumi",
+    color: "var(--ds-cat-costumi)",
+    defaultOn: false,
+  },
+  {
+    key: "photography",
+    label: "Fotografia",
+    color: "var(--ds-cat-fotografia)",
+    defaultOn: false,
+  },
+  {
+    key: "sound",
+    label: "Suono",
+    color: "var(--ds-cat-suono)",
+    defaultOn: false,
+  },
+];
+
+type UnderlineState = Record<UnderlineKey, boolean>;
+
+const initialUnderlineState = (): UnderlineState =>
+  UNDERLINE_CHIPS.reduce<UnderlineState>(
+    (acc, c) => ({ ...acc, [c.key]: c.defaultOn }),
+    {} as UnderlineState,
+  );
+
 export function BreakdownPage({ projectId }: Props) {
   return (
     <Suspense fallback={<div className={styles.status}>Caricamento…</div>}>
@@ -43,6 +110,10 @@ function BreakdownPageContent({ projectId }: ContentProps) {
   const { data: ctx } = useSuspenseQuery(breakdownContextOptions(projectId));
   const canEdit = ctx.canEdit;
   const [activeTab, setActiveTab] = useState<TabId>("per-scene");
+  const [underline, setUnderline] =
+    useState<UnderlineState>(initialUnderlineState);
+  const toggleUnderline = (key: UnderlineKey) =>
+    setUnderline((s) => ({ ...s, [key]: !s[key] }));
   const [activeSceneId, setActiveSceneId] = useState<string | null>(
     ctx.scenes[0]?.id ?? null,
   );
@@ -148,6 +219,23 @@ function BreakdownPageContent({ projectId }: ContentProps) {
 
   return (
     <main className={styles.page} data-testid="breakdown-page">
+      <div className={styles.viewbarWrap}>
+        <Viewbar>
+          <span className={styles.viewbarLabel}>Sottolinea:</span>
+          {UNDERLINE_CHIPS.map((chip) => (
+            <ToggleChip
+              key={chip.key}
+              label={chip.label}
+              isOn={underline[chip.key]}
+              onToggle={() => toggleUnderline(chip.key)}
+              categoryColor={chip.color}
+              aria-label={`Mostra sottolineature ${chip.label}`}
+            />
+          ))}
+          <ViewbarSep />
+          {/* TODO: wire to scene reader highlight — currently visual only */}
+        </Viewbar>
+      </div>
       <header className={styles.header}>
         <Tabs
           tabs={[
