@@ -8,6 +8,10 @@ import {
   ToggleChip,
   SavePill,
   Presence,
+  TopBar,
+  FloatingDock,
+  HeroKPI,
+  MarginNote,
 } from "@oh-writers/ui";
 
 export const Route = createFileRoute("/dev/tokens")({
@@ -338,6 +342,82 @@ function TokensPlayground() {
         ))}
       </div>
 
+      <SectionLabel>Shell</SectionLabel>
+      <div
+        style={{
+          background: "var(--ds-surface)",
+          border: "1px solid var(--ds-line)",
+          borderRadius: 8,
+          overflow: "hidden",
+          marginBottom: 8,
+        }}
+      >
+        <TopBar
+          projectName="Il Grande Lebowski"
+          sectionName="Budget"
+          saveState="saved"
+          saveSecondsAgo={12}
+          cesareNoteCount={3}
+          userInitials="VN"
+          presenceUsers={[
+            { id: "1", name: "Valerio Narcisi", initials: "VN" },
+            { id: "2", name: "Sofia Romani", initials: "SR" },
+          ]}
+          onSearch={() => {}}
+          onBell={() => {}}
+          onAskCesare={() => {}}
+          onBrandClick={() => {}}
+          onProjectClick={() => {}}
+          onSectionClick={() => {}}
+          onAvatarClick={() => {}}
+        />
+      </div>
+      <p style={{ fontFamily: "var(--ds-font-mono)", fontSize: 10, color: "var(--ds-text-mute)", marginBottom: 24 }}>
+        TopBar · FloatingDock is fixed bottom-right on this page ↗
+      </p>
+
+      <SectionLabel>Composites</SectionLabel>
+      <div
+        style={{
+          background: "var(--ds-surface)",
+          border: "1px solid var(--ds-line)",
+          borderRadius: 8,
+          padding: 32,
+          display: "flex",
+          flexDirection: "column",
+          gap: 32,
+        }}
+      >
+        <div>
+          <p style={{ fontFamily: "var(--ds-font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ds-text-mute)", margin: "0 0 16px" }}>HeroKPI</p>
+          <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
+            <HeroKPI eyebrow="Totale preventivo" value="€ 1.247.000" delta="+4,2%" deltaDirection="negative" sub="Media mercato: € 1.190.000" />
+            <HeroKPI eyebrow="Giorni di riprese" value="32" delta="-2" deltaDirection="positive" size="sm" />
+          </div>
+        </div>
+        <div>
+          <p style={{ fontFamily: "var(--ds-font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ds-text-mute)", margin: "0 0 16px" }}>MarginNote</p>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", maxWidth: 600 }}>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <MarginNote
+                kind="dramaturg"
+                text="Il personaggio perde coerenza qui — considera se questa scena sia necessaria o se si possa ellittere."
+                onAccept={() => {}}
+                onIgnore={() => {}}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <MarginNote
+                kind="producer"
+                text="Reparto Trucco supera il budget del 15%. Verifica se si può ottimizzare nella scena 14."
+                onAccept={() => {}}
+                onIgnore={() => {}}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <SectionLabel>Primitives</SectionLabel>
       <div
         style={{
@@ -478,6 +558,18 @@ function TokensPlayground() {
           />
         </div>
       </div>
+
+      {/* FloatingDock demo — fixed bottom-right on this page */}
+      <FloatingDock
+        label="DESIGN SYSTEM"
+        primaryAction={{ label: "Rigenera", hotkey: "⌘R", onClick: () => {} }}
+        secondaryActions={[
+          { label: "Esporta", hotkey: "⌘E", onClick: () => {} },
+          { label: "Salva", hotkey: "⌘S", onClick: () => {} },
+        ]}
+        cesareNoteCount={3}
+        onCesareClick={() => {}}
+      />
     </div>
   );
 }

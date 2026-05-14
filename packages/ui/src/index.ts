@@ -101,3 +101,23 @@ export type { PresenceProps, PresenceUser } from "./primitives/Presence/Presence
 
 export { Button as DsButton } from "./primitives/Button/Button";
 export type { ButtonProps as DsButtonProps, ButtonVariant, ButtonSize } from "./primitives/Button/Button";
+
+// ─── DS-v2 Shell ────────────────────────────────────────────
+export { SkipLink } from "./shell/SkipLink/SkipLink";
+export type { SkipLinkProps } from "./shell/SkipLink/SkipLink";
+
+export { TopBar } from "./shell/TopBar/TopBar";
+export type { TopBarProps } from "./shell/TopBar/TopBar";
+
+export { Viewbar, ViewbarSep } from "./shell/Viewbar/Viewbar";
+export type { ViewbarProps } from "./shell/Viewbar/Viewbar";
+
+export { FloatingDock } from "./shell/FloatingDock/FloatingDock";
+export type { FloatingDockProps, DockAction } from "./shell/FloatingDock/FloatingDock";
+
+// ─── DS-v2 Composites ───────────────────────────────────────
+export { HeroKPI } from "./composites/HeroKPI/HeroKPI";
+export type { HeroKPIProps, DeltaDirection } from "./composites/HeroKPI/HeroKPI";
+
+export { MarginNote } from "./composites/MarginNote/MarginNote";
+export type { MarginNoteProps, MarginNoteKind } from "./composites/MarginNote/MarginNote";
