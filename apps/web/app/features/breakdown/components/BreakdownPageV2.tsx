@@ -29,6 +29,7 @@ import {
   useArchiveBreakdownElement,
 } from "../hooks/useBreakdown";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
+import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import type {
@@ -133,6 +134,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
     setUnderline((s) => ({ ...s, [key]: !s[key] }));
 
   const [panelTab, setPanelTab] = useState<PanelTab>("categories");
+  const [exportOpen, setExportOpen] = useState(false);
   const [indiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
   const indiceSearchRef = useRef<HTMLInputElement>(null);
@@ -294,19 +296,29 @@ function BreakdownPageV2Content({ projectId }: Props) {
     items[next]?.focus();
   };
 
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const flashFeedback = useCallback((msg: string) => {
+    setActionFeedback(msg);
+    window.setTimeout(() => setActionFeedback(null), 1800);
+  }, []);
+
   const handleConfirm = () => {
     if (ctxMenu?.occurrenceId) {
+      const elName = ctxMenu.name;
       setStatus.mutate({
         occurrenceIds: [ctxMenu.occurrenceId],
         status: "accepted",
       });
+      flashFeedback(`Confermato «${elName}»`);
     }
     closeCtxMenu();
   };
 
   const handleRemove = () => {
     if (ctxMenu?.elementId) {
+      const elName = ctxMenu.name;
       archiveEl.mutate({ elementId: ctxMenu.elementId });
+      flashFeedback(`Rimosso «${elName}»`);
     }
     closeCtxMenu();
   };
@@ -349,17 +361,19 @@ function BreakdownPageV2Content({ projectId }: Props) {
       {/* ─── VIEWBAR ─── */}
       <div className={styles.viewbarWrap}>
         <Viewbar>
-          <span className={styles.viewbarLabel}>Sottolinea:</span>
-          {UNDERLINE_CHIPS.map((chip) => (
-            <ToggleChip
-              key={chip.key}
-              label={chip.label}
-              isOn={underline[chip.key]}
-              onToggle={() => toggleUnderline(chip.key)}
-              categoryColor={chip.color}
-              aria-label={`Mostra sottolineature ${chip.label}`}
-            />
-          ))}
+          <div className={styles.viewbarCenter}>
+            <span className={styles.viewbarLabel}>Sottolinea:</span>
+            {UNDERLINE_CHIPS.map((chip) => (
+              <ToggleChip
+                key={chip.key}
+                label={chip.label}
+                isOn={underline[chip.key]}
+                onToggle={() => toggleUnderline(chip.key)}
+                categoryColor={chip.color}
+                aria-label={`Mostra sottolineature ${chip.label}`}
+              />
+            ))}
+          </div>
           <ViewbarSep />
           {/* "Per scena" is the default V2 view; tabs are visual but the
               first is active. Other views fall back to v1 by route. */}
@@ -689,14 +703,30 @@ function BreakdownPageV2Content({ projectId }: Props) {
           {
             label: "Esporta",
             hotkey: "⌘E",
-            onClick: () => {
-              /* TODO */
-            },
+            onClick: () => setExportOpen(true),
           },
         ]}
         cesareNoteCount={pendingCount}
         onCesareClick={() => setPanelTab("cesare")}
       />
+
+      <ExportBreakdownModal
+        projectId={projectId}
+        versionId={versionId}
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+      />
+
+      {actionFeedback && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={styles.actionFeedback}
+          data-testid="breakdown-action-feedback"
+        >
+          {actionFeedback}
+        </div>
+      )}
     </main>
   );
 }

@@ -7,6 +7,10 @@
   background: var(--ds-surface-alt);
   color: var(--ds-text);
   font-family: var(--ds-font-sans);
+  /* Breakdown intentionally keeps a calmer vertical rhythm than the other
+     pages — extra block space above the viewbar gives the spoglio room to
+     breathe instead of compressing it against the TopBar. */
+  padding-block-start: var(--ds-space-4);
 }
 
 .viewbarWrap {
@@ -15,6 +19,7 @@
   z-index: 30;
   background: var(--ds-surface-alt);
   border-block-end: 1px solid var(--ds-line);
+  margin-block-start: var(--ds-space-2);
 }
 
 .viewbarLabel {
@@ -25,8 +30,49 @@
   color: var(--ds-text-3);
 }
 
+.viewbarCenter {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+}
+
+.actionFeedback {
+  position: fixed;
+  inset-block-end: var(--ds-space-10);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  z-index: 40;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  background: var(--ds-text);
+  color: var(--ds-surface);
+  border-radius: var(--ds-radius-pill);
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--ds-shadow-md);
+  animation: fadeInUp 180ms var(--ds-ease);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    translate: -50% 6px;
+  }
+  to {
+    opacity: 1;
+    translate: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actionFeedback {
+    animation: none;
+  }
+}
+
 .viewbarRight {
-  margin-inline-start: auto;
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
