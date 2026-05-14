@@ -43,7 +43,9 @@
 
 .panel {
   position: absolute;
-  inset-block-start: calc(100% + var(--space-2));
+  /* Toolbar menu lives in the bottom-right floating dock — open the panel
+     upward so it never tries to render below the viewport edge. */
+  inset-block-end: calc(100% + var(--space-2));
   inset-inline-end: 0;
   min-inline-size: 14rem;
   display: flex;

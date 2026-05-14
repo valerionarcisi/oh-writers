@@ -124,6 +124,16 @@
   grid-template-columns: minmax(0, 1fr) 32px;
 }
 
+.layoutNoMargin {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-inline-size: 1340px;
+  inline-size: 100%;
+  margin-inline: auto;
+  padding: 0 var(--ds-space-6) var(--ds-space-10);
+  align-items: start;
+}
+
 @media (max-width: 1100px) {
   .layout,
   .layoutCesareCollapsed {

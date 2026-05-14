@@ -23,8 +23,13 @@ export type FloatingDockProps = {
   overflowSlot?: ReactNode;
   /** Number of pending Cesare notes — shown as badge */
   cesareNoteCount?: number;
+  /** Whether the Cesare overlay is currently on. Drives the pill's pressed
+   *  state and the leaf-dot color. Defaults to true. */
+  cesareIsOn?: boolean;
   /** Called when user clicks the Cesare pill. When omitted the pill is hidden. */
   onCesareClick?: () => void;
+  /** Inline toast shown to the left of the actions. Auto-collapses when null. */
+  toast?: string | null;
 };
 
 export function FloatingDock({
@@ -33,7 +38,9 @@ export function FloatingDock({
   secondaryActions = [],
   overflowSlot,
   cesareNoteCount = 0,
+  cesareIsOn = true,
   onCesareClick,
+  toast,
 }: FloatingDockProps) {
   return (
     <div
@@ -41,6 +48,17 @@ export function FloatingDock({
       aria-label={`Azioni pagina ${label}`}
       className={styles.dock}
     >
+      {toast && (
+        <span
+          role="status"
+          aria-live="polite"
+          className={styles.toast}
+          data-testid="dock-toast"
+        >
+          {toast}
+        </span>
+      )}
+
       <span className={styles.label} aria-hidden="true">
         {label}
       </span>
@@ -95,12 +113,19 @@ export function FloatingDock({
           <span className={styles.sep} aria-hidden="true" />
           <button
             type="button"
-            className={styles.cesarePill}
+            className={[
+              styles.cesarePill,
+              cesareIsOn ? styles.cesarePillOn : styles.cesarePillOff,
+            ].join(" ")}
             onClick={onCesareClick}
+            aria-pressed={cesareIsOn}
             aria-label={
               cesareNoteCount > 0
-                ? `Cesare — ${cesareNoteCount} note`
-                : "Cesare"
+                ? `Cesare — ${cesareNoteCount} note ${cesareIsOn ? "attive" : "disattivate"}`
+                : `Cesare ${cesareIsOn ? "attivo" : "disattivato"}`
+            }
+            title={
+              cesareIsOn ? "Disattiva overlay Cesare" : "Attiva overlay Cesare"
             }
           >
             <span className={styles.cesareDot} aria-hidden="true" />

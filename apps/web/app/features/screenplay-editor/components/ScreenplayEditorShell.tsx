@@ -2,10 +2,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   Viewbar,
   ViewbarSep,
-  ToggleChip,
   Icon,
   Popover,
 } from "@oh-writers/ui";
+import { DraftMetaBadge } from "~/features/projects";
 import styles from "./ScreenplayEditorShell.module.css";
 
 // ─── Editor shell ──────────────────────────────────────────────────────────
@@ -33,57 +33,37 @@ const FALLBACK_ACTS: ActEntry[] = [
 
 export type ScreenplayEditorShellProps = {
   title: string;
-  /** Project id — still passed so the editor route can build links if needed */
+  /** Project id — drives the DraftMetaBadge in the viewbar right. */
   projectId: string;
   /** The Monaco/ProseMirror editor — rendered untouched in the center column */
   children: ReactNode;
   /** Optional override for the TOC content; falls back to a single-scene stub */
   acts?: ActEntry[];
-  /** Optional eyebrow override, e.g. "SC. 3 · ATTO I · PAG. 4 / 28" */
-  eyebrow?: string;
-  /** Optional version label shown in the viewbar version trigger */
-  versionLabel?: string;
-  /** Cesare note count for the dock pill / collapsed margin */
+  /** Cesare note count — shown on the collapsed margin badge. The toggle and
+   *  count for Cesare also live in the floating dock owned by the editor. */
   cesareNoteCount?: number;
   /** Render-prop for the Cesare margin column. Provided by the editor when it
    *  has live suggestions; falls back to a quiet empty state when omitted. */
   cesareMargin?: ReactNode;
-  /** Whether the Cesare overlay is currently on. Controls the toggle chip. */
+  /** Whether the Cesare overlay is currently on. Drives both the dock pill
+   *  (in the editor) and the margin column visibility here. */
   isCesareOn?: boolean;
-  onToggleCesare?: (next: boolean) => void;
-  /** Click handler for the version trigger. When omitted the trigger is
-   *  rendered as a quiet, non-interactive label. */
-  onOpenVersions?: () => void;
 };
 
 export function ScreenplayEditorShell({
-  title,
+  title: _title,
+  projectId,
   children,
   acts,
-  eyebrow,
-  versionLabel,
   cesareNoteCount = 0,
   cesareMargin,
   isCesareOn = true,
-  onToggleCesare,
-  onOpenVersions,
 }: ScreenplayEditorShellProps) {
-  const [cesareCollapsed, setCesareCollapsed] = useState(false);
-  const [localCesareOn, setLocalCesareOn] = useState(isCesareOn);
-  const cesareOn = onToggleCesare ? isCesareOn : localCesareOn;
-  const handleToggleCesare = (next: boolean) => {
-    if (onToggleCesare) {
-      onToggleCesare(next);
-    } else {
-      setLocalCesareOn(next);
-    }
-  };
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
 
   const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
   const hasRealToc = acts !== undefined && acts.length > 0;
-  const eyebrowText = eyebrow ?? `${title.toUpperCase()} · BOZZA CORRENTE`;
 
   const { currentSceneIdx, totalScenes } = useMemo(() => {
     let total = 0;
@@ -112,29 +92,13 @@ export function ScreenplayEditorShell({
       .filter((act) => act.scenes.length > 0);
   }, [tocActs, indiceQuery]);
 
-  const layoutClass = [
-    styles.layout,
-    cesareCollapsed ? styles.layoutCesareCollapsed : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const layoutClass = styles.layout;
 
   return (
     <div className={styles.shell}>
       <div className={styles.viewbarWrap}>
         <Viewbar>
-          <div className={styles.viewbarCenter}>
-            <ToggleChip
-              label="Cesare"
-              isOn={cesareOn}
-              onToggle={() => handleToggleCesare(!cesareOn)}
-              categoryColor="#5a6b3c"
-              hotkey="⌥C"
-              aria-label="Overlay Cesare"
-            />
-          </div>
-
-          <ViewbarSep />
+          <div className={styles.viewbarCenter} />
 
           <div className={styles.viewbarRight}>
             {hasRealToc && (
@@ -214,28 +178,7 @@ export function ScreenplayEditorShell({
             </div>
             )}
 
-            <button
-              type="button"
-              className={styles.versionPick}
-              aria-label={
-                onOpenVersions
-                  ? "Apri pannello versioni"
-                  : "Versione corrente"
-              }
-              title={
-                onOpenVersions ? "Apri pannello versioni" : "Versione corrente"
-              }
-              onClick={onOpenVersions}
-              disabled={!onOpenVersions}
-              data-testid="screenplay-versions-trigger"
-            >
-              {versionLabel ?? "Bozza"}
-              {onOpenVersions && (
-                <span aria-hidden="true" className={styles.versionCaret}>
-                  ▾
-                </span>
-              )}
-            </button>
+            <DraftMetaBadge projectId={projectId} />
           </div>
         </Viewbar>
       </div>
@@ -251,60 +194,26 @@ export function ScreenplayEditorShell({
         </section>
       )}
 
-      <div className={layoutClass}>
+      <div className={isCesareOn ? layoutClass : styles.layoutNoMargin}>
         <div className={styles.editorial}>
           <div className={styles.editorSlot}>{children}</div>
         </div>
 
-        <aside
-          className={[
-            styles.margin,
-            cesareCollapsed ? styles.marginCollapsed : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          aria-label="Note di Cesare"
-        >
-          {cesareCollapsed ? (
-            <button
-              type="button"
-              className={styles.cesareExpand}
-              onClick={() => setCesareCollapsed(false)}
-              aria-label="Espandi note di Cesare"
-              title="Espandi note di Cesare"
-            >
-              <Icon name="comment" size={14} />
-              <span className={styles.cesareCount}>{cesareNoteCount}</span>
-            </button>
-          ) : (
-            <>
-              <header className={styles.marginHeader}>
-                <span className={styles.marginLabel}>
-                  Note di Cesare · {cesareNoteCount}
-                </span>
-                <button
-                  type="button"
-                  className={styles.cesareCollapse}
-                  onClick={() => setCesareCollapsed(true)}
-                  aria-label="Collassa note di Cesare"
-                  title="Collassa"
-                >
-                  <Icon name="close" size={14} />
-                </button>
-              </header>
+        {isCesareOn && (
+          <aside className={styles.margin} aria-label="Note di Cesare">
+            <header className={styles.marginHeader}>
+              <span className={styles.marginLabel}>
+                Note di Cesare · {cesareNoteCount}
+              </span>
+            </header>
 
-              {cesareOn && cesareMargin ? (
-                cesareMargin
-              ) : (
-                <p className={styles.marginEmpty}>
-                  {cesareOn
-                    ? "Nessuna nota aperta su questa scena."
-                    : "Overlay Cesare disattivato."}
-                </p>
-              )}
-            </>
-          )}
-        </aside>
+            {cesareMargin ?? (
+              <p className={styles.marginEmpty}>
+                Nessuna nota aperta su questa scena.
+              </p>
+            )}
+          </aside>
+        )}
       </div>
     </div>
   );

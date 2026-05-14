@@ -93,7 +93,7 @@
   padding: 0 var(--ds-space-2);
   height: 28px;
   border-radius: var(--ds-radius-pill);
-  border: none;
+  border: 1px solid transparent;
   background: var(--ds-agent-soft);
   color: var(--ds-agent);
   font-family: var(--ds-font-sans);
@@ -111,6 +111,48 @@
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
+  }
+}
+
+.cesarePillOff {
+  background: transparent;
+  color: var(--ds-text-3);
+  border-color: var(--ds-line);
+}
+
+.cesarePillOff .cesareDot,
+.cesarePillOff:hover {
+  filter: none;
+}
+
+.cesarePillOff .cesareDot {
+  background: var(--ds-text-faint, var(--ds-text-3));
+}
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--ds-space-3);
+  height: 28px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-text);
+  color: var(--ds-surface);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-inline-end: var(--ds-space-1);
+  animation: dockToastFadeIn 180ms var(--ds-ease);
+}
+
+@keyframes dockToastFadeIn {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
 

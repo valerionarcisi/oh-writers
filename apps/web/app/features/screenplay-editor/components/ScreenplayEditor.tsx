@@ -43,6 +43,10 @@ import styles from "./ScreenplayEditor.module.css";
 
 interface ScreenplayEditorProps {
   screenplay: ScreenplayView;
+  /** Cesare overlay state — lifted to the route so both the shell margin
+   *  column and the floating dock pill share a single source of truth. */
+  isCesareOn?: boolean;
+  onToggleCesare?: (next: boolean) => void;
 }
 
 type ViewingState =
@@ -72,7 +76,11 @@ const countHeadings = (doc: Record<string, unknown> | null): number => {
   return count;
 };
 
-export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
+export function ScreenplayEditor({
+  screenplay,
+  isCesareOn: isCesareOnProp,
+  onToggleCesare,
+}: ScreenplayEditorProps) {
   const [content, setContent] = useState(screenplay.content);
   const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
     (screenplay.pmDoc as Record<string, unknown> | null) ?? null,
@@ -102,6 +110,12 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
     null,
   );
   const [toast, setToast] = useState<string | null>(null);
+  const [localCesareOn, setLocalCesareOn] = useState(true);
+  const isCesareOn = isCesareOnProp ?? localCesareOn;
+  const handleToggleCesare = (next: boolean) => {
+    if (onToggleCesare) onToggleCesare(next);
+    else setLocalCesareOn(next);
+  };
   const viewRef = useRef<EditorView | null>(null);
 
   const isViewing = viewing.kind === "viewing";
@@ -545,16 +559,6 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           onCancel={() => setPendingTitlePage(null)}
         />
       ) : null}
-      {toast ? (
-        <div
-          role="status"
-          className={styles.toast}
-          data-testid="scene-number-toast"
-        >
-          {toast}
-        </div>
-      ) : null}
-
       {!isFocusMode && (
         <FloatingDock
           label="SCREENPLAY"
@@ -591,6 +595,10 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
               onTitlePageDetected={handleTitlePageDetected}
             />
           }
+          cesareNoteCount={0}
+          cesareIsOn={isCesareOn}
+          onCesareClick={() => handleToggleCesare(!isCesareOn)}
+          toast={toast}
         />
       )}
 
