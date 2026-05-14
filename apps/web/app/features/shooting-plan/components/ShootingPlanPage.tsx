@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   useSuspenseQuery,
   useMutation,
@@ -29,6 +30,7 @@ const formatMinutes = (m: number): string => {
 
 export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { data } = useSuspenseQuery(
     scenesWithPlanSummaryQueryOptions(projectId),
   );
@@ -74,7 +76,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         activePlanId
       ) {
         e.preventDefault();
-        window.location.href = `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`;
+        void navigate({ to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}` });
       }
     };
     window.addEventListener("keydown", handleKey);
@@ -141,7 +143,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                   planId={activePlanId}
                   sceneNumber={selectedScene.sceneNumber}
                   onOpenEditor={() => {
-                    window.location.href = `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`;
+                    void navigate({ to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}` });
                   }}
                 />
               )}
