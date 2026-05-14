@@ -2,6 +2,7 @@ export { ProjectCard } from "./components/ProjectCard";
 export { ProjectFilters } from "./components/ProjectFilters";
 export { ProjectForm } from "./components/ProjectForm";
 export { DocumentCard } from "./components/DocumentCard";
+export { ProductionCard } from "./components/ProductionCard";
 export { ProgressBar } from "./components/ProgressBar";
 export type { FilterTab, SortKey } from "./components/ProjectFilters";
 export { TitlePageForm } from "./components/TitlePageForm";

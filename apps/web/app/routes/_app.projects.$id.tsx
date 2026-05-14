@@ -12,6 +12,7 @@ import {
   useRestoreProject,
   useDeleteProject,
   DocumentCard,
+  ProductionCard,
   ProgressBar,
 } from "~/features/projects";
 import { ResultErrorView } from "~/components/ResultErrorView";
@@ -217,6 +218,46 @@ function ProjectPageContent({
           >
             Open Editor
           </Button>
+        </div>
+      </div>
+
+      {/* Production */}
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>Production</h2>
+        <div className={styles.productionGrid}>
+          <ProductionCard
+            eyebrow="Breakdown"
+            title="Spoglio scene"
+            subtitle="9 scene · 47 elementi"
+            onClick={() =>
+              void navigate({
+                to: "/projects/$id/breakdown",
+                params: { id },
+              })
+            }
+          />
+          <ProductionCard
+            eyebrow="Budget"
+            title="Preventivo"
+            subtitle="842.180 € · 7 reparti"
+            onClick={() =>
+              void navigate({
+                to: "/projects/$id/budget",
+                params: { id },
+              })
+            }
+          />
+          <ProductionCard
+            eyebrow="Piano di ripresa"
+            title="Schedule"
+            subtitle="5 giornate · 22 inquadrature"
+            onClick={() =>
+              void navigate({
+                to: "/projects/$id/schedule",
+                params: { id },
+              })
+            }
+          />
         </div>
       </div>
 
