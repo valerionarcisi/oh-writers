@@ -7,6 +7,7 @@ import {
   FloatingDock,
   MarginNote,
   Icon,
+  Popover,
 } from "@oh-writers/ui";
 import styles from "./ScreenplayEditorShell.module.css";
 
@@ -118,10 +119,39 @@ export function ScreenplayEditorShell({
     initialState(OVERLAY_CHIPS),
   );
   const [cesareCollapsed, setCesareCollapsed] = useState(false);
+  const [isIndiceOpen, setIndiceOpen] = useState(false);
+  const [indiceQuery, setIndiceQuery] = useState("");
 
   const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
   const eyebrowText = eyebrow ?? "Sc. 3 · Atto I · pag. 4 / 28";
   const versionText = versionLabel ?? "v3 · 14 mag 2026 ▾";
+
+  const { currentSceneIdx, totalScenes } = useMemo(() => {
+    let total = 0;
+    let current = 1;
+    tocActs.forEach((act) => {
+      act.scenes.forEach((scene) => {
+        total += 1;
+        if (scene.isCurrent) current = total;
+      });
+    });
+    return { currentSceneIdx: current, totalScenes: total };
+  }, [tocActs]);
+
+  const filteredActs = useMemo(() => {
+    const q = indiceQuery.trim().toLowerCase();
+    if (!q) return tocActs;
+    return tocActs
+      .map((act) => ({
+        ...act,
+        scenes: act.scenes.filter(
+          (s) =>
+            s.title.toLowerCase().includes(q) ||
+            s.number.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((act) => act.scenes.length > 0);
+  }, [tocActs, indiceQuery]);
 
   const toggleOverlay = (key: OverlayKey) =>
     setOverlay((s) => ({ ...s, [key]: !s[key] }));
@@ -157,6 +187,80 @@ export function ScreenplayEditorShell({
 
         <ViewbarSep />
 
+        <div className={styles.indiceWrap}>
+          <button
+            type="button"
+            className={styles.indiceButton}
+            onClick={() => setIndiceOpen((v) => !v)}
+            aria-haspopup="dialog"
+            aria-expanded={isIndiceOpen}
+            aria-label="Apri indice scene"
+          >
+            <Icon name="book" size={14} aria-hidden />
+            <span>Indice</span>
+            <span className={styles.indiceBadge} data-num>
+              {currentSceneIdx}/{totalScenes}
+            </span>
+            <span className={styles.indiceCaret} aria-hidden>
+              ▾
+            </span>
+          </button>
+
+          <Popover
+            isOpen={isIndiceOpen}
+            onClose={() => setIndiceOpen(false)}
+            placement="bottom-end"
+            width={320}
+            className={styles.indicePopover}
+          >
+            <div className={styles.popSearch}>
+              <Icon name="search" size={14} aria-hidden />
+              <input
+                type="text"
+                value={indiceQuery}
+                onChange={(e) => setIndiceQuery(e.target.value)}
+                placeholder="Cerca scena o luogo…"
+                aria-label="Cerca scena o luogo"
+                className={styles.popSearchInput}
+                autoFocus
+              />
+              <kbd className={styles.popKbd}>⌘K</kbd>
+            </div>
+
+            <div className={styles.popList}>
+              {filteredActs.length === 0 ? (
+                <p className={styles.popEmpty}>Nessuna scena trovata</p>
+              ) : (
+                filteredActs.map((act) => (
+                  <div key={act.name}>
+                    <p className={styles.popAct}>{act.name}</p>
+                    {act.scenes.map((scene) => (
+                      <button
+                        type="button"
+                        key={`${act.name}-${scene.number}`}
+                        className={[
+                          styles.popItem,
+                          scene.isCurrent ? styles.popItemCurrent : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-current={scene.isCurrent ? "true" : undefined}
+                      >
+                        <span className={styles.popItemNum}>
+                          SC.{scene.number.replace(".", "")}
+                        </span>
+                        <span className={styles.popItemLabel}>
+                          {scene.title}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+          </Popover>
+        </div>
+
         <button
           type="button"
           className={styles.versionPick}
@@ -168,34 +272,6 @@ export function ScreenplayEditorShell({
       </Viewbar>
 
       <div className={layoutClass}>
-        <aside
-          className={styles.toc}
-          aria-label="Indice delle scene"
-        >
-          <div className={styles.tocLabel}>Indice · Atto I</div>
-          {tocActs.map((act) => (
-            <div key={act.name} className={styles.tocAct}>
-              <div className={styles.tocActName}>{act.name}</div>
-              {act.scenes.map((scene) => (
-                <button
-                  type="button"
-                  key={`${act.name}-${scene.number}`}
-                  className={[
-                    styles.tocScene,
-                    scene.isCurrent ? styles.tocSceneCurrent : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-current={scene.isCurrent ? "true" : undefined}
-                >
-                  <span className={styles.tocSceneNum}>sc.{scene.number}</span>
-                  <span>{scene.title}</span>
-                </button>
-              ))}
-            </div>
-          ))}
-        </aside>
-
         <div className={styles.editorial}>
           <header className={styles.chapter}>
             <div className={styles.eyebrow}>{eyebrowText}</div>
