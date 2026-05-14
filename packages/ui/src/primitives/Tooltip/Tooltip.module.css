@@ -1,0 +1,69 @@
+/* packages/ui/src/primitives/Tooltip/Tooltip.module.css */
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tip {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+  border-radius: var(--ds-radius-sm);
+  padding: 4px var(--ds-space-2);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity var(--ds-duration-1) var(--ds-ease);
+  max-width: 240px;
+  white-space: normal;
+
+  /* Default dark */
+  background: var(--ds-text);
+  color: var(--ds-text-on-dark);
+}
+
+.info {
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  border: 1px solid var(--ds-line);
+  box-shadow: var(--ds-shadow-2);
+}
+
+/* Placement */
+.top {
+  bottom: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.bottom {
+  top: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+}
+
+.left {
+  right: calc(100% + 6px);
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.right {
+  left: calc(100% + 6px);
+  top: 50%;
+  translate: 0 -50%;
+}
+
+/* Show on hover OR focus-visible on the wrapper's child */
+.wrapper:hover .tip,
+.wrapper:focus-within .tip {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip { transition: none; }
+}
