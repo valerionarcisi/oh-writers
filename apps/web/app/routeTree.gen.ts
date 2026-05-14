@@ -32,6 +32,7 @@ import { Route as AppProjectsIdScreenplayIndexImport } from "./routes/_app.proje
 import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
 import { Route as AppProjectsIdScreenplayDiffV1V2Import } from "./routes/_app.projects.$id_.screenplay.diff.$v1.$v2";
+import { Route as DevTokensImport } from "./routes/dev/tokens";
 
 // Create/Update Routes
 
@@ -163,6 +164,12 @@ const AppProjectsIdScreenplayDiffV1V2Route =
     path: "/diff/$v1/$v2",
     getParentRoute: () => AppProjectsIdScreenplayRoute,
   } as any);
+
+const DevTokensRoute = DevTokensImport.update({
+  id: "/dev/tokens",
+  path: "/dev/tokens",
+  getParentRoute: () => rootRoute,
+} as any);
 
 // Populate the FileRoutesByPath interface
 
@@ -315,6 +322,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdScreenplayDiffV1V2Import;
       parentRoute: typeof AppProjectsIdScreenplayImport;
     };
+    "/dev/tokens": {
+      id: "/dev/tokens";
+      path: "/dev/tokens";
+      fullPath: "/dev/tokens";
+      preLoaderRoute: typeof DevTokensImport;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -410,6 +424,7 @@ export interface FileRoutesByFullPath {
   "/projects/$id/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
   "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
+  "/dev/tokens": typeof DevTokensRoute;
 }
 
 export interface FileRoutesByTo {
@@ -433,6 +448,7 @@ export interface FileRoutesByTo {
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
   "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
+  "/dev/tokens": typeof DevTokensRoute;
 }
 
 export interface FileRoutesById {
@@ -458,6 +474,7 @@ export interface FileRoutesById {
   "/_app/projects/$id_/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/_app/projects/$id_/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
   "/_app/projects/$id_/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
+  "/dev/tokens": typeof DevTokensRoute;
 }
 
 export interface FileRouteTypes {
@@ -483,7 +500,8 @@ export interface FileRouteTypes {
     | "/projects/$id/screenplay/versions"
     | "/projects/$id/screenplay/"
     | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/diff/$v1/$v2";
+    | "/projects/$id/screenplay/diff/$v1/$v2"
+    | "/dev/tokens";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -505,7 +523,8 @@ export interface FileRouteTypes {
     | "/projects/$id/screenplay/versions"
     | "/projects/$id/screenplay"
     | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/diff/$v1/$v2";
+    | "/projects/$id/screenplay/diff/$v1/$v2"
+    | "/dev/tokens";
   id:
     | "__root__"
     | "/"
@@ -528,7 +547,8 @@ export interface FileRouteTypes {
     | "/_app/projects/$id_/screenplay/versions"
     | "/_app/projects/$id_/screenplay/"
     | "/_app/projects/$id_/screenplay/versions/$vId"
-    | "/_app/projects/$id_/screenplay/diff/$v1/$v2";
+    | "/_app/projects/$id_/screenplay/diff/$v1/$v2"
+    | "/dev/tokens";
   fileRoutesById: FileRoutesById;
 }
 
@@ -537,6 +557,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren;
   LoginRoute: typeof LoginRoute;
   RegisterRoute: typeof RegisterRoute;
+  DevTokensRoute: typeof DevTokensRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -544,6 +565,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  DevTokensRoute: DevTokensRoute,
 };
 
 export const routeTree = rootRoute
@@ -559,7 +581,8 @@ export const routeTree = rootRoute
         "/",
         "/_app",
         "/login",
-        "/register"
+        "/register",
+        "/dev/tokens"
       ]
     },
     "/": {
@@ -664,6 +687,9 @@ export const routeTree = rootRoute
     "/_app/projects/$id_/screenplay/diff/$v1/$v2": {
       "filePath": "_app.projects.$id_.screenplay.diff.$v1.$v2.tsx",
       "parent": "/_app/projects/$id_/screenplay"
+    },
+    "/dev/tokens": {
+      "filePath": "dev/tokens.tsx"
     }
   }
 }

@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ToastProvider, ConfirmDialogProvider } from "@oh-writers/ui";
+import { ToastProvider, ConfirmDialogProvider, SpriteLoader } from "@oh-writers/ui";
 import "../styles/global.css";
 
 export const Route = createRootRoute({
@@ -34,6 +34,7 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
+        <SpriteLoader />
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
             <ConfirmDialogProvider>
