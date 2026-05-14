@@ -3,13 +3,15 @@ import {
   useSuspenseQuery,
   useMutation,
   useQueryClient,
+  useQuery,
 } from "@tanstack/react-query";
 import {
   scenesWithPlanSummaryQueryOptions,
   getOrCreateInitialPlan,
+  shotPlanQueryOptions,
 } from "../server/shooting-plan.server";
 import { ScriptPanel } from "./ScriptPanel";
-import { BlockingPlaceholder } from "./BlockingPlaceholder";
+import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -53,6 +55,31 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSceneId]);
+
+  const planQuery = useQuery({
+    ...shotPlanQueryOptions(selectedSceneId ?? "", projectId),
+    enabled: !!selectedSceneId,
+  });
+  const activePlanId: string | null =
+    planQuery.data?.isOk && planQuery.data.value != null
+      ? (planQuery.data.value.activeScenarioId ?? null)
+      : null;
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "b" &&
+        selectedScene &&
+        activePlanId
+      ) {
+        e.preventDefault();
+        window.location.href = `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`;
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [projectId, selectedScene, activePlanId]);
 
   return (
     <div className={styles.page}>
@@ -108,7 +135,16 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
               />
             </div>
             <main className={styles.main}>
-              <BlockingPlaceholder />
+              {activePlanId && (
+                <BlockingCard
+                  sceneId={selectedScene.sceneId}
+                  planId={activePlanId}
+                  sceneNumber={selectedScene.sceneNumber}
+                  onOpenEditor={() => {
+                    window.location.href = `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`;
+                  }}
+                />
+              )}
               <ParallelPlansEditor
                 key={selectedScene.sceneId}
                 sceneId={selectedScene.sceneId}

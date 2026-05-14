@@ -1,7 +1,7 @@
 export { ShootingPlanPage } from "./components/ShootingPlanPage";
 export { ParallelPlansEditor } from "./components/ParallelPlansEditor";
 export { ScriptPanel } from "./components/ScriptPanel";
-export { BlockingPlaceholder } from "./components/BlockingPlaceholder";
+export { BlockingCard } from "./components/BlockingCard";
 export { PlanPicker } from "./components/PlanPicker";
 export { PlanTrack } from "./components/PlanTrack";
 export { QuickAddToolbar } from "./components/QuickAddToolbar";
