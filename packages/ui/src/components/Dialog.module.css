@@ -41,8 +41,8 @@
 }
 
 .content {
-  background: var(--color-elevated);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--ds-surface-deep);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   overflow: hidden;
@@ -60,7 +60,7 @@
   font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
-  color: var(--color-fg);
+  color: var(--ds-text);
   margin: 0;
 }
 
@@ -69,7 +69,7 @@
   border: none;
   font-size: var(--text-xl);
   line-height: 1;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   cursor: pointer;
   padding: 0;
   inline-size: var(--space-6);
@@ -81,19 +81,19 @@
   transition: background var(--duration-fast) var(--ease-default);
 
   &:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-fg);
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 }
 
 .body {
   padding: 0 var(--space-5) var(--space-4);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-size: var(--text-sm);
 }
 
@@ -102,8 +102,8 @@
   justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
-  border-block-start: var(--border-width) solid var(--color-border);
-  background: var(--color-surface);
+  border-block-start: var(--border-width) solid var(--ds-line);
+  background: var(--ds-surface);
 }
 
 @keyframes fadeIn {

@@ -3,19 +3,19 @@
   border-collapse: collapse;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  color: var(--color-fg);
+  color: var(--ds-text);
 
   th,
   td {
     text-align: start;
     padding: var(--space-2) var(--space-3);
-    border-block-end: var(--border-width) solid var(--color-border);
+    border-block-end: var(--border-width) solid var(--ds-line);
   }
 
   thead th {
-    background: var(--color-overlay);
+    background: var(--ds-overlay);
     font-weight: var(--weight-semibold);
-    color: var(--color-fg-secondary);
+    color: var(--ds-text-2);
     user-select: none;
     position: sticky;
     inset-block-start: 0;
@@ -23,7 +23,7 @@
   }
 
   tbody tr:hover {
-    background: var(--color-elevated);
+    background: var(--ds-surface-deep);
   }
 }
 
@@ -31,7 +31,7 @@
   cursor: pointer;
 
   &:focus-visible {
-    outline: 2px solid var(--color-border-focus);
+    outline: 2px solid var(--ds-action);
     outline-offset: -2px;
   }
 }
@@ -42,6 +42,6 @@
 
 .empty {
   text-align: center;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   padding-block: var(--space-6);
 }

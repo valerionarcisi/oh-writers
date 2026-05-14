@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding-block-start: var(--space-2);
-  border-block-start: 1px solid var(--color-border);
+  border-block-start: 1px solid var(--ds-line);
 }
 
 .counters {
@@ -11,10 +11,10 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--font-size-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 
   &[data-over-limit] {
-    color: var(--color-warning);
+    color: var(--ds-warning);
   }
 }
 

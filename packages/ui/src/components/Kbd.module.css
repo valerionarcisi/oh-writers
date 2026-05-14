@@ -8,9 +8,9 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   line-height: var(--leading-tight);
-  color: var(--color-fg-secondary);
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border-strong);
+  color: var(--ds-text-2);
+  background: var(--ds-surface);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-sm);
-  box-shadow: 0 1px 0 var(--color-border-strong);
+  box-shadow: 0 1px 0 var(--ds-line);
 }

@@ -7,6 +7,7 @@ import {
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
 import { AppShell } from "~/features/app-shell";
+import { useProject } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 
 type SerializableUser = { id: string; name: string; email: string };
@@ -62,10 +63,17 @@ function AppLayout() {
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch ? deriveSectionName(lastMatch.routeId) : "";
 
+  const { data: projectResult } = useProject(projectId ?? "");
+  const projectName = projectResult?.isOk
+    ? projectResult.value.title
+    : projectId
+      ? "…"
+      : "Oh Writers";
+
   return (
     <AppShell
       user={user}
-      projectName={projectId ? "" : "Oh Writers"}
+      projectName={projectName}
       sectionName={sectionName}
       saveState="saved"
     >

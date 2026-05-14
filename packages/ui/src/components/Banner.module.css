@@ -4,27 +4,27 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border: var(--border-width) solid var(--banner-border, var(--color-border));
-  background: var(--banner-bg, var(--color-surface));
-  color: var(--color-fg);
+  border: var(--border-width) solid var(--banner-border, var(--ds-line));
+  background: var(--banner-bg, var(--ds-surface));
+  color: var(--ds-text);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
 }
 
 .info {
-  --banner-border: var(--color-info);
-  --banner-bg: var(--color-info-subtle);
+  --banner-border: var(--ds-action);
+  --banner-bg: var(--ds-action-soft);
 }
 
 .cesare {
-  --banner-border: var(--color-cesare);
-  --banner-bg: var(--color-cesare-subtle);
+  --banner-border: var(--ds-agent);
+  --banner-bg: var(--ds-agent-soft);
 }
 
 .warning {
-  --banner-border: var(--color-warning);
-  --banner-bg: var(--color-warning-subtle);
+  --banner-border: var(--ds-warning);
+  --banner-bg: var(--ds-warning-soft);
 }
 
 .icon {
@@ -46,7 +46,7 @@
 
 .action {
   background: none;
-  border: var(--border-width) solid var(--color-border);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
@@ -55,18 +55,18 @@
   color: inherit;
 
   &:hover {
-    background: var(--color-elevated);
+    background: var(--ds-surface-deep);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-border-focus);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 }
 
 .primary {
   background: var(--banner-border);
-  color: var(--color-fg-inverse);
+  color: var(--ds-text-on-dark);
   border-color: transparent;
 
   &:hover {
@@ -82,9 +82,9 @@
   padding: 0 var(--space-1);
   font-size: var(--text-lg);
   line-height: 1;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 }

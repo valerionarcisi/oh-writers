@@ -2,7 +2,7 @@
   display: block;
   inline-size: 100%;
   block-size: var(--space-1);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -15,9 +15,9 @@
   transition: inline-size 200ms ease;
   background: linear-gradient(
     90deg,
-    var(--color-accent) 0%,
-    color-mix(in srgb, var(--color-accent) 65%, white) 50%,
-    var(--color-accent) 100%
+    var(--ds-action) 0%,
+    color-mix(in srgb, var(--ds-action) 65%, white) 50%,
+    var(--ds-action) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
@@ -26,7 +26,7 @@
 @media (prefers-reduced-motion: reduce) {
   .bar {
     transition: none;
-    background: var(--color-accent);
+    background: var(--ds-action);
     animation: none;
   }
 }

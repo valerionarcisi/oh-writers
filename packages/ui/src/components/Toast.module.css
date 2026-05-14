@@ -4,7 +4,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border: var(--border-width) solid var(--color-border);
+  border: var(--border-width) solid var(--ds-line);
   box-shadow: var(--shadow-lg);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -19,27 +19,27 @@
 }
 
 .info {
-  background: var(--color-elevated);
-  color: var(--color-fg);
-  border-color: var(--color-info);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text);
+  border-color: var(--ds-action);
 }
 
 .success {
-  background: var(--color-elevated);
-  color: var(--color-fg);
-  border-color: var(--color-success);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text);
+  border-color: var(--ds-success);
 }
 
 .danger {
-  background: var(--color-elevated);
-  color: var(--color-fg);
-  border-color: var(--color-danger);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text);
+  border-color: var(--ds-danger);
 }
 
 .warning {
-  background: var(--color-elevated);
-  color: var(--color-fg);
-  border-color: var(--color-warning);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text);
+  border-color: var(--ds-warning);
 }
 
 .message {
@@ -54,7 +54,7 @@
   inline-size: 20px;
   block-size: 20px;
   font-size: var(--text-lg);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -62,7 +62,7 @@
 }
 
 .close:hover {
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 @keyframes toastIn {

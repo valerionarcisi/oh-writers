@@ -5,8 +5,8 @@
   border-radius: var(--radius-full);
   font-family: var(--font-sans);
   font-weight: var(--weight-semibold);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
   overflow: hidden;
   flex-shrink: 0;
   user-select: none;

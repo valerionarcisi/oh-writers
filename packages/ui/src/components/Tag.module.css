@@ -10,7 +10,7 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg);
+  color: var(--ds-text);
   cursor: default;
   line-height: var(--leading-tight);
 
@@ -22,7 +22,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--color-border-focus);
+      outline: 2px solid var(--ds-action);
       outline-offset: 2px;
     }
   }
@@ -46,7 +46,7 @@
   min-width: 1.5em;
   padding-inline: var(--space-1);
   background: var(--tag-color);
-  color: var(--color-fg-inverse);
+  color: var(--ds-text-on-dark);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
@@ -57,21 +57,21 @@
 }
 
 .count {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-variant-numeric: tabular-nums;
 }
 
 .dismiss {
   background: none;
   border: 0;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   cursor: pointer;
   padding: 0 var(--space-1);
   font-size: var(--text-base);
   line-height: 1;
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 }
 

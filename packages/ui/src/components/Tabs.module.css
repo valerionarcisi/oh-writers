@@ -1,7 +1,7 @@
 .tabs {
   display: flex;
   gap: var(--space-1);
-  border-block-end: var(--border-width) solid var(--color-border);
+  border-block-end: var(--border-width) solid var(--ds-line);
   padding-block-end: var(--space-px);
 }
 
@@ -10,7 +10,7 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   background: transparent;
   border: none;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -28,8 +28,8 @@
 }
 
 .tab:hover {
-  color: var(--color-fg-secondary);
-  background: var(--color-surface);
+  color: var(--ds-text-2);
+  background: var(--ds-surface);
 }
 
 .tab:focus-visible {
@@ -37,7 +37,7 @@
 }
 
 .active {
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 .active::after {
@@ -46,6 +46,6 @@
   inset-inline: 0;
   inset-block-end: calc(-1 * var(--space-px));
   block-size: 2px;
-  background: var(--color-accent);
+  background: var(--ds-action);
   border-radius: var(--radius-full);
 }

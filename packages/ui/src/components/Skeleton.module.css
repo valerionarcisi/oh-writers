@@ -1,5 +1,5 @@
 .skeleton {
-  background: var(--color-surface);
+  background: var(--ds-surface);
   border-radius: var(--radius-md);
 }
 

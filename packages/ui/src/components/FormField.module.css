@@ -8,12 +8,12 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .error {
   font-family: var(--font-sans);
   font-size: var(--text-xs);
-  color: var(--color-danger);
+  color: var(--ds-danger);
   margin: 0;
 }

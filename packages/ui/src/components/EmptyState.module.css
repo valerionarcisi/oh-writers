@@ -12,14 +12,14 @@
   font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
-  color: var(--color-fg);
+  color: var(--ds-text);
   margin: 0;
 }
 
 .description {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   max-inline-size: 360px;
   margin: 0;
 }

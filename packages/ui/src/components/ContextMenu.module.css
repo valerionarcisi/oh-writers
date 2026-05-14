@@ -4,8 +4,8 @@
   list-style: none;
   margin: 0;
   padding: var(--space-1);
-  background: var(--color-elevated);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--ds-surface-deep);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   min-inline-size: 12rem;
@@ -24,15 +24,15 @@
   text-align: start;
   font-family: inherit;
   font-size: var(--text-sm);
-  color: var(--color-fg);
+  color: var(--ds-text);
   border-radius: var(--radius-sm);
 
   &:hover:not(:disabled) {
-    background: var(--color-overlay);
+    background: var(--ds-overlay);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-border-focus);
+    outline: 2px solid var(--ds-action);
     outline-offset: -2px;
   }
 
@@ -48,5 +48,5 @@
   justify-content: center;
   min-inline-size: 1.25em;
   font-weight: var(--weight-bold);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
