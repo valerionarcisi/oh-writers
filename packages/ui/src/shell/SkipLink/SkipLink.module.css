@@ -1,0 +1,27 @@
+/* packages/ui/src/shell/SkipLink/SkipLink.module.css */
+.link {
+  position: absolute;
+  top: -100%;
+  inset-inline-start: var(--ds-space-4);
+  z-index: 100;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: top var(--ds-duration-1) var(--ds-ease);
+
+  &:focus {
+    top: var(--ds-space-2);
+    outline: 2px solid var(--ds-text-on-dark);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link { transition: none; }
+}
