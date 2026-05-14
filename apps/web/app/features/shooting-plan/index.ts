@@ -1,4 +1,12 @@
 export { ShootingPlanPage } from "./components/ShootingPlanPage";
+export { ParallelPlansEditor } from "./components/ParallelPlansEditor";
+export { ScriptPanel } from "./components/ScriptPanel";
+export { BlockingPlaceholder } from "./components/BlockingPlaceholder";
+export { PlanPicker } from "./components/PlanPicker";
+export { PlanTrack } from "./components/PlanTrack";
+export { QuickAddToolbar } from "./components/QuickAddToolbar";
+export { PatternMenu } from "./components/PatternMenu";
+export { ShotContextMenu } from "./components/ShotContextMenu";
 export type {
   ShotPlanView,
   ShotView,

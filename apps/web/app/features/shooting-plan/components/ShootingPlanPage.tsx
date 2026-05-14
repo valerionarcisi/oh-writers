@@ -1,7 +1,16 @@
-import { useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { scenesWithPlanSummaryQueryOptions } from "../server/shooting-plan.server";
-import { SceneShotTimeline } from "./SceneShotTimeline";
+import { useState, useEffect } from "react";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  scenesWithPlanSummaryQueryOptions,
+  getOrCreateInitialPlan,
+} from "../server/shooting-plan.server";
+import { ScriptPanel } from "./ScriptPanel";
+import { BlockingPlaceholder } from "./BlockingPlaceholder";
+import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import styles from "./ShootingPlanPage.module.css";
 
 interface ShootingPlanPageProps {
@@ -17,6 +26,7 @@ const formatMinutes = (m: number): string => {
 };
 
 export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
+  const qc = useQueryClient();
   const { data } = useSuspenseQuery(
     scenesWithPlanSummaryQueryOptions(projectId),
   );
@@ -25,6 +35,24 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const scenes = data?.isOk ? data.value : [];
   const selectedScene =
     scenes.find((s) => s.sceneId === selectedSceneId) ?? null;
+
+  const initialPlanMut = useMutation({
+    mutationFn: async (sceneId: string) =>
+      await getOrCreateInitialPlan({ data: { sceneId, projectId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shot-plan"] });
+      qc.invalidateQueries({
+        queryKey: ["shooting-plan", "scenes", projectId],
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (selectedSceneId && selectedScene && selectedScene.shotCount === 0) {
+      initialPlanMut.mutate(selectedSceneId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSceneId]);
 
   return (
     <div className={styles.page}>
@@ -68,23 +96,40 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
             );
           })}
         </aside>
-        <main className={styles.main}>
-          {selectedScene ? (
-            <SceneShotTimeline
-              key={selectedScene.sceneId}
-              sceneId={selectedScene.sceneId}
-              projectId={projectId}
-              sceneLabel={`SC.${selectedScene.sceneNumber} ${selectedScene.location}`}
-            />
-          ) : (
+
+        {selectedScene ? (
+          <>
+            <div className={styles.scriptColumn}>
+              <ScriptPanel
+                sceneNumber={selectedScene.sceneNumber}
+                sceneHeading={selectedScene.sceneHeading}
+                sceneNotes={null}
+                storageKey="ohw:shooting-plan:script-panel:open"
+              />
+            </div>
+            <main className={styles.main}>
+              <BlockingPlaceholder />
+              <ParallelPlansEditor
+                key={selectedScene.sceneId}
+                sceneId={selectedScene.sceneId}
+                projectId={projectId}
+                sceneNumber={selectedScene.sceneNumber}
+                scenePageStart={null}
+                scenePageEnd={null}
+                sceneHasSpecialEffect={false}
+              />
+            </main>
+          </>
+        ) : (
+          <main className={styles.main}>
             <div className={styles.mainEmpty}>
               <p>
                 Seleziona una scena dalla lista per iniziare a pianificare gli
                 shot.
               </p>
             </div>
-          )}
-        </main>
+          </main>
+        )}
       </div>
     </div>
   );
