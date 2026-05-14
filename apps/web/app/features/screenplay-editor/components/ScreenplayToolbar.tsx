@@ -6,7 +6,6 @@ import {
   EXPORT_FORMAT_META,
   type ExportFormat,
 } from "@oh-writers/domain";
-import { SaveIndicator } from "./SaveIndicator";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { DraftMetaBadge } from "~/features/projects";
 import type { ElementType } from "../lib/fountain-element-detector";
@@ -82,12 +81,6 @@ const ELEMENT_ORDER: ElementType[] = [
 
 export function ScreenplayToolbar({
   projectId,
-  isDirty,
-  isSaving,
-  isError,
-  isOffline,
-  lastSavedAt,
-  onFlushSave,
   isFocusMode,
   hasContent,
   currentElement,
@@ -99,7 +92,6 @@ export function ScreenplayToolbar({
   onToggleVersions,
   isVersionsPanelOpen,
   currentVersionLabel = null,
-  hideSaveIndicator = false,
   onResequenceAll,
   canEdit,
   isOwner,
@@ -107,6 +99,8 @@ export function ScreenplayToolbar({
   isExportingPdf = false,
   onTitlePageDetected,
 }: ScreenplayToolbarProps) {
+  // Unused save-state props are preserved on the type for caller compatibility,
+  // but no longer consumed here — see comment near the right-side cluster.
   const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   return (
     <div className={styles.toolbar}>
@@ -143,16 +137,10 @@ export function ScreenplayToolbar({
 
       <div className={styles.right}>
         <DraftMetaBadge projectId={projectId} />
-        {!hideSaveIndicator && (
-          <SaveIndicator
-            isDirty={isDirty}
-            isSaving={isSaving}
-            isError={isError}
-            isOffline={isOffline}
-            lastSavedAt={lastSavedAt}
-            onFlush={onFlushSave}
-          />
-        )}
+        {/* SaveIndicator intentionally not rendered here: the global TopBar in
+            AppShell is the single source of truth for save status. The
+            `hideSaveIndicator` / `isDirty` / `isSaving` props are kept for
+            backwards compatibility with callers that still pass them. */}
         {onOpenExportPdf && (
           <DropdownMenu
             align="end"

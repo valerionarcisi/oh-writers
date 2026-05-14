@@ -61,7 +61,7 @@
 .main {
   max-width: 1280px;
   margin: 0 auto;
-  padding: var(--ds-space-10) var(--ds-space-6) var(--ds-space-12);
+  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-12);
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: var(--ds-space-10);

@@ -62,7 +62,7 @@
   max-inline-size: 1480px;
   inline-size: 100%;
   margin-inline: auto;
-  padding: var(--ds-space-8) var(--ds-space-10) var(--ds-space-12);
+  padding: var(--ds-space-4) var(--ds-space-10) var(--ds-space-12);
   align-items: start;
 }
 

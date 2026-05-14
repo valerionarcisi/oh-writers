@@ -43,7 +43,7 @@
   letter-spacing: 0.08em;
   color: var(--ds-text-3);
   margin: 0;
-  padding-block: var(--ds-space-4) var(--ds-space-2);
+  padding-block: var(--ds-space-2) var(--ds-space-2);
 }
 
 .eyebrowStrong {
