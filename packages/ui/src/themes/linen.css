@@ -1,0 +1,43 @@
+/* packages/ui/src/themes/linen.css — layer 1 raw tokens, default theme */
+:root {
+  /* Linen — paper warm neutrals */
+  --ds-linen-50:  #f5f3ee;
+  --ds-linen-100: #ebe9e3;
+  --ds-linen-200: #e2dfd6;
+  --ds-linen-300: #d8d6cd;
+  --ds-linen-400: #c4c2b9;
+  --ds-linen-500: #a09e96;
+  --ds-linen-600: #71706a;
+  --ds-linen-700: #44413c;
+  --ds-linen-800: #1c1a17;
+  --ds-linen-soft: #e3e1d780;
+
+  /* Pure */
+  --ds-white: #ffffff;
+
+  /* Clay — user action, page accent, primary */
+  --ds-clay-50:  #f4dccb;
+  --ds-clay-500: #8b3a1a;
+  --ds-clay-600: #75301a;
+
+  /* Leaf — Cesare, agent */
+  --ds-leaf-50:  #e5e9d8;
+  --ds-leaf-500: #5a6b3c;
+
+  /* Category accents — muted, low chroma */
+  --ds-cat-cast:        #6b3e7a;
+  --ds-cat-crew:        #3d6b4a;
+  --ds-cat-locations:   #9a5128;
+  --ds-cat-vehicles:    #2c6168;
+  --ds-cat-scenografia: #8a5a1f;
+  --ds-cat-costumi:     #8b3565;
+  --ds-cat-fotografia:  #34487a;
+  --ds-cat-suono:       #5a6b25;
+  --ds-cat-vfx:         #6a3e8a;
+  --ds-cat-comparse:    #7a5524;
+
+  /* Plan accents — Shot Plan v2 only */
+  --ds-plan-1: #34487a;
+  --ds-plan-2: #5a6b3c;
+  --ds-plan-3: #8b3a1a;
+}
