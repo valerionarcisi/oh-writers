@@ -1,67 +1,79 @@
 .page {
-  padding: var(--space-8);
-  max-inline-size: var(--max-width-wide);
-  margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  min-block-size: 0;
 }
 
-.breadcrumb {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--text-sm);
-}
-
-.back {
+.viewbarLink {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--ds-text-2);
   text-decoration: none;
   background: transparent;
   border: 0;
   padding: 0;
   cursor: pointer;
-  font: inherit;
+  font-weight: inherit;
 
   &:hover {
     color: var(--ds-text);
   }
 }
 
-.title {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
+.viewbarSpacer {
+  flex: 1;
+}
+
+.contentWrap {
+  max-inline-size: var(--max-width-wide, 1340px);
+  margin-inline: auto;
+  inline-size: 100%;
+  padding: var(--ds-space-3) var(--ds-space-6) var(--ds-space-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.eyebrow {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-3);
   margin: 0;
+  padding-block: var(--ds-space-4) var(--ds-space-2);
 }
 
-.subtitle {
-  color: var(--ds-text-mute);
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
-.status {
-  padding: var(--space-8);
-  color: var(--ds-text-mute);
-}
-
-.statusError {
-  padding: var(--space-8);
-  color: var(--ds-danger);
-}
-
-.formError {
-  color: var(--ds-danger);
-  font-size: var(--text-sm);
+.eyebrowStrong {
+  color: var(--ds-text);
+  font-weight: 600;
 }
 
 .layout {
   display: flex;
-  gap: var(--space-6);
+  gap: var(--ds-space-6);
   align-items: flex-start;
 
   & > :first-child {
     flex: 1;
     min-inline-size: 0;
   }
+}
+
+.status {
+  padding: var(--ds-space-8);
+  color: var(--ds-text-mute);
+}
+
+.statusError {
+  padding: var(--ds-space-8);
+  color: var(--ds-danger);
+}
+
+.formError {
+  color: var(--ds-danger);
+  font-size: var(--text-sm);
+  padding-inline: var(--ds-space-6);
 }

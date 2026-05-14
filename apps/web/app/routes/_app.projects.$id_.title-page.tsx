@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
+import { Viewbar, ViewbarSep } from "@oh-writers/ui";
 import {
   TitlePageEditor,
   TitlePageDraftPanel,
@@ -87,38 +88,49 @@ function TitlePageRouteInner({
 
   return (
     <div className={styles.page}>
-      <div className={styles.breadcrumb}>
+      <Viewbar>
         <Link
           to="/projects/$id"
           params={{ id: projectId }}
-          className={styles.back}
+          className={styles.viewbarLink}
         >
-          ← {projectTitle}
+          ← Indietro
         </Link>
-        <button type="button" className={styles.back} onClick={onClose}>
-          Close
+        <ViewbarSep />
+        <span className={styles.viewbarLink} aria-current="page">
+          Frontespizio
+        </span>
+        <span className={styles.viewbarSpacer} />
+        <button
+          type="button"
+          className={styles.viewbarLink}
+          onClick={onClose}
+        >
+          Chiudi
         </button>
-      </div>
-      <h1 className={styles.title}>Frontespizio</h1>
-      <p className={styles.subtitle}>
-        Page one of every PDF export. Only the project owner can edit it.
-      </p>
+      </Viewbar>
 
-      <div className={styles.layout}>
-        <TitlePageEditor
-          projectTitle={projectTitle}
-          initialDoc={initialState.doc}
-          readOnly={!canEdit}
-          onDocChange={handleDocChange}
-        />
-        <TitlePageDraftPanel
-          projectId={projectId}
-          draftDate={local.draftDate}
-          draftColor={local.draftColor}
-        />
-      </div>
+      <div className={styles.contentWrap}>
+        <p className={styles.eyebrow}>
+          <span className={styles.eyebrowStrong}>FRONTESPIZIO</span> · PAG. 1
+        </p>
 
-      {saveError && <p className={styles.formError}>{saveError}</p>}
+        <div className={styles.layout}>
+          <TitlePageEditor
+            projectTitle={projectTitle}
+            initialDoc={initialState.doc}
+            readOnly={!canEdit}
+            onDocChange={handleDocChange}
+          />
+          <TitlePageDraftPanel
+            projectId={projectId}
+            draftDate={local.draftDate}
+            draftColor={local.draftColor}
+          />
+        </div>
+
+        {saveError && <p className={styles.formError}>{saveError}</p>}
+      </div>
     </div>
   );
 }
