@@ -64,7 +64,8 @@ const inferTemplateKey = (sceneHeading: string): BlockingTemplateKey => {
   if (h.includes("camera") && h.includes("letto")) return "bedroom";
   if (h.includes("ufficio")) return "office";
   if (h.includes("auto") || h.includes("macchina")) return "car_interior";
-  if (h.trim().startsWith("ext") || h.includes("strada")) return "exterior_street";
+  if (h.trim().startsWith("ext") || h.includes("strada"))
+    return "exterior_street";
   return "living_room";
 };
 
@@ -72,9 +73,19 @@ const loadOrCreateLocation = async (
   db: Db,
   projectId: string,
   sceneHeading: string,
-): Promise<{ id: string; widthCm: number; heightCm: number; primitives: Primitive[] }> => {
+): Promise<{
+  id: string;
+  widthCm: number;
+  heightCm: number;
+  primitives: Primitive[];
+}> => {
+  const templateKey = inferTemplateKey(sceneHeading);
+
   const existing = await db.query.locations.findFirst({
-    where: eq(locations.projectId, projectId),
+    where: and(
+      eq(locations.projectId, projectId),
+      eq(locations.templateKey, templateKey),
+    ),
   });
   if (existing) {
     return {
@@ -85,7 +96,6 @@ const loadOrCreateLocation = async (
     };
   }
 
-  const templateKey = inferTemplateKey(sceneHeading);
   const template = BLOCKING_TEMPLATES[templateKey];
   const inserted = await db
     .insert(locations)
@@ -115,7 +125,8 @@ const callCesareBlocking = async (
   }
   const result = await callHaiku(
     {
-      system: "You are a professional film assistant director. Respond only with JSON.",
+      system:
+        "You are a professional film assistant director. Respond only with JSON.",
       fewShot: {},
       user: buildCesareBlockingPrompt(input),
       maxTokens: 1024,
@@ -130,9 +141,13 @@ const callCesareBlocking = async (
 // ─── Server functions ──────────────────────────────────────────────────────────
 
 export const getOrCreateBlocking = createServerFn({ method: "POST" })
-  .validator(z.object({ sceneId: z.string().uuid(), planId: z.string().uuid() }))
+  .validator(
+    z.object({ sceneId: z.string().uuid(), planId: z.string().uuid() }),
+  )
   .handler(
-    async ({ data }): Promise<ResultShape<BlockingView, DbError | ForbiddenError>> => {
+    async ({
+      data,
+    }): Promise<ResultShape<BlockingView, DbError | ForbiddenError>> => {
       await requireUser();
       const db = await getDb();
 
@@ -153,7 +168,11 @@ export const getOrCreateBlocking = createServerFn({ method: "POST" })
 
           if (!sceneRow) throw new Error(`Scene not found: ${data.sceneId}`);
 
-          const loc = await loadOrCreateLocation(db, sceneRow.projectId, sceneRow.heading ?? "");
+          const loc = await loadOrCreateLocation(
+            db,
+            sceneRow.projectId,
+            sceneRow.heading ?? "",
+          );
 
           let sceneBlocking = await db.query.sceneBlockings.findFirst({
             where: eq(sceneBlockings.sceneId, data.sceneId),
@@ -173,7 +192,10 @@ export const getOrCreateBlocking = createServerFn({ method: "POST" })
 
           if (needsCesare) {
             const castRows = await db
-              .select({ id: breakdownElements.id, label: breakdownElements.name })
+              .select({
+                id: breakdownElements.id,
+                label: breakdownElements.name,
+              })
               .from(breakdownOccurrences)
               .innerJoin(
                 breakdownElements,
@@ -231,7 +253,10 @@ export const getOrCreateBlocking = createServerFn({ method: "POST" })
                 .values({
                   planId: data.planId,
                   sceneId: data.sceneId,
-                  cameraPins: cesareOut.cameraPins as unknown as Record<string, unknown>[],
+                  cameraPins: cesareOut.cameraPins as unknown as Record<
+                    string,
+                    unknown
+                  >[],
                   isSuggested: true,
                 })
                 .returning();
@@ -241,7 +266,8 @@ export const getOrCreateBlocking = createServerFn({ method: "POST" })
 
           const effectiveActors: ActorPosition[] =
             planCameras!.detachedActors && planCameras!.overrideActorPositions
-              ? (planCameras!.overrideActorPositions as unknown as ActorPosition[])
+              ? (planCameras!
+                  .overrideActorPositions as unknown as ActorPosition[])
               : (sceneBlocking!.actorPositions as unknown as ActorPosition[]);
 
           const locationRow = await db.query.locations.findFirst({
@@ -281,22 +307,27 @@ export const saveActorPositions = createServerFn({ method: "POST" })
       positions: ActorPositionsArraySchema,
     }),
   )
-  .handler(async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
-    await requireUser();
-    const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      db
-        .update(sceneBlockings)
-        .set({
-          actorPositions: data.positions as unknown as Record<string, unknown>[],
-          isSuggested: false,
-        })
-        .where(eq(sceneBlockings.id, data.sceneBlockingId))
-        .then(() => undefined as void),
-      (e) => new DbError("saveActorPositions", e),
-    );
-    return toShape(result);
-  });
+  .handler(
+    async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
+      await requireUser();
+      const db = await getDb();
+      const result = await ResultAsync.fromPromise(
+        db
+          .update(sceneBlockings)
+          .set({
+            actorPositions: data.positions as unknown as Record<
+              string,
+              unknown
+            >[],
+            isSuggested: false,
+          })
+          .where(eq(sceneBlockings.id, data.sceneBlockingId))
+          .then(() => undefined as void),
+        (e) => new DbError("saveActorPositions", e),
+      );
+      return toShape(result);
+    },
+  );
 
 export const saveCameraPin = createServerFn({ method: "POST" })
   .validator(
@@ -305,56 +336,68 @@ export const saveCameraPin = createServerFn({ method: "POST" })
       pin: CameraPinSchema,
     }),
   )
-  .handler(async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
-    await requireUser();
-    const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      (async () => {
-        const row = await db.query.planSceneCameras.findFirst({
-          where: eq(planSceneCameras.id, data.planSceneCamerasId),
-        });
-        if (!row) throw new Error("planSceneCameras not found");
-        const existing = (row.cameraPins as unknown as CameraPin[]).filter(
-          (p) => p.shotId !== data.pin.shotId,
-        );
-        await db
-          .update(planSceneCameras)
-          .set({
-            cameraPins: [...existing, data.pin] as unknown as Record<string, unknown>[],
-            isSuggested: false,
-          })
-          .where(eq(planSceneCameras.id, data.planSceneCamerasId));
-      })(),
-      (e) => new DbError("saveCameraPin", e),
-    );
-    return toShape(result);
-  });
+  .handler(
+    async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
+      await requireUser();
+      const db = await getDb();
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const row = await db.query.planSceneCameras.findFirst({
+            where: eq(planSceneCameras.id, data.planSceneCamerasId),
+          });
+          if (!row) throw new Error("planSceneCameras not found");
+          const existing = (row.cameraPins as unknown as CameraPin[]).filter(
+            (p) => p.shotId !== data.pin.shotId,
+          );
+          await db
+            .update(planSceneCameras)
+            .set({
+              cameraPins: [...existing, data.pin] as unknown as Record<
+                string,
+                unknown
+              >[],
+              isSuggested: false,
+            })
+            .where(eq(planSceneCameras.id, data.planSceneCamerasId));
+        })(),
+        (e) => new DbError("saveCameraPin", e),
+      );
+      return toShape(result);
+    },
+  );
 
 export const deleteCameraPin = createServerFn({ method: "POST" })
   .validator(
-    z.object({ planSceneCamerasId: z.string().uuid(), shotId: z.string().uuid() }),
+    z.object({
+      planSceneCamerasId: z.string().uuid(),
+      shotId: z.string().uuid(),
+    }),
   )
-  .handler(async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
-    await requireUser();
-    const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      (async () => {
-        const row = await db.query.planSceneCameras.findFirst({
-          where: eq(planSceneCameras.id, data.planSceneCamerasId),
-        });
-        if (!row) throw new Error("planSceneCameras not found");
-        const filtered = (row.cameraPins as unknown as CameraPin[]).filter(
-          (p) => p.shotId !== data.shotId,
-        );
-        await db
-          .update(planSceneCameras)
-          .set({ cameraPins: filtered as unknown as Record<string, unknown>[] })
-          .where(eq(planSceneCameras.id, data.planSceneCamerasId));
-      })(),
-      (e) => new DbError("deleteCameraPin", e),
-    );
-    return toShape(result);
-  });
+  .handler(
+    async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
+      await requireUser();
+      const db = await getDb();
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const row = await db.query.planSceneCameras.findFirst({
+            where: eq(planSceneCameras.id, data.planSceneCamerasId),
+          });
+          if (!row) throw new Error("planSceneCameras not found");
+          const filtered = (row.cameraPins as unknown as CameraPin[]).filter(
+            (p) => p.shotId !== data.shotId,
+          );
+          await db
+            .update(planSceneCameras)
+            .set({
+              cameraPins: filtered as unknown as Record<string, unknown>[],
+            })
+            .where(eq(planSceneCameras.id, data.planSceneCamerasId));
+        })(),
+        (e) => new DbError("deleteCameraPin", e),
+      );
+      return toShape(result);
+    },
+  );
 
 export const detachBlocking = createServerFn({ method: "POST" })
   .validator(
@@ -363,47 +406,54 @@ export const detachBlocking = createServerFn({ method: "POST" })
       sceneBlockingId: z.string().uuid(),
     }),
   )
-  .handler(async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
-    await requireUser();
-    const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      (async () => {
-        const sceneRow = await db.query.sceneBlockings.findFirst({
-          where: eq(sceneBlockings.id, data.sceneBlockingId),
-        });
-        if (!sceneRow) throw new Error("sceneBlocking not found");
-        await db
-          .update(planSceneCameras)
-          .set({
-            detachedActors: true,
-            overrideActorPositions: sceneRow.actorPositions,
-          })
-          .where(eq(planSceneCameras.id, data.planSceneCamerasId));
-      })(),
-      (e) => new DbError("detachBlocking", e),
-    );
-    return toShape(result);
-  });
+  .handler(
+    async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
+      await requireUser();
+      const db = await getDb();
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const sceneRow = await db.query.sceneBlockings.findFirst({
+            where: eq(sceneBlockings.id, data.sceneBlockingId),
+          });
+          if (!sceneRow) throw new Error("sceneBlocking not found");
+          await db
+            .update(planSceneCameras)
+            .set({
+              detachedActors: true,
+              overrideActorPositions: sceneRow.actorPositions,
+            })
+            .where(eq(planSceneCameras.id, data.planSceneCamerasId));
+        })(),
+        (e) => new DbError("detachBlocking", e),
+      );
+      return toShape(result);
+    },
+  );
 
 export const saveLocationPrimitives = createServerFn({ method: "POST" })
   .validator(
-    z.object({ locationId: z.string().uuid(), primitives: PrimitivesArraySchema }),
+    z.object({
+      locationId: z.string().uuid(),
+      primitives: PrimitivesArraySchema,
+    }),
   )
-  .handler(async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
-    await requireUser();
-    const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      db
-        .update(locations)
-        .set({
-          primitives: data.primitives as unknown as Record<string, unknown>[],
-        })
-        .where(eq(locations.id, data.locationId))
-        .then(() => undefined as void),
-      (e) => new DbError("saveLocationPrimitives", e),
-    );
-    return toShape(result);
-  });
+  .handler(
+    async ({ data }): Promise<ResultShape<void, DbError | ForbiddenError>> => {
+      await requireUser();
+      const db = await getDb();
+      const result = await ResultAsync.fromPromise(
+        db
+          .update(locations)
+          .set({
+            primitives: data.primitives as unknown as Record<string, unknown>[],
+          })
+          .where(eq(locations.id, data.locationId))
+          .then(() => undefined as void),
+        (e) => new DbError("saveLocationPrimitives", e),
+      );
+      return toShape(result);
+    },
+  );
 
 export const blockingQueryOptions = (sceneId: string, planId: string) =>
   queryOptions({
