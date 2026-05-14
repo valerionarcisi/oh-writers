@@ -10,10 +10,15 @@ const TRANSITION_ICONS: Record<string, string> = {
 
 interface TransitionBlockProps {
   transition: TransitionSlotView;
-  onEdit: () => void;
+  widthPct: number;
+  onEdit?: () => void;
 }
 
-export function TransitionBlock({ transition, onEdit }: TransitionBlockProps) {
+export function TransitionBlock({
+  transition,
+  widthPct,
+  onEdit,
+}: TransitionBlockProps) {
   const icon = TRANSITION_ICONS[transition.type] ?? "⟳";
   return (
     <button
@@ -21,6 +26,7 @@ export function TransitionBlock({ transition, onEdit }: TransitionBlockProps) {
       className={styles.block}
       data-type={transition.type.toLowerCase()}
       onClick={onEdit}
+      style={{ inlineSize: `${Math.max(widthPct, 0.5)}%` }}
       title={transition.label ?? transition.type}
     >
       <span className={styles.icon}>{icon}</span>
