@@ -1,0 +1,110 @@
+.drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  margin: 0;
+  padding: 0;
+  width: var(--drawer-width, 480px);
+  max-width: 100vw;
+  max-height: 100dvh;
+  overflow-y: auto;
+  background: var(--ds-surface);
+  border-inline-start: 1px solid var(--ds-line);
+  box-shadow: var(--ds-shadow-4);
+  border-radius: 0;
+  z-index: 70;
+
+  translate: 100% 0;
+  transition:
+    translate var(--ds-duration-3) var(--ds-ease),
+    display var(--ds-duration-3) var(--ds-ease) allow-discrete,
+    overlay var(--ds-duration-3) var(--ds-ease) allow-discrete;
+
+  &[open] {
+    translate: 0 0;
+    @starting-style {
+      translate: 100% 0;
+    }
+  }
+
+  &::backdrop {
+    background: rgba(28, 26, 23, 0.4);
+    backdrop-filter: blur(4px);
+    animation: backdropIn var(--ds-duration-2) var(--ds-ease);
+  }
+}
+
+.left {
+  inset-inline-end: auto;
+  inset-inline-start: 0;
+  border-inline-start: none;
+  border-inline-end: 1px solid var(--ds-line);
+  translate: -100% 0;
+
+  &[open] {
+    translate: 0 0;
+    @starting-style {
+      translate: -100% 0;
+    }
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ds-space-4) var(--ds-space-6);
+  border-block-end: 1px solid var(--ds-line);
+  position: sticky;
+  top: 0;
+  background: var(--ds-surface);
+  z-index: 1;
+}
+
+.title {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--ds-text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.body {
+  padding: var(--ds-space-6);
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer { transition: none; }
+  .drawer::backdrop { animation: none; }
+}
