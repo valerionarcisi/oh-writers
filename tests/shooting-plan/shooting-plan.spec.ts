@@ -2,47 +2,8 @@ import { expect } from "@playwright/test";
 import { test } from "../fixtures";
 import { SHOOTING_PLAN_PROJECT_ID, navigateToShootingPlan } from "./helpers";
 
-test.describe("[OHW-022] Piano di Ripresa — shot planning (decoupled)", () => {
-  test("[OHW-022] Page renders without a schedule → h1 + scene sidebar", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
-
-    const heading = page.getByRole("heading", {
-      level: 1,
-      name: "Piano di Ripresa",
-    });
-    await expect(heading).toBeVisible({ timeout: 15_000 });
-
-    await expect(page.getByText("Scene del progetto")).toBeVisible({
-      timeout: 10_000,
-    });
-  });
-
-  test("[OHW-022] Sidebar lists scenes with planned/unplanned status", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
-
-    await expect(page.getByText("Scene del progetto")).toBeVisible({
-      timeout: 15_000,
-    });
-
-    const sceneButtons = page.locator('[class*="sceneItem"]');
-    const count = await sceneButtons.count();
-    if (count === 0) {
-      test.skip();
-      return;
-    }
-    await expect(sceneButtons.first()).toBeVisible();
-
-    const statusBadge = sceneButtons.first().locator('[class*="sceneStatus"]');
-    await expect(statusBadge).toContainText(/non pianificata|shot/);
-  });
-
-  test("[OHW-022] Select a scene → SceneShotTimeline renders with Piano A tab", async ({
+test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
+  test("[OHW-022b] Auto-populate creates Piano A with shots on first scene open", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
@@ -51,25 +12,7 @@ test.describe("[OHW-022] Piano di Ripresa — shot planning (decoupled)", () => 
     const sceneButtons = page.locator('[class*="sceneItem"]');
     await expect(sceneButtons.first()).toBeVisible({ timeout: 15_000 });
 
-    await sceneButtons.first().click();
-
-    await expect(page.getByText(/Piano A|Inizia piano di ripresa/)).toBeVisible(
-      { timeout: 10_000 },
-    );
-  });
-
-  test("[OHW-022] Add a shot to an unplanned scene → sidebar status updates", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
-
-    const sceneButtons = page.locator('[class*="sceneItem"]');
-    await expect(sceneButtons.first()).toBeVisible({ timeout: 15_000 });
-
-    const unplanned = sceneButtons
-      .filter({ hasText: "non pianificata" })
-      .first();
+    const unplanned = sceneButtons.filter({ hasText: "non pianificata" }).first();
     const found = await unplanned.count();
     if (found === 0) {
       test.skip();
@@ -77,22 +20,93 @@ test.describe("[OHW-022] Piano di Ripresa — shot planning (decoupled)", () => 
     }
     await unplanned.click();
 
-    const startBtn = page.getByRole("button", {
-      name: /Inizia piano di ripresa/,
-    });
-    if (await startBtn.isVisible().catch(() => false)) {
-      await startBtn.click();
-    }
+    await expect(page.getByText("Piano A")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/\d+ shot/)).toBeVisible({ timeout: 10_000 });
 
-    const addShotBtn = page.getByRole("button", {
-      name: /\+ shot|Aggiungi shot/,
-    });
-    await expect(addShotBtn).toBeVisible({ timeout: 10_000 });
-    await addShotBtn.click();
+    await expect(page.getByText(/suggerito/)).toBeVisible({ timeout: 5_000 });
+  });
 
-    await expect(unplanned.locator('[class*="sceneStatus"]')).toContainText(
-      /1 shot/,
-      { timeout: 10_000 },
-    );
+  test("[OHW-022b] Quick-add toolbar adds shot to active plan", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
+
+    const sceneButtons = page.locator('[class*="sceneItem"]');
+    await sceneButtons.first().click();
+
+    const cuBtn = page.getByRole("button", { name: "CU", exact: true });
+    await expect(cuBtn).toBeVisible({ timeout: 10_000 });
+    const initialShotCount = await page
+      .locator('[class*="ShotBlock_block"], [class*="block"][data-shot-id]')
+      .count();
+    await cuBtn.click();
+
+    await page.waitForTimeout(500);
+    const newCount = await page
+      .locator('[class*="ShotBlock_block"], [class*="block"][data-shot-id]')
+      .count();
+    expect(newCount).toBeGreaterThan(initialShotCount);
+  });
+
+  test("[OHW-022b] Pattern menu shows recommended badge", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
+
+    const sceneButtons = page.locator('[class*="sceneItem"]');
+    await sceneButtons.first().click();
+
+    const patternBtn = page.getByRole("button", { name: /Pattern/ });
+    await expect(patternBtn).toBeVisible({ timeout: 10_000 });
+    await patternBtn.click();
+
+    await expect(page.getByText("consigliato").first()).toBeVisible({
+      timeout: 5_000,
+    });
+  });
+
+  test("[OHW-022b] Script panel toggles open and persists", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
+
+    const sceneButtons = page.locator('[class*="sceneItem"]');
+    await sceneButtons.first().click();
+
+    const scriptTab = page.getByRole("button", {
+      name: /Apri pannello sceneggiatura/,
+    });
+    await expect(scriptTab).toBeVisible({ timeout: 10_000 });
+    await scriptTab.click();
+
+    await expect(page.getByText(/Scena \d+ — testo/)).toBeVisible({
+      timeout: 5_000,
+    });
+
+    await page.reload();
+    await sceneButtons.first().click();
+    await expect(page.getByText(/Scena \d+ — testo/)).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test("[OHW-022b] PlanPicker creates a second plan", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
+
+    const sceneButtons = page.locator('[class*="sceneItem"]');
+    await sceneButtons.first().click();
+
+    await expect(page.getByText("Piano A")).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole("button", { name: "+ piano" }).click();
+    await page.getByRole("button", { name: "Vuoto", exact: true }).click();
+
+    await expect(page.getByText("Piano B")).toBeVisible({ timeout: 10_000 });
   });
 });
