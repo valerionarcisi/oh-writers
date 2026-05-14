@@ -7,9 +7,9 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--ds-line-soft);
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-5);
+  border-block-end: 1px solid var(--ds-line);
   flex-shrink: 0;
 }
 
@@ -119,11 +119,12 @@
 .row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--ds-line-soft);
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-line);
   border-inline-start: 3px solid transparent;
   cursor: pointer;
+  transition: background var(--ds-duration-1, 150ms) var(--ds-ease);
 
   &:last-child {
     border-block-end: none;
@@ -135,11 +136,11 @@
 }
 
 .rowActive {
-  background: color-mix(in srgb, var(--ds-warning) 8%, transparent);
-  border-inline-start-color: var(--ds-warning);
+  background: color-mix(in srgb, var(--ds-action) 6%, transparent);
+  border-inline-start-color: var(--ds-action);
 
   &:hover {
-    background: color-mix(in srgb, var(--ds-warning) 12%, transparent);
+    background: color-mix(in srgb, var(--ds-action) 10%, transparent);
   }
 }
 
@@ -158,8 +159,10 @@
 }
 
 .label {
-  font-size: var(--text-sm);
+  font-family: var(--ds-font-display, var(--ds-font-sans));
+  font-size: 15px;
   font-weight: 500;
+  letter-spacing: -0.005em;
   color: var(--ds-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -169,15 +172,16 @@
 .badgeActive {
   display: inline-flex;
   align-items: center;
-  padding-inline: var(--space-2);
-  padding-block: calc(var(--space-1) / 2);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
+  padding-inline: var(--ds-space-2);
+  padding-block: 1px;
+  font-family: var(--ds-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ds-text-on-dark);
-  background: var(--ds-action);
-  border-radius: var(--radius-sm);
+  color: var(--ds-action);
+  background: color-mix(in srgb, var(--ds-action) 12%, transparent);
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
@@ -217,18 +221,27 @@
 }
 
 .sub {
-  font-size: 0.75rem;
-  color: var(--ds-text-mute);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-3);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--ds-space-2);
   flex-wrap: wrap;
+  margin-block-start: 2px;
 }
 
 .rowActions {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--ds-space-1);
   flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity var(--ds-duration-1, 150ms) var(--ds-ease);
+
+  .row:hover & {
+    opacity: 1;
+  }
 }
 
 .renameRow {

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
+import { FloatingDock } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -20,7 +20,6 @@ import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
 import { AIAssistantPanel } from "./AIAssistantPanel";
-import { SaveIndicator } from "~/features/screenplay-editor";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   isBulletListActive,
@@ -83,7 +82,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const editorViewRef = useRef<EditorView | null>(null);
   const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
-  const { isDirty, isSaving, isError, lastSavedAt, flush } = useAutoSave(
+  const { isDirty, flush } = useAutoSave(
     save,
     document.id,
     content,
@@ -190,100 +189,39 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     );
   };
 
+  const toggleVersionsDrawer = () => {
+    if (isVersionsOpen) {
+      closeDrawer();
+    } else {
+      openDrawer(
+        {
+          kind: "document",
+          documentId: document.id,
+          docType: type,
+          canEdit: document.canEdit,
+          currentVersionId: document.currentVersionId ?? null,
+        },
+        {
+          dirtyHook: {
+            isDirty: () => isDirtyRef.current,
+            flush: () => flushRef.current(),
+          },
+        },
+      );
+    }
+  };
+
   return (
     <div className={styles.page}>
-      {/* Toolbar */}
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarLeft}>
-          <Link
-            to="/projects/$id"
-            params={{ id: document.projectId }}
-            className={styles.backLink}
-          >
-            ← Back
-          </Link>
-          <h1 className={styles.docTitle}>{DOCUMENT_LABELS[type]}</h1>
-          {isReadOnly && (
-            <span
-              className={styles.readOnlyBadge}
-              data-testid="narrative-readonly-badge"
-            >
-              Read only
-            </span>
-          )}
+      {isReadOnly && (
+        <div
+          className={styles.readOnlyBadge}
+          data-testid="narrative-readonly-badge"
+          role="status"
+        >
+          Read only
         </div>
-        <div className={styles.toolbarRight}>
-          {isNarrative && (
-            <button
-              type="button"
-              className={styles.saveBtn}
-              onClick={handleExport}
-              disabled={allEmpty || exportPdf.isPending}
-              data-testid="narrative-export-pdf"
-            >
-              {exportPdf.isPending ? "Exporting…" : "Export PDF"}
-            </button>
-          )}
-          {!isReadOnly && (
-            <SaveIndicator
-              isDirty={isDirty}
-              isSaving={isSaving}
-              isError={isError}
-              isOffline={false}
-              lastSavedAt={lastSavedAt}
-              onFlush={flush}
-            />
-          )}
-          <button
-            className={`${styles.saveBtn} ${isVersionsOpen ? styles.saveBtnActive : ""}`}
-            onClick={() =>
-              isVersionsOpen
-                ? closeDrawer()
-                : openDrawer(
-                    {
-                      kind: "document",
-                      documentId: document.id,
-                      docType: type,
-                      canEdit: document.canEdit,
-                      currentVersionId: document.currentVersionId ?? null,
-                    },
-                    {
-                      dirtyHook: {
-                        isDirty: () => isDirtyRef.current,
-                        flush: () => flushRef.current(),
-                      },
-                    },
-                  )
-            }
-            type="button"
-            aria-pressed={isVersionsOpen}
-            data-testid="narrative-versions-toggle"
-          >
-            Versioni
-          </button>
-          <div
-            className={styles.modeToggle}
-            role="group"
-            aria-label="Editor mode"
-          >
-            <button
-              className={`${styles.modeBtn} ${mode === "free" ? styles.modeBtnActive : ""}`}
-              onClick={() => setMode("free")}
-              type="button"
-            >
-              Free
-            </button>
-            <button
-              className={`${styles.modeBtn} ${mode === "assisted" ? styles.modeBtnActive : ""}`}
-              onClick={() => setMode("assisted")}
-              type="button"
-              aria-label="Assisted mode"
-            >
-              Assisted
-            </button>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Editor area */}
       <div
@@ -459,6 +397,28 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           </span>
         </div>
       )}
+
+      <FloatingDock
+        label={DOCUMENT_LABELS[type].toUpperCase()}
+        primaryAction={{
+          label:
+            isNarrative && exportPdf.isPending
+              ? "Esportando…"
+              : "Esporta PDF",
+          hotkey: "⌘E",
+          onClick: handleExport,
+        }}
+        secondaryActions={[
+          {
+            label: "Versioni",
+            onClick: toggleVersionsDrawer,
+          },
+          {
+            label: mode === "free" ? "Modalità: Free" : "Modalità: Assisted",
+            onClick: () => setMode(mode === "free" ? "assisted" : "free"),
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -9,11 +9,11 @@
   position: absolute;
   inset-block: 0;
   inset-inline-end: 0;
-  inline-size: var(--drawer-width, 360px);
-  min-inline-size: 280px;
+  inline-size: var(--drawer-width, 420px);
+  min-inline-size: 320px;
   max-inline-size: 600px;
   background: var(--ds-surface);
-  border-inline-start: 1px solid var(--ds-line-soft);
+  border-inline-start: 1px solid var(--ds-line);
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-xl);
@@ -64,14 +64,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-block-end: 1px solid var(--ds-line-soft);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-block-end: 1px solid var(--ds-line);
   flex-shrink: 0;
 }
 
 .title {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-family: var(--ds-font-display, var(--ds-font-sans));
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--ds-text);
   margin: 0;
 }

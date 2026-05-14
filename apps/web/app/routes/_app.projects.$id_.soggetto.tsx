@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
+import { FloatingDock } from "@oh-writers/ui";
 import {
   ExportPdfModal,
   ExportSiaeModal,
@@ -137,26 +138,6 @@ function SoggettoPageReady({
 
   return (
     <main className={styles.page} data-testid="soggetto-page">
-      <div className={styles.toolbar} data-testid="soggetto-toolbar">
-        <button
-          type="button"
-          className={styles.saveBtn}
-          onClick={() => setIsExportOpen(true)}
-          disabled={exportDocx.isPending}
-          data-testid="soggetto-export"
-        >
-          {exportDocx.isPending ? "Esportazione…" : "Esporta"}
-        </button>
-        <button
-          type="button"
-          className={styles.saveBtn}
-          onClick={() => setIsSiaeOpen(true)}
-          data-testid="soggetto-export-siae"
-        >
-          Esporta SIAE
-        </button>
-      </div>
-
       <ExportSiaeModal
         isOpen={isSiaeOpen}
         onClose={() => setIsSiaeOpen(false)}
@@ -193,6 +174,21 @@ function SoggettoPageReady({
           />
         </div>
       </div>
+
+      <FloatingDock
+        label="SOGGETTO"
+        primaryAction={{
+          label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
+          hotkey: "⌘E",
+          onClick: () => setIsExportOpen(true),
+        }}
+        secondaryActions={[
+          {
+            label: "Esporta SIAE",
+            onClick: () => setIsSiaeOpen(true),
+          },
+        ]}
+      />
     </main>
   );
 }
