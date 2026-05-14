@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Breakdown · F · Ambient Cesare</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+        --danger: #b33a28;
+
+        --c-cast: #6b3e7a;
+        --c-comparse: #7a5524;
+        --c-locations: #9a5128;
+        --c-vehicles: #2c6168;
+        --c-scenografia: #8a5a1f;
+        --c-costumi: #8b3565;
+        --c-fotografia: #34487a;
+        --c-suono: #5a6b25;
+        --c-vfx: #6a3e8a;
+        --c-atmosfera: #4d6878;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-pill: 100px;
+      }
+
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px; line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      /* ─── TOP BAR — 48px sticky ─── */
+      .topbar {
+        position: sticky; top: 0; z-index: 40;
+        height: 48px; background: var(--paper-1);
+        border-bottom: 1px solid var(--line);
+        display: grid; grid-template-columns: 1fr auto 1fr;
+        align-items: center; padding: 0 var(--space-6);
+      }
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: var(--ink-1); color: var(--paper-1);
+        display: grid; place-items: center;
+        font-family: var(--font-display); font-style: italic; font-size: 13px;
+      }
+      .breadcrumbs {
+        display: flex; align-items: center; gap: var(--space-2);
+        font-family: var(--font-display); font-style: italic; font-size: 15px;
+      }
+      .breadcrumbs .sep { color: var(--ink-4); font-style: normal; }
+      .breadcrumbs button { color: var(--ink-1); display: flex; gap: 4px; align-items: center; }
+      .breadcrumbs .chev { color: var(--ink-3); }
+      .topbar-right { display: flex; align-items: center; gap: var(--space-3); justify-self: end; }
+      .save-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
+      }
+      .save-pill::before {
+        content: ""; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--leaf);
+      }
+      .icon-btn {
+        width: 28px; height: 28px; border-radius: var(--radius-sm);
+        display: grid; place-items: center; color: var(--ink-2);
+      }
+      .icon-btn:hover { background: var(--paper-3); }
+      .cesare-btn {
+        display: flex; align-items: center; gap: var(--space-2);
+        padding: 5px var(--space-3) 5px var(--space-2);
+        border-radius: var(--radius-pill); border: 1px solid var(--line);
+        background: var(--page); font-size: 12px;
+      }
+      .cesare-btn .kbd {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); padding: 1px 4px; border-radius: 3px;
+        background: var(--paper-2);
+      }
+      .avatar {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: var(--clay-soft); color: var(--clay);
+        display: grid; place-items: center;
+        font-size: 11px; font-weight: 600;
+      }
+
+      /* ─── VIEWBAR — sticky 48px below topbar ─── */
+      .viewbar {
+        position: sticky; top: 48px; z-index: 30;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line);
+        padding: var(--space-3) var(--space-6);
+        display: grid; grid-template-columns: 1fr auto; gap: var(--space-6);
+        align-items: center;
+      }
+      .viewbar-left {
+        display: flex; align-items: center; flex-wrap: wrap;
+        gap: var(--space-3) var(--space-4);
+      }
+      .viewbar-label {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--ink-3);
+      }
+      .chip-row { display: flex; gap: var(--space-1); align-items: center; flex-wrap: wrap; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px var(--space-3);
+        border-radius: var(--radius-pill);
+        border: 1px solid transparent;
+        font-size: 12px; color: var(--ink-3);
+        transition: all 150ms ease;
+        cursor: pointer;
+      }
+      .chip::before {
+        content: ""; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--ink-5);
+      }
+      .chip.is-on {
+        color: var(--ink-1);
+        border-color: var(--chip-color, var(--ink-3));
+      }
+      .chip.is-on::before { background: var(--chip-color, var(--ink-1)); }
+      .vsep { width: 1px; height: 18px; background: var(--line); }
+      .tab-group { display: flex; gap: var(--space-1); }
+      .tab {
+        padding: 4px var(--space-3);
+        border-radius: var(--radius-sm);
+        font-size: 12px; color: var(--ink-3);
+      }
+      .tab.is-active {
+        background: var(--paper-3); color: var(--ink-1); font-weight: 500;
+      }
+      .version-select {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3); padding: 4px var(--space-3);
+        border: 1px solid var(--line); border-radius: var(--radius-sm);
+        background: var(--page);
+      }
+
+      /* ─── HERO — scene summary ─── */
+      .hero {
+        max-width: 1480px; margin: 0 auto;
+        padding: var(--space-10) var(--space-6) var(--space-6);
+        display: grid; grid-template-columns: 1fr auto;
+        align-items: end; gap: var(--space-6);
+      }
+      .hero .eyebrow {
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--ink-3); margin-bottom: var(--space-3);
+      }
+      .hero h1 {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.02em;
+        margin: 0;
+      }
+      .hero h1 .num { color: var(--ink-1); }
+      .hero h1 .sub { color: var(--ink-3); }
+      .hero-meta {
+        font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
+        display: flex; gap: var(--space-3); flex-wrap: wrap;
+      }
+      .hero-meta b { color: var(--ink-1); font-weight: 500; }
+
+      /* ─── LAYOUT — 3 columns ─── */
+      .layout {
+        max-width: 1480px; margin: 0 auto;
+        padding: 0 var(--space-6) var(--space-10);
+        display: grid;
+        grid-template-columns: 240px 1fr 260px;
+        gap: var(--space-8);
+        align-items: start;
+      }
+
+      /* ─── LEFT: Scene TOC ─── */
+      .toc { position: sticky; top: 112px; }
+      .toc-head {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--ink-3); margin-bottom: var(--space-3);
+        padding: 0 var(--space-3);
+      }
+      .toc-list { display: flex; flex-direction: column; gap: 2px; }
+      .toc-item {
+        display: grid; grid-template-columns: 32px 1fr auto;
+        align-items: center; gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        cursor: pointer; transition: background 150ms ease;
+      }
+      .toc-item:hover { background: var(--paper-2); }
+      .toc-item.is-current {
+        background: var(--clay-soft);
+        box-shadow: inset 2px 0 0 var(--clay);
+      }
+      .toc-item .n {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-4); text-transform: uppercase;
+      }
+      .toc-item .label {
+        font-size: 12px; color: var(--ink-2);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .toc-item.is-current .label { color: var(--ink-1); font-weight: 500; }
+      .toc-item .count {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); padding: 1px 6px;
+        background: var(--paper-3); border-radius: var(--radius-pill);
+      }
+      .toc-item.is-current .count {
+        background: var(--clay); color: var(--page);
+      }
+      .toc-act {
+        font-family: var(--font-display); font-style: italic;
+        font-size: 13px; color: var(--ink-3);
+        padding: var(--space-3) var(--space-3) var(--space-1);
+      }
+
+      /* ─── CENTER: chip wall ─── */
+      .center { display: flex; flex-direction: column; gap: var(--space-8); }
+      .category {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .category-head {
+        display: grid; grid-template-columns: auto 1fr auto auto;
+        align-items: center; gap: var(--space-3);
+        padding: var(--space-4) var(--space-5);
+        border-bottom: 1px solid var(--line-soft);
+        background: var(--paper-1);
+      }
+      .category-head::before {
+        content: ""; width: 8px; height: 8px; border-radius: 50%;
+        background: var(--cat-color);
+      }
+      .category-name {
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--ink-1); font-weight: 500;
+      }
+      .category-count {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3);
+      }
+      .category-add {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); padding: 3px var(--space-2);
+        border-radius: var(--radius-sm);
+        border: 1px dashed var(--line);
+      }
+      .category-add:hover {
+        color: var(--ink-1); border-color: var(--ink-3);
+        background: var(--paper-2);
+      }
+      .category-body {
+        padding: var(--space-4) var(--space-5);
+        display: flex; flex-wrap: wrap; gap: var(--space-2);
+      }
+      .el {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px var(--space-3);
+        border-radius: var(--radius-pill);
+        background: color-mix(in oklch, var(--cat-color) 8%, transparent);
+        border: 1px solid color-mix(in oklch, var(--cat-color) 20%, transparent);
+        font-size: 12px;
+        color: var(--ink-1);
+        cursor: pointer; transition: all 150ms ease;
+      }
+      .el:hover {
+        background: color-mix(in oklch, var(--cat-color) 14%, transparent);
+        border-color: color-mix(in oklch, var(--cat-color) 35%, transparent);
+      }
+      .el .badge {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); padding: 0 5px;
+        background: var(--page); border-radius: 8px;
+      }
+      .el .scenes {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3);
+      }
+      .el.is-suggested {
+        background: transparent;
+        border: 1px dashed var(--cat-color);
+        color: var(--cat-color);
+      }
+      .el.is-suggested .ai {
+        font-family: var(--font-mono); font-size: 9px;
+        background: var(--leaf-soft); color: var(--leaf);
+        padding: 1px 5px; border-radius: 6px;
+      }
+      .el.is-pending::after {
+        content: ""; width: 5px; height: 5px; border-radius: 50%;
+        background: var(--clay); margin-left: 2px;
+      }
+
+      /* ─── Screenplay context preview (small, secondary) ─── */
+      .context {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: var(--space-6) var(--space-8);
+      }
+      .context-head {
+        display: flex; justify-content: space-between; align-items: baseline;
+        margin-bottom: var(--space-4);
+      }
+      .context-eyebrow {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--ink-3);
+      }
+      .context-jump {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--clay);
+      }
+      .context-page {
+        font-family: "Courier Prime", monospace;
+        font-size: 13px; line-height: 1.7;
+        color: var(--ink-2);
+        max-height: 220px; overflow: hidden;
+        position: relative;
+      }
+      .context-page::after {
+        content: ""; position: absolute; bottom: 0; left: 0; right: 0;
+        height: 60px;
+        background: linear-gradient(to bottom, transparent, var(--page));
+      }
+      .context-page .sh {
+        text-transform: uppercase; font-weight: 700; color: var(--ink-1);
+        margin-block: var(--space-3) var(--space-2);
+      }
+      .mark {
+        background: color-mix(in oklch, var(--mark-color, var(--leaf)) 18%, transparent);
+        border-bottom: 1px solid var(--mark-color, var(--leaf));
+        padding: 0 2px; border-radius: 2px;
+      }
+
+      /* ─── RIGHT: Cesare margin ─── */
+      .margin { position: sticky; top: 112px; display: flex; flex-direction: column; gap: var(--space-3); }
+      .margin-head {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--ink-3);
+        padding: 0 var(--space-2);
+        display: flex; align-items: center; gap: var(--space-2);
+      }
+      .margin-head::before {
+        content: ""; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--leaf);
+      }
+      .note {
+        background: var(--leaf-soft);
+        border-inline-start: 2px solid var(--leaf);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+      }
+      .note.is-prod {
+        background: var(--clay-soft);
+        border-color: var(--clay);
+      }
+      .note-kind {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--leaf); font-weight: 500;
+        margin-bottom: var(--space-2);
+      }
+      .note.is-prod .note-kind { color: var(--clay); }
+      .note-text {
+        font-family: var(--font-display); font-style: italic;
+        font-size: 13.5px; line-height: 1.45;
+        color: var(--ink-1);
+        margin-bottom: var(--space-3);
+      }
+      .note-actions { display: flex; gap: var(--space-2); }
+      .note-action {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        padding: 4px var(--space-2);
+        border-radius: var(--radius-sm);
+        color: var(--ink-2);
+      }
+      .note-action.is-primary {
+        background: var(--leaf); color: var(--page);
+      }
+      .note.is-prod .note-action.is-primary { background: var(--clay); }
+      .note-action:not(.is-primary):hover { background: rgba(0,0,0,0.06); }
+
+      /* ─── Floating Dock ─── */
+      .dock {
+        position: fixed; bottom: var(--space-6); right: var(--space-6);
+        z-index: 50;
+        display: flex; align-items: center; gap: var(--space-3);
+        padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-pill);
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+      }
+      .dock-label {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--ink-3);
+        padding-right: var(--space-3);
+        border-right: 1px solid var(--line);
+      }
+      .dock-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px var(--space-3); border-radius: var(--radius-pill);
+        font-size: 12px; color: var(--ink-1);
+      }
+      .dock-btn:hover { background: var(--paper-2); }
+      .dock-btn.is-primary {
+        background: var(--clay); color: var(--page);
+      }
+      .dock-btn.is-primary:hover { background: #75301a; }
+      .dock-btn .kbd {
+        font-family: var(--font-mono); font-size: 10px;
+        opacity: 0.75; padding-inline-start: 2px;
+      }
+      .dock-cesare {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px var(--space-3); border-radius: var(--radius-pill);
+        background: var(--leaf-soft); color: var(--leaf);
+        font-size: 12px; font-weight: 500;
+        border: 1px solid var(--leaf);
+      }
+      .dock-cesare::before {
+        content: ""; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--leaf);
+      }
+
+      svg.icon { width: 14px; height: 14px; }
+    </style>
+  </head>
+  <body>
+    <!-- ─────────────── TOPBAR ─────────────── -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">O</div>
+        <div class="breadcrumbs">
+          <span class="sep">/</span>
+          <button>Non fa ridere <span class="chev">▾</span></button>
+          <span class="sep">/</span>
+          <button>Breakdown <span class="chev">▾</span></button>
+        </div>
+      </div>
+      <div></div>
+      <div class="topbar-right">
+        <span class="save-pill">Salvato 8s fa</span>
+        <button class="icon-btn" aria-label="Cerca">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+        <button class="icon-btn" aria-label="Notifiche">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+        </button>
+        <button class="cesare-btn">Chiedi a Cesare <span class="kbd">⌘.</span></button>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <!-- ─────────────── VIEWBAR ─────────────── -->
+    <nav class="viewbar" aria-label="Opzioni di visualizzazione">
+      <div class="viewbar-left">
+        <span class="viewbar-label">Sottolinea:</span>
+        <div class="chip-row">
+          <button class="chip is-on" style="--chip-color: var(--c-cast)">Cast</button>
+          <button class="chip is-on" style="--chip-color: var(--c-locations)">Locations</button>
+          <button class="chip is-on" style="--chip-color: var(--c-scenografia)">Props</button>
+          <button class="chip" style="--chip-color: var(--c-costumi)">Costumi</button>
+          <button class="chip" style="--chip-color: var(--c-fotografia)">Fotografia</button>
+          <button class="chip" style="--chip-color: var(--c-suono)">Suono</button>
+          <button class="chip" style="--chip-color: var(--c-vehicles)">Veicoli</button>
+        </div>
+        <span class="vsep"></span>
+        <div class="tab-group">
+          <button class="tab is-active">Per scena</button>
+          <button class="tab">Per progetto</button>
+          <button class="tab">Matrice</button>
+        </div>
+      </div>
+      <button class="version-select">v3 · 14 mag 2026 ▾</button>
+    </nav>
+
+    <!-- ─────────────── HERO ─────────────── -->
+    <section class="hero">
+      <div>
+        <p class="eyebrow">SCENA 3 · INT. PIZZERIA SOTTOSCALA — SERA</p>
+        <h1><span class="num">12 elementi</span> <span class="sub">spogliati · 3 da confermare</span></h1>
+      </div>
+      <div class="hero-meta">
+        <span><b>3</b> cast</span><span>·</span>
+        <span><b>2</b> location</span><span>·</span>
+        <span><b>4</b> props</span><span>·</span>
+        <span><b>1</b> vfx</span><span>·</span>
+        <span><b>2</b> suono</span>
+      </div>
+    </section>
+
+    <!-- ─────────────── LAYOUT ─────────────── -->
+    <main class="layout">
+      <!-- LEFT: scene TOC -->
+      <aside class="toc">
+        <p class="toc-head">Indice · 9 scene</p>
+        <p class="toc-act">Atto I</p>
+        <div class="toc-list">
+          <button class="toc-item">
+            <span class="n">SC.1</span>
+            <span class="label">Aperture</span>
+            <span class="count">6</span>
+          </button>
+          <button class="toc-item">
+            <span class="n">SC.2</span>
+            <span class="label">Caffè con Marco</span>
+            <span class="count">4</span>
+          </button>
+          <button class="toc-item is-current">
+            <span class="n">SC.3</span>
+            <span class="label">Int. Pizzeria</span>
+            <span class="count">12</span>
+          </button>
+          <button class="toc-item">
+            <span class="n">SC.4</span>
+            <span class="label">Ext. Vicolo</span>
+            <span class="count">3</span>
+          </button>
+        </div>
+        <p class="toc-act">Atto II</p>
+        <div class="toc-list">
+          <button class="toc-item">
+            <span class="n">SC.5</span>
+            <span class="label">Int. Cucina</span>
+            <span class="count">5</span>
+          </button>
+          <button class="toc-item">
+            <span class="n">SC.6</span>
+            <span class="label">Int. Sala</span>
+            <span class="count">8</span>
+          </button>
+          <button class="toc-item">
+            <span class="n">SC.7</span>
+            <span class="label">Ext. Piazza</span>
+            <span class="count">4</span>
+          </button>
+        </div>
+        <p class="toc-act">Atto III</p>
+        <div class="toc-list">
+          <button class="toc-item">
+            <span class="n">SC.8</span>
+            <span class="label">Int. Pizzeria</span>
+            <span class="count">5</span>
+          </button>
+          <button class="toc-item">
+            <span class="n">SC.9</span>
+            <span class="label">Ext. Strada</span>
+            <span class="count">2</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- CENTER: chip wall by category -->
+      <section class="center">
+        <!-- CAST -->
+        <div class="category" style="--cat-color: var(--c-cast)">
+          <header class="category-head">
+            <span class="category-name">Cast</span>
+            <div></div>
+            <span class="category-count">3 elementi</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el is-pending">John <span class="badge" data-num>×2</span></span>
+            <span class="el">Pubblico <span class="badge" data-num>×6</span></span>
+            <span class="el">Filippo <span class="badge" data-num>×7</span></span>
+            <span class="el is-suggested">Cameriere <span class="ai">AI</span></span>
+          </div>
+        </div>
+
+        <!-- LOCATIONS -->
+        <div class="category" style="--cat-color: var(--c-locations)">
+          <header class="category-head">
+            <span class="category-name">Locations</span>
+            <div></div>
+            <span class="category-count">2 elementi</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el">Pizzeria Sottoscala</span>
+            <span class="el">Palco improvvisato</span>
+            <span class="el is-suggested">Esterno notte <span class="ai">AI</span></span>
+          </div>
+        </div>
+
+        <!-- PROPS / SCENOGRAFIA -->
+        <div class="category" style="--cat-color: var(--c-scenografia)">
+          <header class="category-head">
+            <span class="category-name">Props</span>
+            <div></div>
+            <span class="category-count">4 elementi</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el">Microfono</span>
+            <span class="el is-pending">Striscione "Open Grezzo"</span>
+            <span class="el">Locandina</span>
+            <span class="el">Sigaretta</span>
+            <span class="el is-suggested">Pizza fumante <span class="ai">AI</span></span>
+            <span class="el is-suggested">Tovaglioli <span class="ai">AI</span></span>
+          </div>
+        </div>
+
+        <!-- COSTUMI -->
+        <div class="category" style="--cat-color: var(--c-costumi)">
+          <header class="category-head">
+            <span class="category-name">Costumi</span>
+            <div></div>
+            <span class="category-count">2 elementi</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el">Giacca John usata</span>
+            <span class="el">Maglietta zozza Filippo</span>
+          </div>
+        </div>
+
+        <!-- FOTOGRAFIA -->
+        <div class="category" style="--cat-color: var(--c-fotografia)">
+          <header class="category-head">
+            <span class="category-name">Fotografia</span>
+            <div></div>
+            <span class="category-count">1 elemento</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el is-suggested">Luce calda pratica <span class="ai">AI</span></span>
+          </div>
+        </div>
+
+        <!-- SUONO -->
+        <div class="category" style="--cat-color: var(--c-suono)">
+          <header class="category-head">
+            <span class="category-name">Suono</span>
+            <div></div>
+            <span class="category-count">2 elementi</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el">Applauso <span class="badge" data-num>×3</span></span>
+            <span class="el">Risate</span>
+            <span class="el">Voice Over</span>
+          </div>
+        </div>
+
+        <!-- VFX -->
+        <div class="category" style="--cat-color: var(--c-vfx)">
+          <header class="category-head">
+            <span class="category-name">VFX</span>
+            <div></div>
+            <span class="category-count">1 elemento</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el is-suggested">Fumo pizza in cottura <span class="ai">AI</span></span>
+          </div>
+        </div>
+
+        <!-- ATMOSFERA -->
+        <div class="category" style="--cat-color: var(--c-atmosfera)">
+          <header class="category-head">
+            <span class="category-name">Atmosfera</span>
+            <div></div>
+            <span class="category-count">1 elemento</span>
+            <button class="category-add">+ Aggiungi</button>
+          </header>
+          <div class="category-body">
+            <span class="el">Serata Comedy</span>
+          </div>
+        </div>
+
+        <!-- Screenplay context -->
+        <div class="context">
+          <div class="context-head">
+            <span class="context-eyebrow">Contesto · pagina 4</span>
+            <button class="context-jump">Apri nello screenplay →</button>
+          </div>
+          <div class="context-page">
+            <p class="sh">INT/EXT. Angolo Open Grezzo / Fuori dalla porta — Notte</p>
+            <p>
+              <span class="mark" style="--mark-color: var(--c-cast)">John</span> (35) ha il
+              <span class="mark" style="--mark-color: var(--c-scenografia)">microfono</span>
+              in mano. È in piedi in un angolo del ristorante adibito a
+              <span class="mark" style="--mark-color: var(--c-locations)">palco</span>.
+              Dietro di lui c'è un grande
+              <span class="mark" style="--mark-color: var(--c-scenografia)">striscione</span>
+              con scritto "OPEN GREZZO — UN OPEN MIC PROVINCIALE".
+            </p>
+            <p>
+              <span class="mark" style="--mark-color: var(--c-cast)">JOHN</span><br/>
+              AHAHHAH! Ma tua moglie ancora ti ci vuole a letto? AHAH! Mamma se sci diventato bruttu! AHAH! Nice Nice! Buona serata a tutti siamo qui al Sottoscala pizzeria per una grande serata di Stand Up Comedy!
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Cesare margin -->
+      <aside class="margin" aria-label="Note di Cesare">
+        <p class="margin-head">Note di Cesare · 4</p>
+        <article class="note">
+          <p class="note-kind">+ Spoglio</p>
+          <p class="note-text">
+            Cesare ha trovato <b>3 elementi nuovi</b> nello script:
+            <i>cameriere</i>, <i>pizza fumante</i>, <i>luce calda pratica</i>.
+            Vuoi che li aggiunga al breakdown?
+          </p>
+          <div class="note-actions">
+            <button class="note-action is-primary">Accetta tutti</button>
+            <button class="note-action">Rivedi</button>
+            <button class="note-action">Ignora</button>
+          </div>
+        </article>
+
+        <article class="note is-prod">
+          <p class="note-kind">+ Produzione</p>
+          <p class="note-text">
+            "Striscione Open Grezzo" appare in sc.1 e sc.3 — è lo stesso? Conviene
+            unirli per non duplicare il prop.
+          </p>
+          <div class="note-actions">
+            <button class="note-action is-primary">Unisci</button>
+            <button class="note-action">Più tardi</button>
+          </div>
+        </article>
+
+        <article class="note">
+          <p class="note-kind">+ Scrittura</p>
+          <p class="note-text">
+            La scena ha 4 elementi cast non assegnati. Definirli prima del budget
+            ti risparmia un giro di revisione.
+          </p>
+          <div class="note-actions">
+            <button class="note-action is-primary">Apri cast</button>
+            <button class="note-action">Più tardi</button>
+          </div>
+        </article>
+      </aside>
+    </main>
+
+    <!-- ─────────────── FLOATING DOCK ─────────────── -->
+    <div class="dock" role="toolbar" aria-label="Azioni breakdown">
+      <span class="dock-label">Breakdown</span>
+      <button class="dock-btn is-primary">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        Ri-spogliare con AI <span class="kbd">⌘R</span>
+      </button>
+      <button class="dock-btn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
+        Aggiungi <span class="kbd">⌘N</span>
+      </button>
+      <button class="dock-btn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Esporta <span class="kbd">⌘E</span>
+      </button>
+      <button class="dock-cesare">Cesare <span data-num>4</span></button>
+    </div>
+  </body>
+</html>
