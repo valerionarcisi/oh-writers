@@ -1,0 +1,71 @@
+/* packages/ui/src/composites/HeroKPI/HeroKPI.module.css */
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.eyebrow {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ds-text-3);
+  line-height: 1;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-3);
+}
+
+.value {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ds-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.valueSm {
+  font-size: 40px;
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.deltaPositive {
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+}
+
+.deltaNegative {
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+}
+
+.deltaNeutral {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text-3);
+}
+
+.sub {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-mute);
+  margin-block-start: var(--ds-space-1);
+}

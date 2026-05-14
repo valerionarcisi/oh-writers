@@ -1,0 +1,95 @@
+/* packages/ui/src/composites/MarginNote/MarginNote.module.css */
+.note {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-agent-soft);
+  border-inline-start: 2px solid var(--ds-agent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.noteProducer {
+  background: var(--ds-action-soft);
+  border-inline-start-color: var(--ds-action);
+}
+
+.kind {
+  font-family: var(--ds-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ds-agent);
+}
+
+.kindProducer {
+  color: var(--ds-action);
+}
+
+.kindLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.star {
+  font-size: 10px;
+}
+
+.text {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-text-2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  border: 1px solid transparent;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background var(--ds-duration-1) var(--ds-ease);
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.accept {
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+.ignore {
+  background: transparent;
+  color: var(--ds-text-3);
+  border-color: var(--ds-line);
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actionBtn { transition: none; }
+}
