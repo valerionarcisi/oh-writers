@@ -21,8 +21,13 @@
 .body {
   flex: 1;
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 240px auto 1fr;
   min-block-size: 0;
+}
+
+.scriptColumn {
+  display: flex;
+  block-size: 100%;
 }
 
 .sceneSidebar {
