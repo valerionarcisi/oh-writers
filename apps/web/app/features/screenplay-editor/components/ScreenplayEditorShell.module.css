@@ -32,8 +32,25 @@
   box-shadow: 0 1px 0 var(--ds-line);
 }
 
-.viewbarCenter {
+.viewbarGrid {
   flex: 1 1 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-6);
+  max-inline-size: 1340px;
+  inline-size: 100%;
+  margin-inline: auto;
+}
+
+/* When the right Cesare margin is present (data-has-margin), reserve the
+   same 280px slot the .layout grid does — so the chip group sits in the
+   same column as the editor and reads centered above the page content. */
+.viewbarGrid[data-has-margin="true"] {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+
+.viewbarCenter {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,6 +60,7 @@
 .viewbarRight {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--ds-space-3);
 }
 
@@ -126,7 +144,9 @@
   max-inline-size: 1340px;
   inline-size: 100%;
   margin-inline: auto;
-  padding: 0 var(--ds-space-6) var(--ds-space-10);
+  /* Equal top breathing room so the editor card and the Cesare panel both
+     start at the same y just below the viewbar. */
+  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-10);
   align-items: start;
 }
 
@@ -136,7 +156,7 @@
   max-inline-size: 1040px;
   inline-size: 100%;
   margin-inline: auto;
-  padding: 0 var(--ds-space-6) var(--ds-space-10);
+  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-10);
   align-items: start;
 }
 

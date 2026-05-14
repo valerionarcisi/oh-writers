@@ -122,6 +122,7 @@ export function ScreenplayEditorShell({
         data-scrolled={isScrolled || undefined}
       >
         <Viewbar>
+        <div className={styles.viewbarGrid} data-has-margin={cesareSide ? "true" : undefined}>
           <div className={styles.viewbarCenter}>{viewbarCenter}</div>
 
           <div className={styles.viewbarRight}>
@@ -204,6 +205,7 @@ export function ScreenplayEditorShell({
 
             <DraftMetaBadge projectId={projectId} />
           </div>
+        </div>
         </Viewbar>
       </div>
 
