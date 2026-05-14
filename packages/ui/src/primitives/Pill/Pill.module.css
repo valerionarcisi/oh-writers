@@ -1,0 +1,48 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 2px var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.clay {
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+}
+
+.leaf {
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+}
+
+.neutral {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text-3);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  background: currentColor;
+  color: var(--ds-surface);
+  border-radius: var(--ds-radius-pill);
+  min-width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  font-size: 9px;
+}
+
+.sm {
+  font-size: 9px;
+  padding: 1px var(--ds-space-1);
+}
