@@ -1,0 +1,53 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 4px var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.isOn {
+  background: var(--ds-surface);
+  border-color: var(--chip-color, var(--ds-line));
+  color: var(--chip-color, var(--ds-text));
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chip-color, var(--ds-text-3));
+  flex-shrink: 0;
+  transition: opacity var(--ds-duration-1) var(--ds-ease);
+}
+
+.chip:not(.isOn) .dot {
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip { transition: none; }
+  .dot  { transition: none; }
+}
