@@ -1,0 +1,12 @@
+/* packages/ui/src/fonts/fonts.css — DS-v2 font loading */
+/* Self-hosting verrà fatto in spec separata; per ora Google Fonts CDN. */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,400;9..144,1,500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+/* Numeric defaults — tabular nums on data attributes */
+[data-num] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on;
+}
