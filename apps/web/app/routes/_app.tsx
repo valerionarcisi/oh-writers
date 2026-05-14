@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
+import type { TopBarSection } from "@oh-writers/ui";
 import { AppShell } from "~/features/app-shell";
 import { useProject } from "~/features/projects";
 import type { AppUser } from "~/server/context";
@@ -53,6 +54,33 @@ function deriveSectionName(routeId: string): string {
   return "";
 }
 
+const PROJECT_SECTIONS: ReadonlyArray<{ segment: string; label: string }> = [
+  { segment: "screenplay", label: "Screenplay" },
+  { segment: "breakdown", label: "Breakdown" },
+  { segment: "schedule", label: "Schedule" },
+  { segment: "budget", label: "Budget" },
+  { segment: "title-page", label: "Frontespizio" },
+];
+
+function buildSections(
+  projectId: string | undefined,
+  activeSegment: string,
+): ReadonlyArray<TopBarSection> {
+  if (!projectId) return [];
+  return PROJECT_SECTIONS.map((s) => ({
+    label: s.label,
+    href: `/projects/${projectId}/${s.segment}`,
+    isActive: s.segment === activeSegment,
+  }));
+}
+
+function activeSegmentFromRouteId(routeId: string): string {
+  for (const s of PROJECT_SECTIONS) {
+    if (routeId.includes(s.segment)) return s.segment;
+  }
+  return "";
+}
+
 function AppLayout() {
   const { user } = Route.useLoaderData();
   const matches = useMatches();
@@ -62,6 +90,9 @@ function AppLayout() {
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch ? deriveSectionName(lastMatch.routeId) : "";
+  const activeSegment = lastMatch
+    ? activeSegmentFromRouteId(lastMatch.routeId)
+    : "";
 
   const { data: projectResult } = useProject(projectId ?? "");
   const projectName = projectResult?.isOk
@@ -70,12 +101,15 @@ function AppLayout() {
       ? "…"
       : "Oh Writers";
 
+  const sections = buildSections(projectId, activeSegment);
+
   return (
     <AppShell
       user={user}
       projectName={projectName}
       sectionName={sectionName}
       saveState="saved"
+      sections={sections.length > 0 ? sections : undefined}
     >
       <Outlet />
     </AppShell>

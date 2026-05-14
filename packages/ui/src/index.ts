@@ -107,7 +107,7 @@ export { SkipLink } from "./shell/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./shell/SkipLink/SkipLink";
 
 export { TopBar } from "./shell/TopBar/TopBar";
-export type { TopBarProps } from "./shell/TopBar/TopBar";
+export type { TopBarProps, TopBarSection } from "./shell/TopBar/TopBar";
 
 export { Viewbar, ViewbarSep } from "./shell/Viewbar/Viewbar";
 export type { ViewbarProps } from "./shell/Viewbar/Viewbar";

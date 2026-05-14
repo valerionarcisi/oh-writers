@@ -108,6 +108,67 @@
   flex-shrink: 0;
 }
 
+.sectionWrap {
+  position: relative;
+}
+
+.sectionPopover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  min-width: 220px;
+  padding: var(--ds-space-1);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  box-shadow: var(--ds-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
+.sectionItemActive {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.sectionItemDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ds-action);
+  flex-shrink: 0;
+}
+
 /* Spacer pushes right cluster to the right */
 .spacer {
   flex: 1;

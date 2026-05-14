@@ -1,10 +1,17 @@
 // packages/ui/src/shell/TopBar/TopBar.tsx
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../icons/Icon";
 import { SavePill } from "../../primitives/SavePill/SavePill";
 import type { SaveState } from "../../primitives/SavePill/SavePill";
 import { Presence } from "../../primitives/Presence/Presence";
 import type { PresenceUser } from "../../primitives/Presence/Presence";
 import styles from "./TopBar.module.css";
+
+export type TopBarSection = {
+  label: string;
+  href: string;
+  isActive?: boolean;
+};
 
 export type TopBarProps = {
   projectName: string;
@@ -18,6 +25,10 @@ export type TopBarProps = {
   presenceUsers?: PresenceUser[];
   notificationCount?: number;
   userInitials: string;
+  /** When provided, clicking the section breadcrumb opens a popover with these
+   *  entries. Each entry navigates via onNavigate(href). */
+  sections?: ReadonlyArray<TopBarSection>;
+  onNavigate?: (href: string) => void;
   onBrandClick?: () => void;
   onProjectClick?: () => void;
   onSectionClick?: () => void;
@@ -37,6 +48,8 @@ export function TopBar({
   presenceUsers = [],
   notificationCount = 0,
   userInitials,
+  sections,
+  onNavigate,
   onBrandClick,
   onProjectClick,
   onSectionClick,
@@ -45,6 +58,44 @@ export function TopBar({
   onAskCesare,
   onAvatarClick,
 }: TopBarProps) {
+  const [sectionsOpen, setSectionsOpen] = useState(false);
+  const sectionWrapRef = useRef<HTMLSpanElement>(null);
+  const hasSectionMenu = sections !== undefined && sections.length > 0;
+
+  useEffect(() => {
+    if (!sectionsOpen) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (
+        sectionWrapRef.current &&
+        !sectionWrapRef.current.contains(e.target as Node)
+      ) {
+        setSectionsOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSectionsOpen(false);
+    };
+    document.addEventListener("pointerdown", onDocPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [sectionsOpen]);
+
+  const handleSectionTriggerClick = () => {
+    if (hasSectionMenu) {
+      setSectionsOpen((v) => !v);
+      return;
+    }
+    onSectionClick?.();
+  };
+
+  const handleSectionPick = (href: string) => {
+    setSectionsOpen(false);
+    onNavigate?.(href);
+  };
+
   return (
     <header
       className={[styles.topbar, isScrolled ? styles.isScrolled : ""]
@@ -90,17 +141,50 @@ export function TopBar({
       <span className={styles.breadcrumbSep} aria-hidden="true">
         /
       </span>
-      <button
-        type="button"
-        className={styles.breadcrumbBtn}
-        onClick={onSectionClick}
-        aria-label={`Sezione: ${sectionName} — cambia sezione`}
-        aria-haspopup="listbox"
-        aria-expanded="false"
-      >
-        <span className={styles.sectionName}>{sectionName}</span>
-        <Icon name="chevron-down" size={12} aria-hidden={true} />
-      </button>
+      <span className={styles.sectionWrap} ref={sectionWrapRef}>
+        <button
+          type="button"
+          className={styles.breadcrumbBtn}
+          onClick={handleSectionTriggerClick}
+          aria-label={`Sezione: ${sectionName} — cambia sezione`}
+          aria-haspopup={hasSectionMenu ? "menu" : "listbox"}
+          aria-expanded={sectionsOpen}
+          data-testid="topbar-section-trigger"
+        >
+          <span className={styles.sectionName}>{sectionName}</span>
+          <Icon name="chevron-down" size={12} aria-hidden={true} />
+        </button>
+        {hasSectionMenu && sectionsOpen && (
+          <div
+            role="menu"
+            className={styles.sectionPopover}
+            data-testid="topbar-section-popover"
+          >
+            {sections.map((s) => {
+              const cls = [
+                styles.sectionItem,
+                s.isActive ? styles.sectionItemActive : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              return (
+                <button
+                  key={s.href}
+                  type="button"
+                  role="menuitem"
+                  className={cls}
+                  onClick={() => handleSectionPick(s.href)}
+                >
+                  <span>{s.label}</span>
+                  {s.isActive && (
+                    <span className={styles.sectionItemDot} aria-hidden="true" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </span>
 
       <div className={styles.spacer} />
 
