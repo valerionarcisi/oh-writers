@@ -56,6 +56,15 @@ interface ScreenplayEditorProps {
   /** Reports the current cursor's block element type up to the route so the
    *  viewbar chips reflect the same state. */
   onCurrentElementChange?: (element: ElementType) => void;
+  /** Reports live page/scene metrics up to the route so the right-side
+   *  Cesare panel can display real numbers (current page, total pages,
+   *  current scene, total scenes). */
+  onMetricsChange?: (metrics: {
+    pageCurrent: number;
+    pageTotal: number;
+    sceneCurrent: number | null;
+    sceneTotal: number;
+  }) => void;
 }
 
 /** Imperative handle exposed by the editor so the parent route can drive
@@ -100,6 +109,7 @@ export const ScreenplayEditor = forwardRef<
     isCesareOn: isCesareOnProp,
     onToggleCesare,
     onCurrentElementChange,
+    onMetricsChange,
   },
   ref,
 ) {
@@ -262,6 +272,17 @@ export const ScreenplayEditor = forwardRef<
   useEffect(() => {
     onCurrentElementChange?.(currentElement);
   }, [currentElement, onCurrentElementChange]);
+
+  // Bubble up live page/scene metrics so the right-side Cesare panel can
+  // render real numbers instead of placeholders.
+  useEffect(() => {
+    onMetricsChange?.({
+      pageCurrent: pageInfo.current,
+      pageTotal: pageInfo.total,
+      sceneCurrent: currentSceneIndex,
+      sceneTotal: countHeadings(pmDoc),
+    });
+  }, [pageInfo, currentSceneIndex, pmDoc, onMetricsChange]);
   // Fall back to the fountain-line estimate until the paginator emits its
   // first measurement (post-mount rAF). After that, pageInfo wins because
   // it matches the rendered page-break geometry.

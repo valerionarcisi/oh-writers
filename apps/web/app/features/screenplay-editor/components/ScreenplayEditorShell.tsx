@@ -43,6 +43,11 @@ export type ScreenplayEditorShellProps = {
    *  Breakdown V2 page uses for its 'Sottolinea' chips. The screenplay route
    *  fills it with the element conversion chips (Scene/Action/Character/...). */
   viewbarCenter?: ReactNode;
+  /** Optional right-column slot. When provided the layout becomes a
+   *  1fr / 280px grid (capped at 1340px), mirroring the Breakdown V2
+   *  screenplay+panel layout. When omitted the editor takes the centered
+   *  column at the narrower 1040px max width. */
+  cesareSide?: ReactNode;
 };
 
 export function ScreenplayEditorShell({
@@ -51,6 +56,7 @@ export function ScreenplayEditorShell({
   children,
   acts,
   viewbarCenter,
+  cesareSide,
 }: ScreenplayEditorShellProps) {
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
@@ -202,10 +208,11 @@ export function ScreenplayEditorShell({
       </div>
 
 
-      <div className={styles.layoutNoMargin}>
+      <div className={cesareSide ? styles.layout : styles.layoutNoMargin}>
         <div className={styles.editorial}>
           <div className={styles.editorSlot}>{children}</div>
         </div>
+        {cesareSide}
       </div>
     </div>
   );

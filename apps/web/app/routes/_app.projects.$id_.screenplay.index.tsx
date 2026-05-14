@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
+  ScreenplayCesarePanel,
   ScreenplayEditor,
   ScreenplayEditorShell,
   ScreenplayElementChips,
@@ -16,11 +17,24 @@ export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
   component: ScreenplayEditorPage,
 });
 
+interface Metrics {
+  pageCurrent: number;
+  pageTotal: number;
+  sceneCurrent: number | null;
+  sceneTotal: number;
+}
+
 function ScreenplayEditorPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useScreenplay(id);
   const [isCesareOn, setIsCesareOn] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
+  const [metrics, setMetrics] = useState<Metrics>({
+    pageCurrent: 1,
+    pageTotal: 1,
+    sceneCurrent: null,
+    sceneTotal: 0,
+  });
   const editorRef = useRef<ScreenplayEditorHandle>(null);
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
@@ -31,12 +45,23 @@ function ScreenplayEditorPage() {
       <ScreenplayEditorShell
         title={value.title}
         projectId={id}
-        isCesareOn={isCesareOn}
         viewbarCenter={
           <ScreenplayElementChips
             currentElement={currentElement}
             onSetElement={(el) => editorRef.current?.setElement(el)}
           />
+        }
+        cesareSide={
+          isCesareOn ? (
+            <ScreenplayCesarePanel
+              projectId={id}
+              versionId={value.currentVersionId ?? null}
+              pageCurrent={metrics.pageCurrent}
+              pageTotal={metrics.pageTotal}
+              sceneCurrent={metrics.sceneCurrent}
+              sceneTotal={metrics.sceneTotal}
+            />
+          ) : null
         }
       >
         <ScreenplayEditor
@@ -45,6 +70,7 @@ function ScreenplayEditorPage() {
           isCesareOn={isCesareOn}
           onToggleCesare={(next) => setIsCesareOn(next)}
           onCurrentElementChange={setCurrentElement}
+          onMetricsChange={setMetrics}
         />
       </ScreenplayEditorShell>
     ))
