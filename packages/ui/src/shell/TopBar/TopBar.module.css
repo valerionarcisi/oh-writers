@@ -1,0 +1,223 @@
+/* packages/ui/src/shell/TopBar/TopBar.module.css */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 0 var(--ds-space-6);
+  height: 48px;
+  background: var(--ds-surface);
+  border-block-end: 1px solid transparent;
+  transition: border-color var(--ds-duration-1) var(--ds-ease);
+  min-width: 0;
+}
+
+.isScrolled {
+  border-block-end-color: var(--ds-line);
+}
+
+/* Left cluster */
+.brandMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ds-text);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.brandLetter {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ds-text-on-dark);
+  line-height: 1;
+}
+
+.cesareDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ds-agent);
+  border: 1.5px solid var(--ds-surface);
+}
+
+.cesareDotActive {
+  animation: pulse 2s var(--ds-ease) infinite;
+}
+
+.breadcrumbBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ds-text-2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.projectName {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ds-text);
+}
+
+.sectionName {
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  color: var(--ds-text-2);
+}
+
+.breadcrumbSep {
+  font-size: 12px;
+  color: var(--ds-text-faint);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Spacer pushes right cluster to the right */
+.spacer {
+  flex: 1;
+}
+
+/* Right cluster */
+.rightCluster {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.bellBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ds-action);
+  border: 1.5px solid var(--ds-surface);
+}
+
+.askBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 0 var(--ds-space-2);
+  height: 28px;
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid var(--ds-line);
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    border-color: var(--ds-agent);
+    color: var(--ds-agent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.askHotkey {
+  font-family: var(--ds-font-mono);
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.avatarBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar { transition: none; }
+  .cesareDotActive { animation: none; }
+}
