@@ -14,9 +14,9 @@ export type PopoverProps = {
 };
 
 const placementClass: Record<PopoverPlacement, string> = {
-  "bottom-start": styles.bottomStart,
-  "bottom-end": styles.bottomEnd,
-  "bottom-center": styles.bottomCenter,
+  "bottom-start": styles.bottomStart ?? "",
+  "bottom-end": styles.bottomEnd ?? "",
+  "bottom-center": styles.bottomCenter ?? "",
 };
 
 export function Popover({
