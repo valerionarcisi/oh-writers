@@ -1,0 +1,98 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.label {
+  color: var(--color-text-muted);
+  margin-inline-end: var(--space-1);
+}
+
+.shotBtn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &[data-tone="green"] {
+    background: color-mix(in oklab, var(--color-accent-green) 14%, var(--color-surface));
+    border-color: color-mix(in oklab, var(--color-accent-green) 35%, var(--color-border));
+    color: var(--color-accent-green);
+  }
+
+  &[data-tone="blue"] {
+    background: color-mix(in oklab, var(--color-accent-blue) 14%, var(--color-surface));
+    border-color: color-mix(in oklab, var(--color-accent-blue) 35%, var(--color-border));
+    color: var(--color-accent-blue);
+  }
+
+  &[data-tone="red"] {
+    background: color-mix(in oklab, var(--color-accent-red) 14%, var(--color-surface));
+    border-color: color-mix(in oklab, var(--color-accent-red) 35%, var(--color-border));
+    color: var(--color-accent-red);
+  }
+
+  &[data-tone="orange"] {
+    background: color-mix(in oklab, var(--color-accent-orange) 14%, var(--color-surface));
+    border-color: color-mix(in oklab, var(--color-accent-orange) 35%, var(--color-border));
+    color: var(--color-accent-orange);
+  }
+}
+
+.divider {
+  inline-size: 1px;
+  block-size: 18px;
+  background: var(--color-border);
+  margin-inline: var(--space-1);
+}
+
+.patternWrap {
+  position: relative;
+}
+
+.patternBtn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.spacer {
+  flex: 1;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
