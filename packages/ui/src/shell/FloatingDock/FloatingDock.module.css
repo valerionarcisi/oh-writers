@@ -1,0 +1,130 @@
+/* packages/ui/src/shell/FloatingDock/FloatingDock.module.css */
+.dock {
+  position: fixed;
+  bottom: 20px;
+  inset-inline-end: 20px;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 5px var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-3);
+  z-index: 30;
+}
+
+.label {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-3);
+  padding: 0 var(--ds-space-2);
+  white-space: nowrap;
+}
+
+.sep {
+  width: 1px;
+  height: 20px;
+  background: var(--ds-line);
+  flex-shrink: 0;
+  margin: 0 var(--ds-space-1);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 0 var(--ds-space-2);
+  height: 28px;
+  border-radius: var(--ds-radius-pill);
+  border: none;
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.primary {
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+
+  &:hover {
+    background: var(--ds-action-hover);
+  }
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ds-text-2);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+}
+
+.hotkey {
+  font-family: var(--ds-font-mono);
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.cesarePill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 0 var(--ds-space-2);
+  height: 28px;
+  border-radius: var(--ds-radius-pill);
+  border: none;
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-agent-soft);
+    filter: brightness(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.cesareDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ds-agent);
+  flex-shrink: 0;
+}
+
+.cesareCount {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actionBtn { transition: none; }
+  .cesarePill { transition: none; }
+}
