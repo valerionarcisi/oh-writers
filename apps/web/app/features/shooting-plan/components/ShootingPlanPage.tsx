@@ -153,6 +153,13 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                 scenePageStart={null}
                 scenePageEnd={null}
                 sceneHasSpecialEffect={false}
+                onShotListChanged={() => {
+                  if (activePlanId) {
+                    void qc.invalidateQueries({
+                      queryKey: ["blocking", selectedScene.sceneId, activePlanId],
+                    });
+                  }
+                }}
               />
             </main>
           </>

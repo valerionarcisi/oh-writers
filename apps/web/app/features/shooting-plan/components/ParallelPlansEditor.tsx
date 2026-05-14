@@ -37,6 +37,7 @@ interface ParallelPlansEditorProps {
   scenePageStart: number | null;
   scenePageEnd: number | null;
   sceneHasSpecialEffect: boolean;
+  onShotListChanged?: () => void;
 }
 
 const RULER_HOURS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -47,6 +48,7 @@ export function ParallelPlansEditor({
   scenePageStart,
   scenePageEnd,
   sceneHasSpecialEffect,
+  onShotListChanged,
 }: ParallelPlansEditorProps) {
   const qc = useQueryClient();
   const { data: planRes } = useSuspenseQuery(
@@ -112,7 +114,8 @@ export function ParallelPlansEditor({
     void qc.invalidateQueries({
       queryKey: ["shooting-plan", "scenes", projectId],
     });
-  }, [qc, sceneId, projectId]);
+    onShotListChanged?.();
+  }, [qc, sceneId, projectId, onShotListChanged]);
 
   const addShotMut = useMutation({
     mutationFn: async (vars: { scenarioId: string; size: ShotSize }) => {
