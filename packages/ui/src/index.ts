@@ -73,3 +73,31 @@ export type { IconProps } from "./icons/Icon";
 export type { IconName } from "./icons/icon-names";
 export { ICON_NAMES } from "./icons/icon-names";
 export { SpriteLoader } from "./icons/SpriteLoader";
+
+// ─── DS-v2 Primitives ───────────────────────────────────────
+export { Scrim } from "./primitives/Scrim/Scrim";
+export type { ScrimProps } from "./primitives/Scrim/Scrim";
+
+export { Pill } from "./primitives/Pill/Pill";
+export type { PillProps, PillTone, PillSize } from "./primitives/Pill/Pill";
+
+export { ToggleChip } from "./primitives/ToggleChip/ToggleChip";
+export type { ToggleChipProps } from "./primitives/ToggleChip/ToggleChip";
+
+export { Tooltip } from "./primitives/Tooltip/Tooltip";
+export type { TooltipProps, TooltipKind, TooltipPlacement } from "./primitives/Tooltip/Tooltip";
+
+export { Popover } from "./primitives/Popover/Popover";
+export type { PopoverProps, PopoverPlacement } from "./primitives/Popover/Popover";
+
+export { Drawer } from "./primitives/Drawer/Drawer";
+export type { DrawerProps, DrawerSide } from "./primitives/Drawer/Drawer";
+
+export { SavePill } from "./primitives/SavePill/SavePill";
+export type { SavePillProps, SaveState } from "./primitives/SavePill/SavePill";
+
+export { Presence } from "./primitives/Presence/Presence";
+export type { PresenceProps, PresenceUser } from "./primitives/Presence/Presence";
+
+export { Button as DsButton } from "./primitives/Button/Button";
+export type { ButtonProps as DsButtonProps, ButtonVariant, ButtonSize } from "./primitives/Button/Button";

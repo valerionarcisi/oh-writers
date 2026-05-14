@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Icon, ICON_NAMES } from "@oh-writers/ui";
+import {
+  Icon,
+  ICON_NAMES,
+  DsButton,
+  Pill,
+  ToggleChip,
+  SavePill,
+  Presence,
+} from "@oh-writers/ui";
 
 export const Route = createFileRoute("/dev/tokens")({
   component: TokensPlayground,
@@ -102,6 +111,37 @@ function SectionLabel({ children }: { children: string }) {
     >
       {children}
     </h2>
+  );
+}
+
+function ToggleChipDemo() {
+  const [cast, setCast] = useState(true);
+  const [locations, setLocations] = useState(false);
+  const [props_, setProps] = useState(true);
+  return (
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      <ToggleChip
+        isOn={cast}
+        onToggle={() => setCast((v) => !v)}
+        label="Cast"
+        categoryColor="#6b3e7a"
+        aria-label="Mostra sottolineature Cast"
+      />
+      <ToggleChip
+        isOn={locations}
+        onToggle={() => setLocations((v) => !v)}
+        label="Locations"
+        categoryColor="#9a5128"
+        aria-label="Mostra sottolineature Locations"
+      />
+      <ToggleChip
+        isOn={props_}
+        onToggle={() => setProps((v) => !v)}
+        label="Props"
+        categoryColor="#2c6168"
+        aria-label="Mostra sottolineature Props"
+      />
+    </div>
   );
 }
 
@@ -296,6 +336,147 @@ function TokensPlayground() {
             </code>
           </div>
         ))}
+      </div>
+
+      <SectionLabel>Primitives</SectionLabel>
+      <div
+        style={{
+          background: "var(--ds-surface)",
+          border: "1px solid var(--ds-line)",
+          borderRadius: 8,
+          padding: 24,
+          display: "flex",
+          flexDirection: "column",
+          gap: 24,
+        }}
+      >
+        {/* Button */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 12px",
+            }}
+          >
+            Button
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <DsButton variant="primary">Rigenera</DsButton>
+            <DsButton variant="primary" hotkey="⌘R">
+              Rigenera
+            </DsButton>
+            <DsButton variant="ghost">Esporta</DsButton>
+            <DsButton variant="ghost" hotkey="⌘E">
+              Esporta
+            </DsButton>
+            <DsButton variant="danger">Elimina</DsButton>
+            <DsButton variant="ghost" disabled>
+              Disabilitato
+            </DsButton>
+          </div>
+        </div>
+
+        {/* Pill */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 12px",
+            }}
+          >
+            Pill
+          </p>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <Pill tone="clay">CANDIDATO</Pill>
+            <Pill tone="leaf">CONFERMATO</Pill>
+            <Pill tone="neutral">BOZZA</Pill>
+            <Pill tone="leaf" count={3}>
+              Cesare
+            </Pill>
+            <Pill tone="clay" size="sm">
+              SAVING
+            </Pill>
+          </div>
+        </div>
+
+        {/* ToggleChip */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 12px",
+            }}
+          >
+            ToggleChip
+          </p>
+          <ToggleChipDemo />
+        </div>
+
+        {/* SavePill */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 12px",
+            }}
+          >
+            SavePill
+          </p>
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <SavePill state="saved" secondsAgo={12} />
+            <SavePill state="saving" />
+            <SavePill state="offline" />
+          </div>
+        </div>
+
+        {/* Presence */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 12px",
+            }}
+          >
+            Presence
+          </p>
+          <Presence
+            users={[
+              { id: "1", name: "Valerio Narcisi", initials: "VN" },
+              { id: "2", name: "Sofia Romani", initials: "SR" },
+              { id: "3", name: "Marco Bianchi", initials: "MB" },
+              { id: "4", name: "Giulia Ferraro", initials: "GF" },
+              { id: "5", name: "Luca Conti", initials: "LC" },
+            ]}
+            maxVisible={4}
+          />
+        </div>
       </div>
     </div>
   );
