@@ -1,5 +1,7 @@
 // Components
 export { ScreenplayEditor } from "./components/ScreenplayEditor";
+export { ScreenplayEditorShell } from "./components/ScreenplayEditorShell";
+export type { ScreenplayEditorShellProps } from "./components/ScreenplayEditorShell";
 export { ScreenplayToolbar } from "./components/ScreenplayToolbar";
 export { MonacoWrapper } from "./components/MonacoWrapper";
 export { ToolbarMenu } from "./components/ToolbarMenu";

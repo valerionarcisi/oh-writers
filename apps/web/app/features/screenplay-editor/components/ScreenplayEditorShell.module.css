@@ -1,0 +1,242 @@
+/*
+ * Editorial shell around the screenplay editor — three-column grid with a
+ * sticky Viewbar at the top and a FloatingDock anchored bottom-right. The
+ * Monaco/ProseMirror editor itself is untouched and slotted into the center
+ * column.
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+  background: var(--ds-bg);
+}
+
+.viewbarLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ds-text-3);
+  margin-inline-end: var(--ds-space-2);
+}
+
+.versionPick {
+  margin-inline-start: auto;
+  block-size: 28px;
+  padding-inline: var(--ds-space-3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  border: 0;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .versionPick {
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+}
+
+.versionPick:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.versionPick:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  gap: var(--ds-space-8);
+  max-inline-size: 1480px;
+  inline-size: 100%;
+  margin-inline: auto;
+  padding: var(--ds-space-8) var(--ds-space-10) var(--ds-space-12);
+  align-items: start;
+}
+
+@container (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ─── TOC (left) ──────────────────────────────────────── */
+
+.toc {
+  position: sticky;
+  inset-block-start: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.tocLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ds-text-3);
+}
+
+.tocAct {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.tocActName {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ds-text-2);
+  margin-block-end: var(--ds-space-1);
+}
+
+.tocScene {
+  display: flex;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-1) var(--ds-space-2);
+  margin-inline: calc(var(--ds-space-2) * -1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--ds-text-2);
+  background: transparent;
+  border: 0;
+  text-align: start;
+  cursor: pointer;
+  border-inline-start: 2px solid transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tocScene {
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+}
+
+.tocScene:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.tocScene:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.tocSceneCurrent {
+  background: var(--ds-action-soft);
+  color: var(--ds-text);
+  font-weight: var(--weight-semibold);
+  border-inline-start-color: var(--ds-clay, var(--ds-action));
+}
+
+.tocSceneNum {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  inline-size: 36px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* ─── Center editorial column ─────────────────────────── */
+
+.editorial {
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.chapter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding-block-end: var(--ds-space-5);
+  border-block-end: var(--border);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ds-text-3);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: var(--weight-regular);
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ds-text);
+}
+
+.stats {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ds-text-3);
+  display: flex;
+  gap: var(--ds-space-3);
+}
+
+.stats > span + span::before {
+  content: "·";
+  margin-inline-end: var(--ds-space-2);
+  color: var(--ds-text-4, var(--ds-text-3));
+}
+
+.editorSlot {
+  min-block-size: 600px;
+  block-size: 75vh;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--ds-surface);
+}
+
+/* ─── Margin notes (right) ────────────────────────────── */
+
+.margin {
+  position: sticky;
+  inset-block-start: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.marginLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ds-text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.marginLabel::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  background: var(--ds-leaf, var(--ds-success));
+  border-radius: 50%;
+}

@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { ScreenplayEditor, useScreenplay } from "~/features/screenplay-editor";
+import {
+  ScreenplayEditor,
+  ScreenplayEditorShell,
+  useScreenplay,
+} from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.editor.module.css";
 
@@ -17,7 +21,9 @@ function ScreenplayEditorPage() {
 
   return match(result)
     .with({ isOk: true }, ({ value }) => (
-      <ScreenplayEditor screenplay={value} />
+      <ScreenplayEditorShell title={value.title}>
+        <ScreenplayEditor screenplay={value} />
+      </ScreenplayEditorShell>
     ))
     .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
     .exhaustive();
