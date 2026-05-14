@@ -1,41 +1,18 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   Viewbar,
   ViewbarSep,
   ToggleChip,
-  FloatingDock,
-  MarginNote,
   Icon,
   Popover,
 } from "@oh-writers/ui";
 import styles from "./ScreenplayEditorShell.module.css";
 
-// ─── Static demo data (UI-only shell) ───────────────────────────────────────
-// The Viewbar/TOC/MarginNotes are currently visual scaffolding around the
-// existing editor. Wiring them to live screenplay state happens in a follow-up
-// spec — the toggles, scene index and Cesare notes are intentionally local.
-
-type OverlayKey = "cesare" | "comments" | "sceneNumbers" | "revisions";
-
-const OVERLAY_CHIPS: ReadonlyArray<{
-  key: OverlayKey;
-  label: string;
-  hotkey?: string;
-  color?: string;
-  defaultOn: boolean;
-}> = [
-  {
-    key: "cesare",
-    label: "Cesare",
-    hotkey: "⌥C",
-    color: "#5a6b3c",
-    defaultOn: true,
-  },
-  { key: "comments", label: "Commenti", hotkey: "⌥M", defaultOn: false },
-  { key: "sceneNumbers", label: "Numeri scena", defaultOn: true },
-  { key: "revisions", label: "Revisioni", defaultOn: false },
-];
+// ─── Editor shell ──────────────────────────────────────────────────────────
+// Pure layout around the screenplay editor: a sticky Viewbar at the top, the
+// editor in the center column, and a right margin reserved for Cesare notes.
+// The FloatingDock is owned by the editor itself — see ScreenplayEditor — so
+// actions can read/write live editor state directly.
 
 type SceneEntry = {
   number: string;
@@ -79,19 +56,9 @@ const FALLBACK_ACTS: ActEntry[] = [
   },
 ];
 
-type ToggleState<K extends string> = Record<K, boolean>;
-
-const initialState = <K extends string>(
-  chips: ReadonlyArray<{ key: K; defaultOn: boolean }>,
-): ToggleState<K> =>
-  chips.reduce<ToggleState<K>>(
-    (acc, c) => ({ ...acc, [c.key]: c.defaultOn }),
-    {} as ToggleState<K>,
-  );
-
 export type ScreenplayEditorShellProps = {
   title: string;
-  /** Project id — used by dock actions to navigate to versions */
+  /** Project id — still passed so the editor route can build links if needed */
   projectId: string;
   /** The Monaco/ProseMirror editor — rendered untouched in the center column */
   children: ReactNode;
@@ -99,32 +66,40 @@ export type ScreenplayEditorShellProps = {
   acts?: ActEntry[];
   /** Optional eyebrow override, e.g. "SC. 3 · ATTO I · PAG. 4 / 28" */
   eyebrow?: string;
-  /** Optional version label shown in the viewbar right side */
+  /** Optional version label shown in the viewbar version trigger */
   versionLabel?: string;
   /** Cesare note count for the dock pill */
   cesareNoteCount?: number;
+  /** Render-prop for the Cesare margin column. Provided by the editor when it
+   *  has live suggestions; falls back to a quiet empty state when omitted. */
+  cesareMargin?: ReactNode;
+  /** Whether the Cesare overlay is currently on. Controls the toggle chip. */
+  isCesareOn?: boolean;
+  onToggleCesare?: (next: boolean) => void;
+  /** Click handler for the version trigger. When omitted the trigger is
+   *  rendered as a quiet, non-interactive label. */
+  onOpenVersions?: () => void;
 };
 
 export function ScreenplayEditorShell({
   title,
-  projectId,
   children,
   acts,
   eyebrow,
   versionLabel,
-  cesareNoteCount = 4,
+  cesareNoteCount = 0,
+  cesareMargin,
+  isCesareOn = true,
+  onToggleCesare,
+  onOpenVersions,
 }: ScreenplayEditorShellProps) {
-  const navigate = useNavigate();
-  const [overlay, setOverlay] = useState<ToggleState<OverlayKey>>(() =>
-    initialState(OVERLAY_CHIPS),
-  );
   const [cesareCollapsed, setCesareCollapsed] = useState(false);
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
 
   const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
   const eyebrowText = eyebrow ?? "Sc. 3 · Atto I · pag. 4 / 28";
-  const versionText = versionLabel ?? "v3 · 14 mag 2026 ▾";
+  const versionText = versionLabel ?? "v3 · 14 mag 2026";
 
   const { currentSceneIdx, totalScenes } = useMemo(() => {
     let total = 0;
@@ -153,15 +128,6 @@ export function ScreenplayEditorShell({
       .filter((act) => act.scenes.length > 0);
   }, [tocActs, indiceQuery]);
 
-  const toggleOverlay = (key: OverlayKey) =>
-    setOverlay((s) => ({ ...s, [key]: !s[key] }));
-
-  const goToVersions = () =>
-    navigate({
-      to: "/projects/$id/screenplay/versions",
-      params: { id: projectId },
-    });
-
   const layoutClass = [
     styles.layout,
     cesareCollapsed ? styles.layoutCesareCollapsed : "",
@@ -173,17 +139,14 @@ export function ScreenplayEditorShell({
     <div className={styles.shell}>
       <Viewbar>
         <span className={styles.viewbarLabel}>Overlay:</span>
-        {OVERLAY_CHIPS.map((chip) => (
-          <ToggleChip
-            key={chip.key}
-            label={chip.label}
-            isOn={overlay[chip.key]}
-            onToggle={() => toggleOverlay(chip.key)}
-            categoryColor={chip.color}
-            hotkey={chip.hotkey}
-            aria-label={`Overlay ${chip.label}`}
-          />
-        ))}
+        <ToggleChip
+          label="Cesare"
+          isOn={isCesareOn}
+          onToggle={() => onToggleCesare?.(!isCesareOn)}
+          categoryColor="#5a6b3c"
+          hotkey="⌥C"
+          aria-label="Overlay Cesare"
+        />
 
         <ViewbarSep />
 
@@ -195,6 +158,7 @@ export function ScreenplayEditorShell({
             aria-haspopup="dialog"
             aria-expanded={isIndiceOpen}
             aria-label="Apri indice scene"
+            data-testid="screenplay-indice-trigger"
           >
             <Icon name="book" size={14} aria-hidden />
             <span>Indice</span>
@@ -264,10 +228,18 @@ export function ScreenplayEditorShell({
         <button
           type="button"
           className={styles.versionPick}
-          aria-label="Seleziona versione"
-          title="Versione corrente — click per cambiare"
+          aria-label="Versione corrente — apri pannello versioni"
+          title={onOpenVersions ? "Apri pannello versioni" : "Versione corrente"}
+          onClick={onOpenVersions}
+          disabled={!onOpenVersions}
+          data-testid="screenplay-versions-trigger"
         >
           {versionText}
+          {onOpenVersions && (
+            <span aria-hidden="true" style={{ marginInlineStart: 4 }}>
+              ▾
+            </span>
+          )}
         </button>
       </Viewbar>
 
@@ -323,44 +295,17 @@ export function ScreenplayEditorShell({
                 </button>
               </header>
 
-              {overlay.cesare && (
-                <>
-                  <MarginNote
-                    kind="dramaturg"
-                    text="La scena chiude in 38 secondi con quattro battute. La transizione 'È bravo, eh? Ma non ride nessuno.' potrebbe portare più tensione: provo a estendere con una micro-azione di Francesco?"
-                    onAccept={() => {}}
-                    onIgnore={() => {}}
-                  />
-                  <MarginNote
-                    kind="producer"
-                    text="'Pizza fumante' e 'luce calda' non sono ancora nel breakdown. Vuoi che li aggiunga come props / VFX?"
-                    onAccept={() => {}}
-                    onIgnore={() => {}}
-                  />
-                </>
+              {isCesareOn && cesareMargin ? (
+                cesareMargin
+              ) : (
+                <p className={styles.marginEmpty}>
+                  Nessuna nota aperta su questa scena.
+                </p>
               )}
             </>
           )}
         </aside>
       </div>
-
-      <FloatingDock
-        label="SCREENPLAY"
-        primaryAction={{
-          label: "Esporta PDF",
-          hotkey: "⌘E",
-          onClick: () => {
-            // TODO: trigger real PDF export (handled elsewhere)
-            console.log("export pdf");
-          },
-        }}
-        secondaryActions={[
-          { label: "Versione", onClick: goToVersions },
-          { label: "Confronta", onClick: goToVersions },
-        ]}
-        cesareNoteCount={cesareNoteCount}
-        onCesareClick={() => setCesareCollapsed(false)}
-      />
     </div>
   );
 }

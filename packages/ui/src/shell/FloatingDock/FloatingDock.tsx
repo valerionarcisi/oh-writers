@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import styles from "./FloatingDock.module.css";
 
 export type DockAction = {
@@ -16,9 +17,13 @@ export type FloatingDockProps = {
   primaryAction: DockAction;
   /** Secondary ghost actions */
   secondaryActions?: DockAction[];
+  /** Optional slot rendered between the secondary actions and the Cesare pill.
+   *  Use it to embed an overflow menu (e.g. the screenplay editor's Import
+   *  popover) without having to position a second floating element. */
+  overflowSlot?: ReactNode;
   /** Number of pending Cesare notes — shown as badge */
   cesareNoteCount?: number;
-  /** Called when user clicks the Cesare pill */
+  /** Called when user clicks the Cesare pill. When omitted the pill is hidden. */
   onCesareClick?: () => void;
 };
 
@@ -26,6 +31,7 @@ export function FloatingDock({
   label,
   primaryAction,
   secondaryActions = [],
+  overflowSlot,
   cesareNoteCount = 0,
   onCesareClick,
 }: FloatingDockProps) {
@@ -80,24 +86,33 @@ export function FloatingDock({
         </button>
       ))}
 
-      <span className={styles.sep} aria-hidden="true" />
+      {overflowSlot && (
+        <span className={styles.overflowSlot}>{overflowSlot}</span>
+      )}
 
-      <button
-        type="button"
-        className={styles.cesarePill}
-        onClick={onCesareClick}
-        aria-label={
-          cesareNoteCount > 0 ? `Cesare — ${cesareNoteCount} note` : "Cesare"
-        }
-      >
-        <span className={styles.cesareDot} aria-hidden="true" />
-        Cesare
-        {cesareNoteCount > 0 && (
-          <span className={styles.cesareCount} aria-hidden="true">
-            {cesareNoteCount}
-          </span>
-        )}
-      </button>
+      {onCesareClick && (
+        <>
+          <span className={styles.sep} aria-hidden="true" />
+          <button
+            type="button"
+            className={styles.cesarePill}
+            onClick={onCesareClick}
+            aria-label={
+              cesareNoteCount > 0
+                ? `Cesare — ${cesareNoteCount} note`
+                : "Cesare"
+            }
+          >
+            <span className={styles.cesareDot} aria-hidden="true" />
+            Cesare
+            {cesareNoteCount > 0 && (
+              <span className={styles.cesareCount} aria-hidden="true">
+                {cesareNoteCount}
+              </span>
+            )}
+          </button>
+        </>
+      )}
     </div>
   );
 }

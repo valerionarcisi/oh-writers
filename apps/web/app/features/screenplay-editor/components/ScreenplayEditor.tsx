@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
+import { FloatingDock } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
 import {
@@ -14,9 +15,10 @@ import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
+import { ToolbarMenu } from "./ToolbarMenu";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
-import type { ExportFormat } from "@oh-writers/domain";
+import { EXPORT_FORMATS, type ExportFormat } from "@oh-writers/domain";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
@@ -410,6 +412,31 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
       window.removeEventListener("screenplay:toggleFocusMode", handleToggle);
   }, []);
 
+  const toggleVersionsDrawer = useCallback(() => {
+    if (isVersionsPanelOpen) {
+      closeDrawer();
+    } else {
+      openDrawer(
+        { kind: "screenplay", screenplayId: screenplay.id },
+        { onSelectVersion: (versionId) => requestView(versionId) },
+      );
+    }
+  }, [
+    isVersionsPanelOpen,
+    closeDrawer,
+    openDrawer,
+    screenplay.id,
+    requestView,
+  ]);
+
+  const hasContent = content.trim().length > 0;
+  const canEdit = screenplay.canEdit ?? false;
+  const isOwner = screenplay.isOwner ?? false;
+
+  // Choose a sensible default export format for the dock's primary "Esporta
+  // PDF" button. The user can switch format from inside the export modal.
+  const defaultExportFormat: ExportFormat = EXPORT_FORMATS[0];
+
   return (
     <div className={`${styles.page} ${isFocusMode ? styles.focusMode : ""}`}>
       {isFocusMode ? (
@@ -425,44 +452,8 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
         </div>
       ) : (
         <ScreenplayToolbar
-          projectId={screenplay.projectId}
-          screenplayId={screenplay.id}
-          currentVersionId={screenplay.currentVersionId ?? null}
-          isDirty={isDirty}
-          isSaving={isSaving}
-          isError={isError}
-          isOffline={isOffline}
-          lastSavedAt={lastSavedAt}
-          onFlushSave={flush}
-          isFocusMode={isFocusMode}
-          hasContent={content.trim().length > 0}
           currentElement={currentElement}
           onSetElement={handleSetElement}
-          onToggleFocusMode={() => setFocusMode((prev) => !prev)}
-          onImport={setContent}
-          onTitlePageDetected={handleTitlePageDetected}
-          nextVersionLabel={nextVersionLabel}
-          onCreateVersionThenImport={
-            nextVersionLabel ? handleCreateVersionThenImport : undefined
-          }
-          onToggleVersions={() => {
-            if (isVersionsPanelOpen) {
-              closeDrawer();
-            } else {
-              openDrawer(
-                { kind: "screenplay", screenplayId: screenplay.id },
-                { onSelectVersion: (versionId) => requestView(versionId) },
-              );
-            }
-          }}
-          isVersionsPanelOpen={isVersionsPanelOpen}
-          currentVersionLabel={latestVersion?.label ?? null}
-          hideSaveIndicator={isViewing}
-          onResequenceAll={onResequenceAll}
-          canEdit={screenplay.canEdit ?? false}
-          isOwner={screenplay.isOwner ?? false}
-          onOpenExportPdf={(f) => setExportFormat(f)}
-          isExportingPdf={exportPdf.isPending}
         />
       )}
       {!isFocusMode && versionsLoadError && (
@@ -563,6 +554,46 @@ export function ScreenplayEditor({ screenplay }: ScreenplayEditorProps) {
           {toast}
         </div>
       ) : null}
+
+      {!isFocusMode && (
+        <FloatingDock
+          label="SCREENPLAY"
+          primaryAction={{
+            label: exportPdf.isPending ? "Esportando…" : "Esporta PDF",
+            hotkey: "⌘E",
+            onClick: () => setExportFormat(defaultExportFormat),
+          }}
+          secondaryActions={[
+            {
+              label: "Focus",
+              hotkey: "⌃⇧F",
+              onClick: () => setFocusMode((prev) => !prev),
+            },
+            {
+              label: "Versioni",
+              onClick: toggleVersionsDrawer,
+            },
+          ]}
+          overflowSlot={
+            <ToolbarMenu
+              projectId={screenplay.projectId}
+              hasContent={hasContent}
+              onImport={setContent}
+              nextVersionLabel={nextVersionLabel}
+              onCreateVersionThenImport={
+                nextVersionLabel ? handleCreateVersionThenImport : undefined
+              }
+              onToggleVersions={toggleVersionsDrawer}
+              isVersionsPanelOpen={isVersionsPanelOpen}
+              currentVersionLabel={latestVersion?.label ?? null}
+              onResequenceAll={canEdit ? onResequenceAll : undefined}
+              isOwner={isOwner}
+              onTitlePageDetected={handleTitlePageDetected}
+            />
+          }
+        />
+      )}
+
     </div>
   );
 }

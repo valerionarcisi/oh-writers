@@ -111,6 +111,10 @@ export const injectProseMirrorStyles = (): void => {
      */
 
     .pm-heading .scene-number-btn {
+      /* Scene numbers are kept in the DOM (edits via the conflict modal rely
+         on the buttons), but hidden in the default view. They appear in the
+         printed/exported PDF based on the export modal's sceneNumbers option. */
+      display: none;
       position: absolute;
       top: 0;
       padding: 0;

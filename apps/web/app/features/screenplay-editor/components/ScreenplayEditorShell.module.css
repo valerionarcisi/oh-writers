@@ -396,3 +396,12 @@
   font-size: var(--text-xs);
   color: var(--ds-text-2);
 }
+
+.marginEmpty {
+  margin: 0;
+  padding: var(--ds-space-3) 0;
+  font-family: var(--ds-font-sans);
+  font-size: var(--text-xs);
+  color: var(--ds-text-3);
+  line-height: 1.4;
+}

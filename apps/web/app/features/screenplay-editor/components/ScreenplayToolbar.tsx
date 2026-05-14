@@ -1,55 +1,9 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Button, Dialog, DropdownMenu } from "@oh-writers/ui";
-import {
-  EXPORT_FORMATS,
-  EXPORT_FORMAT_META,
-  type ExportFormat,
-} from "@oh-writers/domain";
-import { ToolbarMenu } from "./ToolbarMenu";
-import { DraftMetaBadge } from "~/features/projects";
 import type { ElementType } from "../lib/fountain-element-detector";
-import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import styles from "./ScreenplayToolbar.module.css";
 
 interface ScreenplayToolbarProps {
-  projectId: string;
-  screenplayId: string;
-  currentVersionId: string | null;
-  isDirty: boolean;
-  isSaving: boolean;
-  isError: boolean;
-  isOffline: boolean;
-  lastSavedAt: number | null;
-  onFlushSave: () => void;
-  isFocusMode: boolean;
-  hasContent: boolean;
   currentElement: ElementType;
   onSetElement: (element: ElementType) => void;
-  onToggleFocusMode: () => void;
-  onImport: (fountain: string) => void;
-  nextVersionLabel?: string | null;
-  onCreateVersionThenImport?: (fountain: string) => void;
-  onToggleVersions: () => void;
-  isVersionsPanelOpen: boolean;
-  currentVersionLabel?: string | null;
-  hideSaveIndicator?: boolean;
-  /** Opens the "Resequence all scenes?" confirmation modal and, on confirm,
-   *  reruns resequenceAll over the whole doc via the editor view. */
-  onResequenceAll?: () => void;
-  /** True when the signed-in user can mutate this project (owner or editor
-   *  on a non-archived project). Gates write affordances. */
-  canEdit: boolean;
-  /** True when the signed-in user owns the project. Gates Owner-only entries
-   *  (e.g. Frontespizio per spec 07b). */
-  isOwner: boolean;
-  /** Opens the PDF export modal for the chosen format (Spec 05j+05k). The
-   *  trigger is disabled when the screenplay has no content. */
-  onOpenExportPdf?: (format: ExportFormat) => void;
-  isExportingPdf?: boolean;
-  /** Forwarded to ToolbarMenu → useImportPdf so the parent can react when
-   *  Pass 0 of the PDF import detects a title page. */
-  onTitlePageDetected?: (doc: TitlePageDocJSON) => void;
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -79,43 +33,17 @@ const ELEMENT_ORDER: ElementType[] = [
   "transition",
 ];
 
+/**
+ * Inline element converter strip. The toolbar is intentionally minimal: only
+ * element-type pills. Page-level actions (Export, Focus, Import, Versioni)
+ * live in the floating dock at the bottom-right of the editor.
+ */
 export function ScreenplayToolbar({
-  projectId,
-  isFocusMode,
-  hasContent,
   currentElement,
   onSetElement,
-  onToggleFocusMode,
-  onImport,
-  nextVersionLabel = null,
-  onCreateVersionThenImport,
-  onToggleVersions,
-  isVersionsPanelOpen,
-  currentVersionLabel = null,
-  onResequenceAll,
-  canEdit,
-  isOwner,
-  onOpenExportPdf,
-  isExportingPdf = false,
-  onTitlePageDetected,
 }: ScreenplayToolbarProps) {
-  // Unused save-state props are preserved on the type for caller compatibility,
-  // but no longer consumed here — see comment near the right-side cluster.
-  const [resequenceConfirmOpen, setResequenceConfirmOpen] = useState(false);
   return (
     <div className={styles.toolbar}>
-      <div className={styles.left}>
-        <Link
-          to="/projects/$id"
-          params={{ id: projectId }}
-          className={styles.backLink}
-        >
-          ← Back
-        </Link>
-      </div>
-
-      {/* Element indicator strip — pills double as element-converter buttons.
-          Clicking one converts the block at the cursor to that element type. */}
       <div
         className={styles.elementStrip}
         role="toolbar"
@@ -134,100 +62,6 @@ export function ScreenplayToolbar({
           </button>
         ))}
       </div>
-
-      <div className={styles.right}>
-        <DraftMetaBadge projectId={projectId} />
-        {/* SaveIndicator intentionally not rendered here: the global TopBar in
-            AppShell is the single source of truth for save status. The
-            `hideSaveIndicator` / `isDirty` / `isSaving` props are kept for
-            backwards compatibility with callers that still pass them. */}
-        {onOpenExportPdf && (
-          <DropdownMenu
-            align="end"
-            data-testid="screenplay-export-menu"
-            trigger={
-              <button
-                type="button"
-                className={styles.focusBtn}
-                disabled={!hasContent || isExportingPdf}
-                data-testid="screenplay-export-pdf"
-              >
-                {isExportingPdf ? "Exporting…" : "Export PDF ▾"}
-              </button>
-            }
-            items={EXPORT_FORMATS.map((f) => {
-              const meta = EXPORT_FORMAT_META[f];
-              return {
-                label: meta.labelIt,
-                description: meta.descriptionIt,
-                onClick: () => onOpenExportPdf(f),
-              };
-            })}
-          />
-        )}
-        <button
-          className={`${styles.focusBtn} ${isFocusMode ? styles.focusBtnActive : ""}`}
-          onClick={onToggleFocusMode}
-          type="button"
-          title="Toggle focus mode (Ctrl+Shift+F)"
-          aria-pressed={isFocusMode}
-        >
-          Focus
-        </button>
-        <ToolbarMenu
-          projectId={projectId}
-          hasContent={hasContent}
-          onImport={onImport}
-          nextVersionLabel={nextVersionLabel}
-          onCreateVersionThenImport={onCreateVersionThenImport}
-          onToggleVersions={onToggleVersions}
-          isVersionsPanelOpen={isVersionsPanelOpen}
-          currentVersionLabel={currentVersionLabel}
-          onResequenceAll={
-            onResequenceAll && canEdit
-              ? () => setResequenceConfirmOpen(true)
-              : undefined
-          }
-          isOwner={isOwner}
-          onTitlePageDetected={onTitlePageDetected}
-        />
-      </div>
-      {resequenceConfirmOpen && onResequenceAll ? (
-        <Dialog
-          isOpen
-          onClose={() => setResequenceConfirmOpen(false)}
-          title="Resequence all scenes?"
-          data-testid="resequence-confirm-modal"
-          actions={
-            <>
-              <Button
-                variant="ghost"
-                data-testid="resequence-confirm-cancel"
-                onClick={() => setResequenceConfirmOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                data-testid="resequence-confirm-apply"
-                onClick={() => {
-                  onResequenceAll();
-                  setResequenceConfirmOpen(false);
-                }}
-              >
-                Resequence
-              </Button>
-            </>
-          }
-        >
-          <p>
-            This renumbers every scene from 1 upward based on the current
-            document order. Locked scenes keep their numbers — others get
-            assigned around them with letter suffixes if needed. This can&apos;t
-            be undone automatically.
-          </p>
-        </Dialog>
-      ) : null}
     </div>
   );
 }
