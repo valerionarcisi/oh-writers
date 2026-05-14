@@ -2,12 +2,12 @@
 <html lang="it">
   <head>
     <meta charset="utf-8" />
-    <title>Breakdown · F · Ambient Cesare</title>
+    <title>Breakdown · F · Ambient Cesare — Screenplay-first</title>
     <meta name="viewport" content="width=1440, initial-scale=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Courier+Prime:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -28,7 +28,6 @@
         --clay-soft: #f4dccb;
         --leaf: #5a6b3c;
         --leaf-soft: #e5e9d8;
-        --danger: #b33a28;
 
         --c-cast: #6b3e7a;
         --c-comparse: #7a5524;
@@ -41,30 +40,21 @@
         --c-vfx: #6a3e8a;
         --c-atmosfera: #4d6878;
 
-        --space-1: 4px;
-        --space-2: 8px;
-        --space-3: 12px;
-        --space-4: 16px;
-        --space-5: 20px;
-        --space-6: 24px;
-        --space-8: 32px;
-        --space-10: 48px;
+        --space-1: 4px; --space-2: 8px; --space-3: 12px;
+        --space-4: 16px; --space-5: 20px; --space-6: 24px;
+        --space-8: 32px; --space-10: 48px;
 
         --font-sans: "Inter", -apple-system, system-ui, sans-serif;
         --font-display: "Fraunces", Georgia, serif;
         --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --font-script: "Courier Prime", "Courier New", monospace;
 
-        --radius-sm: 4px;
-        --radius-md: 8px;
-        --radius-lg: 12px;
-        --radius-pill: 100px;
+        --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-pill: 100px;
       }
-
       * { box-sizing: border-box; }
       html, body {
         margin: 0; padding: 0;
-        background: var(--paper-1);
-        color: var(--ink-1);
+        background: var(--paper-1); color: var(--ink-1);
         font-family: var(--font-sans);
         font-size: 14px; line-height: 1.55;
         -webkit-font-smoothing: antialiased;
@@ -72,7 +62,7 @@
       [data-num] { font-variant-numeric: tabular-nums; }
       button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
 
-      /* ─── TOP BAR — 48px sticky ─── */
+      /* ─── TOP BAR ─── */
       .topbar {
         position: sticky; top: 0; z-index: 40;
         height: 48px; background: var(--paper-1);
@@ -126,7 +116,7 @@
         font-size: 11px; font-weight: 600;
       }
 
-      /* ─── VIEWBAR — sticky 48px below topbar ─── */
+      /* ─── VIEWBAR ─── */
       .viewbar {
         position: sticky; top: 48px; z-index: 30;
         background: var(--paper-1);
@@ -139,6 +129,7 @@
         display: flex; align-items: center; flex-wrap: wrap;
         gap: var(--space-3) var(--space-4);
       }
+      .viewbar-right { display: flex; align-items: center; gap: var(--space-3); }
       .viewbar-label {
         font-family: var(--font-mono); font-size: 10px;
         text-transform: uppercase; letter-spacing: 0.1em;
@@ -151,8 +142,7 @@
         border-radius: var(--radius-pill);
         border: 1px solid transparent;
         font-size: 12px; color: var(--ink-3);
-        transition: all 150ms ease;
-        cursor: pointer;
+        transition: all 150ms ease; cursor: pointer;
       }
       .chip::before {
         content: ""; width: 6px; height: 6px; border-radius: 50%;
@@ -170,236 +160,216 @@
         border-radius: var(--radius-sm);
         font-size: 12px; color: var(--ink-3);
       }
-      .tab.is-active {
-        background: var(--paper-3); color: var(--ink-1); font-weight: 500;
-      }
-      .version-select {
+      .tab.is-active { background: var(--paper-3); color: var(--ink-1); font-weight: 500; }
+      .pill-btn {
         display: inline-flex; align-items: center; gap: 6px;
         font-family: var(--font-mono); font-size: 11px;
-        color: var(--ink-3); padding: 4px var(--space-3);
+        color: var(--ink-2); padding: 4px var(--space-3);
         border: 1px solid var(--line); border-radius: var(--radius-sm);
         background: var(--page);
+        position: relative;
+      }
+      .pill-btn:hover { border-color: var(--ink-4); }
+      .pill-btn .badge-count {
+        font-family: var(--font-mono); font-size: 9px;
+        background: var(--clay-soft); color: var(--clay);
+        padding: 1px 5px; border-radius: 6px; font-weight: 600;
       }
 
-      /* ─── HERO — scene summary ─── */
-      .hero {
-        max-width: 1480px; margin: 0 auto;
-        padding: var(--space-10) var(--space-6) var(--space-6);
+      /* ─── EYEBROW (small, no huge hero) ─── */
+      .scene-bar {
+        max-width: 1340px; margin: 0 auto;
+        padding: var(--space-8) var(--space-6) var(--space-3);
         display: grid; grid-template-columns: 1fr auto;
-        align-items: end; gap: var(--space-6);
+        align-items: baseline; gap: var(--space-4);
       }
-      .hero .eyebrow {
+      .scene-bar .eyebrow {
         font-family: var(--font-mono); font-size: 11px;
         text-transform: uppercase; letter-spacing: 0.08em;
-        color: var(--ink-3); margin-bottom: var(--space-3);
+        color: var(--ink-3);
       }
-      .hero h1 {
-        font-family: var(--font-display); font-style: italic;
-        font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.02em;
-        margin: 0;
-      }
-      .hero h1 .num { color: var(--ink-1); }
-      .hero h1 .sub { color: var(--ink-3); }
-      .hero-meta {
+      .scene-bar .eyebrow .scene-num { color: var(--ink-1); font-weight: 500; }
+      .scene-bar .meta {
         font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
-        display: flex; gap: var(--space-3); flex-wrap: wrap;
+        display: flex; gap: var(--space-3);
       }
-      .hero-meta b { color: var(--ink-1); font-weight: 500; }
+      .scene-bar .meta b { color: var(--ink-1); font-weight: 500; }
+      .scene-bar .meta .pending {
+        color: var(--clay); font-weight: 500;
+      }
+      .scene-bar .meta .pending::before {
+        content: "●"; margin-right: 4px;
+      }
 
-      /* ─── LAYOUT — 3 columns ─── */
+      /* ─── LAYOUT — screenplay center, right panel ─── */
       .layout {
-        max-width: 1480px; margin: 0 auto;
+        max-width: 1340px; margin: 0 auto;
         padding: 0 var(--space-6) var(--space-10);
         display: grid;
-        grid-template-columns: 240px 1fr 260px;
-        gap: var(--space-8);
+        grid-template-columns: 1fr 280px;
+        gap: var(--space-6);
         align-items: start;
       }
 
-      /* ─── LEFT: Scene TOC ─── */
-      .toc { position: sticky; top: 112px; }
-      .toc-head {
-        font-family: var(--font-mono); font-size: 10px;
-        text-transform: uppercase; letter-spacing: 0.1em;
-        color: var(--ink-3); margin-bottom: var(--space-3);
-        padding: 0 var(--space-3);
+      /* ─── SCREENPLAY (center, hero) ─── */
+      .screenplay {
+        background: var(--page);
+        border-radius: var(--radius-md);
+        box-shadow: 0 1px 2px rgba(28, 26, 23, 0.04),
+                    0 8px 24px -12px rgba(28, 26, 23, 0.08);
+        padding: var(--space-10) 80px var(--space-10);
+        font-family: var(--font-script);
+        font-size: 14px; line-height: 1.7;
+        color: var(--ink-1);
+        min-height: 70vh;
       }
-      .toc-list { display: flex; flex-direction: column; gap: 2px; }
-      .toc-item {
-        display: grid; grid-template-columns: 32px 1fr auto;
-        align-items: center; gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
-        border-radius: var(--radius-sm);
-        cursor: pointer; transition: background 150ms ease;
+      .scene-heading {
+        font-weight: 700; text-transform: uppercase;
+        margin: var(--space-6) 0 var(--space-4);
+        display: grid; grid-template-columns: 30px 1fr 30px;
+        align-items: baseline;
       }
-      .toc-item:hover { background: var(--paper-2); }
-      .toc-item.is-current {
-        background: var(--clay-soft);
-        box-shadow: inset 2px 0 0 var(--clay);
+      .scene-heading .num {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-4); font-weight: 400;
       }
-      .toc-item .n {
-        font-family: var(--font-mono); font-size: 10px;
-        color: var(--ink-4); text-transform: uppercase;
+      .sp-action { margin-block: var(--space-3); }
+      .sp-char {
+        text-align: center; margin: var(--space-4) auto 0;
+        font-weight: 700; width: 60%;
       }
-      .toc-item .label {
-        font-size: 12px; color: var(--ink-2);
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      .sp-paren {
+        text-align: center; color: var(--ink-2); font-style: italic;
+        margin: 0 auto; width: 55%; font-size: 13px;
       }
-      .toc-item.is-current .label { color: var(--ink-1); font-weight: 500; }
-      .toc-item .count {
-        font-family: var(--font-mono); font-size: 10px;
-        color: var(--ink-3); padding: 1px 6px;
-        background: var(--paper-3); border-radius: var(--radius-pill);
+      .sp-dlg { margin: 0 auto var(--space-3); width: 65%; }
+
+      /* Element inline highlight */
+      .el {
+        background: color-mix(in oklch, var(--cat-color) 14%, transparent);
+        border-bottom: 1.5px solid var(--cat-color);
+        padding: 0 2px;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: background 150ms ease;
+        position: relative;
       }
-      .toc-item.is-current .count {
-        background: var(--clay); color: var(--page);
+      .el:hover {
+        background: color-mix(in oklch, var(--cat-color) 26%, transparent);
       }
-      .toc-act {
-        font-family: var(--font-display); font-style: italic;
-        font-size: 13px; color: var(--ink-3);
-        padding: var(--space-3) var(--space-3) var(--space-1);
+      .el.is-suggested {
+        background: transparent;
+        border-bottom: 1.5px dashed var(--cat-color);
+        color: var(--cat-color);
+      }
+      .el.is-pending::after {
+        content: "●"; font-size: 8px;
+        color: var(--clay); margin-left: 2px;
+        vertical-align: super;
+      }
+      .el.is-selected {
+        outline: 2px solid var(--cat-color);
+        outline-offset: 1px;
       }
 
-      /* ─── CENTER: chip wall ─── */
-      .center { display: flex; flex-direction: column; gap: var(--space-8); }
-      .category {
+      /* ─── RIGHT PANEL — Categorie + Cesare ─── */
+      .panel {
+        position: sticky; top: 116px;
+        display: flex; flex-direction: column;
+        max-height: calc(100vh - 130px);
+      }
+      .panel-tabs {
+        display: flex; gap: 1px;
+        background: var(--paper-3); border-radius: var(--radius-sm);
+        padding: 2px; margin-bottom: var(--space-3);
+      }
+      .panel-tab {
+        flex: 1; padding: 5px var(--space-2);
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--ink-3); border-radius: var(--radius-sm);
+        text-align: center;
+      }
+      .panel-tab.is-active {
+        background: var(--page); color: var(--ink-1); font-weight: 500;
+        box-shadow: 0 1px 2px rgba(28,26,23,0.06);
+      }
+      .panel-tab .count {
+        margin-left: 4px; color: var(--ink-4);
+      }
+      .panel-tab.is-active .count { color: var(--clay); }
+      .panel-body {
+        flex: 1; overflow-y: auto;
+        display: flex; flex-direction: column; gap: var(--space-3);
+        padding-right: 4px;
+      }
+
+      /* Categorie panel */
+      .cat-group {
         background: var(--page);
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
         overflow: hidden;
       }
-      .category-head {
-        display: grid; grid-template-columns: auto 1fr auto auto;
-        align-items: center; gap: var(--space-3);
-        padding: var(--space-4) var(--space-5);
-        border-bottom: 1px solid var(--line-soft);
-        background: var(--paper-1);
+      .cat-head {
+        display: grid; grid-template-columns: 12px 1fr auto auto;
+        align-items: center; gap: var(--space-2);
+        padding: var(--space-3) var(--space-3);
+        cursor: pointer;
       }
-      .category-head::before {
-        content: ""; width: 8px; height: 8px; border-radius: 50%;
+      .cat-head .dot {
+        width: 8px; height: 8px; border-radius: 50%;
         background: var(--cat-color);
       }
-      .category-name {
+      .cat-head .name {
         font-family: var(--font-mono); font-size: 11px;
-        text-transform: uppercase; letter-spacing: 0.08em;
+        text-transform: uppercase; letter-spacing: 0.06em;
         color: var(--ink-1); font-weight: 500;
       }
-      .category-count {
-        font-family: var(--font-mono); font-size: 11px;
+      .cat-head .ct {
+        font-family: var(--font-mono); font-size: 10px;
         color: var(--ink-3);
       }
-      .category-add {
-        font-family: var(--font-mono); font-size: 10px;
-        color: var(--ink-3); padding: 3px var(--space-2);
-        border-radius: var(--radius-sm);
-        border: 1px dashed var(--line);
+      .cat-head .add {
+        width: 20px; height: 20px; border-radius: var(--radius-sm);
+        display: grid; place-items: center;
+        color: var(--ink-3); font-size: 14px;
       }
-      .category-add:hover {
-        color: var(--ink-1); border-color: var(--ink-3);
-        background: var(--paper-2);
+      .cat-head .add:hover { background: var(--paper-2); color: var(--ink-1); }
+      .cat-list {
+        padding: 0 var(--space-3) var(--space-3);
+        display: flex; flex-wrap: wrap; gap: 4px;
       }
-      .category-body {
-        padding: var(--space-4) var(--space-5);
-        display: flex; flex-wrap: wrap; gap: var(--space-2);
-      }
-      .el {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 5px var(--space-3);
-        border-radius: var(--radius-pill);
-        background: color-mix(in oklch, var(--cat-color) 8%, transparent);
-        border: 1px solid color-mix(in oklch, var(--cat-color) 20%, transparent);
+      .cat-list .it {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px var(--space-2);
         font-size: 12px;
+        background: color-mix(in oklch, var(--cat-color) 8%, transparent);
+        border: 1px solid color-mix(in oklch, var(--cat-color) 18%, transparent);
+        border-radius: var(--radius-pill);
         color: var(--ink-1);
-        cursor: pointer; transition: all 150ms ease;
       }
-      .el:hover {
-        background: color-mix(in oklch, var(--cat-color) 14%, transparent);
-        border-color: color-mix(in oklch, var(--cat-color) 35%, transparent);
-      }
-      .el .badge {
-        font-family: var(--font-mono); font-size: 10px;
-        color: var(--ink-3); padding: 0 5px;
-        background: var(--page); border-radius: 8px;
-      }
-      .el .scenes {
-        font-family: var(--font-mono); font-size: 10px;
+      .cat-list .it .x {
+        font-family: var(--font-mono); font-size: 9px;
         color: var(--ink-3);
       }
-      .el.is-suggested {
+      .cat-list .it.is-suggested {
         background: transparent;
-        border: 1px dashed var(--cat-color);
+        border-style: dashed;
         color: var(--cat-color);
       }
-      .el.is-suggested .ai {
-        font-family: var(--font-mono); font-size: 9px;
+      .cat-list .it.is-suggested::after {
+        content: "AI"; font-family: var(--font-mono); font-size: 8px;
         background: var(--leaf-soft); color: var(--leaf);
-        padding: 1px 5px; border-radius: 6px;
-      }
-      .el.is-pending::after {
-        content: ""; width: 5px; height: 5px; border-radius: 50%;
-        background: var(--clay); margin-left: 2px;
+        padding: 0 4px; border-radius: 4px; margin-left: 2px;
       }
 
-      /* ─── Screenplay context preview (small, secondary) ─── */
-      .context {
-        background: var(--page);
-        border: 1px solid var(--line);
-        border-radius: var(--radius-md);
-        padding: var(--space-6) var(--space-8);
-      }
-      .context-head {
-        display: flex; justify-content: space-between; align-items: baseline;
-        margin-bottom: var(--space-4);
-      }
-      .context-eyebrow {
-        font-family: var(--font-mono); font-size: 10px;
-        text-transform: uppercase; letter-spacing: 0.08em;
-        color: var(--ink-3);
-      }
-      .context-jump {
-        font-family: var(--font-mono); font-size: 11px;
-        color: var(--clay);
-      }
-      .context-page {
-        font-family: "Courier Prime", monospace;
-        font-size: 13px; line-height: 1.7;
-        color: var(--ink-2);
-        max-height: 220px; overflow: hidden;
-        position: relative;
-      }
-      .context-page::after {
-        content: ""; position: absolute; bottom: 0; left: 0; right: 0;
-        height: 60px;
-        background: linear-gradient(to bottom, transparent, var(--page));
-      }
-      .context-page .sh {
-        text-transform: uppercase; font-weight: 700; color: var(--ink-1);
-        margin-block: var(--space-3) var(--space-2);
-      }
-      .mark {
-        background: color-mix(in oklch, var(--mark-color, var(--leaf)) 18%, transparent);
-        border-bottom: 1px solid var(--mark-color, var(--leaf));
-        padding: 0 2px; border-radius: 2px;
-      }
-
-      /* ─── RIGHT: Cesare margin ─── */
-      .margin { position: sticky; top: 112px; display: flex; flex-direction: column; gap: var(--space-3); }
-      .margin-head {
-        font-family: var(--font-mono); font-size: 10px;
-        text-transform: uppercase; letter-spacing: 0.1em;
-        color: var(--ink-3);
-        padding: 0 var(--space-2);
-        display: flex; align-items: center; gap: var(--space-2);
-      }
-      .margin-head::before {
-        content: ""; width: 6px; height: 6px; border-radius: 50%;
-        background: var(--leaf);
-      }
+      /* Cesare notes (in panel) */
       .note {
         background: var(--leaf-soft);
         border-inline-start: 2px solid var(--leaf);
         border-radius: var(--radius-md);
-        padding: var(--space-4);
+        padding: var(--space-3);
       }
       .note.is-prod {
         background: var(--clay-soft);
@@ -414,15 +384,15 @@
       .note.is-prod .note-kind { color: var(--clay); }
       .note-text {
         font-family: var(--font-display); font-style: italic;
-        font-size: 13.5px; line-height: 1.45;
+        font-size: 13px; line-height: 1.45;
         color: var(--ink-1);
         margin-bottom: var(--space-3);
       }
-      .note-actions { display: flex; gap: var(--space-2); }
+      .note-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
       .note-action {
         font-family: var(--font-mono); font-size: 10px;
-        text-transform: uppercase; letter-spacing: 0.06em;
-        padding: 4px var(--space-2);
+        text-transform: uppercase; letter-spacing: 0.05em;
+        padding: 3px var(--space-2);
         border-radius: var(--radius-sm);
         color: var(--ink-2);
       }
@@ -430,7 +400,120 @@
         background: var(--leaf); color: var(--page);
       }
       .note.is-prod .note-action.is-primary { background: var(--clay); }
-      .note-action:not(.is-primary):hover { background: rgba(0,0,0,0.06); }
+
+      /* ─── INDICE POPOVER (from Viewbar) ─── */
+      .popover {
+        position: absolute; z-index: 70;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+        width: 320px;
+        padding: var(--space-3);
+        margin-top: 6px;
+      }
+      .popover::before {
+        content: ""; position: absolute; top: -6px; right: 16px;
+        width: 10px; height: 10px;
+        background: var(--page);
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+        transform: rotate(45deg);
+      }
+      .pop-search {
+        display: flex; align-items: center; gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        background: var(--paper-2);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--space-2);
+      }
+      .pop-search input {
+        flex: 1; background: transparent; border: 0; outline: none;
+        font-family: inherit; font-size: 13px; color: var(--ink-1);
+      }
+      .pop-search input::placeholder { color: var(--ink-4); }
+      .pop-search .kbd {
+        font-family: var(--font-mono); font-size: 10px;
+        background: var(--page); color: var(--ink-3);
+        padding: 1px 5px; border-radius: 3px;
+        border: 1px solid var(--line);
+      }
+      .pop-act {
+        font-family: var(--font-display); font-style: italic;
+        font-size: 12px; color: var(--ink-3);
+        padding: var(--space-2) var(--space-2) 2px;
+      }
+      .pop-item {
+        display: grid; grid-template-columns: 36px 1fr auto;
+        align-items: center; gap: var(--space-2);
+        padding: 6px var(--space-2);
+        border-radius: var(--radius-sm);
+        cursor: pointer; width: 100%;
+      }
+      .pop-item:hover { background: var(--paper-2); }
+      .pop-item.is-current {
+        background: var(--clay-soft);
+        box-shadow: inset 2px 0 0 var(--clay);
+      }
+      .pop-item .n {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-4); text-transform: uppercase;
+      }
+      .pop-item.is-current .n { color: var(--clay); }
+      .pop-item .lbl {
+        font-size: 13px; color: var(--ink-2);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .pop-item.is-current .lbl { color: var(--ink-1); font-weight: 500; }
+      .pop-item .ct {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); padding: 1px 5px;
+        background: var(--paper-3); border-radius: 8px;
+      }
+
+      /* ─── CONTEXT MENU (right-click on element) ─── */
+      .ctx {
+        position: absolute; z-index: 75;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.22);
+        width: 220px;
+        padding: 4px;
+      }
+      .ctx-head {
+        padding: var(--space-2) var(--space-3) var(--space-2);
+        border-bottom: 1px solid var(--line-soft);
+        margin-bottom: 4px;
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--ink-3);
+        display: flex; align-items: center; gap: 6px;
+      }
+      .ctx-head .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--cat-color);
+      }
+      .ctx-head b { color: var(--ink-1); font-weight: 500; }
+      .ctx-item {
+        display: grid; grid-template-columns: 16px 1fr auto;
+        gap: var(--space-2); align-items: center;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        font-size: 13px; color: var(--ink-1);
+        cursor: pointer; width: 100%;
+      }
+      .ctx-item:hover { background: var(--paper-2); }
+      .ctx-item.is-danger { color: #b33a28; }
+      .ctx-item.is-danger:hover { background: #f5e0dc; }
+      .ctx-item .kbd {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3);
+      }
+      .ctx-sep {
+        height: 1px; background: var(--line-soft);
+        margin: 4px 0;
+      }
 
       /* ─── Floating Dock ─── */
       .dock {
@@ -438,8 +521,7 @@
         z-index: 50;
         display: flex; align-items: center; gap: var(--space-3);
         padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
-        background: var(--page);
-        border: 1px solid var(--line);
+        background: var(--page); border: 1px solid var(--line);
         border-radius: var(--radius-pill);
         box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
       }
@@ -480,7 +562,7 @@
     </style>
   </head>
   <body>
-    <!-- ─────────────── TOPBAR ─────────────── -->
+    <!-- ─────────── TOPBAR ─────────── -->
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">O</div>
@@ -505,7 +587,7 @@
       </div>
     </header>
 
-    <!-- ─────────────── VIEWBAR ─────────────── -->
+    <!-- ─────────── VIEWBAR ─────────── -->
     <nav class="viewbar" aria-label="Opzioni di visualizzazione">
       <div class="viewbar-left">
         <span class="viewbar-label">Sottolinea:</span>
@@ -516,7 +598,6 @@
           <button class="chip" style="--chip-color: var(--c-costumi)">Costumi</button>
           <button class="chip" style="--chip-color: var(--c-fotografia)">Fotografia</button>
           <button class="chip" style="--chip-color: var(--c-suono)">Suono</button>
-          <button class="chip" style="--chip-color: var(--c-vehicles)">Veicoli</button>
         </div>
         <span class="vsep"></span>
         <div class="tab-group">
@@ -525,273 +606,271 @@
           <button class="tab">Matrice</button>
         </div>
       </div>
-      <button class="version-select">v3 · 14 mag 2026 ▾</button>
+      <div class="viewbar-right">
+        <!-- INDICE button — opens popover with scenes + search -->
+        <div style="position: relative">
+          <button class="pill-btn" aria-haspopup="dialog" aria-expanded="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
+            Indice
+            <span class="badge-count">3/9</span>
+            ▾
+          </button>
+
+          <!-- Popover Indice — open by default to show the design -->
+          <div class="popover" role="dialog" aria-label="Indice scene">
+            <div class="pop-search">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="color: var(--ink-3)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input type="text" placeholder="Cerca scena o luogo…" />
+              <span class="kbd">⌘K</span>
+            </div>
+            <p class="pop-act">Atto I</p>
+            <button class="pop-item"><span class="n">SC.1</span><span class="lbl">INT. Appartamento — Notte</span><span class="ct">6</span></button>
+            <button class="pop-item"><span class="n">SC.2</span><span class="lbl">EXT. Strada Napoli — Giorno</span><span class="ct">4</span></button>
+            <button class="pop-item is-current"><span class="n">SC.3</span><span class="lbl">INT. Pizzeria Sottoscala — Sera</span><span class="ct">12</span></button>
+            <button class="pop-item"><span class="n">SC.4</span><span class="lbl">INT. Cucina Pizzeria — Sera</span><span class="ct">3</span></button>
+            <p class="pop-act">Atto II</p>
+            <button class="pop-item"><span class="n">SC.5</span><span class="lbl">INT. Palco Open Mic — Notte</span><span class="ct">8</span></button>
+            <button class="pop-item"><span class="n">SC.6</span><span class="lbl">INT. Sala — Notte</span><span class="ct">5</span></button>
+          </div>
+        </div>
+
+        <button class="pill-btn">v3 · 14 mag 2026 ▾</button>
+      </div>
     </nav>
 
-    <!-- ─────────────── HERO ─────────────── -->
-    <section class="hero">
-      <div>
-        <p class="eyebrow">SCENA 3 · INT. PIZZERIA SOTTOSCALA — SERA</p>
-        <h1><span class="num">12 elementi</span> <span class="sub">spogliati · 3 da confermare</span></h1>
-      </div>
-      <div class="hero-meta">
-        <span><b>3</b> cast</span><span>·</span>
-        <span><b>2</b> location</span><span>·</span>
-        <span><b>4</b> props</span><span>·</span>
-        <span><b>1</b> vfx</span><span>·</span>
-        <span><b>2</b> suono</span>
+    <!-- ─────────── SCENE EYEBROW + META ─────────── -->
+    <section class="scene-bar">
+      <p class="eyebrow">
+        <span class="scene-num">SCENA 3</span> · INT. PIZZERIA SOTTOSCALA — SERA · PAG. 4 / 28
+      </p>
+      <div class="meta">
+        <span><b>12</b> elementi</span>
+        <span>·</span>
+        <span class="pending">3 da confermare</span>
       </div>
     </section>
 
-    <!-- ─────────────── LAYOUT ─────────────── -->
+    <!-- ─────────── LAYOUT — Screenplay + Right panel ─────────── -->
     <main class="layout">
-      <!-- LEFT: scene TOC -->
-      <aside class="toc">
-        <p class="toc-head">Indice · 9 scene</p>
-        <p class="toc-act">Atto I</p>
-        <div class="toc-list">
-          <button class="toc-item">
-            <span class="n">SC.1</span>
-            <span class="label">Aperture</span>
-            <span class="count">6</span>
+      <!-- SCREENPLAY (hero, center) -->
+      <article class="screenplay" aria-label="Sceneggiatura scena 3">
+        <div class="scene-heading">
+          <span class="num">1</span>
+          <span>INT/EXT. Angolo Open Grezzo / Fuori dalla porta — Notte</span>
+          <span class="num" style="text-align: right">1</span>
+        </div>
+
+        <p class="sp-action">
+          <span class="el" style="--cat-color: var(--c-cast)">JOHN</span> (35) ha il
+          <span class="el" style="--cat-color: var(--c-scenografia)">microfono</span>
+          in mano. È in piedi in un angolo del ristorante adibito a
+          <span class="el" style="--cat-color: var(--c-locations)">palco</span>.
+          Dietro di lui c'è un grande
+          <span class="el is-pending" style="--cat-color: var(--c-scenografia)">striscione "OPEN GREZZO"</span>
+          con scritto "OPEN GREZZO — UN OPEN MIC PROVINCIALE".
+        </p>
+
+        <p class="sp-char"><span class="el is-selected" style="--cat-color: var(--c-cast)">JOHN</span></p>
+        <p class="sp-dlg">
+          AHAHHAH! Ma tua moglie ancora ti ci vuole a letto? AHAH! Mamma se sci diventato
+          bruttu! AHAH! Nice Nice! Buona serata a tutti siamo qui al
+          <span class="el" style="--cat-color: var(--c-locations)">Sottoscala pizzeria</span>
+          per una grande serata di Stand Up Comedy!
+        </p>
+
+        <p class="sp-char"><span class="el" style="--cat-color: var(--c-cast)">PUBBLICO</span></p>
+        <p class="sp-dlg">Ma che sarria? Stand che?</p>
+
+        <p class="sp-char"><span class="el" style="--cat-color: var(--c-cast)">JOHN</span></p>
+        <p class="sp-dlg">
+          Ma poesse che non capisci un cazzu! Allora vi devo spigare tutto!
+          Ci saranno una serie di comici che uno dietro all'altro si esibiranno
+          su questo fantastico palco per farvi ridere e anche pensare…
+        </p>
+
+        <p class="sp-paren">(<span class="el" style="--cat-color: var(--c-suono)">risate</span>)</p>
+
+        <p class="sp-action">
+          Vediamo il ristorante fuori, le
+          <span class="el is-suggested" style="--cat-color: var(--c-vehicles)">macchine</span>
+          che passano sulla strada. Allora iniziamo subito con il primo… No le tagliatelle
+          signo', il primo comico! Un grande
+          <span class="el" style="--cat-color: var(--c-suono)">applauso</span>
+          a Milco Messi.
+        </p>
+
+        <p class="sp-paren">(<span class="el" style="--cat-color: var(--c-suono)">applauso</span>)</p>
+
+        <p class="sp-action">
+          <span class="el" style="--cat-color: var(--c-cast)">FILIPPO</span> (40) è fuori dal
+          locale. Si accende una
+          <span class="el" style="--cat-color: var(--c-scenografia)">sigaretta</span>.
+          Sta guardando la
+          <span class="el is-pending" style="--cat-color: var(--c-scenografia)">locandina</span>
+          dell'"Open Grezzo: un open-mic provinciale" appesa fuori dal ristorante.
+          Sulla locandina c'è l'immagine di
+          <span class="el" style="--cat-color: var(--c-cast)">John</span>.
+        </p>
+
+        <!-- Suggested element (AI) -->
+        <p class="sp-action">
+          La cucina è accesa dietro al banco —
+          <span class="el is-suggested" style="--cat-color: var(--c-fotografia)">luce calda pratica</span>
+          taglia il fumo della
+          <span class="el is-suggested" style="--cat-color: var(--c-scenografia)">pizza fumante</span>.
+        </p>
+
+        <!-- ─── CONTEXT MENU (right-click on element "Striscione Open Grezzo") ─── -->
+        <div class="ctx" style="--cat-color: var(--c-scenografia); top: 178px; left: 240px" role="menu">
+          <div class="ctx-head">
+            <span class="dot"></span>
+            Props · <b>Striscione Open Grezzo</b>
+          </div>
+          <button class="ctx-item" role="menuitem">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 6 9 17l-5-5"/></svg>
+            <span>Conferma elemento</span>
+            <span class="kbd">↵</span>
           </button>
-          <button class="toc-item">
-            <span class="n">SC.2</span>
-            <span class="label">Caffè con Marco</span>
-            <span class="count">4</span>
+          <button class="ctx-item" role="menuitem">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h18M12 3v18"/></svg>
+            <span>Cambia categoria</span>
+            <span class="kbd">⇧C</span>
           </button>
-          <button class="toc-item is-current">
-            <span class="n">SC.3</span>
-            <span class="label">Int. Pizzeria</span>
-            <span class="count">12</span>
+          <button class="ctx-item" role="menuitem">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M11 4 4 11l7 7M4 11h16"/></svg>
+            <span>Modifica nome</span>
+            <span class="kbd">⏎</span>
           </button>
-          <button class="toc-item">
-            <span class="n">SC.4</span>
-            <span class="label">Ext. Vicolo</span>
-            <span class="count">3</span>
+          <button class="ctx-item" role="menuitem">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M9 12h6"/></svg>
+            <span>Unisci con esistente…</span>
           </button>
-        </div>
-        <p class="toc-act">Atto II</p>
-        <div class="toc-list">
-          <button class="toc-item">
-            <span class="n">SC.5</span>
-            <span class="label">Int. Cucina</span>
-            <span class="count">5</span>
-          </button>
-          <button class="toc-item">
-            <span class="n">SC.6</span>
-            <span class="label">Int. Sala</span>
-            <span class="count">8</span>
-          </button>
-          <button class="toc-item">
-            <span class="n">SC.7</span>
-            <span class="label">Ext. Piazza</span>
-            <span class="count">4</span>
+          <div class="ctx-sep"></div>
+          <button class="ctx-item is-danger" role="menuitem">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/></svg>
+            <span>Rimuovi dallo spoglio</span>
+            <span class="kbd">⌫</span>
           </button>
         </div>
-        <p class="toc-act">Atto III</p>
-        <div class="toc-list">
-          <button class="toc-item">
-            <span class="n">SC.8</span>
-            <span class="label">Int. Pizzeria</span>
-            <span class="count">5</span>
+      </article>
+
+      <!-- RIGHT PANEL — tabs: Categorie / Cesare -->
+      <aside class="panel" aria-label="Pannello laterale">
+        <div class="panel-tabs" role="tablist">
+          <button class="panel-tab is-active" role="tab" aria-selected="true">
+            Categorie<span class="count">8</span>
           </button>
-          <button class="toc-item">
-            <span class="n">SC.9</span>
-            <span class="label">Ext. Strada</span>
-            <span class="count">2</span>
+          <button class="panel-tab" role="tab" aria-selected="false">
+            Cesare<span class="count">4</span>
           </button>
         </div>
-      </aside>
 
-      <!-- CENTER: chip wall by category -->
-      <section class="center">
-        <!-- CAST -->
-        <div class="category" style="--cat-color: var(--c-cast)">
-          <header class="category-head">
-            <span class="category-name">Cast</span>
-            <div></div>
-            <span class="category-count">3 elementi</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el is-pending">John <span class="badge" data-num>×2</span></span>
-            <span class="el">Pubblico <span class="badge" data-num>×6</span></span>
-            <span class="el">Filippo <span class="badge" data-num>×7</span></span>
-            <span class="el is-suggested">Cameriere <span class="ai">AI</span></span>
+        <div class="panel-body">
+          <!-- CAST -->
+          <div class="cat-group" style="--cat-color: var(--c-cast)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">Cast</span>
+              <span class="ct">3</span>
+              <button class="add" aria-label="Aggiungi cast">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it">John <span class="x" data-num>×2</span></span>
+              <span class="it">Pubblico <span class="x" data-num>×6</span></span>
+              <span class="it">Filippo <span class="x" data-num>×7</span></span>
+              <span class="it is-suggested">Cameriere</span>
+            </div>
+          </div>
+
+          <!-- LOCATIONS -->
+          <div class="cat-group" style="--cat-color: var(--c-locations)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">Locations</span>
+              <span class="ct">2</span>
+              <button class="add">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it">Pizzeria Sottoscala</span>
+              <span class="it">Palco</span>
+            </div>
+          </div>
+
+          <!-- PROPS -->
+          <div class="cat-group" style="--cat-color: var(--c-scenografia)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">Props</span>
+              <span class="ct">4</span>
+              <button class="add">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it">Microfono</span>
+              <span class="it">Striscione</span>
+              <span class="it">Sigaretta</span>
+              <span class="it">Locandina</span>
+              <span class="it is-suggested">Pizza fumante</span>
+            </div>
+          </div>
+
+          <!-- COSTUMI -->
+          <div class="cat-group" style="--cat-color: var(--c-costumi)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">Costumi</span>
+              <span class="ct">2</span>
+              <button class="add">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it">Giacca John usata</span>
+              <span class="it">Maglietta zozza Filippo</span>
+            </div>
+          </div>
+
+          <!-- FOTOGRAFIA -->
+          <div class="cat-group" style="--cat-color: var(--c-fotografia)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">Fotografia</span>
+              <span class="ct">1</span>
+              <button class="add">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it is-suggested">Luce calda pratica</span>
+            </div>
+          </div>
+
+          <!-- SUONO -->
+          <div class="cat-group" style="--cat-color: var(--c-suono)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">Suono</span>
+              <span class="ct">2</span>
+              <button class="add">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it">Applauso <span class="x" data-num>×3</span></span>
+              <span class="it">Risate</span>
+            </div>
+          </div>
+
+          <!-- VFX -->
+          <div class="cat-group" style="--cat-color: var(--c-vfx)">
+            <div class="cat-head">
+              <span class="dot"></span>
+              <span class="name">VFX</span>
+              <span class="ct">1</span>
+              <button class="add">+</button>
+            </div>
+            <div class="cat-list">
+              <span class="it is-suggested">Fumo pizza</span>
+            </div>
           </div>
         </div>
-
-        <!-- LOCATIONS -->
-        <div class="category" style="--cat-color: var(--c-locations)">
-          <header class="category-head">
-            <span class="category-name">Locations</span>
-            <div></div>
-            <span class="category-count">2 elementi</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el">Pizzeria Sottoscala</span>
-            <span class="el">Palco improvvisato</span>
-            <span class="el is-suggested">Esterno notte <span class="ai">AI</span></span>
-          </div>
-        </div>
-
-        <!-- PROPS / SCENOGRAFIA -->
-        <div class="category" style="--cat-color: var(--c-scenografia)">
-          <header class="category-head">
-            <span class="category-name">Props</span>
-            <div></div>
-            <span class="category-count">4 elementi</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el">Microfono</span>
-            <span class="el is-pending">Striscione "Open Grezzo"</span>
-            <span class="el">Locandina</span>
-            <span class="el">Sigaretta</span>
-            <span class="el is-suggested">Pizza fumante <span class="ai">AI</span></span>
-            <span class="el is-suggested">Tovaglioli <span class="ai">AI</span></span>
-          </div>
-        </div>
-
-        <!-- COSTUMI -->
-        <div class="category" style="--cat-color: var(--c-costumi)">
-          <header class="category-head">
-            <span class="category-name">Costumi</span>
-            <div></div>
-            <span class="category-count">2 elementi</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el">Giacca John usata</span>
-            <span class="el">Maglietta zozza Filippo</span>
-          </div>
-        </div>
-
-        <!-- FOTOGRAFIA -->
-        <div class="category" style="--cat-color: var(--c-fotografia)">
-          <header class="category-head">
-            <span class="category-name">Fotografia</span>
-            <div></div>
-            <span class="category-count">1 elemento</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el is-suggested">Luce calda pratica <span class="ai">AI</span></span>
-          </div>
-        </div>
-
-        <!-- SUONO -->
-        <div class="category" style="--cat-color: var(--c-suono)">
-          <header class="category-head">
-            <span class="category-name">Suono</span>
-            <div></div>
-            <span class="category-count">2 elementi</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el">Applauso <span class="badge" data-num>×3</span></span>
-            <span class="el">Risate</span>
-            <span class="el">Voice Over</span>
-          </div>
-        </div>
-
-        <!-- VFX -->
-        <div class="category" style="--cat-color: var(--c-vfx)">
-          <header class="category-head">
-            <span class="category-name">VFX</span>
-            <div></div>
-            <span class="category-count">1 elemento</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el is-suggested">Fumo pizza in cottura <span class="ai">AI</span></span>
-          </div>
-        </div>
-
-        <!-- ATMOSFERA -->
-        <div class="category" style="--cat-color: var(--c-atmosfera)">
-          <header class="category-head">
-            <span class="category-name">Atmosfera</span>
-            <div></div>
-            <span class="category-count">1 elemento</span>
-            <button class="category-add">+ Aggiungi</button>
-          </header>
-          <div class="category-body">
-            <span class="el">Serata Comedy</span>
-          </div>
-        </div>
-
-        <!-- Screenplay context -->
-        <div class="context">
-          <div class="context-head">
-            <span class="context-eyebrow">Contesto · pagina 4</span>
-            <button class="context-jump">Apri nello screenplay →</button>
-          </div>
-          <div class="context-page">
-            <p class="sh">INT/EXT. Angolo Open Grezzo / Fuori dalla porta — Notte</p>
-            <p>
-              <span class="mark" style="--mark-color: var(--c-cast)">John</span> (35) ha il
-              <span class="mark" style="--mark-color: var(--c-scenografia)">microfono</span>
-              in mano. È in piedi in un angolo del ristorante adibito a
-              <span class="mark" style="--mark-color: var(--c-locations)">palco</span>.
-              Dietro di lui c'è un grande
-              <span class="mark" style="--mark-color: var(--c-scenografia)">striscione</span>
-              con scritto "OPEN GREZZO — UN OPEN MIC PROVINCIALE".
-            </p>
-            <p>
-              <span class="mark" style="--mark-color: var(--c-cast)">JOHN</span><br/>
-              AHAHHAH! Ma tua moglie ancora ti ci vuole a letto? AHAH! Mamma se sci diventato bruttu! AHAH! Nice Nice! Buona serata a tutti siamo qui al Sottoscala pizzeria per una grande serata di Stand Up Comedy!
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- RIGHT: Cesare margin -->
-      <aside class="margin" aria-label="Note di Cesare">
-        <p class="margin-head">Note di Cesare · 4</p>
-        <article class="note">
-          <p class="note-kind">+ Spoglio</p>
-          <p class="note-text">
-            Cesare ha trovato <b>3 elementi nuovi</b> nello script:
-            <i>cameriere</i>, <i>pizza fumante</i>, <i>luce calda pratica</i>.
-            Vuoi che li aggiunga al breakdown?
-          </p>
-          <div class="note-actions">
-            <button class="note-action is-primary">Accetta tutti</button>
-            <button class="note-action">Rivedi</button>
-            <button class="note-action">Ignora</button>
-          </div>
-        </article>
-
-        <article class="note is-prod">
-          <p class="note-kind">+ Produzione</p>
-          <p class="note-text">
-            "Striscione Open Grezzo" appare in sc.1 e sc.3 — è lo stesso? Conviene
-            unirli per non duplicare il prop.
-          </p>
-          <div class="note-actions">
-            <button class="note-action is-primary">Unisci</button>
-            <button class="note-action">Più tardi</button>
-          </div>
-        </article>
-
-        <article class="note">
-          <p class="note-kind">+ Scrittura</p>
-          <p class="note-text">
-            La scena ha 4 elementi cast non assegnati. Definirli prima del budget
-            ti risparmia un giro di revisione.
-          </p>
-          <div class="note-actions">
-            <button class="note-action is-primary">Apri cast</button>
-            <button class="note-action">Più tardi</button>
-          </div>
-        </article>
       </aside>
     </main>
 
-    <!-- ─────────────── FLOATING DOCK ─────────────── -->
+    <!-- ─────────── FLOATING DOCK ─────────── -->
     <div class="dock" role="toolbar" aria-label="Azioni breakdown">
       <span class="dock-label">Breakdown</span>
       <button class="dock-btn is-primary">
