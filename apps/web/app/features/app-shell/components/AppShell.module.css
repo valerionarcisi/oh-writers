@@ -4,7 +4,6 @@
 }
 
 .main {
-  padding-block-start: 48px;
   min-block-size: calc(100vh - 48px);
   overflow: auto;
 }

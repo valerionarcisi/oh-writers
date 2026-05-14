@@ -136,18 +136,20 @@ export function TopBar({
           )}
         </button>
 
-        <button
-          type="button"
-          className={styles.askBtn}
-          onClick={onAskCesare}
-          aria-label="Chiedi a Cesare (⌘.)"
-          title="Chiedi a Cesare (⌘.)"
-        >
-          Chiedi a Cesare
-          <span className={styles.askHotkey} aria-hidden="true">
-            ⌘.
-          </span>
-        </button>
+        {onAskCesare !== undefined && (
+          <button
+            type="button"
+            className={styles.askBtn}
+            onClick={onAskCesare}
+            aria-label="Chiedi a Cesare (⌘.)"
+            title="Chiedi a Cesare (⌘.)"
+          >
+            Chiedi a Cesare
+            <span className={styles.askHotkey} aria-hidden="true">
+              ⌘.
+            </span>
+          </button>
+        )}
 
         {presenceUsers.length > 0 && (
           <Presence users={presenceUsers} maxVisible={3} />
