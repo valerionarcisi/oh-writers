@@ -356,10 +356,32 @@ function BreakdownPageV2Content({ projectId }: Props) {
 
   const totalScenes = scenes.length;
 
+  // Toggle the data-scrolled flag on the viewbar so it shrinks once the user
+  // moves past the top. Scrolling can happen on AppShell's #main-content or
+  // on the window itself depending on viewport height — listen on both.
+  const [isScrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const main = document.getElementById("main-content");
+    const onScroll = () => {
+      const top = (main?.scrollTop ?? 0) + window.scrollY;
+      setScrolled(top > 4);
+    };
+    onScroll();
+    main?.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      main?.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
   return (
     <main className={styles.page} data-testid="breakdown-page-v2">
       {/* ─── VIEWBAR ─── */}
-      <div className={styles.viewbarWrap}>
+      <div
+        className={styles.viewbarWrap}
+        data-scrolled={isScrolled || undefined}
+      >
         <Viewbar>
           <div className={styles.viewbarCenter}>
             <span className={styles.viewbarLabel}>Sottolinea:</span>

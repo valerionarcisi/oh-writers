@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
@@ -22,6 +23,18 @@ const ELEMENT_SHORTCUTS: Record<ElementType, string> = {
   dialogue: "⌥D",
   parenthetical: "⌥P",
   transition: "⌥T",
+};
+
+// One ambient accent per fountain block type. Reuses the breakdown category
+// palette so a future reader can visually associate, e.g., "Character" with
+// the cast category in the breakdown panel.
+const ELEMENT_COLORS: Record<ElementType, string> = {
+  scene: "var(--ds-cat-locations, #b07a3a)",
+  action: "var(--ds-text-3, #8a8479)",
+  character: "var(--ds-cat-cast, #6c4d8c)",
+  dialogue: "var(--ds-action, #b04a2a)",
+  parenthetical: "var(--ds-cat-costumi, #c98a8a)",
+  transition: "var(--ds-cat-suono, #5a8a6a)",
 };
 
 const ELEMENT_ORDER: ElementType[] = [
@@ -53,10 +66,12 @@ export function ScreenplayElementChips({
           key={el}
           type="button"
           className={`${styles.elementPill} ${currentElement === el ? styles.elementPillActive : ""}`}
+          style={{ "--chip-accent": ELEMENT_COLORS[el] } as CSSProperties}
           title={`${ELEMENT_LABELS[el]} (${ELEMENT_SHORTCUTS[el]})`}
           aria-pressed={currentElement === el}
           onClick={() => onSetElement(el)}
         >
+          <span className={styles.chipDot} aria-hidden="true" />
           {ELEMENT_LABELS[el]}
         </button>
       ))}

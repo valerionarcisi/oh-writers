@@ -5,5 +5,7 @@
 
 .main {
   min-block-size: calc(100vh - 48px);
-  overflow: auto;
+  /* The window is the scroll container, not main. Keep main as a normal
+     flow block so sticky positioning inside (Viewbar, TopBar) anchors to
+     the viewport instead of a nested scroll context. */
 }

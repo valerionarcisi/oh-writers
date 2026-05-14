@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Viewbar,
   ViewbarSep,
@@ -39,15 +39,6 @@ export type ScreenplayEditorShellProps = {
   children: ReactNode;
   /** Optional override for the TOC content; falls back to a single-scene stub */
   acts?: ActEntry[];
-  /** Cesare note count — shown on the collapsed margin badge. The toggle and
-   *  count for Cesare also live in the floating dock owned by the editor. */
-  cesareNoteCount?: number;
-  /** Render-prop for the Cesare margin column. Provided by the editor when it
-   *  has live suggestions; falls back to a quiet empty state when omitted. */
-  cesareMargin?: ReactNode;
-  /** Whether the Cesare overlay is currently on. Drives both the dock pill
-   *  (in the editor) and the margin column visibility here. */
-  isCesareOn?: boolean;
   /** Optional slot rendered centered in the Viewbar — same position the
    *  Breakdown V2 page uses for its 'Sottolinea' chips. The screenplay route
    *  fills it with the element conversion chips (Scene/Action/Character/...). */
@@ -59,16 +50,36 @@ export function ScreenplayEditorShell({
   projectId,
   children,
   acts,
-  cesareNoteCount = 0,
-  cesareMargin,
-  isCesareOn = true,
   viewbarCenter,
 }: ScreenplayEditorShellProps) {
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
+  const [isScrolled, setScrolled] = useState(false);
+  const viewbarWrapRef = useRef<HTMLDivElement>(null);
+
+  // Toggle the data-scrolled flag on the viewbar so its CSS can shrink the
+  // chip strip once the user has moved past the top of the page. The actual
+  // scrolling happens on either AppShell's #main-content (when it has
+  // overflow:auto and is shorter than its content) or the window itself
+  // (when main expands to fit). Listen on both to cover both cases.
+  useEffect(() => {
+    const main = document.getElementById("main-content");
+    const onScroll = () => {
+      const top = (main?.scrollTop ?? 0) + window.scrollY;
+      setScrolled(top > 4);
+    };
+    onScroll();
+    main?.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      main?.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
   const hasRealToc = acts !== undefined && acts.length > 0;
+  void _title; // currently unused — kept for future TOC-driven indices
 
   const { currentSceneIdx, totalScenes } = useMemo(() => {
     let total = 0;
@@ -97,11 +108,13 @@ export function ScreenplayEditorShell({
       .filter((act) => act.scenes.length > 0);
   }, [tocActs, indiceQuery]);
 
-  const layoutClass = styles.layout;
-
   return (
     <div className={styles.shell}>
-      <div className={styles.viewbarWrap}>
+      <div
+        ref={viewbarWrapRef}
+        className={styles.viewbarWrap}
+        data-scrolled={isScrolled || undefined}
+      >
         <Viewbar>
           <div className={styles.viewbarCenter}>{viewbarCenter}</div>
 
@@ -188,37 +201,11 @@ export function ScreenplayEditorShell({
         </Viewbar>
       </div>
 
-      {/* Scene eyebrow — minimal; main project/section info already lives in
-          the TopBar. Only render when there's status to communicate. */}
-      {cesareNoteCount > 0 && (
-        <section className={styles.sceneBar} aria-label="Stato scena">
-          <span />
-          <p className={styles.metaPending} data-num>
-            {cesareNoteCount} note di Cesare
-          </p>
-        </section>
-      )}
 
-      <div className={isCesareOn ? layoutClass : styles.layoutNoMargin}>
+      <div className={styles.layoutNoMargin}>
         <div className={styles.editorial}>
           <div className={styles.editorSlot}>{children}</div>
         </div>
-
-        {isCesareOn && (
-          <aside className={styles.margin} aria-label="Note di Cesare">
-            <header className={styles.marginHeader}>
-              <span className={styles.marginLabel}>
-                Note di Cesare · {cesareNoteCount}
-              </span>
-            </header>
-
-            {cesareMargin ?? (
-              <p className={styles.marginEmpty}>
-                Nessuna nota aperta su questa scena.
-              </p>
-            )}
-          </aside>
-        )}
       </div>
     </div>
   );

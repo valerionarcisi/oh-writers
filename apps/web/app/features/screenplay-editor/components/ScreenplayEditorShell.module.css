@@ -16,10 +16,20 @@
 
 .viewbarWrap {
   position: sticky;
+  /* The window is the scroll container (AppShell.main is now in-flow). The
+     TopBar is sticky top:0 over 48px, so the viewbar sticks just below it. */
   inset-block-start: 48px;
   z-index: 30;
   background: var(--ds-surface-alt);
   border-block-end: 1px solid var(--ds-line);
+  transition:
+    padding-block var(--ds-duration-1, 150ms) var(--ds-ease),
+    box-shadow var(--ds-duration-1, 150ms) var(--ds-ease);
+}
+
+.viewbarWrap[data-scrolled="true"] {
+  padding-block: 0;
+  box-shadow: 0 1px 0 var(--ds-line);
 }
 
 .viewbarCenter {

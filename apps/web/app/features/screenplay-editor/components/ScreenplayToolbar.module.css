@@ -68,6 +68,7 @@
 }
 
 .elementPill {
+  --chip-accent: var(--ds-text-3);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -87,7 +88,7 @@
 
 .elementPill:hover {
   color: var(--ds-text);
-  border-color: var(--ds-text-3);
+  border-color: var(--chip-accent);
 }
 
 .elementPill:focus-visible {
@@ -104,17 +105,19 @@
   }
 }
 
-.elementPillActive {
-  color: var(--ds-text);
-  background: var(--ds-action-soft);
-  border-color: var(--ds-action);
-  font-weight: 600;
+.chipDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--chip-accent);
+  flex-shrink: 0;
 }
 
-.elementPillActive::before {
-  content: "●";
-  font-size: 8px;
-  color: var(--ds-action);
+.elementPillActive {
+  color: var(--ds-text);
+  background: color-mix(in srgb, var(--chip-accent) 12%, transparent);
+  border-color: var(--chip-accent);
+  font-weight: 600;
 }
 
 /* ─── Right buttons ─────────────────────────────────────── */
