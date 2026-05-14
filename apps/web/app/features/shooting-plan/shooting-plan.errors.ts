@@ -33,3 +33,11 @@ export class InvalidReverseShotError {
     this.message = `Cannot create reverse shot: ${reason}`;
   }
 }
+
+export class BlockingNotFoundError {
+  readonly _tag = "BlockingNotFoundError" as const;
+  readonly message: string;
+  constructor(readonly sceneId: string) {
+    this.message = `Blocking not found for scene: ${sceneId}`;
+  }
+}
