@@ -10,349 +10,349 @@
 
 // Import Routes
 
-import { Route as rootRoute } from "./routes/__root";
-import { Route as RegisterImport } from "./routes/register";
-import { Route as LoginImport } from "./routes/login";
-import { Route as AppImport } from "./routes/_app";
-import { Route as IndexImport } from "./routes/index";
-import { Route as AppDashboardImport } from "./routes/_app.dashboard";
-import { Route as AppProjectsNewImport } from "./routes/_app.projects.new";
-import { Route as AppProjectsIdImport } from "./routes/_app.projects.$id";
-import { Route as AppProjectsIdTreatmentImport } from "./routes/_app.projects.$id_.treatment";
-import { Route as AppProjectsIdTitlePageImport } from "./routes/_app.projects.$id_.title-page";
-import { Route as AppProjectsIdSynopsisImport } from "./routes/_app.projects.$id_.synopsis";
-import { Route as AppProjectsIdSoggettoImport } from "./routes/_app.projects.$id_.soggetto";
-import { Route as AppProjectsIdSettingsImport } from "./routes/_app.projects.$id_.settings";
-import { Route as AppProjectsIdScreenplayImport } from "./routes/_app.projects.$id_.screenplay";
-import { Route as AppProjectsIdScheduleImport } from "./routes/_app.projects.$id_.schedule";
-import { Route as AppProjectsIdOutlineImport } from "./routes/_app.projects.$id_.outline";
-import { Route as AppProjectsIdBudgetImport } from "./routes/_app.projects.$id_.budget";
-import { Route as AppProjectsIdBreakdownImport } from "./routes/_app.projects.$id_.breakdown";
-import { Route as AppProjectsIdScreenplayIndexImport } from "./routes/_app.projects.$id_.screenplay.index";
-import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
-import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
-import { Route as AppProjectsIdScreenplayDiffV1V2Import } from "./routes/_app.projects.$id_.screenplay.diff.$v1.$v2";
-import { Route as DevTokensImport } from "./routes/dev/tokens";
+import { Route as rootRoute } from './routes/__root'
+import { Route as RegisterImport } from './routes/register'
+import { Route as LoginImport } from './routes/login'
+import { Route as AppImport } from './routes/_app'
+import { Route as IndexImport } from './routes/index'
+import { Route as DevTokensImport } from './routes/dev/tokens'
+import { Route as AppDashboardImport } from './routes/_app.dashboard'
+import { Route as AppProjectsNewImport } from './routes/_app.projects.new'
+import { Route as AppProjectsIdImport } from './routes/_app.projects.$id'
+import { Route as AppProjectsIdTreatmentImport } from './routes/_app.projects.$id_.treatment'
+import { Route as AppProjectsIdTitlePageImport } from './routes/_app.projects.$id_.title-page'
+import { Route as AppProjectsIdSynopsisImport } from './routes/_app.projects.$id_.synopsis'
+import { Route as AppProjectsIdSoggettoImport } from './routes/_app.projects.$id_.soggetto'
+import { Route as AppProjectsIdSettingsImport } from './routes/_app.projects.$id_.settings'
+import { Route as AppProjectsIdScreenplayImport } from './routes/_app.projects.$id_.screenplay'
+import { Route as AppProjectsIdScheduleImport } from './routes/_app.projects.$id_.schedule'
+import { Route as AppProjectsIdOutlineImport } from './routes/_app.projects.$id_.outline'
+import { Route as AppProjectsIdBudgetImport } from './routes/_app.projects.$id_.budget'
+import { Route as AppProjectsIdBreakdownImport } from './routes/_app.projects.$id_.breakdown'
+import { Route as AppProjectsIdScreenplayIndexImport } from './routes/_app.projects.$id_.screenplay.index'
+import { Route as AppProjectsIdScreenplayVersionsImport } from './routes/_app.projects.$id_.screenplay.versions'
+import { Route as AppProjectsIdScreenplayVersionsVIdImport } from './routes/_app.projects.$id_.screenplay.versions.$vId'
+import { Route as AppProjectsIdScreenplayDiffV1V2Import } from './routes/_app.projects.$id_.screenplay.diff.$v1.$v2'
 
 // Create/Update Routes
 
 const RegisterRoute = RegisterImport.update({
-  id: "/register",
-  path: "/register",
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const LoginRoute = LoginImport.update({
-  id: "/login",
-  path: "/login",
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const AppRoute = AppImport.update({
-  id: "/_app",
+  id: '/_app',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
 
 const IndexRoute = IndexImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRoute,
-} as any);
+} as any)
+
+const DevTokensRoute = DevTokensImport.update({
+  id: '/dev/tokens',
+  path: '/dev/tokens',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const AppDashboardRoute = AppDashboardImport.update({
-  id: "/dashboard",
-  path: "/dashboard",
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsNewRoute = AppProjectsNewImport.update({
-  id: "/projects/new",
-  path: "/projects/new",
+  id: '/projects/new',
+  path: '/projects/new',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdRoute = AppProjectsIdImport.update({
-  id: "/projects/$id",
-  path: "/projects/$id",
+  id: '/projects/$id',
+  path: '/projects/$id',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdTreatmentRoute = AppProjectsIdTreatmentImport.update({
-  id: "/projects/$id_/treatment",
-  path: "/projects/$id/treatment",
+  id: '/projects/$id_/treatment',
+  path: '/projects/$id/treatment',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdTitlePageRoute = AppProjectsIdTitlePageImport.update({
-  id: "/projects/$id_/title-page",
-  path: "/projects/$id/title-page",
+  id: '/projects/$id_/title-page',
+  path: '/projects/$id/title-page',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdSynopsisRoute = AppProjectsIdSynopsisImport.update({
-  id: "/projects/$id_/synopsis",
-  path: "/projects/$id/synopsis",
+  id: '/projects/$id_/synopsis',
+  path: '/projects/$id/synopsis',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdSoggettoRoute = AppProjectsIdSoggettoImport.update({
-  id: "/projects/$id_/soggetto",
-  path: "/projects/$id/soggetto",
+  id: '/projects/$id_/soggetto',
+  path: '/projects/$id/soggetto',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdSettingsRoute = AppProjectsIdSettingsImport.update({
-  id: "/projects/$id_/settings",
-  path: "/projects/$id/settings",
+  id: '/projects/$id_/settings',
+  path: '/projects/$id/settings',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdScreenplayRoute = AppProjectsIdScreenplayImport.update({
-  id: "/projects/$id_/screenplay",
-  path: "/projects/$id/screenplay",
+  id: '/projects/$id_/screenplay',
+  path: '/projects/$id/screenplay',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdScheduleRoute = AppProjectsIdScheduleImport.update({
-  id: "/projects/$id_/schedule",
-  path: "/projects/$id/schedule",
+  id: '/projects/$id_/schedule',
+  path: '/projects/$id/schedule',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdOutlineRoute = AppProjectsIdOutlineImport.update({
-  id: "/projects/$id_/outline",
-  path: "/projects/$id/outline",
+  id: '/projects/$id_/outline',
+  path: '/projects/$id/outline',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdBudgetRoute = AppProjectsIdBudgetImport.update({
-  id: "/projects/$id_/budget",
-  path: "/projects/$id/budget",
+  id: '/projects/$id_/budget',
+  path: '/projects/$id/budget',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdBreakdownRoute = AppProjectsIdBreakdownImport.update({
-  id: "/projects/$id_/breakdown",
-  path: "/projects/$id/breakdown",
+  id: '/projects/$id_/breakdown',
+  path: '/projects/$id/breakdown',
   getParentRoute: () => AppRoute,
-} as any);
+} as any)
 
 const AppProjectsIdScreenplayIndexRoute =
   AppProjectsIdScreenplayIndexImport.update({
-    id: "/",
-    path: "/",
+    id: '/',
+    path: '/',
     getParentRoute: () => AppProjectsIdScreenplayRoute,
-  } as any);
+  } as any)
 
 const AppProjectsIdScreenplayVersionsRoute =
   AppProjectsIdScreenplayVersionsImport.update({
-    id: "/versions",
-    path: "/versions",
+    id: '/versions',
+    path: '/versions',
     getParentRoute: () => AppProjectsIdScreenplayRoute,
-  } as any);
+  } as any)
 
 const AppProjectsIdScreenplayVersionsVIdRoute =
   AppProjectsIdScreenplayVersionsVIdImport.update({
-    id: "/$vId",
-    path: "/$vId",
+    id: '/$vId',
+    path: '/$vId',
     getParentRoute: () => AppProjectsIdScreenplayVersionsRoute,
-  } as any);
+  } as any)
 
 const AppProjectsIdScreenplayDiffV1V2Route =
   AppProjectsIdScreenplayDiffV1V2Import.update({
-    id: "/diff/$v1/$v2",
-    path: "/diff/$v1/$v2",
+    id: '/diff/$v1/$v2',
+    path: '/diff/$v1/$v2',
     getParentRoute: () => AppProjectsIdScreenplayRoute,
-  } as any);
-
-const DevTokensRoute = DevTokensImport.update({
-  id: "/dev/tokens",
-  path: "/dev/tokens",
-  getParentRoute: () => rootRoute,
-} as any);
+  } as any)
 
 // Populate the FileRoutesByPath interface
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexImport;
-      parentRoute: typeof rootRoute;
-    };
-    "/_app": {
-      id: "/_app";
-      path: "";
-      fullPath: "";
-      preLoaderRoute: typeof AppImport;
-      parentRoute: typeof rootRoute;
-    };
-    "/login": {
-      id: "/login";
-      path: "/login";
-      fullPath: "/login";
-      preLoaderRoute: typeof LoginImport;
-      parentRoute: typeof rootRoute;
-    };
-    "/register": {
-      id: "/register";
-      path: "/register";
-      fullPath: "/register";
-      preLoaderRoute: typeof RegisterImport;
-      parentRoute: typeof rootRoute;
-    };
-    "/_app/dashboard": {
-      id: "/_app/dashboard";
-      path: "/dashboard";
-      fullPath: "/dashboard";
-      preLoaderRoute: typeof AppDashboardImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id": {
-      id: "/_app/projects/$id";
-      path: "/projects/$id";
-      fullPath: "/projects/$id";
-      preLoaderRoute: typeof AppProjectsIdImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/new": {
-      id: "/_app/projects/new";
-      path: "/projects/new";
-      fullPath: "/projects/new";
-      preLoaderRoute: typeof AppProjectsNewImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/breakdown": {
-      id: "/_app/projects/$id_/breakdown";
-      path: "/projects/$id/breakdown";
-      fullPath: "/projects/$id/breakdown";
-      preLoaderRoute: typeof AppProjectsIdBreakdownImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/budget": {
-      id: "/_app/projects/$id_/budget";
-      path: "/projects/$id/budget";
-      fullPath: "/projects/$id/budget";
-      preLoaderRoute: typeof AppProjectsIdBudgetImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/outline": {
-      id: "/_app/projects/$id_/outline";
-      path: "/projects/$id/outline";
-      fullPath: "/projects/$id/outline";
-      preLoaderRoute: typeof AppProjectsIdOutlineImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/schedule": {
-      id: "/_app/projects/$id_/schedule";
-      path: "/projects/$id/schedule";
-      fullPath: "/projects/$id/schedule";
-      preLoaderRoute: typeof AppProjectsIdScheduleImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/screenplay": {
-      id: "/_app/projects/$id_/screenplay";
-      path: "/projects/$id/screenplay";
-      fullPath: "/projects/$id/screenplay";
-      preLoaderRoute: typeof AppProjectsIdScreenplayImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/settings": {
-      id: "/_app/projects/$id_/settings";
-      path: "/projects/$id/settings";
-      fullPath: "/projects/$id/settings";
-      preLoaderRoute: typeof AppProjectsIdSettingsImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/soggetto": {
-      id: "/_app/projects/$id_/soggetto";
-      path: "/projects/$id/soggetto";
-      fullPath: "/projects/$id/soggetto";
-      preLoaderRoute: typeof AppProjectsIdSoggettoImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/synopsis": {
-      id: "/_app/projects/$id_/synopsis";
-      path: "/projects/$id/synopsis";
-      fullPath: "/projects/$id/synopsis";
-      preLoaderRoute: typeof AppProjectsIdSynopsisImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/title-page": {
-      id: "/_app/projects/$id_/title-page";
-      path: "/projects/$id/title-page";
-      fullPath: "/projects/$id/title-page";
-      preLoaderRoute: typeof AppProjectsIdTitlePageImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/treatment": {
-      id: "/_app/projects/$id_/treatment";
-      path: "/projects/$id/treatment";
-      fullPath: "/projects/$id/treatment";
-      preLoaderRoute: typeof AppProjectsIdTreatmentImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/projects/$id_/screenplay/versions": {
-      id: "/_app/projects/$id_/screenplay/versions";
-      path: "/versions";
-      fullPath: "/projects/$id/screenplay/versions";
-      preLoaderRoute: typeof AppProjectsIdScreenplayVersionsImport;
-      parentRoute: typeof AppProjectsIdScreenplayImport;
-    };
-    "/_app/projects/$id_/screenplay/": {
-      id: "/_app/projects/$id_/screenplay/";
-      path: "/";
-      fullPath: "/projects/$id/screenplay/";
-      preLoaderRoute: typeof AppProjectsIdScreenplayIndexImport;
-      parentRoute: typeof AppProjectsIdScreenplayImport;
-    };
-    "/_app/projects/$id_/screenplay/versions/$vId": {
-      id: "/_app/projects/$id_/screenplay/versions/$vId";
-      path: "/$vId";
-      fullPath: "/projects/$id/screenplay/versions/$vId";
-      preLoaderRoute: typeof AppProjectsIdScreenplayVersionsVIdImport;
-      parentRoute: typeof AppProjectsIdScreenplayVersionsImport;
-    };
-    "/_app/projects/$id_/screenplay/diff/$v1/$v2": {
-      id: "/_app/projects/$id_/screenplay/diff/$v1/$v2";
-      path: "/diff/$v1/$v2";
-      fullPath: "/projects/$id/screenplay/diff/$v1/$v2";
-      preLoaderRoute: typeof AppProjectsIdScreenplayDiffV1V2Import;
-      parentRoute: typeof AppProjectsIdScreenplayImport;
-    };
-    "/dev/tokens": {
-      id: "/dev/tokens";
-      path: "/dev/tokens";
-      fullPath: "/dev/tokens";
-      preLoaderRoute: typeof DevTokensImport;
-      parentRoute: typeof rootRoute;
-    };
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AppImport
+      parentRoute: typeof rootRoute
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginImport
+      parentRoute: typeof rootRoute
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterImport
+      parentRoute: typeof rootRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardImport
+      parentRoute: typeof AppImport
+    }
+    '/dev/tokens': {
+      id: '/dev/tokens'
+      path: '/dev/tokens'
+      fullPath: '/dev/tokens'
+      preLoaderRoute: typeof DevTokensImport
+      parentRoute: typeof rootRoute
+    }
+    '/_app/projects/$id': {
+      id: '/_app/projects/$id'
+      path: '/projects/$id'
+      fullPath: '/projects/$id'
+      preLoaderRoute: typeof AppProjectsIdImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/new': {
+      id: '/_app/projects/new'
+      path: '/projects/new'
+      fullPath: '/projects/new'
+      preLoaderRoute: typeof AppProjectsNewImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/breakdown': {
+      id: '/_app/projects/$id_/breakdown'
+      path: '/projects/$id/breakdown'
+      fullPath: '/projects/$id/breakdown'
+      preLoaderRoute: typeof AppProjectsIdBreakdownImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/budget': {
+      id: '/_app/projects/$id_/budget'
+      path: '/projects/$id/budget'
+      fullPath: '/projects/$id/budget'
+      preLoaderRoute: typeof AppProjectsIdBudgetImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/outline': {
+      id: '/_app/projects/$id_/outline'
+      path: '/projects/$id/outline'
+      fullPath: '/projects/$id/outline'
+      preLoaderRoute: typeof AppProjectsIdOutlineImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/schedule': {
+      id: '/_app/projects/$id_/schedule'
+      path: '/projects/$id/schedule'
+      fullPath: '/projects/$id/schedule'
+      preLoaderRoute: typeof AppProjectsIdScheduleImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/screenplay': {
+      id: '/_app/projects/$id_/screenplay'
+      path: '/projects/$id/screenplay'
+      fullPath: '/projects/$id/screenplay'
+      preLoaderRoute: typeof AppProjectsIdScreenplayImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/settings': {
+      id: '/_app/projects/$id_/settings'
+      path: '/projects/$id/settings'
+      fullPath: '/projects/$id/settings'
+      preLoaderRoute: typeof AppProjectsIdSettingsImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/soggetto': {
+      id: '/_app/projects/$id_/soggetto'
+      path: '/projects/$id/soggetto'
+      fullPath: '/projects/$id/soggetto'
+      preLoaderRoute: typeof AppProjectsIdSoggettoImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/synopsis': {
+      id: '/_app/projects/$id_/synopsis'
+      path: '/projects/$id/synopsis'
+      fullPath: '/projects/$id/synopsis'
+      preLoaderRoute: typeof AppProjectsIdSynopsisImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/title-page': {
+      id: '/_app/projects/$id_/title-page'
+      path: '/projects/$id/title-page'
+      fullPath: '/projects/$id/title-page'
+      preLoaderRoute: typeof AppProjectsIdTitlePageImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/treatment': {
+      id: '/_app/projects/$id_/treatment'
+      path: '/projects/$id/treatment'
+      fullPath: '/projects/$id/treatment'
+      preLoaderRoute: typeof AppProjectsIdTreatmentImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/projects/$id_/screenplay/versions': {
+      id: '/_app/projects/$id_/screenplay/versions'
+      path: '/versions'
+      fullPath: '/projects/$id/screenplay/versions'
+      preLoaderRoute: typeof AppProjectsIdScreenplayVersionsImport
+      parentRoute: typeof AppProjectsIdScreenplayImport
+    }
+    '/_app/projects/$id_/screenplay/': {
+      id: '/_app/projects/$id_/screenplay/'
+      path: '/'
+      fullPath: '/projects/$id/screenplay/'
+      preLoaderRoute: typeof AppProjectsIdScreenplayIndexImport
+      parentRoute: typeof AppProjectsIdScreenplayImport
+    }
+    '/_app/projects/$id_/screenplay/versions/$vId': {
+      id: '/_app/projects/$id_/screenplay/versions/$vId'
+      path: '/$vId'
+      fullPath: '/projects/$id/screenplay/versions/$vId'
+      preLoaderRoute: typeof AppProjectsIdScreenplayVersionsVIdImport
+      parentRoute: typeof AppProjectsIdScreenplayVersionsImport
+    }
+    '/_app/projects/$id_/screenplay/diff/$v1/$v2': {
+      id: '/_app/projects/$id_/screenplay/diff/$v1/$v2'
+      path: '/diff/$v1/$v2'
+      fullPath: '/projects/$id/screenplay/diff/$v1/$v2'
+      preLoaderRoute: typeof AppProjectsIdScreenplayDiffV1V2Import
+      parentRoute: typeof AppProjectsIdScreenplayImport
+    }
   }
 }
 
 // Create and export the route tree
 
 interface AppProjectsIdScreenplayVersionsRouteChildren {
-  AppProjectsIdScreenplayVersionsVIdRoute: typeof AppProjectsIdScreenplayVersionsVIdRoute;
+  AppProjectsIdScreenplayVersionsVIdRoute: typeof AppProjectsIdScreenplayVersionsVIdRoute
 }
 
 const AppProjectsIdScreenplayVersionsRouteChildren: AppProjectsIdScreenplayVersionsRouteChildren =
   {
     AppProjectsIdScreenplayVersionsVIdRoute:
       AppProjectsIdScreenplayVersionsVIdRoute,
-  };
+  }
 
 const AppProjectsIdScreenplayVersionsRouteWithChildren =
   AppProjectsIdScreenplayVersionsRoute._addFileChildren(
     AppProjectsIdScreenplayVersionsRouteChildren,
-  );
+  )
 
 interface AppProjectsIdScreenplayRouteChildren {
-  AppProjectsIdScreenplayVersionsRoute: typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
-  AppProjectsIdScreenplayIndexRoute: typeof AppProjectsIdScreenplayIndexRoute;
-  AppProjectsIdScreenplayDiffV1V2Route: typeof AppProjectsIdScreenplayDiffV1V2Route;
+  AppProjectsIdScreenplayVersionsRoute: typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  AppProjectsIdScreenplayIndexRoute: typeof AppProjectsIdScreenplayIndexRoute
+  AppProjectsIdScreenplayDiffV1V2Route: typeof AppProjectsIdScreenplayDiffV1V2Route
 }
 
 const AppProjectsIdScreenplayRouteChildren: AppProjectsIdScreenplayRouteChildren =
@@ -361,27 +361,27 @@ const AppProjectsIdScreenplayRouteChildren: AppProjectsIdScreenplayRouteChildren
       AppProjectsIdScreenplayVersionsRouteWithChildren,
     AppProjectsIdScreenplayIndexRoute: AppProjectsIdScreenplayIndexRoute,
     AppProjectsIdScreenplayDiffV1V2Route: AppProjectsIdScreenplayDiffV1V2Route,
-  };
+  }
 
 const AppProjectsIdScreenplayRouteWithChildren =
   AppProjectsIdScreenplayRoute._addFileChildren(
     AppProjectsIdScreenplayRouteChildren,
-  );
+  )
 
 interface AppRouteChildren {
-  AppDashboardRoute: typeof AppDashboardRoute;
-  AppProjectsIdRoute: typeof AppProjectsIdRoute;
-  AppProjectsNewRoute: typeof AppProjectsNewRoute;
-  AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute;
-  AppProjectsIdBudgetRoute: typeof AppProjectsIdBudgetRoute;
-  AppProjectsIdOutlineRoute: typeof AppProjectsIdOutlineRoute;
-  AppProjectsIdScheduleRoute: typeof AppProjectsIdScheduleRoute;
-  AppProjectsIdScreenplayRoute: typeof AppProjectsIdScreenplayRouteWithChildren;
-  AppProjectsIdSettingsRoute: typeof AppProjectsIdSettingsRoute;
-  AppProjectsIdSoggettoRoute: typeof AppProjectsIdSoggettoRoute;
-  AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute;
-  AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute;
-  AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute;
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppProjectsIdRoute: typeof AppProjectsIdRoute
+  AppProjectsNewRoute: typeof AppProjectsNewRoute
+  AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute
+  AppProjectsIdBudgetRoute: typeof AppProjectsIdBudgetRoute
+  AppProjectsIdOutlineRoute: typeof AppProjectsIdOutlineRoute
+  AppProjectsIdScheduleRoute: typeof AppProjectsIdScheduleRoute
+  AppProjectsIdScreenplayRoute: typeof AppProjectsIdScreenplayRouteWithChildren
+  AppProjectsIdSettingsRoute: typeof AppProjectsIdSettingsRoute
+  AppProjectsIdSoggettoRoute: typeof AppProjectsIdSoggettoRoute
+  AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute
+  AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute
+  AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -398,166 +398,166 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsIdSynopsisRoute: AppProjectsIdSynopsisRoute,
   AppProjectsIdTitlePageRoute: AppProjectsIdTitlePageRoute,
   AppProjectsIdTreatmentRoute: AppProjectsIdTreatmentRoute,
-};
+}
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "": typeof AppRouteWithChildren;
-  "/login": typeof LoginRoute;
-  "/register": typeof RegisterRoute;
-  "/dashboard": typeof AppDashboardRoute;
-  "/projects/$id": typeof AppProjectsIdRoute;
-  "/projects/new": typeof AppProjectsNewRoute;
-  "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
-  "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
-  "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
-  "/projects/$id/schedule": typeof AppProjectsIdScheduleRoute;
-  "/projects/$id/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
-  "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
-  "/projects/$id/soggetto": typeof AppProjectsIdSoggettoRoute;
-  "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
-  "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
-  "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
-  "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
-  "/projects/$id/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
-  "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
-  "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
-  "/dev/tokens": typeof DevTokensRoute;
+  '/': typeof IndexRoute
+  '': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/dev/tokens': typeof DevTokensRoute
+  '/projects/$id': typeof AppProjectsIdRoute
+  '/projects/new': typeof AppProjectsNewRoute
+  '/projects/$id/breakdown': typeof AppProjectsIdBreakdownRoute
+  '/projects/$id/budget': typeof AppProjectsIdBudgetRoute
+  '/projects/$id/outline': typeof AppProjectsIdOutlineRoute
+  '/projects/$id/schedule': typeof AppProjectsIdScheduleRoute
+  '/projects/$id/screenplay': typeof AppProjectsIdScreenplayRouteWithChildren
+  '/projects/$id/settings': typeof AppProjectsIdSettingsRoute
+  '/projects/$id/soggetto': typeof AppProjectsIdSoggettoRoute
+  '/projects/$id/synopsis': typeof AppProjectsIdSynopsisRoute
+  '/projects/$id/title-page': typeof AppProjectsIdTitlePageRoute
+  '/projects/$id/treatment': typeof AppProjectsIdTreatmentRoute
+  '/projects/$id/screenplay/versions': typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  '/projects/$id/screenplay/': typeof AppProjectsIdScreenplayIndexRoute
+  '/projects/$id/screenplay/versions/$vId': typeof AppProjectsIdScreenplayVersionsVIdRoute
+  '/projects/$id/screenplay/diff/$v1/$v2': typeof AppProjectsIdScreenplayDiffV1V2Route
 }
 
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "": typeof AppRouteWithChildren;
-  "/login": typeof LoginRoute;
-  "/register": typeof RegisterRoute;
-  "/dashboard": typeof AppDashboardRoute;
-  "/projects/$id": typeof AppProjectsIdRoute;
-  "/projects/new": typeof AppProjectsNewRoute;
-  "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
-  "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
-  "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
-  "/projects/$id/schedule": typeof AppProjectsIdScheduleRoute;
-  "/projects/$id/settings": typeof AppProjectsIdSettingsRoute;
-  "/projects/$id/soggetto": typeof AppProjectsIdSoggettoRoute;
-  "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
-  "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
-  "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
-  "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
-  "/projects/$id/screenplay": typeof AppProjectsIdScreenplayIndexRoute;
-  "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
-  "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
-  "/dev/tokens": typeof DevTokensRoute;
+  '/': typeof IndexRoute
+  '': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/dev/tokens': typeof DevTokensRoute
+  '/projects/$id': typeof AppProjectsIdRoute
+  '/projects/new': typeof AppProjectsNewRoute
+  '/projects/$id/breakdown': typeof AppProjectsIdBreakdownRoute
+  '/projects/$id/budget': typeof AppProjectsIdBudgetRoute
+  '/projects/$id/outline': typeof AppProjectsIdOutlineRoute
+  '/projects/$id/schedule': typeof AppProjectsIdScheduleRoute
+  '/projects/$id/settings': typeof AppProjectsIdSettingsRoute
+  '/projects/$id/soggetto': typeof AppProjectsIdSoggettoRoute
+  '/projects/$id/synopsis': typeof AppProjectsIdSynopsisRoute
+  '/projects/$id/title-page': typeof AppProjectsIdTitlePageRoute
+  '/projects/$id/treatment': typeof AppProjectsIdTreatmentRoute
+  '/projects/$id/screenplay/versions': typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  '/projects/$id/screenplay': typeof AppProjectsIdScreenplayIndexRoute
+  '/projects/$id/screenplay/versions/$vId': typeof AppProjectsIdScreenplayVersionsVIdRoute
+  '/projects/$id/screenplay/diff/$v1/$v2': typeof AppProjectsIdScreenplayDiffV1V2Route
 }
 
 export interface FileRoutesById {
-  __root__: typeof rootRoute;
-  "/": typeof IndexRoute;
-  "/_app": typeof AppRouteWithChildren;
-  "/login": typeof LoginRoute;
-  "/register": typeof RegisterRoute;
-  "/_app/dashboard": typeof AppDashboardRoute;
-  "/_app/projects/$id": typeof AppProjectsIdRoute;
-  "/_app/projects/new": typeof AppProjectsNewRoute;
-  "/_app/projects/$id_/breakdown": typeof AppProjectsIdBreakdownRoute;
-  "/_app/projects/$id_/budget": typeof AppProjectsIdBudgetRoute;
-  "/_app/projects/$id_/outline": typeof AppProjectsIdOutlineRoute;
-  "/_app/projects/$id_/schedule": typeof AppProjectsIdScheduleRoute;
-  "/_app/projects/$id_/screenplay": typeof AppProjectsIdScreenplayRouteWithChildren;
-  "/_app/projects/$id_/settings": typeof AppProjectsIdSettingsRoute;
-  "/_app/projects/$id_/soggetto": typeof AppProjectsIdSoggettoRoute;
-  "/_app/projects/$id_/synopsis": typeof AppProjectsIdSynopsisRoute;
-  "/_app/projects/$id_/title-page": typeof AppProjectsIdTitlePageRoute;
-  "/_app/projects/$id_/treatment": typeof AppProjectsIdTreatmentRoute;
-  "/_app/projects/$id_/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
-  "/_app/projects/$id_/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
-  "/_app/projects/$id_/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
-  "/_app/projects/$id_/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
-  "/dev/tokens": typeof DevTokensRoute;
+  __root__: typeof rootRoute
+  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/dev/tokens': typeof DevTokensRoute
+  '/_app/projects/$id': typeof AppProjectsIdRoute
+  '/_app/projects/new': typeof AppProjectsNewRoute
+  '/_app/projects/$id_/breakdown': typeof AppProjectsIdBreakdownRoute
+  '/_app/projects/$id_/budget': typeof AppProjectsIdBudgetRoute
+  '/_app/projects/$id_/outline': typeof AppProjectsIdOutlineRoute
+  '/_app/projects/$id_/schedule': typeof AppProjectsIdScheduleRoute
+  '/_app/projects/$id_/screenplay': typeof AppProjectsIdScreenplayRouteWithChildren
+  '/_app/projects/$id_/settings': typeof AppProjectsIdSettingsRoute
+  '/_app/projects/$id_/soggetto': typeof AppProjectsIdSoggettoRoute
+  '/_app/projects/$id_/synopsis': typeof AppProjectsIdSynopsisRoute
+  '/_app/projects/$id_/title-page': typeof AppProjectsIdTitlePageRoute
+  '/_app/projects/$id_/treatment': typeof AppProjectsIdTreatmentRoute
+  '/_app/projects/$id_/screenplay/versions': typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  '/_app/projects/$id_/screenplay/': typeof AppProjectsIdScreenplayIndexRoute
+  '/_app/projects/$id_/screenplay/versions/$vId': typeof AppProjectsIdScreenplayVersionsVIdRoute
+  '/_app/projects/$id_/screenplay/diff/$v1/$v2': typeof AppProjectsIdScreenplayDiffV1V2Route
 }
 
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | ""
-    | "/login"
-    | "/register"
-    | "/dashboard"
-    | "/projects/$id"
-    | "/projects/new"
-    | "/projects/$id/breakdown"
-    | "/projects/$id/budget"
-    | "/projects/$id/outline"
-    | "/projects/$id/schedule"
-    | "/projects/$id/screenplay"
-    | "/projects/$id/settings"
-    | "/projects/$id/soggetto"
-    | "/projects/$id/synopsis"
-    | "/projects/$id/title-page"
-    | "/projects/$id/treatment"
-    | "/projects/$id/screenplay/versions"
-    | "/projects/$id/screenplay/"
-    | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/diff/$v1/$v2"
-    | "/dev/tokens";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | ''
+    | '/login'
+    | '/register'
+    | '/dashboard'
+    | '/dev/tokens'
+    | '/projects/$id'
+    | '/projects/new'
+    | '/projects/$id/breakdown'
+    | '/projects/$id/budget'
+    | '/projects/$id/outline'
+    | '/projects/$id/schedule'
+    | '/projects/$id/screenplay'
+    | '/projects/$id/settings'
+    | '/projects/$id/soggetto'
+    | '/projects/$id/synopsis'
+    | '/projects/$id/title-page'
+    | '/projects/$id/treatment'
+    | '/projects/$id/screenplay/versions'
+    | '/projects/$id/screenplay/'
+    | '/projects/$id/screenplay/versions/$vId'
+    | '/projects/$id/screenplay/diff/$v1/$v2'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | ""
-    | "/login"
-    | "/register"
-    | "/dashboard"
-    | "/projects/$id"
-    | "/projects/new"
-    | "/projects/$id/breakdown"
-    | "/projects/$id/budget"
-    | "/projects/$id/outline"
-    | "/projects/$id/schedule"
-    | "/projects/$id/settings"
-    | "/projects/$id/soggetto"
-    | "/projects/$id/synopsis"
-    | "/projects/$id/title-page"
-    | "/projects/$id/treatment"
-    | "/projects/$id/screenplay/versions"
-    | "/projects/$id/screenplay"
-    | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/diff/$v1/$v2"
-    | "/dev/tokens";
+    | '/'
+    | ''
+    | '/login'
+    | '/register'
+    | '/dashboard'
+    | '/dev/tokens'
+    | '/projects/$id'
+    | '/projects/new'
+    | '/projects/$id/breakdown'
+    | '/projects/$id/budget'
+    | '/projects/$id/outline'
+    | '/projects/$id/schedule'
+    | '/projects/$id/settings'
+    | '/projects/$id/soggetto'
+    | '/projects/$id/synopsis'
+    | '/projects/$id/title-page'
+    | '/projects/$id/treatment'
+    | '/projects/$id/screenplay/versions'
+    | '/projects/$id/screenplay'
+    | '/projects/$id/screenplay/versions/$vId'
+    | '/projects/$id/screenplay/diff/$v1/$v2'
   id:
-    | "__root__"
-    | "/"
-    | "/_app"
-    | "/login"
-    | "/register"
-    | "/_app/dashboard"
-    | "/_app/projects/$id"
-    | "/_app/projects/new"
-    | "/_app/projects/$id_/breakdown"
-    | "/_app/projects/$id_/budget"
-    | "/_app/projects/$id_/outline"
-    | "/_app/projects/$id_/schedule"
-    | "/_app/projects/$id_/screenplay"
-    | "/_app/projects/$id_/settings"
-    | "/_app/projects/$id_/soggetto"
-    | "/_app/projects/$id_/synopsis"
-    | "/_app/projects/$id_/title-page"
-    | "/_app/projects/$id_/treatment"
-    | "/_app/projects/$id_/screenplay/versions"
-    | "/_app/projects/$id_/screenplay/"
-    | "/_app/projects/$id_/screenplay/versions/$vId"
-    | "/_app/projects/$id_/screenplay/diff/$v1/$v2"
-    | "/dev/tokens";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/login'
+    | '/register'
+    | '/_app/dashboard'
+    | '/dev/tokens'
+    | '/_app/projects/$id'
+    | '/_app/projects/new'
+    | '/_app/projects/$id_/breakdown'
+    | '/_app/projects/$id_/budget'
+    | '/_app/projects/$id_/outline'
+    | '/_app/projects/$id_/schedule'
+    | '/_app/projects/$id_/screenplay'
+    | '/_app/projects/$id_/settings'
+    | '/_app/projects/$id_/soggetto'
+    | '/_app/projects/$id_/synopsis'
+    | '/_app/projects/$id_/title-page'
+    | '/_app/projects/$id_/treatment'
+    | '/_app/projects/$id_/screenplay/versions'
+    | '/_app/projects/$id_/screenplay/'
+    | '/_app/projects/$id_/screenplay/versions/$vId'
+    | '/_app/projects/$id_/screenplay/diff/$v1/$v2'
+  fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AppRoute: typeof AppRouteWithChildren;
-  LoginRoute: typeof LoginRoute;
-  RegisterRoute: typeof RegisterRoute;
-  DevTokensRoute: typeof DevTokensRoute;
+  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  DevTokensRoute: typeof DevTokensRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -566,11 +566,11 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   DevTokensRoute: DevTokensRoute,
-};
+}
 
 export const routeTree = rootRoute
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
 /* ROUTE_MANIFEST_START
 {
@@ -615,6 +615,9 @@ export const routeTree = rootRoute
     "/_app/dashboard": {
       "filePath": "_app.dashboard.tsx",
       "parent": "/_app"
+    },
+    "/dev/tokens": {
+      "filePath": "dev/tokens.tsx"
     },
     "/_app/projects/$id": {
       "filePath": "_app.projects.$id.tsx",
@@ -687,9 +690,6 @@ export const routeTree = rootRoute
     "/_app/projects/$id_/screenplay/diff/$v1/$v2": {
       "filePath": "_app.projects.$id_.screenplay.diff.$v1.$v2.tsx",
       "parent": "/_app/projects/$id_/screenplay"
-    },
-    "/dev/tokens": {
-      "filePath": "dev/tokens.tsx"
     }
   }
 }

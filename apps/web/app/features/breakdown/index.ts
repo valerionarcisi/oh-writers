@@ -40,5 +40,6 @@ export {
   type BreakdownPermissionContext,
 } from "./lib/permissions";
 export { BreakdownPage } from "./components/BreakdownPage";
+export { BreakdownPageV2 } from "./components/BreakdownPageV2";
 export { staleScenesOptions } from "./hooks/useBreakdown";
 export { findElementInText } from "./lib/re-match";

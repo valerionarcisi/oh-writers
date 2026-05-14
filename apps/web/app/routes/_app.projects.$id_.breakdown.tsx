@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { BreakdownPage } from "~/features/breakdown";
+import { BreakdownPageV2 } from "~/features/breakdown";
 
 const BreakdownSearchSchema = z.object({
   cat: z.string().optional(),
@@ -14,5 +14,5 @@ export const Route = createFileRoute("/_app/projects/$id_/breakdown")({
 
 function BreakdownRoute() {
   const { id } = Route.useParams();
-  return <BreakdownPage projectId={id} />;
+  return <BreakdownPageV2 projectId={id} />;
 }
