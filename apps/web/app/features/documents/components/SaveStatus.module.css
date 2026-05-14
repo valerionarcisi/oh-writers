@@ -4,17 +4,17 @@
 }
 
 .saved {
-  color: var(--color-success);
+  color: var(--ds-success);
 }
 
 .dirty {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .saving {
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .error {
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }

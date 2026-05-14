@@ -17,7 +17,7 @@
 .legend {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+  color: var(--ds-text);
   padding: 0;
   margin-block-end: var(--space-1);
 }
@@ -32,7 +32,7 @@
 }
 
 .errorBanner {
-  color: var(--color-danger);
+  color: var(--ds-danger);
   font-size: var(--font-size-sm);
 }
 
@@ -42,13 +42,13 @@
   padding: var(--space-2) var(--space-3);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   font: inherit;
   resize: vertical;
 
   &:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 }

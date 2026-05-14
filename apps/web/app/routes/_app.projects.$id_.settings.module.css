@@ -11,12 +11,12 @@
 }
 
 .back {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   text-decoration: none;
   border-radius: var(--radius-sm);
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 
   &:focus-visible {
@@ -38,7 +38,7 @@
 }
 
 .statusError {
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }
 
 .section {
@@ -52,7 +52,7 @@
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .localeSelect {
@@ -60,8 +60,8 @@
   padding: var(--space-2) var(--space-3);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-fg);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   font-size: var(--text-sm);
 
   &:disabled {
@@ -72,20 +72,20 @@
 
 .readOnly {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   padding: var(--space-4);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--ds-surface);
 }
 
 .formError {
   font-size: var(--text-sm);
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }
 
 .dangerZone {
-  border: 2px solid var(--color-danger);
+  border: 2px solid var(--ds-danger);
   border-radius: var(--radius-md);
   padding: var(--space-5);
   display: flex;
@@ -98,7 +98,7 @@
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }
 
 .dangerActions {
@@ -116,6 +116,6 @@
 
 .dangerDesc {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   margin-block-start: var(--space-1);
 }

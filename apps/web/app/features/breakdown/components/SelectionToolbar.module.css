@@ -5,8 +5,8 @@
   flex-wrap: wrap;
   gap: var(--space-1);
   padding: var(--space-2);
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--ds-surface);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   max-inline-size: 360px;
@@ -21,13 +21,13 @@
 .btn {
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
-  background: var(--color-elevated);
-  color: var(--color-fg);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-sm);
   cursor: pointer;
 
   &:hover {
-    background: var(--color-overlay);
+    background: var(--ds-overlay);
   }
 }

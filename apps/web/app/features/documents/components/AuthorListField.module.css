@@ -7,7 +7,7 @@
 .heading {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  color: var(--ds-text-2);
   margin: 0;
 }
 

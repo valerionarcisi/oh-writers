@@ -15,7 +15,7 @@
 }
 
 .back {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   text-decoration: none;
   background: transparent;
   border: 0;
@@ -24,7 +24,7 @@
   font: inherit;
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 }
 
@@ -35,23 +35,23 @@
 }
 
 .subtitle {
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   font-size: var(--text-sm);
   margin: 0;
 }
 
 .status {
   padding: var(--space-8);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .statusError {
   padding: var(--space-8);
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }
 
 .formError {
-  color: var(--color-danger);
+  color: var(--ds-danger);
   font-size: var(--text-sm);
 }
 

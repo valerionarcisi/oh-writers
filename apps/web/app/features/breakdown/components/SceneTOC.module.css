@@ -16,23 +16,23 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  color: var(--color-text);
+  color: var(--ds-text);
   cursor: pointer;
   text-align: start;
   font: inherit;
 
   &:hover {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 }
 
 .active {
-  background: var(--color-surface);
-  border-color: var(--color-border);
+  background: var(--ds-surface);
+  border-color: var(--ds-line);
 }
 
 .number {
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   font-variant-numeric: tabular-nums;
   min-inline-size: 2ch;
 }
@@ -50,7 +50,7 @@
 }
 
 .empty {
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   font-size: var(--font-size-sm);
   padding: var(--space-3);
 }

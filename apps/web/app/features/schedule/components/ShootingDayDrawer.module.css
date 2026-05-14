@@ -14,8 +14,8 @@
   inset-block: 0;
   inset-inline-end: 0;
   width: 380px;
-  background: var(--color-elevated);
-  border-inline-start: 1px solid var(--color-border);
+  background: var(--ds-surface-deep);
+  border-inline-start: 1px solid var(--ds-line);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -38,14 +38,14 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-4) var(--space-3);
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--ds-line);
   flex-shrink: 0;
 }
 
 .dayLabel {
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
   flex: 1;
@@ -59,7 +59,7 @@
 
 .dayDate {
   font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .dayTypeBadge {
@@ -67,9 +67,9 @@
   padding: 1px var(--space-2);
   border-radius: var(--radius-full);
   font-weight: var(--weight-medium);
-  background: var(--color-overlay);
-  color: var(--color-fg-secondary);
-  border: 1px solid var(--color-border);
+  background: var(--ds-overlay);
+  color: var(--ds-text-2);
+  border: 1px solid var(--ds-line);
 
   &[data-type="travel"] {
     background: rgba(245, 158, 11, 0.15);
@@ -91,7 +91,7 @@
 .closeBtn {
   background: none;
   border: none;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   cursor: pointer;
   padding: var(--space-1);
   border-radius: var(--radius-sm);
@@ -104,15 +104,15 @@
     background 120ms ease;
 
   &:hover {
-    color: var(--color-fg);
-    background: var(--color-overlay);
+    color: var(--ds-text);
+    background: var(--ds-overlay);
   }
 }
 
 /* ─── Capacity bar ─── */
 .capacitySection {
   padding: var(--space-4);
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--ds-line);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -124,7 +124,7 @@
   align-items: center;
   justify-content: space-between;
   font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .capacityValue {
@@ -143,7 +143,7 @@
 
 .capacityBar {
   height: 6px;
-  background: var(--color-overlay);
+  background: var(--ds-overlay);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -178,7 +178,7 @@
 
 .empty {
   font-size: var(--text-sm);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   padding: var(--space-4);
   text-align: center;
 }
@@ -188,7 +188,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--ds-line);
   min-height: 48px;
 
   &:last-child {
@@ -196,7 +196,7 @@
   }
 
   &:hover {
-    background: var(--color-overlay);
+    background: var(--ds-overlay);
   }
 }
 
@@ -205,7 +205,7 @@
   height: 32px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: var(--color-border);
+  background: var(--ds-line);
 
   &[data-color="white"] {
     background: rgba(255, 255, 255, 0.25);
@@ -247,14 +247,14 @@
 .sceneNumber {
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   flex-shrink: 0;
 }
 
 .sceneLocation {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg);
+  color: var(--ds-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -262,7 +262,7 @@
 
 .scenePages {
   font-size: 10px;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 /* ─── Effort input ─── */
@@ -276,10 +276,10 @@
 .effortInput {
   width: 60px;
   padding: var(--space-1) var(--space-2);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-size: var(--text-xs);
   text-align: center;
   outline: none;
@@ -288,13 +288,13 @@
     color 120ms ease;
 
   &:focus {
-    border-color: var(--color-accent);
-    color: var(--color-fg);
+    border-color: var(--ds-action);
+    color: var(--ds-text);
   }
 
   &.overridden {
-    color: var(--color-fg);
-    border-color: var(--color-border-strong);
+    color: var(--ds-text);
+    border-color: var(--ds-line);
   }
 
   /* Hide browser spin buttons */
@@ -307,7 +307,7 @@
 .clearBtn {
   background: none;
   border: none;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   cursor: pointer;
   font-size: var(--text-sm);
   line-height: 1;
@@ -316,6 +316,6 @@
   transition: color 120ms ease;
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 }

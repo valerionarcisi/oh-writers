@@ -1,7 +1,7 @@
 .bar {
   height: 4px;
   border-radius: 2px;
-  background: var(--color-border);
+  background: var(--ds-line);
   overflow: hidden;
 }
 
@@ -27,6 +27,6 @@
 
 .label {
   font-size: 10px;
-  color: var(--color-text-subtle);
+  color: var(--ds-text-faint);
   margin-block-start: 2px;
 }

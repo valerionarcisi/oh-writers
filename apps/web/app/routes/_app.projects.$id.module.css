@@ -8,13 +8,13 @@
 
 .status {
   padding: var(--space-8);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-size: var(--text-sm);
 }
 
 .statusError {
   padding: var(--space-8);
-  color: var(--color-danger);
+  color: var(--ds-danger);
   font-size: var(--text-sm);
 }
 
@@ -62,7 +62,7 @@
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .documentGrid {
@@ -85,7 +85,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  background: var(--color-surface);
+  background: var(--ds-surface);
 }
 
 .screenplayMeta {
@@ -100,10 +100,10 @@
 
 .screenplayDate {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .teamPlaceholder {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }

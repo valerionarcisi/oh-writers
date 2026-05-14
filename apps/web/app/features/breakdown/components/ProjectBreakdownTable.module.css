@@ -13,8 +13,8 @@
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-3);
-  border-block-end: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-block-end: 1px solid var(--ds-line);
+  background: var(--ds-surface);
 }
 
 .filters {
@@ -28,18 +28,18 @@
 .searchInput {
   inline-size: 220px;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   font: inherit;
   font-size: var(--text-sm, 0.875rem);
   color: inherit;
 
   &:focus {
     outline: none;
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
     box-shadow: 0 0 0 2px
-      color-mix(in srgb, var(--color-accent) 20%, transparent);
+      color-mix(in srgb, var(--ds-action) 20%, transparent);
   }
 }
 
@@ -51,12 +51,12 @@
 
 .catChip {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   border-radius: 99px;
   background: transparent;
   font: inherit;
   font-size: var(--text-xs, 0.75rem);
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   cursor: pointer;
   transition:
     background 100ms ease,
@@ -64,22 +64,22 @@
     border-color 100ms ease;
 
   &:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-text);
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
   }
 }
 
 .catChipActive {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-accent, var(--color-text));
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: var(--ds-text-on-dark, var(--ds-text));
 }
 
 .statusSelect {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   font: inherit;
   font-size: var(--text-sm, 0.875rem);
   color: inherit;
@@ -87,7 +87,7 @@
 
   &:focus {
     outline: none;
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
   }
 }
 
@@ -98,34 +98,34 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--ds-action);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--ds-action) 8%, transparent);
 }
 
 .bulkCount {
   font-size: var(--text-sm, 0.875rem);
-  color: var(--color-text);
+  color: var(--ds-text);
   font-weight: 500;
 }
 
 .bulkBtn {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   font: inherit;
   font-size: var(--text-sm, 0.875rem);
-  color: var(--color-text);
+  color: var(--ds-text);
   cursor: pointer;
 
   &:hover {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 }
 
 .bulkBtnDestructive {
-  color: var(--color-error, #d93025);
+  color: var(--ds-danger, #d93025);
   border-color: currentColor;
 
   &:hover {
@@ -157,10 +157,10 @@
   padding: var(--space-2) var(--space-3);
   text-align: start;
   font-weight: 600;
-  background: var(--color-surface);
-  border-block-end: 2px solid var(--color-border);
+  background: var(--ds-surface);
+  border-block-end: 2px solid var(--ds-line);
   white-space: nowrap;
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
 }
 
 .sortable {
@@ -168,7 +168,7 @@
   user-select: none;
 
   &:hover {
-    color: var(--color-text);
+    color: var(--ds-text);
   }
 }
 
@@ -179,27 +179,27 @@
   inline-size: 36px;
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   text-align: center;
-  background: var(--color-surface);
-  border-block-end: 2px solid var(--color-border);
+  background: var(--ds-surface);
+  border-block-end: 2px solid var(--ds-line);
 }
 
 .tr {
   &:hover {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 }
 
 .trSelected {
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  background: color-mix(in srgb, var(--ds-action) 6%, transparent);
 
   &:hover {
-    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+    background: color-mix(in srgb, var(--ds-action) 10%, transparent);
   }
 }
 
 .td {
   padding: var(--space-1) var(--space-3);
-  border-block-end: 1px solid var(--color-border-subtle, var(--color-border));
+  border-block-end: 1px solid var(--ds-line-soft, var(--ds-line));
   vertical-align: middle;
 }
 
@@ -211,34 +211,34 @@
 .emptyCell {
   padding: var(--space-6) var(--space-3);
   text-align: center;
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
 }
 
 /* ─── Status indicators ──────────────────────────────────────────────────── */
 
 .staleIndicator {
-  color: var(--color-warning, #f5a623);
+  color: var(--ds-warning, #f5a623);
   font-size: 1rem;
 }
 
 .okIndicator {
-  color: var(--color-success, #34a853);
+  color: var(--ds-success, #34a853);
   font-size: 1rem;
 }
 
 .pendingIndicator {
-  color: var(--color-warning, #f5a623);
+  color: var(--ds-warning, #f5a623);
   font-size: 1.2rem;
   line-height: 1;
 }
 
 .mutedText {
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
 }
 
 /* ─── Loading / empty ────────────────────────────────────────────────────── */
 
 .status {
   padding: var(--space-4);
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
 }

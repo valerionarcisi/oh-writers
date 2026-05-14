@@ -12,21 +12,21 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-block-end: var(--border);
-  background: var(--color-surface);
+  background: var(--ds-surface);
 }
 
 .saveBtn {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
   border: var(--border);
-  border-color: var(--color-accent);
+  border-color: var(--ds-action);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: var(--color-accent-hover);
+    background: var(--ds-action-hover);
   }
 
   &:disabled {
@@ -41,7 +41,7 @@
   align-items: center;
   overflow-y: auto;
   padding: var(--space-8) var(--space-6);
-  background: var(--color-bg);
+  background: var(--ds-bg);
 }
 
 /* White "paper" card — mirrors the pageShell used by Synopsis and Treatment. */
@@ -96,12 +96,12 @@
 /* Status messages */
 .status {
   padding: var(--space-8);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-size: var(--text-sm);
 }
 
 .statusError {
   padding: var(--space-8);
-  color: var(--color-danger);
+  color: var(--ds-danger);
   font-size: var(--text-sm);
 }

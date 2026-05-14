@@ -13,14 +13,14 @@
 
 .selectorLabel {
   font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
 }
 
 .select {
-  background: var(--color-surface);
-  color: var(--color-fg);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   border: var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-2);
@@ -53,32 +53,32 @@
   inline-size: 50%;
   white-space: pre-wrap;
   word-break: break-word;
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--ds-line);
 }
 
 .cell-equal {
-  background: var(--color-diff-neutral);
+  background: var(--ds-diff-neutral);
 }
 
 .cell-added {
-  background: var(--color-diff-added);
+  background: var(--ds-diff-add-bg);
 }
 
 .cell-removed {
-  background: var(--color-diff-removed);
+  background: var(--ds-diff-remove-bg);
 }
 
 .cell-changed {
-  background: var(--color-diff-changed);
+  background: var(--ds-diff-change-bg);
 }
 
 .intra {
-  background: var(--color-diff-intra);
+  background: var(--ds-diff-intra);
   border-radius: var(--radius-sm);
 }
 
 .empty {
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   padding: var(--space-4);
   text-align: center;
 }

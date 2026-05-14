@@ -18,14 +18,14 @@
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .heading {
   font-family: var(--font-sans);
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
-  color: var(--color-fg);
+  color: var(--ds-text);
   margin: 0;
 }
 
@@ -37,11 +37,11 @@
 
 .apiError {
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-danger);
+  border: 1px solid var(--ds-danger);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  color: var(--color-danger);
-  background: var(--color-danger-subtle);
+  color: var(--ds-danger);
+  background: var(--ds-danger-soft);
   margin: 0;
 }
 
@@ -54,11 +54,11 @@
 .label {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 .required {
-  color: var(--color-danger);
+  color: var(--ds-danger);
   margin-inline-start: var(--space-1);
 }
 
@@ -67,19 +67,19 @@
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-sans);
   font-size: var(--text-base);
-  color: var(--color-fg);
-  background: var(--color-bg);
+  color: var(--ds-text);
+  background: var(--ds-bg);
   border: var(--border);
   border-radius: var(--radius-md);
   outline: none;
 
   &:focus {
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
     box-shadow: var(--ring-focus);
   }
 
   &::placeholder {
-    color: var(--color-fg-muted);
+    color: var(--ds-text-mute);
   }
 }
 
@@ -90,12 +90,12 @@
 }
 
 .inputError {
-  border-color: var(--color-danger);
+  border-color: var(--ds-danger);
 }
 
 .fieldError {
   font-size: var(--text-xs);
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }
 
 /* ─── OAuth section ──────────────────────────────────────── */
@@ -116,13 +116,13 @@
     content: "";
     flex: 1;
     block-size: 1px;
-    background: var(--color-border);
+    background: var(--ds-line);
   }
 }
 
 .dividerLabel {
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   white-space: nowrap;
 }
 
@@ -137,15 +137,15 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg);
-  background: var(--color-surface);
+  color: var(--ds-text);
+  background: var(--ds-surface);
   border: var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
 
   &:hover {
-    background: var(--color-elevated);
-    border-color: var(--color-border-strong);
+    background: var(--ds-surface-deep);
+    border-color: var(--ds-line);
   }
 
   &:focus-visible {
@@ -166,12 +166,12 @@
 
 .footer {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   margin: 0;
 }
 
 .link {
-  color: var(--color-accent);
+  color: var(--ds-action);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

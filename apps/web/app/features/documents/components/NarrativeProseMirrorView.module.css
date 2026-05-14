@@ -76,7 +76,7 @@
   margin-block: var(--space-4);
   text-align: center;
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   letter-spacing: 0.1em;
   user-select: none;
   pointer-events: none;

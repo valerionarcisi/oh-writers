@@ -1,5 +1,5 @@
 .row {
-  border-block-end: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--ds-line);
 
   &:last-child {
     border-block-end: none;
@@ -17,7 +17,7 @@
 }
 
 .nameCell {
-  color: var(--color-text);
+  color: var(--ds-text);
   white-space: nowrap;
   min-width: 140px;
 }
@@ -33,25 +33,25 @@
   cursor: text;
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
+  color: var(--ds-text);
   border-radius: var(--radius-sm);
   padding: 1px var(--space-1);
   width: 100%;
   text-align: end;
 
   &:hover {
-    background: var(--color-surface-raised);
+    background: var(--ds-surface-alt);
   }
 }
 
 .cellInput {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--ds-action);
   border-radius: var(--radius-sm);
   padding: 1px var(--space-1);
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   width: 72px;
   text-align: end;
   outline: none;
@@ -59,10 +59,10 @@
 
 .regimeSelect {
   font-size: var(--text-xs);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
-  color: var(--color-text);
+  color: var(--ds-text);
   padding: 2px var(--space-1);
   cursor: pointer;
 }
@@ -72,19 +72,19 @@
   font-variant-numeric: tabular-nums;
   text-align: end;
   white-space: nowrap;
-  color: var(--color-text);
+  color: var(--ds-text);
 }
 
 .removeBtn {
   all: unset;
   cursor: pointer;
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   font-size: var(--text-base);
   padding: 0 var(--space-1);
   border-radius: var(--radius-sm);
 
   &:hover {
-    color: var(--color-error);
-    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    color: var(--ds-danger);
+    background: color-mix(in srgb, var(--ds-danger) 10%, transparent);
   }
 }

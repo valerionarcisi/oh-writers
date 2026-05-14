@@ -9,7 +9,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--color-border-subtle);
+  border-block-end: 1px solid var(--ds-line-soft);
   flex-shrink: 0;
 }
 
@@ -23,17 +23,17 @@
 .labelInput,
 .renameInput {
   flex: 1;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--ds-bg);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);
-  color: var(--color-fg);
+  color: var(--ds-text);
   font: inherit;
   font-size: var(--text-sm);
   min-inline-size: 0;
 
   &:focus {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 1px;
   }
 }
@@ -55,32 +55,32 @@
 
 .btnPrimary {
   composes: btn;
-  background: var(--color-accent);
-  color: var(--color-accent-contrast, #fff);
+  background: var(--ds-action);
+  color: var(--ds-action, #fff);
   border: 1px solid transparent;
 
   &:hover:not(:disabled) {
-    background: var(--color-accent-hover);
+    background: var(--ds-action-hover);
   }
 }
 
 .btnGhost {
   composes: btn;
   background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-fg);
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text);
 
   &:hover:not(:disabled) {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 }
 
 .btnDanger {
   composes: btnGhost;
-  color: var(--color-error);
+  color: var(--ds-danger);
 
   &:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-error) 10%, transparent);
+    background: color-mix(in srgb, var(--ds-danger) 10%, transparent);
   }
 }
 
@@ -90,8 +90,8 @@
 }
 
 .error {
-  background: color-mix(in srgb, var(--color-error) 10%, transparent);
-  color: var(--color-error);
+  background: color-mix(in srgb, var(--ds-danger) 10%, transparent);
+  color: var(--ds-danger);
   padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
 }
@@ -105,7 +105,7 @@
 .status,
 .empty {
   padding: var(--space-6) var(--space-4);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   text-align: center;
   font-size: var(--text-sm);
 }
@@ -121,7 +121,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--color-border-subtle);
+  border-block-end: 1px solid var(--ds-line-soft);
   border-inline-start: 3px solid transparent;
   cursor: pointer;
 
@@ -130,16 +130,16 @@
   }
 
   &:hover {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 }
 
 .rowActive {
-  background: color-mix(in srgb, var(--color-warning) 8%, transparent);
-  border-inline-start-color: var(--color-warning);
+  background: color-mix(in srgb, var(--ds-warning) 8%, transparent);
+  border-inline-start-color: var(--ds-warning);
 
   &:hover {
-    background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+    background: color-mix(in srgb, var(--ds-warning) 12%, transparent);
   }
 }
 
@@ -160,7 +160,7 @@
 .label {
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--color-fg);
+  color: var(--ds-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -175,8 +175,8 @@
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--color-accent-fg);
-  background: var(--color-accent);
+  color: var(--ds-text-on-dark);
+  background: var(--ds-action);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
@@ -189,7 +189,7 @@
   block-size: 20px;
   border: none;
   background: transparent;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   cursor: pointer;
   border-radius: var(--radius-sm);
   opacity: 0;
@@ -201,8 +201,8 @@
   }
 
   &:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-fg);
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
   }
 }
 
@@ -210,15 +210,15 @@
   font-size: 0.65rem;
   padding: 1px var(--space-1);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-hover);
-  color: var(--color-fg-muted);
+  background: var(--ds-surface-alt);
+  color: var(--ds-text-mute);
   font-weight: 400;
   flex-shrink: 0;
 }
 
 .sub {
   font-size: 0.75rem;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -236,7 +236,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  border-block-end: 1px solid var(--color-border-subtle);
+  border-block-end: 1px solid var(--ds-line-soft);
 
   &:last-child {
     border-block-end: none;
@@ -247,7 +247,7 @@
   inline-size: 1.1rem;
   block-size: 1.1rem;
   border-radius: 50%;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -256,14 +256,14 @@
   flex-shrink: 0;
 
   &:hover {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 }
 
 .swatchEmpty {
   font-size: 0.65rem;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   line-height: 1;
 }
 
@@ -273,7 +273,7 @@
   gap: var(--space-2);
   padding: var(--space-2);
   margin-block-start: var(--space-1);
-  background: var(--color-bg);
+  background: var(--ds-bg);
   border: var(--border);
   border-radius: var(--radius-md);
   inline-size: max-content;
@@ -290,12 +290,12 @@
   inline-size: 1.4rem;
   block-size: 1.4rem;
   border-radius: 50%;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   cursor: pointer;
   padding: 0;
 
   &[aria-pressed="true"] {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 
@@ -306,7 +306,7 @@
 
 .swatchClear {
   background: transparent;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -319,15 +319,15 @@
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .dateInput {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--ds-bg);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   padding: 0 var(--space-2);
-  color: var(--color-fg);
+  color: var(--ds-text);
   font: inherit;
   font-size: var(--text-xs);
   color-scheme: dark;

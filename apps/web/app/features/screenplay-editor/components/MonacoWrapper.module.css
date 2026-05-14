@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: center;
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-family: var(--font-mono);
 }
 

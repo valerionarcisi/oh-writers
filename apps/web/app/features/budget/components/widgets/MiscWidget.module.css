@@ -1,6 +1,6 @@
 .widget {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   padding: var(--space-4);
 }
@@ -15,7 +15,7 @@
 .title {
   font-size: var(--text-base);
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ds-text);
   margin: 0;
 }
 
@@ -23,7 +23,7 @@
   font-size: var(--text-sm);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
 }
 
 .chips {
@@ -36,22 +36,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-full);
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-sm);
 }
 
 .chipName {
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
 }
 
 .chipValue {
   all: unset;
   cursor: text;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
+  color: var(--ds-text);
   font-weight: 500;
 
   &:hover {
@@ -62,11 +62,11 @@
 .chipInput {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--ds-action);
   border-radius: var(--radius-sm);
   padding: 1px var(--space-1);
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   width: 80px;
   text-align: end;
   outline: none;

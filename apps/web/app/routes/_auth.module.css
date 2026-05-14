@@ -6,5 +6,5 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-8) var(--space-6);
-  background: var(--color-bg);
+  background: var(--ds-bg);
 }

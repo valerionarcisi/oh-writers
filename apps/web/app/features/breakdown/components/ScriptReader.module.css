@@ -15,7 +15,7 @@
 
 .empty {
   padding: var(--space-4);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .highlight {
@@ -71,7 +71,7 @@
 }
 
 .ghost {
-  border-block-end: 1px dashed var(--color-border);
+  border-block-end: 1px dashed var(--ds-line);
   border-radius: var(--radius-sm);
   padding-inline: var(--space-0-5);
   cursor: pointer;

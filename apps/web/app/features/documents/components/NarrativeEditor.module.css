@@ -14,7 +14,7 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   border-block-end: var(--border);
-  background: var(--color-surface);
+  background: var(--ds-surface);
 }
 
 .toolbarLeft {
@@ -31,13 +31,13 @@
 
 .backLink {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   text-decoration: none;
   font-weight: var(--weight-medium);
   border-radius: var(--radius-sm);
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 
   &:focus-visible {
@@ -62,8 +62,8 @@
   font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--color-fg-secondary);
-  background: var(--color-surface-hover);
+  color: var(--ds-text-2);
+  background: var(--ds-surface-alt);
   border: var(--border);
   border-radius: var(--radius-sm);
 }
@@ -78,7 +78,7 @@
   cursor: pointer;
 
   &:not(:disabled):hover {
-    background: var(--color-elevated);
+    background: var(--ds-surface-deep);
     box-shadow: var(--shadow-xs);
   }
 
@@ -94,12 +94,12 @@
 }
 
 .saveBtnActive {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  border-color: var(--color-accent);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border-color: var(--ds-action);
 
   &:not(:disabled):hover {
-    background: var(--color-accent-hover, var(--color-accent));
+    background: var(--ds-action-hover, var(--ds-action));
   }
 }
 
@@ -115,13 +115,13 @@
 .modeBtn {
   padding: var(--space-1) var(--space-3);
   border: none;
-  background: var(--color-surface);
+  background: var(--ds-surface);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
   cursor: pointer;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .modeBtn + .modeBtn {
@@ -129,8 +129,8 @@
 }
 
 .modeBtnActive {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
   cursor: default;
 }
 
@@ -155,7 +155,7 @@
   min-block-size: 0;
   overflow-y: auto;
   padding: var(--space-8) var(--space-6);
-  background: var(--color-bg);
+  background: var(--ds-bg);
 }
 
 /* Page shell — white "paper" centered on the dark editorMain background.
@@ -186,12 +186,12 @@
   gap: var(--space-2);
   padding-block-end: var(--space-4);
   margin-block-end: var(--space-4);
-  border-block-end: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
+  border-block-end: 1px solid var(--ds-line-soft, rgba(0, 0, 0, 0.08));
 }
 
 .editorToolbarBtn {
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--ds-line-soft, rgba(0, 0, 0, 0.12));
   border-radius: var(--radius-sm);
   background: transparent;
   color: #1a1a1a;
@@ -205,12 +205,12 @@
 }
 
 .editorToolbarBtnActive {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  border-color: var(--color-accent);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border-color: var(--ds-action);
 
   &:hover {
-    background: var(--color-accent);
+    background: var(--ds-action);
   }
 }
 
@@ -221,9 +221,9 @@
   gap: var(--space-4);
   padding: var(--space-2) var(--space-5);
   border-block-start: var(--border);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .editorFooter {
@@ -235,7 +235,7 @@
   margin-block-start: var(--space-2);
   padding-block-start: var(--space-2);
   font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .counter {
@@ -247,7 +247,7 @@
 }
 
 .charCountWarn {
-  color: var(--color-danger);
+  color: var(--ds-danger);
   font-weight: var(--weight-semibold);
 }
 
@@ -255,9 +255,9 @@
   margin-block-start: var(--space-2);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
-  color: var(--color-danger);
-  background: var(--color-danger-subtle, transparent);
+  color: var(--ds-danger);
+  background: var(--ds-danger-soft, transparent);
   border: var(--border);
-  border-color: var(--color-danger);
+  border-color: var(--ds-danger);
   border-radius: var(--radius-md);
 }

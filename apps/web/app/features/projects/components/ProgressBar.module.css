@@ -8,19 +8,19 @@
   display: flex;
   justify-content: space-between;
   font-size: var(--text-xs);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .track {
   block-size: 6px;
-  background: var(--color-elevated);
+  background: var(--ds-surface-deep);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .fill {
   block-size: 100%;
-  background: var(--color-accent);
+  background: var(--ds-action);
   border-radius: var(--radius-full);
 }
 

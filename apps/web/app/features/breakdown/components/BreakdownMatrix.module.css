@@ -12,19 +12,19 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-block-end: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-block-end: 1px solid var(--ds-line);
+  background: var(--ds-surface);
   flex-shrink: 0;
 }
 
 .heatmapBtn {
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
   background: transparent;
   font: inherit;
   font-size: var(--text-sm, 0.875rem);
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   cursor: pointer;
   transition:
     background 100ms ease,
@@ -32,15 +32,15 @@
     border-color 100ms ease;
 
   &:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-text);
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
   }
 }
 
 .heatmapBtnActive {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-accent, var(--color-text));
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: var(--ds-text-on-dark, var(--ds-text));
 }
 
 /* ─── Grid container ─────────────────────────────────────────────────────── */
@@ -71,29 +71,29 @@
   padding: 0;
 
   &:hover {
-    color: var(--color-accent);
+    color: var(--ds-action);
   }
 }
 
 .cellBtnActive {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--ds-action) 12%, transparent);
+  color: var(--ds-action);
 }
 
 .cellEmpty {
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   opacity: 0.4;
 }
 
 .cellPresent {
-  color: var(--color-success, #34a853);
+  color: var(--ds-success, #34a853);
   font-size: 0.9rem;
 }
 
 .cellQty {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
+  color: var(--ds-text);
 }
 
 /* ─── Popover overlay ────────────────────────────────────────────────────── */
@@ -109,8 +109,8 @@
 }
 
 .popover {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg, var(--shadow-md));
   padding: var(--space-4);
@@ -134,18 +134,18 @@
 .popoverInput {
   inline-size: 100%;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   font: inherit;
   font-size: var(--text-sm, 0.875rem);
   color: inherit;
 
   &:focus {
     outline: none;
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
     box-shadow: 0 0 0 2px
-      color-mix(in srgb, var(--color-accent) 20%, transparent);
+      color-mix(in srgb, var(--ds-action) 20%, transparent);
   }
 }
 
@@ -163,7 +163,7 @@
   font: inherit;
   font-size: var(--text-sm, 0.875rem);
   cursor: pointer;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ds-line);
 
   &:disabled {
     opacity: 0.5;
@@ -173,7 +173,7 @@
 
 .removeBtn {
   background: transparent;
-  color: var(--color-error, #d93025);
+  color: var(--ds-danger, #d93025);
   border-color: currentColor;
   margin-inline-end: auto;
 
@@ -184,17 +184,17 @@
 
 .cancelBtn {
   background: transparent;
-  color: var(--color-text);
+  color: var(--ds-text);
 
   &:hover:not(:disabled) {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 }
 
 .submitBtn {
-  background: var(--color-accent);
-  color: var(--color-on-accent, var(--color-text));
-  border-color: var(--color-accent);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark, var(--ds-text));
+  border-color: var(--ds-action);
 
   &:hover:not(:disabled) {
     filter: brightness(1.05);
@@ -205,6 +205,6 @@
 
 .status {
   padding: var(--space-4);
-  color: var(--color-text-muted);
+  color: var(--ds-text-mute);
   font-size: var(--text-sm, 0.875rem);
 }

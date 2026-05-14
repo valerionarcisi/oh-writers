@@ -15,7 +15,7 @@
 .heading {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-fg-primary);
+  color: var(--ds-text);
   margin: 0;
 }
 
@@ -30,19 +30,19 @@
   font-family: inherit;
   font-size: var(--font-size-md);
   line-height: var(--line-height-relaxed);
-  color: var(--color-fg-primary);
-  background: var(--color-surface);
+  color: var(--ds-text);
+  background: var(--ds-surface);
   border: var(--border);
   border-radius: var(--radius-md);
   resize: vertical;
 
   &:focus {
     outline: none;
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
   }
 
   &:read-only {
-    background: var(--color-surface-muted);
+    background: var(--ds-surface-alt);
     cursor: default;
   }
 }
@@ -54,11 +54,11 @@
 
 .counter {
   font-size: var(--font-size-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-variant-numeric: tabular-nums;
 
   &.counterWarn {
-    color: var(--color-warning);
+    color: var(--ds-warning);
   }
 }
 
@@ -71,7 +71,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--color-surface-raised);
+  background: var(--ds-surface-alt);
   border: var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
@@ -82,7 +82,7 @@
 .popoverText {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: var(--color-fg-primary);
+  color: var(--ds-text);
   line-height: var(--line-height-relaxed);
   white-space: pre-wrap;
 }
@@ -90,7 +90,7 @@
 .popoverError {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: var(--color-error);
+  color: var(--ds-danger);
 }
 
 .popoverActions {
@@ -105,13 +105,13 @@
   font-weight: var(--font-weight-medium);
   border: var(--border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-fg-primary);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   cursor: pointer;
   transition: background 120ms ease;
 
   &:hover:not(:disabled) {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 
   &:disabled {
@@ -121,12 +121,12 @@
 }
 
 .btnPrimary {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  border-color: var(--color-accent);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border-color: var(--ds-action);
 
   &:hover:not(:disabled) {
-    background: var(--color-accent-hover);
+    background: var(--ds-action-hover);
   }
 }
 

@@ -5,9 +5,9 @@
   padding: var(--space-1) var(--space-2);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-elevated);
+  background: var(--ds-surface-deep);
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .swatch {
@@ -19,10 +19,10 @@
 }
 
 .label {
-  color: var(--color-fg);
+  color: var(--ds-text);
   font-weight: var(--weight-medium);
 }
 
 .date {
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }

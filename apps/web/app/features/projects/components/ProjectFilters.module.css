@@ -16,11 +16,11 @@
   padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   border: none;
   border-inline-end: var(--border);
   cursor: pointer;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -36,13 +36,13 @@
 }
 
 .tab:hover {
-  background: var(--color-elevated);
-  color: var(--color-fg);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text);
 }
 
 .tab.active {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
 }
 
 .search {
@@ -58,12 +58,12 @@
   font-size: var(--text-sm);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-fg);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   outline: none;
 
   &:focus {
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
     box-shadow: var(--ring-focus);
   }
 }
@@ -80,8 +80,8 @@
   font-size: var(--text-sm);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-fg);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   cursor: pointer;
   outline: none;
 

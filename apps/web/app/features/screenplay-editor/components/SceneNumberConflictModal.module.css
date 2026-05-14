@@ -10,18 +10,18 @@
   gap: var(--space-1);
   text-align: start;
   padding: var(--space-3);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   border: var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background 120ms ease;
 
   &:hover {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 }
@@ -31,7 +31,7 @@
 }
 
 .choiceHint {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-size: var(--text-sm);
   line-height: 1.4;
 }

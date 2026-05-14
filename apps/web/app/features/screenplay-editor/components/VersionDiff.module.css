@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   min-block-size: 100vh;
-  background: var(--color-bg);
+  background: var(--ds-bg);
 }
 
 /* ─── Toolbar ────────────────────────────────────────────── */
@@ -13,20 +13,20 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   border-block-end: var(--border);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   flex-shrink: 0;
 }
 
 .backLink {
   font-size: var(--text-sm);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   text-decoration: none;
   font-weight: var(--weight-medium);
   white-space: nowrap;
   border-radius: var(--radius-sm);
 
   &:hover {
-    color: var(--color-fg);
+    color: var(--ds-text);
   }
 
   &:focus-visible {
@@ -50,11 +50,11 @@
 }
 
 .statAdded {
-  color: var(--color-diff-insert-fg);
+  color: var(--ds-diff-add-fg);
 }
 
 .statRemoved {
-  color: var(--color-diff-delete-fg);
+  color: var(--ds-diff-remove-fg);
 }
 
 /* ─── Column headers ─────────────────────────────────────── */
@@ -63,7 +63,7 @@
   display: grid;
   grid-template-columns: 1fr 4px 1fr;
   border-block-end: var(--border-strong);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   flex-shrink: 0;
 }
 
@@ -78,13 +78,13 @@
 .headerLabel {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 .headerDate {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 /* ─── Diff area ──────────────────────────────────────────── */
@@ -103,7 +103,7 @@
 }
 
 .divider {
-  background: var(--color-border);
+  background: var(--ds-line);
   flex-shrink: 0;
 }
 
@@ -119,17 +119,17 @@
 }
 
 .lineDelete {
-  background: var(--color-diff-delete-bg);
+  background: var(--ds-diff-remove-bg);
 }
 
 .lineInsert {
-  background: var(--color-diff-insert-bg);
+  background: var(--ds-diff-add-bg);
 }
 
 .lineGutter {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   min-inline-size: var(--space-3);
   flex-shrink: 0;
   user-select: none;
@@ -142,13 +142,13 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 .lineDelete .lineText {
-  color: var(--color-diff-delete-fg);
+  color: var(--ds-diff-remove-fg);
 }
 
 .lineInsert .lineText {
-  color: var(--color-diff-insert-fg);
+  color: var(--ds-diff-add-fg);
 }

@@ -13,8 +13,8 @@
   font-family: var(--font-serif);
   font-size: var(--text-base);
   line-height: var(--leading-relaxed);
-  color: var(--color-fg);
-  background: var(--color-bg);
+  color: var(--ds-text);
+  background: var(--ds-bg);
   border: var(--border);
   border-radius: var(--radius-md);
   resize: none;
@@ -22,7 +22,7 @@
   flex: 1;
 
   &:focus {
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
     box-shadow: var(--ring-focus);
   }
 }

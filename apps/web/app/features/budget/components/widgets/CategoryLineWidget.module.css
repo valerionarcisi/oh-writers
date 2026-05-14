@@ -1,6 +1,6 @@
 .widget {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -15,7 +15,7 @@
   gap: var(--space-3);
 
   &:hover {
-    background: var(--color-surface-raised);
+    background: var(--ds-surface-alt);
   }
 }
 
@@ -33,14 +33,14 @@
 .title {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 .badge {
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
+  color: var(--ds-text-mute);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
   padding: 1px var(--space-2);
 }
@@ -54,12 +54,12 @@
 .total {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .arrow {
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   transition: transform 150ms ease;
 
   &.open {
@@ -68,7 +68,7 @@
 }
 
 .body {
-  border-block-start: 1px solid var(--color-border);
+  border-block-start: 1px solid var(--ds-line);
   padding: var(--space-3) var(--space-4);
 }
 
@@ -81,7 +81,7 @@
 
 .rowLabel {
   flex: 1;
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .fieldGroup {
@@ -89,7 +89,7 @@
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
 }
 
 .cellBtn {
@@ -97,25 +97,25 @@
   cursor: pointer;
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg-secondary);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
+  color: var(--ds-text-2);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-sm);
   padding: 2px var(--space-2);
   min-width: 72px;
   text-align: right;
 
   &:hover {
-    border-color: var(--color-accent);
+    border-color: var(--ds-action);
   }
 }
 
 .cellInput {
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--color-fg);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-accent);
+  color: var(--ds-text);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-action);
   border-radius: var(--radius-sm);
   padding: 2px var(--space-2);
   min-width: 72px;
@@ -127,14 +127,14 @@
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-semibold);
-  color: var(--color-fg);
+  color: var(--ds-text);
   min-width: 80px;
   text-align: right;
 }
 
 .aiHint {
   font-size: var(--text-xs);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   font-style: italic;
 }
 

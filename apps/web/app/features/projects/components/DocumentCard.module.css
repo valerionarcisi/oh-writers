@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: var(--space-3);
   cursor: pointer;
-  background: var(--color-surface);
+  background: var(--ds-surface);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -33,27 +33,27 @@
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
 
 .completedDot {
   inline-size: 8px;
   block-size: 8px;
-  background: var(--color-success);
+  background: var(--ds-success);
   border-radius: var(--radius-full);
 }
 
 .emptyDot {
   inline-size: 8px;
   block-size: 8px;
-  border: 2px solid var(--color-border-strong);
+  border: 2px solid var(--ds-line);
   border-radius: var(--radius-full);
 }
 
 .preview {
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -62,6 +62,6 @@
 
 .empty {
   font-size: var(--text-sm);
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   font-style: italic;
 }

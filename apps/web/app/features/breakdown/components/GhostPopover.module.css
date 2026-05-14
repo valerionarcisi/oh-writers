@@ -1,8 +1,8 @@
 .popover {
   position: fixed;
   z-index: var(--z-modal);
-  background: var(--color-elevated);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--ds-surface-deep);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   padding: var(--space-2);
@@ -13,15 +13,15 @@
 }
 
 .label {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   margin-inline-end: var(--space-1);
 }
 
 .btn {
   appearance: none;
-  background: var(--color-surface);
-  color: var(--color-fg);
-  border: var(--border-width) solid var(--color-border);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border: var(--border-width) solid var(--ds-line);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
   font: inherit;
@@ -29,17 +29,17 @@
   transition: background var(--duration-fast) var(--ease-default);
 
   &:hover {
-    background: var(--color-overlay);
+    background: var(--ds-overlay);
   }
 }
 
 .accept {
-  background: var(--color-accent);
-  color: var(--color-accent-fg);
-  border-color: var(--color-accent);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border-color: var(--ds-action);
 
   &:hover {
-    background: var(--color-accent-hover);
+    background: var(--ds-action-hover);
   }
 }
 

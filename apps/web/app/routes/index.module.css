@@ -14,7 +14,7 @@
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);
-  color: var(--color-fg);
+  color: var(--ds-text);
   padding-block-end: var(--space-4);
   margin-block-end: var(--space-6);
   border-block-end: var(--border);
@@ -23,5 +23,5 @@
 .subtitle {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }

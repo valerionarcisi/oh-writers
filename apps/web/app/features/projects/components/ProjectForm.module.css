@@ -13,11 +13,11 @@
 .label {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-fg);
+  color: var(--ds-text);
 }
 
 .required {
-  color: var(--color-danger);
+  color: var(--ds-danger);
   margin-inline-start: var(--space-1);
 }
 
@@ -27,10 +27,10 @@
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-sans);
   font-size: var(--text-base);
-  color: var(--color-fg);
+  color: var(--ds-text);
   border: var(--border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--ds-surface);
   outline: none;
 }
 
@@ -43,22 +43,22 @@
 
 .input:focus,
 .select:focus {
-  border-color: var(--color-accent);
+  border-color: var(--ds-action);
   box-shadow: var(--ring-focus);
 }
 
 .input.error,
 .select.error {
-  border-color: var(--color-danger);
+  border-color: var(--ds-danger);
 }
 
 .fieldError {
   font-size: var(--text-xs);
-  color: var(--color-danger);
+  color: var(--ds-danger);
 }
 
 .optional {
-  color: var(--color-fg-muted);
+  color: var(--ds-text-mute);
   font-weight: var(--weight-normal);
   margin-inline-start: var(--space-1);
 }

@@ -38,12 +38,12 @@
 }
 
 .status {
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
   font-size: var(--text-sm);
 }
 
 .statusError {
-  color: var(--color-danger);
+  color: var(--ds-danger);
   font-size: var(--text-sm);
 }
 
@@ -57,5 +57,5 @@
 
 .emptyText {
   font-size: var(--text-base);
-  color: var(--color-fg-secondary);
+  color: var(--ds-text-2);
 }
