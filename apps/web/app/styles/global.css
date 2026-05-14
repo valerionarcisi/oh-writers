@@ -16,16 +16,16 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   font-size: var(--text-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: var(--font-sans);
-  background-color: var(--color-bg);
-  color: var(--color-fg);
+  font-family: var(--ds-font-sans);
+  background-color: var(--ds-bg);
+  color: var(--ds-text);
   line-height: var(--leading-normal);
 }
 
@@ -42,24 +42,24 @@ button {
 /* ─── Monaco suggest widget override ─────────────────────── */
 
 .monaco-editor {
-  --vscode-editorSuggestWidget-background: var(--color-elevated) !important;
-  --vscode-editorSuggestWidget-border: var(--color-border-strong) !important;
-  --vscode-editorSuggestWidget-foreground: var(--color-fg-secondary) !important;
+  --vscode-editorSuggestWidget-background: var(--ds-surface-deep) !important;
+  --vscode-editorSuggestWidget-border: var(--ds-line) !important;
+  --vscode-editorSuggestWidget-foreground: var(--ds-text-2) !important;
   --vscode-editorSuggestWidget-selectedBackground: var(
-    --color-overlay
+    --ds-overlay
   ) !important;
-  --vscode-editorSuggestWidget-selectedForeground: var(--color-fg) !important;
+  --vscode-editorSuggestWidget-selectedForeground: var(--ds-text) !important;
   --vscode-editorSuggestWidget-highlightForeground: var(
-    --color-accent
+    --ds-action
   ) !important;
   --vscode-editorSuggestWidget-focusHighlightForeground: var(
-    --color-accent
+    --ds-action
   ) !important;
-  --vscode-list-activeSelectionBackground: var(--color-overlay) !important;
-  --vscode-list-activeSelectionForeground: var(--color-fg) !important;
-  --vscode-list-hoverBackground: var(--color-surface) !important;
-  --vscode-list-focusBackground: var(--color-overlay) !important;
-  --vscode-list-highlightForeground: var(--color-accent) !important;
+  --vscode-list-activeSelectionBackground: var(--ds-overlay) !important;
+  --vscode-list-activeSelectionForeground: var(--ds-text) !important;
+  --vscode-list-hoverBackground: var(--ds-surface) !important;
+  --vscode-list-focusBackground: var(--ds-overlay) !important;
+  --vscode-list-highlightForeground: var(--ds-action) !important;
 }
 
 .monaco-editor .suggest-widget {

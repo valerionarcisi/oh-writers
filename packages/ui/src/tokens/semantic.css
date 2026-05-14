@@ -35,6 +35,26 @@
   --ds-success:  var(--ds-leaf-500);
   --ds-info:     #34487a;
 
+  /* Danger */
+  --ds-danger:      #b33a28;
+  --ds-danger-soft: rgba(179, 58, 40, 0.08);
+
+  /* Soft backgrounds for status (matching brand bichromy) */
+  --ds-warning-soft: var(--ds-clay-50);   /* #f4dccb — light peach */
+  --ds-success-soft: var(--ds-leaf-50);   /* #e5e9d8 — light sage */
+
+  /* Scrim / modal backdrop */
+  --ds-overlay: rgba(28, 26, 23, 0.5);
+
+  /* Diff view (version compare, screenplay diff) */
+  --ds-diff-add-bg:    rgba(90, 107, 60, 0.13);
+  --ds-diff-add-fg:    var(--ds-agent);
+  --ds-diff-remove-bg: rgba(179, 58, 40, 0.10);
+  --ds-diff-remove-fg: var(--ds-danger);
+  --ds-diff-change-bg: rgba(139, 58, 26, 0.10);
+  --ds-diff-intra:     rgba(139, 58, 26, 0.28);
+  --ds-diff-neutral:   transparent;
+
   /* Typography stacks */
   --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
   --ds-font-display: "Fraunces", Georgia, serif;
