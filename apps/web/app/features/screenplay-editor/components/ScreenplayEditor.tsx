@@ -513,12 +513,6 @@ export const ScreenplayEditor = forwardRef<
           {versionsLoadError}
         </div>
       )}
-      {!isFocusMode && !isViewing && (
-        <SceneStaleBadge
-          projectId={screenplay.projectId}
-          versionId={screenplay.currentVersionId ?? null}
-        />
-      )}
       {!isFocusMode && isViewing && (
         <VersionViewingBanner
           label={viewing.label}

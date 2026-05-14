@@ -1,16 +1,57 @@
 // packages/ui/src/shell/TopBar/TopBar.tsx
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../icons/Icon";
+import type { IconName } from "../../icons/icon-names";
 import { SavePill } from "../../primitives/SavePill/SavePill";
 import type { SaveState } from "../../primitives/SavePill/SavePill";
 import { Presence } from "../../primitives/Presence/Presence";
 import type { PresenceUser } from "../../primitives/Presence/Presence";
 import styles from "./TopBar.module.css";
 
+function SectionMenuItem({
+  section,
+  onPick,
+}: {
+  section: TopBarSection;
+  onPick: (href: string) => void;
+}) {
+  const cls = [styles.sectionItem, section.isActive ? styles.sectionItemActive : ""]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={cls}
+      onClick={() => onPick(section.href)}
+    >
+      {section.icon && (
+        <Icon
+          name={section.icon as IconName}
+          size={14}
+          aria-hidden={true}
+        />
+      )}
+      <span>{section.label}</span>
+      {section.isActive && (
+        <span className={styles.sectionItemDot} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
 export type TopBarSection = {
   label: string;
   href: string;
   isActive?: boolean;
+  /** Optional Icon name (from the DS icon sprite). When provided, renders a
+   *  small leading icon — matches the f-ambient mockup section dropdown. */
+  icon?: string;
+};
+
+export type TopBarSectionGroup = {
+  label: string;
+  items: ReadonlyArray<TopBarSection>;
 };
 
 export type TopBarProps = {
@@ -28,6 +69,10 @@ export type TopBarProps = {
   /** When provided, clicking the section breadcrumb opens a popover with these
    *  entries. Each entry navigates via onNavigate(href). */
   sections?: ReadonlyArray<TopBarSection>;
+  /** Grouped variant of `sections` — when provided, the popover renders
+   *  group labels and dividers between them (e.g. Scrittura / Pre-produzione
+   *  / Produzione). Takes precedence over `sections`. */
+  sectionGroups?: ReadonlyArray<TopBarSectionGroup>;
   onNavigate?: (href: string) => void;
   onBrandClick?: () => void;
   onProjectClick?: () => void;
@@ -49,6 +94,7 @@ export function TopBar({
   notificationCount = 0,
   userInitials,
   sections,
+  sectionGroups,
   onNavigate,
   onBrandClick,
   onProjectClick,
@@ -60,7 +106,10 @@ export function TopBar({
 }: TopBarProps) {
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const sectionWrapRef = useRef<HTMLSpanElement>(null);
-  const hasSectionMenu = sections !== undefined && sections.length > 0;
+  const hasGroupedMenu =
+    sectionGroups !== undefined && sectionGroups.length > 0;
+  const hasFlatMenu = sections !== undefined && sections.length > 0;
+  const hasSectionMenu = hasGroupedMenu || hasFlatMenu;
 
   useEffect(() => {
     if (!sectionsOpen) return;
@@ -160,28 +209,34 @@ export function TopBar({
             className={styles.sectionPopover}
             data-testid="topbar-section-popover"
           >
-            {sections.map((s) => {
-              const cls = [
-                styles.sectionItem,
-                s.isActive ? styles.sectionItemActive : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-              return (
-                <button
-                  key={s.href}
-                  type="button"
-                  role="menuitem"
-                  className={cls}
-                  onClick={() => handleSectionPick(s.href)}
-                >
-                  <span>{s.label}</span>
-                  {s.isActive && (
-                    <span className={styles.sectionItemDot} aria-hidden="true" />
-                  )}
-                </button>
-              );
-            })}
+            {hasGroupedMenu
+              ? sectionGroups!.map((group, gIdx) => (
+                  <div key={group.label} className={styles.sectionGroup}>
+                    {gIdx > 0 && (
+                      <span
+                        className={styles.sectionDivider}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className={styles.sectionGroupLabel}>
+                      {group.label}
+                    </span>
+                    {group.items.map((s) => (
+                      <SectionMenuItem
+                        key={s.href}
+                        section={s}
+                        onPick={handleSectionPick}
+                      />
+                    ))}
+                  </div>
+                ))
+              : sections!.map((s) => (
+                  <SectionMenuItem
+                    key={s.href}
+                    section={s}
+                    onPick={handleSectionPick}
+                  />
+                ))}
           </div>
         )}
       </span>

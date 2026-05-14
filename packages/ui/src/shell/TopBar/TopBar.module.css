@@ -118,9 +118,9 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  z-index: 30;
-  min-width: 220px;
-  padding: var(--ds-space-1);
+  z-index: 50;
+  min-width: 240px;
+  padding: var(--ds-space-2);
   border-radius: var(--ds-radius-md);
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
@@ -130,11 +130,35 @@
   gap: 2px;
 }
 
+.sectionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionGroupLabel {
+  display: block;
+  padding: var(--ds-space-2) var(--ds-space-3) 4px;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-3);
+}
+
+.sectionDivider {
+  display: block;
+  block-size: 1px;
+  inline-size: auto;
+  margin: var(--ds-space-1) 0;
+  background: var(--ds-line);
+}
+
 .sectionItem {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-space-3);
+  gap: var(--ds-space-2);
   padding: var(--ds-space-2) var(--ds-space-3);
   border-radius: var(--ds-radius-sm);
   border: none;
@@ -147,9 +171,22 @@
   cursor: pointer;
   white-space: nowrap;
 
+  > svg {
+    color: var(--ds-text-3);
+    flex-shrink: 0;
+  }
+
+  > span:nth-of-type(1) {
+    flex: 1 1 auto;
+  }
+
   &:hover {
     background: var(--ds-surface-alt);
     color: var(--ds-text);
+
+    > svg {
+      color: var(--ds-text-2);
+    }
   }
 
   &:focus-visible {

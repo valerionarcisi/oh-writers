@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
-import type { TopBarSection } from "@oh-writers/ui";
+import type { TopBarSectionGroup } from "@oh-writers/ui";
 import { AppShell } from "~/features/app-shell";
 import { useProject } from "~/features/projects";
 import type { AppUser } from "~/server/context";
@@ -54,32 +54,56 @@ function deriveSectionName(routeId: string): string {
   return "";
 }
 
-const PROJECT_SECTIONS: ReadonlyArray<{ segment: string; label: string }> = [
-  { segment: "soggetto", label: "Soggetto" },
-  { segment: "synopsis", label: "Synopsis" },
-  { segment: "outline", label: "Outline" },
-  { segment: "treatment", label: "Treatment" },
-  { segment: "screenplay", label: "Screenplay" },
-  { segment: "breakdown", label: "Breakdown" },
-  { segment: "schedule", label: "Schedule" },
-  { segment: "budget", label: "Budget" },
-  { segment: "title-page", label: "Frontespizio" },
+type SectionDef = { segment: string; label: string; icon: string };
+
+const SECTION_GROUPS: ReadonlyArray<{
+  label: string;
+  items: ReadonlyArray<SectionDef>;
+}> = [
+  {
+    label: "Scrittura",
+    items: [
+      { segment: "soggetto", label: "Soggetto", icon: "file-text" },
+      { segment: "synopsis", label: "Synopsis", icon: "book" },
+      { segment: "outline", label: "Outline", icon: "clipboard" },
+      { segment: "treatment", label: "Treatment", icon: "file-text" },
+      { segment: "screenplay", label: "Screenplay", icon: "file-text" },
+    ],
+  },
+  {
+    label: "Pre-produzione",
+    items: [
+      { segment: "breakdown", label: "Breakdown", icon: "clipboard" },
+      { segment: "budget", label: "Budget", icon: "file-text" },
+      { segment: "schedule", label: "Schedule", icon: "clock" },
+    ],
+  },
+  {
+    label: "Produzione",
+    items: [{ segment: "title-page", label: "Frontespizio", icon: "book" }],
+  },
 ];
 
-function buildSections(
+const ALL_SECTIONS = SECTION_GROUPS.flatMap((g) => g.items);
+
+function buildSectionGroups(
   projectId: string | undefined,
   activeSegment: string,
-): ReadonlyArray<TopBarSection> {
+): ReadonlyArray<TopBarSectionGroup> {
   if (!projectId) return [];
-  return PROJECT_SECTIONS.map((s) => ({
-    label: s.label,
-    href: `/projects/${projectId}/${s.segment}`,
-    isActive: s.segment === activeSegment,
+  return SECTION_GROUPS.map((g) => ({
+    label: g.label,
+    items: g.items.map((s) => ({
+      label: s.label,
+      icon: s.icon,
+      href: `/projects/${projectId}/${s.segment}`,
+      isActive: s.segment === activeSegment,
+    })),
   }));
 }
 
 function activeSegmentFromRouteId(routeId: string): string {
-  for (const s of PROJECT_SECTIONS) {
+  for (const s of ALL_SECTIONS) {
     if (routeId.includes(s.segment)) return s.segment;
   }
   return "";
@@ -105,7 +129,7 @@ function AppLayout() {
       ? "…"
       : "Oh Writers";
 
-  const sections = buildSections(projectId, activeSegment);
+  const sectionGroups = buildSectionGroups(projectId, activeSegment);
 
   return (
     <AppShell
@@ -113,7 +137,7 @@ function AppLayout() {
       projectName={projectName}
       sectionName={sectionName}
       saveState="saved"
-      sections={sections.length > 0 ? sections : undefined}
+      sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
     >
       <Outlet />
     </AppShell>

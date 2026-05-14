@@ -1,7 +1,11 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { TopBar, SkipLink } from "@oh-writers/ui";
-import type { SaveState, TopBarSection } from "@oh-writers/ui";
+import type {
+  SaveState,
+  TopBarSection,
+  TopBarSectionGroup,
+} from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import type { AppUser } from "~/server/context";
 import styles from "./AppShell.module.css";
@@ -14,6 +18,7 @@ interface AppShellProps {
   saveSecondsAgo?: number;
   cesareNoteCount?: number;
   sections?: ReadonlyArray<TopBarSection>;
+  sectionGroups?: ReadonlyArray<TopBarSectionGroup>;
   children: ReactNode;
 }
 
@@ -33,6 +38,7 @@ export function AppShell({
   saveSecondsAgo,
   cesareNoteCount = 0,
   sections,
+  sectionGroups,
   children,
 }: AppShellProps) {
   const router = useRouter();
@@ -69,6 +75,7 @@ export function AppShell({
           presenceUsers={[]}
           isScrolled={isScrolled}
           sections={sections}
+          sectionGroups={sectionGroups}
           onNavigate={handleNavigate}
           onBrandClick={handleBrandClick}
           onProjectClick={handleBrandClick}
