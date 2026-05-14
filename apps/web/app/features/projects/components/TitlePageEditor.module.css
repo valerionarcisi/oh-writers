@@ -1,6 +1,6 @@
 /*
- * Title page editor — mirrors the screenplay editor's chrome:
- * dark canvas + white US-Letter page card + Courier Prime monospace.
+ * Title page editor — light linen canvas + white US-Letter page card.
+ * Page sits on the linen background with a subtle shadow for depth.
  * Layout inside the page is a 5-region grid (title, center, 3 footer cols),
  * applied directly to the .ProseMirror element so it remains the editable
  * host (display:contents on the editable host breaks PM focus/selection).
@@ -10,20 +10,19 @@
   overflow-y: auto;
   overflow-x: hidden;
   min-block-size: 0;
-  background: #2a2927;
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-block: var(--space-8);
-  padding-inline: 0;
+  padding: var(--ds-space-8, var(--space-8));
 }
 
 .pageShell {
   inline-size: 100%;
   max-inline-size: 816px;
   min-block-size: 1056px;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  background: var(--ds-surface, #ffffff);
+  box-shadow: var(--ds-shadow-2, 0 1px 3px rgba(0, 0, 0, 0.08));
   position: relative;
   flex-shrink: 0;
   padding-block: 1in;
