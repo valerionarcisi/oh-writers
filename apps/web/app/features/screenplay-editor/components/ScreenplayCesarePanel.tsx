@@ -1,15 +1,16 @@
 import { Suspense } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { CATEGORY_META, type BreakdownCategory } from "@oh-writers/domain";
 import {
-  projectBreakdownOptions,
-  staleScenesOptions,
-} from "~/features/breakdown";
+  polishQueryOptions,
+  type PolishSuggestion,
+} from "../server/screenplay-polish.server";
+import { staleScenesOptions } from "~/features/breakdown";
 import styles from "./ScreenplayCesarePanel.module.css";
 
 interface ScreenplayCesarePanelProps {
   projectId: string;
+  screenplayId: string;
   versionId: string | null;
   /** Live scene/page metrics — pure read, no mock. */
   pageCurrent: number;
@@ -22,17 +23,36 @@ export function ScreenplayCesarePanel(props: ScreenplayCesarePanelProps) {
   return (
     <aside className={styles.panel} aria-label="Note di Cesare">
       <header className={styles.header}>
-        <span className={styles.label}>Cesare · live</span>
+        <span className={styles.label}>Cesare · polish</span>
       </header>
-      <Suspense fallback={<p className={styles.loading}>Caricamento…</p>}>
+      <Suspense fallback={<p className={styles.loading}>Lettura in corso…</p>}>
         <PanelBody {...props} />
       </Suspense>
     </aside>
   );
 }
 
+const KIND_LABEL: Record<PolishSuggestion["kind"], string> = {
+  dialogue: "Dialogo",
+  action: "Azione",
+  structure: "Struttura",
+  pacing: "Pacing",
+  style: "Stile",
+  format: "Formato",
+};
+
+const KIND_COLOR: Record<PolishSuggestion["kind"], string> = {
+  dialogue: "var(--ds-cat-cast, #6c4d8c)",
+  action: "var(--ds-text-3, #8a8479)",
+  structure: "var(--ds-cat-locations, #b07a3a)",
+  pacing: "var(--ds-action, #b04a2a)",
+  style: "var(--ds-cat-costumi, #c98a8a)",
+  format: "var(--ds-cat-suono, #5a8a6a)",
+};
+
 function PanelBody({
   projectId,
+  screenplayId,
   versionId,
   pageCurrent,
   pageTotal,
@@ -40,30 +60,22 @@ function PanelBody({
   sceneTotal,
 }: ScreenplayCesarePanelProps) {
   const navigate = useNavigate();
-  const rowsQ = useQuery(projectBreakdownOptions(projectId, versionId ?? ""));
+  const qc = useQueryClient();
+  const polishQ = useQuery(polishQueryOptions(screenplayId));
   const staleQ = useQuery(staleScenesOptions(versionId ?? ""));
-  const rows = rowsQ.data ?? [];
+  const suggestions = polishQ.data?.suggestions ?? [];
   const staleScenes = staleQ.data ?? [];
-
-  // Real, aggregated metrics from breakdown — no mock strings.
-  const pendingRows = rows.filter((r) => r.hasPending);
-  const pendingCount = pendingRows.length;
-  const totalElements = rows.length;
-
-  // Top categories by number of pending elements, max 4 shown.
-  const byCategory = new Map<BreakdownCategory, number>();
-  for (const row of pendingRows) {
-    const cat = row.element.category;
-    byCategory.set(cat, (byCategory.get(cat) ?? 0) + 1);
-  }
-  const topCategories = Array.from(byCategory.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
 
   const handleOpenBreakdown = () => {
     void navigate({
       to: "/projects/$id/breakdown",
       params: { id: projectId },
+    });
+  };
+
+  const handleRefresh = () => {
+    void qc.invalidateQueries({
+      queryKey: ["screenplay-polish", screenplayId],
     });
   };
 
@@ -75,44 +87,62 @@ function PanelBody({
           label="Scena"
           value={sceneCurrent != null ? `${sceneCurrent}/${sceneTotal}` : "—"}
         />
-        <Metric label="Elementi" value={String(totalElements)} />
       </section>
 
       <section className={styles.notes}>
-        <p className={styles.notesHead}>
-          {pendingCount > 0
-            ? `${pendingCount} suggerimenti aperti`
-            : "Nessun suggerimento aperto"}
-        </p>
-        {topCategories.length > 0 && (
-          <ul className={styles.catList}>
-            {topCategories.map(([cat, n]) => {
-              const meta = CATEGORY_META[cat];
-              const colorVar = `var(${meta.colorToken.replace(
-                "--cat-",
-                "--ds-cat-",
-              )})`;
-              return (
-                <li key={cat} className={styles.catRow}>
-                  <span
-                    className={styles.catDot}
-                    style={{ background: colorVar }}
-                    aria-hidden="true"
-                  />
-                  <span className={styles.catLabel}>{meta.labelIt}</span>
-                  <span className={styles.catCount} data-num>
-                    {n}
-                  </span>
-                </li>
-              );
-            })}
+        <div className={styles.notesHeadRow}>
+          <p className={styles.notesHead}>
+            {polishQ.isFetching
+              ? "Cesare sta leggendo…"
+              : suggestions.length > 0
+                ? `${suggestions.length} rifiniture proposte`
+                : "Nessuna rifinitura — buon ritmo."}
+          </p>
+          <button
+            type="button"
+            className={styles.refresh}
+            onClick={handleRefresh}
+            disabled={polishQ.isFetching}
+            aria-label="Rilegge la sceneggiatura"
+            title="Rilegge la sceneggiatura"
+          >
+            ↻
+          </button>
+        </div>
+
+        {suggestions.length > 0 && (
+          <ul className={styles.suggestionList}>
+            {suggestions.slice(0, 5).map((s) => (
+              <li key={s.id} className={styles.suggestionRow}>
+                <span
+                  className={styles.kindDot}
+                  style={{ background: KIND_COLOR[s.kind] }}
+                  aria-hidden="true"
+                />
+                <div className={styles.suggestionBody}>
+                  <p className={styles.suggestionMeta}>
+                    <span
+                      className={styles.kindTag}
+                      style={{ color: KIND_COLOR[s.kind] }}
+                    >
+                      {KIND_LABEL[s.kind]}
+                    </span>
+                    <span className={styles.sceneTag} data-num>
+                      Sc. {s.scene}
+                    </span>
+                  </p>
+                  <p className={styles.suggestionMessage}>{s.message}</p>
+                </div>
+              </li>
+            ))}
           </ul>
         )}
+
         {staleScenes.length > 0 && (
           <p className={styles.stale}>
             {staleScenes.length}{" "}
             {staleScenes.length === 1 ? "scena obsoleta" : "scene obsolete"} —
-            il breakdown è da rispogliare
+            il breakdown è da rispogliare.
           </p>
         )}
       </section>

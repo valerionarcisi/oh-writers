@@ -53,7 +53,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--ds-space-2);
 }
 
@@ -87,7 +87,14 @@
   border-block-start: 1px solid var(--ds-line);
 }
 
+.notesHeadRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
 .notesHead {
+  flex: 1 1 auto;
   margin: 0;
   font-family: var(--ds-font-sans);
   font-size: 13px;
@@ -95,39 +102,88 @@
   color: var(--ds-text);
 }
 
-.catList {
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-text-3);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.refresh:hover:not(:disabled) {
+  border-color: var(--ds-action);
+  color: var(--ds-action);
+}
+
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.suggestionList {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--ds-space-3);
 }
 
-.catRow {
-  display: flex;
-  align-items: center;
+.suggestionRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: var(--ds-space-2);
-  font-family: var(--ds-font-sans);
-  font-size: 12px;
-  color: var(--ds-text-2);
+  align-items: start;
 }
 
-.catDot {
+.kindDot {
   width: 8px;
   height: 8px;
+  margin-block-start: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.catLabel {
-  flex: 1 1 auto;
+.suggestionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
 }
 
-.catCount {
+.suggestionMeta {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
   font-family: var(--ds-font-mono);
-  font-size: 11px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kindTag {
+  font-weight: 600;
+}
+
+.sceneTag {
   color: var(--ds-text-3);
+}
+
+.suggestionMessage {
+  margin: 0;
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ds-text-2);
 }
 
 .stale {
