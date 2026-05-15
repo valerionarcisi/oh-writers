@@ -68,32 +68,48 @@
   block-size: 4px;
 }
 
+/* Filter chips — Proposta A (minimal underline). Solo testo + sottolineatura
+ * action sull'active. Zero bordi, zero background → coerente con il page tone
+ * e leggera rispetto alle pill clay piene. */
 .catChip {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--ds-line);
-  border-radius: 99px;
+  padding: 4px 4px 6px;
+  border: none;
+  border-radius: 0;
   background: transparent;
   font: inherit;
-  font-size: var(--text-xs, 0.75rem);
+  font-size: var(--text-sm);
+  font-weight: 500;
   color: var(--ds-text-mute);
   cursor: pointer;
   flex-shrink: 0;
   white-space: nowrap;
-  transition:
-    background 100ms ease,
-    color 100ms ease,
-    border-color 100ms ease;
+  position: relative;
+  transition: color 120ms ease;
 
   &:hover {
-    background: var(--ds-surface-alt);
     color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 }
 
 .catChipActive {
+  color: var(--ds-text);
+  font-weight: 600;
+}
+
+.catChipActive::after {
+  content: "";
+  position: absolute;
+  inset-inline: 4px;
+  inset-block-end: 0;
+  block-size: 2px;
+  border-radius: 1px;
   background: var(--ds-action);
-  border-color: var(--ds-action);
-  color: var(--ds-text-on-dark, var(--ds-text));
 }
 
 .statusSelect {
