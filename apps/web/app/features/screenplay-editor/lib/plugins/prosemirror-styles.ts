@@ -343,6 +343,31 @@ export const injectProseMirrorStyles = (): void => {
       border-radius: 2px;
       outline: 1px solid rgba(200, 120, 0, 0.5);
     }
+
+    /* ─── Cesare "Applica" flash ───────────────────────────────
+     * Inline decoration that briefly marks the range substituted by
+     * a Cesare suggestion so the writer can spot the change. The
+     * plugin clears the decoration after ~1.6s; the CSS animation
+     * runs once over the same window so the fade matches the lifetime. */
+    .cesareAppliedHighlight {
+      background: color-mix(in srgb, var(--ds-accent, #b07a3a) 22%, transparent);
+      border-radius: 2px;
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-accent, #b07a3a) 35%, transparent);
+      animation: cesareAppliedFade 1600ms ease-out forwards;
+    }
+
+    @keyframes cesareAppliedFade {
+      0%   { background: color-mix(in srgb, var(--ds-accent, #b07a3a) 40%, transparent); }
+      60%  { background: color-mix(in srgb, var(--ds-accent, #b07a3a) 22%, transparent); }
+      100% { background: color-mix(in srgb, var(--ds-accent, #b07a3a) 0%, transparent); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cesareAppliedHighlight {
+        animation: none;
+        background: color-mix(in srgb, var(--ds-accent, #b07a3a) 22%, transparent);
+      }
+    }
   `;
 
   document.head.appendChild(style);

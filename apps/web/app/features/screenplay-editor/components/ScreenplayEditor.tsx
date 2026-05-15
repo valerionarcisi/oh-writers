@@ -21,6 +21,10 @@ import { estimatePageCount } from "../lib/page-counter";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
+import {
+  cesareAppliedHighlightKey,
+  highlightAppliedRange,
+} from "../lib/plugins/cesare-applied-highlight";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
@@ -310,6 +314,14 @@ export const ScreenplayEditor = forwardRef<
         posStart,
         posEnd,
         view.state.schema.text(replace),
+      );
+      // Map the original anchor through the replacement so the highlight range
+      // stays correct even if PM normalised the inserted text node.
+      const mappedFrom = tr.mapping.map(posStart);
+      const mappedTo = mappedFrom + replace.length;
+      tr.setMeta(
+        cesareAppliedHighlightKey,
+        highlightAppliedRange(mappedFrom, mappedTo),
       );
       view.dispatch(tr);
       view.focus();

@@ -22,6 +22,7 @@ import {
   getPaginationInfo,
   injectPaginatorStyles,
 } from "../lib/plugins/paginator";
+import { buildCesareAppliedHighlightPlugin } from "../lib/plugins/cesare-applied-highlight";
 import { schema } from "../lib/schema";
 import { fountainToDoc } from "../lib/fountain-to-doc";
 import { docToFountain } from "../lib/doc-to-fountain";
@@ -159,6 +160,7 @@ export function ProseMirrorView({
           "Shift-Enter": chainCommands(createParagraphNear, liftEmptyBlock),
         }),
         buildPaginatorPlugin(),
+        buildCesareAppliedHighlightPlugin(),
       ],
     });
 
