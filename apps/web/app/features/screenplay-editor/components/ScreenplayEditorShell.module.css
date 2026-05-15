@@ -122,7 +122,7 @@
 .sceneBar {
   max-inline-size: 1340px;
   margin-inline: auto;
-  padding: var(--ds-space-3) var(--ds-space-6) var(--ds-space-2);
+  padding: var(--ds-space-1) var(--ds-space-6) var(--ds-space-1);
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: baseline;
@@ -157,9 +157,9 @@
   max-inline-size: 1340px;
   inline-size: 100%;
   margin-inline: auto;
-  /* Equal top breathing room so the editor card and the Cesare panel both
-     start at the same y just below the viewbar. */
-  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-10);
+  /* Tight top spacing under the sticky viewbar — the chip row + version pill
+     already provides visual breathing room. Bigger padding was passive space. */
+  padding: var(--ds-space-2) var(--ds-space-6) var(--ds-space-10);
   align-items: start;
 }
 
@@ -169,7 +169,7 @@
   max-inline-size: 1040px;
   inline-size: 100%;
   margin-inline: auto;
-  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-10);
+  padding: var(--ds-space-2) var(--ds-space-6) var(--ds-space-10);
   align-items: start;
 }
 

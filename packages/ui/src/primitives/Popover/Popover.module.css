@@ -11,33 +11,38 @@
   animation: popIn var(--ds-duration-2) var(--ds-ease);
 }
 
+/* Animation uses opacity + scale only — NO translate, otherwise it overrides
+ * the `.bottomCenter` translate(-50% 0) that horizontally centers the popover
+ * and you get a snap when the animation ends. transform-origin gives the
+ * "from above" feel without touching position. */
 @keyframes popIn {
   from {
     opacity: 0;
     scale: 0.96;
-    translate: 0 -4px;
   }
   to {
     opacity: 1;
     scale: 1;
-    translate: 0 0;
   }
 }
 
 .bottomStart {
   top: calc(100% + 4px);
   inset-inline-start: 0;
+  transform-origin: top left;
 }
 
 .bottomEnd {
   top: calc(100% + 4px);
   inset-inline-end: 0;
+  transform-origin: top right;
 }
 
 .bottomCenter {
   top: calc(100% + 4px);
   left: 50%;
   translate: -50% 0;
+  transform-origin: top center;
 }
 
 @media (prefers-reduced-motion: reduce) {
