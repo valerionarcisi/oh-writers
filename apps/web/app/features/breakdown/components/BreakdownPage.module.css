@@ -193,6 +193,11 @@
    * mode at narrow viewports. Explicit min-inline-size: 0 lets the track
    * shrink so the heading slots receive their proportional share. */
   min-inline-size: 0;
+  /* Center the ScriptReader (max-inline-size: 816px) inside the card so the
+   * script content sits in the middle of the column rather than left-flush,
+   * keeping visual balance with the 280px right panel. */
+  display: flex;
+  justify-content: center;
 }
 
 /* Element highlight applied to spans inside ScriptReader */
