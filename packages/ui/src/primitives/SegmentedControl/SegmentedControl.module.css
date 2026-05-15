@@ -1,54 +1,52 @@
-/* SegmentedControl — Proposta B (TagBicolor).
- * Rettangoli affiancati con bordo morbido. Active = border-left action 3px +
- * background soft action + testo solid. Inactive = bordo grigio, testo mute.
- * Pattern "tag" — leggibile, posato, niente shadow-card. */
+/* SegmentedControl — Variant 1 (industry typewriter mono).
+ * Tabs in Courier uppercase, underline ink su active. Coerente con il foglio
+ * Courier del copione + Sottolinea/Version inline mono. */
 .group {
   display: inline-flex;
-  align-items: stretch;
-  gap: var(--ds-space-1);
+  align-items: center;
+  gap: var(--ds-space-4);
 }
 
 .option {
+  all: unset;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 4px 8px;
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-line);
-  border-left: 3px solid var(--ds-line);
-  border-radius: var(--ds-radius-sm);
+  padding: 4px 4px 6px;
   color: var(--ds-text-mute);
-  font-family: var(--ds-font-sans);
-  font-size: var(--text-sm);
-  font-weight: 500;
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
+  position: relative;
+  transition: color 120ms ease;
 }
 
 .option:hover {
   color: var(--ds-text);
-  border-color: var(--ds-text-3);
 }
 
 .option:focus-visible {
   outline: 2px solid var(--ds-action);
-  outline-offset: 2px;
+  outline-offset: 4px;
+  border-radius: 2px;
 }
 
 .optionActive {
-  background: color-mix(in srgb, var(--ds-action) 8%, var(--ds-surface));
-  border-color: color-mix(in srgb, var(--ds-action) 35%, var(--ds-line));
-  border-left-color: var(--ds-action);
   color: var(--ds-text);
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.optionActive:hover {
-  border-color: color-mix(in srgb, var(--ds-action) 50%, var(--ds-line));
+.optionActive::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 2px;
+  background: var(--ds-text);
+  border-radius: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

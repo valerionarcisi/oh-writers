@@ -8,6 +8,7 @@ import {
   ScreenplayEditorShell,
   ScreenplayElementChips,
   useScreenplay,
+  useVersions,
   type ScreenplayEditorHandle,
 } from "~/features/screenplay-editor";
 import type { ElementType } from "~/features/screenplay-editor/lib/fountain-element-detector";
@@ -44,6 +45,9 @@ interface Metrics {
 function ScreenplayEditorPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useScreenplay(id);
+  const screenplayId =
+    result && result.isOk ? result.value.id : "";
+  const { data: versionsResult } = useVersions(screenplayId || "");
   const [isCesareOn, setIsCesareOn] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
   const [metrics, setMetrics] = useState<Metrics>({
@@ -95,6 +99,15 @@ function ScreenplayEditorPage() {
             projectId={id}
             onOpenVersions={() =>
               openVersionsDrawer({ kind: "screenplay", screenplayId: value.id })
+            }
+            versions={
+              versionsResult && versionsResult.isOk
+                ? versionsResult.value.map((v, idx) => ({
+                    id: v.id,
+                    label: v.label ?? `Versione ${idx + 1}`,
+                    isCurrent: v.id === value.currentVersionId,
+                  }))
+                : []
             }
             viewbarCenter={
               <ScreenplayElementChips

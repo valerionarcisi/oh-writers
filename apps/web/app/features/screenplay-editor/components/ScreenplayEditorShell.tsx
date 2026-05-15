@@ -54,6 +54,10 @@ export type ScreenplayEditorShellProps = {
   onOpenVersions?: () => void;
   /** Optional label shown inside the version pill (e.g. "v3 · 14 mag 2026"). */
   versionLabel?: string;
+  /** Optional list of versions to surface in the version-trigger dropdown.
+   *  When provided, the menu shows the version history + the "Apri Versioni"
+   *  action. When empty, only the "Apri" action is shown. */
+  versions?: ReadonlyArray<{ id: string; label: string; isCurrent: boolean }>;
 };
 
 export function ScreenplayEditorShell({
@@ -65,6 +69,7 @@ export function ScreenplayEditorShell({
   cesareSide,
   onOpenVersions,
   versionLabel,
+  versions,
 }: ScreenplayEditorShellProps) {
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
@@ -221,6 +226,16 @@ export function ScreenplayEditorShell({
                 variant="pill"
                 versionLabel={versionLabel}
                 menuItems={[
+                  ...(versions && versions.length > 0
+                    ? versions.map((v) => ({
+                        id: `version-${v.id}`,
+                        label: v.isCurrent ? `● ${v.label}` : v.label,
+                        onSelect: onOpenVersions,
+                        tone: v.isCurrent
+                          ? ("default" as const)
+                          : ("muted" as const),
+                      }))
+                    : []),
                   {
                     id: "open-drawer",
                     label: "Apri Versioni →",
