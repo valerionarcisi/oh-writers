@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget + Schedule redesign — proposte</title>
+    <meta name="viewport" content="width=1600, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,500&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+        --pos: #5a6b3c;
+        --neg: #b33a28;
+        --cat-cast: #b48a2b;
+        --cat-crew: #5a6b3c;
+        --cat-locations: #b07a3a;
+        --cat-scenografia: #6c4d8c;
+        --cat-costumi: #c4729a;
+        --cat-fotografia: #b33a28;
+        --cat-suono: #5a8a6a;
+        --cat-veicoli: #3a6b8b;
+        --cat-comparse: #a48a5a;
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper-2);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      header.page {
+        padding: 48px 64px 24px;
+        max-width: 1540px;
+        margin: 0 auto;
+      }
+      header.page h1 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 32px;
+        margin: 0 0 8px;
+      }
+      header.page p {
+        color: var(--ink-3);
+        margin: 0;
+        max-width: 70ch;
+      }
+      .grid {
+        max-width: 1540px;
+        margin: 0 auto;
+        padding: 0 64px 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 48px;
+      }
+      .proposal {
+        background: var(--page);
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 12px 32px -16px rgba(28, 26, 23, 0.12);
+        overflow: hidden;
+      }
+      .proposal__head {
+        padding: 20px 28px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .proposal__head h2 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 22px;
+        margin: 0;
+      }
+      .proposal__head .meta {
+        color: var(--ink-3);
+        font-size: 13px;
+        max-width: 50ch;
+        text-align: end;
+      }
+      .proposal__body {
+        background: var(--paper-1);
+        padding: 0;
+      }
+      .proposal__note {
+        padding: 14px 28px 22px;
+        color: var(--ink-3);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .proposal__note b {
+        color: var(--ink-1);
+      }
+
+      /* ─── Shared chrome ────────────────────────────────────────── */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 24px;
+        background: var(--page);
+        border-bottom: 1px solid var(--line);
+      }
+      .topbar__left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--ink-1);
+        color: var(--page);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+      }
+      .sep {
+        color: var(--ink-4);
+      }
+      .brand-crumb {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+      }
+      .section-crumb {
+        font-family: var(--font-display);
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .topbar__right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--ink-3);
+      }
+      .avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--clay-soft);
+        color: var(--clay);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .viewbar {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 24px;
+        padding: 8px 24px;
+        background: var(--paper-1);
+        border-bottom: 1px dashed var(--line);
+      }
+      .tabs {
+        display: inline-flex;
+        gap: 14px;
+      }
+      .tab {
+        all: unset;
+        display: inline-flex;
+        padding: 4px 6px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+        cursor: pointer;
+        position: relative;
+      }
+      .tab.is-active {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .tab.is-active::after {
+        content: "";
+        position: absolute;
+        inset-inline: 6px;
+        bottom: -3px;
+        height: 2px;
+        background: var(--ink-1);
+      }
+      .vb-center {
+        display: inline-flex;
+        justify-content: center;
+        gap: 16px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+      .vb-center b {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .vb-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .version-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      .draft-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+      .draft-badge .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fff;
+        border: 1px solid var(--ink-4);
+      }
+
+      .meta-bar {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 6px 28px 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+      }
+      .meta-bar b {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .meta-bar .item + .item::before {
+        content: " · ";
+        color: var(--ink-4);
+      }
+
+      /* ─── Variant Budget — Hero + categorie tag-row ─────────────── */
+      .budget-1 .content {
+        padding: 24px 28px 36px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .hero-total {
+        display: flex;
+        align-items: baseline;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding: 4px 0 12px;
+        border-bottom: 1px dashed var(--line);
+      }
+      .hero-total .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+      }
+      .hero-total .figure {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 56px;
+        line-height: 1;
+        color: var(--ink-1);
+      }
+      .hero-total .figure .currency {
+        font-size: 32px;
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+      .hero-total .delta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--pos);
+      }
+      .hero-total .delta.neg { color: var(--neg); }
+
+      .cat-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .cat-card {
+        flex: 1 1 220px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--cat);
+        border-radius: 4px;
+        padding: 10px 14px;
+        cursor: pointer;
+        position: relative;
+      }
+      .cat-card .name {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cat-card .name .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--cat);
+      }
+      .cat-card .amount {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-style: italic;
+        font-size: 24px;
+        color: var(--ink-1);
+        margin-top: 2px;
+      }
+      .cat-card .foot {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+
+      .lines-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .lines-table th {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+        text-align: start;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        font-weight: 500;
+      }
+      .lines-table th.num,
+      .lines-table td.num {
+        text-align: end;
+        font-variant-numeric: tabular-nums;
+      }
+      .lines-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--ink-1);
+      }
+      .lines-table .rownum {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+      }
+      .lines-table .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+      .lines-table .tag .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--cat);
+      }
+      .lines-table .delta-pos { color: var(--pos); }
+      .lines-table .delta-neg { color: var(--neg); }
+
+      /* ─── Variant Budget 2 — Split view ─────────────────────────── */
+      .budget-2 .content {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        background: var(--paper-1);
+        min-height: 460px;
+      }
+      .budget-2 .summary {
+        padding: 24px 20px;
+        background: var(--page);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .budget-2 .summary .row {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .budget-2 .summary .row b {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .budget-2 .summary .total {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .budget-2 .summary .total .figure {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 1;
+      }
+      .budget-2 .summary .total .figure .currency {
+        font-size: 22px;
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+      .budget-2 .summary .legend {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .budget-2 .summary .legend .item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .budget-2 .summary .legend .item .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--cat);
+      }
+      .budget-2 .summary .legend .item .label {
+        flex: 1;
+        color: var(--ink-2);
+      }
+      .budget-2 .summary .legend .item .amt {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .budget-2 .body {
+        padding: 24px 28px 36px;
+      }
+
+      /* ─── Variant Schedule 1 — Strip board mono ─────────────────── */
+      .schedule-1 .content {
+        padding: 18px 28px 36px;
+      }
+      .day-board {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+      }
+      .day-col {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .day-col__head {
+        padding: 10px 14px;
+        background: var(--paper-2);
+        border-bottom: 1px dashed var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .day-col__head .name {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .day-col__head .date {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .day-col__head .hours {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .day-col__strips {
+        display: flex;
+        flex-direction: column;
+        padding: 6px;
+        gap: 4px;
+      }
+      .strip {
+        display: flex;
+        flex-direction: column;
+        padding: 8px 10px;
+        background: var(--paper-1);
+        border-left: 3px solid var(--cat);
+        border-radius: 2px;
+        cursor: grab;
+      }
+      .strip .top {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .strip .top .scn {
+        font-weight: 700;
+        color: var(--ink-1);
+      }
+      .strip .heading {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--ink-1);
+        line-height: 1.2;
+        margin-top: 2px;
+      }
+      .strip .meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 4px;
+      }
+
+      /* ─── Variant Schedule 2 — Spreadsheet-like ─────────────────── */
+      .schedule-2 .content {
+        padding: 0 0 24px;
+      }
+      .sheet {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        background: var(--page);
+      }
+      .sheet thead th {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+        font-weight: 500;
+        padding: 10px 14px;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line);
+        text-align: start;
+      }
+      .sheet thead th.num {
+        text-align: end;
+      }
+      .sheet tbody td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: top;
+      }
+      .sheet .gg-cell {
+        background: var(--paper-2);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        color: var(--ink-1);
+      }
+      .sheet .gg-cell .small {
+        display: block;
+        font-weight: 400;
+        color: var(--ink-3);
+        margin-top: 2px;
+      }
+      .sheet .scn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+      .sheet .scn b {
+        color: var(--ink-1);
+      }
+      .sheet .head {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 14px;
+        color: var(--ink-1);
+      }
+      .sheet td.num {
+        text-align: end;
+        font-variant-numeric: tabular-nums;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .sheet tr:hover td {
+        background: var(--paper-1);
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="page">
+      <h1>Budget + Schedule — refactor proposals</h1>
+      <p>
+        Tutti i mockup partono dal viewbar Variant 1 (industry typewriter
+        mono) già adottato su Breakdown. Si differenziano nel layout del
+        contenuto sotto: come presentare totale, categorie, voci modificabili
+        per Budget; e come renderizzare il piano di lavorazione per Schedule.
+      </p>
+    </header>
+
+    <main class="grid">
+      <!-- ─── BUDGET 1 ─────────────────────────────────────────── -->
+      <section class="proposal budget-1">
+        <div class="proposal__head">
+          <h2>Budget · 1 · Hero figure + Categorie tag-row + Lista voci</h2>
+          <span class="meta"
+            >Totale grosso in Fraunces · cards categoria tag-strip · tabella
+            voci modificabili sotto.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Budget ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar">
+            <div class="tabs">
+              <button class="tab is-active">Per categoria</button>
+              <button class="tab">Per giornata</button>
+              <button class="tab">Cast</button>
+              <button class="tab">Tutti i reparti</button>
+            </div>
+            <div class="vb-center">
+              Giorni <b>5</b> · Cont. <b>10%</b>
+            </div>
+            <div class="vb-right">
+              <span class="draft-badge"><span class="dot"></span>Bianco · 2026-05-15</span>
+              <button class="version-pill">v3 · 14 mag 2026 ▾</button>
+            </div>
+          </div>
+          <div class="meta-bar">
+            <span class="item"><b>9</b> scene</span><span class="item"><b>5</b> giornate</span><span class="item"><b>11</b> voci modificabili</span><span class="item"><b>3</b> con scostamento</span>
+          </div>
+          <div class="content">
+            <div class="hero-total">
+              <div>
+                <div class="eyebrow">Totale stimato</div>
+                <div class="figure">81.320<span class="currency"> €</span></div>
+              </div>
+              <span class="delta">+4,2% vs preventivo</span>
+            </div>
+            <div class="cat-row">
+              <button class="cat-card" style="--cat: var(--cat-crew)">
+                <span class="name"><span class="dot"></span>Troupe</span>
+                <span class="amount">36.750 €</span>
+                <span class="foot"><span>45%</span><span>0,0%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-locations)">
+                <span class="name"><span class="dot"></span>Locations</span>
+                <span class="amount">18.000 €</span>
+                <span class="foot"><span>22%</span><span style="color: var(--pos)">+8,1%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-scenografia)">
+                <span class="name"><span class="dot"></span>Scenografia</span>
+                <span class="amount">18.000 €</span>
+                <span class="foot"><span>22%</span><span style="color: var(--pos)">+2,0%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-cast)">
+                <span class="name"><span class="dot"></span>Cast</span>
+                <span class="amount">9.450 €</span>
+                <span class="foot"><span>12%</span><span>0,0%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-suono)">
+                <span class="name"><span class="dot"></span>Suono</span>
+                <span class="amount">6.400 €</span>
+                <span class="foot"><span>8%</span><span>0,0%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-veicoli)">
+                <span class="name"><span class="dot"></span>Veicoli</span>
+                <span class="amount">1.750 €</span>
+                <span class="foot"><span>2%</span><span>0,0%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-costumi)">
+                <span class="name"><span class="dot"></span>Costumi</span>
+                <span class="amount">300 €</span>
+                <span class="foot"><span>0%</span><span style="color: var(--pos)">+5,1%</span></span>
+              </button>
+              <button class="cat-card" style="--cat: var(--cat-comparse)">
+                <span class="name"><span class="dot"></span>Comparse</span>
+                <span class="amount">120 €</span>
+                <span class="foot"><span>0%</span><span>0,0%</span></span>
+              </button>
+            </div>
+            <table class="lines-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px">#</th>
+                  <th>Voce</th>
+                  <th>Reparto</th>
+                  <th class="num">Q.tà</th>
+                  <th class="num">€/u</th>
+                  <th class="num">Stima</th>
+                  <th class="num">Effettivo</th>
+                  <th class="num">Δ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="rownum">001</td>
+                  <td>Angolo Open Grezzo</td>
+                  <td><span class="tag" style="--cat: var(--cat-locations)"><span class="dot"></span>Locations</span></td>
+                  <td class="num">5</td>
+                  <td class="num">600 €</td>
+                  <td class="num">3000 €</td>
+                  <td class="num">3000 €</td>
+                  <td class="num">—</td>
+                </tr>
+                <tr>
+                  <td class="rownum">002</td>
+                  <td>Fuori Dalla Porta</td>
+                  <td><span class="tag" style="--cat: var(--cat-locations)"><span class="dot"></span>Locations</span></td>
+                  <td class="num">5</td>
+                  <td class="num">600 €</td>
+                  <td class="num">3000 €</td>
+                  <td class="num">3000 €</td>
+                  <td class="num">—</td>
+                </tr>
+                <tr>
+                  <td class="rownum">003</td>
+                  <td>Macchina</td>
+                  <td><span class="tag" style="--cat: var(--cat-veicoli)"><span class="dot"></span>Veicoli</span></td>
+                  <td class="num">5</td>
+                  <td class="num">350 €</td>
+                  <td class="num">1750 €</td>
+                  <td class="num">1500 €</td>
+                  <td class="num delta-pos">−14%</td>
+                </tr>
+                <tr>
+                  <td class="rownum">004</td>
+                  <td>Suono</td>
+                  <td><span class="tag" style="--cat: var(--cat-suono)"><span class="dot"></span>Suono</span></td>
+                  <td class="num">4</td>
+                  <td class="num">1600 €</td>
+                  <td class="num">6400 €</td>
+                  <td class="num">6800 €</td>
+                  <td class="num delta-neg">+6%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Hero totale dramatico (Fraunces 56px) — è il dato che conta · ✔︎
+          Cat-cards stile tag (B TagBicolor) con peso colore — coerenti col
+          breakdown · ✔︎ Tabella voci con tag pure tag-style + Δ chiaro · ✘
+          Molto verticale, più scroll
+        </div>
+      </section>
+
+      <!-- ─── BUDGET 2 ─────────────────────────────────────────── -->
+      <section class="proposal budget-2">
+        <div class="proposal__head">
+          <h2>Budget · 2 · Split — colonna riepilogo + tabella voci</h2>
+          <span class="meta"
+            >Riepilogo totale + legenda fissa sx, tabella voci spreadsheet a
+            destra. Editorial workbench.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Budget ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar">
+            <div class="tabs">
+              <button class="tab is-active">Per categoria</button>
+              <button class="tab">Per giornata</button>
+              <button class="tab">Cast</button>
+              <button class="tab">Tutti i reparti</button>
+            </div>
+            <div class="vb-center">
+              Giorni <b>5</b> · Cont. <b>10%</b>
+            </div>
+            <div class="vb-right">
+              <span class="draft-badge"><span class="dot"></span>Bianco</span>
+              <button class="version-pill">v3 · 14 mag 2026 ▾</button>
+            </div>
+          </div>
+          <div class="content">
+            <aside class="summary">
+              <div class="total">
+                <span class="eyebrow" style="font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3)">Totale stimato</span>
+                <span class="figure">81.320<span class="currency"> €</span></span>
+                <span style="font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pos)">+4,2% vs preventivo</span>
+              </div>
+              <div class="row"><span>Scene</span><b>9</b></div>
+              <div class="row"><span>Giornate</span><b>5</b></div>
+              <div class="row"><span>Voci modificabili</span><b>11</b></div>
+              <div class="legend">
+                <div class="item" style="--cat: var(--cat-crew)"><span class="dot"></span><span class="label">Troupe</span><span class="amt">36.750</span></div>
+                <div class="item" style="--cat: var(--cat-locations)"><span class="dot"></span><span class="label">Locations</span><span class="amt">18.000</span></div>
+                <div class="item" style="--cat: var(--cat-scenografia)"><span class="dot"></span><span class="label">Scenografia</span><span class="amt">18.000</span></div>
+                <div class="item" style="--cat: var(--cat-cast)"><span class="dot"></span><span class="label">Cast</span><span class="amt">9.450</span></div>
+                <div class="item" style="--cat: var(--cat-suono)"><span class="dot"></span><span class="label">Suono</span><span class="amt">6.400</span></div>
+                <div class="item" style="--cat: var(--cat-veicoli)"><span class="dot"></span><span class="label">Veicoli</span><span class="amt">1.750</span></div>
+                <div class="item" style="--cat: var(--cat-costumi)"><span class="dot"></span><span class="label">Costumi</span><span class="amt">300</span></div>
+                <div class="item" style="--cat: var(--cat-comparse)"><span class="dot"></span><span class="label">Comparse</span><span class="amt">120</span></div>
+              </div>
+            </aside>
+            <div class="body">
+              <h3 style="margin: 0 0 14px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 500;">Voci · clicca per modificare</h3>
+              <table class="lines-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px">#</th>
+                    <th>Voce</th>
+                    <th>Reparto</th>
+                    <th class="num">Q.tà</th>
+                    <th class="num">€/u</th>
+                    <th class="num">Stima</th>
+                    <th class="num">Effettivo</th>
+                    <th class="num">Δ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="rownum">001</td><td>Angolo Open Grezzo</td><td><span class="tag" style="--cat: var(--cat-locations)"><span class="dot"></span>Locations</span></td><td class="num">5</td><td class="num">600 €</td><td class="num">3000 €</td><td class="num">3000 €</td><td class="num">—</td></tr>
+                  <tr><td class="rownum">002</td><td>Fuori Dalla Porta</td><td><span class="tag" style="--cat: var(--cat-locations)"><span class="dot"></span>Locations</span></td><td class="num">5</td><td class="num">600 €</td><td class="num">3000 €</td><td class="num">3000 €</td><td class="num">—</td></tr>
+                  <tr><td class="rownum">003</td><td>Macchina</td><td><span class="tag" style="--cat: var(--cat-veicoli)"><span class="dot"></span>Veicoli</span></td><td class="num">5</td><td class="num">350 €</td><td class="num">1750 €</td><td class="num">1500 €</td><td class="num delta-pos">−14%</td></tr>
+                  <tr><td class="rownum">004</td><td>Suono</td><td><span class="tag" style="--cat: var(--cat-suono)"><span class="dot"></span>Suono</span></td><td class="num">4</td><td class="num">1600 €</td><td class="num">6400 €</td><td class="num">6800 €</td><td class="num delta-neg">+6%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Vista da workbench: dati permanenti a sinistra, lavoro a destra ·
+          ✔︎ Legend categorie con totali numerici subito leggibili · ✘ Riduce
+          larghezza utile della tabella · ✘ Su mobile lo split crolla
+        </div>
+      </section>
+
+      <!-- ─── SCHEDULE 1 ───────────────────────────────────────── -->
+      <section class="proposal schedule-1">
+        <div class="proposal__head">
+          <h2>Schedule · 1 · Strip board mono · giornate side-by-side</h2>
+          <span class="meta"
+            >Ogni giornata è una colonna. Ogni scena uno strip con border-left
+            categoria-location. Drag-drop tra colonne.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Piano ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar">
+            <div class="tabs">
+              <button class="tab is-active">Per giornata</button>
+              <button class="tab">Per scena</button>
+              <button class="tab">Tutti i giorni</button>
+            </div>
+            <div class="vb-center">
+              Giornate <b>5</b> · Scene <b>9</b> · Ore tot. <b>32</b>
+            </div>
+            <div class="vb-right">
+              <button class="version-pill">v3 · 14 mag 2026 ▾</button>
+            </div>
+          </div>
+          <div class="content">
+            <div class="day-board">
+              <div class="day-col">
+                <div class="day-col__head">
+                  <span class="name">GG 1</span>
+                  <span class="date">21 mag</span>
+                  <span class="hours">8h</span>
+                </div>
+                <div class="day-col__strips">
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 1</span><span>INT/EXT · NOTTE</span></div>
+                    <div class="heading">Angolo Open Grezzo</div>
+                    <div class="meta">1p · 2h · Filippo, John</div>
+                  </div>
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 4</span><span>INT · NOTTE</span></div>
+                    <div class="heading">Angolo Open Grezzo</div>
+                    <div class="meta">1p · 1.5h · Filippo</div>
+                  </div>
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 8</span><span>INT · NOTTE</span></div>
+                    <div class="heading">Angolo Open Grezzo</div>
+                    <div class="meta">1p · 1h · Filippo, Tea</div>
+                  </div>
+                </div>
+              </div>
+              <div class="day-col">
+                <div class="day-col__head">
+                  <span class="name">GG 2</span>
+                  <span class="date">22 mag</span>
+                  <span class="hours">6h</span>
+                </div>
+                <div class="day-col__strips">
+                  <div class="strip" style="--cat: var(--cat-scenografia)">
+                    <div class="top"><span class="scn">SC. 2</span><span>INT · NOTTE</span></div>
+                    <div class="heading">Ristorante – Forno</div>
+                    <div class="meta">1p · 2h</div>
+                  </div>
+                </div>
+              </div>
+              <div class="day-col">
+                <div class="day-col__head">
+                  <span class="name">GG 3</span>
+                  <span class="date">23 mag</span>
+                  <span class="hours">7h</span>
+                </div>
+                <div class="day-col__strips">
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 5</span><span>INT · GIORNO</span></div>
+                    <div class="heading">Bancone</div>
+                    <div class="meta">1p · 3h</div>
+                  </div>
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 7</span><span>INT · GIORNO</span></div>
+                    <div class="heading">Cucina/Sala</div>
+                    <div class="meta">1p · 2h</div>
+                  </div>
+                </div>
+              </div>
+              <div class="day-col">
+                <div class="day-col__head">
+                  <span class="name">GG 4</span>
+                  <span class="date">24 mag</span>
+                  <span class="hours">6h</span>
+                </div>
+                <div class="day-col__strips">
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 3</span><span>INT · NOTTE</span></div>
+                    <div class="heading">Cucina</div>
+                    <div class="meta">1p · 1.5h</div>
+                  </div>
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 6</span><span>INT · NOTTE</span></div>
+                    <div class="heading">Cucina</div>
+                    <div class="meta">1p · 1h</div>
+                  </div>
+                </div>
+              </div>
+              <div class="day-col">
+                <div class="day-col__head">
+                  <span class="name">GG 5</span>
+                  <span class="date">25 mag</span>
+                  <span class="hours">5h</span>
+                </div>
+                <div class="day-col__strips">
+                  <div class="strip" style="--cat: var(--cat-locations)">
+                    <div class="top"><span class="scn">SC. 9</span><span>INT · NOTTE</span></div>
+                    <div class="heading">Cucina</div>
+                    <div class="meta">1p · 1h</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Layout pianificazione classico · ✔︎ Drag-drop intuitivo · ✔︎
+          Cromia location bordo-sx lega lo strip alla scena · ✘ Su 10+ giornate
+          serve scroll orizzontale
+        </div>
+      </section>
+
+      <!-- ─── SCHEDULE 2 ───────────────────────────────────────── -->
+      <section class="proposal schedule-2">
+        <div class="proposal__head">
+          <h2>Schedule · 2 · Spreadsheet / table classica</h2>
+          <span class="meta"
+            >Stripboard "movie magic style" come tabella stretta — più dati
+            visibili, meno graphics. Industry feel.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Piano ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar">
+            <div class="tabs">
+              <button class="tab is-active">Per giornata</button>
+              <button class="tab">Per scena</button>
+              <button class="tab">Tutti i giorni</button>
+            </div>
+            <div class="vb-center">
+              Giornate <b>5</b> · Scene <b>9</b>
+            </div>
+            <div class="vb-right">
+              <button class="version-pill">v3 · 14 mag 2026 ▾</button>
+            </div>
+          </div>
+          <div class="content">
+            <table class="sheet">
+              <thead>
+                <tr>
+                  <th style="width: 90px">GG</th>
+                  <th style="width: 60px">SC.</th>
+                  <th>Heading</th>
+                  <th style="width: 100px">Tipo</th>
+                  <th class="num" style="width: 70px">Pagine</th>
+                  <th class="num" style="width: 70px">Ore</th>
+                  <th>Cast</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="gg-cell" rowspan="3">GG 1<span class="small">21 mag · 8h</span></td>
+                  <td><span class="scn"><b>1</b></span></td>
+                  <td class="head">Angolo Open Grezzo</td>
+                  <td><span class="scn">INT/EXT NOTTE</span></td>
+                  <td class="num">1</td>
+                  <td class="num">2.0</td>
+                  <td><span class="scn">Filippo · John · Pubblico</span></td>
+                </tr>
+                <tr>
+                  <td><span class="scn"><b>4</b></span></td>
+                  <td class="head">Angolo Open Grezzo</td>
+                  <td><span class="scn">INT NOTTE</span></td>
+                  <td class="num">1</td>
+                  <td class="num">1.5</td>
+                  <td><span class="scn">Filippo · Vecchia 2</span></td>
+                </tr>
+                <tr>
+                  <td><span class="scn"><b>8</b></span></td>
+                  <td class="head">Angolo Open Grezzo</td>
+                  <td><span class="scn">INT NOTTE</span></td>
+                  <td class="num">1</td>
+                  <td class="num">1.0</td>
+                  <td><span class="scn">Filippo · Tea</span></td>
+                </tr>
+                <tr>
+                  <td class="gg-cell">GG 2<span class="small">22 mag · 6h</span></td>
+                  <td><span class="scn"><b>2</b></span></td>
+                  <td class="head">Ristorante – Forno</td>
+                  <td><span class="scn">INT NOTTE</span></td>
+                  <td class="num">1</td>
+                  <td class="num">2.0</td>
+                  <td><span class="scn">Filippo · Giulio · Luca</span></td>
+                </tr>
+                <tr>
+                  <td class="gg-cell" rowspan="2">GG 3<span class="small">23 mag · 7h</span></td>
+                  <td><span class="scn"><b>5</b></span></td>
+                  <td class="head">Bancone</td>
+                  <td><span class="scn">INT GIORNO</span></td>
+                  <td class="num">1</td>
+                  <td class="num">3.0</td>
+                  <td><span class="scn">Filippo · Michele</span></td>
+                </tr>
+                <tr>
+                  <td><span class="scn"><b>7</b></span></td>
+                  <td class="head">Cucina/Sala</td>
+                  <td><span class="scn">INT GIORNO</span></td>
+                  <td class="num">1</td>
+                  <td class="num">2.0</td>
+                  <td><span class="scn">Filippo · Tea</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Più scene visibili a colpo d'occhio · ✔︎ "Movie Magic" feel —
+          familiare a chi viene dal cinema · ✘ Drag-drop meno intuitivo · ✘
+          Meno graphic, più tabellare
+        </div>
+      </section>
+    </main>
+
+    <footer style="max-width: 1540px; margin: 0 auto; padding: 0 64px 64px; color: var(--ink-3); font-size: 13px; line-height: 1.7;">
+      <hr style="border: none; border-top: 1px solid var(--line); margin: 24px 0;" />
+      <p>
+        <b style="color: var(--ink-1)">Raccomandazione</b>:
+        <b>Budget 1</b> + <b>Schedule 1</b> insieme. Il primo dà il "wow"
+        immediato del totale + cards categoria che funzionano come tag colorati
+        coerenti col breakdown; il secondo è il classico strip board che ogni
+        AD si aspetta + drag-drop facile + cromia location chiara. La
+        <b>MetaBar</b> sopra al viewbar è l'eyebrow che ci connette agli altri
+        layout (Soggetto/Sinossi).
+      </p>
+      <p>
+        Schedule <b>2</b> resta utile come export PDF "stile Movie Magic" più
+        avanti. Budget <b>2</b> potrebbe diventare un drawer "Sommario" sul
+        Budget 1 invece di un layout principale.
+      </p>
+    </footer>
+  </body>
+</html>
