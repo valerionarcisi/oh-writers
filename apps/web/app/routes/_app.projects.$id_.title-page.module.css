@@ -51,15 +51,15 @@
   font-weight: 600;
 }
 
+/* Grid 1fr/280px coerente con Breakdown/Screenplay: la card della title page
+ * vive nella colonna sinistra, il pannello Draft corrente nella destra,
+ * entrambi flush col contenitore. La pagina-foglio interna alla card è già
+ * cappata a US Letter (816px) e si auto-centra. */
 .layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: var(--ds-space-6);
   align-items: flex-start;
-
-  & > :first-child {
-    flex: 1;
-    min-inline-size: 0;
-  }
 }
 
 .status {
