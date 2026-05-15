@@ -17,6 +17,7 @@ import {
   ViewbarSep,
 } from "@oh-writers/ui";
 import { useVersionsDrawer } from "~/features/versions";
+import { DraftMetaBadge } from "~/features/projects";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -618,6 +619,7 @@ function BreakdownPageContent({ projectId }: Props) {
             </div>
             )}
 
+            <DraftMetaBadge projectId={projectId} />
             <VersionTrigger
               variant="pill"
               versionLabel="v3 · 14 mag 2026"
