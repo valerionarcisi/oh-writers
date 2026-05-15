@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
-import { DocStats, FloatingDock } from "@oh-writers/ui";
+import { FloatingDock, MetaBar } from "@oh-writers/ui";
 import type { DocStat } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
@@ -241,8 +241,30 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     }
   };
 
+  const metaItems = isSynopsis
+    ? [
+        { id: "chars", label: "Caratteri", value: charCount },
+        { id: "pages", label: "Pagine", value: `~${pageEstimate}` },
+      ]
+    : isTreatment
+      ? [
+          {
+            id: "words",
+            label: "Parole",
+            value: countWords(plainContent),
+          },
+          { id: "pages", label: "Pagine", value: `~${pageEstimate}` },
+        ]
+      : isOutline
+        ? [
+            { id: "scenes", label: "Scene", value: outlineSceneCount },
+            { id: "words", label: "Parole", value: outlineWordCount },
+          ]
+        : [];
+
   return (
     <div className={styles.page}>
+      {metaItems.length > 0 && <MetaBar items={metaItems} />}
       {isReadOnly && (
         <div
           className={styles.readOnlyBadge}
@@ -414,39 +436,8 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onGenerate={handleGenerate}
         />
       )}
-      {(isSynopsis || isTreatment) && (
-        <div
-          className={styles.stickyFooter}
-          data-testid="narrative-counters-footer"
-        >
-          <DocStats
-            stats={
-              (isSynopsis
-                ? [
-                    { kind: "chars", value: charCount },
-                    { kind: "pages", value: pageEstimate, approx: true },
-                  ]
-                : [
-                    { kind: "words", value: countWords(plainContent) },
-                    { kind: "pages", value: pageEstimate, approx: true },
-                  ]) satisfies ReadonlyArray<DocStat>
-            }
-          />
-        </div>
-      )}
-      {isOutline && (
-        <div
-          className={styles.stickyFooter}
-          data-testid="narrative-counters-footer"
-        >
-          <DocStats
-            stats={[
-              { kind: "scenes", value: outlineSceneCount },
-              { kind: "words", value: outlineWordCount },
-            ]}
-          />
-        </div>
-      )}
+      {/* Stats moved to MetaBar at the top of the page. Sticky footer here
+       *  removed (was a DocStats duplicate). */}
 
       <FloatingDock
         primaryAction={{

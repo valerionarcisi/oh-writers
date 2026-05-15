@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { DocStats, FloatingDock } from "@oh-writers/ui";
+import { FloatingDock, MetaBar } from "@oh-writers/ui";
 import { toCartelle } from "~/features/documents/lib/cartelle-counter";
 import {
   ExportPdfModal,
@@ -150,12 +150,12 @@ function SoggettoPageReady({
 
   const canEdit = soggettoDoc.canEdit && loglineDoc.canEdit;
 
-  const soggettoStats = useMemo(() => {
+  const soggettoMeta = useMemo(() => {
     const plain = soggettoContent.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
     const chars = plain.length;
     return [
-      { kind: "cartelle" as const, value: toCartelle(chars) },
-      { kind: "chars" as const, value: chars },
+      { id: "cartelle", label: "Cartelle", value: toCartelle(chars) },
+      { id: "caratteri", label: "Caratteri", value: chars },
     ];
   }, [soggettoContent]);
 
@@ -169,6 +169,7 @@ function SoggettoPageReady({
 
   return (
     <main className={styles.page} data-testid="soggetto-page">
+      <MetaBar items={soggettoMeta} />
       <ExportSiaeModal
         isOpen={isSiaeOpen}
         onClose={() => setIsSiaeOpen(false)}
@@ -204,9 +205,6 @@ function SoggettoPageReady({
             hideCounter
             testId="subject-editor"
           />
-        </div>
-        <div className={styles.statsBar}>
-          <DocStats stats={soggettoStats} />
         </div>
       </div>
 
