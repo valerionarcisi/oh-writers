@@ -111,11 +111,11 @@ test.describe("Narrative Export — Spec 04c", () => {
   }) => {
     await page.goto(`${BASE_URL}/projects/new`);
     await page.waitForLoadState("networkidle");
-    const titleInput = page.getByRole("textbox", { name: /title/i });
+    const titleInput = page.getByRole("textbox", { name: /titolo|title/i });
     await expect(titleInput).toBeVisible({ timeout: 10_000 });
     await titleInput.fill(`Empty Export ${Date.now()}`);
-    await page.getByRole("combobox", { name: /format/i }).selectOption("short");
-    await page.getByRole("button", { name: /create project/i }).click();
+    await page.getByRole("combobox", { name: /formato|format/i }).selectOption("short");
+    await page.getByRole("button", { name: /crea progetto|create project/i }).click();
     await page.waitForURL(
       (url) => /\/projects\/[0-9a-f-]{36}$/.test(url.pathname),
       { timeout: 15_000 },

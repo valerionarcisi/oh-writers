@@ -25,6 +25,24 @@ const pipelineIndex = (type: string): number => {
   return idx === -1 ? DOCUMENT_PIPELINE.length : idx;
 };
 
+const FORMAT_LABELS: Record<string, string> = {
+  feature: "lungometraggio",
+  short: "cortometraggio",
+  series_episode: "episodio serie",
+  pilot: "pilota",
+};
+
+const GENRE_LABELS: Record<string, string> = {
+  drama: "dramma",
+  comedy: "commedia",
+  thriller: "thriller",
+  horror: "horror",
+  action: "azione",
+  "sci-fi": "sci-fi",
+  documentary: "documentario",
+  other: "altro",
+};
+
 export const Route = createFileRoute("/_app/projects/$id")({
   component: ProjectPage,
 });
@@ -33,7 +51,7 @@ function ProjectPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useProject(id);
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (isLoading) return <div className={styles.status}>Caricamento…</div>;
   if (!result) return null;
 
   return match(result)
@@ -80,9 +98,9 @@ function ProjectPageContent({
 
   const handleDelete = () => {
     void confirm({
-      title: "Delete project?",
-      message: "Delete this project? This cannot be undone.",
-      confirmLabel: "Delete",
+      title: "Eliminare il progetto?",
+      message: "Eliminare questo progetto? L'operazione non può essere annullata.",
+      confirmLabel: "Elimina",
       destructive: true,
     }).then((ok) => {
       if (!ok) return;
@@ -100,14 +118,20 @@ function ProjectPageContent({
         <div className={styles.headerLeft}>
           <h1 className={styles.title}>{project.title}</h1>
           <div className={styles.meta}>
-            <Badge variant="default">{project.format.replace("_", " ")}</Badge>
-            {project.genre && <Badge variant="default">{project.genre}</Badge>}
+            <Badge variant="default">
+              {FORMAT_LABELS[project.format] ?? project.format.replace("_", " ")}
+            </Badge>
+            {project.genre && (
+              <Badge variant="default">
+                {GENRE_LABELS[project.genre] ?? project.genre}
+              </Badge>
+            )}
             {project.teamId ? (
               <Badge variant="accent">Team</Badge>
             ) : (
-              <Badge variant="outline">Personal</Badge>
+              <Badge variant="outline">Personale</Badge>
             )}
-            {project.isArchived && <Badge variant="outline">Archived</Badge>}
+            {project.isArchived && <Badge variant="outline">Archiviato</Badge>}
           </div>
         </div>
         <div className={styles.headerActions}>
@@ -119,7 +143,7 @@ function ProjectPageContent({
             }
             data-testid="nav-title-page"
           >
-            Title Page
+            Frontespizio
           </Button>
           <Button
             variant="secondary"
@@ -128,7 +152,7 @@ function ProjectPageContent({
               navigate({ to: "/projects/$id/settings", params: { id } })
             }
           >
-            Settings
+            Impostazioni
           </Button>
           {project.isArchived ? (
             <>
@@ -138,7 +162,7 @@ function ProjectPageContent({
                 onClick={handleRestore}
                 disabled={restoreProject.isPending}
               >
-                Restore
+                Ripristina
               </Button>
               <Button
                 variant="danger"
@@ -146,7 +170,7 @@ function ProjectPageContent({
                 onClick={handleDelete}
                 disabled={deleteProject.isPending}
               >
-                Delete
+                Elimina
               </Button>
             </>
           ) : (
@@ -156,7 +180,7 @@ function ProjectPageContent({
               onClick={handleArchive}
               disabled={archiveProject.isPending}
             >
-              Archive
+              Archivia
             </Button>
           )}
         </div>
@@ -167,13 +191,13 @@ function ProjectPageContent({
         <ProgressBar
           value={completedDocs}
           max={DOCUMENT_PIPELINE.length}
-          label="Narrative development"
+          label="Sviluppo narrativo"
         />
       </div>
 
       {/* Narrative Development */}
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Narrative Development</h2>
+        <h2 className={styles.sectionTitle}>Sviluppo narrativo</h2>
         <div className={styles.documentGrid}>
           {documents.map((doc) => (
             <DocumentCard
@@ -189,24 +213,24 @@ function ProjectPageContent({
 
       {/* Screenplay */}
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Screenplay</h2>
+        <h2 className={styles.sectionTitle}>Sceneggiatura</h2>
         <div className={styles.screenplayCard}>
           <div className={styles.screenplayMeta}>
             {screenplay ? (
               <>
                 <span className={styles.pageCount}>
-                  {screenplay.pageCount} pages
+                  {screenplay.pageCount} pagine
                 </span>
                 <span className={styles.screenplayDate}>
-                  Updated{" "}
-                  {new Intl.DateTimeFormat("en-US", {
+                  Aggiornata{" "}
+                  {new Intl.DateTimeFormat("it-IT", {
                     month: "short",
                     day: "numeric",
                   }).format(new Date(screenplay.updatedAt))}
                 </span>
               </>
             ) : (
-              <span className={styles.pageCount}>No screenplay yet</span>
+              <span className={styles.pageCount}>Nessuna sceneggiatura</span>
             )}
           </div>
           <Button
@@ -216,14 +240,14 @@ function ProjectPageContent({
               void navigate({ to: "/projects/$id/screenplay", params: { id } })
             }
           >
-            Open Editor
+            Apri Editor
           </Button>
         </div>
       </div>
 
       {/* Production */}
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Production</h2>
+        <h2 className={styles.sectionTitle}>Produzione</h2>
         <div className={styles.productionGrid}>
           <ProductionCard
             eyebrow="Breakdown"
@@ -265,7 +289,7 @@ function ProjectPageContent({
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Team</h2>
         <p className={styles.teamPlaceholder}>
-          Real-time presence coming in a future update.
+          Presenza in tempo reale in arrivo in un prossimo aggiornamento.
         </p>
       </div>
     </div>

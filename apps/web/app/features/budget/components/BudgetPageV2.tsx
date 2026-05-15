@@ -580,23 +580,16 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
         <aside className={styles.margin} aria-label="Note di Cesare">
           <div className={styles.marginLabel}>Note di Cesare</div>
           <div className={styles.marginNotes}>
-            <MarginNote
-              kind="dramaturg"
-              text="Hai segnato 2.222 € per la Pizzeria. La media per location di 5 giorni con permessi comunali a Roma è ~18.000 €. Sicuro non sia un typo?"
-              onAccept={() => undefined}
-              onIgnore={() => undefined}
-            />
-            <MarginNote
-              kind="producer"
-              text="Il DOP ha richiesto un'unità extra notte per sc.18-21. Suggerisco di aggiungere 12.000 € al reparto."
-              onAccept={() => undefined}
-              onIgnore={() => undefined}
-            />
-            <MarginNote
-              kind="dramaturg"
-              text="Giulia ha già firmato per 115k. Ho aggiornato lo storico, il preventivo originale (120k) resta come riferimento."
-              onAccept={() => undefined}
-            />
+            <div
+              style={{
+                color: "var(--ds-text-faint)",
+                fontSize: "var(--ds-font-size-sm)",
+                padding: "var(--ds-space-4) var(--ds-space-2)",
+                textAlign: "center",
+              }}
+            >
+              Nessuna nota Cesare per il budget
+            </div>
           </div>
         </aside>
       </main>
@@ -612,7 +605,7 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
           { label: "Salva", onClick: () => undefined },
           { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
         ]}
-        cesareNoteCount={3}
+        cesareNoteCount={0}
         onCesareClick={() => undefined}
       />
     </div>

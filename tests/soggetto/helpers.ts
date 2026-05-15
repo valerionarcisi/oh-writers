@@ -18,7 +18,7 @@ export const navigateToProjectDashboard = async (
 ) => {
   await page.goto(`${BASE_URL}/projects/${projectId}`);
   await expect(
-    page.getByRole("heading", { level: 2, name: /Narrative/i }),
+    page.getByRole("heading", { level: 2, name: /Sviluppo narrativo|Narrative/i }),
   ).toBeVisible({
     timeout: 10_000,
   });

@@ -221,12 +221,12 @@ function SceneRow({
         className={styles.sceneInput}
         value={scene.description}
         onChange={(e) => onUpdate(e.target.value)}
-        placeholder="Scene description…"
+        placeholder="Descrizione scena…"
       />
       <button
         className={styles.deleteBtn}
         onClick={onDelete}
-        aria-label="Delete scene"
+        aria-label="Elimina scena"
         type="button"
       >
         ×
@@ -265,12 +265,12 @@ function SequenceBlock({
           className={styles.sequenceTitleInput}
           value={sequence.title}
           onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="Sequence title…"
+          placeholder="Titolo sequenza…"
         />
         <button
           className={styles.deleteBtn}
           onClick={onDelete}
-          aria-label="Delete sequence"
+          aria-label="Elimina sequenza"
           type="button"
         >
           ×
@@ -298,7 +298,7 @@ function SequenceBlock({
           />
         ))}
         <button className={styles.addBtn} onClick={onAddScene} type="button">
-          + Add scene
+          + Aggiungi scena
         </button>
       </div>
     </div>
@@ -337,12 +337,12 @@ function ActBlock({
           className={styles.actTitleInput}
           value={act.title}
           onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="Act title…"
+          placeholder="Titolo atto…"
         />
         <button
           className={styles.deleteBtn}
           onClick={onDelete}
-          aria-label="Delete act"
+          aria-label="Elimina atto"
           type="button"
         >
           ×
@@ -365,7 +365,7 @@ function ActBlock({
           />
         ))}
         <button className={styles.addBtn} onClick={onAddSequence} type="button">
-          + Add sequence
+          + Aggiungi sequenza
         </button>
       </div>
     </div>
@@ -426,7 +426,7 @@ export function OutlineEditor({
           onClick={() => onChange(addAct(value))}
           type="button"
         >
-          + Add act
+          + Aggiungi atto
         </button>
       )}
     </>

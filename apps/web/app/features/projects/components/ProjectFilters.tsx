@@ -13,15 +13,15 @@ interface ProjectFiltersProps {
 }
 
 const TABS: { key: FilterTab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "personal", label: "Personal" },
-  { key: "archived", label: "Archived" },
+  { key: "all", label: "Tutti" },
+  { key: "personal", label: "Personali" },
+  { key: "archived", label: "Archiviati" },
 ];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "updatedAt", label: "Last modified" },
-  { key: "createdAt", label: "Date created" },
-  { key: "title", label: "Title" },
+  { key: "updatedAt", label: "Ultima modifica" },
+  { key: "createdAt", label: "Data creazione" },
+  { key: "title", label: "Titolo" },
 ];
 
 export function ProjectFilters({
@@ -50,7 +50,7 @@ export function ProjectFilters({
         <input
           type="search"
           className={styles.searchInput}
-          placeholder="Search projects…"
+          placeholder="Cerca progetti…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />

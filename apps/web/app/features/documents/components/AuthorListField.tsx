@@ -26,11 +26,11 @@ export interface AuthorListFieldProps {
 }
 
 const DEFAULT_LABELS: AuthorListFieldLabels = {
-  heading: "Authors",
-  addAuthor: "+ Add author",
-  removeAuthor: "Remove",
-  fullNamePlaceholder: "Full name",
-  taxCodePlaceholder: "Tax code (optional)",
+  heading: "Autori",
+  addAuthor: "+ Aggiungi autore",
+  removeAuthor: "Rimuovi",
+  fullNamePlaceholder: "Nome completo",
+  taxCodePlaceholder: "Codice fiscale (opzionale)",
 };
 
 const newAuthor = (): AuthorEntry => ({

@@ -16,17 +16,17 @@ export function TitlePageDraftPanel({
 }: TitlePageDraftPanelProps) {
   return (
     <aside className={styles.panel} data-testid="title-page-draft-panel">
-      <h2 className={styles.heading}>Current draft</h2>
+      <h2 className={styles.heading}>Draft corrente</h2>
 
       <div className={styles.field}>
-        <span className={styles.label}>Date</span>
+        <span className={styles.label}>Data</span>
         <span className={styles.readonly} data-testid="tp-draft-date-readonly">
           {draftDate ?? "—"}
         </span>
       </div>
 
       <div className={styles.field}>
-        <span className={styles.label}>Color</span>
+        <span className={styles.label}>Colore</span>
         <div className={styles.colorReadonly}>
           <span
             className={styles.swatchReadonly}
@@ -37,17 +37,17 @@ export function TitlePageDraftPanel({
             }}
             data-testid="tp-draft-color-readonly"
             aria-label={
-              draftColor ? `Draft color: ${draftColor}` : "No draft color"
+              draftColor ? `Colore draft: ${draftColor}` : "Nessun colore draft"
             }
           />
           <span className={styles.colorName}>
-            {draftColor ? DRAFT_COLOR_LABEL[draftColor] : "Not set"}
+            {draftColor ? DRAFT_COLOR_LABEL[draftColor] : "Non impostato"}
           </span>
         </div>
       </div>
 
       <p className={styles.hint}>
-        Date and color belong to the current screenplay version.
+        Data e colore appartengono alla versione corrente della sceneggiatura.
       </p>
       <Link
         to="/projects/$id/screenplay"
@@ -55,7 +55,7 @@ export function TitlePageDraftPanel({
         className={styles.link}
         data-testid="tp-draft-edit-versions-link"
       >
-        Edit in Versions →
+        Modifica nelle Versioni →
       </Link>
     </aside>
   );

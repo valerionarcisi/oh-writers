@@ -14,14 +14,14 @@ export const DRAFT_COLOR_HEX: Record<DraftRevisionColor, string> = {
 };
 
 export const DRAFT_COLOR_LABEL: Record<DraftRevisionColor, string> = {
-  white: "White (1st draft)",
-  blue: "Blue",
-  pink: "Pink",
-  yellow: "Yellow",
-  green: "Green",
-  goldenrod: "Goldenrod",
-  buff: "Buff",
-  salmon: "Salmon",
-  cherry: "Cherry",
-  tan: "Tan",
+  white: "Bianco (1ª stesura)",
+  blue: "Blu",
+  pink: "Rosa",
+  yellow: "Giallo",
+  green: "Verde",
+  goldenrod: "Oro",
+  buff: "Camoscio",
+  salmon: "Salmone",
+  cherry: "Ciliegia",
+  tan: "Cuoio",
 };

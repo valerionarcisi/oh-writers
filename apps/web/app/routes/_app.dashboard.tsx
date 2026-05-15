@@ -61,12 +61,12 @@ function DashboardPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Projects</h1>
+        <h1 className={styles.title}>Progetti</h1>
         <Button
           variant="primary"
           onClick={() => navigate({ to: "/projects/new" })}
         >
-          New Project
+          Nuovo progetto
         </Button>
       </div>
 
@@ -80,20 +80,20 @@ function DashboardPage() {
       />
 
       {isLoading ? (
-        <p className={styles.status}>Loading…</p>
+        <p className={styles.status}>Caricamento…</p>
       ) : error ? (
-        <p className={styles.statusError}>Failed to load projects.</p>
+        <p className={styles.statusError}>Impossibile caricare i progetti.</p>
       ) : filtered.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyText}>
-            {search ? "No projects match your search." : "No projects yet."}
+            {search ? "Nessun progetto corrisponde alla ricerca." : "Nessun progetto."}
           </p>
           {!search && (
             <Button
               variant="primary"
               onClick={() => navigate({ to: "/projects/new" })}
             >
-              Create your first project
+              Crea il tuo primo progetto
             </Button>
           )}
         </div>

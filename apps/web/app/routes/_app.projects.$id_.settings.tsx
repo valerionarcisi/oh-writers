@@ -26,7 +26,7 @@ function ProjectSettingsPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useProject(id);
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (isLoading) return <div className={styles.status}>Caricamento…</div>;
   if (!result) return null;
 
   return match(result)
@@ -82,9 +82,9 @@ function ProjectSettingsContent({
 
   const handleDelete = () => {
     void confirm({
-      title: "Delete project?",
-      message: "Delete this project permanently? This cannot be undone.",
-      confirmLabel: "Delete",
+      title: "Eliminare il progetto?",
+      message: "Eliminare definitivamente questo progetto? L'operazione non può essere annullata.",
+      confirmLabel: "Elimina",
       destructive: true,
     }).then((ok) => {
       if (!ok) return;
@@ -102,12 +102,12 @@ function ProjectSettingsContent({
           ← {project.title}
         </Link>
       </div>
-      <h1 className={styles.title}>Settings</h1>
+      <h1 className={styles.title}>Impostazioni</h1>
 
       {canEdit ? (
         <>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Project details</h2>
+            <h2 className={styles.sectionTitle}>Dettagli progetto</h2>
             <ProjectForm
               initialValues={{
                 title: project.title,
@@ -117,7 +117,7 @@ function ProjectSettingsContent({
               onSubmit={handleUpdate}
               onCancel={() => navigate({ to: "/projects/$id", params: { id } })}
               isSubmitting={updateProject.isPending}
-              submitLabel="Save changes"
+              submitLabel="Salva modifiche"
             />
             {updateProject.error && (
               <p className={styles.formError}>{updateProject.error.message}</p>
@@ -144,20 +144,20 @@ function ProjectSettingsContent({
         </>
       ) : (
         <p className={styles.readOnly}>
-          You don't have edit access to this project.
+          Non hai accesso in modifica a questo progetto.
         </p>
       )}
 
       <section className={styles.dangerZone}>
-        <h2 className={styles.dangerTitle}>Danger zone</h2>
+        <h2 className={styles.dangerTitle}>Zona pericolosa</h2>
         <div className={styles.dangerActions}>
           {project.isArchived ? (
             <>
               <div className={styles.dangerRow}>
                 <div>
-                  <strong>Restore project</strong>
+                  <strong>Ripristina progetto</strong>
                   <p className={styles.dangerDesc}>
-                    Make this project active again.
+                    Rendi questo progetto di nuovo attivo.
                   </p>
                 </div>
                 <Button
@@ -166,14 +166,14 @@ function ProjectSettingsContent({
                   onClick={handleRestore}
                   disabled={restoreProject.isPending}
                 >
-                  Restore
+                  Ripristina
                 </Button>
               </div>
               <div className={styles.dangerRow}>
                 <div>
-                  <strong>Delete project</strong>
+                  <strong>Elimina progetto</strong>
                   <p className={styles.dangerDesc}>
-                    Permanently delete this project and all its content.
+                    Elimina definitivamente questo progetto e tutto il suo contenuto.
                   </p>
                 </div>
                 <Button
@@ -182,17 +182,16 @@ function ProjectSettingsContent({
                   onClick={handleDelete}
                   disabled={deleteProject.isPending}
                 >
-                  Delete
+                  Elimina
                 </Button>
               </div>
             </>
           ) : (
             <div className={styles.dangerRow}>
               <div>
-                <strong>Archive project</strong>
+                <strong>Archivia progetto</strong>
                 <p className={styles.dangerDesc}>
-                  Make this project read-only. You can restore or delete it
-                  later.
+                  Rendi questo progetto in sola lettura. Potrai ripristinarlo o eliminarlo in seguito.
                 </p>
               </div>
               <Button
@@ -201,7 +200,7 @@ function ProjectSettingsContent({
                 onClick={handleArchive}
                 disabled={archiveProject.isPending}
               >
-                Archive
+                Archivia
               </Button>
             </div>
           )}

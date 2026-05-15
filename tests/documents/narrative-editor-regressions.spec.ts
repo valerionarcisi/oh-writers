@@ -100,7 +100,7 @@ test.describe("Narrative editor — spec 04e regressions", () => {
 
     await page.keyboard.type("voce di lista");
 
-    const listButton = page.getByRole("button", { name: /list/i });
+    const listButton = page.getByRole("button", { name: /elenco|list/i });
     await expect(listButton).toBeVisible();
     await listButton.click();
 

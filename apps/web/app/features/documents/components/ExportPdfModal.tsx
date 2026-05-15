@@ -50,7 +50,7 @@ export function ExportPdfModal({
   const showFormatPicker = availableFormats.length > 1;
   const resolvedTitle =
     title ??
-    (showFormatPicker ? "Export document" : `Export ${FORMAT_LABELS[format]}`);
+    (showFormatPicker ? "Esporta documento" : `Esporta ${FORMAT_LABELS[format]}`);
 
   return (
     <Modal
@@ -64,7 +64,7 @@ export function ExportPdfModal({
             onClick={onClose}
             disabled={isPending}
           >
-            Cancel
+            Annulla
           </DsButton>
           <DsButton
             variant="primary"
@@ -77,7 +77,7 @@ export function ExportPdfModal({
               })
             }
           >
-            {isPending ? "Generating…" : "Generate"}
+            {isPending ? "Generazione…" : "Genera"}
           </DsButton>
         </>
       }
@@ -91,7 +91,7 @@ export function ExportPdfModal({
             className={styles.fieldset}
             data-testid="narrative-export-format"
           >
-            <legend className={styles.legend}>Format</legend>
+            <legend className={styles.legend}>Formato</legend>
             {availableFormats.map((f) => (
               <label key={f} className={styles.checkboxRow}>
                 <input
@@ -115,11 +115,11 @@ export function ExportPdfModal({
             disabled={!canIncludeTitlePage}
             onChange={(e) => setIncludeTitlePage(e.target.checked)}
           />
-          <span>Include title page</span>
+          <span>Includi frontespizio</span>
         </label>
         {!canIncludeTitlePage && (
           <p className={styles.hint}>
-            Fill in the project title page to enable this option.
+            Compila il frontespizio del progetto per abilitare questa opzione.
           </p>
         )}
       </div>

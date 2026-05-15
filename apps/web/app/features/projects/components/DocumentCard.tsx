@@ -27,9 +27,9 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
       <div className={styles.header}>
         <span className={styles.type}>{labelFor(document.type)}</span>
         {hasContent ? (
-          <span className={styles.completedDot} aria-label="Completed" />
+          <span className={styles.completedDot} aria-label="Completato" />
         ) : (
-          <span className={styles.emptyDot} aria-label="Empty" />
+          <span className={styles.emptyDot} aria-label="Vuoto" />
         )}
       </div>
       {hasContent ? (
@@ -38,7 +38,7 @@ export function DocumentCard({ document, onClick }: DocumentCardProps) {
           {document.content.length > 80 ? "…" : ""}
         </p>
       ) : (
-        <p className={styles.empty}>Not started</p>
+        <p className={styles.empty}>Non iniziato</p>
       )}
     </div>
   );

@@ -18,12 +18,30 @@ const genreTuple = Object.values(Genres) as unknown as [
 ];
 
 const FormSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title is too long"),
+  title: z.string().min(1, "Il titolo è obbligatorio").max(200, "Il titolo è troppo lungo"),
   format: z.enum(formatTuple, {
-    errorMap: () => ({ message: "Format is required" }),
+    errorMap: () => ({ message: "Il formato è obbligatorio" }),
   }),
   genre: z.enum(genreTuple).optional(),
 });
+
+const FORMAT_LABELS: Record<string, string> = {
+  feature: "lungometraggio",
+  short: "cortometraggio",
+  series_episode: "episodio serie",
+  pilot: "pilota",
+};
+
+const GENRE_LABELS: Record<string, string> = {
+  drama: "Dramma",
+  comedy: "Commedia",
+  thriller: "Thriller",
+  horror: "Horror",
+  action: "Azione",
+  "sci-fi": "Sci-fi",
+  documentary: "Documentario",
+  other: "Altro",
+};
 
 type FormValues = z.infer<typeof FormSchema>;
 type FormErrors = Partial<Record<keyof FormValues, string>>;
@@ -41,7 +59,7 @@ export function ProjectForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
-  submitLabel = "Create project",
+  submitLabel = "Crea progetto",
 }: ProjectFormProps) {
   const [values, setValues] = useState<Partial<FormValues>>({
     title: "",
@@ -79,7 +97,7 @@ export function ProjectForm({
     <form onSubmit={handleSubmit} className={styles.form} noValidate>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="title">
-          Title <span className={styles.required}>*</span>
+          Titolo <span className={styles.required}>*</span>
         </label>
         <input
           id="title"
@@ -87,7 +105,7 @@ export function ProjectForm({
           className={`${styles.input} ${errors.title ? styles.error : ""}`}
           value={values.title ?? ""}
           onChange={(e) => setField("title", e.target.value)}
-          placeholder="My Screenplay"
+          placeholder="La mia sceneggiatura"
           autoFocus
         />
         {errors.title && (
@@ -97,7 +115,7 @@ export function ProjectForm({
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="format">
-          Format <span className={styles.required}>*</span>
+          Formato <span className={styles.required}>*</span>
         </label>
         <select
           id="format"
@@ -105,10 +123,10 @@ export function ProjectForm({
           value={values.format ?? ""}
           onChange={(e) => setField("format", e.target.value as FormatValue)}
         >
-          <option value="">Select a format…</option>
+          <option value="">Seleziona un formato…</option>
           {Object.entries(Formats).map(([, val]) => (
             <option key={val} value={val}>
-              {val.replace("_", " ")}
+              {FORMAT_LABELS[val] ?? val.replace("_", " ")}
             </option>
           ))}
         </select>
@@ -119,7 +137,7 @@ export function ProjectForm({
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="genre">
-          Genre <span className={styles.optional}>(optional)</span>
+          Genere <span className={styles.optional}>(opzionale)</span>
         </label>
         <select
           id="genre"
@@ -129,10 +147,10 @@ export function ProjectForm({
             setField("genre", (e.target.value as GenreValue) || undefined)
           }
         >
-          <option value="">Select a genre…</option>
+          <option value="">Seleziona un genere…</option>
           {Object.entries(Genres).map(([, val]) => (
             <option key={val} value={val}>
-              {val.charAt(0).toUpperCase() + val.slice(1)}
+              {GENRE_LABELS[val] ?? val.charAt(0).toUpperCase() + val.slice(1)}
             </option>
           ))}
         </select>
@@ -140,10 +158,10 @@ export function ProjectForm({
 
       <div className={styles.actions}>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? "Saving…" : submitLabel}
+          {isSubmitting ? "Salvataggio…" : submitLabel}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          Annulla
         </Button>
       </div>
     </form>

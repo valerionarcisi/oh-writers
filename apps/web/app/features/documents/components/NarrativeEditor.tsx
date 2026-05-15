@@ -62,17 +62,17 @@ interface NarrativeEditorProps {
 const DOCUMENT_LABELS: Record<DocumentType, string> = {
   [DocumentTypes.LOGLINE]: "Logline",
   [DocumentTypes.SOGGETTO]: "Soggetto",
-  [DocumentTypes.SYNOPSIS]: "Synopsis",
-  [DocumentTypes.OUTLINE]: "Outline",
-  [DocumentTypes.TREATMENT]: "Treatment",
+  [DocumentTypes.SYNOPSIS]: "Sinossi",
+  [DocumentTypes.OUTLINE]: "Scaletta",
+  [DocumentTypes.TREATMENT]: "Trattamento",
 };
 
 const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
-  [DocumentTypes.LOGLINE]: "A [protagonist] must [goal] before [stakes]…",
-  [DocumentTypes.SOGGETTO]: "Begin your soggetto here…",
-  [DocumentTypes.SYNOPSIS]: "Begin your synopsis here…",
+  [DocumentTypes.LOGLINE]: "Un [protagonista] deve [obiettivo] prima di [posta in gioco]…",
+  [DocumentTypes.SOGGETTO]: "Inizia il tuo soggetto qui…",
+  [DocumentTypes.SYNOPSIS]: "Inizia la tua sinossi qui…",
   [DocumentTypes.OUTLINE]: "",
-  [DocumentTypes.TREATMENT]: "Begin your treatment here…",
+  [DocumentTypes.TREATMENT]: "Inizia il tuo trattamento qui…",
 };
 
 type EditorMode = "free" | "assisted";
@@ -345,7 +345,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
                         ? isBulletListActive(editorViewRef.current.state)
                         : false
                     }
-                    aria-label="Bullet list"
+                    aria-label="Elenco puntato"
                     onMouseDown={(e) => {
                       e.preventDefault();
                       const view = editorViewRef.current;

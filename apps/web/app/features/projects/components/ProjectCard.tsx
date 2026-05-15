@@ -15,8 +15,26 @@ interface ProjectCardProps {
 }
 
 // tRPC HTTP transport serializes Date → string; new Date() handles both
+const FORMAT_LABELS: Record<string, string> = {
+  feature: "lungometraggio",
+  short: "cortometraggio",
+  series_episode: "episodio serie",
+  pilot: "pilota",
+};
+
+const GENRE_LABELS: Record<string, string> = {
+  drama: "dramma",
+  comedy: "commedia",
+  thriller: "thriller",
+  horror: "horror",
+  action: "azione",
+  "sci-fi": "sci-fi",
+  documentary: "documentario",
+  other: "altro",
+};
+
 const formatDate = (date: Date | string): string =>
-  new Intl.DateTimeFormat("en-US", {
+  new Intl.DateTimeFormat("it-IT", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -31,12 +49,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
     >
       <div className={styles.header}>
         <span className={styles.title}>{project.title}</span>
-        {project.isArchived && <Badge variant="outline">Archived</Badge>}
+        {project.isArchived && <Badge variant="outline">Archiviato</Badge>}
       </div>
 
       <div className={styles.meta}>
         <span className={styles.format}>
-          {[project.format.replace("_", " "), project.genre]
+          {[
+            FORMAT_LABELS[project.format] ?? project.format.replace("_", " "),
+            project.genre ? (GENRE_LABELS[project.genre] ?? project.genre) : null,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </span>
@@ -45,7 +66,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
       <div className={styles.footer}>
         <span className={styles.date}>
-          Updated {formatDate(project.updatedAt)}
+          Aggiornato {formatDate(project.updatedAt)}
         </span>
       </div>
     </Link>
