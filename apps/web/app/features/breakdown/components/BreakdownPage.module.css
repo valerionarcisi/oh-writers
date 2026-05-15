@@ -639,6 +639,13 @@
 
 /* Table / matrix tab wrappers */
 .tableWrap {
+  /* `.page` is a flex column; a flex item with `margin-inline: auto`
+   * opts out of the default cross-axis stretch and shrinks to content,
+   * collapsing the inner table to ~padding-only width. Explicit
+   * `inline-size: 100%` restores the intended full-width behavior, while
+   * `max-inline-size` continues to cap it and the auto inline margins
+   * keep it centered. */
+  inline-size: 100%;
   max-inline-size: 1340px;
   margin: var(--ds-space-4) auto var(--ds-space-10);
   padding: 0 var(--ds-space-6);
