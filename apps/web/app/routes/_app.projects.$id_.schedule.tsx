@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SchedulePageV2 } from "~/features/schedule/components/SchedulePageV2";
+import { SchedulePage } from "~/features/schedule";
 
 export const Route = createFileRoute("/_app/projects/$id_/schedule")({
   component: ScheduleRoute,
@@ -7,5 +7,5 @@ export const Route = createFileRoute("/_app/projects/$id_/schedule")({
 
 function ScheduleRoute() {
   const { id } = Route.useParams();
-  return <SchedulePageV2 projectId={id} />;
+  return <SchedulePage projectId={id} />;
 }

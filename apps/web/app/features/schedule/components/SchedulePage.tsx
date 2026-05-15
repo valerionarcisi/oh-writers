@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useSuspenseQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Viewbar, FloatingDock, VersionTrigger, Tabs } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
   scheduleQueryOptions,
@@ -15,28 +16,35 @@ import {
   removeShootingDay,
   updateStripEffort,
 } from "../server/schedule.server";
+import type { StripView, ShootingDayView } from "../server/schedule.server";
 import { StripBoard } from "./StripBoard";
 import { UnscheduledTray } from "./UnscheduledTray";
 import { SceneDrawer } from "./SceneDrawer";
 import { ShootingDayDrawer } from "./ShootingDayDrawer";
-import type { StripView, ShootingDayView } from "../server/schedule.server";
 import styles from "./SchedulePage.module.css";
+
+type ViewTab = "day" | "byScene" | "all";
 
 interface SchedulePageProps {
   projectId: string;
 }
 
-type ViewMode = "days" | "weeks";
-
 export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
+  const schedule = data?.isOk ? data.value : null;
+
+  const [tab, setTab] = useState<ViewTab>("day");
+  const [isStuck, setIsStuck] = useState(false);
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("days");
   const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
   const [selectedDay, setSelectedDay] = useState<ShootingDayView | null>(null);
 
-  const schedule = data?.isOk ? data.value : null;
+  useEffect(() => {
+    const onScroll = () => setIsStuck(window.scrollY > 48);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const invalidate = () =>
     qc.refetchQueries({ queryKey: ["schedule", projectId] });
@@ -93,7 +101,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     mutationFn: (vars: { stripId: string; estimatedHours: number | null }) =>
       updateStripEffort({ data: vars }).then(unwrapResult),
     onSuccess: (updatedSchedule) => {
-      // Optimistically keep day drawer open with fresh data
       if (selectedDay) {
         const fresh = updatedSchedule.shootingDays.find(
           (d) => d.id === selectedDay.id,
@@ -140,90 +147,158 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     setSelectedDay(day);
   };
 
-  return (
-    <div className={styles.page} data-testid="schedule-page">
-      <div className={styles.toolbar}>
-        <h2 className={styles.toolbarTitle}>Piano di Lavorazione</h2>
+  const sceneCount = schedule
+    ? schedule.shootingDays.reduce((s, d) => s + d.strips.length, 0) +
+      schedule.unscheduledStrips.length
+    : 0;
+  const dayCount = schedule?.shootingDays.length ?? 0;
+  const totalHours = schedule
+    ? schedule.shootingDays.reduce(
+        (sum, d) =>
+          sum +
+          d.strips.reduce((s, st) => s + (st.estimatedHours ?? 0), 0),
+        0,
+      )
+    : 0;
 
-        {schedule && (
-          <div className={styles.viewToggle}>
+  const versionLabel = "v3 · 14 mag 2026";
+
+  return (
+    <div className={styles.page} data-testid="schedule-page-v2">
+      <Viewbar
+        isScrolled={isStuck}
+        className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
+      >
+        <Tabs
+          tabs={[
+            { id: "day", label: "Per giornata" },
+            { id: "byScene", label: "Per scena" },
+            { id: "all", label: "Tutti i giorni" },
+          ]}
+          activeId={tab}
+          onSelect={(id) => setTab(id as ViewTab)}
+        />
+        <span className={styles.viewbarRight} />
+        {dayCount > 0 && (
+          <button
+            type="button"
+            className={styles.filter}
+            aria-haspopup="menu"
+            aria-label="Filtra per giornata"
+          >
+            Tutte le giornate ▾
+          </button>
+        )}
+        <VersionTrigger
+          variant="pill"
+          versionLabel={versionLabel}
+          onClick={() => {
+            /* TODO Spec 12d: wire schedule version scope */
+          }}
+        />
+      </Viewbar>
+
+      <main className={styles.main} id="main">
+        <header className={styles.eyebrowRow}>
+          <span className={styles.eyebrow}>
+            PIANO DI RIPRESA · {dayCount} {dayCount === 1 ? "GIORNATA" : "GIORNATE"}
+          </span>
+          <span className={styles.eyebrowMeta}>
+            {sceneCount} {sceneCount === 1 ? "scena" : "scene"}
+            {totalHours > 0 && (
+              <>
+                {" · "}
+                {formatHours(totalHours)} totali
+              </>
+            )}
+          </span>
+        </header>
+
+        {!schedule ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyHint}>
+              Genera il piano di lavorazione per organizzare le scene in
+              giornate di ripresa. Richiede uno screenplay con scene.
+            </p>
             <button
               type="button"
-              className={`${styles.viewBtn} ${viewMode === "days" ? styles.viewBtnActive : ""}`}
-              onClick={() => setViewMode("days")}
+              className={styles.generateBtn}
+              data-testid="generate-schedule-btn"
+              disabled={generateMutation.isPending}
+              onClick={() => generateMutation.mutate()}
             >
-              Giornate
-            </button>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${viewMode === "weeks" ? styles.viewBtnActive : ""}`}
-              onClick={() => setViewMode("weeks")}
-            >
-              Settimane
+              Genera pianificazione
             </button>
           </div>
-        )}
-
-        <button
-          type="button"
-          className={styles.generateBtn}
-          data-testid="generate-schedule-btn"
-          disabled={generateMutation.isPending}
-          onClick={() => generateMutation.mutate()}
-        >
-          {schedule ? "Rigenera" : "Genera pianificazione"}
-        </button>
-      </div>
-
-      {!schedule ? (
-        <div className={styles.empty}>
-          <p className={styles.emptyHint}>
-            Genera il piano di lavorazione per organizzare le scene in giorni di
-            ripresa. Richiede uno screenplay con scene.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className={styles.boardScroll}>
-            <StripBoard
-              schedule={schedule}
-              draggingStripId={draggingStripId}
-              viewMode={viewMode}
+        ) : (
+          <div className={styles.boardCard}>
+            <div className={styles.boardScroll}>
+              <StripBoard
+                schedule={schedule}
+                draggingStripId={draggingStripId}
+                viewMode="days"
+                onDragStart={setDraggingStripId}
+                onDrop={handleDrop}
+                onLockToggle={(stripId) => lockMutation.mutate(stripId)}
+                onDateChange={(dayId, date) =>
+                  dateMutation.mutate({ dayId, date })
+                }
+                onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
+                onAddDay={() => addDayMutation.mutate()}
+                onStripClick={handleStripClick}
+                onDayClick={handleDayClick}
+              />
+            </div>
+            <UnscheduledTray
+              strips={schedule.unscheduledStrips}
               onDragStart={setDraggingStripId}
-              onDrop={handleDrop}
+              onDrop={handleDropUnscheduled}
               onLockToggle={(stripId) => lockMutation.mutate(stripId)}
-              onDateChange={(dayId, date) =>
-                dateMutation.mutate({ dayId, date })
-              }
-              onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
-              onAddDay={() => addDayMutation.mutate()}
               onStripClick={handleStripClick}
-              onDayClick={handleDayClick}
             />
           </div>
-          <UnscheduledTray
-            strips={schedule.unscheduledStrips}
-            onDragStart={setDraggingStripId}
-            onDrop={handleDropUnscheduled}
-            onLockToggle={(stripId) => lockMutation.mutate(stripId)}
-            onStripClick={handleStripClick}
-          />
-        </>
+        )}
+      </main>
+
+      {selectedStrip && (
+        <SceneDrawer
+          strip={selectedStrip}
+          screenplayVersionId={schedule?.screenplayVersionId ?? null}
+          onClose={() => setSelectedStrip(null)}
+        />
       )}
 
-      <SceneDrawer
-        strip={selectedStrip}
-        screenplayVersionId={schedule?.screenplayVersionId ?? null}
-        onClose={() => setSelectedStrip(null)}
-      />
+      {selectedDay && (
+        <ShootingDayDrawer
+          day={selectedDay}
+          onClose={() => setSelectedDay(null)}
+          onEffortChange={(stripId, estimatedHours) =>
+            effortMutation.mutate({ stripId, estimatedHours })
+          }
+        />
+      )}
 
-      <ShootingDayDrawer
-        day={selectedDay}
-        onClose={() => setSelectedDay(null)}
-        onEffortChange={(stripId, estimatedHours) =>
-          effortMutation.mutate({ stripId, estimatedHours })
-        }
+      <FloatingDock
+        label="PIANO DI RIPRESA"
+        primaryAction={{
+          label: schedule ? "Rigenera" : "Genera",
+          hotkey: "⌘⇧P",
+          onClick: () => generateMutation.mutate(),
+        }}
+        secondaryActions={[
+          { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
+          { label: "Stampa", hotkey: "⌘P", onClick: () => undefined },
+        ]}
+        cesareNoteCount={0}
       />
     </div>
   );
+}
+
+function formatHours(hours: number): string {
+  if (hours <= 0) return "0h";
+  const whole = Math.floor(hours);
+  const minutes = Math.round((hours - whole) * 60);
+  if (minutes === 0) return `${whole}h`;
+  return `${whole}h ${minutes}m`;
 }
