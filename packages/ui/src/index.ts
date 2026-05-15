@@ -112,6 +112,11 @@ export type {
   TopBarSection,
   TopBarSectionGroup,
 } from "./shell/TopBar/TopBar";
+export { ProjectSwitcherPopover } from "./shell/TopBar/ProjectSwitcherPopover";
+export type {
+  ProjectSwitcherItem,
+  ProjectSwitcherPopoverProps,
+} from "./shell/TopBar/ProjectSwitcherPopover";
 
 export { Viewbar, ViewbarSep } from "./shell/Viewbar/Viewbar";
 export type { ViewbarProps } from "./shell/Viewbar/Viewbar";

@@ -7,8 +7,12 @@ import {
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup } from "@oh-writers/ui";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
-import { useProject } from "~/features/projects";
+import {
+  useProject,
+  personalProjectsQueryOptions,
+} from "~/features/projects";
 import type { AppUser } from "~/server/context";
 
 type SerializableUser = { id: string; name: string; email: string };
@@ -133,6 +137,12 @@ function AppLayout() {
 
   const sectionGroups = buildSectionGroups(projectId, activeSegment);
 
+  const { data: personalProjects } = useQuery(personalProjectsQueryOptions());
+  const projectsList = personalProjects?.map((p) => ({
+    id: p.id,
+    title: p.title,
+  }));
+
   return (
     <AppShell
       user={user}
@@ -140,6 +150,8 @@ function AppLayout() {
       sectionName={sectionName}
       saveState="saved"
       sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
+      projects={projectsList}
+      currentProjectId={projectId}
     >
       <Outlet />
     </AppShell>

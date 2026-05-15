@@ -5,6 +5,7 @@ import type {
   SaveState,
   TopBarSection,
   TopBarSectionGroup,
+  ProjectSwitcherItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import type { AppUser } from "~/server/context";
@@ -19,6 +20,9 @@ interface AppShellProps {
   cesareNoteCount?: number;
   sections?: ReadonlyArray<TopBarSection>;
   sectionGroups?: ReadonlyArray<TopBarSectionGroup>;
+  projects?: ReadonlyArray<ProjectSwitcherItem>;
+  currentProjectId?: string;
+  onProjectSelect?: (id: string) => void;
   children: ReactNode;
 }
 
@@ -39,6 +43,9 @@ export function AppShell({
   cesareNoteCount = 0,
   sections,
   sectionGroups,
+  projects,
+  currentProjectId,
+  onProjectSelect,
   children,
 }: AppShellProps) {
   const router = useRouter();
@@ -61,6 +68,18 @@ export function AppShell({
     void router.navigate({ to: href });
   };
 
+  const handleProjectSelect = (id: string) => {
+    if (onProjectSelect) {
+      onProjectSelect(id);
+      return;
+    }
+    void router.navigate({ to: "/projects/$id", params: { id } });
+  };
+
+  const handleAllProjects = () => {
+    void router.navigate({ to: "/dashboard" });
+  };
+
   return (
     <VersionsDrawerProvider>
       <div className={styles.shell}>
@@ -76,6 +95,10 @@ export function AppShell({
           isScrolled={isScrolled}
           sections={sections}
           sectionGroups={sectionGroups}
+          projects={projects}
+          currentProjectId={currentProjectId}
+          onProjectSelect={handleProjectSelect}
+          onAllProjects={handleAllProjects}
           onNavigate={handleNavigate}
           onBrandClick={handleBrandClick}
           onProjectClick={handleBrandClick}

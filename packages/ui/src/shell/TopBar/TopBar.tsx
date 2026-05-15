@@ -6,6 +6,8 @@ import { SavePill } from "../../primitives/SavePill/SavePill";
 import type { SaveState } from "../../primitives/SavePill/SavePill";
 import { Presence } from "../../primitives/Presence/Presence";
 import type { PresenceUser } from "../../primitives/Presence/Presence";
+import { ProjectSwitcherPopover } from "./ProjectSwitcherPopover";
+import type { ProjectSwitcherItem } from "./ProjectSwitcherPopover";
 import styles from "./TopBar.module.css";
 
 function SectionMenuItem({
@@ -73,6 +75,12 @@ export type TopBarProps = {
    *  group labels and dividers between them (e.g. Scrittura / Pre-produzione
    *  / Produzione). Takes precedence over `sections`. */
   sectionGroups?: ReadonlyArray<TopBarSectionGroup>;
+  /** When provided, clicking the project breadcrumb opens a popover listing
+   *  these projects. If omitted, the button falls back to onProjectClick. */
+  projects?: ReadonlyArray<ProjectSwitcherItem>;
+  currentProjectId?: string;
+  onProjectSelect?: (id: string) => void;
+  onAllProjects?: () => void;
   onNavigate?: (href: string) => void;
   onBrandClick?: () => void;
   onProjectClick?: () => void;
@@ -95,6 +103,10 @@ export function TopBar({
   userInitials,
   sections,
   sectionGroups,
+  projects,
+  currentProjectId,
+  onProjectSelect,
+  onAllProjects,
   onNavigate,
   onBrandClick,
   onProjectClick,
@@ -105,11 +117,14 @@ export function TopBar({
   onAvatarClick,
 }: TopBarProps) {
   const [sectionsOpen, setSectionsOpen] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(false);
   const sectionWrapRef = useRef<HTMLSpanElement>(null);
+  const projectWrapRef = useRef<HTMLSpanElement>(null);
   const hasGroupedMenu =
     sectionGroups !== undefined && sectionGroups.length > 0;
   const hasFlatMenu = sections !== undefined && sections.length > 0;
   const hasSectionMenu = hasGroupedMenu || hasFlatMenu;
+  const hasProjectMenu = projects !== undefined;
 
   useEffect(() => {
     if (!sectionsOpen) return;
@@ -131,6 +146,40 @@ export function TopBar({
       document.removeEventListener("keydown", onKey);
     };
   }, [sectionsOpen]);
+
+  useEffect(() => {
+    if (!projectsOpen) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (
+        projectWrapRef.current &&
+        !projectWrapRef.current.contains(e.target as Node)
+      ) {
+        setProjectsOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown);
+    };
+  }, [projectsOpen]);
+
+  const handleProjectTriggerClick = () => {
+    if (hasProjectMenu) {
+      setProjectsOpen((v) => !v);
+      return;
+    }
+    onProjectClick?.();
+  };
+
+  const handleProjectPick = (id: string) => {
+    setProjectsOpen(false);
+    onProjectSelect?.(id);
+  };
+
+  const handleAllProjects = () => {
+    setProjectsOpen(false);
+    onAllProjects?.();
+  };
 
   const handleSectionTriggerClick = () => {
     if (hasSectionMenu) {
@@ -175,17 +224,29 @@ export function TopBar({
       <span className={styles.breadcrumbSep} aria-hidden="true">
         /
       </span>
-      <button
-        type="button"
-        className={styles.breadcrumbBtn}
-        onClick={onProjectClick}
-        aria-label={`Progetto: ${projectName} — cambia progetto`}
-        aria-haspopup="listbox"
-        aria-expanded="false"
-      >
-        <span className={styles.projectName}>{projectName}</span>
-        <Icon name="chevron-down" size={12} aria-hidden={true} />
-      </button>
+      <span className={styles.projectWrap} ref={projectWrapRef}>
+        <button
+          type="button"
+          className={styles.breadcrumbBtn}
+          onClick={handleProjectTriggerClick}
+          aria-label={`Progetto: ${projectName} — cambia progetto`}
+          aria-haspopup={hasProjectMenu ? "listbox" : undefined}
+          aria-expanded={hasProjectMenu ? projectsOpen : undefined}
+          data-testid="topbar-project-trigger"
+        >
+          <span className={styles.projectName}>{projectName}</span>
+          <Icon name="chevron-down" size={12} aria-hidden={true} />
+        </button>
+        {hasProjectMenu && projectsOpen && (
+          <ProjectSwitcherPopover
+            projects={projects!}
+            currentProjectId={currentProjectId}
+            onSelect={handleProjectPick}
+            onAllProjects={handleAllProjects}
+            onClose={() => setProjectsOpen(false)}
+          />
+        )}
+      </span>
 
       <span className={styles.breadcrumbSep} aria-hidden="true">
         /
