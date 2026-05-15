@@ -87,7 +87,7 @@
   margin: 0 auto;
   padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-12);
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--ds-space-10);
   align-items: start;
 }

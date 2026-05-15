@@ -291,23 +291,23 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
           label="Tariffe"
           aria-label="Mostra tariffe"
         />
-        {shootingDays !== null && (
+        {budget && shootingDays !== null && (
           <SettingChip
             label="Giorni"
             value={shootingDays}
             placeholder="—"
-            disabled={!budget}
+            disabled={false}
             onCommit={(v) => settingsMutation.mutate({ shootingDays: v })}
             suffix=""
             testId="shooting-days"
           />
         )}
-        {contingencyPercent !== null && contingencyPercent !== undefined && (
+        {budget && contingencyPercent !== null && contingencyPercent !== undefined && (
           <SettingChip
             label="Cont."
             value={contingencyPercent}
             placeholder="10"
-            disabled={!budget}
+            disabled={false}
             onCommit={(v) => settingsMutation.mutate({ contingencyPercent: v })}
             suffix="%"
             testId="contingency-percent"
@@ -637,7 +637,7 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
                   {linesForView.length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         style={{
                           textAlign: "center",
                           color: "var(--ds-text-faint)",
@@ -654,21 +654,6 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
           )}
         </div>
 
-        <aside className={styles.margin} aria-label="Note di Cesare">
-          <div className={styles.marginLabel}>Note di Cesare</div>
-          <div className={styles.marginNotes}>
-            <div
-              style={{
-                color: "var(--ds-text-faint)",
-                fontSize: "var(--ds-font-size-sm)",
-                padding: "var(--ds-space-4) var(--ds-space-2)",
-                textAlign: "center",
-              }}
-            >
-              Nessuna nota Cesare per il budget
-            </div>
-          </div>
-        </aside>
       </main>
 
       <FloatingDock
@@ -744,6 +729,66 @@ function EffectiveCell({
       data-testid="effective-cell"
     >
       {eurAmount(display)}
+    </button>
+  );
+}
+
+interface NumberCellProps {
+  value: number;
+  format: (v: number) => string;
+  onCommit: (v: number) => void;
+  disabled?: boolean;
+  testId?: string;
+}
+
+function NumberCell({
+  value,
+  format,
+  onCommit,
+  disabled,
+  testId,
+}: NumberCellProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const commit = () => {
+    setEditing(false);
+    const n = parseFloat(draft);
+    if (!isNaN(n) && n >= 0 && n !== value) onCommit(n);
+  };
+
+  if (editing) {
+    return (
+      <input
+        className={styles.cellInput}
+        type="number"
+        min="0"
+        step="any"
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        data-testid={testId ? `${testId}-input` : undefined}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={styles.cellBtn}
+      disabled={disabled}
+      onClick={() => {
+        setDraft(String(value));
+        setEditing(true);
+      }}
+      data-testid={testId}
+    >
+      {format(value)}
     </button>
   );
 }
