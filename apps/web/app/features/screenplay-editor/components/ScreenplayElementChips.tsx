@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { Pill } from "@oh-writers/ui";
 import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
@@ -75,13 +74,8 @@ export function ScreenplayElementChips({
             aria-pressed={isActive}
             onClick={() => onSetElement(el)}
           >
-            <Pill
-              tone={isActive ? "clay" : "neutral"}
-              className={styles.elementChipPill}
-            >
-              <span className={styles.chipDot} aria-hidden="true" />
-              {ELEMENT_LABELS[el]}
-            </Pill>
+            <span className={styles.chipDot} aria-hidden="true" />
+            <span className={styles.chipLabel}>{ELEMENT_LABELS[el]}</span>
           </button>
         );
       })}

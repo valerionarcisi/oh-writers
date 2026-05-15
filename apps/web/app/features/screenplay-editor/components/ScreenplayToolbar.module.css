@@ -62,7 +62,7 @@
 .elementStrip {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-5);
   flex: 1;
   justify-content: center;
 }
@@ -121,46 +121,55 @@
   font-weight: 600;
 }
 
-/* Wrapper button that hosts the DS Pill primitive. The Pill renders the
- * visual chip; this button only provides interactivity, focus ring, and
- * the aria-pressed semantics driven by `currentElement`. */
+/* ─── Element chips — Proposta F (mono tabline) ───────────────────────────
+ *
+ * Style typewriter, semanticamente corretto: lo screenplay editor è un
+ * artefatto-copione, il font Courier mono richiama il foglio sotto.
+ * Layout: testo mono uppercase + dot piccolo di categoria + underline
+ * ink piena su active. Zero bordi, zero background → leggero, no rumore. */
 .elementChip {
   all: unset;
   display: inline-flex;
   align-items: center;
+  gap: var(--ds-space-1);
+  padding: 4px 0;
   cursor: pointer;
-  border-radius: var(--ds-radius-pill, 999px);
+  color: var(--ds-text-mute);
+  font-family: var(--ds-font-mono);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: relative;
+  transition: color 120ms ease;
+}
+
+.elementChip:hover {
+  color: var(--ds-text);
 }
 
 .elementChip:focus-visible {
   outline: 2px solid var(--ds-action);
-  outline-offset: 2px;
+  outline-offset: 4px;
+  border-radius: 2px;
 }
 
-.elementChipPill {
-  /* Override Pill defaults so chip height matches the Versioni / version pill
-   * baseline (~28px). Pill uppercase + letter-spacing are inherited. */
-  padding: 5px var(--ds-space-3);
-  font-size: var(--text-sm);
-  border: 1px solid var(--ds-line);
-  background: var(--ds-surface);
-  color: var(--ds-text-2);
-  transition:
-    color 150ms ease,
-    background 150ms ease,
-    border-color 150ms ease;
-}
-
-.elementChip:hover .elementChipPill {
+.elementChipActive {
   color: var(--ds-text);
-  border-color: var(--chip-accent);
+  font-weight: 700;
 }
 
-.elementChipActive .elementChipPill {
-  color: var(--ds-text);
-  background: color-mix(in srgb, var(--chip-accent) 12%, transparent);
-  border-color: var(--chip-accent);
-  font-weight: 600;
+.elementChipActive::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -2px;
+  block-size: 1.5px;
+  background: var(--ds-text);
+}
+
+.chipLabel {
+  /* placeholder for future utility; semantic split kept for testid clarity */
 }
 
 /* ─── Right buttons ─────────────────────────────────────── */
