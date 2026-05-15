@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { ResultAsync, ok, err } from "neverthrow";
+import { ResultAsync, ok, err, okAsync, errAsync } from "neverthrow";
 import {
   budgets,
   budgetLines,
@@ -38,9 +38,9 @@ import {
   type RateUnit,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
 import { withProjectAccess } from "~/server/pipeline";
+import { requireProjectAccess } from "~/server/access";
 import {
   BudgetNotFoundError,
   BudgetLineNotFoundError,
@@ -50,7 +50,6 @@ import {
   DbError,
 } from "../budget.errors";
 import { ProjectNotFoundError } from "~/features/projects";
-import { resolveBudgetAccessByProjectId } from "./budget-access";
 import {
   aggregateProductionLines,
   computeDayCosts,
@@ -60,19 +59,6 @@ import {
 import { getProjectBreakdownRows } from "~/features/breakdown/server/breakdown.server";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const canEdit = (access: {
-  isPersonalOwner: boolean;
-  teamRole: string | null;
-}) =>
-  access.isPersonalOwner ||
-  access.teamRole === "owner" ||
-  access.teamRole === "editor";
-
-const canView = (access: {
-  isPersonalOwner: boolean;
-  teamRole: string | null;
-}) => access.isPersonalOwner || access.teamRole !== null;
 
 const parseLine = (row: typeof budgetLines.$inferSelect): BudgetLine =>
   BudgetLineSchema.parse({
@@ -597,56 +583,50 @@ export const updateBudgetLine = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         BudgetLine,
-        BudgetLineNotFoundError | BudgetLockedError | ForbiddenError | DbError
+        | BudgetLineNotFoundError
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const line = await db.query.budgetLines.findFirst({
-        where: eq(budgetLines.id, data.lineId),
-      });
-      if (!line) return toShape(err(new BudgetLineNotFoundError(data.lineId)));
-
-      const budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, line.budgetId),
-      });
-      if (!budget)
-        return toShape(err(new DbError("updateBudgetLine", "budget missing")));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        budget.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("edit budget line")));
-      if (budget.status === "locked")
-        return toShape(err(new BudgetLockedError()));
-
-      const set: Record<string, unknown> = { updatedAt: new Date() };
-      if (data.patch.actual !== undefined)
-        set.actual =
-          data.patch.actual !== null ? String(data.patch.actual) : null;
-      if (data.patch.rate !== undefined)
-        set.rate = data.patch.rate !== null ? String(data.patch.rate) : null;
-      if (data.patch.quantity !== undefined)
-        set.quantity =
-          data.patch.quantity !== null ? String(data.patch.quantity) : null;
-      if (data.patch.notes !== undefined) set.notes = data.patch.notes;
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(budgetLines)
-          .set(set)
-          .where(eq(budgetLines.id, data.lineId))
-          .returning()
-          .then(([r]) => parseLine(r!)),
-        (e) => new DbError("updateBudgetLine", e),
-      );
-      return toShape(result);
-    },
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetLineRowById(db, data.lineId).andThen((line) =>
+            findBudgetRowById(db, line.budgetId).andThen((budget) =>
+              requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+                if (budget.status === "locked")
+                  return errAsync(new BudgetLockedError());
+                const set: Record<string, unknown> = { updatedAt: new Date() };
+                if (data.patch.actual !== undefined)
+                  set.actual =
+                    data.patch.actual !== null
+                      ? String(data.patch.actual)
+                      : null;
+                if (data.patch.rate !== undefined)
+                  set.rate =
+                    data.patch.rate !== null ? String(data.patch.rate) : null;
+                if (data.patch.quantity !== undefined)
+                  set.quantity =
+                    data.patch.quantity !== null
+                      ? String(data.patch.quantity)
+                      : null;
+                if (data.patch.notes !== undefined) set.notes = data.patch.notes;
+                return ResultAsync.fromPromise(
+                  db
+                    .update(budgetLines)
+                    .set(set)
+                    .where(eq(budgetLines.id, data.lineId))
+                    .returning()
+                    .then(([r]) => parseLine(r!)),
+                  (e) => new DbError("updateBudgetLine", e),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
   );
 
 // ─── updateBudgetSettings ─────────────────────────────────────────────────────
@@ -665,47 +645,40 @@ export const updateBudgetSettings = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         Budget,
-        BudgetNotFoundError | BudgetLockedError | ForbiddenError | DbError
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, data.budgetId),
-      });
-      if (!budget) return toShape(err(new BudgetNotFoundError(data.budgetId)));
-      if (budget.status === "locked")
-        return toShape(err(new BudgetLockedError()));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        budget.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("edit budget settings")));
-
-      const set: Record<string, unknown> = { updatedAt: new Date() };
-      if (data.shootingDays !== undefined) set.shootingDays = data.shootingDays;
-      if (data.contingencyPercent !== undefined)
-        set.contingencyPercent = String(data.contingencyPercent);
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(budgets)
-          .set(set)
-          .where(eq(budgets.id, data.budgetId))
-          .then(() => loadBudgetWithLines(db, budget.projectId)),
-        (e) => new DbError("updateBudgetSettings", e),
-      ).andThen((updated) =>
-        updated
-          ? ok(updated)
-          : err(new DbError("updateBudgetSettings", "reload failed")),
-      );
-      return toShape(result);
-    },
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetRowById(db, data.budgetId).andThen((budget) =>
+            requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+              if (budget.status === "locked")
+                return errAsync(new BudgetLockedError());
+              const set: Record<string, unknown> = { updatedAt: new Date() };
+              if (data.shootingDays !== undefined)
+                set.shootingDays = data.shootingDays;
+              if (data.contingencyPercent !== undefined)
+                set.contingencyPercent = String(data.contingencyPercent);
+              return ResultAsync.fromPromise(
+                db
+                  .update(budgets)
+                  .set(set)
+                  .where(eq(budgets.id, data.budgetId))
+                  .then(() => loadBudgetWithLines(db, budget.projectId)),
+                (e) => new DbError("updateBudgetSettings", e),
+              ).andThen((updated) =>
+                updated
+                  ? ok(updated)
+                  : err(new DbError("updateBudgetSettings", "reload failed")),
+              );
+            }),
+          ),
+        ),
+      ),
   );
 
 // ─── getBudgetSummary ─────────────────────────────────────────────────────────
@@ -849,60 +822,47 @@ export const updateBudgetCastRow = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<BudgetCast, BudgetLockedError | ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const row = await db.query.budgetCast.findFirst({
-        where: eq(budgetCast.id, data.rowId),
-      });
-      if (!row)
-        return toShape(
-          err(new DbError("updateBudgetCastRow", "cast row not found")),
-        );
-
-      const budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, row.budgetId),
-      });
-      if (!budget)
-        return toShape(
-          err(new DbError("updateBudgetCastRow", "budget missing")),
-        );
-      if (budget.status === "locked")
-        return toShape(err(new BudgetLockedError()));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        budget.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("edit cast row")));
-
-      const set: Record<string, unknown> = { updatedAt: new Date() };
-      if (data.patch.days !== undefined) set.days = String(data.patch.days);
-      if (data.patch.dayRate !== undefined)
-        set.dayRate = String(data.patch.dayRate);
-      if (data.patch.fiscalRegime !== undefined)
-        set.fiscalRegime = data.patch.fiscalRegime;
-      if (data.patch.mealAllowance !== undefined)
-        set.mealAllowance = String(data.patch.mealAllowance);
-      if (data.patch.accommodation !== undefined)
-        set.accommodation = String(data.patch.accommodation);
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(budgetCast)
-          .set(set)
-          .where(eq(budgetCast.id, data.rowId))
-          .returning()
-          .then(([r]) => r!),
-        (e) => new DbError("updateBudgetCastRow", e),
-      );
-      return toShape(result);
-    },
+      ResultShape<
+        BudgetCast,
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetCastRowById(db, data.rowId).andThen((row) =>
+            findBudgetRowById(db, row.budgetId).andThen((budget) =>
+              requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+                if (budget.status === "locked")
+                  return errAsync(new BudgetLockedError());
+                const set: Record<string, unknown> = { updatedAt: new Date() };
+                if (data.patch.days !== undefined)
+                  set.days = String(data.patch.days);
+                if (data.patch.dayRate !== undefined)
+                  set.dayRate = String(data.patch.dayRate);
+                if (data.patch.fiscalRegime !== undefined)
+                  set.fiscalRegime = data.patch.fiscalRegime;
+                if (data.patch.mealAllowance !== undefined)
+                  set.mealAllowance = String(data.patch.mealAllowance);
+                if (data.patch.accommodation !== undefined)
+                  set.accommodation = String(data.patch.accommodation);
+                return ResultAsync.fromPromise(
+                  db
+                    .update(budgetCast)
+                    .set(set)
+                    .where(eq(budgetCast.id, data.rowId))
+                    .returning()
+                    .then(([r]) => r!),
+                  (e) => new DbError("updateBudgetCastRow", e),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
   );
 
 // ─── updateBudgetCrewRow ──────────────────────────────────────────────────────
@@ -922,61 +882,49 @@ export const updateBudgetCrewRow = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<BudgetCrew, BudgetLockedError | ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const row = await db.query.budgetCrew.findFirst({
-        where: eq(budgetCrew.id, data.rowId),
-      });
-      if (!row)
-        return toShape(
-          err(new DbError("updateBudgetCrewRow", "crew row not found")),
-        );
-
-      const budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, row.budgetId),
-      });
-      if (!budget)
-        return toShape(
-          err(new DbError("updateBudgetCrewRow", "budget missing")),
-        );
-      if (budget.status === "locked")
-        return toShape(err(new BudgetLockedError()));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        budget.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("edit crew row")));
-
-      const set: Record<string, unknown> = { updatedAt: new Date() };
-      if (data.patch.days !== undefined) set.days = String(data.patch.days);
-      if (data.patch.dayRate !== undefined)
-        set.dayRate = String(data.patch.dayRate);
-      if (data.patch.fiscalRegime !== undefined)
-        set.fiscalRegime = data.patch.fiscalRegime;
-      if (data.patch.mealAllowance !== undefined)
-        set.mealAllowance = String(data.patch.mealAllowance);
-      if (data.patch.accommodation !== undefined)
-        set.accommodation = String(data.patch.accommodation);
-      if (data.patch.enabled !== undefined) set.enabled = data.patch.enabled;
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(budgetCrew)
-          .set(set)
-          .where(eq(budgetCrew.id, data.rowId))
-          .returning()
-          .then(([r]) => r!),
-        (e) => new DbError("updateBudgetCrewRow", e),
-      );
-      return toShape(result);
-    },
+      ResultShape<
+        BudgetCrew,
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetCrewRowById(db, data.rowId).andThen((row) =>
+            findBudgetRowById(db, row.budgetId).andThen((budget) =>
+              requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+                if (budget.status === "locked")
+                  return errAsync(new BudgetLockedError());
+                const set: Record<string, unknown> = { updatedAt: new Date() };
+                if (data.patch.days !== undefined)
+                  set.days = String(data.patch.days);
+                if (data.patch.dayRate !== undefined)
+                  set.dayRate = String(data.patch.dayRate);
+                if (data.patch.fiscalRegime !== undefined)
+                  set.fiscalRegime = data.patch.fiscalRegime;
+                if (data.patch.mealAllowance !== undefined)
+                  set.mealAllowance = String(data.patch.mealAllowance);
+                if (data.patch.accommodation !== undefined)
+                  set.accommodation = String(data.patch.accommodation);
+                if (data.patch.enabled !== undefined)
+                  set.enabled = data.patch.enabled;
+                return ResultAsync.fromPromise(
+                  db
+                    .update(budgetCrew)
+                    .set(set)
+                    .where(eq(budgetCrew.id, data.rowId))
+                    .returning()
+                    .then(([r]) => r!),
+                  (e) => new DbError("updateBudgetCrewRow", e),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
   );
 
 // ─── addBudgetCrewRow ─────────────────────────────────────────────────────────
@@ -996,59 +944,52 @@ export const addBudgetCrewRow = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<BudgetCrew, BudgetLockedError | ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, data.budgetId),
-      });
-      if (!budget)
-        return toShape(
-          err(new DbError("addBudgetCrewRow", "budget not found")),
-        );
-      if (budget.status === "locked")
-        return toShape(err(new BudgetLockedError()));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        budget.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("add crew row")));
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const maxSort = await db.query.budgetCrew
-            .findMany({ where: eq(budgetCrew.budgetId, data.budgetId) })
-            .then((rows) =>
-              rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
-            );
-          const [inserted] = await db
-            .insert(budgetCrew)
-            .values({
-              budgetId: data.budgetId,
-              roleKey: null,
-              name: data.name,
-              department: data.department,
-              days: String(data.days),
-              dayRate: String(data.dayRate),
-              fiscalRegime: data.fiscalRegime,
-              mealAllowance: "0",
-              accommodation: "0",
-              enabled: true,
-              sortOrder: maxSort + 1,
-            })
-            .returning();
-          return inserted!;
-        })(),
-        (e) => new DbError("addBudgetCrewRow", e),
-      );
-      return toShape(result);
-    },
+      ResultShape<
+        BudgetCrew,
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetRowById(db, data.budgetId).andThen((budget) =>
+            requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+              if (budget.status === "locked")
+                return errAsync(new BudgetLockedError());
+              return ResultAsync.fromPromise(
+                (async () => {
+                  const maxSort = await db.query.budgetCrew
+                    .findMany({ where: eq(budgetCrew.budgetId, data.budgetId) })
+                    .then((rows) =>
+                      rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
+                    );
+                  const [inserted] = await db
+                    .insert(budgetCrew)
+                    .values({
+                      budgetId: data.budgetId,
+                      roleKey: null,
+                      name: data.name,
+                      department: data.department,
+                      days: String(data.days),
+                      dayRate: String(data.dayRate),
+                      fiscalRegime: data.fiscalRegime,
+                      mealAllowance: "0",
+                      accommodation: "0",
+                      enabled: true,
+                      sortOrder: maxSort + 1,
+                    })
+                    .returning();
+                  return inserted!;
+                })(),
+                (e) => new DbError("addBudgetCrewRow", e),
+              );
+            }),
+          ),
+        ),
+      ),
   );
 
 // ─── removeBudgetCrewRow ──────────────────────────────────────────────────────
@@ -1059,47 +1000,34 @@ export const removeBudgetCrewRow = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<{ id: string }, BudgetLockedError | ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const row = await db.query.budgetCrew.findFirst({
-        where: eq(budgetCrew.id, data.rowId),
-      });
-      if (!row)
-        return toShape(
-          err(new DbError("removeBudgetCrewRow", "crew row not found")),
-        );
-
-      const budget = await db.query.budgets.findFirst({
-        where: eq(budgets.id, row.budgetId),
-      });
-      if (!budget)
-        return toShape(
-          err(new DbError("removeBudgetCrewRow", "budget missing")),
-        );
-      if (budget.status === "locked")
-        return toShape(err(new BudgetLockedError()));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        budget.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("remove crew row")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .delete(budgetCrew)
-          .where(eq(budgetCrew.id, data.rowId))
-          .then(() => ({ id: data.rowId })),
-        (e) => new DbError("removeBudgetCrewRow", e),
-      );
-      return toShape(result);
-    },
+      ResultShape<
+        { id: string },
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetCrewRowById(db, data.rowId).andThen((row) =>
+            findBudgetRowById(db, row.budgetId).andThen((budget) =>
+              requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+                if (budget.status === "locked")
+                  return errAsync(new BudgetLockedError());
+                return ResultAsync.fromPromise(
+                  db
+                    .delete(budgetCrew)
+                    .where(eq(budgetCrew.id, data.rowId))
+                    .then(() => ({ id: data.rowId })),
+                  (e) => new DbError("removeBudgetCrewRow", e),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
   );
 
 // ─── getRateCard ──────────────────────────────────────────────────────────────
@@ -1146,68 +1074,65 @@ export const upsertRateEntry = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<ProjectRateCard, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("edit rate card")));
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const existing = await db.query.projectRateCard.findFirst({
-            where: and(
-              eq(projectRateCard.projectId, data.projectId),
-              eq(projectRateCard.name, data.name),
-            ),
-          });
-          if (existing) {
-            const [updated] = await db
-              .update(projectRateCard)
-              .set({
-                role: data.role,
-                rateUnit: data.rateUnit,
-                rateValue: String(data.rateValue),
-                mealAllowance: String(data.mealAllowance),
-                accommodation: String(data.accommodation),
-                fiscalRegime: data.fiscalRegime,
-                updatedAt: new Date(),
-              })
-              .where(eq(projectRateCard.id, existing.id))
-              .returning();
-            return updated!;
-          }
-          const maxSort = await db.query.projectRateCard
-            .findMany({ where: eq(projectRateCard.projectId, data.projectId) })
-            .then((rows) =>
-              rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
-            );
-          const [inserted] = await db
-            .insert(projectRateCard)
-            .values({
-              projectId: data.projectId,
-              name: data.name,
-              role: data.role,
-              rateUnit: data.rateUnit,
-              rateValue: String(data.rateValue),
-              mealAllowance: String(data.mealAllowance),
-              accommodation: String(data.accommodation),
-              fiscalRegime: data.fiscalRegime,
-              sortOrder: maxSort + 1,
-            })
-            .returning();
-          return inserted!;
-        })(),
-        (e) => new DbError("upsertRateEntry", e),
-      );
-      return toShape(result);
-    },
+    }): Promise<
+      ResultShape<
+        ProjectRateCard,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db }) =>
+          ResultAsync.fromPromise(
+            (async () => {
+              const existing = await db.query.projectRateCard.findFirst({
+                where: and(
+                  eq(projectRateCard.projectId, data.projectId),
+                  eq(projectRateCard.name, data.name),
+                ),
+              });
+              if (existing) {
+                const [updated] = await db
+                  .update(projectRateCard)
+                  .set({
+                    role: data.role,
+                    rateUnit: data.rateUnit,
+                    rateValue: String(data.rateValue),
+                    mealAllowance: String(data.mealAllowance),
+                    accommodation: String(data.accommodation),
+                    fiscalRegime: data.fiscalRegime,
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(projectRateCard.id, existing.id))
+                  .returning();
+                return updated!;
+              }
+              const maxSort = await db.query.projectRateCard
+                .findMany({
+                  where: eq(projectRateCard.projectId, data.projectId),
+                })
+                .then((rows) =>
+                  rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
+                );
+              const [inserted] = await db
+                .insert(projectRateCard)
+                .values({
+                  projectId: data.projectId,
+                  name: data.name,
+                  role: data.role,
+                  rateUnit: data.rateUnit,
+                  rateValue: String(data.rateValue),
+                  mealAllowance: String(data.mealAllowance),
+                  accommodation: String(data.accommodation),
+                  fiscalRegime: data.fiscalRegime,
+                  sortOrder: maxSort + 1,
+                })
+                .returning();
+              return inserted!;
+            })(),
+            (e) => new DbError("upsertRateEntry", e),
+          ),
+        ),
+      ),
   );
 
 // ─── deleteRateEntry ──────────────────────────────────────────────────────────
@@ -1217,34 +1142,27 @@ export const deleteRateEntry = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<{ id: string }, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const entry = await db.query.projectRateCard.findFirst({
-        where: eq(projectRateCard.id, data.entryId),
-      });
-      if (!entry)
-        return toShape(err(new DbError("deleteRateEntry", "entry not found")));
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        entry.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("delete rate entry")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .delete(projectRateCard)
-          .where(eq(projectRateCard.id, data.entryId))
-          .then(() => ({ id: data.entryId })),
-        (e) => new DbError("deleteRateEntry", e),
-      );
-      return toShape(result);
-    },
+    }): Promise<
+      ResultShape<
+        { id: string },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findRateEntryById(db, data.entryId).andThen((entry) =>
+            requireProjectAccess(db, entry.projectId, "edit").andThen(() =>
+              ResultAsync.fromPromise(
+                db
+                  .delete(projectRateCard)
+                  .where(eq(projectRateCard.id, data.entryId))
+                  .then(() => ({ id: data.entryId })),
+                (e) => new DbError("deleteRateEntry", e),
+              ),
+            ),
+          ),
+        ),
+      ),
   );
 
 // ─── getDayCosts ──────────────────────────────────────────────────────────────
