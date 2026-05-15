@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Versioni button — 6 proposte</title>
+    <meta name="viewport" content="width=1400, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --line: #d8d6cd;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      header.page {
+        padding: 48px 64px 24px;
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+      header.page h1 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 32px;
+        margin: 0 0 8px;
+      }
+      header.page p {
+        color: var(--ink-3);
+        margin: 0;
+        max-width: 64ch;
+      }
+      .grid {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 64px 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+      }
+      .proposal {
+        background: var(--page);
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 8px 24px -12px rgba(28, 26, 23, 0.12);
+        overflow: hidden;
+      }
+      .proposal__head {
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .proposal__head h2 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 20px;
+        margin: 0;
+      }
+      .proposal__head .meta {
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .proposal__body {
+        padding: 32px 24px;
+        background: var(--paper-1);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .proposal__note {
+        padding: 12px 24px 18px;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .proposal__note b {
+        color: var(--ink-1);
+      }
+
+      /* Shared menu shell when a popover is shown alongside */
+      .menu {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.06),
+          0 12px 32px -8px rgba(28, 26, 23, 0.18);
+        padding: 4px;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .menu button {
+        all: unset;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--ink-1);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .menu button:hover {
+        background: var(--paper-2);
+      }
+      .menu .check {
+        margin-inline-start: auto;
+        color: var(--clay);
+      }
+      .menu .sep {
+        height: 1px;
+        background: var(--line);
+        margin: 2px 0;
+      }
+      .menu .label {
+        display: block;
+        padding: 6px 8px 2px;
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* ─── 0 · Current (baseline) ─────────────────────────────────────── */
+      .v-current {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .v-current .chev {
+        color: var(--ink-3);
+      }
+
+      /* ─── A · Mono pill + dropdown (typewriter feel) ─────────────────── */
+      .v-a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink-1);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      .v-a .chev {
+        color: var(--ink-3);
+      }
+
+      /* ─── B · Eyebrow + value (compact mono inline) ──────────────────── */
+      .v-b {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 4px 10px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .v-b:hover {
+        border-color: var(--line);
+        background: var(--page);
+      }
+      .v-b .eyebrow {
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 10px;
+      }
+      .v-b .value {
+        color: var(--ink-1);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .v-b .chev {
+        color: var(--ink-3);
+        font-size: 10px;
+      }
+
+      /* ─── C · Color dot + version code only ──────────────────────────── */
+      .v-c {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px 4px 8px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .v-c .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 1px solid var(--ink-4);
+      }
+      .v-c .code {
+        font-weight: 700;
+        color: var(--ink-1);
+      }
+      .v-c .date {
+        color: var(--ink-3);
+      }
+
+      /* ─── D · Plain text trigger (no border, no bg) ──────────────────── */
+      .v-d {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px;
+        background: transparent;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-1);
+      }
+      .v-d:hover {
+        background: var(--paper-2);
+      }
+      .v-d .chev {
+        color: var(--ink-3);
+        opacity: 0.6;
+      }
+
+      /* ─── E · Icon + version code (compact) ──────────────────────────── */
+      .v-e {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px 4px 8px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink-1);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .v-e .icon {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+      }
+      .v-e .chev {
+        color: var(--ink-3);
+      }
+
+      /* ─── F · Two-line (version code + date stacked) ─────────────────── */
+      .v-f {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .v-f .stack {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        font-family: var(--font-mono);
+      }
+      .v-f .stack b {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-1);
+        line-height: 1.1;
+      }
+      .v-f .stack i {
+        font-style: normal;
+        font-size: 10px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
+      }
+      .v-f .chev {
+        color: var(--ink-3);
+      }
+
+      .stage-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .row-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+      }
+      hr {
+        border: none;
+        border-top: 1px solid var(--line);
+        margin: 32px 0;
+      }
+      footer.page {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 64px 64px;
+        color: var(--ink-3);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      footer.page b {
+        color: var(--ink-1);
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="page">
+      <h1>Versioni button — 6 proposte</h1>
+      <p>
+        Riferimento: il bottone "v3 · 14 mag 2026 ▾" che vive nella Viewbar
+        destra dello screenplay (e duplicato su Breakdown/Budget/Schedule). Lo
+        consideriamo un artefatto-screenplay → mono-typewriter. Ogni mockup
+        mostra il bottone chiuso + il popover aperto sottostante.
+      </p>
+    </header>
+
+    <main class="grid">
+      <!-- 0 baseline -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>0 · Stato attuale</h2>
+          <span class="meta">Pill Inter sans 14px + chevron.</span>
+        </div>
+        <div class="proposal__body">
+          <button class="v-current">
+            v3 · 14 mag 2026
+            <span class="chev">▾</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- A · Mono pill -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>A · Mono pill</h2>
+          <span class="meta"
+            >Stesso shape (pill) ma Courier mono 12px upper. Niente più
+            mix Inter + Mono.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <button class="v-a">
+            v3 · 14 mag 2026
+            <span class="chev">▾</span>
+          </button>
+          <div class="menu">
+            <span class="label">Versione corrente</span>
+            <button>v3 · 14 mag 2026<span class="check">●</span></button>
+            <span class="label">Storico</span>
+            <button>v2 · 28 apr 2026</button>
+            <button>v1 · 12 apr 2026</button>
+            <div class="sep"></div>
+            <button>Apri Versioni →</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Coerente col Courier dei chip element + del foglio sotto · ✔︎
+          Header "Versione corrente / Storico" + voce "Apri" come da spec
+        </div>
+      </section>
+
+      <!-- B · Eyebrow inline -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>B · Eyebrow inline (ghost)</h2>
+          <span class="meta"
+            >Senza bordo. Eyebrow "VERSIONE" come label, valore in bold accanto.
+            Stesso linguaggio di GIORNI/CONT sul Budget.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <button class="v-b">
+            <span class="eyebrow">Versione</span>
+            <span class="value">v3</span>
+            <span class="value" style="font-weight: 400; color: var(--ink-3)"
+              >· 14 mag 2026</span
+            >
+            <span class="chev">▾</span>
+          </button>
+          <div class="menu">
+            <button>Apri Versioni →</button>
+            <button>Confronta versioni…</button>
+            <button>Crea nuova versione…</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Massima leggerezza, sparisce nel viewbar · ✔︎ Allineato con altri
+          settings inline · ✘ Meno "clickable" a colpo d'occhio
+        </div>
+      </section>
+
+      <!-- C · Dot + code -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>C · Dot draft + codice</h2>
+          <span class="meta"
+            >Il dot bianco rappresenta il "colore draft" (Bianco /
+            Azzurro / Rosa per le revisioni industry). Versione + data.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <button class="v-c">
+            <span class="dot"></span>
+            <span class="code">V3</span>
+            <span class="date">· 14 mag 2026</span>
+          </button>
+          <div class="menu">
+            <span class="label">Colore draft</span>
+            <button>● Bianco (1ª stesura)<span class="check">●</span></button>
+            <button>● Azzurra</button>
+            <button>● Rosa</button>
+            <div class="sep"></div>
+            <button>Apri Versioni →</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Fonde DraftMetaBadge + VersionTrigger in un singolo controllo →
+          meno cose nel viewbar · ✔︎ Industry standard (revision colors) · ✘
+          Concept-heavy: serve un'icona "colore" non solo dot
+        </div>
+      </section>
+
+      <!-- D · Plain text -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>D · Plain text trigger</h2>
+          <span class="meta"
+            >Nessun bordo, nessun background. Solo testo cliccabile. Lo stile
+            "underline anchor".</span
+          >
+        </div>
+        <div class="proposal__body">
+          <button class="v-d">
+            v3 · 14 mag 2026
+            <span class="chev">▾</span>
+          </button>
+          <div class="menu">
+            <button>Apri Versioni →</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Zero peso visivo · ✘ Anche zero affordance — molti utenti non
+          cliccano roba che non ha forma di bottone
+        </div>
+      </section>
+
+      <!-- E · Icon + code -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>E · Icona + codice compatto</h2>
+          <span class="meta"
+            >Solo "V3" + icona "history". Data nel popover. Il più
+            compatto.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <button class="v-e">
+            <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M2.5 8a5.5 5.5 0 109.4-3.9" />
+              <path d="M2.5 3v3h3" />
+            </svg>
+            V3
+            <span class="chev">▾</span>
+          </button>
+          <div class="menu">
+            <span class="label">v3 · 14 mag 2026</span>
+            <button>Apri Versioni →</button>
+            <button>Crea nuova versione…</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Risparmia ~80px nel viewbar · ✘ Senza data visibile, fuori contesto
+        </div>
+      </section>
+
+      <!-- F · Two-line stack -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>F · Stack verticale (code + date)</h2>
+          <span class="meta"
+            >Due righe: codice grande in alto, data piccola sotto. Più
+            informativo a colpo d'occhio.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <button class="v-f">
+            <span class="stack">
+              <b>V3 · BIANCO</b>
+              <i>14 maggio 2026</i>
+            </span>
+            <span class="chev">▾</span>
+          </button>
+          <div class="menu">
+            <button>Apri Versioni →</button>
+            <button>Cambia colore draft…</button>
+            <button>Confronta versioni…</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Più info, sostituisce anche DraftMetaBadge accanto · ✘ Più alto
+          (rompe l'allineamento a riga con i chip element)
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <hr />
+      <p>
+        <b>Raccomandazione</b>: <b>A</b> per consistency immediata (stesso shape
+        di oggi, solo font swap a mono → pochissimo lavoro). <b>C</b> se vuoi
+        accorpare DraftMetaBadge + VersionTrigger in un controllo unico (il viewbar
+        guadagna spazio e diventa più "industry"). <b>F</b> se l'informazione
+        deve essere immediatamente leggibile (utile su breakdown/budget dove
+        l'utente non scrive). Sconsiglio <b>D</b> e <b>E</b> per la stessa
+        ragione (poca affordance / poca info).
+      </p>
+    </footer>
+  </body>
+</html>
