@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project Overview · A · Industry Typewriter</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,400&family=Inter:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #14110d;
+        --surface: #1c1813;
+        --surface-raised: #221d17;
+        --surface-hover: #29241d;
+        --line: #34302a;
+        --line-soft: #2a261f;
+        --ink-1: #ece5d7;
+        --ink-2: #c7c0b1;
+        --ink-3: #908a7d;
+        --ink-4: #66615a;
+        --ink-5: #443f3a;
+        --clay: #d57a4a;
+        --clay-soft: #3a2418;
+        --leaf: #9cb072;
+        --leaf-soft: #243018;
+        --rose: #c9755e;
+        --rose-soft: #3a201a;
+
+        --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+        --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 48px; --space-12: 64px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", "Courier New", monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink-1); font-family: var(--font-sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      ::selection { background: var(--clay-soft); color: var(--ink-1); }
+
+      /* ─── TOP BAR ─── */
+      .topbar { height: 44px; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 var(--space-6); gap: var(--space-5); background: var(--bg); position: sticky; top: 0; z-index: 10; }
+      .topbar .brand { font-family: var(--font-display); font-style: italic; font-size: 16px; color: var(--ink-1); }
+      .topbar nav { display: flex; gap: var(--space-1); margin-left: var(--space-5); }
+      .topbar nav a { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 6px 10px; border-radius: var(--radius-sm); text-decoration: none; }
+      .topbar nav a.active { color: var(--ink-1); background: var(--surface-raised); }
+      .topbar .spacer { flex: 1; }
+      .topbar .user { width: 28px; height: 28px; border-radius: 50%; background: var(--clay-soft); color: var(--clay); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+
+      /* ─── PAGE ─── */
+      .page { max-width: 1080px; margin: 0 auto; padding: var(--space-10) var(--space-6) var(--space-12); }
+
+      /* ─── BREADCRUMB ─── */
+      .crumb { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); margin-bottom: var(--space-5); }
+      .crumb a { color: var(--ink-3); text-decoration: none; }
+      .crumb .sep { margin: 0 var(--space-2); color: var(--ink-5); }
+
+      /* ─── HERO ─── */
+      .hero { display: flex; align-items: flex-start; gap: var(--space-8); margin-bottom: var(--space-8); padding-bottom: var(--space-8); border-bottom: 1px solid var(--line-soft); }
+      .hero-main { flex: 1; min-width: 0; }
+      .hero-eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+      .hero-eyebrow .dot { color: var(--ink-5); }
+      .hero-eyebrow .version { color: var(--clay); }
+      .hero-title { font-family: var(--font-display); font-weight: 500; font-size: 56px; line-height: 1.05; letter-spacing: -.02em; margin: 0 0 var(--space-4); color: var(--ink-1); }
+      .hero-title .em { font-style: italic; font-weight: 400; color: var(--ink-2); }
+      .hero-tagline { font-family: var(--font-display); font-style: italic; font-size: 18px; color: var(--ink-3); max-width: 56ch; margin: 0; }
+
+      .hero-actions { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-end; }
+      .btn-primary { display: inline-flex; align-items: center; gap: var(--space-2); padding: 10px 18px; background: var(--clay); color: #1a120a; border-radius: var(--radius-md); font-weight: 600; font-size: 13px; letter-spacing: .02em; }
+      .btn-primary:hover { background: #e08a5a; }
+      .btn-primary .arrow { font-family: var(--font-mono); }
+      .btn-ghost { display: inline-flex; align-items: center; gap: var(--space-2); padding: 8px 12px; color: var(--ink-3); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+      .btn-ghost:hover { color: var(--ink-1); background: var(--surface); }
+      .kebab { display: flex; gap: var(--space-1); }
+
+      /* ─── KPI STRIP ─── */
+      .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); margin-bottom: var(--space-8); }
+      .kpi { padding: var(--space-5) var(--space-4); border-right: 1px solid var(--line-soft); }
+      .kpi:last-child { border-right: 0; }
+      .kpi-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4); margin-bottom: var(--space-2); }
+      .kpi-value { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+      .kpi-unit { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); margin-left: 2px; font-weight: 400; }
+      .kpi-delta { font-family: var(--font-mono); font-size: 10px; color: var(--leaf); margin-top: 2px; }
+
+      /* ─── PIPELINE ─── */
+      .pipeline { margin-bottom: var(--space-8); }
+      .pipeline-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4); margin-bottom: var(--space-3); }
+      .pipeline-track { display: flex; align-items: center; gap: 0; }
+      .pipe-node { display: flex; align-items: center; gap: var(--space-2); padding: 6px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
+      .pipe-node.done { color: var(--ink-2); }
+      .pipe-node.done .mark { color: var(--leaf); }
+      .pipe-node.current { background: var(--clay-soft); color: var(--clay); }
+      .pipe-node.todo { color: var(--ink-4); }
+      .pipe-node.todo .mark { color: var(--ink-5); }
+      .pipe-node:hover { background: var(--surface); }
+      .pipe-line { flex: 1; height: 1px; background: var(--line); min-width: 12px; }
+      .pipe-line.done { background: var(--leaf); opacity: .5; }
+
+      /* ─── CESARE BANNER ─── */
+      .cesare { display: flex; gap: var(--space-4); padding: var(--space-4) var(--space-5); background: linear-gradient(180deg, var(--leaf-soft) 0%, transparent 100%); border: 1px solid rgba(156, 176, 114, .25); border-radius: var(--radius-md); margin-bottom: var(--space-8); align-items: flex-start; }
+      .cesare-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--leaf-soft); color: var(--leaf); display: grid; place-items: center; font-family: var(--font-display); font-style: italic; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+      .cesare-body { flex: 1; }
+      .cesare-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--leaf); margin-bottom: var(--space-1); }
+      .cesare-msg { font-family: var(--font-display); font-style: italic; font-size: 15px; color: var(--ink-1); line-height: 1.5; margin: 0; }
+      .cesare-msg b { font-style: normal; font-weight: 500; color: var(--ink-1); }
+      .cesare-actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+      .cesare-cta { padding: 6px 12px; background: var(--leaf); color: #14110d; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+      .cesare-dismiss { padding: 6px 12px; color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+      .cesare-dismiss:hover { color: var(--ink-1); }
+
+      /* ─── LAYOUT 2-col ─── */
+      .layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: var(--space-8); }
+
+      /* ─── SECTION ─── */
+      .sec { margin-bottom: var(--space-10); }
+      .sec-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-5); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+      .sec-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+      .sec-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
+
+      /* ─── NARRATIVE GRID ─── */
+      .doc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+      .doc-card { padding: var(--space-4) var(--space-5); background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-md); cursor: pointer; transition: background 120ms, border-color 120ms; text-align: left; display: block; width: 100%; }
+      .doc-card:hover { background: var(--surface-raised); border-color: var(--line); }
+      .doc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+      .doc-eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); }
+      .doc-status { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; }
+      .doc-status.done { color: var(--leaf); background: var(--leaf-soft); }
+      .doc-status.draft { color: var(--clay); background: var(--clay-soft); }
+      .doc-title { font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--ink-1); margin: 0 0 var(--space-2); }
+      .doc-preview { font-size: 13px; color: var(--ink-3); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0 0 var(--space-3); }
+      .doc-foot { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: .04em; }
+
+      /* ─── SCREENPLAY BLOCK ─── */
+      .screen-block { display: grid; grid-template-columns: 1fr auto; gap: var(--space-6); padding: var(--space-6); background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-md); align-items: center; }
+      .screen-meta { display: flex; flex-direction: column; gap: var(--space-2); }
+      .screen-title-row { display: flex; align-items: baseline; gap: var(--space-3); }
+      .screen-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--ink-1); margin: 0; }
+      .screen-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; background: var(--rose-soft); color: var(--rose); border-radius: 999px; }
+      .screen-stats { display: flex; gap: var(--space-5); font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+      .screen-stats .num { color: var(--ink-1); font-weight: 700; }
+      .screen-foot { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
+
+      /* ─── PRODUCTION CARDS ─── */
+      .prod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+      .prod-card { padding: var(--space-5); background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-md); cursor: pointer; text-align: left; display: block; transition: background 120ms, border-color 120ms; }
+      .prod-card:hover { background: var(--surface-raised); border-color: var(--line); }
+      .prod-eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: var(--space-3); }
+      .prod-value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: var(--ink-1); margin-bottom: var(--space-1); font-variant-numeric: tabular-nums; }
+      .prod-value .unit { font-size: 13px; color: var(--ink-3); font-weight: 400; margin-left: 4px; }
+      .prod-sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); margin-bottom: var(--space-4); }
+      .prod-bar { height: 3px; background: var(--line-soft); border-radius: 999px; overflow: hidden; margin-bottom: var(--space-2); }
+      .prod-bar-fill { height: 100%; background: var(--clay); }
+      .prod-progress { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: .04em; }
+
+      /* ─── SIDE: ACTIVITY ─── */
+      .side .sec-head { padding-bottom: var(--space-2); margin-bottom: var(--space-3); }
+      .activity { display: flex; flex-direction: column; }
+      .act-item { display: flex; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px dashed var(--line-soft); }
+      .act-item:last-child { border-bottom: 0; }
+      .act-time { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: .04em; min-width: 48px; padding-top: 2px; }
+      .act-body { flex: 1; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+      .act-body b { color: var(--ink-1); font-weight: 500; }
+      .act-body .who { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; display: block; margin-top: 2px; }
+
+      /* ─── SIDE: COLLABORATORS ─── */
+      .collab-list { display: flex; flex-direction: column; gap: var(--space-3); }
+      .collab { display: flex; align-items: center; gap: var(--space-3); }
+      .collab-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--clay-soft); color: var(--clay); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+      .collab-avatar.b { background: var(--leaf-soft); color: var(--leaf); }
+      .collab-avatar.c { background: var(--rose-soft); color: var(--rose); }
+      .collab-name { font-size: 13px; color: var(--ink-1); }
+      .collab-role { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: .06em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="brand">Oh Writers</span>
+      <nav>
+        <a href="#" class="active">Progetti</a>
+        <a href="#">Cesare</a>
+        <a href="#">Archivio</a>
+      </nav>
+      <div class="spacer"></div>
+      <div class="user">VN</div>
+    </div>
+
+    <div class="page">
+      <div class="crumb">
+        <a href="#">Progetti</a><span class="sep">/</span><span>Non fa ridere</span>
+      </div>
+
+      <!-- HERO -->
+      <header class="hero">
+        <div class="hero-main">
+          <div class="hero-eyebrow">
+            <span>Cortometraggio</span><span class="dot">·</span>
+            <span>Commedia</span><span class="dot">·</span>
+            <span>Personale</span><span class="dot">·</span>
+            <span class="version">v3 — Salmone</span>
+          </div>
+          <h1 class="hero-title">Non fa <span class="em">ridere</span></h1>
+          <p class="hero-tagline">Un comico in crisi prova a scrivere il pezzo della vita mentre la sua vita gli ride dietro.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn-primary">Continua sceneggiatura <span class="arrow">→</span></button>
+          <div class="kebab">
+            <button class="btn-ghost">Frontespizio</button>
+            <button class="btn-ghost">Impostazioni</button>
+            <button class="btn-ghost">⋯</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- KPI -->
+      <section class="kpis">
+        <div class="kpi"><div class="kpi-label">Pagine</div><div class="kpi-value" data-num>9</div></div>
+        <div class="kpi"><div class="kpi-label">Scene</div><div class="kpi-value" data-num>12</div></div>
+        <div class="kpi"><div class="kpi-label">Personaggi</div><div class="kpi-value" data-num>4</div></div>
+        <div class="kpi"><div class="kpi-label">Location</div><div class="kpi-value" data-num>3</div></div>
+        <div class="kpi"><div class="kpi-label">Durata</div><div class="kpi-value" data-num>9<span class="kpi-unit">min</span></div></div>
+        <div class="kpi"><div class="kpi-label">Ultima modifica</div><div class="kpi-value" style="font-size:14px;line-height:1.8">15 mag · 14:22</div></div>
+      </section>
+
+      <!-- PIPELINE -->
+      <section class="pipeline">
+        <div class="pipeline-label">Pipeline di sviluppo</div>
+        <div class="pipeline-track">
+          <button class="pipe-node done"><span class="mark">●</span> Soggetto</button>
+          <span class="pipe-line done"></span>
+          <button class="pipe-node done"><span class="mark">●</span> Sinossi</button>
+          <span class="pipe-line done"></span>
+          <button class="pipe-node done"><span class="mark">●</span> Scaletta</button>
+          <span class="pipe-line done"></span>
+          <button class="pipe-node done"><span class="mark">●</span> Trattamento</button>
+          <span class="pipe-line"></span>
+          <button class="pipe-node current"><span class="mark">◐</span> Screenplay</button>
+          <span class="pipe-line"></span>
+          <button class="pipe-node todo"><span class="mark">○</span> Breakdown</button>
+          <span class="pipe-line"></span>
+          <button class="pipe-node todo"><span class="mark">○</span> Budget</button>
+          <span class="pipe-line"></span>
+          <button class="pipe-node todo"><span class="mark">○</span> Piano</button>
+        </div>
+      </section>
+
+      <!-- CESARE NEXT STEP -->
+      <aside class="cesare">
+        <div class="cesare-icon">C</div>
+        <div class="cesare-body">
+          <div class="cesare-label">Cesare suggerisce</div>
+          <p class="cesare-msg">Lo screenplay è <b>fermo da 4 giorni</b> a pagina 9. Posso fare una prima passata di spoglio sulle 12 scene esistenti, così quando torni hai già un breakdown grezzo da rivedere.</p>
+          <div class="cesare-actions">
+            <button class="cesare-cta">Avvia spoglio</button>
+            <button class="cesare-dismiss">Più tardi</button>
+            <button class="cesare-dismiss">Non ora</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- LAYOUT 2 col -->
+      <div class="layout">
+        <main>
+
+          <!-- NARRATIVE -->
+          <section class="sec">
+            <div class="sec-head">
+              <h2 class="sec-title">Sviluppo narrativo</h2>
+              <span class="sec-meta">4 / 4 documenti</span>
+            </div>
+            <div class="doc-grid">
+              <button class="doc-card">
+                <div class="doc-head"><span class="doc-eyebrow">Soggetto</span><span class="doc-status done">Completo</span></div>
+                <h3 class="doc-title">Premessa</h3>
+                <p class="doc-preview">Marco, comico stand-up sulla soglia dei quarant'anni, deve scrivere il monologo che potrebbe cambiargli la carriera nella settimana in cui sua madre…</p>
+                <div class="doc-foot">312 parole · 12 mag</div>
+              </button>
+              <button class="doc-card">
+                <div class="doc-head"><span class="doc-eyebrow">Sinossi</span><span class="doc-status done">Completo</span></div>
+                <h3 class="doc-title">Tre atti</h3>
+                <p class="doc-preview">Atto I — Marco prova un nuovo pezzo. Atto II — Sua madre si ammala e lui non riesce più a scrivere. Atto III — Sale sul palco senza testo…</p>
+                <div class="doc-foot">740 parole · 13 mag</div>
+              </button>
+              <button class="doc-card">
+                <div class="doc-head"><span class="doc-eyebrow">Scaletta</span><span class="doc-status done">Completo</span></div>
+                <h3 class="doc-title">14 beat</h3>
+                <p class="doc-preview">1. Marco al club, prova un bit nuovo, silenzio. 2. Chiama la madre, non risponde. 3. Va in ospedale. 4. Tenta di scrivere in sala d'attesa…</p>
+                <div class="doc-foot">14 punti · 14 mag</div>
+              </button>
+              <button class="doc-card">
+                <div class="doc-head"><span class="doc-eyebrow">Trattamento</span><span class="doc-status draft">Bozza</span></div>
+                <h3 class="doc-title">Stesura</h3>
+                <p class="doc-preview">Il film si apre su Marco di spalle, in un camerino che sembra una stanza d'ospedale. Le luci del palco arrivano dal corridoio come quelle…</p>
+                <div class="doc-foot">2 140 parole · 14 mag</div>
+              </button>
+            </div>
+          </section>
+
+          <!-- SCREENPLAY -->
+          <section class="sec">
+            <div class="sec-head">
+              <h2 class="sec-title">Sceneggiatura</h2>
+              <span class="sec-meta">Versione attuale · v3 Salmone</span>
+            </div>
+            <div class="screen-block">
+              <div class="screen-meta">
+                <div class="screen-title-row">
+                  <h3 class="screen-title">Non fa ridere — bozza</h3>
+                  <span class="screen-badge">Salmone</span>
+                </div>
+                <div class="screen-stats">
+                  <span><span class="num" data-num>9</span> pagine</span>
+                  <span><span class="num" data-num>12</span> scene</span>
+                  <span><span class="num" data-num>87</span> dialoghi</span>
+                </div>
+                <div class="screen-foot">Aggiornata 15 mag · 14:22 · Salvataggio automatico attivo</div>
+              </div>
+              <button class="btn-primary">Apri editor →</button>
+            </div>
+          </section>
+
+          <!-- PRODUCTION -->
+          <section class="sec">
+            <div class="sec-head">
+              <h2 class="sec-title">Produzione</h2>
+              <span class="sec-meta">Dati provvisori dalla bozza corrente</span>
+            </div>
+            <div class="prod-grid">
+              <button class="prod-card">
+                <div class="prod-eyebrow">Breakdown</div>
+                <div class="prod-value" data-num>0<span class="unit">/ 12 scene</span></div>
+                <div class="prod-sub">Nessuna scena spogliata</div>
+                <div class="prod-bar"><div class="prod-bar-fill" style="width:0%"></div></div>
+                <div class="prod-progress">0% — Avvia spoglio</div>
+              </button>
+              <button class="prod-card">
+                <div class="prod-eyebrow">Budget</div>
+                <div class="prod-value" data-num>—</div>
+                <div class="prod-sub">Da generare dopo breakdown</div>
+                <div class="prod-bar"><div class="prod-bar-fill" style="width:0%"></div></div>
+                <div class="prod-progress">In attesa</div>
+              </button>
+              <button class="prod-card">
+                <div class="prod-eyebrow">Piano di ripresa</div>
+                <div class="prod-value" data-num>—</div>
+                <div class="prod-sub">Da generare dopo breakdown</div>
+                <div class="prod-bar"><div class="prod-bar-fill" style="width:0%"></div></div>
+                <div class="prod-progress">In attesa</div>
+              </button>
+            </div>
+          </section>
+
+        </main>
+
+        <aside class="side">
+          <!-- ACTIVITY -->
+          <section class="sec">
+            <div class="sec-head"><h2 class="sec-title">Attività</h2></div>
+            <div class="activity">
+              <div class="act-item">
+                <div class="act-time">14:22</div>
+                <div class="act-body"><b>Sceneggiatura</b> aggiornata — scene 8–9 riscritte<span class="who">Valerio</span></div>
+              </div>
+              <div class="act-item">
+                <div class="act-time">Ieri</div>
+                <div class="act-body"><b>Trattamento</b> aggiornato — atto III rifinito<span class="who">Valerio</span></div>
+              </div>
+              <div class="act-item">
+                <div class="act-time">11 mag</div>
+                <div class="act-body"><b>Cesare</b> ha suggerito 3 rifiniture, 2 accettate<span class="who">AI</span></div>
+              </div>
+              <div class="act-item">
+                <div class="act-time">10 mag</div>
+                <div class="act-body"><b>Scaletta</b> creata — 14 beat<span class="who">Valerio</span></div>
+              </div>
+              <div class="act-item">
+                <div class="act-time">8 mag</div>
+                <div class="act-body">Progetto creato<span class="who">Valerio</span></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- COLLABORATORS -->
+          <section class="sec">
+            <div class="sec-head"><h2 class="sec-title">Persone</h2></div>
+            <div class="collab-list">
+              <div class="collab">
+                <div class="collab-avatar">VN</div>
+                <div>
+                  <div class="collab-name">Valerio Narcisi</div>
+                  <div class="collab-role">Autore · Owner</div>
+                </div>
+              </div>
+              <div class="collab">
+                <div class="collab-avatar b">C</div>
+                <div>
+                  <div class="collab-name">Cesare</div>
+                  <div class="collab-role">AI assistant</div>
+                </div>
+              </div>
+              <div class="collab">
+                <div class="collab-avatar c">+</div>
+                <div>
+                  <div class="collab-name" style="color:var(--ink-3)">Invita collaboratore</div>
+                  <div class="collab-role">Lettore o editor</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </body>
+</html>
