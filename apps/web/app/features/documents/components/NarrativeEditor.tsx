@@ -29,6 +29,7 @@ import {
   toggleHeading,
 } from "../lib/narrative-plugins";
 import { useVersionsDrawer } from "~/features/versions";
+import { useSaveStatePublisher } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
 
@@ -112,6 +113,22 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const isTreatment = type === DocumentTypes.TREATMENT;
   const isReadOnly = !document.canEdit;
 
+  // Track whether the user has actually edited (vs just loaded an empty doc).
+  // We only publish a saveState after the first real edit — otherwise the
+  // TopBar pill would show a stale "Salvato" on an empty page (V7 bug).
+  const [hasEdited, setHasEdited] = useState(content !== document.content);
+  useEffect(() => {
+    if (content !== document.content) setHasEdited(true);
+  }, [content, document.content]);
+
+  const shouldPublishSave = hasEdited && !isReadOnly;
+  const publishedSaveState = shouldPublishSave
+    ? save.isPending || isDirty
+      ? "saving"
+      : "saved"
+    : undefined;
+  useSaveStatePublisher(publishedSaveState);
+
   const plainContent = isSynopsis || isTreatment ? stripHtml(content) : content;
   const charCount = plainContent.length;
   const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
@@ -187,7 +204,10 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     contentFor(DocumentTypes.TREATMENT, treatment).trim().length === 0;
   const exportPdf = useExportNarrativePdf();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const handleExport = () => setIsExportModalOpen(true);
+  const handleExport = () => {
+    if (isVersionsOpen) closeDrawer();
+    setIsExportModalOpen(true);
+  };
   const handleGenerate = ({
     includeTitlePage,
   }: {

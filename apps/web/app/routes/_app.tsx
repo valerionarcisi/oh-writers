@@ -51,10 +51,12 @@ const SECTION_LABELS: Record<string, string> = {
   dashboard: "Progetti",
 };
 
-// Routes where the TopBar should NOT show the SavePill (no editable content).
-// Dashboard and project-home are read-only landing pages — a stale "Salvato"
-// chip there is misleading.
-const NON_EDITABLE_SEGMENTS = ["dashboard"] as const;
+// The SavePill is driven entirely by editor components via
+// `useSaveStatePublisher` (see `features/app-shell/save-state-context.tsx`).
+// `_app.tsx` no longer hardcodes a static "saved" — an empty document, a
+// read-only route, or a not-yet-edited document leaves the context value
+// `undefined` and the pill stays hidden. This avoids a stale "Salvato" chip
+// on routes like /outline, /treatment and /title-page before the user types.
 
 function deriveSectionName(routeId: string, hasProjectId: boolean): string {
   for (const [segment, label] of Object.entries(SECTION_LABELS)) {
@@ -138,13 +140,6 @@ function AppLayout() {
     ? activeSegmentFromRouteId(lastMatch.routeId)
     : "";
 
-  // SavePill is only meaningful on editable sub-routes. Hide it on dashboard
-  // and project home (no editable content there).
-  const isEditableRoute =
-    Boolean(projectId) &&
-    activeSegment !== "" &&
-    !NON_EDITABLE_SEGMENTS.some((s) => lastMatch?.routeId.includes(s));
-
   const { data: projectResult } = useProject(projectId ?? "");
   const projectName = projectResult?.isOk
     ? projectResult.value.title
@@ -165,7 +160,6 @@ function AppLayout() {
       user={user}
       projectName={projectName}
       sectionName={sectionName}
-      saveState={isEditableRoute ? "saved" : undefined}
       sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
       projects={projectsList}
       currentProjectId={projectId}

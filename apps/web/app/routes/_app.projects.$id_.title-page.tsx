@@ -8,6 +8,7 @@ import {
   useTitlePageState,
   useUpdateTitlePageState,
 } from "~/features/projects";
+import { useSaveStatePublisher } from "~/features/app-shell";
 import type { TitlePageState } from "~/features/projects";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import styles from "./_app.projects.$id_.title-page.module.css";
@@ -65,6 +66,16 @@ function TitlePageRouteInner({
   const [local, setLocal] = useState<TitlePageState>(initialState);
   const lastSavedRef = useRef<string>(JSON.stringify(initialState));
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hasEdited, setHasEdited] = useState(false);
+  const isDirty = JSON.stringify(local) !== lastSavedRef.current;
+  // Read-only frontespizio (canEdit=false) never publishes — pill stays
+  // hidden. Editable but untouched also stays hidden until first edit.
+  const publishedSaveState = canEdit && hasEdited
+    ? isDirty
+      ? "saving"
+      : "saved"
+    : undefined;
+  useSaveStatePublisher(publishedSaveState);
 
   useEffect(() => {
     if (!canEdit) return;
@@ -83,6 +94,7 @@ function TitlePageRouteInner({
   }, [local, canEdit]);
 
   const handleDocChange = (doc: Record<string, NonNullable<unknown>>) => {
+    setHasEdited(true);
     setLocal((prev) => ({ ...prev, doc }));
   };
 

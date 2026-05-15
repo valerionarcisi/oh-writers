@@ -271,26 +271,37 @@ export function TopBar({
             data-testid="topbar-section-popover"
           >
             {hasGroupedMenu
-              ? sectionGroups!.map((group, gIdx) => (
-                  <div key={group.label} className={styles.sectionGroup}>
-                    {gIdx > 0 && (
-                      <span
-                        className={styles.sectionDivider}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className={styles.sectionGroupLabel}>
-                      {group.label}
-                    </span>
-                    {group.items.map((s) => (
-                      <SectionMenuItem
-                        key={s.href}
-                        section={s}
-                        onPick={handleSectionPick}
-                      />
-                    ))}
-                  </div>
-                ))
+              ? sectionGroups!.map((group, gIdx) => {
+                  const labelId = `section-group-${gIdx}`;
+                  return (
+                    <div
+                      key={group.label}
+                      className={styles.sectionGroup}
+                      role="group"
+                      aria-labelledby={labelId}
+                    >
+                      {gIdx > 0 && (
+                        <span
+                          className={styles.sectionDivider}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <header
+                        id={labelId}
+                        className={styles.sectionGroupLabel}
+                      >
+                        {group.label}
+                      </header>
+                      {group.items.map((s) => (
+                        <SectionMenuItem
+                          key={s.href}
+                          section={s}
+                          onPick={handleSectionPick}
+                        />
+                      ))}
+                    </div>
+                  );
+                })
               : sections!.map((s) => (
                   <SectionMenuItem
                     key={s.href}

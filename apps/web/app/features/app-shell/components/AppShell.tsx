@@ -10,6 +10,7 @@ import type {
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import type { AppUser } from "~/server/context";
+import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -35,12 +36,20 @@ const deriveInitials = (name: string): string =>
     .toUpperCase()
     .slice(0, 2);
 
-export function AppShell({
+export function AppShell(props: AppShellProps) {
+  return (
+    <SaveStateProvider>
+      <AppShellInner {...props} />
+    </SaveStateProvider>
+  );
+}
+
+function AppShellInner({
   user,
   projectName = "",
   sectionName = "",
-  saveState,
-  saveSecondsAgo,
+  saveState: saveStateProp,
+  saveSecondsAgo: saveSecondsAgoProp,
   cesareNoteCount = 0,
   sections,
   sectionGroups,
@@ -49,6 +58,9 @@ export function AppShell({
   onProjectSelect,
   children,
 }: AppShellProps) {
+  const ctxSave = useSaveStateValue();
+  const saveState = ctxSave.state ?? saveStateProp;
+  const saveSecondsAgo = ctxSave.secondsAgo ?? saveSecondsAgoProp;
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
