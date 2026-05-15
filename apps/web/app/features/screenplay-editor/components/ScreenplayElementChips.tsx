@@ -77,7 +77,6 @@ export function ScreenplayElementChips({
           >
             <Pill
               tone={isActive ? "clay" : "neutral"}
-              size="sm"
               className={styles.elementChipPill}
             >
               <span className={styles.chipDot} aria-hidden="true" />

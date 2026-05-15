@@ -110,7 +110,9 @@ function PanelBody({
   return (
     <div className={styles.body}>
       <section className={styles.metrics}>
-        <Metric label="Pagina" value={`${pageCurrent}/${pageTotal}`} />
+        {/* PAGINA rimossa: il totale pagine sta già nel DocStats footer e
+         * la posizione cursore non aggiunge valore al regista/sceneggiatore.
+         * SCENA resta perché contestualizza i suggerimenti Cesare. */}
         <Metric
           label="Scena"
           value={sceneCurrent != null ? `${sceneCurrent}/${sceneTotal}` : "—"}
