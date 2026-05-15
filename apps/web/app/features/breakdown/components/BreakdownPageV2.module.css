@@ -711,3 +711,152 @@
   border-radius: 50%;
   background: var(--cat-color, var(--ds-text-3));
 }
+
+/* Underline popover (replaces 6 ToggleChips) */
+.underlineList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.underlineRow {
+  display: grid;
+  grid-template-columns: 16px 12px 1fr;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 6px var(--ds-space-2);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ds-text);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+  }
+}
+
+.underlineRow input[type="checkbox"] {
+  inline-size: 14px;
+  block-size: 14px;
+  accent-color: var(--cat-color, var(--ds-action));
+  margin: 0;
+}
+
+.underlineDot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--cat-color, var(--ds-text-3));
+}
+
+.underlineLabel {
+  font-family: var(--ds-font-sans);
+}
+
+/* Cesare panel — grouped suggestions */
+.cesareGroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.cesareGroup {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  overflow: hidden;
+}
+
+.cesareGroupAccent {
+  border-color: color-mix(in oklch, var(--cat-color) 38%, var(--ds-line));
+  box-shadow: inset 3px 0 0 var(--cat-color);
+}
+
+.cesareGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-block-end: 1px solid var(--ds-line-soft);
+}
+
+.cesareGroupToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ds-text);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.cesareCaret {
+  display: inline-block;
+  inline-size: 10px;
+  color: var(--ds-text-3);
+  font-size: 10px;
+}
+
+.cesareDot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--cat-color, var(--ds-text-3));
+}
+
+.cesareGroupName {
+  color: var(--ds-text);
+}
+
+.cesareGroupCount {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  color: var(--ds-text-3);
+  font-weight: 400;
+}
+
+.cesareGroupBulk {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.cesareBulkBtn {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px var(--ds-space-2);
+  background: transparent;
+  color: var(--ds-text-3);
+  border: 1px solid var(--ds-line);
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+    outline: none;
+  }
+}
+
+.cesareGroupBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+}

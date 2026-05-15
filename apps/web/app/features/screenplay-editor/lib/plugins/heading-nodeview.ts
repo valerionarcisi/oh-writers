@@ -4,11 +4,11 @@
  * Renders each scene heading as:
  *   <h2.pm-heading data-number data-locked>
  *     <button.scene-number.scene-number-left>   ← click → edit
+ *     <button.scene-number-menu-btn>            ← ⋮ actions menu
  *     <div.pm-heading-slots>                    ← contentDOM (prefix + title)
- *     <button.scene-number.scene-number-right>
  *   </h2>
  *
- * Clicking either scene-number button swaps it for an <input>. On Enter / blur
+ * Clicking the scene-number button swaps it for an <input>. On Enter / blur
  * we validate against `^\d+[A-Z]?$`, dispatch a PM transaction that updates
  * `scene_number` + sets `scene_number_locked=true`, and re-render. Escape
  * discards the edit.
@@ -46,7 +46,6 @@ class HeadingNodeView implements NodeView {
   private readonly readOnly: boolean;
 
   private readonly leftBtn: HTMLButtonElement;
-  private readonly rightBtn: HTMLButtonElement;
   private readonly menuBtn: HTMLButtonElement;
   private readonly slots: HTMLElement;
   private input: HTMLInputElement | null = null;
@@ -77,7 +76,6 @@ class HeadingNodeView implements NodeView {
     this.dom.className = "pm-heading";
 
     this.leftBtn = this.createButton("scene-number-left");
-    this.rightBtn = this.createButton("scene-number-right");
     this.menuBtn = this.createMenuButton();
 
     this.slots = document.createElement("div");
@@ -85,9 +83,9 @@ class HeadingNodeView implements NodeView {
     this.contentDOM = this.slots;
 
     if (this.readOnly) {
-      this.dom.append(this.leftBtn, this.slots, this.rightBtn);
+      this.dom.append(this.leftBtn, this.slots);
     } else {
-      this.dom.append(this.leftBtn, this.menuBtn, this.slots, this.rightBtn);
+      this.dom.append(this.leftBtn, this.menuBtn, this.slots);
     }
     this.syncAttrs();
   }
@@ -135,17 +133,13 @@ class HeadingNodeView implements NodeView {
     this.dom.dataset["number"] = n;
     this.dom.dataset["locked"] = String(locked);
     this.leftBtn.textContent = n;
-    this.rightBtn.textContent = n;
     const hide = n.length === 0;
     this.leftBtn.hidden = hide;
-    this.rightBtn.hidden = hide;
     this.leftBtn.classList.toggle("is-locked", locked);
-    this.rightBtn.classList.toggle("is-locked", locked);
     const tooltip = locked
       ? "Numero di scena bloccato: non verrà modificato da “Ricalcola numerazione”. Apri il menu ⋮ per sbloccarlo."
       : "Numero di scena. Clicca per modificarlo; verrà bloccato automaticamente.";
     this.leftBtn.title = tooltip;
-    this.rightBtn.title = tooltip;
   }
 
   private startEdit() {
@@ -397,8 +391,7 @@ class HeadingNodeView implements NodeView {
     const t = event.target as HTMLElement | null;
     if (!t) return false;
     if (t === this.input) return true;
-    if (t === this.leftBtn || t === this.rightBtn || t === this.menuBtn)
-      return true;
+    if (t === this.leftBtn || t === this.menuBtn) return true;
     if (this.menu && this.menu.contains(t)) return true;
     return false;
   }

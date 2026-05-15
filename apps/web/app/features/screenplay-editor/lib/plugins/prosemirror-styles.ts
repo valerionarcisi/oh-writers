@@ -178,10 +178,6 @@ export const injectProseMirrorStyles = (): void => {
       left: -1in;
     }
 
-    .pm-heading .scene-number-right {
-      right: -0.75in;
-    }
-
     /* Inline edit input — replaces the left button while editing. */
     .pm-heading .scene-number-input {
       position: absolute;

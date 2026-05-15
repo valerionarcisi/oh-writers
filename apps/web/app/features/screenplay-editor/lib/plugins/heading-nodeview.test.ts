@@ -41,13 +41,13 @@ describe("createHeadingNodeView", () => {
     expect(trigger).toBeNull();
   });
 
-  it("still renders scene number badges in readOnly mode", () => {
+  it("renders a single scene number badge (no duplicate)", () => {
     const nv = createHeadingNodeView(mockNode, mockView, getPos, {
       readOnly: true,
     });
     const badges = (nv.dom as HTMLElement).querySelectorAll(
       '[data-testid="scene-number-edit-trigger"]',
     );
-    expect(badges.length).toBe(2);
+    expect(badges.length).toBe(1);
   });
 });

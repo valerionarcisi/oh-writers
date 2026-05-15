@@ -12,7 +12,6 @@ import {
   MarginNote,
   Popover,
   Tabs,
-  ToggleChip,
   VersionTrigger,
   Viewbar,
   ViewbarSep,
@@ -142,6 +141,12 @@ function BreakdownPageV2Content({ projectId }: Props) {
   const [underline, setUnderline] = useState(initialUnderlineState);
   const toggleUnderline = (key: UnderlineKey) =>
     setUnderline((s) => ({ ...s, [key]: !s[key] }));
+  const [underlineOpen, setUnderlineOpen] = useState(false);
+  const underlineWrapRef = useRef<HTMLDivElement>(null);
+  const underlineActiveCount = UNDERLINE_CHIPS.reduce(
+    (n, c) => (underline[c.key] ? n + 1 : n),
+    0,
+  );
 
   const [panelTab, setPanelTab] = useState<PanelTab>("categories");
   const [viewTab, setViewTab] = useState<ViewTab>("per-scene");
@@ -455,17 +460,61 @@ function BreakdownPageV2Content({ projectId }: Props) {
           <ViewbarSep />
           {viewTab === "per-scene" && (
             <div className={styles.viewbarCenter}>
-              <span className={styles.viewbarLabel}>Sottolinea:</span>
-              {UNDERLINE_CHIPS.map((chip) => (
-                <ToggleChip
-                  key={chip.key}
-                  label={chip.label}
-                  isOn={underline[chip.key]}
-                  onToggle={() => toggleUnderline(chip.key)}
-                  categoryColor={chip.color}
-                  aria-label={`Mostra sottolineature ${chip.label}`}
-                />
-              ))}
+              <div className={styles.indiceWrap} ref={underlineWrapRef}>
+                <button
+                  type="button"
+                  className={styles.pillBtn}
+                  aria-haspopup="dialog"
+                  aria-expanded={underlineOpen}
+                  onClick={() => setUnderlineOpen((o) => !o)}
+                  data-testid="breakdown-underline-trigger"
+                >
+                  Sottolinea
+                  <span className={styles.badgeCount} data-num>
+                    {underlineActiveCount}
+                  </span>
+                  ▾
+                </button>
+
+                <Popover
+                  isOpen={underlineOpen}
+                  onClose={() => setUnderlineOpen(false)}
+                  placement="bottom-center"
+                  width={240}
+                >
+                  <div
+                    className={styles.underlineList}
+                    role="group"
+                    aria-label="Categorie sottolineate"
+                  >
+                    {UNDERLINE_CHIPS.map((chip) => {
+                      const isOn = underline[chip.key];
+                      return (
+                        <label
+                          key={chip.key}
+                          className={styles.underlineRow}
+                          // @ts-expect-error CSS custom property
+                          style={{ "--cat-color": chip.color }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isOn}
+                            onChange={() => toggleUnderline(chip.key)}
+                            aria-label={`Mostra sottolineature ${chip.label}`}
+                          />
+                          <span
+                            className={styles.underlineDot}
+                            aria-hidden="true"
+                          />
+                          <span className={styles.underlineLabel}>
+                            {chip.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </Popover>
+              </div>
             </div>
           )}
           {viewTab !== "per-scene" && <div className={styles.viewbarCenter} />}
@@ -569,32 +618,6 @@ function BreakdownPageV2Content({ projectId }: Props) {
           </div>
         </Viewbar>
       </div>
-
-      {/* ─── SCENE EYEBROW + META ─── */}
-      {viewTab === "per-scene" && activeScene && (
-        <section className={styles.sceneBar}>
-          <p className={styles.eyebrow}>
-            <span className={styles.sceneNum}>
-              SCENA {activeScene.fountainNumber}
-            </span>{" "}
-            · {formatHeading(activeScene)} · PAG. {activeSceneIdx} /{" "}
-            {totalScenes}
-          </p>
-          <div className={styles.meta}>
-            <span>
-              <b data-num>{sceneOccurrences.length}</b> elementi
-            </span>
-            {pendingCount > 0 && (
-              <>
-                <span>·</span>
-                <span className={styles.metaPending} data-num>
-                  {pendingCount} da confermare
-                </span>
-              </>
-            )}
-          </div>
-        </section>
-      )}
 
       {autoSpoglio.isPending && (
         <div
@@ -1040,7 +1063,39 @@ function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
   );
 }
 
+// Category ordering inside the Cesare panel — Props block surfaces first
+// because production design is the column the team consults most after Cast.
+const CESARE_CATEGORY_ORDER: ReadonlyArray<BreakdownCategory> = [
+  "props",
+  "cast",
+  "locations",
+  "set_dress",
+  "wardrobe",
+  "makeup",
+  "vfx",
+  "sfx",
+  "sound",
+  "vehicles",
+  "extras",
+  "stunts",
+  "animals",
+  "atmosphere",
+  "equipment",
+];
+
 function CesarePanel({ suggestions, onAccept, onIgnore }: CesarePanelProps) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const grouped = useMemo(() => {
+    const map = new Map<BreakdownCategory, SceneOccurrenceWithElement[]>();
+    for (const s of suggestions) {
+      const arr = map.get(s.element.category) ?? [];
+      arr.push(s);
+      map.set(s.element.category, arr);
+    }
+    return map;
+  }, [suggestions]);
+
   if (suggestions.length === 0) {
     return (
       <p className={styles.notesEmpty}>
@@ -1048,17 +1103,92 @@ function CesarePanel({ suggestions, onAccept, onIgnore }: CesarePanelProps) {
       </p>
     );
   }
+
+  const visibleCats = CESARE_CATEGORY_ORDER.filter((c) => grouped.has(c));
+
   return (
-    <div className={styles.notesList}>
-      {suggestions.map((s) => (
-        <MarginNote
-          key={s.occurrence.id}
-          kind="dramaturg"
-          text={`Suggerimento: aggiungere ${CATEGORY_META[s.element.category].labelIt.toLowerCase()} «${s.element.name}»`}
-          onAccept={() => onAccept(s.occurrence.id)}
-          onIgnore={() => onIgnore(s.occurrence.id)}
-        />
-      ))}
+    <div className={styles.cesareGroups}>
+      {visibleCats.map((cat) => {
+        const items = grouped.get(cat) ?? [];
+        const meta = CATEGORY_META[cat];
+        const colorVar = `var(${meta.colorToken.replace("--cat-", "--ds-cat-")})`;
+        const isCollapsed = collapsed[cat] === true;
+        const isProps = cat === "props";
+
+        return (
+          <section
+            key={cat}
+            className={[
+              styles.cesareGroup,
+              isProps ? styles.cesareGroupAccent : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            // @ts-expect-error CSS custom property
+            style={{ "--cat-color": colorVar }}
+            data-testid={`cesare-group-${cat}`}
+          >
+            <header className={styles.cesareGroupHead}>
+              <button
+                type="button"
+                className={styles.cesareGroupToggle}
+                aria-expanded={!isCollapsed}
+                onClick={() =>
+                  setCollapsed((s) => ({ ...s, [cat]: !isCollapsed }))
+                }
+              >
+                <span className={styles.cesareCaret} aria-hidden="true">
+                  {isCollapsed ? "▸" : "▾"}
+                </span>
+                <span className={styles.cesareDot} aria-hidden="true" />
+                <span className={styles.cesareGroupName}>
+                  {meta.labelIt}
+                </span>
+                <span className={styles.cesareGroupCount} data-num>
+                  {items.length}
+                </span>
+              </button>
+              <div className={styles.cesareGroupBulk}>
+                <button
+                  type="button"
+                  className={styles.cesareBulkBtn}
+                  onClick={() => {
+                    for (const it of items) onAccept(it.occurrence.id);
+                  }}
+                  aria-label={`Accetta tutti i suggerimenti ${meta.labelIt}`}
+                  data-testid={`cesare-accept-all-${cat}`}
+                >
+                  Accetta tutto
+                </button>
+                <button
+                  type="button"
+                  className={styles.cesareBulkBtn}
+                  onClick={() => {
+                    for (const it of items) onIgnore(it.occurrence.id);
+                  }}
+                  aria-label={`Ignora tutti i suggerimenti ${meta.labelIt}`}
+                  data-testid={`cesare-ignore-all-${cat}`}
+                >
+                  Ignora tutto
+                </button>
+              </div>
+            </header>
+            {!isCollapsed && (
+              <div className={styles.cesareGroupBody}>
+                {items.map((s) => (
+                  <MarginNote
+                    key={s.occurrence.id}
+                    kind="dramaturg"
+                    text={`Suggerimento: aggiungere ${meta.labelIt.toLowerCase()} «${s.element.name}»`}
+                    onAccept={() => onAccept(s.occurrence.id)}
+                    onIgnore={() => onIgnore(s.occurrence.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
