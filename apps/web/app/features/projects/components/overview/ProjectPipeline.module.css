@@ -1,0 +1,97 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.label {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ds-text-mute);
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-1);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.node {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 6px 12px;
+  border-radius: var(--ds-radius-pill);
+  border: 0;
+  background: transparent;
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--ds-text-mute);
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.done {
+  color: var(--ds-text-2);
+}
+
+.done .mark {
+  color: var(--ds-success);
+}
+
+.current {
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+}
+
+.todo .mark {
+  color: var(--ds-text-faint);
+}
+
+.mark {
+  font-size: 12px;
+}
+
+.line {
+  flex: 1 1 auto;
+  block-size: 1px;
+  background: var(--ds-line);
+  min-inline-size: 12px;
+  margin-inline: 4px;
+}
+
+.lineDone {
+  background: var(--ds-success);
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node {
+    transition: none;
+  }
+}

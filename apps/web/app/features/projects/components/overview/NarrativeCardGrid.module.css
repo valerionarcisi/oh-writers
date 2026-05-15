@@ -1,0 +1,126 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-block-end: var(--ds-space-3);
+  border-block-end: 1px solid var(--ds-line-soft);
+}
+
+.title {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+  margin: 0;
+}
+
+.meta {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-mute);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--ds-space-3);
+}
+
+.card {
+  text-align: start;
+  inline-size: 100%;
+  padding: var(--ds-space-4) var(--ds-space-5);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line-soft);
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    border-color: var(--ds-line);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eyebrow {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ds-text-mute);
+}
+
+.status {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--ds-radius-pill);
+}
+
+.statusDone {
+  color: var(--ds-success);
+  background: var(--ds-success-soft);
+}
+
+.statusDraft {
+  color: var(--ds-warning);
+  background: var(--ds-warning-soft);
+}
+
+.cardTitle {
+  font-family: var(--ds-font-display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ds-text);
+  margin: 0;
+}
+
+.preview {
+  font-size: 13px;
+  color: var(--ds-text-3);
+  line-height: 1.55;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.foot {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  color: var(--ds-text-mute);
+  letter-spacing: 0.04em;
+}
+
+@container (max-width: 700px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

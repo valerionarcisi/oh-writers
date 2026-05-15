@@ -27,6 +27,21 @@ export {
   useDashboardView,
 } from "./hooks/useDashboard";
 export * from "./hooks/useProjects";
+export * from "./hooks/useProjectOverview";
+export type {
+  ProjectOverview,
+  DocumentSummary,
+  ScreenplaySummary,
+  BreakdownSummary,
+  BudgetSummary,
+  ScheduleSummary,
+  KpiSummary,
+  ActivityItem,
+  ActivityKind,
+  CollaboratorEntry,
+  NextStep,
+} from "./server/project-overview.server";
+export { ProjectOverviewPage } from "./components/overview/ProjectOverviewPage";
 export * from "./hooks/useTitlePage";
 export * from "./hooks/useTitlePageState";
 export * from "./projects.errors";
