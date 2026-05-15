@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Viewbar, ViewbarSep, FloatingDock } from "@oh-writers/ui";
+import { Viewbar, ViewbarSep, FloatingDock, VersionTrigger } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
   scheduleQueryOptions,
@@ -205,9 +205,13 @@ export function SchedulePageV2({ projectId }: SchedulePageV2Props) {
             Tutte le giornate ▾
           </button>
         )}
-        <button type="button" className={styles.filter} aria-haspopup="menu">
-          {versionLabel} ▾
-        </button>
+        <VersionTrigger
+          variant="pill"
+          versionLabel={versionLabel}
+          onClick={() => {
+            /* TODO Spec 12d: wire schedule version scope */
+          }}
+        />
       </Viewbar>
 
       <main className={styles.main} id="main">

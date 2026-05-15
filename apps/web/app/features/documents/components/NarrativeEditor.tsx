@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
-import { FloatingDock } from "@oh-writers/ui";
+import { DocStats, FloatingDock } from "@oh-writers/ui";
+import type { DocStat } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -116,6 +117,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
   const pageEstimate =
     isSynopsis || isTreatment ? estimatePages(plainContent) : 0;
+  const outlineSceneCount = isOutline
+    ? parseOutline(content).acts.reduce(
+        (total, act) =>
+          total +
+          act.sequences.reduce((s, seq) => s + seq.scenes.length, 0),
+        0,
+      )
+    : 0;
+  const outlineWordCount = isOutline ? countWords(stripHtml(content)) : 0;
 
   // When the active version changes (e.g. after switchToVersion), reload content
   // from the freshly-fetched document. We key on currentVersionId rather than
@@ -389,12 +399,32 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           className={styles.stickyFooter}
           data-testid="narrative-counters-footer"
         >
-          <span data-testid="char-counter" className={styles.counter}>
-            {charCount} characters
-          </span>
-          <span data-testid="page-counter" className={styles.counter}>
-            ~{pageEstimate} {pageEstimate === 1 ? "page" : "pages"}
-          </span>
+          <DocStats
+            stats={
+              (isSynopsis
+                ? [
+                    { kind: "chars", value: charCount },
+                    { kind: "pages", value: pageEstimate, approx: true },
+                  ]
+                : [
+                    { kind: "words", value: countWords(plainContent) },
+                    { kind: "pages", value: pageEstimate, approx: true },
+                  ]) satisfies ReadonlyArray<DocStat>
+            }
+          />
+        </div>
+      )}
+      {isOutline && (
+        <div
+          className={styles.stickyFooter}
+          data-testid="narrative-counters-footer"
+        >
+          <DocStats
+            stats={[
+              { kind: "scenes", value: outlineSceneCount },
+              { kind: "words", value: outlineWordCount },
+            ]}
+          />
         </div>
       )}
 

@@ -8,7 +8,7 @@ import {
 } from "react";
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
-import { FloatingDock } from "@oh-writers/ui";
+import { DocStats, FloatingDock } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
 import {
@@ -678,12 +678,12 @@ export const ScreenplayEditor = forwardRef<
           className={styles.stickyFooter}
           data-testid="screenplay-counters-footer"
         >
-          <span data-testid="page-indicator" className={styles.counter}>
-            page {currentPage}/{totalPages}
-          </span>
-          <span data-testid="scene-indicator" className={styles.counter}>
-            scene {currentSceneIndex ?? "—"}/{totalScenes}
-          </span>
+          <DocStats
+            stats={[
+              { kind: "scenes", value: totalScenes },
+              { kind: "pages", value: totalPages },
+            ]}
+          />
         </div>
       )}
       {exportFormat && (
@@ -723,10 +723,6 @@ export const ScreenplayEditor = forwardRef<
               label: "Focus",
               hotkey: "⌃⇧F",
               onClick: () => setFocusMode((prev) => !prev),
-            },
-            {
-              label: "Versioni",
-              onClick: toggleVersionsDrawer,
             },
           ]}
           overflowSlot={

@@ -93,6 +93,14 @@
   margin: 0 0 var(--space-4);
 }
 
+.statsBar {
+  display: flex;
+  justify-content: flex-start;
+  inline-size: 100%;
+  max-inline-size: 720px;
+  padding-block-start: var(--space-3);
+}
+
 /* Status messages */
 .status {
   padding: var(--space-8);

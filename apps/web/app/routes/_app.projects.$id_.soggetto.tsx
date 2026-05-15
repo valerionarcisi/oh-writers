@@ -1,10 +1,11 @@
 // IT is the default runtime language (Spec 04f). Hook up the shared i18n
 // layer later to surface English copy for non-IT users.
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { FloatingDock } from "@oh-writers/ui";
+import { DocStats, FloatingDock } from "@oh-writers/ui";
+import { toCartelle } from "~/features/documents/lib/cartelle-counter";
 import {
   ExportPdfModal,
   ExportSiaeModal,
@@ -149,6 +150,15 @@ function SoggettoPageReady({
 
   const canEdit = soggettoDoc.canEdit && loglineDoc.canEdit;
 
+  const soggettoStats = useMemo(() => {
+    const plain = soggettoContent.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+    const chars = plain.length;
+    return [
+      { kind: "cartelle" as const, value: toCartelle(chars) },
+      { kind: "chars" as const, value: chars },
+    ];
+  }, [soggettoContent]);
+
   const handleExport = (opts: { format: "pdf" | "docx" }) => {
     if (opts.format !== "docx") return;
     exportDocx.mutate(
@@ -191,8 +201,12 @@ function SoggettoPageReady({
             onChange={setSoggettoContent}
             canEdit={canEdit}
             embedded
+            hideCounter
             testId="subject-editor"
           />
+        </div>
+        <div className={styles.statsBar}>
+          <DocStats stats={soggettoStats} />
         </div>
       </div>
 

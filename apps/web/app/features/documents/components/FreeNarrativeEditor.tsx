@@ -13,6 +13,9 @@ export interface FreeNarrativeEditorProps {
   readonly testId?: string;
   /** When true, renders only the editor + counter with no card wrapper. */
   readonly embedded?: boolean;
+  /** When true, suppresses the internal cartelle/chars counter. Caller is
+   *  expected to render a DocStats at page level instead. */
+  readonly hideCounter?: boolean;
 }
 
 const stripHtmlTags = (html: string): string =>
@@ -27,6 +30,7 @@ export function FreeNarrativeEditor({
   canEdit,
   testId,
   embedded = false,
+  hideCounter = false,
 }: FreeNarrativeEditorProps) {
   const { cartelle, chars } = useMemo(() => {
     const plain = stripHtmlTags(content);
@@ -43,10 +47,12 @@ export function FreeNarrativeEditor({
         readOnly={!canEdit}
         placeholder={PLACEHOLDER}
       />
-      <div className={styles.counter} aria-live="polite">
-        {cartelle} {cartelle === 1 ? "cartella" : "cartelle"} ·{" "}
-        {chars.toLocaleString("it-IT")} caratteri
-      </div>
+      {!hideCounter && (
+        <div className={styles.counter} aria-live="polite">
+          {cartelle} {cartelle === 1 ? "cartella" : "cartelle"} ·{" "}
+          {chars.toLocaleString("it-IT")} caratteri
+        </div>
+      )}
     </>
   );
 

@@ -4,6 +4,7 @@ import {
   ViewbarSep,
   Icon,
   Popover,
+  VersionTrigger,
 } from "@oh-writers/ui";
 import { DraftMetaBadge } from "~/features/projects";
 import styles from "./ScreenplayEditorShell.module.css";
@@ -48,6 +49,11 @@ export type ScreenplayEditorShellProps = {
    *  screenplay+panel layout. When omitted the editor takes the centered
    *  column at the narrower 1040px max width. */
   cesareSide?: ReactNode;
+  /** Opens the Versions drawer. When provided, a `VersionTrigger` pill is
+   *  rendered in the Viewbar right slot. */
+  onOpenVersions?: () => void;
+  /** Optional label shown inside the version pill (e.g. "v3 · 14 mag 2026"). */
+  versionLabel?: string;
 };
 
 export function ScreenplayEditorShell({
@@ -57,6 +63,8 @@ export function ScreenplayEditorShell({
   acts,
   viewbarCenter,
   cesareSide,
+  onOpenVersions,
+  versionLabel,
 }: ScreenplayEditorShellProps) {
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
@@ -204,6 +212,13 @@ export function ScreenplayEditorShell({
             )}
 
             <DraftMetaBadge projectId={projectId} />
+            {onOpenVersions && (
+              <VersionTrigger
+                variant="pill"
+                versionLabel={versionLabel}
+                onClick={onOpenVersions}
+              />
+            )}
           </div>
         </div>
         </Viewbar>

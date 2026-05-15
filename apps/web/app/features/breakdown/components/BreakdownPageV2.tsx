@@ -13,6 +13,7 @@ import {
   Popover,
   Tabs,
   ToggleChip,
+  VersionTrigger,
   Viewbar,
   ViewbarSep,
 } from "@oh-writers/ui";
@@ -558,9 +559,13 @@ function BreakdownPageV2Content({ projectId }: Props) {
               </Popover>
             </div>
 
-            <button type="button" className={styles.pillBtn} disabled>
-              v3 · 14 mag 2026 ▾
-            </button>
+            <VersionTrigger
+              variant="pill"
+              versionLabel="v3 · 14 mag 2026"
+              onClick={() => {
+                /* TODO Spec 12d: wire breakdown version scope */
+              }}
+            />
           </div>
         </Viewbar>
       </div>

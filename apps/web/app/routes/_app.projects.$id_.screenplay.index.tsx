@@ -11,6 +11,7 @@ import {
 } from "~/features/screenplay-editor";
 import type { ElementType } from "~/features/screenplay-editor/lib/fountain-element-detector";
 import { ResultErrorView } from "~/components/ResultErrorView";
+import { useVersionsDrawer } from "~/features/versions";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
@@ -36,6 +37,7 @@ function ScreenplayEditorPage() {
     sceneTotal: 0,
   });
   const editorRef = useRef<ScreenplayEditorHandle>(null);
+  const { open: openVersionsDrawer } = useVersionsDrawer();
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
@@ -45,6 +47,9 @@ function ScreenplayEditorPage() {
       <ScreenplayEditorShell
         title={value.title}
         projectId={id}
+        onOpenVersions={() =>
+          openVersionsDrawer({ kind: "screenplay", screenplayId: value.id })
+        }
         viewbarCenter={
           <ScreenplayElementChips
             currentElement={currentElement}
