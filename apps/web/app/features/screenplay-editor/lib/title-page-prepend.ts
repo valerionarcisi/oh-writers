@@ -23,7 +23,7 @@ export const prependTitlePageToFountain = (
   const lines: string[] = [];
   lines.push(`Title: ${escapeFountainValue(fields.title)}`);
   if (fields.author) {
-    lines.push(`Credit: Written by`);
+    lines.push(`Credit: Scritto da`);
     lines.push(`Author: ${escapeFountainValue(fields.author)}`);
   }
   if (fields.draftDate) {

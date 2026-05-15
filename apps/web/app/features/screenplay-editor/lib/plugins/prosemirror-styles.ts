@@ -110,6 +110,11 @@ export const injectProseMirrorStyles = (): void => {
     .pm-heading-title {
       flex: 1 1 auto;
       min-inline-size: 0;
+      /* A pathologically long token in the title (rare, but possible — e.g.
+       * a location name typed without spaces) must break instead of forcing
+       * the parent grid track wider, otherwise the heading falls back to the
+       * 1-word-per-line layout we explicitly fixed above. */
+      overflow-wrap: anywhere;
     }
 
     /* Visual separator between prefix and title — a non-breaking space injected

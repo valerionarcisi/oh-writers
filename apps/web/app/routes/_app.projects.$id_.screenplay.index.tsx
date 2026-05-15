@@ -62,7 +62,7 @@ function ScreenplayEditorPage() {
 
   return match(result)
     .with({ isOk: true }, ({ value }) => {
-      const cesarePanel = isCesareOn ? (
+      const cesarePanel = (
         <ScreenplayCesarePanel
           projectId={id}
           screenplayId={value.id}
@@ -75,7 +75,18 @@ function ScreenplayEditorPage() {
             editorRef.current?.applyEdit(find, replace) ?? false
           }
         />
-      ) : null;
+      );
+
+      const handleToggleCesare = (next: boolean) => {
+        if (isNarrow) {
+          setIsCesareOn(true);
+          setIsCesareDrawerOpen(next);
+          return;
+        }
+        setIsCesareOn(next);
+      };
+
+      const cesareToggleState = isNarrow ? isCesareDrawerOpen : isCesareOn;
 
       return (
         <>
@@ -91,41 +102,27 @@ function ScreenplayEditorPage() {
                 onSetElement={(el) => editorRef.current?.setElement(el)}
               />
             }
-            cesareSide={isNarrow ? null : cesarePanel}
+            cesareSide={!isNarrow && isCesareOn ? cesarePanel : null}
           >
             <ScreenplayEditor
               ref={editorRef}
               screenplay={value}
-              isCesareOn={isCesareOn}
-              onToggleCesare={(next) => setIsCesareOn(next)}
+              isCesareOn={cesareToggleState}
+              onToggleCesare={handleToggleCesare}
               onCurrentElementChange={setCurrentElement}
               onMetricsChange={setMetrics}
             />
           </ScreenplayEditorShell>
 
-          {isNarrow && isCesareOn && cesarePanel && (
-            <>
-              <button
-                type="button"
-                className={styles.cesareFab}
-                onClick={() => setIsCesareDrawerOpen(true)}
-                aria-label="Apri Cesare"
-                aria-haspopup="dialog"
-                aria-expanded={isCesareDrawerOpen}
-                data-testid="cesare-fab"
-              >
-                <span className={styles.cesareFabDot} aria-hidden />
-                Apri Cesare
-              </button>
-              <Drawer
-                isOpen={isCesareDrawerOpen}
-                onClose={() => setIsCesareDrawerOpen(false)}
-                title="Note di Cesare"
-                width={360}
-              >
-                {cesarePanel}
-              </Drawer>
-            </>
+          {isNarrow && (
+            <Drawer
+              isOpen={isCesareDrawerOpen}
+              onClose={() => setIsCesareDrawerOpen(false)}
+              title="Note di Cesare"
+              width={360}
+            >
+              {cesarePanel}
+            </Drawer>
           )}
         </>
       );

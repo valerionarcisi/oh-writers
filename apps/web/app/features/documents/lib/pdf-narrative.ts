@@ -66,7 +66,7 @@ const writeCoverPage = (
     doc
       .font("Times-Roman")
       .fontSize(12)
-      .text("Written by", { align: "center" })
+      .text("Scritto da", { align: "center" })
       .moveDown(0.5)
       .fontSize(14)
       .text(author, { align: "center" });

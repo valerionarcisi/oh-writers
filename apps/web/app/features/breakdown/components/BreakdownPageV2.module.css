@@ -187,6 +187,12 @@
   min-block-size: 70vh;
   position: relative;
   overflow: hidden;
+  /* In a CSS grid track, a child's default min-inline-size is min-content,
+   * which here is the widest unbreakable token inside the ScriptReader's
+   * ProseMirror content. That can push the heading flex into 1-word-per-line
+   * mode at narrow viewports. Explicit min-inline-size: 0 lets the track
+   * shrink so the heading slots receive their proportional share. */
+  min-inline-size: 0;
 }
 
 /* Element highlight applied to spans inside ScriptReader */

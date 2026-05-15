@@ -53,7 +53,10 @@
 .viewbarCenter {
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* `safe center` falls back to flex-start when the content overflows so the
+   * leading chips are never clipped to the left of the visible area. Plain
+   * `center` places the overflow before the scroll origin, hiding chip 1. */
+  justify-content: safe center;
   gap: var(--ds-space-2);
   min-inline-size: 0;
   flex-wrap: nowrap;

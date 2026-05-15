@@ -25,10 +25,15 @@
 
   /* Below the editorial breakpoint the chips and settings can't fit on a
    * single row without clipping the trailing items (e.g. "Cont. 10%"). Wrap
-   * to a second row and let the spacer collapse so both rows align left. */
+   * to a second row and let the spacer collapse so both rows align left.
+   * The explicit row-gap prevents the wrapped row from butting against the
+   * hero's eyebrow below — at ~756px the version pill on the second row was
+   * reading as if glued to "TOTALE STIMATO". */
   @media (max-width: 900px) {
     flex-wrap: wrap;
     overflow-x: visible;
+    row-gap: var(--ds-space-2);
+    padding-block-end: var(--ds-space-3);
   }
 }
 

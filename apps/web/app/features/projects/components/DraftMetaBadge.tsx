@@ -19,8 +19,8 @@ export function DraftMetaBadge({ projectId }: DraftMetaBadgeProps) {
 
       const colorLabel = draftColor
         ? DRAFT_COLOR_LABEL[draftColor]
-        : "No color";
-      const title = `Draft ${colorLabel}${draftDate ? ` — ${draftDate}` : ""} · managed in Versions on the screenplay`;
+        : "Senza colore";
+      const title = `Bozza ${colorLabel}${draftDate ? ` — ${draftDate}` : ""} · gestita nelle Versioni della sceneggiatura`;
 
       return (
         <span
