@@ -279,38 +279,37 @@ export const ScreenplayEditor = forwardRef<
       );
       const idx = docText.indexOf(find);
       if (idx < 0) return false;
-      // textBetween joins top-level blocks with "\n". To map a flat index
-      // back to PM positions we walk each top-level block, accumulating its
-      // text length and adding 1 for the separator that precedes every block
-      // after the first.
+      // textBetween inserts the block separator at EVERY block boundary,
+      // including nested ones (scene → heading-slots → prefix/title in
+      // screenplays). Map flat indices back to PM positions by walking
+      // descendants in order: each non-first sibling block contributes one
+      // separator character to the flat text.
       const findEnd = idx + find.length;
       let posStart = -1;
       let posEnd = -1;
       let textCursor = 0;
-      view.state.doc.forEach((block, blockStart) => {
-        if (posEnd >= 0) return;
-        if (blockStart > 0) textCursor += 1;
-        block.descendants((n, relPos) => {
-          if (posEnd >= 0) return false;
-          if (!n.isText) return true;
-          const txt = n.text ?? "";
-          const absStart = blockStart + 1 + relPos;
-          if (
-            posStart < 0 &&
-            textCursor + txt.length > idx &&
-            textCursor <= idx
-          ) {
-            posStart = absStart + (idx - textCursor);
-          }
-          if (
-            textCursor + txt.length >= findEnd &&
-            textCursor <= findEnd
-          ) {
-            posEnd = absStart + (findEnd - textCursor);
-          }
-          textCursor += txt.length;
-          return true;
-        });
+      view.state.doc.descendants((n, pos, _parent, index) => {
+        if (posEnd >= 0) return false;
+        if (n.isBlock && index > 0) {
+          textCursor += 1; // sibling-block separator from textBetween
+        }
+        if (!n.isText) return true;
+        const txt = n.text ?? "";
+        if (
+          posStart < 0 &&
+          textCursor + txt.length > idx &&
+          textCursor <= idx
+        ) {
+          posStart = pos + (idx - textCursor);
+        }
+        if (
+          textCursor + txt.length >= findEnd &&
+          textCursor <= findEnd
+        ) {
+          posEnd = pos + (findEnd - textCursor);
+        }
+        textCursor += txt.length;
+        return true;
       });
       if (posStart < 0 || posEnd < 0) return false;
       const tr = view.state.tr.replaceWith(
