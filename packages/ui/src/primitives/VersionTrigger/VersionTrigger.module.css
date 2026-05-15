@@ -4,26 +4,26 @@
   gap: var(--space-1);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--ds-fg-strong);
+  color: var(--ds-text);
   font-family: inherit;
-  font-size: var(--ds-text-sm);
+  font-size: var(--text-sm);
   cursor: pointer;
   padding: var(--space-1) var(--space-3);
   transition: background 120ms ease, border-color 120ms ease;
 
   &:hover {
-    background: var(--ds-surface-2);
+    background: var(--ds-surface-alt);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--ds-accent);
+    outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
 
   &[data-variant="pill"] {
     border-radius: var(--radius-full);
     border-color: var(--ds-line);
-    background: var(--ds-surface-1);
+    background: var(--ds-surface);
   }
 
   &[data-variant="ghost"] {
@@ -38,7 +38,7 @@
 .chevron {
   inline-size: 14px;
   block-size: 14px;
-  color: var(--ds-fg-mute);
+  color: var(--ds-text-mute);
 }
 
 @media (prefers-reduced-motion: reduce) {

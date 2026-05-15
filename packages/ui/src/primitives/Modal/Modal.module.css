@@ -1,8 +1,8 @@
 .dialog {
   padding: 0;
   border: none;
-  background: var(--ds-surface-1);
-  color: var(--ds-fg-strong);
+  background: var(--ds-surface);
+  color: var(--ds-text);
   border-radius: var(--radius-lg);
   box-shadow: var(--ds-shadow-4);
   inline-size: min(100%, var(--modal-width));
@@ -41,15 +41,15 @@
 
 .title {
   font-family: var(--ds-font-display);
-  font-size: var(--ds-text-lg);
+  font-size: var(--text-lg);
   font-weight: 600;
   margin: 0;
-  color: var(--ds-fg-strong);
+  color: var(--ds-text);
 }
 
 .description {
-  font-size: var(--ds-text-sm);
-  color: var(--ds-fg-mute);
+  font-size: var(--text-sm);
+  color: var(--ds-text-mute);
   margin: 0;
 }
 
@@ -65,7 +65,7 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
   border-block-start: 1px solid var(--ds-line);
-  background: var(--ds-surface-1);
+  background: var(--ds-surface);
 }
 
 @keyframes modalBackdropFade {
