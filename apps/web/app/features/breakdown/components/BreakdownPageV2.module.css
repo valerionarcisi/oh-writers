@@ -283,12 +283,18 @@
   box-shadow: var(--ds-shadow-0);
 }
 
-.panelTab .count {
-  margin-inline-start: 4px;
+.panelTab :global(.count) {
+  margin-inline-start: var(--ds-space-1);
   color: var(--ds-text-faint);
 }
 
-.panelTab[aria-selected="true"] .count {
+.panelTab :global(.count)::before {
+  content: "·";
+  margin-inline-end: var(--ds-space-1);
+  color: var(--ds-text-faint);
+}
+
+.panelTab[aria-selected="true"] :global(.count) {
   color: var(--ds-action);
 }
 

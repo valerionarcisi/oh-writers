@@ -55,6 +55,14 @@
   align-items: center;
   justify-content: center;
   gap: var(--ds-space-2);
+  min-inline-size: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.viewbarCenter::-webkit-scrollbar {
+  display: none;
 }
 
 .viewbarRight {
@@ -62,6 +70,8 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--ds-space-3);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .versionCaret {

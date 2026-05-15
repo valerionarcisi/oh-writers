@@ -45,8 +45,15 @@
 
 .catChips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-1);
+  overflow-x: auto;
+  min-inline-size: 0;
+  scrollbar-width: thin;
+}
+
+.catChips::-webkit-scrollbar {
+  block-size: 4px;
 }
 
 .catChip {
@@ -58,6 +65,8 @@
   font-size: var(--text-xs, 0.75rem);
   color: var(--ds-text-mute);
   cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
   transition:
     background 100ms ease,
     color 100ms ease,

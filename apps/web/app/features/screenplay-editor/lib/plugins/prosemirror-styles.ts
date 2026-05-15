@@ -87,10 +87,29 @@ export const injectProseMirrorStyles = (): void => {
 
     .pm-heading-prefix,
     .pm-heading-title {
-      display: inline-block;
+      display: block;
       margin: 0;
       padding: 0;
       min-inline-size: 1ch; /* keeps empty slot clickable + cursor visible */
+    }
+
+    /* Prefix (INT., INT/EXT., EST.) must render as a single inline token.
+     * Without nowrap, browsers treat the slash and dot as soft break
+     * opportunities (URL-style wrapping) and the prefix can fragment across
+     * lines when the column is narrow — observed in the Breakdown
+     * ScriptReader and on the Screenplay editor itself. */
+    .pm-heading-prefix {
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    /* Title is free-form text. Allow it to wrap naturally if it exceeds the
+     * available inline-size, but prevent the flex layout from squeezing it
+     * down to min-content (one word per line) — that is what
+     * min-inline-size: 0 disables. */
+    .pm-heading-title {
+      flex: 1 1 auto;
+      min-inline-size: 0;
     }
 
     /* Visual separator between prefix and title — a non-breaking space injected
@@ -176,7 +195,10 @@ export const injectProseMirrorStyles = (): void => {
     }
 
     /* ⋮ button next to the left scene number — opens the scene popover
-       (lock number, renumber from here, etc.). */
+       (lock number, renumber from here, etc.). Hidden by default so it
+       does not read as a floating bullet between the gutter and the
+       page body; revealed on row hover, focus-within, or while its
+       menu is open (aria-expanded=true). */
     .pm-heading .scene-number-menu-btn {
       position: absolute;
       top: 0;
@@ -189,10 +211,25 @@ export const injectProseMirrorStyles = (): void => {
       color: #888;
       cursor: pointer;
       user-select: none;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    .pm-heading:hover .scene-number-menu-btn,
+    .pm-heading:focus-within .scene-number-menu-btn,
+    .pm-heading .scene-number-menu-btn[aria-expanded="true"],
+    .pm-heading .scene-number-menu-btn:focus-visible {
+      opacity: 1;
     }
 
     .pm-heading .scene-number-menu-btn:hover {
       color: #111;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pm-heading .scene-number-menu-btn {
+        transition: none;
+      }
     }
 
     .pm-heading .scene-menu {

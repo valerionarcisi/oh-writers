@@ -219,6 +219,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-4);
+  margin-block-start: var(--space-6);
   padding: var(--space-2) var(--space-5);
   border-block-start: var(--border);
   background: var(--ds-surface);

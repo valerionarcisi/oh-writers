@@ -13,7 +13,10 @@
   padding: var(--ds-space-2) var(--ds-space-6);
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: var(--ds-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
   transition: border-color var(--ds-duration-2) var(--ds-ease);
 
   &.isStuck {
@@ -21,8 +24,13 @@
   }
 }
 
+.viewbar::-webkit-scrollbar {
+  display: none;
+}
+
 .viewbarRight {
   margin-inline-start: auto;
+  flex-shrink: 0;
 }
 
 .filter {
@@ -38,6 +46,8 @@
   background: transparent;
   border: 0;
   cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
   transition:
     background var(--ds-duration-1) var(--ds-ease),
     color var(--ds-duration-1) var(--ds-ease);
