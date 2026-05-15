@@ -1367,6 +1367,221 @@ export const getDayCosts = createServerFn({ method: "GET" })
 // Returns `null` when no budget exists yet (day-zero) so the UI can render an
 // empty-state.
 //
+// ─── addBudgetCastRow ─────────────────────────────────────────────────────────
+
+export const addBudgetCastRow = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      budgetId: z.string().uuid(),
+      name: z.string().min(1),
+      days: z.number().min(0).default(1),
+      dayRate: z.number().min(0).default(0),
+      fiscalRegime: z.enum(["piva", "privato", "none"]).default("piva"),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        BudgetCast,
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetRowById(db, data.budgetId).andThen((budget) =>
+            requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+              if (budget.status === "locked")
+                return errAsync(new BudgetLockedError());
+              return ResultAsync.fromPromise(
+                (async () => {
+                  const maxSort = await db.query.budgetCast
+                    .findMany({ where: eq(budgetCast.budgetId, data.budgetId) })
+                    .then((rows) =>
+                      rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
+                    );
+                  const [inserted] = await db
+                    .insert(budgetCast)
+                    .values({
+                      budgetId: data.budgetId,
+                      elementId: null,
+                      name: data.name,
+                      days: String(data.days),
+                      dayRate: String(data.dayRate),
+                      fiscalRegime: data.fiscalRegime,
+                      mealAllowance: "0",
+                      accommodation: "0",
+                      sortOrder: maxSort + 1,
+                    })
+                    .returning();
+                  return inserted!;
+                })(),
+                (e) => new DbError("addBudgetCastRow", e),
+              );
+            }),
+          ),
+        ),
+      ),
+  );
+
+// ─── removeBudgetCastRow ──────────────────────────────────────────────────────
+
+export const removeBudgetCastRow = createServerFn({ method: "POST" })
+  .validator(z.object({ rowId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { id: string },
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetCastRowById(db, data.rowId).andThen((row) =>
+            findBudgetRowById(db, row.budgetId).andThen((budget) =>
+              requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+                if (budget.status === "locked")
+                  return errAsync(new BudgetLockedError());
+                return ResultAsync.fromPromise(
+                  db
+                    .delete(budgetCast)
+                    .where(eq(budgetCast.id, data.rowId))
+                    .then(() => ({ id: data.rowId })),
+                  (e) => new DbError("removeBudgetCastRow", e),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+  );
+
+// ─── addBudgetLine ────────────────────────────────────────────────────────────
+
+export const addBudgetLine = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      budgetId: z.string().uuid(),
+      topSheet: z.enum([
+        "above_the_line",
+        "production",
+        "crew",
+        "post_production",
+        "contingency",
+      ]),
+      name: z.string().min(1),
+      costType: z
+        .enum(["daily", "flat", "weekly", "unit", "percentage"])
+        .default("flat"),
+      quantity: z.number().min(0).default(1),
+      rate: z.number().min(0).default(0),
+      linkedCategory: z.string().nullable().optional(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        BudgetLine,
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetRowById(db, data.budgetId).andThen((budget) =>
+            requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+              if (budget.status === "locked")
+                return errAsync(new BudgetLockedError());
+              return ResultAsync.fromPromise(
+                (async () => {
+                  const maxSort = await db.query.budgetLines
+                    .findMany({
+                      where: eq(budgetLines.budgetId, data.budgetId),
+                    })
+                    .then((rows) =>
+                      rows.reduce((m, r) => Math.max(m, r.sortOrder), -1),
+                    );
+                  const [inserted] = await db
+                    .insert(budgetLines)
+                    .values({
+                      budgetId: data.budgetId,
+                      topSheet: data.topSheet,
+                      name: data.name,
+                      costType: data.costType,
+                      quantity: String(data.quantity),
+                      rate: String(data.rate),
+                      actual: null,
+                      notes: null,
+                      linkedElementId: null,
+                      linkedCategory: data.linkedCategory ?? null,
+                      sortOrder: maxSort + 1,
+                    })
+                    .returning();
+                  return parseLine(inserted!);
+                })(),
+                (e) => new DbError("addBudgetLine", e),
+              );
+            }),
+          ),
+        ),
+      ),
+  );
+
+// ─── removeBudgetLine ─────────────────────────────────────────────────────────
+
+export const removeBudgetLine = createServerFn({ method: "POST" })
+  .validator(z.object({ lineId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { id: string },
+        | BudgetLineNotFoundError
+        | BudgetNotFoundError
+        | BudgetLockedError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBudgetLineRowById(db, data.lineId).andThen((line) =>
+            findBudgetRowById(db, line.budgetId).andThen((budget) =>
+              requireProjectAccess(db, budget.projectId, "edit").andThen(() => {
+                if (budget.status === "locked")
+                  return errAsync(new BudgetLockedError());
+                return ResultAsync.fromPromise(
+                  db
+                    .delete(budgetLines)
+                    .where(eq(budgetLines.id, data.lineId))
+                    .then(() => ({ id: data.lineId })),
+                  (e) => new DbError("removeBudgetLine", e),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+  );
+
 // TODO(spec-overview): wire `previousTotal` to a real snapshot when
 // `getPreviousBudgetSnapshot` lands. Currently hardcoded to null.
 

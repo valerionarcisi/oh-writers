@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { resourceTotal } from "@oh-writers/domain";
 import type { FiscalRegime } from "@oh-writers/domain";
@@ -5,7 +6,11 @@ import type {
   BudgetCast,
   CastSceneMap,
 } from "~/features/budget/server/budget.server";
-import { updateBudgetCastRow } from "~/features/budget/server/budget.server";
+import {
+  updateBudgetCastRow,
+  addBudgetCastRow,
+  removeBudgetCastRow,
+} from "~/features/budget/server/budget.server";
 import { unwrapResult } from "@oh-writers/utils";
 import { BudgetGauge } from "./BudgetGauge";
 import { BudgetResourceRow } from "../BudgetResourceRow";
@@ -17,6 +22,7 @@ interface CastWidgetProps {
   selectedScene: number | null;
   grandTotal: number;
   projectId: string;
+  budgetId: string;
 }
 
 const parseNum = (v: string) => Number(v);
@@ -37,8 +43,14 @@ export function CastWidget({
   selectedScene,
   grandTotal,
   projectId,
+  budgetId,
 }: CastWidgetProps) {
   const qc = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ["budget-cast-crew", projectId] });
 
   const castTotal = cast.reduce((sum, r) => {
     const full = resourceTotal({
@@ -59,8 +71,25 @@ export function CastWidget({
       rowId: string;
       patch: Parameters<typeof updateBudgetCastRow>[0]["data"]["patch"];
     }) => updateBudgetCastRow({ data: vars }).then(unwrapResult),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["budget-cast-crew", projectId] }),
+    onSuccess: invalidate,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (vars: { name: string }) =>
+      addBudgetCastRow({
+        data: { budgetId, name: vars.name },
+      }).then(unwrapResult),
+    onSuccess: () => {
+      invalidate();
+      setAddOpen(false);
+      setNewName("");
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (rowId: string) =>
+      removeBudgetCastRow({ data: { rowId } }).then(unwrapResult),
+    onSuccess: invalidate,
   });
 
   if (cast.length === 0) {
@@ -72,6 +101,43 @@ export function CastWidget({
         <p className={styles.empty}>
           Genera il budget per popolare il cast dal breakdown.
         </p>
+        <div className={styles.footer}>
+          {addOpen ? (
+            <form
+              className={styles.addForm}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newName.trim()) addMutation.mutate({ name: newName.trim() });
+              }}
+            >
+              <input
+                className={styles.addInput}
+                placeholder="Nome attore"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                autoFocus
+              />
+              <button type="submit" className={styles.addConfirm}>
+                Aggiungi
+              </button>
+              <button
+                type="button"
+                className={styles.addCancel}
+                onClick={() => setAddOpen(false)}
+              >
+                Annulla
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className={styles.addTrigger}
+              onClick={() => setAddOpen(true)}
+            >
+              + Aggiungi attore
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -105,6 +171,7 @@ export function CastWidget({
               <th className={`${styles.th} ${styles.numTh}`}>Vitto</th>
               <th className={`${styles.th} ${styles.numTh}`}>Pernotto</th>
               <th className={`${styles.th} ${styles.numTh}`}>Totale</th>
+              <th className={styles.th} />
             </tr>
           </thead>
           <tbody>
@@ -122,10 +189,49 @@ export function CastWidget({
                 onPatch={(patch) =>
                   patchMutation.mutate({ rowId: row.id, patch })
                 }
+                onRemove={() => removeMutation.mutate(row.id)}
               />
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className={styles.footer}>
+        {addOpen ? (
+          <form
+            className={styles.addForm}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newName.trim()) addMutation.mutate({ name: newName.trim() });
+            }}
+          >
+            <input
+              className={styles.addInput}
+              placeholder="Nome attore"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              autoFocus
+            />
+            <button type="submit" className={styles.addConfirm}>
+              Aggiungi
+            </button>
+            <button
+              type="button"
+              className={styles.addCancel}
+              onClick={() => setAddOpen(false)}
+            >
+              Annulla
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className={styles.addTrigger}
+            onClick={() => setAddOpen(true)}
+          >
+            + Aggiungi attore
+          </button>
+        )}
       </div>
     </div>
   );

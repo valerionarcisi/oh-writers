@@ -139,3 +139,122 @@
   border-radius: var(--ds-radius-md);
   font-size: 13px;
 }
+
+.colAction {
+  inline-size: 36px;
+  text-align: center;
+}
+
+.removeBtn {
+  all: unset;
+  cursor: pointer;
+  inline-size: 24px;
+  block-size: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-faint);
+  font-size: 12px;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-danger, var(--ds-text));
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.addRowFooter {
+  padding-block: var(--ds-space-2);
+}
+
+.addTrigger {
+  all: unset;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ds-action);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.addForm {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+  padding: var(--ds-space-3);
+  background: var(--ds-surface-alt);
+  border-radius: var(--ds-radius-md);
+}
+
+.addInput {
+  flex: 1;
+  min-inline-size: 160px;
+  font-size: 13px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  padding: var(--ds-space-2);
+  color: var(--ds-text);
+  outline: none;
+
+  &:focus {
+    border-color: var(--ds-action);
+  }
+}
+
+.addInputSmall {
+  inline-size: 90px;
+  font-size: 13px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  padding: var(--ds-space-2);
+  color: var(--ds-text);
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+
+  &:focus {
+    border-color: var(--ds-action);
+  }
+}
+
+.addConfirm {
+  all: unset;
+  cursor: pointer;
+  font-size: 13px;
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border-radius: var(--ds-radius-sm);
+  padding: var(--ds-space-2) var(--ds-space-3);
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.addCancel {
+  all: unset;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ds-text-mute);
+  padding: var(--ds-space-2);
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}

@@ -3,7 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SegmentedControl } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import type { Budget, BudgetLine } from "@oh-writers/domain";
-import { updateBudgetLine } from "../../server/budget.server";
+import {
+  updateBudgetLine,
+  addBudgetLine,
+  removeBudgetLine,
+} from "../../server/budget.server";
 import styles from "./ProductionDrillDown.module.css";
 
 const eur = new Intl.NumberFormat("it-IT", {
@@ -87,27 +91,68 @@ const statusLabel = (s: "ok" | "warn" | "missing"): string =>
 
 interface ProductionDrillDownProps {
   readonly budget: Budget;
+  readonly budgetId: string;
   readonly initialTab?: ProductionTabId;
   readonly projectId: string;
 }
 
 export function ProductionDrillDown({
   budget,
+  budgetId,
   initialTab,
   projectId,
 }: ProductionDrillDownProps) {
   const [tab, setTab] = useState<ProductionTabId>(initialTab ?? "locations");
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newQty, setNewQty] = useState("1");
+  const [newRate, setNewRate] = useState("0");
   const qc = useQueryClient();
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["budget", projectId] });
+    qc.invalidateQueries({ queryKey: ["budget-overview", projectId] });
+  };
 
   const updateLineMutation = useMutation({
     mutationFn: (vars: {
       lineId: string;
       patch: { actual?: number | null; rate?: number | null };
     }) => updateBudgetLine({ data: vars }).then(unwrapResult),
+    onSuccess: invalidate,
+  });
+
+  const addLineMutation = useMutation({
+    mutationFn: (vars: {
+      name: string;
+      quantity: number;
+      rate: number;
+      linkedCategory: string;
+    }) =>
+      addBudgetLine({
+        data: {
+          budgetId,
+          topSheet: "production",
+          name: vars.name,
+          costType: "flat",
+          quantity: vars.quantity,
+          rate: vars.rate,
+          linkedCategory: vars.linkedCategory,
+        },
+      }).then(unwrapResult),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["budget", projectId] });
-      qc.invalidateQueries({ queryKey: ["budget-overview", projectId] });
+      invalidate();
+      setAddOpen(false);
+      setNewName("");
+      setNewQty("1");
+      setNewRate("0");
     },
+  });
+
+  const removeLineMutation = useMutation({
+    mutationFn: (lineId: string) =>
+      removeBudgetLine({ data: { lineId } }).then(unwrapResult),
+    onSuccess: invalidate,
   });
 
   const activeTab = PRODUCTION_TABS.find((t) => t.id === tab) ?? PRODUCTION_TABS[0]!;
@@ -172,6 +217,7 @@ export function ProductionDrillDown({
               <th className={styles.colNum}>€/u</th>
               <th className={styles.colNum}>Totale</th>
               <th>Stato</th>
+              <th className={styles.colAction} aria-label="Azioni" />
             </tr>
           </thead>
           <tbody>
@@ -208,6 +254,17 @@ export function ProductionDrillDown({
                       {statusLabel(status)}
                     </span>
                   </td>
+                  <td className={styles.colAction}>
+                    <button
+                      type="button"
+                      className={styles.removeBtn}
+                      aria-label={`Rimuovi ${line.name}`}
+                      onClick={() => removeLineMutation.mutate(line.id)}
+                      disabled={removeLineMutation.isPending}
+                    >
+                      ✕
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -219,10 +276,81 @@ export function ProductionDrillDown({
               <td />
               <td className={styles.colNum}>{eurAmount(tabTotal)}</td>
               <td />
+              <td />
             </tr>
           </tfoot>
         </table>
       )}
+
+      <div className={styles.addRowFooter}>
+        {addOpen ? (
+          <form
+            className={styles.addForm}
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = newName.trim();
+              const qty = parseFloat(newQty);
+              const rate = parseFloat(newRate);
+              if (!name || isNaN(qty) || isNaN(rate)) return;
+              const cat = activeTab.categories[0]!;
+              addLineMutation.mutate({
+                name,
+                quantity: qty,
+                rate,
+                linkedCategory: cat,
+              });
+            }}
+          >
+            <input
+              className={styles.addInput}
+              placeholder="Voce"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              autoFocus
+            />
+            <input
+              className={styles.addInputSmall}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Q.tà"
+              value={newQty}
+              onChange={(e) => setNewQty(e.target.value)}
+            />
+            <input
+              className={styles.addInputSmall}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="€/u"
+              value={newRate}
+              onChange={(e) => setNewRate(e.target.value)}
+            />
+            <button
+              type="submit"
+              className={styles.addConfirm}
+              disabled={addLineMutation.isPending}
+            >
+              Aggiungi
+            </button>
+            <button
+              type="button"
+              className={styles.addCancel}
+              onClick={() => setAddOpen(false)}
+            >
+              Annulla
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className={styles.addTrigger}
+            onClick={() => setAddOpen(true)}
+          >
+            + Aggiungi voce a {activeTab.label}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

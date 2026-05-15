@@ -433,11 +433,10 @@ function CategoryDrillContent({
   projectId,
 }: CategoryDrillContentProps) {
   if (categoryId === "cast") {
-    if (cast.length === 0)
+    if (!budget)
       return (
         <div className={styles.emptyCard}>
-          Nessun personaggio nel cast — esegui Genera per popolare dal
-          breakdown.
+          Genera il budget per poter gestire il cast.
         </div>
       );
     return (
@@ -447,6 +446,7 @@ function CategoryDrillContent({
         selectedScene={null}
         grandTotal={overview.grandTotal}
         projectId={projectId}
+        budgetId={budget.id}
       />
     );
   }
@@ -476,6 +476,7 @@ function CategoryDrillContent({
   return (
     <ProductionDrillDown
       budget={budget}
+      budgetId={budget.id}
       initialTab={mapCategoryToProductionTab(categoryId)}
       projectId={projectId}
     />

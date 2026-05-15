@@ -58,3 +58,67 @@
   font-size: var(--text-sm);
   margin: 0;
 }
+
+.footer {
+  padding: var(--space-3) var(--space-4);
+  border-block-start: 1px solid var(--ds-line);
+}
+
+.addTrigger {
+  all: unset;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--ds-action);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.addForm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.addInput {
+  flex: 1;
+  min-width: 140px;
+  font-size: var(--text-sm);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--ds-text);
+  outline: none;
+
+  &:focus {
+    border-color: var(--ds-action);
+  }
+}
+
+.addConfirm {
+  all: unset;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.addCancel {
+  all: unset;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--ds-text-mute);
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}
