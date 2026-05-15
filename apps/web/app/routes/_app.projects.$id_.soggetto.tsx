@@ -214,11 +214,20 @@ function SoggettoPageReady({
         primaryAction={{
           label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
           hotkey: "⌘E",
-          onClick: () => setIsExportOpen(true),
+          onClick: () => {
+            if (isVersionsOpen) closeDrawer();
+            setIsExportOpen(true);
+          },
         }}
         secondaryActions={[
           { label: "Versioni", onClick: toggleVersions },
-          { label: "Esporta SIAE", onClick: () => setIsSiaeOpen(true) },
+          {
+            label: "Esporta SIAE",
+            onClick: () => {
+              if (isVersionsOpen) closeDrawer();
+              setIsSiaeOpen(true);
+            },
+          },
         ]}
       />
     </main>

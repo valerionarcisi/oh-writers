@@ -716,7 +716,10 @@ export const ScreenplayEditor = forwardRef<
           primaryAction={{
             label: exportPdf.isPending ? "Esportando…" : "Esporta PDF",
             hotkey: "⌘E",
-            onClick: () => setExportFormat(defaultExportFormat),
+            onClick: () => {
+              if (isVersionsPanelOpen) closeDrawer();
+              setExportFormat(defaultExportFormat);
+            },
           }}
           secondaryActions={[
             {

@@ -50,6 +50,18 @@
   overflow-x: auto;
   min-inline-size: 0;
   scrollbar-width: thin;
+  /* Fade the right edge to signal there is more content scrollable
+   * horizontally — pure visual hint, no extra DOM. */
+  mask-image: linear-gradient(
+    to right,
+    black calc(100% - 24px),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black calc(100% - 24px),
+    transparent
+  );
 }
 
 .catChips::-webkit-scrollbar {
@@ -154,7 +166,8 @@
 }
 
 .table {
-  inline-size: 100%;
+  inline-size: max-content;
+  min-inline-size: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm, 0.875rem);
 }

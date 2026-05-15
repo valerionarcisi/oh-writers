@@ -38,3 +38,45 @@
     cursor: not-allowed;
   }
 }
+
+/* Floating action button used on narrow viewports to summon the Cesare
+ * Drawer when the side-panel layout collapses. Anchored above the
+ * FloatingDock so it does not overlap the primary actions. */
+.cesareFab {
+  position: fixed;
+  inset-inline-end: var(--ds-space-6);
+  inset-block-end: calc(var(--ds-space-6) + 64px);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-radius: 999px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text);
+  font-family: var(--ds-font-mono);
+  font-size: var(--text-xs);
+  box-shadow: var(--ds-shadow-3, var(--ds-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.15)));
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.cesareFabDot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--ds-leaf, var(--ds-success));
+}
+
+.cesareDrawerBody {
+  padding: 0;
+}

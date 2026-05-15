@@ -22,6 +22,20 @@
   &.isStuck {
     border-bottom-color: var(--ds-line);
   }
+
+  /* Below the editorial breakpoint the chips and settings can't fit on a
+   * single row without clipping the trailing items (e.g. "Cont. 10%"). Wrap
+   * to a second row and let the spacer collapse so both rows align left. */
+  @media (max-width: 900px) {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 900px) {
+  .viewbarRight {
+    display: none;
+  }
 }
 
 .viewbar::-webkit-scrollbar {
