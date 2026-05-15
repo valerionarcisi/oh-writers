@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { FloatingDock, MetaBar } from "@oh-writers/ui";
+import { FloatingDock } from "@oh-writers/ui";
 import { toCartelle } from "~/features/documents/lib/cartelle-counter";
 import {
   ExportPdfModal,
@@ -150,15 +150,6 @@ function SoggettoPageReady({
 
   const canEdit = soggettoDoc.canEdit && loglineDoc.canEdit;
 
-  const soggettoMeta = useMemo(() => {
-    const plain = soggettoContent.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
-    const chars = plain.length;
-    return [
-      { id: "cartelle", label: "Cartelle", value: toCartelle(chars) },
-      { id: "caratteri", label: "Caratteri", value: chars },
-    ];
-  }, [soggettoContent]);
-
   const handleExport = (opts: { format: "pdf" | "docx" }) => {
     if (opts.format !== "docx") return;
     exportDocx.mutate(
@@ -169,7 +160,6 @@ function SoggettoPageReady({
 
   return (
     <main className={styles.page} data-testid="soggetto-page">
-      <MetaBar items={soggettoMeta} />
       <ExportSiaeModal
         isOpen={isSiaeOpen}
         onClose={() => setIsSiaeOpen(false)}
