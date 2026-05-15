@@ -28,7 +28,7 @@
 }
 
 .viewbarLabel {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -91,7 +91,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 11px;
   color: var(--ds-text-2);
   padding: 4px var(--ds-space-3);
@@ -112,7 +112,7 @@
 }
 
 .badgeCount {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 9px;
   background: var(--ds-action-soft);
   color: var(--ds-action);
@@ -133,7 +133,7 @@
 }
 
 .eyebrow {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -147,7 +147,7 @@
 }
 
 .meta {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 11px;
   color: var(--ds-text-3);
   display: flex;
@@ -270,7 +270,7 @@
 .panelTab {
   flex: 1;
   padding: 5px var(--ds-space-3);
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -337,7 +337,7 @@
 }
 
 .catName {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -346,7 +346,7 @@
 }
 
 .catCt {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   color: var(--ds-text-3);
 }
@@ -389,7 +389,7 @@
 }
 
 .catItemX {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 9px;
   color: var(--ds-text-3);
 }
@@ -402,7 +402,7 @@
 
 .catItemSuggested::after {
   content: "AI";
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 8px;
   background: var(--ds-leaf-50, #e5e9d8);
   color: var(--ds-leaf-500, #5a6b3c);
@@ -437,7 +437,7 @@
 }
 
 .popKbd {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   background: var(--ds-surface);
   color: var(--ds-text-3);
@@ -479,7 +479,7 @@
 }
 
 .popItem .n {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   color: var(--ds-text-faint);
   text-transform: uppercase;
@@ -518,7 +518,7 @@
   padding: var(--ds-space-2, 8px) var(--ds-space-3);
   border-block-end: 1px solid var(--ds-line-soft);
   margin-block-end: 4px;
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -573,7 +573,7 @@
 }
 
 .ctxKbd {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   color: var(--ds-text-3);
 }
@@ -588,7 +588,7 @@
   max-inline-size: 1340px;
   margin: 0 auto var(--ds-space-3);
   padding: var(--ds-space-3) var(--ds-space-6);
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 11px;
   color: var(--ds-text-3);
 }
@@ -790,7 +790,7 @@
   padding: 0;
   cursor: pointer;
   color: var(--ds-text);
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -822,7 +822,7 @@
 }
 
 .cesareGroupCount {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   color: var(--ds-text-3);
   font-weight: 400;
@@ -835,7 +835,7 @@
 }
 
 .cesareBulkBtn {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;

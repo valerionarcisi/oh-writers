@@ -67,7 +67,7 @@
 }
 
 .hotkey {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   opacity: 0.6;
   margin-inline-start: var(--ds-space-1);

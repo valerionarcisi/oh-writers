@@ -4,7 +4,7 @@
   gap: var(--ds-space-1);
   padding: 2px var(--ds-space-2);
   border-radius: var(--ds-radius-pill);
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;

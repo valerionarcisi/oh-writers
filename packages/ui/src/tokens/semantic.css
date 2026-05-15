@@ -55,12 +55,16 @@
   --ds-diff-intra:     rgba(139, 58, 26, 0.28);
   --ds-diff-neutral:   transparent;
 
-  /* Typography stacks */
+  /* Typography stacks
+     Two-font system. Inter for UI, Fraunces for display.
+     Courier Prime is screenplay-only (industry standard for fountain).
+     `--ds-font-serif` and `--ds-font-script` are aliases kept for
+     backward compatibility — do not introduce new fonts. */
   --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
   --ds-font-display: "Fraunces", Georgia, serif;
-  --ds-font-serif:   var(--font-serif, "Lora", Georgia, serif);
-  --ds-font-mono:    "IBM Plex Mono", ui-monospace, monospace;
-  --ds-font-script:  "Courier Prime", "Courier New", monospace;
+  --ds-font-mono:    "Courier Prime", "Courier New", ui-monospace, monospace;
+  --ds-font-serif:   var(--ds-font-display);
+  --ds-font-script:  var(--ds-font-mono);
 
   /* Spacing — px-based, decoupled from rem */
   --ds-space-1:  4px;

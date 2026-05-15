@@ -20,7 +20,7 @@
 }
 
 .label {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -81,7 +81,7 @@
 }
 
 .hotkey {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 9px;
   opacity: 0.55;
 }
@@ -165,7 +165,7 @@
 }
 
 .cesareCount {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   font-weight: 600;
   opacity: 0.8;

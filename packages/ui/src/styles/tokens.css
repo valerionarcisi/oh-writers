@@ -42,8 +42,10 @@
   --color-info-subtle: rgba(59, 130, 246, 0.12);
 
   /* ─── Typography ────────────────────────────────────────── */
-  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
-  --font-serif: "Lora", Georgia, serif;
+  /* Two-font system aliases. Inter for UI, Fraunces for display.
+     Courier Prime stays as the industry-standard screenplay font. */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
   --font-mono: "Courier Prime", "Courier New", Courier, monospace;
 
   --text-xs: clamp(0.75rem, 0.7rem + 0.09vw, 0.8125rem);

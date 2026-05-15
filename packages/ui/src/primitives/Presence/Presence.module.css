@@ -27,7 +27,7 @@
   border: 2px solid var(--ds-bg);
   background: var(--ds-action-soft);
   color: var(--ds-action);
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;

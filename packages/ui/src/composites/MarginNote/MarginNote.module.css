@@ -15,7 +15,7 @@
 }
 
 .kind {
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
@@ -57,7 +57,7 @@
   padding: 2px var(--ds-space-2);
   border-radius: var(--ds-radius-sm);
   border: 1px solid transparent;
-  font-family: var(--ds-font-mono);
+  font-family: var(--ds-font-sans);
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
