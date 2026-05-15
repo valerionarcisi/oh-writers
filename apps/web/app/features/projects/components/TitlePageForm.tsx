@@ -87,7 +87,7 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Written by</span>
+              <span className={styles.labelText}>Scritto da</span>
               <input
                 className={styles.input}
                 value={toInputValue(values.author)}
@@ -240,7 +240,7 @@ function TitlePagePreview({ projectTitle, titlePage }: TitlePagePreviewProps) {
           <h2 className={styles.pageTitle}>{projectTitle.toUpperCase()}</h2>
           {author && (
             <>
-              <p className={styles.pageLabel}>Written by</p>
+              <p className={styles.pageLabel}>Scritto da</p>
               <p className={styles.pageAuthor}>{author}</p>
             </>
           )}

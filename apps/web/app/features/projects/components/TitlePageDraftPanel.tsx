@@ -37,7 +37,9 @@ export function TitlePageDraftPanel({
             }}
             data-testid="tp-draft-color-readonly"
             aria-label={
-              draftColor ? `Colore draft: ${draftColor}` : "Nessun colore draft"
+              draftColor
+                ? `Colore draft: ${DRAFT_COLOR_LABEL[draftColor]}`
+                : "Nessun colore draft"
             }
           />
           <span className={styles.colorName}>

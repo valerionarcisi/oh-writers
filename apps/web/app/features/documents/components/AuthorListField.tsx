@@ -64,7 +64,6 @@ export function AuthorListField({
 
   return (
     <div className={styles.wrapper} data-testid={testId}>
-      <p className={styles.heading}>{l.heading}</p>
       <div className={styles.list}>
         {authors.map((author, index) => (
           <div className={styles.row} key={author.id}>

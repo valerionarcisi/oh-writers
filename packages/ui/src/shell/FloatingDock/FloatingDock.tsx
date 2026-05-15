@@ -119,8 +119,8 @@ export function FloatingDock({
             aria-pressed={cesareIsOn}
             aria-label={
               cesareNoteCount > 0
-                ? `Cesare — ${cesareNoteCount} note ${cesareIsOn ? "attive" : "disattivate"}`
-                : `Cesare ${cesareIsOn ? "attivo" : "disattivato"}`
+                ? `Cesare — ${cesareNoteCount} note`
+                : "Cesare"
             }
             title={
               cesareIsOn ? "Disattiva overlay Cesare" : "Attiva overlay Cesare"

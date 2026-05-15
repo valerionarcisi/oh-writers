@@ -224,7 +224,6 @@ export function ExportSiaeModal({
         data-testid="siae-export-form"
       >
         <fieldset className={styles.section}>
-          <legend className={styles.legend}>{l.heading}</legend>
           <FormField
             label={l.titleLabel}
             htmlFor="siae-title"

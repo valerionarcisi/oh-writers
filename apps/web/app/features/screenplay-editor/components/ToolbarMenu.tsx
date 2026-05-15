@@ -82,8 +82,8 @@ export function ToolbarMenu({
         className={styles.trigger}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        aria-label="Screenplay actions"
-        title="Screenplay actions"
+        aria-label="Azioni sceneggiatura"
+        title="Azioni sceneggiatura"
         disabled={imp.isLoading}
         onClick={toggle}
         data-testid="toolbar-menu-trigger"
@@ -95,7 +95,7 @@ export function ToolbarMenu({
         <div
           ref={panelRef}
           role="menu"
-          aria-label="Screenplay actions"
+          aria-label="Azioni sceneggiatura"
           className={styles.panel}
           data-testid="toolbar-menu-panel"
         >
