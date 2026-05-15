@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Chip menu — 6 proposte</title>
+    <meta name="viewport" content="width=1400, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+
+        /* Category accent colors (same as the live DS-v2 chip palette) */
+        --c-scene: #6b4a8a;
+        --c-action: #71706a;
+        --c-character: #b48a2b;
+        --c-dialogue: #b33a28;
+        --c-paren: #c4729a;
+        --c-transition: #5a6b3c;
+
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      header.page {
+        padding: 48px 64px 24px;
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+      header.page h1 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 32px;
+        margin: 0 0 8px;
+      }
+      header.page p {
+        color: var(--ink-3);
+        margin: 0;
+        max-width: 60ch;
+      }
+
+      .grid {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 64px 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 48px;
+      }
+
+      .proposal {
+        background: var(--page);
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 8px 24px -12px rgba(28, 26, 23, 0.12);
+        overflow: hidden;
+      }
+      .proposal__head {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .proposal__head h2 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 22px;
+        margin: 0;
+      }
+      .proposal__head .meta {
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .proposal__head .meta b {
+        color: var(--ink-1);
+        font-weight: 500;
+      }
+      .proposal__body {
+        padding: 32px 24px;
+        background: var(--paper-1);
+      }
+      .proposal__note {
+        padding: 12px 24px 20px;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .proposal__note ul {
+        margin: 4px 0 0;
+        padding-inline-start: 18px;
+      }
+      .proposal__note li {
+        margin: 2px 0;
+      }
+
+      .stage {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      /* ─── Current (baseline reference) ───────────────────────────── */
+      .chip-current {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink-2);
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .chip-current .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--chip);
+      }
+      .chip-current.is-active {
+        background: color-mix(in srgb, var(--chip) 12%, transparent);
+        border-color: var(--chip);
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      /* ─── A · Minimal underline ──────────────────────────────────── */
+      .chip-a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 4px 4px;
+        background: transparent;
+        border: none;
+        color: var(--ink-3);
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        cursor: pointer;
+        position: relative;
+      }
+      .chip-a::after {
+        content: "";
+        position: absolute;
+        inset: auto 4px 0 4px;
+        height: 2px;
+        background: transparent;
+        border-radius: 1px;
+        transition: background 120ms ease;
+      }
+      .chip-a:hover {
+        color: var(--ink-2);
+      }
+      .chip-a.is-active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .chip-a.is-active::after {
+        background: var(--chip);
+      }
+
+      /* ─── B · Bicolor tag (dot integrated as left-border) ───────── */
+      .chip-b {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px 4px 8px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--chip);
+        border-radius: 4px;
+        color: var(--ink-2);
+        font-size: 13px;
+        font-weight: 500;
+        text-transform: none;
+        cursor: pointer;
+      }
+      .chip-b.is-active {
+        background: color-mix(in srgb, var(--chip) 8%, var(--page));
+        border-color: color-mix(in srgb, var(--chip) 60%, var(--line));
+        border-left-color: var(--chip);
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      /* ─── C · Segmented control (single piece) ──────────────────── */
+      .chip-c-group {
+        display: inline-flex;
+        background: var(--paper-2);
+        padding: 3px;
+        border-radius: 8px;
+        gap: 0;
+      }
+      .chip-c {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: transparent;
+        border: none;
+        color: var(--ink-3);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 6px;
+        transition:
+          background 120ms ease,
+          color 120ms ease;
+      }
+      .chip-c .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--chip);
+      }
+      .chip-c:hover {
+        color: var(--ink-2);
+      }
+      .chip-c.is-active {
+        background: var(--page);
+        color: var(--ink-1);
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.06),
+          0 0 0 1px var(--line);
+      }
+
+      /* ─── D · Dot-only (text on hover) ──────────────────────────── */
+      .chip-d-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .chip-d {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        padding: 4px 0;
+        background: transparent;
+        border: none;
+        color: var(--ink-3);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+      }
+      .chip-d .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--chip);
+        margin-inline-end: 0;
+        transition: margin 160ms ease;
+      }
+      .chip-d .label {
+        max-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        opacity: 0;
+        transition:
+          max-width 200ms ease,
+          opacity 120ms ease,
+          margin 160ms ease;
+        margin-inline-start: 0;
+      }
+      .chip-d:hover .label,
+      .chip-d.is-active .label {
+        max-width: 120px;
+        opacity: 1;
+        margin-inline-start: 6px;
+      }
+      .chip-d.is-active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      /* ─── E · Compact dropdown trigger ──────────────────────────── */
+      .chip-e {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px 6px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink-1);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .chip-e .prefix {
+        color: var(--ink-3);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        font-weight: 500;
+      }
+      .chip-e .active {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-1);
+      }
+      .chip-e .active .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--chip);
+      }
+      .chip-e .chev {
+        color: var(--ink-3);
+      }
+      .chip-e-popover {
+        margin-top: 8px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.06),
+          0 12px 32px -8px rgba(28, 26, 23, 0.18);
+        padding: 4px;
+        width: 220px;
+        display: inline-flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .chip-e-popover button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: transparent;
+        border: none;
+        color: var(--ink-1);
+        text-align: start;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .chip-e-popover button:hover {
+        background: var(--paper-2);
+      }
+      .chip-e-popover button .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--chip);
+      }
+      .chip-e-popover button.is-active {
+        background: color-mix(in srgb, var(--clay) 6%, var(--page));
+      }
+      .chip-e-popover button .check {
+        margin-inline-start: auto;
+        color: var(--clay);
+        font-size: 14px;
+      }
+
+      /* ─── F · Mono tab row (industry / typewriter feel) ─────────── */
+      .chip-f {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 0;
+        background: transparent;
+        border: none;
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        position: relative;
+      }
+      .chip-f-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .chip-f .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--chip);
+      }
+      .chip-f.is-active {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .chip-f.is-active::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -2px;
+        height: 1.5px;
+        background: var(--ink-1);
+      }
+
+      /* helpers for colored dot per chip on the stage */
+      [data-cat="scene"] {
+        --chip: var(--c-scene);
+      }
+      [data-cat="action"] {
+        --chip: var(--c-action);
+      }
+      [data-cat="character"] {
+        --chip: var(--c-character);
+      }
+      [data-cat="dialogue"] {
+        --chip: var(--c-dialogue);
+      }
+      [data-cat="paren"] {
+        --chip: var(--c-paren);
+      }
+      [data-cat="transition"] {
+        --chip: var(--c-transition);
+      }
+
+      .row-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+        margin-bottom: 8px;
+      }
+
+      .row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .row + .row {
+        margin-top: 24px;
+      }
+
+      footer.page {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 64px 64px;
+        color: var(--ink-3);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      footer.page b {
+        color: var(--ink-1);
+      }
+      hr {
+        border: none;
+        border-top: 1px solid var(--line);
+        margin: 32px 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="page">
+      <h1>Chip menu — 6 proposte</h1>
+      <p>
+        Riferimento: i 6 chip element-converter del viewbar screenplay (SCENE /
+        ACTION / CHARACTER / DIALOGUE / PAREN / TRANSITION). Ogni proposta
+        mostra le 6 voci con la 1ª attiva (SCENE) per leggere l'active state.
+        Stesso pattern andrà esteso a: chip "Sottolinea" sul breakdown,
+        eventualmente altri menu di view-tool.
+      </p>
+    </header>
+
+    <main class="grid">
+      <!-- 0 · Current baseline ============================================ -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>0 · Stato attuale (baseline)</h2>
+          <span class="meta"
+            ><b>Pill bianca</b> + bordo + dot colorato + uppercase 14px medium.
+            Background 12% accent su active. Altezza ~28px allineata al Versioni
+            button.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage">
+            <button class="chip-current is-active" data-cat="scene">
+              <span class="dot"></span>SCENE
+            </button>
+            <button class="chip-current" data-cat="action">
+              <span class="dot"></span>ACTION
+            </button>
+            <button class="chip-current" data-cat="character">
+              <span class="dot"></span>CHARACTER
+            </button>
+            <button class="chip-current" data-cat="dialogue">
+              <span class="dot"></span>DIALOGUE
+            </button>
+            <button class="chip-current" data-cat="paren">
+              <span class="dot"></span>PAREN
+            </button>
+            <button class="chip-current" data-cat="transition">
+              <span class="dot"></span>TRANSITION
+            </button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          Cosa fatica:
+          <ul>
+            <li>
+              6 pill bianche fianco a fianco hanno molto peso visivo; non c'è
+              focus
+            </li>
+            <li>L'uppercase 14px medium su tutte e 6 grida un po'</li>
+            <li>Active state (bg tinto) si confonde col bg pagina</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- A · Minimal underline =========================================== -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>A · Sottolineatura minimal</h2>
+          <span class="meta"
+            >Solo testo + sottolineatura colorata sull'active. Zero bordi, zero
+            background.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage" style="gap: 16px">
+            <button class="chip-a is-active" data-cat="scene">Scene</button>
+            <button class="chip-a" data-cat="action">Action</button>
+            <button class="chip-a" data-cat="character">Character</button>
+            <button class="chip-a" data-cat="dialogue">Dialogue</button>
+            <button class="chip-a" data-cat="paren">Paren</button>
+            <button class="chip-a" data-cat="transition">Transition</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Massima leggerezza · ✔︎ Cassa subito chi è attivo · ✘ Senza dot, i
+          colori categoria spariscono
+        </div>
+      </section>
+
+      <!-- B · Bicolor tag ================================================= -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>B · Tag bicolor</h2>
+          <span class="meta"
+            >Rettangolo morbido con border-left colorato (3px). Active = tinto
+            soft + bordi più scuri.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage">
+            <button class="chip-b is-active" data-cat="scene">Scene</button>
+            <button class="chip-b" data-cat="action">Action</button>
+            <button class="chip-b" data-cat="character">Character</button>
+            <button class="chip-b" data-cat="dialogue">Dialogue</button>
+            <button class="chip-b" data-cat="paren">Paren</button>
+            <button class="chip-b" data-cat="transition">Transition</button>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Colori categoria riconoscibili dal border · ✔︎ Sembra una row di
+          un script breakdown · ✘ Più peso del minimal A
+        </div>
+      </section>
+
+      <!-- C · Segmented control =========================================== -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>C · Segmented control</h2>
+          <span class="meta"
+            >Singolo pezzo grigio chiaro. Active = "cartolina" bianca con
+            shadow. Pattern iOS-like.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage">
+            <div class="chip-c-group">
+              <button class="chip-c is-active" data-cat="scene">
+                <span class="dot"></span>Scene
+              </button>
+              <button class="chip-c" data-cat="action">
+                <span class="dot"></span>Action
+              </button>
+              <button class="chip-c" data-cat="character">
+                <span class="dot"></span>Character
+              </button>
+              <button class="chip-c" data-cat="dialogue">
+                <span class="dot"></span>Dialogue
+              </button>
+              <button class="chip-c" data-cat="paren">
+                <span class="dot"></span>Paren
+              </button>
+              <button class="chip-c" data-cat="transition">
+                <span class="dot"></span>Transition
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Compatto, "uno solo" · ✔︎ Active super-leggibile (il bianco salta
+          fuori) · ✘ Width complessivo grande
+        </div>
+      </section>
+
+      <!-- D · Dot-only with label on hover =============================== -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>D · Solo dot · label on hover/active</h2>
+          <span class="meta"
+            >Ridotto a 6 dot piccoli. Hover o active espande il label. Massima
+            economia di spazio.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage">
+            <div class="chip-d-group">
+              <button class="chip-d is-active" data-cat="scene">
+                <span class="dot"></span><span class="label">Scene</span>
+              </button>
+              <button class="chip-d" data-cat="action">
+                <span class="dot"></span><span class="label">Action</span>
+              </button>
+              <button class="chip-d" data-cat="character">
+                <span class="dot"></span><span class="label">Character</span>
+              </button>
+              <button class="chip-d" data-cat="dialogue">
+                <span class="dot"></span><span class="label">Dialogue</span>
+              </button>
+              <button class="chip-d" data-cat="paren">
+                <span class="dot"></span><span class="label">Paren</span>
+              </button>
+              <button class="chip-d" data-cat="transition">
+                <span class="dot"></span><span class="label">Transition</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Min footprint · ✔︎ Cromia categoria sempre visibile · ✘ Per
+          utenti nuovi i dot vuoti non si capiscono (richiede hover/teach)
+        </div>
+      </section>
+
+      <!-- E · Compact dropdown trigger ==================================== -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>E · Dropdown compatto (1 trigger + popover)</h2>
+          <span class="meta"
+            >Stesso pattern del ViewSwitcher introdotto in Budget/Schedule. 6
+            voci nascoste nel popover.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage" style="flex-direction: column; align-items: flex-start; gap: 4px">
+            <button class="chip-e" data-cat="scene">
+              <span class="prefix">Elemento</span>
+              <span class="active"><span class="dot"></span>Scene</span>
+              <span class="chev">▾</span>
+            </button>
+            <div class="chip-e-popover">
+              <button class="is-active" data-cat="scene">
+                <span class="dot"></span>Scene<span class="check">●</span>
+              </button>
+              <button data-cat="action"><span class="dot"></span>Action</button>
+              <button data-cat="character">
+                <span class="dot"></span>Character
+              </button>
+              <button data-cat="dialogue">
+                <span class="dot"></span>Dialogue
+              </button>
+              <button data-cat="paren"><span class="dot"></span>Paren</button>
+              <button data-cat="transition">
+                <span class="dot"></span>Transition
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Spazio minimo nel viewbar · ✔︎ Coerente col ViewSwitcher · ✘ Costa
+          1 click extra per cambiare elemento mentre si scrive
+        </div>
+      </section>
+
+      <!-- F · Mono tabline ================================================ -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>F · Tabline mono — typewriter</h2>
+          <span class="meta"
+            >Font Courier (mono, come il copione), sottolineatura ink. Active
+            bold. Dot opzionale piccolissimo.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="stage">
+            <div class="chip-f-group">
+              <button class="chip-f is-active" data-cat="scene">
+                <span class="dot"></span>SCENE
+              </button>
+              <button class="chip-f" data-cat="action">
+                <span class="dot"></span>ACTION
+              </button>
+              <button class="chip-f" data-cat="character">
+                <span class="dot"></span>CHARACTER
+              </button>
+              <button class="chip-f" data-cat="dialogue">
+                <span class="dot"></span>DIALOGUE
+              </button>
+              <button class="chip-f" data-cat="paren">
+                <span class="dot"></span>PAREN
+              </button>
+              <button class="chip-f" data-cat="transition">
+                <span class="dot"></span>TRANSITION
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Coerente con il foglio Courier sotto (artefatto sceneggiatura) ·
+          ✔︎ Zero peso, zero rumore · ✘ Lo screenplay editor è l'unico posto
+          dove starebbe bene — su Breakdown sottolinea sarebbe out-of-place
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <hr />
+      <p>
+        <b>La mia raccomandazione</b>: <b>F</b> per lo screenplay editor (è un
+        artefatto-copione, il mono è semanticamente corretto e leggerissimo),
+        <b>A</b> o <b>B</b> per i menu "categoria" su pagine non-screenplay
+        (breakdown Sottolinea, futuri filter chip categorici). Il dropdown
+        <b>E</b> è la fallback quando lo spazio orizzontale è davvero stretto
+        (mobile / narrow viewport).
+      </p>
+      <p>
+        Sconsiglio <b>C</b> (segmented) e <b>D</b> (dot-only): C diventa enorme
+        con 6 voci, D è un puzzle visivo per utenti nuovi.
+      </p>
+    </footer>
+  </body>
+</html>
