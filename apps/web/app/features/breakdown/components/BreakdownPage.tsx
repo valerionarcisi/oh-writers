@@ -10,6 +10,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   FloatingDock,
   MarginNote,
+  MetaBar,
   Popover,
   SegmentedControl,
   VersionTrigger,
@@ -438,8 +439,18 @@ function BreakdownPageContent({ projectId }: Props) {
     };
   }, []);
 
+  const totalElements = allRows.length;
+
   return (
     <main className={styles.page} data-testid="breakdown-page-v2">
+      <MetaBar
+        items={[
+          ...(activeSceneIdx
+            ? [{ id: "scena", label: "Scena", value: `${activeSceneIdx}/${totalScenes}` }]
+            : []),
+          { id: "elementi", label: "Elementi", value: totalElements },
+        ]}
+      />
       {/* ─── VIEWBAR ─── */}
       <div
         className={styles.viewbarWrap}

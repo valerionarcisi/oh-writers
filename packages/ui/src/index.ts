@@ -127,6 +127,9 @@ export type {
   SegmentedControlOption,
 } from "./primitives/SegmentedControl/SegmentedControl";
 
+export { MetaBar } from "./primitives/MetaBar/MetaBar";
+export type { MetaBarProps, MetaBarItem } from "./primitives/MetaBar/MetaBar";
+
 // ─── DS-v2 Shell ────────────────────────────────────────────
 export { SkipLink } from "./shell/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./shell/SkipLink/SkipLink";
