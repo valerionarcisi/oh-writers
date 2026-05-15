@@ -9,10 +9,12 @@
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-md);
   align-self: start;
-  /* TopBar (48) + viewbar (40) + .layout padding-top (16) + bottom dock
-     (~64) → leave ~120px viewport margin so the panel always fits without
-     pushing the floating dock. Body scrolls internally past that point. */
-  max-block-size: calc(100vh - 120px);
+  /* Headroom budget:
+   *   TopBar 48 + Viewbar 40 + layout padding-top 16 = 104 above
+   *   FloatingDock height ~42 + dock bottom inset 20 + breathing 24 = 86 below
+   * So sticky top is 96 and max-height leaves the bottom 86px clear for the
+   * dock — the panel never sits on top of it. */
+  max-block-size: calc(100vh - 190px);
   overflow: hidden;
 }
 
