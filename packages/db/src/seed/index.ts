@@ -13,6 +13,7 @@ import {
   scenes,
   breakdownElements,
   breakdownOccurrences,
+  projectRateCard,
 } from "../schema/index";
 import { and, eq } from "drizzle-orm";
 import {
@@ -465,6 +466,11 @@ export async function seed() {
   await seedFirstDocumentVersions(TEST_TEAM_PROJECT_ID, TEST_USER_ID);
 
   await seedTeamProjectBreakdownFixtures();
+
+  // Rate card defaults for the seeded project so Cast/Troupe in Per-categoria
+  // show populated values right after a fresh seed. Real rates come from the
+  // future spec 24 cascading pre-fill (auto-derive from format×genre×country).
+  await seedDefaultRateCard(TEST_PROJECT_ID);
 
   console.log("  -> Team project + documents created");
 
@@ -921,6 +927,50 @@ async function seedTeamProjectBreakdownFixtures() {
   }
 
   console.log("  -> Team project breakdown fixtures seeded");
+}
+
+/**
+ * Seed a sensible default rate-card for the test project so Cast/Troupe in
+ * the budget Per-categoria view show populated values right after a fresh
+ * seed. Values are baseline daily rates for an Italian indie feature in
+ * EUR — they're educational placeholders, not contractual numbers. The real
+ * derivation (format × genre × country) is spec 24 cascading pre-fill.
+ */
+async function seedDefaultRateCard(projectId: string) {
+  const entries: Array<{
+    name: string;
+    role: string;
+    rateValue: string;
+  }> = [
+    // Cast — by archetype
+    { name: "Filippo", role: "Protagonista", rateValue: "850" },
+    { name: "John", role: "Co-protagonista", rateValue: "700" },
+    { name: "Tea", role: "Co-protagonista", rateValue: "700" },
+    { name: "Giulio", role: "Caratterista", rateValue: "500" },
+    { name: "Nonno", role: "Caratterista", rateValue: "500" },
+    { name: "Michele", role: "Caratterista", rateValue: "450" },
+    { name: "Luca", role: "Generico", rateValue: "300" },
+    { name: "Vecchia 1", role: "Generico", rateValue: "250" },
+    { name: "Vecchia 2", role: "Generico", rateValue: "250" },
+    { name: "Vecchia 3", role: "Generico", rateValue: "250" },
+    { name: "Pubblico", role: "Comparse", rateValue: "120" },
+  ];
+  await db
+    .insert(projectRateCard)
+    .values(
+      entries.map((e, idx) => ({
+        projectId,
+        name: e.name,
+        role: e.role,
+        rateUnit: "giornata" as const,
+        rateValue: e.rateValue,
+        mealAllowance: "20",
+        accommodation: "0",
+        fiscalRegime: "piva" as const,
+        sortOrder: idx,
+      })),
+    )
+    .onConflictDoNothing();
 }
 
 // Only auto-run when this file is the entrypoint (tsx src/seed/index.ts).
