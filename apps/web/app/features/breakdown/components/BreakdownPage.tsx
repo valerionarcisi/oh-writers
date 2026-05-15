@@ -9,7 +9,6 @@ import {
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   FloatingDock,
-  MarginNote,
   Popover,
   SegmentedControl,
   VersionTrigger,
@@ -36,6 +35,7 @@ import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import { ProjectBreakdownTable } from "./ProjectBreakdownTable";
 import { BreakdownMatrix } from "./BreakdownMatrix";
+import { CesareAdPanel, useAdAlertStats } from "./CesareAdPanel";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import type {
@@ -201,6 +201,15 @@ function BreakdownPageContent({ projectId }: Props) {
   const pendingCount = sceneOccurrences.filter(
     (o) => o.occurrence.cesareStatus === "pending",
   ).length;
+
+  // AD alert stats — drive panel tab count and the floating dock counter so
+  // the user sees production-side concerns rather than writing suggestions.
+  const adStats = useAdAlertStats(
+    projectId,
+    scenes,
+    allRows,
+    ctx.versionContent ?? "",
+  );
 
   // Group occurrences by category for the panel.
   const groupedByCategory = useMemo(() => {
@@ -730,10 +739,17 @@ function BreakdownPageContent({ projectId }: Props) {
               aria-selected={panelTab === "cesare"}
               className={styles.panelTab}
               onClick={() => setPanelTab("cesare")}
+              data-testid="breakdown-cesare-tab"
+              aria-label={
+                adStats.critical > 0
+                  ? `Cesare: ${adStats.total} alert, di cui ${adStats.critical} critici`
+                  : `Cesare: ${adStats.total} alert`
+              }
             >
               Cesare
               <span className="count" data-num>
-                {pendingCount}
+                {adStats.total}
+                {adStats.critical > 0 && ` (${adStats.critical}!)`}
               </span>
             </button>
           </div>
@@ -749,22 +765,13 @@ function BreakdownPageContent({ projectId }: Props) {
               />
             )}
             {panelTab === "cesare" && (
-              <CesarePanel
-                suggestions={sceneOccurrences.filter(
-                  (o) => o.occurrence.cesareStatus === "pending",
-                )}
-                onAccept={(occurrenceId) =>
-                  setStatus.mutate({
-                    occurrenceIds: [occurrenceId],
-                    status: "accepted",
-                  })
-                }
-                onIgnore={(occurrenceId) =>
-                  setStatus.mutate({
-                    occurrenceIds: [occurrenceId],
-                    status: "ignored",
-                  })
-                }
+              <CesareAdPanel
+                projectId={projectId}
+                scenes={scenes}
+                rows={allRows}
+                screenplayText={ctx.versionContent ?? ""}
+                activeSceneId={activeScene?.id ?? null}
+                onOpenScene={handleSceneSelect}
               />
             )}
           </div>
@@ -915,7 +922,7 @@ function BreakdownPageContent({ projectId }: Props) {
             onClick: () => setExportOpen(true),
           },
         ]}
-        cesareNoteCount={pendingCount}
+        cesareNoteCount={adStats.total}
         onCesareClick={() => setPanelTab("cesare")}
       />
 
@@ -1019,13 +1026,10 @@ function CategoriesPanel({ grouped, canEdit, onAdd }: CategoriesPanelProps) {
   );
 }
 
-/* ────────────────────────── Cesare panel ──────────────────────────── */
-
-interface CesarePanelProps {
-  suggestions: SceneOccurrenceWithElement[];
-  onAccept: (occurrenceId: string) => void;
-  onIgnore: (occurrenceId: string) => void;
-}
+/* ────────────────────────── Cesare panel ────────────────────────────
+ * Moved to `CesareAdPanel.tsx` — the legacy memo-style panel that suggested
+ * "aggiungere oggetto X" was removed in favour of production-side AD alerts.
+ */
 
 interface RenameFormProps {
   initialName: string;
@@ -1080,132 +1084,3 @@ function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
   );
 }
 
-// Category ordering inside the Cesare panel — Props block surfaces first
-// because production design is the column the team consults most after Cast.
-const CESARE_CATEGORY_ORDER: ReadonlyArray<BreakdownCategory> = [
-  "props",
-  "cast",
-  "locations",
-  "set_dress",
-  "wardrobe",
-  "makeup",
-  "vfx",
-  "sfx",
-  "sound",
-  "vehicles",
-  "extras",
-  "stunts",
-  "animals",
-  "atmosphere",
-  "equipment",
-];
-
-function CesarePanel({ suggestions, onAccept, onIgnore }: CesarePanelProps) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-
-  const grouped = useMemo(() => {
-    const map = new Map<BreakdownCategory, SceneOccurrenceWithElement[]>();
-    for (const s of suggestions) {
-      const arr = map.get(s.element.category) ?? [];
-      arr.push(s);
-      map.set(s.element.category, arr);
-    }
-    return map;
-  }, [suggestions]);
-
-  if (suggestions.length === 0) {
-    return (
-      <p className={styles.notesEmpty}>
-        Cesare non ha proposte aperte su questa scena.
-      </p>
-    );
-  }
-
-  const visibleCats = CESARE_CATEGORY_ORDER.filter((c) => grouped.has(c));
-
-  return (
-    <div className={styles.cesareGroups}>
-      {visibleCats.map((cat) => {
-        const items = grouped.get(cat) ?? [];
-        const meta = CATEGORY_META[cat];
-        const colorVar = `var(${meta.colorToken.replace("--cat-", "--ds-cat-")})`;
-        const isCollapsed = collapsed[cat] === true;
-        const isProps = cat === "props";
-
-        return (
-          <section
-            key={cat}
-            className={[
-              styles.cesareGroup,
-              isProps ? styles.cesareGroupAccent : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            // @ts-expect-error CSS custom property
-            style={{ "--cat-color": colorVar }}
-            data-testid={`cesare-group-${cat}`}
-          >
-            <header className={styles.cesareGroupHead}>
-              <button
-                type="button"
-                className={styles.cesareGroupToggle}
-                aria-expanded={!isCollapsed}
-                onClick={() =>
-                  setCollapsed((s) => ({ ...s, [cat]: !isCollapsed }))
-                }
-              >
-                <span className={styles.cesareCaret} aria-hidden="true">
-                  {isCollapsed ? "▸" : "▾"}
-                </span>
-                <span className={styles.cesareDot} aria-hidden="true" />
-                <span className={styles.cesareGroupName}>
-                  {meta.labelIt}
-                </span>
-                <span className={styles.cesareGroupCount} data-num>
-                  {items.length}
-                </span>
-              </button>
-              <div className={styles.cesareGroupBulk}>
-                <button
-                  type="button"
-                  className={styles.cesareBulkBtn}
-                  onClick={() => {
-                    for (const it of items) onAccept(it.occurrence.id);
-                  }}
-                  aria-label={`Accetta tutti i suggerimenti ${meta.labelIt}`}
-                  data-testid={`cesare-accept-all-${cat}`}
-                >
-                  Accetta tutto
-                </button>
-                <button
-                  type="button"
-                  className={styles.cesareBulkBtn}
-                  onClick={() => {
-                    for (const it of items) onIgnore(it.occurrence.id);
-                  }}
-                  aria-label={`Ignora tutti i suggerimenti ${meta.labelIt}`}
-                  data-testid={`cesare-ignore-all-${cat}`}
-                >
-                  Ignora tutto
-                </button>
-              </div>
-            </header>
-            {!isCollapsed && (
-              <div className={styles.cesareGroupBody}>
-                {items.map((s) => (
-                  <MarginNote
-                    key={s.occurrence.id}
-                    kind="dramaturg"
-                    text={`Suggerimento: aggiungere ${meta.labelIt.toLowerCase()} «${s.element.name}»`}
-                    onAccept={() => onAccept(s.occurrence.id)}
-                    onIgnore={() => onIgnore(s.occurrence.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        );
-      })}
-    </div>
-  );
-}
