@@ -134,7 +134,11 @@ export function ScreenplayEditorShell({
           <div className={styles.viewbarCenter}>{viewbarCenter}</div>
 
           <div className={styles.viewbarRight}>
-            {hasRealToc && (
+            {/* TODO(audit-2026-05-15): restore Indice popover once scene
+                buttons get a working onClick (scrollIntoView on
+                [data-scene-number="N"]). Hidden for consistency with the
+                Breakdown Indice — same logic, same gap. */}
+            {false && hasRealToc && (
             <div className={styles.indiceWrap}>
               <button
                 type="button"

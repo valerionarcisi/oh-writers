@@ -268,6 +268,10 @@ export const ScreenplayEditor = forwardRef<
     [onCurrentElementChange],
   );
 
+  // TODO(audit-2026-05-15): re-enable Cesare Applica once the find/replace
+  // mapping reliably lands on the correct PM range (currently flagged in audit
+  // as still broken after the latest patch). The button is disabled in
+  // ScreenplayCesarePanel but the handler is left intact for testing.
   const handleApplyEdit = useCallback(
     (find: string, replace: string): boolean => {
       const view = viewRef.current;

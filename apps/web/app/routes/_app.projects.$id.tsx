@@ -249,10 +249,14 @@ function ProjectPageContent({
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Produzione</h2>
         <div className={styles.productionGrid}>
+          {/* TODO(audit-2026-05-15): wire ProductionCard subtitles to real
+              server queries (breakdown scene/element counts, budget total +
+              department count, schedule day/shot counts). Until then we
+              show "—" so day-zero projects don't see stale mock numbers. */}
           <ProductionCard
             eyebrow="Breakdown"
             title="Spoglio scene"
-            subtitle="9 scene · 47 elementi"
+            subtitle="—"
             onClick={() =>
               void navigate({
                 to: "/projects/$id/breakdown",
@@ -263,7 +267,7 @@ function ProjectPageContent({
           <ProductionCard
             eyebrow="Budget"
             title="Preventivo"
-            subtitle="842.180 € · 7 reparti"
+            subtitle="—"
             onClick={() =>
               void navigate({
                 to: "/projects/$id/budget",
@@ -274,7 +278,7 @@ function ProjectPageContent({
           <ProductionCard
             eyebrow="Piano di ripresa"
             title="Schedule"
-            subtitle="5 giornate · 22 inquadrature"
+            subtitle="—"
             onClick={() =>
               void navigate({
                 to: "/projects/$id/schedule",

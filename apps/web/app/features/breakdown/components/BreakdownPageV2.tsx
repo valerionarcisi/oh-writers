@@ -522,6 +522,10 @@ function BreakdownPageV2Content({ projectId }: Props) {
           {/* "Per scena" is the default V2 view; tabs are visual but the
               first is active. Other views fall back to v1 by route. */}
           <div className={styles.viewbarRight}>
+            {/* TODO(audit-2026-05-15): restore Indice popover once scene-click
+                anchor logic scrolls to the correct breakdown scene block.
+                The popover items have no working onClick handler today. */}
+            {false && (
             <div className={styles.indiceWrap} ref={indiceWrapRef}>
               <button
                 type="button"
@@ -607,6 +611,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
                 )}
               </Popover>
             </div>
+            )}
 
             <VersionTrigger
               variant="pill"

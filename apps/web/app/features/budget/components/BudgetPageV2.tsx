@@ -258,7 +258,14 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
     .filter((k) => (totalsByCategory[k] ?? 0) > 0)
     .sort((a, b) => (totalsByCategory[b] ?? 0) - (totalsByCategory[a] ?? 0));
 
-  const deltaPercent = 4.2;
+  // TODO(audit-2026-05-15): wire deltaPercent to a real `previousBudget` snapshot
+  // (compare current grandTotal to last saved budget revision). Until then the
+  // pill is hidden — day-zero projects must not see a fake "+4,2% vs preventivo".
+  const previousBudget: number | null = null;
+  const deltaPercent: number | null =
+    previousBudget !== null && previousBudget > 0
+      ? ((grandTotal - previousBudget) / previousBudget) * 100
+      : null;
   const shootingDays = budget?.shootingDays ?? null;
   const contingencyPercent = budget?.contingencyPercent ?? 10;
   const sceneCount = scenes.length || 0;
@@ -285,12 +292,17 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
           onSelect={(id) => setView(id as ViewMode)}
         />
         <span className={styles.viewbarRight} />
-        <ToggleChip
-          isOn={showRateCard}
-          onToggle={() => setShowRateCard((v) => !v)}
-          label="Tariffe"
-          aria-label="Mostra tariffe"
-        />
+        {/* TODO(audit-2026-05-15): restore Tariffe ToggleChip when the rate-card
+            entry point lands per docs/specs/core/11c-rate-card.md — currently
+            the toggle navigates to a broken /dashboard route. */}
+        {false && (
+          <ToggleChip
+            isOn={showRateCard}
+            onToggle={() => setShowRateCard((v) => !v)}
+            label="Tariffe"
+            aria-label="Mostra tariffe"
+          />
+        )}
         {budget && shootingDays !== null && (
           <SettingChip
             label="Giorni"
@@ -324,8 +336,16 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
             <HeroKPI
               eyebrow="TOTALE STIMATO"
               value={eurAmount(grandTotal || 0)}
-              delta={`+${deltaPercent.toLocaleString("it-IT")}% vs preventivo`}
-              deltaDirection="negative"
+              delta={
+                deltaPercent !== null
+                  ? `${deltaPercent >= 0 ? "+" : ""}${deltaPercent.toLocaleString("it-IT", { maximumFractionDigits: 1 })}% vs preventivo`
+                  : undefined
+              }
+              deltaDirection={
+                deltaPercent !== null && deltaPercent > 0
+                  ? "negative"
+                  : "positive"
+              }
               sub={
                 sceneCount > 0
                   ? `su ${sceneCount} scene${shootingDays ? ` · ${shootingDays} giornate` : ""}`
