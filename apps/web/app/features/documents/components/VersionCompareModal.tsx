@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Dialog } from "@oh-writers/ui";
+import { Modal, DsButton } from "@oh-writers/ui";
 import { buildSideBySideDiff } from "@oh-writers/utils";
 import type { DiffRow, DiffSegment } from "@oh-writers/utils";
 import styles from "./VersionCompareModal.module.css";
@@ -52,13 +52,16 @@ export function VersionCompareModal({
   );
 
   return (
-    <Dialog
+    <Modal
       isOpen
       onClose={onClose}
       title="Compare versions"
-      size="xl"
-      showCloseButton
-      data-testid="version-compare-modal"
+      size="lg"
+      footer={
+        <DsButton variant="ghost" onClick={onClose}>
+          Chiudi
+        </DsButton>
+      }
     >
       <div className={styles.selectors}>
         <label className={styles.selectorGroup}>
@@ -107,7 +110,7 @@ export function VersionCompareModal({
           </table>
         )}
       </div>
-    </Dialog>
+    </Modal>
   );
 }
 

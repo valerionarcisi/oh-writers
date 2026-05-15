@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { Modal, DsButton } from "@oh-writers/ui";
 import styles from "./ExportPdfModal.module.css";
 
 export type ExportFormat = "pdf" | "docx";
@@ -45,21 +46,6 @@ export function ExportPdfModal({
   const [format, setFormat] = useState<ExportFormat>(
     availableFormats[0] ?? "pdf",
   );
-  const triggerRef = useRef<Element | null>(null);
-
-  useEffect(() => {
-    triggerRef.current = document.activeElement;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("keydown", handleKey);
-      if (triggerRef.current instanceof HTMLElement) {
-        triggerRef.current.focus();
-      }
-    };
-  }, [onClose]);
 
   const showFormatPicker = availableFormats.length > 1;
   const resolvedTitle =
@@ -67,82 +53,21 @@ export function ExportPdfModal({
     (showFormatPicker ? "Export document" : `Export ${FORMAT_LABELS[format]}`);
 
   return (
-    <div
-      className={styles.overlay}
-      onClick={onClose}
-      data-testid="narrative-export-modal-overlay"
-    >
-      <div
-        className={styles.modal}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="narrative-export-modal-title"
-        data-testid="narrative-export-modal"
-      >
-        <div className={styles.header}>
-          <h2 id="narrative-export-modal-title" className={styles.title}>
-            {resolvedTitle}
-          </h2>
-          <button
-            type="button"
-            className={styles.closeBtn}
-            aria-label="Close"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
-        <div className={styles.body}>
-          {showFormatPicker && (
-            <fieldset
-              className={styles.fieldset}
-              data-testid="narrative-export-format"
-            >
-              <legend className={styles.legend}>Format</legend>
-              {availableFormats.map((f) => (
-                <label key={f} className={styles.checkboxRow}>
-                  <input
-                    type="radio"
-                    name="export-format"
-                    value={f}
-                    checked={format === f}
-                    onChange={() => setFormat(f)}
-                    data-testid={`narrative-export-format-${f}`}
-                  />
-                  <span>{FORMAT_LABELS[f]}</span>
-                </label>
-              ))}
-            </fieldset>
-          )}
-          <label className={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              data-testid="narrative-export-include-title-page"
-              checked={includeTitlePage && canIncludeTitlePage}
-              disabled={!canIncludeTitlePage}
-              onChange={(e) => setIncludeTitlePage(e.target.checked)}
-            />
-            <span>Include title page</span>
-          </label>
-          {!canIncludeTitlePage && (
-            <p className={styles.hint}>
-              Fill in the project title page to enable this option.
-            </p>
-          )}
-        </div>
-        <div className={styles.footer}>
-          <button
-            type="button"
-            className={styles.btn}
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={resolvedTitle}
+      footer={
+        <>
+          <DsButton
+            variant="ghost"
             onClick={onClose}
             disabled={isPending}
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnPrimary}`}
+          </DsButton>
+          <DsButton
+            variant="primary"
             data-testid="narrative-export-generate"
             disabled={isPending}
             onClick={() =>
@@ -153,9 +78,51 @@ export function ExportPdfModal({
             }
           >
             {isPending ? "Generating…" : "Generate"}
-          </button>
-        </div>
+          </DsButton>
+        </>
+      }
+    >
+      <div
+        className={styles.body}
+        data-testid="narrative-export-modal"
+      >
+        {showFormatPicker && (
+          <fieldset
+            className={styles.fieldset}
+            data-testid="narrative-export-format"
+          >
+            <legend className={styles.legend}>Format</legend>
+            {availableFormats.map((f) => (
+              <label key={f} className={styles.checkboxRow}>
+                <input
+                  type="radio"
+                  name="export-format"
+                  value={f}
+                  checked={format === f}
+                  onChange={() => setFormat(f)}
+                  data-testid={`narrative-export-format-${f}`}
+                />
+                <span>{FORMAT_LABELS[f]}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            data-testid="narrative-export-include-title-page"
+            checked={includeTitlePage && canIncludeTitlePage}
+            disabled={!canIncludeTitlePage}
+            onChange={(e) => setIncludeTitlePage(e.target.checked)}
+          />
+          <span>Include title page</span>
+        </label>
+        {!canIncludeTitlePage && (
+          <p className={styles.hint}>
+            Fill in the project title page to enable this option.
+          </p>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

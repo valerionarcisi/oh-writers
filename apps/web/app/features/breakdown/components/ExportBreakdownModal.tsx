@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog } from "@oh-writers/ui";
+import { DsButton, Modal } from "@oh-writers/ui";
 import { useExportBreakdown } from "../hooks/useBreakdown";
 import { openPdfPreview } from "~/features/documents";
 import { downloadCsv } from "../lib/download-csv";
@@ -42,24 +42,23 @@ export function ExportBreakdownModal({
   };
 
   return (
-    <Dialog
+    <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Esporta breakdown"
-      actions={
+      footer={
         <>
-          <button type="button" className={styles.secondary} onClick={onClose}>
+          <DsButton variant="ghost" onClick={onClose}>
             Annulla
-          </button>
-          <button
-            type="button"
-            className={styles.primary}
+          </DsButton>
+          <DsButton
+            variant="primary"
             data-testid="breakdown-export-generate"
             onClick={handleGenerate}
             disabled={exportMut.isPending}
           >
             {exportMut.isPending ? "Generazione…" : "Genera"}
-          </button>
+          </DsButton>
         </>
       }
     >
@@ -77,6 +76,6 @@ export function ExportBreakdownModal({
           </select>
         </label>
       </div>
-    </Dialog>
+    </Modal>
   );
 }

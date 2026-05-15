@@ -2,7 +2,7 @@
 // by spec; English labels are not shipped — override via the `labels` prop.
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { match } from "ts-pattern";
-import { Button, Dialog, FormField, Input } from "@oh-writers/ui";
+import { DsButton, Modal, FormField, Input } from "@oh-writers/ui";
 import { useExportSubjectSiae } from "../hooks/useExportSubjectSiae";
 import { useSaveSiaeMetadata } from "../hooks/useSiaeMetadata";
 import { SiaeExportInputSchema } from "../documents.schema";
@@ -189,13 +189,14 @@ export function ExportSiaeModal({
   };
 
   return (
-    <Dialog
+    <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={l.heading}
-      actions={
-        <div className={styles.actions}>
-          <Button
+      size="lg"
+      footer={
+        <>
+          <DsButton
             type="button"
             variant="ghost"
             onClick={onClose}
@@ -203,8 +204,8 @@ export function ExportSiaeModal({
             data-testid="siae-export-cancel"
           >
             {l.cancel}
-          </Button>
-          <Button
+          </DsButton>
+          <DsButton
             type="submit"
             form="siae-export-form"
             variant="primary"
@@ -212,8 +213,8 @@ export function ExportSiaeModal({
             data-testid="siae-export-submit"
           >
             {isPending ? l.submitting : l.submit}
-          </Button>
-        </div>
+          </DsButton>
+        </>
       }
     >
       <form
@@ -349,6 +350,6 @@ export function ExportSiaeModal({
           </p>
         ) : null}
       </form>
-    </Dialog>
+    </Modal>
   );
 }

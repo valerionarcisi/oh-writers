@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Dialog } from "@oh-writers/ui";
+import { DsButton, Modal } from "@oh-writers/ui";
 import { EXPORT_FORMAT_META, type ExportFormat } from "@oh-writers/domain";
 import { useListScreenplayScenes } from "../hooks/useListScreenplayScenes";
 import styles from "./ExportScreenplayPdfModal.module.css";
@@ -58,28 +58,28 @@ export function ExportScreenplayPdfModal({
   };
 
   return (
-    <Dialog
+    <Modal
       isOpen
       onClose={onClose}
       title={`Esporta — ${meta.labelIt}`}
-      showCloseButton
-      data-testid="screenplay-export-modal"
-      actions={
+      size={meta.requiresSceneSelection ? "lg" : "md"}
+      footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={isPending}>
+          <DsButton variant="ghost" onClick={onClose} disabled={isPending}>
             Annulla
-          </Button>
-          <Button
+          </DsButton>
+          <DsButton
             variant="primary"
             data-testid="screenplay-export-generate"
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
             {isPending ? "Generazione…" : "Genera"}
-          </Button>
+          </DsButton>
         </>
       }
     >
+      <div data-testid="screenplay-export-modal">
       <p className={styles.description}>{meta.descriptionIt}</p>
 
       {meta.requiresSceneSelection && (
@@ -127,6 +127,7 @@ export function ExportScreenplayPdfModal({
         />
         <span>Includi cover page</span>
       </label>
-    </Dialog>
+      </div>
+    </Modal>
   );
 }

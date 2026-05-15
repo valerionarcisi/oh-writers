@@ -14,7 +14,7 @@
  * resolver the NodeView provided. Keeps the NodeView free of React while
  * letting the UX live where it belongs.
  */
-import { Button, Dialog } from "@oh-writers/ui";
+import { DsButton, Modal } from "@oh-writers/ui";
 import styles from "./SceneNumberConflictModal.module.css";
 
 export type ConflictChoice = "lock" | "resequence-from" | "cancel";
@@ -31,21 +31,21 @@ export function SceneNumberConflictModal({
   onResolve,
 }: Props) {
   return (
-    <Dialog
+    <Modal
       isOpen
       onClose={() => onResolve("cancel")}
       title="Scene number conflict"
-      data-testid="scene-number-conflict-modal"
-      actions={
-        <Button
+      footer={
+        <DsButton
           variant="ghost"
           data-testid="conflict-choice-cancel"
           onClick={() => onResolve("cancel")}
         >
           Cancel
-        </Button>
+        </DsButton>
       }
     >
+      <div data-testid="scene-number-conflict-modal">
       <p>
         You&apos;re changing scene <strong>{current || "—"}</strong> to{" "}
         <strong>{proposed}</strong>, but another scene already uses that number.
@@ -78,6 +78,7 @@ export function SceneNumberConflictModal({
           </span>
         </button>
       </div>
-    </Dialog>
+      </div>
+    </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog } from "@oh-writers/ui";
+import { DsButton, Modal } from "@oh-writers/ui";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -68,24 +68,24 @@ export function AddElementModal({
   };
 
   return (
-    <Dialog
+    <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Aggiungi elemento"
-      actions={
+      footer={
         <>
-          <button type="button" className={styles.secondary} onClick={onClose}>
+          <DsButton variant="ghost" onClick={onClose}>
             Annulla
-          </button>
-          <button
+          </DsButton>
+          <DsButton
             type="submit"
             form="add-element-form"
-            className={styles.primary}
+            variant="primary"
             data-testid="add-element-submit"
             disabled={add.isPending}
           >
             {add.isPending ? "Salvataggio…" : "Aggiungi"}
-          </button>
+          </DsButton>
         </>
       }
     >
@@ -152,6 +152,6 @@ export function AddElementModal({
           />
         </label>
       </form>
-    </Dialog>
+    </Modal>
   );
 }
