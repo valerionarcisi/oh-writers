@@ -10,7 +10,7 @@ import {
   HeroKPI,
   Viewbar,
   FloatingDock,
-  Tabs,
+  ViewSwitcher,
   ToggleChip,
 } from "@oh-writers/ui";
 import { resourceTotal } from "@oh-writers/domain";
@@ -285,8 +285,8 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   return (
     <div className={styles.page} data-testid="budget-page-v2">
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
-        <Tabs
-          tabs={[
+        <ViewSwitcher
+          options={[
             { id: "category", label: "Per categoria" },
             // TODO(audit-2026-05-15): re-enable "Per scena" once getSceneCosts
             // server fn lands — current view shows only a dropdown filter with

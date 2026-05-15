@@ -11,7 +11,7 @@ import {
   FloatingDock,
   MarginNote,
   Popover,
-  Tabs,
+  ViewSwitcher,
   VersionTrigger,
   Viewbar,
   ViewbarSep,
@@ -447,8 +447,8 @@ function BreakdownPageContent({ projectId }: Props) {
       >
         <Viewbar>
           <div className={styles.viewbarLeft}>
-            <Tabs
-              tabs={[
+            <ViewSwitcher
+              options={[
                 { id: "per-scene", label: "Per scena" },
                 { id: "per-project", label: "Per progetto" },
                 { id: "matrice", label: "Matrice" },

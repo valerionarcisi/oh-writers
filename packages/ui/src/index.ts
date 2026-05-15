@@ -114,6 +114,12 @@ export type {
   VersionTriggerVariant,
 } from "./primitives/VersionTrigger/VersionTrigger";
 
+export { ViewSwitcher } from "./primitives/ViewSwitcher/ViewSwitcher";
+export type {
+  ViewSwitcherProps,
+  ViewSwitcherOption,
+} from "./primitives/ViewSwitcher/ViewSwitcher";
+
 // ─── DS-v2 Shell ────────────────────────────────────────────
 export { SkipLink } from "./shell/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./shell/SkipLink/SkipLink";

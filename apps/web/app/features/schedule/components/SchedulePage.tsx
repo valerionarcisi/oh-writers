@@ -4,7 +4,12 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Viewbar, FloatingDock, VersionTrigger, Tabs } from "@oh-writers/ui";
+import {
+  Viewbar,
+  FloatingDock,
+  VersionTrigger,
+  ViewSwitcher,
+} from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
   scheduleQueryOptions,
@@ -169,8 +174,8 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         isScrolled={isStuck}
         className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
       >
-        <Tabs
-          tabs={[
+        <ViewSwitcher
+          options={[
             { id: "day", label: "Per giornata" },
             { id: "byScene", label: "Per scena" },
             { id: "all", label: "Tutti i giorni" },
