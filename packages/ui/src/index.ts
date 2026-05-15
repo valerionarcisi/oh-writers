@@ -112,6 +112,7 @@ export { VersionTrigger } from "./primitives/VersionTrigger/VersionTrigger";
 export type {
   VersionTriggerProps,
   VersionTriggerVariant,
+  VersionMenuItem,
 } from "./primitives/VersionTrigger/VersionTrigger";
 
 export { ViewSwitcher } from "./primitives/ViewSwitcher/ViewSwitcher";

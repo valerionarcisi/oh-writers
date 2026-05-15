@@ -70,6 +70,35 @@
   gap: var(--ds-space-2);
 }
 
+/* Inline loading state when Cesare is reading */
+.loadingInline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.spinner {
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ds-line);
+  border-top-color: var(--ds-action);
+  animation: cesareSpin 700ms linear infinite;
+}
+
+@keyframes cesareSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--ds-line);
+  }
+}
+
 .metric {
   display: flex;
   flex-direction: column;

@@ -1,34 +1,37 @@
+/* SegmentedControl — Proposta B (TagBicolor).
+ * Rettangoli affiancati con bordo morbido. Active = border-left action 3px +
+ * background soft action + testo solid. Inactive = bordo grigio, testo mute.
+ * Pattern "tag" — leggibile, posato, niente shadow-card. */
 .group {
   display: inline-flex;
   align-items: stretch;
-  background: var(--ds-surface-alt);
-  padding: 3px;
-  border-radius: var(--ds-radius-md);
-  gap: 0;
+  gap: var(--ds-space-1);
 }
 
 .option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px var(--ds-space-3);
-  background: transparent;
-  border: none;
+  padding: 4px 12px 4px 8px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-left: 3px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
   color: var(--ds-text-mute);
   font-family: var(--ds-font-sans);
   font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
-  border-radius: calc(var(--ds-radius-md) - 2px);
   white-space: nowrap;
   transition:
     background 120ms ease,
-    color 120ms ease,
-    box-shadow 120ms ease;
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .option:hover {
   color: var(--ds-text);
+  border-color: var(--ds-text-3);
 }
 
 .option:focus-visible {
@@ -37,15 +40,15 @@
 }
 
 .optionActive {
-  background: var(--ds-surface);
+  background: color-mix(in srgb, var(--ds-action) 8%, var(--ds-surface));
+  border-color: color-mix(in srgb, var(--ds-action) 35%, var(--ds-line));
+  border-left-color: var(--ds-action);
   color: var(--ds-text);
-  box-shadow:
-    0 1px 2px rgba(28, 26, 23, 0.06),
-    0 0 0 1px var(--ds-line);
+  font-weight: 600;
 }
 
 .optionActive:hover {
-  color: var(--ds-text);
+  border-color: color-mix(in srgb, var(--ds-action) 50%, var(--ds-line));
 }
 
 @media (prefers-reduced-motion: reduce) {

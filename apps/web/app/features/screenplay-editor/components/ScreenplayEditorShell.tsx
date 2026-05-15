@@ -220,7 +220,13 @@ export function ScreenplayEditorShell({
               <VersionTrigger
                 variant="pill"
                 versionLabel={versionLabel}
-                onClick={onOpenVersions}
+                menuItems={[
+                  {
+                    id: "open-drawer",
+                    label: "Apri Versioni →",
+                    onSelect: onOpenVersions,
+                  },
+                ]}
               />
             )}
           </div>

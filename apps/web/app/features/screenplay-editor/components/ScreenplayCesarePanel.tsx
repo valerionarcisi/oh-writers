@@ -109,26 +109,23 @@ function PanelBody({
 
   return (
     <div className={styles.body}>
-      <section className={styles.metrics}>
-        {/* PAGINA rimossa: il totale pagine sta già nel DocStats footer e
-         * la posizione cursore non aggiunge valore al regista/sceneggiatore.
-         * SCENA resta perché contestualizza i suggerimenti Cesare. */}
-        <Metric
-          label="Scena"
-          value={sceneCurrent != null ? `${sceneCurrent}/${sceneTotal}` : "—"}
-        />
-      </section>
-
+      {/* SCENA + PAGINA entrambi rimossi: la posizione cursore è ambient noise.
+       * Lo stato attivo lo mostra direttamente il cursore nell'editor. */}
       <section className={styles.notes}>
         <div className={styles.notesHeadRow}>
           <p className={styles.notesHead}>
-            {!hasContent
-              ? "Scrivi almeno una scena per iniziare."
-              : polishQ.isFetching
-                ? "Cesare sta leggendo…"
-                : suggestions.length > 0
-                  ? `${suggestions.length} rifiniture proposte`
-                  : "Nessuna rifinitura — buon ritmo."}
+            {!hasContent ? (
+              "Scrivi almeno una scena per iniziare."
+            ) : polishQ.isFetching ? (
+              <span className={styles.loadingInline}>
+                <span className={styles.spinner} aria-hidden="true" />
+                Cesare sta leggendo…
+              </span>
+            ) : suggestions.length > 0 ? (
+              `${suggestions.length} rifiniture proposte`
+            ) : (
+              "Nessuna rifinitura — buon ritmo."
+            )}
           </p>
           <button
             type="button"
