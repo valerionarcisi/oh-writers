@@ -39,7 +39,7 @@ export function AppShell({
   user,
   projectName = "",
   sectionName = "",
-  saveState = "saved",
+  saveState,
   saveSecondsAgo,
   cesareNoteCount = 0,
   sections,

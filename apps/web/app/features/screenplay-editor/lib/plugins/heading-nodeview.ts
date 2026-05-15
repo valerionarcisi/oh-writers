@@ -98,7 +98,7 @@ class HeadingNodeView implements NodeView {
     btn.className = "scene-number-menu-btn";
     btn.textContent = "⋮";
     btn.setAttribute("data-testid", "scene-menu-trigger");
-    btn.setAttribute("aria-label", "Scene actions");
+    btn.setAttribute("aria-label", "Azioni scena");
     btn.setAttribute("aria-haspopup", "menu");
     btn.contentEditable = "false";
     if (!this.readOnly) {
@@ -116,7 +116,7 @@ class HeadingNodeView implements NodeView {
     btn.type = "button";
     btn.className = `scene-number scene-number-btn ${side}`;
     btn.setAttribute("data-testid", "scene-number-edit-trigger");
-    btn.setAttribute("aria-label", "Edit scene number");
+    btn.setAttribute("aria-label", "Modifica numero scena");
     btn.contentEditable = "false";
     if (!this.readOnly) {
       // mousedown (not click) so PM doesn't steal focus before we react.

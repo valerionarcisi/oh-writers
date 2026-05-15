@@ -40,21 +40,29 @@ export const Route = createFileRoute("/_app")({
 const SECTION_LABELS: Record<string, string> = {
   breakdown: "Breakdown",
   budget: "Budget",
-  schedule: "Schedule",
-  screenplay: "Screenplay",
+  schedule: "Piano",
+  screenplay: "Sceneggiatura",
   soggetto: "Soggetto",
-  synopsis: "Synopsis",
-  outline: "Outline",
-  treatment: "Treatment",
+  synopsis: "Sinossi",
+  outline: "Scaletta",
+  treatment: "Trattamento",
   settings: "Impostazioni",
   "title-page": "Frontespizio",
-  dashboard: "Projects",
+  dashboard: "Progetti",
 };
 
-function deriveSectionName(routeId: string): string {
+// Routes where the TopBar should NOT show the SavePill (no editable content).
+// Dashboard and project-home are read-only landing pages — a stale "Salvato"
+// chip there is misleading.
+const NON_EDITABLE_SEGMENTS = ["dashboard"] as const;
+
+function deriveSectionName(routeId: string, hasProjectId: boolean): string {
   for (const [segment, label] of Object.entries(SECTION_LABELS)) {
     if (routeId.includes(segment)) return label;
   }
+  // Project home (no sub-route segment matched) — show an explicit label
+  // so the TopBar doesn't render `Sezione: — cambia sezione`.
+  if (hasProjectId) return "Panoramica";
   return "";
 }
 
@@ -68,10 +76,10 @@ const SECTION_GROUPS: ReadonlyArray<{
     label: "Scrittura",
     items: [
       { segment: "soggetto", label: "Soggetto", icon: "file-text" },
-      { segment: "synopsis", label: "Synopsis", icon: "book" },
-      { segment: "outline", label: "Outline", icon: "clipboard" },
-      { segment: "treatment", label: "Treatment", icon: "file-text" },
-      { segment: "screenplay", label: "Screenplay", icon: "file-text" },
+      { segment: "synopsis", label: "Sinossi", icon: "book" },
+      { segment: "outline", label: "Scaletta", icon: "clipboard" },
+      { segment: "treatment", label: "Trattamento", icon: "file-text" },
+      { segment: "screenplay", label: "Sceneggiatura", icon: "file-text" },
     ],
   },
   {
@@ -79,7 +87,7 @@ const SECTION_GROUPS: ReadonlyArray<{
     items: [
       { segment: "breakdown", label: "Breakdown", icon: "clipboard" },
       { segment: "budget", label: "Budget", icon: "file-text" },
-      { segment: "schedule", label: "Schedule", icon: "clock" },
+      { segment: "schedule", label: "Piano", icon: "clock" },
     ],
   },
 ];
@@ -123,10 +131,19 @@ function AppLayout() {
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
 
   const lastMatch = matches[matches.length - 1];
-  const sectionName = lastMatch ? deriveSectionName(lastMatch.routeId) : "";
+  const sectionName = lastMatch
+    ? deriveSectionName(lastMatch.routeId, Boolean(projectId))
+    : "";
   const activeSegment = lastMatch
     ? activeSegmentFromRouteId(lastMatch.routeId)
     : "";
+
+  // SavePill is only meaningful on editable sub-routes. Hide it on dashboard
+  // and project home (no editable content there).
+  const isEditableRoute =
+    Boolean(projectId) &&
+    activeSegment !== "" &&
+    !NON_EDITABLE_SEGMENTS.some((s) => lastMatch?.routeId.includes(s));
 
   const { data: projectResult } = useProject(projectId ?? "");
   const projectName = projectResult?.isOk
@@ -148,7 +165,7 @@ function AppLayout() {
       user={user}
       projectName={projectName}
       sectionName={sectionName}
-      saveState="saved"
+      saveState={isEditableRoute ? "saved" : undefined}
       sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
       projects={projectsList}
       currentProjectId={projectId}

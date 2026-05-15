@@ -95,7 +95,7 @@ export function TopBar({
   projectName,
   sectionName,
   isScrolled = false,
-  saveState = "saved",
+  saveState,
   saveSecondsAgo,
   cesareNoteCount = 0,
   presenceUsers = [],
@@ -304,8 +304,10 @@ export function TopBar({
 
       <div className={styles.spacer} />
 
-      {/* Save state */}
-      <SavePill state={saveState} secondsAgo={saveSecondsAgo} />
+      {/* Save state — hidden on read-only pages (dashboard, project home) */}
+      {saveState !== undefined && (
+        <SavePill state={saveState} secondsAgo={saveSecondsAgo} />
+      )}
 
       {/* Right cluster */}
       <div className={styles.rightCluster}>
