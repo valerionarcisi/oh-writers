@@ -233,3 +233,26 @@ None new. Re-uses:
    should not crowd the right slot.**
 2. Should `VersionTrigger variant="pill"` also surface the `Salvato …s ago`
    state? **No — that stays in the TopBar `SavePill`. Concerns separated.**
+3. Should doc-page FloatingDocks render `<VersionTrigger variant="ghost">`
+   as a ReactNode child, or stay with `FloatingDock.secondaryActions=[{
+   label: "Versioni" }]`? **Decision (15 May 2026): stay with
+   `secondaryActions`. The dock's ghost button is visually and semantically
+   the same as `VersionTrigger ghost` — introducing a node slot only for
+   naming would add API surface without value. The two render paths are the
+   canonical ghost-version-trigger pattern.**
+
+## 12. Out of scope — explicit follow-ups
+
+These came up during migration but are not porting cleanup. Tracked here so
+they don't get lost:
+
+- **Versioning for `breakdown` and `schedule`.** `VersionScopeSchema` today
+  has only `screenplay | document`. The `VersionTrigger variant="pill"` on
+  Breakdown V2 and Schedule V2 currently fires an `onClick` that does
+  nothing (mirrors the previous `disabled` button). Wiring requires a new
+  `breakdown` / `schedule` scope in the schema, server functions to
+  list/create/restore versions, and a DB column. Own spec when prioritised.
+- **E2E test selectors.** `char-counter`, `page-counter`, `page-indicator`,
+  `scene-indicator` test-ids were removed when ad-hoc footers were
+  replaced with `DocStats`. Tests updated in this spec to query DocStats
+  labels — see commit referenced in the implementation log.

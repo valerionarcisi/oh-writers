@@ -133,8 +133,9 @@ test.describe("Narrative editor — spec 04e regressions", () => {
       await page.goto(path);
       await expect(editorLocator(page)).toBeVisible({ timeout: 10_000 });
 
-      const charCounter = page.getByTestId("char-counter");
-      const pageCounter = page.getByTestId("page-counter");
+      const docStats = page.getByTestId("doc-stats");
+      const charCounter = docStats.locator('[data-stat="chars"]');
+      const pageCounter = docStats.locator('[data-stat="pages"]');
 
       await expect(charCounter).toBeVisible();
       await expect(pageCounter).toBeVisible();

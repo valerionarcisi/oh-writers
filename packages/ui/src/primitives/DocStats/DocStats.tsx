@@ -35,9 +35,14 @@ export function DocStats({ stats, className }: DocStatsProps) {
     <dl
       className={`${styles.stats}${className ? ` ${className}` : ""}`}
       aria-live="polite"
+      data-testid="doc-stats"
     >
       {stats.map((stat) => (
-        <div key={stat.kind} className={styles.item}>
+        <div
+          key={stat.kind}
+          className={styles.item}
+          data-stat={stat.kind}
+        >
           <dt className={styles.label}>{labels[stat.kind]}</dt>
           <dd className={styles.value}>{formatValue(stat)}</dd>
         </div>

@@ -38,10 +38,9 @@ test.describe("Screenplay Editor", () => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForEditor(page);
 
-    const indicator = page.getByTestId("page-indicator");
-    await expect(indicator).toBeVisible();
-    // Format: "p.{currentPage}/{totalPages}"
-    await expect(indicator).toHaveText(/p\.\d+\/\d+/);
+    const pages = page.getByTestId("doc-stats").locator('[data-stat="pages"]');
+    await expect(pages).toBeVisible();
+    await expect(pages.locator("dd")).toHaveText(/\d+/);
   });
 
   test("[OHW-082] Tab cycles action → character → dialogue → action", async ({

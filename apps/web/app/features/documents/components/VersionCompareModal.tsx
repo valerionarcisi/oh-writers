@@ -56,7 +56,7 @@ export function VersionCompareModal({
       isOpen
       onClose={onClose}
       title="Compare versions"
-      size="lg"
+      size="xl"
       footer={
         <DsButton variant="ghost" onClick={onClose}>
           Chiudi

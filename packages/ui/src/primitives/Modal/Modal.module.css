@@ -15,6 +15,7 @@
   &[data-size="sm"] { --modal-width: 360px; }
   &[data-size="md"] { --modal-width: 480px; }
   &[data-size="lg"] { --modal-width: 640px; }
+  &[data-size="xl"] { --modal-width: 880px; }
 
   &::backdrop {
     background: oklch(0% 0 0 / 0.35);

@@ -58,6 +58,7 @@
   /* Typography stacks */
   --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
   --ds-font-display: "Fraunces", Georgia, serif;
+  --ds-font-serif:   var(--font-serif, "Lora", Georgia, serif);
   --ds-font-mono:    "IBM Plex Mono", ui-monospace, monospace;
   --ds-font-script:  "Courier Prime", "Courier New", monospace;
 

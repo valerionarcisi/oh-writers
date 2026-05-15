@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from "react";
 import styles from "./Modal.module.css";
 
-export type ModalSize = "sm" | "md" | "lg";
+export type ModalSize = "sm" | "md" | "lg" | "xl";
 
 export type ModalProps = {
   isOpen: boolean;
