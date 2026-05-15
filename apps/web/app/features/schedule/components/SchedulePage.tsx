@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDragAutoScroll } from "../hooks/useDragAutoScroll";
 import {
   useSuspenseQuery,
   useMutation,
@@ -63,6 +64,8 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
   const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
   const [selectedDay, setSelectedDay] = useState<ShootingDayView | null>(null);
+  const boardScrollRef = useRef<HTMLDivElement | null>(null);
+  useDragAutoScroll(boardScrollRef, draggingStripId !== null);
   const [activeDayId, setActiveDayId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -119,6 +122,14 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const removeDayMutation = useMutation({
     mutationFn: (dayId: string) =>
       removeShootingDay({ data: { dayId } }).then(unwrapResult),
+    onSuccess: invalidate,
+  });
+
+  const notesMutation = useMutation({
+    mutationFn: (vars: { dayId: string; notes: string | null }) =>
+      updateShootingDay({
+        data: { dayId: vars.dayId, patch: { notes: vars.notes } },
+      }).then(unwrapResult),
     onSuccess: invalidate,
   });
 
@@ -260,16 +271,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           ariaLabel="Vista piano di lavorazione"
         />
         <span className={styles.viewbarRight} />
-        {dayCount > 0 && (
-          <button
-            type="button"
-            className={styles.filter}
-            aria-haspopup="menu"
-            aria-label="Filtra per giornata"
-          >
-            Tutte le giornate ▾
-          </button>
-        )}
         <VersionTrigger
           variant="pill"
           versionLabel={versionLabel}
@@ -315,11 +316,19 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                     onApply={handleApplySuggestion}
                   />
                   <div className={styles.boardCard}>
-                    <div className={styles.boardScroll}>
+                    <div className={styles.boardScroll} ref={boardScrollRef}>
                       <StripBoard
                         schedule={schedule}
                         draggingStripId={draggingStripId}
                         viewMode="days"
+                        unscheduledStrips={schedule.unscheduledStrips}
+                        onMoveStrip={(stripId, targetDayId) =>
+                          moveMutation.mutate({
+                            stripId,
+                            targetDayId,
+                            targetPosition: 0,
+                          })
+                        }
                         onDragStart={setDraggingStripId}
                         onDrop={handleDrop}
                         onLockToggle={(stripId) =>
@@ -361,6 +370,10 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                   schedule={schedule}
                   dayId={activeDayId}
                   onSelectDay={handleSelectDayInView}
+                  onNotesChange={(dayId, notes) =>
+                    notesMutation.mutate({ dayId, notes })
+                  }
+                  notesSaving={notesMutation.isPending}
                 />
               ))
               .exhaustive()}

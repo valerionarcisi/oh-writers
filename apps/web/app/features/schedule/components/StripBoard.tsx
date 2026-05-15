@@ -1,4 +1,4 @@
-import type { ScheduleView } from "../server/schedule.server";
+import type { ScheduleView, StripView } from "../server/schedule.server";
 import { ShootingDayColumn } from "./ShootingDayColumn";
 import styles from "./StripBoard.module.css";
 
@@ -8,6 +8,8 @@ interface StripBoardProps {
   schedule: ScheduleView;
   draggingStripId: string | null;
   viewMode: "days" | "weeks";
+  unscheduledStrips: ReadonlyArray<StripView>;
+  onMoveStrip: (stripId: string, targetDayId: string | null) => void;
   onDragStart: (stripId: string) => void;
   onDrop: (dayId: string, position: number) => void;
   onLockToggle: (stripId: string) => void;
@@ -21,6 +23,8 @@ interface StripBoardProps {
 export function StripBoard({
   schedule,
   viewMode,
+  unscheduledStrips,
+  onMoveStrip,
   onDragStart,
   onDrop,
   onLockToggle,
@@ -56,6 +60,8 @@ export function StripBoard({
                 <ShootingDayColumn
                   key={day.id}
                   day={day}
+                  unscheduledStrips={unscheduledStrips}
+                  onMoveStrip={onMoveStrip}
                   onDragStart={onDragStart}
                   onDrop={onDrop}
                   onLockToggle={onLockToggle}
@@ -87,6 +93,8 @@ export function StripBoard({
         <ShootingDayColumn
           key={day.id}
           day={day}
+          unscheduledStrips={unscheduledStrips}
+          onMoveStrip={onMoveStrip}
           onDragStart={onDragStart}
           onDrop={onDrop}
           onLockToggle={onLockToggle}

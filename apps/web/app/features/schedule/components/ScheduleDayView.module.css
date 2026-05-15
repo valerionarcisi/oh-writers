@@ -266,6 +266,30 @@
   border-radius: var(--ds-radius-sm);
 }
 
+.notesTextarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 120px;
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  outline: none;
+  transition: border-color var(--ds-duration-1) var(--ds-ease);
+
+  &::placeholder {
+    color: var(--ds-text-faint);
+  }
+
+  &:focus {
+    border-color: var(--ds-action);
+  }
+}
+
 .locationRow {
   display: flex;
   flex-direction: column;

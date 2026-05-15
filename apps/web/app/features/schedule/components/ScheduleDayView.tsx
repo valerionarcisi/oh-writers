@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { computeDayKpis, formatDayHours } from "@oh-writers/domain";
 import type { ScheduleView, ShootingDayView } from "../server/schedule.server";
 import styles from "./ScheduleDayView.module.css";
@@ -7,6 +7,8 @@ interface ScheduleDayViewProps {
   schedule: ScheduleView;
   dayId: string | null;
   onSelectDay: (dayId: string) => void;
+  onNotesChange: (dayId: string, notes: string | null) => void;
+  notesSaving: boolean;
 }
 
 const ITALIAN_WEEKDAYS = [
@@ -55,8 +57,28 @@ export function ScheduleDayView({
   schedule,
   dayId,
   onSelectDay,
+  onNotesChange,
+  notesSaving,
 }: ScheduleDayViewProps) {
   const day = resolveActiveDay(schedule, dayId);
+  const [notesDraft, setNotesDraft] = useState(day?.notes ?? "");
+  const lastFlushRef = useRef<string>(day?.notes ?? "");
+
+  useEffect(() => {
+    setNotesDraft(day?.notes ?? "");
+    lastFlushRef.current = day?.notes ?? "";
+  }, [day?.id, day?.notes]);
+
+  useEffect(() => {
+    if (!day) return;
+    const original = lastFlushRef.current;
+    if (notesDraft === original) return;
+    const t = window.setTimeout(() => {
+      lastFlushRef.current = notesDraft;
+      onNotesChange(day.id, notesDraft.trim() === "" ? null : notesDraft);
+    }, 700);
+    return () => window.clearTimeout(t);
+  }, [notesDraft, day, onNotesChange]);
 
   const kpis = useMemo(() => {
     if (!day) return null;
@@ -225,6 +247,26 @@ export function ScheduleDayView({
               elencati dopo l'introduzione del campo{" "}
               <code>requiredDepartmentIds</code> sulle strip.
             </p>
+          </div>
+        </section>
+
+        <section className={styles.card} aria-label="Note di giornata">
+          <header className={styles.cardHead}>
+            <h3>Note di giornata</h3>
+            <span className={styles.cardMeta}>
+              {notesSaving ? "Salvataggio…" : notesDraft ? "Salvate" : "Vuote"}
+            </span>
+          </header>
+          <div className={styles.cardBody}>
+            <textarea
+              className={styles.notesTextarea}
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              placeholder="Promemoria per la regia, la troupe, la produzione…"
+              rows={6}
+              aria-label="Note di giornata"
+              data-testid={`day-notes-${day.dayNumber}`}
+            />
           </div>
         </section>
 

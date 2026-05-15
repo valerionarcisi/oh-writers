@@ -1,12 +1,15 @@
 import { useMemo, useRef, useState } from "react";
-import { Calendar, Pencil, X } from "lucide-react";
+import { Calendar, Pencil, Plus, Minus, X } from "lucide-react";
+import { DropdownMenu } from "@oh-writers/ui";
 import { computeDayKpis, formatDayHours } from "@oh-writers/domain";
-import type { ShootingDayView } from "../server/schedule.server";
+import type { ShootingDayView, StripView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
 import styles from "./ShootingDayColumn.module.css";
 
 interface ShootingDayColumnProps {
   day: ShootingDayView;
+  unscheduledStrips: ReadonlyArray<StripView>;
+  onMoveStrip: (stripId: string, targetDayId: string | null) => void;
   onDragStart: (stripId: string) => void;
   onDrop: (dayId: string, position: number) => void;
   onLockToggle: (stripId: string) => void;
@@ -55,6 +58,8 @@ const formatShortDate = (iso: string): string => {
 
 export function ShootingDayColumn({
   day,
+  unscheduledStrips,
+  onMoveStrip,
   onDragStart,
   onDrop,
   onLockToggle,
@@ -135,19 +140,83 @@ export function ShootingDayColumn({
               {dayTypeLabel[day.dayType]}
             </span>
           )}
-          <button
-            type="button"
-            className={styles.removeBtn}
-            title="Rimuovi giorno"
-            aria-label="Rimuovi giorno"
-            data-testid={`remove-day-${day.dayNumber}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(day.id);
-            }}
+          <div
+            className={styles.headerActions}
+            onClick={(e) => e.stopPropagation()}
           >
-            <X size={12} strokeWidth={2} />
-          </button>
+            <DropdownMenu
+              align="end"
+              data-testid={`add-scene-${day.dayNumber}`}
+              trigger={
+                <button
+                  type="button"
+                  className={styles.actionBtn}
+                  title="Aggiungi scena alla giornata"
+                  aria-label="Aggiungi scena"
+                  disabled={unscheduledStrips.length === 0}
+                >
+                  <Plus size={12} strokeWidth={2} />
+                </button>
+              }
+              items={
+                unscheduledStrips.length === 0
+                  ? [
+                      {
+                        label: "Nessuna scena da aggiungere",
+                        onClick: () => undefined,
+                        disabled: true,
+                      },
+                    ]
+                  : unscheduledStrips.map((s) => ({
+                      label: `SC ${s.sceneNumber} · ${s.location ?? "—"}`,
+                      description: [s.timeOfDay, s.intExt]
+                        .filter(Boolean)
+                        .join(" · "),
+                      onClick: () => onMoveStrip(s.id, day.id),
+                    }))
+              }
+            />
+            <DropdownMenu
+              align="end"
+              data-testid={`remove-scene-${day.dayNumber}`}
+              trigger={
+                <button
+                  type="button"
+                  className={styles.actionBtn}
+                  title="Rimuovi scena dalla giornata"
+                  aria-label="Rimuovi scena"
+                  disabled={day.strips.length === 0}
+                >
+                  <Minus size={12} strokeWidth={2} />
+                </button>
+              }
+              items={
+                day.strips.length === 0
+                  ? [
+                      {
+                        label: "Nessuna scena in questa giornata",
+                        onClick: () => undefined,
+                        disabled: true,
+                      },
+                    ]
+                  : day.strips.map((s) => ({
+                      label: `SC ${s.sceneNumber} · ${s.location ?? "—"}`,
+                      description: "Sposta tra le non pianificate",
+                      onClick: () => onMoveStrip(s.id, null),
+                    }))
+              }
+            />
+            <button
+              type="button"
+              className={styles.removeBtn}
+              title="Rimuovi giorno"
+              aria-label="Rimuovi giorno"
+              data-testid={`remove-day-${day.dayNumber}`}
+              onClick={() => onRemove(day.id)}
+            >
+              <X size={12} strokeWidth={2} />
+            </button>
+          </div>
         </div>
 
         <div className={styles.dateWrap} onClick={(e) => e.stopPropagation()}>
