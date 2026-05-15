@@ -1,0 +1,31 @@
+.stats {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-fg-mute);
+}
+
+.item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.value {
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
+  color: var(--ds-fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  margin: 0;
+  font-size: var(--ds-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-fg-mute);
+}

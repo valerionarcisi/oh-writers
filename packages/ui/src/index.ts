@@ -102,6 +102,18 @@ export type { PresenceProps, PresenceUser } from "./primitives/Presence/Presence
 export { Button as DsButton } from "./primitives/Button/Button";
 export type { ButtonProps as DsButtonProps, ButtonVariant, ButtonSize } from "./primitives/Button/Button";
 
+export { Modal } from "./primitives/Modal/Modal";
+export type { ModalProps, ModalSize } from "./primitives/Modal/Modal";
+
+export { DocStats } from "./primitives/DocStats/DocStats";
+export type { DocStatsProps, DocStat } from "./primitives/DocStats/DocStats";
+
+export { VersionTrigger } from "./primitives/VersionTrigger/VersionTrigger";
+export type {
+  VersionTriggerProps,
+  VersionTriggerVariant,
+} from "./primitives/VersionTrigger/VersionTrigger";
+
 // ─── DS-v2 Shell ────────────────────────────────────────────
 export { SkipLink } from "./shell/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./shell/SkipLink/SkipLink";

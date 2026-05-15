@@ -1,0 +1,48 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-fg-strong);
+  font-family: inherit;
+  font-size: var(--ds-text-sm);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-3);
+  transition: background 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    background: var(--ds-surface-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-accent);
+    outline-offset: 2px;
+  }
+
+  &[data-variant="pill"] {
+    border-radius: var(--radius-full);
+    border-color: var(--ds-line);
+    background: var(--ds-surface-1);
+  }
+
+  &[data-variant="ghost"] {
+    border-radius: var(--radius-md);
+  }
+}
+
+.label {
+  font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--ds-fg-mute);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}
