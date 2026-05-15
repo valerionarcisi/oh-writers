@@ -10,13 +10,13 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   FloatingDock,
   MarginNote,
-  MetaBar,
   Popover,
   SegmentedControl,
   VersionTrigger,
   Viewbar,
   ViewbarSep,
 } from "@oh-writers/ui";
+import { useVersionsDrawer } from "~/features/versions";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -129,6 +129,7 @@ function BreakdownPageContent({ projectId }: Props) {
   const versionId = ctx.screenplayVersionId;
   const canEdit = ctx.canEdit;
   const scenes = ctx.scenes;
+  const { open: openVersionsDrawer } = useVersionsDrawer();
 
   const [activeSceneId, setActiveSceneId] = useState<string | null>(
     scenes[0]?.id ?? null,
@@ -439,18 +440,8 @@ function BreakdownPageContent({ projectId }: Props) {
     };
   }, []);
 
-  const totalElements = allRows.length;
-
   return (
     <main className={styles.page} data-testid="breakdown-page-v2">
-      <MetaBar
-        items={[
-          ...(activeSceneIdx
-            ? [{ id: "scena", label: "Scena", value: `${activeSceneIdx}/${totalScenes}` }]
-            : []),
-          { id: "elementi", label: "Elementi", value: totalElements },
-        ]}
-      />
       {/* ─── VIEWBAR ─── */}
       <div
         className={styles.viewbarWrap}
@@ -631,7 +622,12 @@ function BreakdownPageContent({ projectId }: Props) {
               variant="pill"
               versionLabel="v3 · 14 mag 2026"
               onClick={() => {
-                /* TODO Spec 12d: wire breakdown version scope */
+                if (ctx.screenplayId) {
+                  openVersionsDrawer({
+                    kind: "screenplay",
+                    screenplayId: ctx.screenplayId,
+                  });
+                }
               }}
             />
           </div>

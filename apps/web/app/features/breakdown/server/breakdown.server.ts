@@ -714,6 +714,9 @@ export interface BreakdownSceneSummary {
 
 export interface BreakdownContext {
   projectId: string;
+  /** Id dello screenplay del progetto. Vuoto solo se il progetto non ne ha
+   *  ancora uno — caso bordo che fa fallire le viste anyway. */
+  screenplayId: string;
   screenplayVersionId: string;
   versionContent: string; // fountain snapshot della version corrente; "" se nessuna version
   scenes: BreakdownSceneSummary[];
@@ -734,6 +737,7 @@ const buildBreakdownContext = (
       if (!screenplay) {
         return {
           projectId,
+          screenplayId: "",
           screenplayVersionId: "",
           versionContent: "",
           scenes: [] as BreakdownSceneSummary[],
@@ -770,6 +774,7 @@ const buildBreakdownContext = (
       if (!currentVersionId) {
         return {
           projectId,
+          screenplayId: screenplay.id,
           screenplayVersionId: "",
           versionContent: "",
           scenes: [] as BreakdownSceneSummary[],
@@ -821,6 +826,7 @@ const buildBreakdownContext = (
       );
       return {
         projectId,
+        screenplayId: screenplay.id,
         screenplayVersionId: currentVersionId,
         versionContent: fountainContent,
         scenes: sceneRows.map((s) => ({

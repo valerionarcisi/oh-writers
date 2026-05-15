@@ -1,18 +1,22 @@
+/* DraftMetaBadge — Variant 1 industry typewriter.
+ * Inline mono uppercase coerente con la VersionTrigger pill mono accanto. */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border: var(--border);
-  border-radius: var(--radius-md);
-  background: var(--ds-surface-deep);
-  font-size: var(--text-xs);
+  gap: 6px;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ds-text-mute);
 }
 
 .swatch {
-  inline-size: 0.85rem;
-  block-size: 0.85rem;
+  inline-size: 10px;
+  block-size: 10px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.25);
   flex-shrink: 0;
@@ -20,7 +24,7 @@
 
 .label {
   color: var(--ds-text);
-  font-weight: var(--weight-medium);
+  font-weight: 700;
 }
 
 .date {
