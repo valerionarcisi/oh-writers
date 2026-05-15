@@ -279,35 +279,38 @@ export const ScreenplayEditor = forwardRef<
       );
       const idx = docText.indexOf(find);
       if (idx < 0) return false;
-      // Map plain-text indices back to PM positions by walking the doc.
-      // textBetween joins block contents with the second arg as the
-      // block-separator, so PM positions in text-space are offset by the
-      // structural boundary tokens. We use a coarse mapping that walks
-      // forward node-by-node, advancing the text cursor as we go.
+      // textBetween joins top-level blocks with "\n". To map a flat index
+      // back to PM positions we walk each top-level block, accumulating its
+      // text length and adding 1 for the separator that precedes every block
+      // after the first.
+      const findEnd = idx + find.length;
       let posStart = -1;
       let posEnd = -1;
       let textCursor = 0;
-      view.state.doc.descendants((n, pos) => {
-        if (posEnd >= 0) return false;
-        if (n.isText) {
+      view.state.doc.forEach((block, blockStart) => {
+        if (posEnd >= 0) return;
+        if (blockStart > 0) textCursor += 1;
+        block.descendants((n, relPos) => {
+          if (posEnd >= 0) return false;
+          if (!n.isText) return true;
           const txt = n.text ?? "";
+          const absStart = blockStart + 1 + relPos;
           if (
             posStart < 0 &&
             textCursor + txt.length > idx &&
             textCursor <= idx
           ) {
-            posStart = pos + (idx - textCursor);
+            posStart = absStart + (idx - textCursor);
           }
-          const end = idx + find.length;
-          if (textCursor + txt.length >= end && textCursor <= end) {
-            posEnd = pos + (end - textCursor);
+          if (
+            textCursor + txt.length >= findEnd &&
+            textCursor <= findEnd
+          ) {
+            posEnd = absStart + (findEnd - textCursor);
           }
           textCursor += txt.length;
-        } else if (n.isBlock && n.content.size === 0) {
-          // empty block — counts as a "\n" separator in textBetween
-          textCursor += 1;
-        }
-        return true;
+          return true;
+        });
       });
       if (posStart < 0 || posEnd < 0) return false;
       const tr = view.state.tr.replaceWith(
