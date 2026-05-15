@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import { ResultAsync, ok, err } from "neverthrow";
+import { ResultAsync, ok, err, okAsync, errAsync } from "neverthrow";
 import {
   breakdownElements,
   breakdownOccurrences,
@@ -23,8 +23,10 @@ import {
   type OccurrenceSource,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
+import { withProjectAccess } from "~/server/pipeline";
+import { requireProjectAccess } from "~/server/access";
+import { ProjectNotFoundError } from "~/features/projects";
 import {
   BreakdownElementNotFoundError,
   BreakdownSceneNotFoundError,
@@ -32,12 +34,7 @@ import {
   ForbiddenError,
 } from "../breakdown.errors";
 import { hashText } from "@oh-writers/utils/hash";
-import { canEditBreakdown, canViewBreakdown } from "../lib/permissions";
 import { findElementInText } from "../lib/re-match";
-import {
-  resolveBreakdownAccessByProjectId,
-  resolveBreakdownAccessByScene,
-} from "./breakdown-access";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,6 +58,51 @@ const parseOccurrence = (row: typeof breakdownOccurrences.$inferSelect) =>
     updatedAt: row.updatedAt.toISOString(),
   });
 
+// ─── Loader helpers (Spec 23 — ResultAsync, not Promise<T | null>) ───────────
+
+const findSceneById = (
+  db: Db,
+  sceneId: string,
+): ResultAsync<
+  typeof scenes.$inferSelect,
+  BreakdownSceneNotFoundError | DbError
+> =>
+  ResultAsync.fromPromise(
+    db.query.scenes.findFirst({ where: eq(scenes.id, sceneId) }),
+    (e) => new DbError("findSceneById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new BreakdownSceneNotFoundError(sceneId)),
+  );
+
+const findScreenplayById = (
+  db: Db,
+  screenplayId: string,
+): ResultAsync<typeof screenplays.$inferSelect, DbError> =>
+  ResultAsync.fromPromise(
+    db.query.screenplays.findFirst({ where: eq(screenplays.id, screenplayId) }),
+    (e) => new DbError("findScreenplayById", e),
+  ).andThen((row) =>
+    row
+      ? ok(row)
+      : err(new DbError("findScreenplayById", `not found: ${screenplayId}`)),
+  );
+
+const findBreakdownElementById = (
+  db: Db,
+  elementId: string,
+): ResultAsync<
+  typeof breakdownElements.$inferSelect,
+  BreakdownElementNotFoundError | DbError
+> =>
+  ResultAsync.fromPromise(
+    db.query.breakdownElements.findFirst({
+      where: eq(breakdownElements.id, elementId),
+    }),
+    (e) => new DbError("findBreakdownElementById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new BreakdownElementNotFoundError(elementId)),
+  );
+
 // ─── getBreakdownForScene (with L1 re-match) ─────────────────────────────────
 
 export interface SceneOccurrenceWithElement {
@@ -73,6 +115,87 @@ const GetForSceneInput = z.object({
   screenplayVersionId: z.string().uuid(),
 });
 
+const loadSceneOccurrencesWithRematch = (
+  db: Db,
+  scene: typeof scenes.$inferSelect,
+  screenplayVersionId: string,
+): ResultAsync<SceneOccurrenceWithElement[], DbError> =>
+  ResultAsync.fromPromise(
+    db
+      .select({ occ: breakdownOccurrences, el: breakdownElements })
+      .from(breakdownOccurrences)
+      .innerJoin(
+        breakdownElements,
+        eq(breakdownOccurrences.elementId, breakdownElements.id),
+      )
+      .where(
+        and(
+          eq(breakdownOccurrences.sceneId, scene.id),
+          eq(breakdownOccurrences.screenplayVersionId, screenplayVersionId),
+          isNull(breakdownElements.archivedAt),
+          ne(breakdownOccurrences.cesareStatus, "ignored"),
+        ),
+      ),
+    (e) => new DbError("getBreakdownForScene/loadOccs", e),
+  ).andThen((rows) => {
+    const currentHash = hashText(sceneTextOf(scene));
+    return ResultAsync.fromPromise(
+      db.query.breakdownSceneState.findFirst({
+        where: and(
+          eq(breakdownSceneState.sceneId, scene.id),
+          eq(breakdownSceneState.screenplayVersionId, screenplayVersionId),
+        ),
+      }),
+      (e) => new DbError("getBreakdownForScene/loadState", e),
+    ).andThen((state) => {
+      const needsRematch = !state || state.textHash !== currentHash;
+      if (!needsRematch)
+        return okAsync(
+          rows.map((r) => ({
+            occurrence: parseOccurrence(r.occ),
+            element: parseElement(r.el),
+          })),
+        );
+      const sceneText = sceneTextOf(scene);
+      return ResultAsync.fromPromise(
+        (async () => {
+          const updated: typeof rows = [];
+          for (const r of rows) {
+            const isStale = !findElementInText(r.el.name, sceneText);
+            if (isStale !== r.occ.isStale) {
+              await db
+                .update(breakdownOccurrences)
+                .set({ isStale, updatedAt: new Date() })
+                .where(eq(breakdownOccurrences.id, r.occ.id));
+            }
+            updated.push({ occ: { ...r.occ, isStale }, el: r.el });
+          }
+          await db
+            .insert(breakdownSceneState)
+            .values({
+              sceneId: scene.id,
+              screenplayVersionId,
+              textHash: currentHash,
+            })
+            .onConflictDoUpdate({
+              target: [
+                breakdownSceneState.sceneId,
+                breakdownSceneState.screenplayVersionId,
+              ],
+              set: { textHash: currentHash },
+            });
+          return updated;
+        })(),
+        (e) => new DbError("getBreakdownForScene/rematchUpdate", e),
+      ).map((updated) =>
+        updated.map((r) => ({
+          occurrence: parseOccurrence(r.occ),
+          element: parseElement(r.el),
+        })),
+      );
+    });
+  });
+
 export const getBreakdownForScene = createServerFn({ method: "GET" })
   .validator(GetForSceneInput)
   .handler(
@@ -81,118 +204,28 @@ export const getBreakdownForScene = createServerFn({ method: "GET" })
     }): Promise<
       ResultShape<
         SceneOccurrenceWithElement[],
-        BreakdownSceneNotFoundError | ForbiddenError | DbError
+        | BreakdownSceneNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const sceneResult = await ResultAsync.fromPromise(
-        db.query.scenes
-          .findFirst({ where: eq(scenes.id, data.sceneId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("getBreakdownForScene/loadScene", e),
-      );
-      if (sceneResult.isErr()) return toShape(err(sceneResult.error));
-      const scene = sceneResult.value;
-      if (!scene)
-        return toShape(err(new BreakdownSceneNotFoundError(data.sceneId)));
-
-      const accessResult = await resolveBreakdownAccessByScene(
-        db,
-        user.id,
-        scene.id,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canViewBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("view breakdown")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .select({ occ: breakdownOccurrences, el: breakdownElements })
-          .from(breakdownOccurrences)
-          .innerJoin(
-            breakdownElements,
-            eq(breakdownOccurrences.elementId, breakdownElements.id),
-          )
-          .where(
-            and(
-              eq(breakdownOccurrences.sceneId, scene.id),
-              eq(
-                breakdownOccurrences.screenplayVersionId,
-                data.screenplayVersionId,
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findSceneById(db, data.sceneId).andThen((scene) =>
+            findScreenplayById(db, scene.screenplayId).andThen((screenplay) =>
+              requireProjectAccess(db, screenplay.projectId, "view").andThen(
+                () =>
+                  loadSceneOccurrencesWithRematch(
+                    db,
+                    scene,
+                    data.screenplayVersionId,
+                  ),
               ),
-              isNull(breakdownElements.archivedAt),
-              ne(breakdownOccurrences.cesareStatus, "ignored"),
             ),
           ),
-        (e) => new DbError("getBreakdownForScene/loadOccs", e),
-      ).andThen((rows) => {
-        const currentHash = hashText(sceneTextOf(scene));
-        return ResultAsync.fromPromise(
-          db.query.breakdownSceneState
-            .findFirst({
-              where: and(
-                eq(breakdownSceneState.sceneId, scene.id),
-                eq(
-                  breakdownSceneState.screenplayVersionId,
-                  data.screenplayVersionId,
-                ),
-              ),
-            })
-            .then((r) => r ?? null),
-          (e) => new DbError("getBreakdownForScene/loadState", e),
-        ).andThen((state) => {
-          const needsRematch = !state || state.textHash !== currentHash;
-          if (!needsRematch) return ok(rows);
-          const sceneText = sceneTextOf(scene);
-          return ResultAsync.fromPromise(
-            (async () => {
-              const updated: typeof rows = [];
-              for (const r of rows) {
-                const isStale = !findElementInText(r.el.name, sceneText);
-                if (isStale !== r.occ.isStale) {
-                  await db
-                    .update(breakdownOccurrences)
-                    .set({ isStale, updatedAt: new Date() })
-                    .where(eq(breakdownOccurrences.id, r.occ.id));
-                }
-                updated.push({
-                  occ: { ...r.occ, isStale },
-                  el: r.el,
-                });
-              }
-              await db
-                .insert(breakdownSceneState)
-                .values({
-                  sceneId: scene.id,
-                  screenplayVersionId: data.screenplayVersionId,
-                  textHash: currentHash,
-                })
-                .onConflictDoUpdate({
-                  target: [
-                    breakdownSceneState.sceneId,
-                    breakdownSceneState.screenplayVersionId,
-                  ],
-                  set: { textHash: currentHash },
-                });
-              return updated;
-            })(),
-            (e) => new DbError("getBreakdownForScene/rematchUpdate", e),
-          );
-        });
-      });
-
-      if (result.isErr()) return toShape(err(result.error));
-      return toShape(
-        ok(
-          result.value.map((r) => ({
-            occurrence: parseOccurrence(r.occ),
-            element: parseElement(r.el),
-          })),
         ),
-      );
-    },
+      ),
   );
 
 // ─── getProjectBreakdown (consolidated view) ─────────────────────────────────
@@ -312,54 +345,78 @@ export const getProjectBreakdown = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<ProjectBreakdownRow[], ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canViewBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("view breakdown")));
-
-      return toShape(
-        await getProjectBreakdownRows(
-          db,
-          data.projectId,
-          data.screenplayVersionId,
+      ResultShape<
+        ProjectBreakdownRow[],
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          getProjectBreakdownRows(
+            db,
+            access.project.id,
+            data.screenplayVersionId,
+          ),
         ),
-      );
-    },
+      ),
   );
 
 // ─── getStaleScenes ──────────────────────────────────────────────────────────
 
 export const getStaleScenes = createServerFn({ method: "GET" })
   .validator(z.object({ screenplayVersionId: z.string().uuid() }))
-  .handler(async ({ data }): Promise<ResultShape<string[], DbError>> => {
-    await requireUser();
-    const db = await getDb();
-    const result = await ResultAsync.fromPromise(
-      db
-        .selectDistinct({ sceneId: breakdownOccurrences.sceneId })
-        .from(breakdownOccurrences)
-        .where(
-          and(
-            eq(
-              breakdownOccurrences.screenplayVersionId,
-              data.screenplayVersionId,
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<string[], ProjectNotFoundError | ForbiddenError | DbError>
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          ResultAsync.fromPromise(
+            db.query.screenplayVersions.findFirst({
+              where: eq(screenplayVersions.id, data.screenplayVersionId),
+            }),
+            (e) => new DbError("getStaleScenes/loadVersion", e),
+          )
+            .andThen((version) =>
+              version
+                ? okAsync(version)
+                : errAsync(
+                    new DbError(
+                      "getStaleScenes",
+                      `version not found: ${data.screenplayVersionId}`,
+                    ),
+                  ),
+            )
+            .andThen((version) =>
+              findScreenplayById(db, version.screenplayId).andThen(
+                (screenplay) =>
+                  requireProjectAccess(db, screenplay.projectId, "view").andThen(
+                    () =>
+                      ResultAsync.fromPromise(
+                        db
+                          .selectDistinct({
+                            sceneId: breakdownOccurrences.sceneId,
+                          })
+                          .from(breakdownOccurrences)
+                          .where(
+                            and(
+                              eq(
+                                breakdownOccurrences.screenplayVersionId,
+                                data.screenplayVersionId,
+                              ),
+                              eq(breakdownOccurrences.isStale, true),
+                            ),
+                          ),
+                        (e) => new DbError("getStaleScenes", e),
+                      ).map((rows) => rows.map((r) => r.sceneId)),
+                  ),
+              ),
             ),
-            eq(breakdownOccurrences.isStale, true),
-          ),
         ),
-      (e) => new DbError("getStaleScenes", e),
-    ).map((rows) => rows.map((r) => r.sceneId));
-    return toShape(result);
-  });
+      ),
+  );
 
 // ─── addBreakdownElement (manual add + optional occurrence) ──────────────────
 
@@ -392,94 +449,89 @@ export const addBreakdownElement = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         { elementId: string; occurrenceId: string | null },
-        ForbiddenError | DbError
+        ProjectNotFoundError | ForbiddenError | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("add breakdown element")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .insert(breakdownElements)
-          .values({
-            projectId: data.projectId,
-            category: data.category,
-            name: data.name,
-            description: data.description ?? null,
-            castTier: data.castTier ?? null,
-          })
-          .onConflictDoUpdate({
-            target: [
-              breakdownElements.projectId,
-              breakdownElements.category,
-              breakdownElements.name,
-            ],
-            set: {
-              updatedAt: new Date(),
-              archivedAt: null,
-              ...(data.castTier !== undefined && { castTier: data.castTier }),
-            },
-          })
-          .returning(),
-        (e) => new DbError("addBreakdownElement/upsert", e),
-      ).andThen(([elRow]) => {
-        if (!elRow)
-          return err(
-            new DbError("addBreakdownElement/upsert", "no row returned"),
-          );
-        if (!data.occurrence)
-          return ok({
-            elementId: elRow.id,
-            occurrenceId: null as string | null,
-          });
-        const occInput = data.occurrence;
-        return ResultAsync.fromPromise(
-          db
-            .insert(breakdownOccurrences)
-            .values({
-              elementId: elRow.id,
-              sceneId: occInput.sceneId,
-              screenplayVersionId: occInput.screenplayVersionId,
-              quantity: occInput.quantity,
-              note: occInput.note ?? null,
-              cesareStatus: "accepted",
-            })
-            .onConflictDoUpdate({
-              target: [
-                breakdownOccurrences.elementId,
-                breakdownOccurrences.screenplayVersionId,
-                breakdownOccurrences.sceneId,
-              ],
-              set: {
-                quantity: occInput.quantity,
-                note: occInput.note ?? null,
-                updatedAt: new Date(),
-              },
-            })
-            .returning(),
-          (e) => new DbError("addBreakdownElement/insertOcc", e),
-        ).andThen(([occRow]) =>
-          occRow
-            ? ok({
-                elementId: elRow.id,
-                occurrenceId: occRow.id as string | null,
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db }) =>
+          ResultAsync.fromPromise(
+            db
+              .insert(breakdownElements)
+              .values({
+                projectId: data.projectId,
+                category: data.category,
+                name: data.name,
+                description: data.description ?? null,
+                castTier: data.castTier ?? null,
               })
-            : err(
-                new DbError("addBreakdownElement/insertOcc", "no row returned"),
-              ),
-        );
-      });
-
-      return toShape(result);
-    },
+              .onConflictDoUpdate({
+                target: [
+                  breakdownElements.projectId,
+                  breakdownElements.category,
+                  breakdownElements.name,
+                ],
+                set: {
+                  updatedAt: new Date(),
+                  archivedAt: null,
+                  ...(data.castTier !== undefined && {
+                    castTier: data.castTier,
+                  }),
+                },
+              })
+              .returning(),
+            (e) => new DbError("addBreakdownElement/upsert", e),
+          ).andThen(([elRow]) => {
+            if (!elRow)
+              return errAsync(
+                new DbError("addBreakdownElement/upsert", "no row returned"),
+              );
+            if (!data.occurrence)
+              return okAsync({
+                elementId: elRow.id,
+                occurrenceId: null as string | null,
+              });
+            const occInput = data.occurrence;
+            return ResultAsync.fromPromise(
+              db
+                .insert(breakdownOccurrences)
+                .values({
+                  elementId: elRow.id,
+                  sceneId: occInput.sceneId,
+                  screenplayVersionId: occInput.screenplayVersionId,
+                  quantity: occInput.quantity,
+                  note: occInput.note ?? null,
+                  cesareStatus: "accepted",
+                })
+                .onConflictDoUpdate({
+                  target: [
+                    breakdownOccurrences.elementId,
+                    breakdownOccurrences.screenplayVersionId,
+                    breakdownOccurrences.sceneId,
+                  ],
+                  set: {
+                    quantity: occInput.quantity,
+                    note: occInput.note ?? null,
+                    updatedAt: new Date(),
+                  },
+                })
+                .returning(),
+              (e) => new DbError("addBreakdownElement/insertOcc", e),
+            ).andThen(([occRow]) =>
+              occRow
+                ? ok({
+                    elementId: elRow.id,
+                    occurrenceId: occRow.id as string | null,
+                  })
+                : err(
+                    new DbError(
+                      "addBreakdownElement/insertOcc",
+                      "no row returned",
+                    ),
+                  ),
+            );
+          }),
+        ),
+      ),
   );
 
 // ─── updateBreakdownElement + archiveBreakdownElement ────────────────────────
@@ -502,61 +554,51 @@ export const updateBreakdownElement = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         BreakdownElement,
-        BreakdownElementNotFoundError | ForbiddenError | DbError
+        | BreakdownElementNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const elResult = await ResultAsync.fromPromise(
-        db.query.breakdownElements
-          .findFirst({ where: eq(breakdownElements.id, data.elementId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("updateBreakdownElement/load", e),
-      );
-      if (elResult.isErr()) return toShape(err(elResult.error));
-      const el = elResult.value;
-      if (!el)
-        return toShape(err(new BreakdownElementNotFoundError(data.elementId)));
-
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        el.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("update breakdown element")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(breakdownElements)
-          .set({
-            ...(data.patch.name !== undefined && { name: data.patch.name }),
-            ...(data.patch.category !== undefined && {
-              category: data.patch.category,
-            }),
-            ...(data.patch.description !== undefined && {
-              description: data.patch.description,
-            }),
-            ...(data.patch.castTier !== undefined && {
-              castTier: data.patch.castTier,
-            }),
-            updatedAt: new Date(),
-          })
-          .where(eq(breakdownElements.id, el.id))
-          .returning(),
-        (e) => new DbError("updateBreakdownElement/update", e),
-      ).andThen(([row]) =>
-        row
-          ? ok(parseElement(row))
-          : err(
-              new DbError("updateBreakdownElement/update", "no row returned"),
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBreakdownElementById(db, data.elementId).andThen((el) =>
+            requireProjectAccess(db, el.projectId, "edit").andThen(() =>
+              ResultAsync.fromPromise(
+                db
+                  .update(breakdownElements)
+                  .set({
+                    ...(data.patch.name !== undefined && {
+                      name: data.patch.name,
+                    }),
+                    ...(data.patch.category !== undefined && {
+                      category: data.patch.category,
+                    }),
+                    ...(data.patch.description !== undefined && {
+                      description: data.patch.description,
+                    }),
+                    ...(data.patch.castTier !== undefined && {
+                      castTier: data.patch.castTier,
+                    }),
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(breakdownElements.id, el.id))
+                  .returning(),
+                (e) => new DbError("updateBreakdownElement/update", e),
+              ).andThen(([row]) =>
+                row
+                  ? ok(parseElement(row))
+                  : err(
+                      new DbError(
+                        "updateBreakdownElement/update",
+                        "no row returned",
+                      ),
+                    ),
+              ),
             ),
-      );
-
-      return toShape(result);
-    },
+          ),
+        ),
+      ),
   );
 
 export const archiveBreakdownElement = createServerFn({ method: "POST" })
@@ -567,41 +609,27 @@ export const archiveBreakdownElement = createServerFn({ method: "POST" })
     }): Promise<
       ResultShape<
         { ok: true },
-        BreakdownElementNotFoundError | ForbiddenError | DbError
+        | BreakdownElementNotFoundError
+        | ProjectNotFoundError
+        | ForbiddenError
+        | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const elResult = await ResultAsync.fromPromise(
-        db.query.breakdownElements
-          .findFirst({ where: eq(breakdownElements.id, data.elementId) })
-          .then((r) => r ?? null),
-        (e) => new DbError("archiveBreakdownElement/load", e),
-      );
-      if (elResult.isErr()) return toShape(err(elResult.error));
-      const el = elResult.value;
-      if (!el)
-        return toShape(err(new BreakdownElementNotFoundError(data.elementId)));
-
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        el.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("archive breakdown element")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(breakdownElements)
-          .set({ archivedAt: new Date() })
-          .where(eq(breakdownElements.id, el.id)),
-        (e) => new DbError("archiveBreakdownElement/update", e),
-      ).map(() => ({ ok: true as const }));
-      return toShape(result);
-    },
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          findBreakdownElementById(db, data.elementId).andThen((el) =>
+            requireProjectAccess(db, el.projectId, "edit").andThen(() =>
+              ResultAsync.fromPromise(
+                db
+                  .update(breakdownElements)
+                  .set({ archivedAt: new Date() })
+                  .where(eq(breakdownElements.id, el.id)),
+                (e) => new DbError("archiveBreakdownElement/update", e),
+              ).map(() => ({ ok: true as const })),
+            ),
+          ),
+        ),
+      ),
   );
 
 // ─── setOccurrenceStatus (single + bulk) ─────────────────────────────────────
@@ -616,55 +644,58 @@ export const setOccurrenceStatus = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<{ updated: number }, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const rowsResult = await ResultAsync.fromPromise(
-        db
-          .select({
-            projectId: breakdownElements.projectId,
-            occId: breakdownOccurrences.id,
-          })
-          .from(breakdownOccurrences)
-          .innerJoin(
-            breakdownElements,
-            eq(breakdownOccurrences.elementId, breakdownElements.id),
-          )
-          .where(inArray(breakdownOccurrences.id, data.occurrenceIds)),
-        (e) => new DbError("setOccurrenceStatus/load", e),
-      );
-      if (rowsResult.isErr()) return toShape(err(rowsResult.error));
-      const rows = rowsResult.value;
-      if (rows.length === 0) return toShape(ok({ updated: 0 }));
-
-      const projectIds = [...new Set(rows.map((r) => r.projectId))];
-      for (const pid of projectIds) {
-        const accessResult = await resolveBreakdownAccessByProjectId(
-          db,
-          user.id,
-          pid,
-        );
-        if (accessResult.isErr()) return toShape(err(accessResult.error));
-        if (!canEditBreakdown(accessResult.value))
-          return toShape(err(new ForbiddenError("update occurrence status")));
-      }
-
-      const updated = await ResultAsync.fromPromise(
-        db
-          .update(breakdownOccurrences)
-          .set({ cesareStatus: data.status, updatedAt: new Date() })
-          .where(
-            inArray(
-              breakdownOccurrences.id,
-              rows.map((r) => r.occId),
-            ),
-          ),
-        (e) => new DbError("setOccurrenceStatus/update", e),
-      ).map(() => ({ updated: rows.length }));
-
-      return toShape(updated);
-    },
+    }): Promise<
+      ResultShape<
+        { updated: number },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          ResultAsync.fromPromise(
+            db
+              .select({
+                projectId: breakdownElements.projectId,
+                occId: breakdownOccurrences.id,
+              })
+              .from(breakdownOccurrences)
+              .innerJoin(
+                breakdownElements,
+                eq(breakdownOccurrences.elementId, breakdownElements.id),
+              )
+              .where(inArray(breakdownOccurrences.id, data.occurrenceIds)),
+            (e) => new DbError("setOccurrenceStatus/load", e),
+          ).andThen((rows) => {
+            if (rows.length === 0) return okAsync({ updated: 0 });
+            const projectIds = [...new Set(rows.map((r) => r.projectId))];
+            // Sequentially gate each unique project on edit access. Using
+            // `.andThen` chained over the list keeps short-circuit semantics.
+            const gateAll = projectIds.reduce<
+              ResultAsync<true, ProjectNotFoundError | ForbiddenError | DbError>
+            >(
+              (acc, pid) =>
+                acc.andThen(() =>
+                  requireProjectAccess(db, pid, "edit").map(() => true as const),
+                ),
+              okAsync(true as const),
+            );
+            return gateAll.andThen(() =>
+              ResultAsync.fromPromise(
+                db
+                  .update(breakdownOccurrences)
+                  .set({ cesareStatus: data.status, updatedAt: new Date() })
+                  .where(
+                    inArray(
+                      breakdownOccurrences.id,
+                      rows.map((r) => r.occId),
+                    ),
+                  ),
+                (e) => new DbError("setOccurrenceStatus/update", e),
+              ).map(() => ({ updated: rows.length })),
+            );
+          }),
+        ),
+      ),
   );
 
 // ─── listScenesForBreakdown — minimal scene list for the TOC + script panes ──
@@ -689,139 +720,151 @@ export interface BreakdownContext {
   canEdit: boolean;
 }
 
+const buildBreakdownContext = (
+  db: Db,
+  projectId: string,
+  userId: string,
+  canEdit: boolean,
+): ResultAsync<BreakdownContext, DbError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const screenplay = await db.query.screenplays.findFirst({
+        where: (s, { eq: e }) => e(s.projectId, projectId),
+      });
+      if (!screenplay) {
+        return {
+          projectId,
+          screenplayVersionId: "",
+          versionContent: "",
+          scenes: [] as BreakdownSceneSummary[],
+          canEdit,
+        };
+      }
+      // Lazy-create v1 if the screenplay row exists but no version was
+      // ever pointed to. This recovers projects whose import path created
+      // the screenplay but never triggered saveScreenplay (which is what
+      // normally calls ensureFirstVersion + updates currentVersionId).
+      // Without this, the breakdown gets stuck on "Nessuna versione".
+      let currentVersionId = screenplay.currentVersionId;
+      if (!currentVersionId) {
+        await ensureFirstVersion(db, screenplay.id, userId);
+        const refreshed = await db.query.screenplays.findFirst({
+          where: (s, { eq: e }) => e(s.id, screenplay.id),
+        });
+        if (refreshed?.currentVersionId) {
+          currentVersionId = refreshed.currentVersionId;
+        } else {
+          const v = await db.query.screenplayVersions.findFirst({
+            where: (v, { eq: e }) => e(v.screenplayId, screenplay.id),
+            orderBy: (v, { asc }) => [asc(v.number)],
+          });
+          if (v) {
+            await db
+              .update(screenplays)
+              .set({ currentVersionId: v.id })
+              .where(eq(screenplays.id, screenplay.id));
+            currentVersionId = v.id;
+          }
+        }
+      }
+      if (!currentVersionId) {
+        return {
+          projectId,
+          screenplayVersionId: "",
+          versionContent: "",
+          scenes: [] as BreakdownSceneSummary[],
+          canEdit,
+        };
+      }
+      let version = await db.query.screenplayVersions.findFirst({
+        where: (v, { eq: e }) => e(v.id, currentVersionId),
+      });
+
+      // Heal stale data: if v1 was snapshotted while screenplays.content
+      // was still empty (race between import-create and import-save) but
+      // screenplays.content has since been written, copy it forward so
+      // the breakdown viewer and auto-spoglio see the same fountain.
+      if (
+        version &&
+        version.content.length === 0 &&
+        screenplay.content.length > 0
+      ) {
+        await db
+          .update(screenplayVersions)
+          .set({ content: screenplay.content })
+          .where(eq(screenplayVersions.id, version.id));
+        version = { ...version, content: screenplay.content };
+      }
+
+      // One-shot backfill for screenplays imported before saveScreenplay
+      // started mirroring fountain into the scenes table. If we have
+      // version content but zero scenes, parse + insert once. New saves
+      // already keep this in sync via syncScenesFromFountain.
+      let sceneRows = await db.query.scenes.findMany({
+        where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+        orderBy: (sc, { asc }) => [asc(sc.number)],
+      });
+      if (sceneRows.length === 0 && version?.content) {
+        await syncScenesFromFountain(db, screenplay.id, version.content);
+        sceneRows = await db.query.scenes.findMany({
+          where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+          orderBy: (sc, { asc }) => [asc(sc.number)],
+        });
+      }
+      const fountainContent = version?.content ?? "";
+      const fountainScenes = fountainContent
+        ? listScenesInFountain(fountainContent)
+        : [];
+      // Map ordinal index → explicit fountain number (e.g. "2A" from #2A#)
+      const fountainNumberByOrdinal = new Map<number, string>(
+        fountainScenes.map((fs) => [fs.index, fs.number]),
+      );
+      return {
+        projectId,
+        screenplayVersionId: currentVersionId,
+        versionContent: fountainContent,
+        scenes: sceneRows.map((s) => ({
+          id: s.id,
+          number: s.number,
+          fountainNumber:
+            fountainNumberByOrdinal.get(s.number) ?? String(s.number),
+          heading: s.heading,
+          intExt: s.intExt,
+          location: s.location,
+          timeOfDay: s.timeOfDay,
+          notes: s.notes,
+        })),
+        canEdit,
+      };
+    })(),
+    (e) => new DbError("getBreakdownContext", e),
+  );
+
 export const getBreakdownContext = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<BreakdownContext, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canViewBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("view breakdown")));
-
-      const canEdit = canEditBreakdown(accessResult.value);
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const screenplay = await db.query.screenplays.findFirst({
-            where: (s, { eq: e }) => e(s.projectId, data.projectId),
-          });
-          if (!screenplay) {
-            return {
-              projectId: data.projectId,
-              screenplayVersionId: "",
-              versionContent: "",
-              scenes: [] as BreakdownSceneSummary[],
-              canEdit,
-            };
-          }
-          // Lazy-create v1 if the screenplay row exists but no version was
-          // ever pointed to. This recovers projects whose import path created
-          // the screenplay but never triggered saveScreenplay (which is what
-          // normally calls ensureFirstVersion + updates currentVersionId).
-          // Without this, the breakdown gets stuck on "Nessuna versione".
-          let currentVersionId = screenplay.currentVersionId;
-          if (!currentVersionId) {
-            await ensureFirstVersion(db, screenplay.id, user.id);
-            const refreshed = await db.query.screenplays.findFirst({
-              where: (s, { eq: e }) => e(s.id, screenplay.id),
-            });
-            if (refreshed?.currentVersionId) {
-              currentVersionId = refreshed.currentVersionId;
-            } else {
-              const v = await db.query.screenplayVersions.findFirst({
-                where: (v, { eq: e }) => e(v.screenplayId, screenplay.id),
-                orderBy: (v, { asc }) => [asc(v.number)],
-              });
-              if (v) {
-                await db
-                  .update(screenplays)
-                  .set({ currentVersionId: v.id })
-                  .where(eq(screenplays.id, screenplay.id));
-                currentVersionId = v.id;
-              }
-            }
-          }
-          if (!currentVersionId) {
-            return {
-              projectId: data.projectId,
-              screenplayVersionId: "",
-              versionContent: "",
-              scenes: [] as BreakdownSceneSummary[],
-              canEdit,
-            };
-          }
-          let version = await db.query.screenplayVersions.findFirst({
-            where: (v, { eq: e }) => e(v.id, currentVersionId),
-          });
-
-          // Heal stale data: if v1 was snapshotted while screenplays.content
-          // was still empty (race between import-create and import-save) but
-          // screenplays.content has since been written, copy it forward so
-          // the breakdown viewer and auto-spoglio see the same fountain.
-          if (
-            version &&
-            version.content.length === 0 &&
-            screenplay.content.length > 0
-          ) {
-            await db
-              .update(screenplayVersions)
-              .set({ content: screenplay.content })
-              .where(eq(screenplayVersions.id, version.id));
-            version = { ...version, content: screenplay.content };
-          }
-
-          // One-shot backfill for screenplays imported before saveScreenplay
-          // started mirroring fountain into the scenes table. If we have
-          // version content but zero scenes, parse + insert once. New saves
-          // already keep this in sync via syncScenesFromFountain.
-          let sceneRows = await db.query.scenes.findMany({
-            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
-            orderBy: (sc, { asc }) => [asc(sc.number)],
-          });
-          if (sceneRows.length === 0 && version?.content) {
-            await syncScenesFromFountain(db, screenplay.id, version.content);
-            sceneRows = await db.query.scenes.findMany({
-              where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
-              orderBy: (sc, { asc }) => [asc(sc.number)],
-            });
-          }
-          const fountainContent = version?.content ?? "";
-          const fountainScenes = fountainContent
-            ? listScenesInFountain(fountainContent)
-            : [];
-          // Map ordinal index → explicit fountain number (e.g. "2A" from #2A#)
-          const fountainNumberByOrdinal = new Map<number, string>(
-            fountainScenes.map((fs) => [fs.index, fs.number]),
-          );
-          return {
-            projectId: data.projectId,
-            screenplayVersionId: currentVersionId,
-            versionContent: fountainContent,
-            scenes: sceneRows.map((s) => ({
-              id: s.id,
-              number: s.number,
-              fountainNumber:
-                fountainNumberByOrdinal.get(s.number) ?? String(s.number),
-              heading: s.heading,
-              intExt: s.intExt,
-              location: s.location,
-              timeOfDay: s.timeOfDay,
-              notes: s.notes,
-            })),
+    }): Promise<
+      ResultShape<
+        BreakdownContext,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) => {
+          const canEdit =
+            access.isPersonalOwner ||
+            access.role === "owner" ||
+            access.role === "editor";
+          return buildBreakdownContext(
+            db,
+            access.project.id,
+            access.user.id,
             canEdit,
-          };
-        })(),
-        (e) => new DbError("getBreakdownContext", e),
-      );
-      return toShape(result);
-    },
+          );
+        }),
+      ),
   );
 
 // ─── bulkUpdateBreakdownElements ──────────────────────────────────────────────
@@ -840,44 +883,36 @@ export const bulkUpdateBreakdownElements = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<{ updated: number }, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
-        return toShape(
-          err(new ForbiddenError("bulk update breakdown elements")),
-        );
-
-      const set: Partial<typeof breakdownElements.$inferInsert> = {
-        updatedAt: new Date(),
-      };
-      if (data.patch.category !== undefined) set.category = data.patch.category;
-      if (data.patch.archivedAt !== undefined)
-        set.archivedAt = data.patch.archivedAt === "now" ? new Date() : null;
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .update(breakdownElements)
-          .set(set)
-          .where(
-            and(
-              eq(breakdownElements.projectId, data.projectId),
-              inArray(breakdownElements.id, data.elementIds),
-            ),
-          )
-          .returning({ id: breakdownElements.id }),
-        (e) => new DbError("bulkUpdateBreakdownElements", e),
-      ).map((rows) => ({ updated: rows.length }));
-
-      return toShape(result);
-    },
+    }): Promise<
+      ResultShape<
+        { updated: number },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) => {
+          const set: Partial<typeof breakdownElements.$inferInsert> = {
+            updatedAt: new Date(),
+          };
+          if (data.patch.category !== undefined)
+            set.category = data.patch.category;
+          if (data.patch.archivedAt !== undefined)
+            set.archivedAt = data.patch.archivedAt === "now" ? new Date() : null;
+          return ResultAsync.fromPromise(
+            db
+              .update(breakdownElements)
+              .set(set)
+              .where(
+                and(
+                  eq(breakdownElements.projectId, access.project.id),
+                  inArray(breakdownElements.id, data.elementIds),
+                ),
+              )
+              .returning({ id: breakdownElements.id }),
+            (e) => new DbError("bulkUpdateBreakdownElements", e),
+          ).map((rows) => ({ updated: rows.length }));
+        }),
+      ),
   );
 
 // ─── addBreakdownOccurrence ────────────────────────────────────────────────────
@@ -896,66 +931,64 @@ export const addBreakdownOccurrence = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<{ id: string; quantity: number }, ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("add breakdown occurrence")));
-
-      // Verify elementId belongs to the project before inserting to prevent IDOR.
-      const elResult = await ResultAsync.fromPromise(
-        db.query.breakdownElements.findFirst({
-          where: and(
-            eq(breakdownElements.id, data.elementId),
-            eq(breakdownElements.projectId, data.projectId),
-          ),
-        }),
-        (e) => new DbError("addBreakdownOccurrence/verify-element", e),
-      );
-      if (elResult.isErr()) return toShape(err(elResult.error));
-      if (!elResult.value)
-        return toShape(err(new ForbiddenError("add breakdown occurrence")));
-
-      const result = await ResultAsync.fromPromise(
-        db
-          .insert(breakdownOccurrences)
-          .values({
-            elementId: data.elementId,
-            screenplayVersionId: data.screenplayVersionId,
-            sceneId: data.sceneId,
-            quantity: data.quantity,
-            cesareStatus: "accepted",
-          })
-          .onConflictDoUpdate({
-            target: [
-              breakdownOccurrences.elementId,
-              breakdownOccurrences.screenplayVersionId,
-              breakdownOccurrences.sceneId,
-            ],
-            set: {
-              quantity: sql`excluded.quantity`,
-              updatedAt: new Date(),
-            },
-          })
-          .returning({
-            id: breakdownOccurrences.id,
-            quantity: breakdownOccurrences.quantity,
-          }),
-        (e) => new DbError("addBreakdownOccurrence", e),
-      ).andThen(([row]) =>
-        row ? ok(row) : err(new DbError("addBreakdownOccurrence", "no row")),
-      );
-
-      return toShape(result);
-    },
+      ResultShape<
+        { id: string; quantity: number },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+          // Verify elementId belongs to the project before inserting to
+          // prevent IDOR.
+          ResultAsync.fromPromise(
+            db.query.breakdownElements.findFirst({
+              where: and(
+                eq(breakdownElements.id, data.elementId),
+                eq(breakdownElements.projectId, access.project.id),
+              ),
+            }),
+            (e) => new DbError("addBreakdownOccurrence/verify-element", e),
+          )
+            .andThen((el) =>
+              el
+                ? okAsync(el)
+                : errAsync(new ForbiddenError("add breakdown occurrence")),
+            )
+            .andThen(() =>
+              ResultAsync.fromPromise(
+                db
+                  .insert(breakdownOccurrences)
+                  .values({
+                    elementId: data.elementId,
+                    screenplayVersionId: data.screenplayVersionId,
+                    sceneId: data.sceneId,
+                    quantity: data.quantity,
+                    cesareStatus: "accepted",
+                  })
+                  .onConflictDoUpdate({
+                    target: [
+                      breakdownOccurrences.elementId,
+                      breakdownOccurrences.screenplayVersionId,
+                      breakdownOccurrences.sceneId,
+                    ],
+                    set: {
+                      quantity: sql`excluded.quantity`,
+                      updatedAt: new Date(),
+                    },
+                  })
+                  .returning({
+                    id: breakdownOccurrences.id,
+                    quantity: breakdownOccurrences.quantity,
+                  }),
+                (e) => new DbError("addBreakdownOccurrence", e),
+              ).andThen(([row]) =>
+                row
+                  ? ok(row)
+                  : err(new DbError("addBreakdownOccurrence", "no row")),
+              ),
+            ),
+        ),
+      ),
   );
 
 // ─── removeBreakdownOccurrence ─────────────────────────────────────────────────
@@ -970,38 +1003,33 @@ export const removeBreakdownOccurrence = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<{ ok: true }, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const accessResult = await resolveBreakdownAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (accessResult.isErr()) return toShape(err(accessResult.error));
-      if (!canEditBreakdown(accessResult.value))
-        return toShape(err(new ForbiddenError("remove breakdown occurrence")));
-
-      // Gate delete on project ownership via the element join to prevent IDOR.
-      const result = await ResultAsync.fromPromise(
-        db
-          .delete(breakdownOccurrences)
-          .where(
-            and(
-              eq(breakdownOccurrences.id, data.occurrenceId),
-              inArray(
-                breakdownOccurrences.elementId,
-                db
-                  .select({ id: breakdownElements.id })
-                  .from(breakdownElements)
-                  .where(eq(breakdownElements.projectId, data.projectId)),
+    }): Promise<
+      ResultShape<
+        { ok: true },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+          // Gate delete on project ownership via the element join to
+          // prevent IDOR.
+          ResultAsync.fromPromise(
+            db
+              .delete(breakdownOccurrences)
+              .where(
+                and(
+                  eq(breakdownOccurrences.id, data.occurrenceId),
+                  inArray(
+                    breakdownOccurrences.elementId,
+                    db
+                      .select({ id: breakdownElements.id })
+                      .from(breakdownElements)
+                      .where(eq(breakdownElements.projectId, access.project.id)),
+                  ),
+                ),
               ),
-            ),
-          ),
-        (e) => new DbError("removeBreakdownOccurrence", e),
-      ).map(() => ({ ok: true as const }));
-
-      return toShape(result);
-    },
+            (e) => new DbError("removeBreakdownOccurrence", e),
+          ).map(() => ({ ok: true as const })),
+        ),
+      ),
   );
