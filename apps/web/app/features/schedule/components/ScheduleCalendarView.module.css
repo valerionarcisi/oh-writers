@@ -1,0 +1,209 @@
+.wrap {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.placeholder {
+  padding: var(--ds-space-8);
+  text-align: center;
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  color: var(--ds-text-mute);
+}
+
+.undatedBlock {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  overflow: hidden;
+}
+
+.blockHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-line);
+  background: var(--ds-surface-deep);
+
+  & h3 {
+    margin: 0;
+    font-family: var(--ds-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ds-text-mute);
+    font-weight: 700;
+  }
+}
+
+.blockMeta {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-mute);
+}
+
+.undatedStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+}
+
+.calendar {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 140px repeat(7, 1fr);
+  gap: var(--ds-space-2);
+  padding-inline: var(--ds-space-2);
+}
+
+.weekColHead {
+  display: block;
+}
+
+.dayColHead {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ds-text-mute);
+  text-align: center;
+  padding-block: var(--ds-space-1);
+}
+
+.weekRow {
+  display: grid;
+  grid-template-columns: 140px repeat(7, 1fr);
+  gap: var(--ds-space-2);
+  align-items: stretch;
+}
+
+.weekLabel {
+  display: flex;
+  align-items: center;
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--ds-text-2);
+  padding-inline: var(--ds-space-2);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 84px;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-surface-deep);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  text-align: start;
+  color: inherit;
+  font: inherit;
+  transition:
+    border-color var(--ds-duration-1) var(--ds-ease),
+    background var(--ds-duration-1) var(--ds-ease),
+    translate var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    border-color: var(--ds-action);
+    translate: 0 -1px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.spacer {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--ds-line);
+  pointer-events: none;
+  cursor: default;
+}
+
+.undated {
+  min-width: 160px;
+  flex: 0 0 auto;
+}
+
+.heavy {
+  border-inline-start: 3px solid var(--ds-warn, #c98a2b);
+}
+
+.light {
+  border-inline-start: 3px solid var(--ds-info, #3a6b8b);
+  opacity: 0.92;
+}
+
+.empty {
+  opacity: 0.6;
+}
+
+.normal {
+  border-inline-start: 3px solid var(--ds-line);
+}
+
+.cellNum {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ds-text);
+}
+
+.cellLoc {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--ds-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.cellMeta {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+@container (max-width: 720px) {
+  .headerRow,
+  .weekRow {
+    grid-template-columns: 1fr;
+  }
+  .dayColHead {
+    display: none;
+  }
+  .weekLabel {
+    padding-block: var(--ds-space-2);
+    border-block-end: 1px solid var(--ds-line);
+  }
+  .spacer {
+    display: none;
+  }
+}

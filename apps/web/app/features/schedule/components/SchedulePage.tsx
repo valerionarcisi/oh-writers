@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useSuspenseQuery,
   useMutation,
@@ -12,7 +12,11 @@ import {
   SegmentedControl,
 } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
-import { formatDayHours } from "@oh-writers/domain";
+import {
+  formatDayHours,
+  analyzeSchedule,
+  type Suggestion,
+} from "@oh-writers/domain";
 import { useVersionsDrawer } from "~/features/versions";
 import {
   scheduleQueryOptions,
@@ -30,7 +34,8 @@ import { UnscheduledTray } from "./UnscheduledTray";
 import { SceneDrawer } from "./SceneDrawer";
 import { ShootingDayDrawer } from "./ShootingDayDrawer";
 import { ScheduleCesareBanner } from "./ScheduleCesareBanner";
-import { ScheduleStubView } from "./ScheduleStubView";
+import { ScheduleCalendarView } from "./ScheduleCalendarView";
+import { ScheduleTimelineView } from "./ScheduleTimelineView";
 import { ScheduleDayView } from "./ScheduleDayView";
 import styles from "./SchedulePage.module.css";
 
@@ -171,6 +176,46 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     setActiveDayId(dayId);
   };
 
+  const handleSelectDayFromOtherTab = (dayId: string) => {
+    setActiveDayId(dayId);
+    setTab("day");
+  };
+
+  const suggestions = useMemo<Suggestion[]>(
+    () =>
+      schedule
+        ? analyzeSchedule({
+            shootingDays: schedule.shootingDays.map((d) => ({
+              id: d.id,
+              dayNumber: d.dayNumber,
+              strips: d.strips.map((s) => ({
+                id: s.id,
+                sceneNumber: s.sceneNumber,
+                location: s.location,
+                resolvedHours: s.resolvedHours,
+                timeOfDay: s.timeOfDay,
+                sceneHeading: s.sceneHeading,
+              })),
+            })),
+          })
+        : [],
+    [schedule],
+  );
+
+  const handleApplySuggestion = (s: Suggestion) => {
+    if (s.payload.stripId && s.payload.targetDayId) {
+      moveMutation.mutate({
+        stripId: s.payload.stripId,
+        targetDayId: s.payload.targetDayId,
+        targetPosition: 0,
+      });
+      return;
+    }
+    // TODO Spec 12c: magic-hour suggestions need a day-level start-time
+    // field (shooting_days.shootStartTime) before they can be applied.
+    console.warn("[cesare] suggestion not yet applicable", s);
+  };
+
   const handleOpenVersions = () => {
     if (!schedule?.screenplayId) return;
     // TODO Spec 12d: dedicated schedule version scope. For now we surface the
@@ -265,7 +310,10 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
             {match(tab)
               .with("strip", () => (
                 <>
-                  <ScheduleCesareBanner />
+                  <ScheduleCesareBanner
+                    suggestions={suggestions}
+                    onApply={handleApplySuggestion}
+                  />
                   <div className={styles.boardCard}>
                     <div className={styles.boardScroll}>
                       <StripBoard
@@ -297,15 +345,15 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                 </>
               ))
               .with("calendar", () => (
-                <ScheduleStubView
-                  title="Vista calendario"
-                  description="Griglia settimanale / mensile con weekend, festività, riposi e company-move. In arrivo dopo l'estensione dello schema shooting_days (date di chiusura, vincoli temporali)."
+                <ScheduleCalendarView
+                  schedule={schedule}
+                  onSelectDay={handleSelectDayFromOtherTab}
                 />
               ))
               .with("timeline", () => (
-                <ScheduleStubView
-                  title="Vista timeline"
-                  description="Gantt orizzontale con lane per location: blocchi continuativi, milestone (inizio riprese, move, wrap) e KPI ore. In arrivo con i campi locationId + schedule_milestones."
+                <ScheduleTimelineView
+                  schedule={schedule}
+                  onSelectDay={handleSelectDayFromOtherTab}
                 />
               ))
               .with("day", () => (

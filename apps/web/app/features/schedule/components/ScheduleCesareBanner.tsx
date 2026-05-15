@@ -1,50 +1,22 @@
 import { useState } from "react";
 import { Banner } from "@oh-writers/ui";
+import type { Suggestion } from "@oh-writers/domain";
 import styles from "./ScheduleCesareBanner.module.css";
 
 /**
- * Static mock suggestions surfaced as non-blocking banner above the strip
- * board, matching the "controllore garbato" pattern (apply/ignore inline,
- * no chat sidebar).
- *
- * TODO Spec 12c: replace mocks with `analyzeSchedule(projectId)` server fn
- * once the conflict-resolver pipeline is wired (cast availability +
- * location consolidation + magic-hour planner).
+ * Non-blocking banner that surfaces algorithmic Cesare hints above the
+ * strip board (and other schedule views). Follows the "controllore
+ * garbato" pattern: apply or ignore inline, never open a chat sidebar.
  */
-export interface CesareSuggestion {
-  readonly id: string;
-  readonly message: string;
-  readonly applyLabel: string;
-}
-
-const MOCK_SUGGESTIONS: ReadonlyArray<CesareSuggestion> = [
-  {
-    id: "consolidate-bar",
-    message:
-      "Sposta SC 14 al giorno 3 per consolidare la location Bar: risparmi 1 company move.",
-    applyLabel: "Applica spostamento",
-  },
-  {
-    id: "actor-marta",
-    message:
-      "Marta Bellucci non è disponibile il 4 giugno. Posso spostare SC 8 al giorno 04 dove il cast è già convocato.",
-    applyLabel: "Sposta SC 8 a giorno 04",
-  },
-  {
-    id: "magic-hour",
-    message:
-      "SC 19 è annotata 'magic hour'. La finestra ottimale è 20:30 → 21:10: programma la giornata a partire dalle 18:30.",
-    applyLabel: "Pianifica magic hour",
-  },
-];
+export type CesareSuggestion = Suggestion;
 
 interface ScheduleCesareBannerProps {
-  suggestions?: ReadonlyArray<CesareSuggestion>;
-  onApply?: (id: string) => void;
+  suggestions: ReadonlyArray<CesareSuggestion>;
+  onApply?: (suggestion: CesareSuggestion) => void;
 }
 
 export function ScheduleCesareBanner({
-  suggestions = MOCK_SUGGESTIONS,
+  suggestions,
   onApply,
 }: ScheduleCesareBannerProps) {
   const [dismissed, setDismissed] = useState<ReadonlyArray<string>>([]);
@@ -78,7 +50,7 @@ export function ScheduleCesareBanner({
                 label: s.applyLabel,
                 variant: "primary",
                 onClick: () => {
-                  onApply?.(s.id);
+                  onApply?.(s);
                   dismiss(s.id);
                 },
               },

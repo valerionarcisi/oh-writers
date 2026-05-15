@@ -1,0 +1,205 @@
+.wrap {
+  container-type: inline-size;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  overflow-x: auto;
+}
+
+.placeholder {
+  padding: var(--ds-space-8);
+  text-align: center;
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  color: var(--ds-text-mute);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--ds-space-2);
+  min-width: max-content;
+}
+
+.laneHead {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ds-text-mute);
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-block-end: 1px solid var(--ds-line);
+}
+
+.axis {
+  display: grid;
+  grid-template-columns: repeat(var(--day-count), minmax(72px, 1fr));
+  gap: var(--ds-space-1);
+  border-block-end: 1px solid var(--ds-line);
+  padding-block-end: var(--ds-space-2);
+}
+
+.axisCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--ds-space-1);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  border-radius: var(--ds-radius-sm);
+  transition: background var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-overlay);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.axisLabel {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--ds-text-mute);
+}
+
+.axisNum {
+  font-family: var(--ds-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ds-text);
+  letter-spacing: 0.04em;
+}
+
+.lane {
+  display: contents;
+}
+
+.laneLabelCol {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--ds-space-2);
+  border-block-end: 1px solid var(--ds-line);
+}
+
+.laneLabel {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ds-text);
+  text-transform: capitalize;
+}
+
+.laneMeta {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(var(--day-count), minmax(72px, 1fr));
+  gap: var(--ds-space-1);
+  padding-block: var(--ds-space-2);
+  border-block-end: 1px solid var(--ds-line);
+  align-items: stretch;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  background: var(--block-color, var(--ds-surface-deep));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    translate var(--ds-duration-1) var(--ds-ease),
+    box-shadow var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    translate: 0 -1px;
+    box-shadow: var(--ds-shadow-1, 0 2px 8px rgba(0, 0, 0, 0.25));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.block[data-color="white"] {
+  --block-color: #d8d6cd;
+  color: #1a1a1a;
+}
+.block[data-color="yellow"] {
+  --block-color: #c98a2b;
+  color: #1a1a1a;
+}
+.block[data-color="blue"] {
+  --block-color: #3a6b8b;
+  color: #fff;
+}
+.block[data-color="green"] {
+  --block-color: #5a6b3c;
+  color: #fff;
+}
+.block[data-color="red"] {
+  --block-color: #b33a28;
+  color: #fff;
+}
+.block[data-color="pink"] {
+  --block-color: #c4729a;
+  color: #1a1a1a;
+}
+.block[data-color="grey"] {
+  --block-color: #71706a;
+  color: #fff;
+}
+
+.blockNum {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.blockHours {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.blockEmpty {
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  opacity: 0.4;
+}
+
+.laneNone .laneLabel {
+  color: var(--ds-text-mute);
+  font-style: italic;
+}
