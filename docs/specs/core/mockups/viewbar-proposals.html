@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Viewbar Breakdown — 6 proposte</title>
+    <meta name="viewport" content="width=1600, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,400;9..144,1,500&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+        --cat-cast: #6b4a8a;
+        --cat-locations: #b07a3a;
+        --cat-props: #b48a2b;
+        --cat-costumi: #c4729a;
+        --cat-fotografia: #b33a28;
+        --cat-suono: #5a8a6a;
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper-2);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      header.page {
+        padding: 48px 64px 24px;
+        max-width: 1480px;
+        margin: 0 auto;
+      }
+      header.page h1 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 32px;
+        margin: 0 0 8px;
+      }
+      header.page p {
+        color: var(--ink-3);
+        margin: 0;
+        max-width: 64ch;
+      }
+      .grid {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 0 64px 96px;
+        display: flex;
+        flex-direction: column;
+        gap: 36px;
+      }
+      .proposal {
+        background: var(--page);
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 12px 32px -16px rgba(28, 26, 23, 0.12);
+        overflow: hidden;
+      }
+      .proposal__head {
+        padding: 18px 28px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .proposal__head h2 {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 20px;
+        margin: 0;
+      }
+      .proposal__head .meta {
+        color: var(--ink-3);
+        font-size: 13px;
+        max-width: 50ch;
+        text-align: end;
+      }
+      .proposal__body {
+        background: var(--paper-1);
+        padding: 0;
+      }
+      .proposal__note {
+        padding: 12px 28px 18px;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .proposal__note b {
+        color: var(--ink-1);
+      }
+
+      /* ─── Generic topbar (same across all proposals) ─────────────── */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 24px;
+        background: var(--page);
+        border-bottom: 1px solid var(--line);
+      }
+      .topbar__left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--ink-1);
+        color: var(--page);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+      }
+      .sep {
+        color: var(--ink-4);
+      }
+      .brand-crumb {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-1);
+      }
+      .section-crumb {
+        font-family: var(--font-display);
+        font-size: 16px;
+        color: var(--ink-1);
+        font-weight: 500;
+      }
+      .topbar__right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--ink-3);
+        font-size: 18px;
+      }
+      .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--clay-soft);
+        color: var(--clay);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      /* ─── Common shapes used across variants ─────────────────────── */
+      .v-pill-mono {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        color: var(--ink-1);
+      }
+      .v-pill-mono .chev {
+        color: var(--ink-3);
+      }
+
+      .sottolinea-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        color: var(--ink-1);
+      }
+      .sottolinea-trigger .prefix {
+        color: var(--ink-3);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+      }
+      .sottolinea-trigger .count {
+        min-width: 18px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--clay) 12%, transparent);
+        color: var(--clay);
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+      }
+      .sottolinea-trigger .chev {
+        color: var(--ink-3);
+      }
+
+      /* ─── 0 · Current baseline ──────────────────────────────────── */
+      .viewbar-0 {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 24px;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .viewbar-0 .left {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .viewbar-0 .tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--line);
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-3);
+        cursor: pointer;
+      }
+      .viewbar-0 .tag.is-active {
+        border-left-color: var(--clay);
+        background: color-mix(in srgb, var(--clay) 8%, var(--page));
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .viewbar-0 .center {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+      }
+      .viewbar-0 .right {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+
+      /* ─── 1 · Industry typewriter — tutto mono ────────────────── */
+      .viewbar-1 {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 24px;
+        padding: 8px 24px;
+        background: var(--paper-1);
+        border-bottom: 1px dashed var(--line);
+      }
+      .viewbar-1 .tab {
+        all: unset;
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+        cursor: pointer;
+        position: relative;
+      }
+      .viewbar-1 .tab.is-active {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .viewbar-1 .tab.is-active::after {
+        content: "";
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: -3px;
+        height: 2px;
+        background: var(--ink-1);
+      }
+      .viewbar-1 .tabs {
+        display: inline-flex;
+        gap: 12px;
+      }
+      .viewbar-1 .center {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+      .viewbar-1 .center b {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .viewbar-1 .right {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        justify-content: flex-end;
+      }
+
+      /* ─── 2 · Two-row hierarchy ───────────────────────────────── */
+      .viewbar-2 {
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .viewbar-2 .row1 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 24px 4px;
+        gap: 12px;
+        border-bottom: 1px dashed var(--line);
+      }
+      .viewbar-2 .row1 .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+      }
+      .viewbar-2 .row1 .eyebrow b {
+        color: var(--ink-1);
+        font-weight: 700;
+      }
+      .viewbar-2 .row1 .version {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-1);
+        cursor: pointer;
+      }
+      .viewbar-2 .row1 .version .chev {
+        color: var(--ink-3);
+      }
+      .viewbar-2 .row2 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 24px;
+        gap: 12px;
+      }
+      .viewbar-2 .tabs {
+        display: inline-flex;
+        gap: 4px;
+      }
+      .viewbar-2 .seg {
+        display: inline-flex;
+        background: var(--paper-2);
+        padding: 3px;
+        border-radius: 8px;
+        gap: 0;
+      }
+      .viewbar-2 .seg button {
+        all: unset;
+        padding: 5px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-3);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .viewbar-2 .seg button.is-active {
+        background: var(--page);
+        color: var(--ink-1);
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.06),
+          0 0 0 1px var(--line);
+      }
+
+      /* ─── 3 · Slim minimal — solo testo ──────────────────────── */
+      .viewbar-3 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 28px;
+        background: transparent;
+        border-bottom: 1px solid var(--line);
+      }
+      .viewbar-3 .tabs {
+        display: inline-flex;
+        gap: 24px;
+      }
+      .viewbar-3 .tab {
+        all: unset;
+        display: inline-flex;
+        padding: 4px 0;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink-3);
+        cursor: pointer;
+        position: relative;
+      }
+      .viewbar-3 .tab.is-active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .viewbar-3 .tab.is-active::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        bottom: -2px;
+        height: 2px;
+        background: var(--clay);
+        border-radius: 1px;
+      }
+      .viewbar-3 .right {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .viewbar-3 .sotto-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+      .viewbar-3 .sotto-inline .count {
+        min-width: 18px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--clay) 12%, transparent);
+        color: var(--clay);
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      /* ─── 4 · Tabs as page H1 (display font) ─────────────────── */
+      .viewbar-4 {
+        padding: 12px 28px;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line-soft);
+        display: flex;
+        align-items: baseline;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .viewbar-4 .tabs {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 28px;
+        flex: 1;
+      }
+      .viewbar-4 .tab {
+        all: unset;
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 500;
+        color: var(--ink-4);
+        cursor: pointer;
+        line-height: 1;
+        position: relative;
+      }
+      .viewbar-4 .tab.is-active {
+        color: var(--ink-1);
+        font-style: italic;
+      }
+      .viewbar-4 .tab.is-active::after {
+        content: "·";
+        margin-inline-start: 8px;
+        color: var(--clay);
+      }
+      .viewbar-4 .right {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      /* ─── 5 · Single dense bar, all left ─────────────────────── */
+      .viewbar-5 {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 6px 24px;
+        background: var(--page);
+        border-bottom: 1px solid var(--line);
+      }
+      .viewbar-5 .group {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding-inline-end: 16px;
+        border-inline-end: 1px solid var(--line);
+      }
+      .viewbar-5 .group:last-child {
+        border-inline-end: none;
+        margin-inline-start: auto;
+        padding-inline-end: 0;
+      }
+      .viewbar-5 .label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+        margin-inline-end: 4px;
+      }
+      .viewbar-5 .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        background: var(--paper-1);
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-2);
+        cursor: pointer;
+      }
+      .viewbar-5 .pill.is-active {
+        background: var(--ink-1);
+        color: var(--paper-1);
+      }
+      .viewbar-5 .num-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        background: var(--paper-1);
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-1);
+        cursor: pointer;
+      }
+      .viewbar-5 .num-badge .n {
+        background: var(--clay);
+        color: var(--page);
+        padding: 0 5px;
+        border-radius: 3px;
+        font-size: 10px;
+      }
+
+      /* ─── 6 · Hero strip — view chunky + tools small ─────────── */
+      .viewbar-6 {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .viewbar-6 .tabs-cell {
+        padding: 0;
+        display: inline-flex;
+        align-items: stretch;
+      }
+      .viewbar-6 .tab {
+        all: unset;
+        padding: 14px 22px;
+        font-family: var(--font-display);
+        font-size: 16px;
+        font-style: italic;
+        color: var(--ink-3);
+        cursor: pointer;
+        border-inline-end: 1px solid var(--line-soft);
+        position: relative;
+      }
+      .viewbar-6 .tab.is-active {
+        background: var(--page);
+        color: var(--ink-1);
+      }
+      .viewbar-6 .tab.is-active::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        height: 2px;
+        background: var(--clay);
+      }
+      .viewbar-6 .tools {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 16px;
+        padding: 0 24px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="page">
+      <h1>Viewbar — Header strip · 7 proposte</h1>
+      <p>
+        Riferimento: la striscia TopBar + Viewbar del Breakdown. Composta da
+        TopBar (brand · breadcrumb progetto · breadcrumb sezione · search ·
+        avatar) e Viewbar sotto (tabs vista · Sottolinea · Versione). Ogni
+        mockup ridisegna SOLO la viewbar, lasciando la TopBar invariata.
+      </p>
+    </header>
+
+    <main class="grid">
+      <!-- 0 · Current baseline -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>0 · Stato attuale (baseline)</h2>
+          <span class="meta"
+            >Tag B sx · Sottolinea pill mono dropdown centrale · Version mono
+            pill dx.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-0">
+            <div class="left">
+              <button class="tag is-active">Per scena</button>
+              <button class="tag">Per progetto</button>
+              <button class="tag">Matrice</button>
+            </div>
+            <div class="center">
+              <button class="sottolinea-trigger">
+                <span class="prefix">Sottolinea</span>
+                <span class="count">3</span>
+                <span class="chev">▾</span>
+              </button>
+            </div>
+            <div class="right">
+              <button class="v-pill-mono">v3 · 14 mag 2026 <span class="chev">▾</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          Stato che vedi tu adesso.
+        </div>
+      </section>
+
+      <!-- 1 · Industry typewriter -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>1 · Industry typewriter — tutto mono</h2>
+          <span class="meta"
+            >Stesso linguaggio del foglio Courier sotto. Tabs · Sottolinea ·
+            Version: tutto in mono, separatori dashed, zero pill.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-1">
+            <div class="tabs">
+              <button class="tab is-active">Per scena</button>
+              <button class="tab">Per progetto</button>
+              <button class="tab">Matrice</button>
+            </div>
+            <div class="center">
+              Sottolinea <b>3</b> ▾
+            </div>
+            <div class="right">
+              <span style="font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;">
+                v3 · 14 mag 2026 ▾
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Coerenza max con copione · ✔︎ Densità altissima, nessun chrome ·
+          ✘ Forte impegno tipografico, ogni cosa è in mono = può sembrare
+          "industriale"
+        </div>
+      </section>
+
+      <!-- 2 · Two-row hierarchy -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>2 · Due righe — meta sopra, tools sotto</h2>
+          <span class="meta"
+            >Riga 1: eyebrow scena/pagine + version pill testuale.<br />Riga
+            2: tabs segmented (C iOS-like) + Sottolinea right.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-2">
+            <div class="row1">
+              <span class="eyebrow">Scena <b>1</b> · Pag. <b>1 / 9</b> · 25 elementi</span>
+              <span class="version">v3 · 14 mag 2026 <span class="chev">▾</span></span>
+            </div>
+            <div class="row2">
+              <div class="seg">
+                <button class="is-active">Per scena</button>
+                <button>Per progetto</button>
+                <button>Matrice</button>
+              </div>
+              <button class="sottolinea-trigger">
+                <span class="prefix">Sottolinea</span>
+                <span class="count">3</span>
+                <span class="chev">▾</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Tabs prominenti e scopribili · ✔︎ Meta+version respirano sopra,
+          tools sotto · ✘ Aggiunge un'altra riga di altezza
+        </div>
+      </section>
+
+      <!-- 3 · Slim minimal -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>3 · Slim minimal — solo testo</h2>
+          <span class="meta"
+            >Tabs underline anchor sinistra, tools text-only destra. Niente
+            pill, niente bordi. La viewbar quasi sparisce.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-3">
+            <div class="tabs">
+              <button class="tab is-active">Per scena</button>
+              <button class="tab">Per progetto</button>
+              <button class="tab">Matrice</button>
+            </div>
+            <div class="right">
+              <span class="sotto-inline">Sottolinea <span class="count">3</span> ▾</span>
+              <span style="font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;">
+                v3 · 14 mag 2026 ▾
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Zero peso visivo, la viewbar respira · ✔︎ Lascia tutto il focus
+          al contenuto · ✘ Tabs senza container possono sembrare "fluttuanti"
+        </div>
+      </section>
+
+      <!-- 4 · Tabs as page H1 -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>4 · Tabs come page-H1 (display)</h2>
+          <span class="meta"
+            >Tabs in Fraunces 28px — sono il titolo della pagina. Editorial,
+            elegante. Tools piccoli a destra.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-4">
+            <div class="tabs">
+              <button class="tab is-active">Per scena</button>
+              <button class="tab">Per progetto</button>
+              <button class="tab">Matrice</button>
+            </div>
+            <div class="right">
+              <button class="sottolinea-trigger">
+                <span class="prefix">Sottolinea</span>
+                <span class="count">3</span>
+                <span class="chev">▾</span>
+              </button>
+              <button class="v-pill-mono">v3 · 14 mag 2026 <span class="chev">▾</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Forte gerarchia: la vista è il punto · ✔︎ Editorial come la TopBar
+          (Fraunces italic) · ✘ Più alto, riduce screen real-estate
+        </div>
+      </section>
+
+      <!-- 5 · Single dense bar -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>5 · Single dense bar — tutto a sinistra</h2>
+          <span class="meta"
+            >Riga unica con label mono uppercase, separatori verticali.
+            Massima densità. Version pinned destra.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-5">
+            <div class="group">
+              <span class="label">Vista</span>
+              <button class="pill is-active">Per scena</button>
+              <button class="pill">Per progetto</button>
+              <button class="pill">Matrice</button>
+            </div>
+            <div class="group">
+              <span class="label">Sottolinea</span>
+              <button class="num-badge">Cast · Locations · Props <span class="n">3</span> ▾</button>
+            </div>
+            <div class="group">
+              <button class="v-pill-mono">v3 · 14 mag 2026 <span class="chev">▾</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ Massima densità · ✔︎ Label "Vista / Sottolinea" rende chiaro
+          cosa è cosa · ✘ Active pill scuro nero/cream feel diverso dal resto
+          della DS (più tech / dashboard)
+        </div>
+      </section>
+
+      <!-- 6 · Hero strip -->
+      <section class="proposal">
+        <div class="proposal__head">
+          <h2>6 · Hero strip — viste a sinistra, tools right</h2>
+          <span class="meta"
+            >Tabs come "schede" verticali con un side accent rosso su attiva.
+            Tools small a destra.</span
+          >
+        </div>
+        <div class="proposal__body">
+          <div class="topbar">
+            <div class="topbar__left">
+              <span class="brand">O</span>
+              <span class="sep">/</span>
+              <span class="brand-crumb">Non fa ridere ▾</span>
+              <span class="sep">/</span>
+              <span class="section-crumb">Breakdown ▾</span>
+            </div>
+            <div class="topbar__right">
+              <span>🔍</span>
+              <span class="avatar">v</span>
+            </div>
+          </div>
+          <div class="viewbar-6">
+            <div class="tabs-cell">
+              <button class="tab is-active">Per scena</button>
+              <button class="tab">Per progetto</button>
+              <button class="tab">Matrice</button>
+            </div>
+            <div class="tools">
+              <button class="sottolinea-trigger">
+                <span class="prefix">Sottolinea</span>
+                <span class="count">3</span>
+                <span class="chev">▾</span>
+              </button>
+              <button class="v-pill-mono">v3 · 14 mag 2026 <span class="chev">▾</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="proposal__note">
+          ✔︎ "Schede" tabs forti come pages di un dossier — coerente col tono
+          editoriale · ✔︎ Active tab è bianca = continua nel contenuto sotto ·
+          ✘ Più verticale (14px padding) — toglie 16-20px di contenuto
+        </div>
+      </section>
+    </main>
+
+    <footer style="max-width: 1480px; margin: 0 auto; padding: 0 64px 64px; color: var(--ink-3); font-size: 13px; line-height: 1.7;">
+      <hr style="border: none; border-top: 1px solid var(--line); margin: 24px 0;" />
+      <p>
+        <b style="color: var(--ink-1);">Raccomandazione</b>: <b>1</b> se vuoi
+        coerenza totale col copione (industry typewriter) — risparmia spazio,
+        densità massima. <b>3</b> se vuoi lasciare respirare al contenuto
+        (slim minimal). <b>2</b> se vuoi dare prominenza alle viste e separare
+        meta+version dai tools — costa una riga ma è il più scannable.
+      </p>
+      <p>
+        <b style="color: var(--ink-1);">Da evitare</b>: <b>4</b> (display
+        titles troppo dominanti su un breakdown), <b>5</b> (pill scuri
+        rompono la DS), <b>6</b> (gestire la prima tab bianca come
+        "continuazione" è bello ma fragile su viewport stretti).
+      </p>
+    </footer>
+  </body>
+</html>
