@@ -11,6 +11,7 @@ import {
   FloatingDock,
   MarginNote,
   Popover,
+  Tabs,
   ToggleChip,
   Viewbar,
   ViewbarSep,
@@ -27,9 +28,12 @@ import {
   useRunAutoSpoglio,
   useSetOccurrenceStatus,
   useArchiveBreakdownElement,
+  useUpdateBreakdownElement,
 } from "../hooks/useBreakdown";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
+import { ProjectBreakdownTable } from "./ProjectBreakdownTable";
+import { BreakdownMatrix } from "./BreakdownMatrix";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import type {
@@ -53,6 +57,10 @@ type UnderlineKey =
 
 type PanelTab = "categories" | "cesare";
 
+type ViewTab = "per-scene" | "per-project" | "matrice";
+
+type CtxMode = "main" | "rename" | "category";
+
 interface ContextMenuState {
   x: number;
   y: number;
@@ -60,6 +68,7 @@ interface ContextMenuState {
   category: BreakdownCategory | null;
   name: string;
   occurrenceId: string | null;
+  mode: CtxMode;
 }
 
 const UNDERLINE_CHIPS: ReadonlyArray<{
@@ -134,6 +143,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
     setUnderline((s) => ({ ...s, [key]: !s[key] }));
 
   const [panelTab, setPanelTab] = useState<PanelTab>("categories");
+  const [viewTab, setViewTab] = useState<ViewTab>("per-scene");
   const [exportOpen, setExportOpen] = useState(false);
   const [indiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
@@ -220,6 +230,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
   const ctxMenuRef = useRef<HTMLDivElement>(null);
   const setStatus = useSetOccurrenceStatus(activeScene?.id ?? "", versionId);
   const archiveEl = useArchiveBreakdownElement();
+  const updateEl = useUpdateBreakdownElement();
 
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
 
@@ -244,12 +255,18 @@ function BreakdownPageV2Content({ projectId }: Props) {
     };
   }, [ctxMenu, closeCtxMenu]);
 
-  // Focus the first menuitem when the menu opens.
+  // Focus the first focusable item when the menu opens or switches mode.
   useEffect(() => {
     if (!ctxMenu) return;
-    const first = ctxMenuRef.current?.querySelector<HTMLButtonElement>(
-      "[role='menuitem']",
-    );
+    const node = ctxMenuRef.current;
+    if (!node) return;
+    if (ctxMenu.mode === "rename") {
+      const input = node.querySelector<HTMLInputElement>("input[type='text']");
+      input?.focus();
+      input?.select();
+      return;
+    }
+    const first = node.querySelector<HTMLButtonElement>("[role='menuitem']");
     first?.focus();
   }, [ctxMenu]);
 
@@ -276,6 +293,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
       category,
       name,
       occurrenceId: occ?.occurrence.id ?? null,
+      mode: "main",
     });
   };
 
@@ -320,6 +338,45 @@ function BreakdownPageV2Content({ projectId }: Props) {
       archiveEl.mutate({ elementId: ctxMenu.elementId });
       flashFeedback(`Rimosso «${elName}»`);
     }
+    closeCtxMenu();
+  };
+
+  const handleOpenRename = () => {
+    setCtxMenu((m) => (m ? { ...m, mode: "rename" } : m));
+  };
+
+  const handleOpenCategory = () => {
+    setCtxMenu((m) => (m ? { ...m, mode: "category" } : m));
+  };
+
+  const handleCommitRename = (nextName: string) => {
+    if (!ctxMenu) return;
+    const trimmed = nextName.trim();
+    if (trimmed.length === 0 || trimmed === ctxMenu.name) {
+      closeCtxMenu();
+      return;
+    }
+    updateEl.mutate({
+      elementId: ctxMenu.elementId,
+      patch: { name: trimmed },
+    });
+    flashFeedback(`Rinominato «${ctxMenu.name}» → «${trimmed}»`);
+    closeCtxMenu();
+  };
+
+  const handleCommitCategory = (nextCat: BreakdownCategory) => {
+    if (!ctxMenu) return;
+    if (nextCat === ctxMenu.category) {
+      closeCtxMenu();
+      return;
+    }
+    updateEl.mutate({
+      elementId: ctxMenu.elementId,
+      patch: { category: nextCat },
+    });
+    flashFeedback(
+      `«${ctxMenu.name}» → ${CATEGORY_META[nextCat].labelIt}`,
+    );
     closeCtxMenu();
   };
 
@@ -383,19 +440,34 @@ function BreakdownPageV2Content({ projectId }: Props) {
         data-scrolled={isScrolled || undefined}
       >
         <Viewbar>
-          <div className={styles.viewbarCenter}>
-            <span className={styles.viewbarLabel}>Sottolinea:</span>
-            {UNDERLINE_CHIPS.map((chip) => (
-              <ToggleChip
-                key={chip.key}
-                label={chip.label}
-                isOn={underline[chip.key]}
-                onToggle={() => toggleUnderline(chip.key)}
-                categoryColor={chip.color}
-                aria-label={`Mostra sottolineature ${chip.label}`}
-              />
-            ))}
+          <div className={styles.viewbarLeft}>
+            <Tabs
+              tabs={[
+                { id: "per-scene", label: "Per scena" },
+                { id: "per-project", label: "Per progetto" },
+                { id: "matrice", label: "Matrice" },
+              ]}
+              activeId={viewTab}
+              onSelect={(id) => setViewTab(id as ViewTab)}
+            />
           </div>
+          <ViewbarSep />
+          {viewTab === "per-scene" && (
+            <div className={styles.viewbarCenter}>
+              <span className={styles.viewbarLabel}>Sottolinea:</span>
+              {UNDERLINE_CHIPS.map((chip) => (
+                <ToggleChip
+                  key={chip.key}
+                  label={chip.label}
+                  isOn={underline[chip.key]}
+                  onToggle={() => toggleUnderline(chip.key)}
+                  categoryColor={chip.color}
+                  aria-label={`Mostra sottolineature ${chip.label}`}
+                />
+              ))}
+            </div>
+          )}
+          {viewTab !== "per-scene" && <div className={styles.viewbarCenter} />}
           <ViewbarSep />
           {/* "Per scena" is the default V2 view; tabs are visual but the
               first is active. Other views fall back to v1 by route. */}
@@ -494,7 +566,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
       </div>
 
       {/* ─── SCENE EYEBROW + META ─── */}
-      {activeScene && (
+      {viewTab === "per-scene" && activeScene && (
         <section className={styles.sceneBar}>
           <p className={styles.eyebrow}>
             <span className={styles.sceneNum}>
@@ -530,6 +602,34 @@ function BreakdownPageV2Content({ projectId }: Props) {
       )}
 
       {/* ─── LAYOUT ─── */}
+      {viewTab === "per-project" && (
+        <section
+          className={styles.tableWrap}
+          data-testid="breakdown-table-view"
+        >
+          <ProjectBreakdownTable
+            projectId={projectId}
+            versionId={versionId}
+            canEdit={canEdit}
+          />
+        </section>
+      )}
+
+      {viewTab === "matrice" && (
+        <section
+          className={styles.tableWrap}
+          data-testid="breakdown-matrix-view"
+        >
+          <BreakdownMatrix
+            projectId={projectId}
+            versionId={versionId}
+            scenes={scenes}
+            canEdit={canEdit}
+          />
+        </section>
+      )}
+
+      {viewTab === "per-scene" && (
       <div className={styles.layout}>
         {/* Screenplay */}
         <div
@@ -625,6 +725,7 @@ function BreakdownPageV2Content({ projectId }: Props) {
           </div>
         </aside>
       </div>
+      )}
 
       {/* ─── CONTEXT MENU ─── */}
       {ctxMenu && (
@@ -651,56 +752,98 @@ function BreakdownPageV2Content({ projectId }: Props) {
               : "Elemento"}{" "}
             · <b>{ctxMenu.name}</b>
           </div>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.ctxItem}
-            onClick={handleConfirm}
-            disabled={!ctxMenu.occurrenceId}
-          >
-            <span aria-hidden="true">✓</span>
-            <span>Conferma elemento</span>
-            <span className={styles.ctxKbd}>↵</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.ctxItem}
-            onClick={closeCtxMenu}
-          >
-            <span aria-hidden="true">↔</span>
-            <span>Cambia categoria</span>
-            <span className={styles.ctxKbd}>⇧C</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.ctxItem}
-            onClick={closeCtxMenu}
-          >
-            <span aria-hidden="true">✎</span>
-            <span>Modifica nome</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.ctxItem}
-            onClick={closeCtxMenu}
-          >
-            <span aria-hidden="true">⊕</span>
-            <span>Unisci con esistente…</span>
-          </button>
-          <div className={styles.ctxSep} aria-hidden="true" />
-          <button
-            type="button"
-            role="menuitem"
-            className={[styles.ctxItem, styles.isDanger].join(" ")}
-            onClick={handleRemove}
-          >
-            <span aria-hidden="true">🗑</span>
-            <span>Rimuovi dallo spoglio</span>
-            <span className={styles.ctxKbd}>⌫</span>
-          </button>
+          {ctxMenu.mode === "main" && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.ctxItem}
+                onClick={handleConfirm}
+                disabled={!ctxMenu.occurrenceId}
+              >
+                <span aria-hidden="true">✓</span>
+                <span>Conferma elemento</span>
+                <span className={styles.ctxKbd}>↵</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.ctxItem}
+                onClick={handleOpenCategory}
+                data-testid="ctx-change-category"
+              >
+                <span aria-hidden="true">↔</span>
+                <span>Cambia categoria</span>
+                <span className={styles.ctxKbd}>⇧C</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.ctxItem}
+                onClick={handleOpenRename}
+                data-testid="ctx-rename"
+              >
+                <span aria-hidden="true">✎</span>
+                <span>Modifica nome</span>
+              </button>
+              <div className={styles.ctxSep} aria-hidden="true" />
+              <button
+                type="button"
+                role="menuitem"
+                className={[styles.ctxItem, styles.isDanger].join(" ")}
+                onClick={handleRemove}
+              >
+                <span aria-hidden="true">🗑</span>
+                <span>Rimuovi dallo spoglio</span>
+                <span className={styles.ctxKbd}>⌫</span>
+              </button>
+            </>
+          )}
+
+          {ctxMenu.mode === "rename" && (
+            <RenameForm
+              initialName={ctxMenu.name}
+              onCommit={handleCommitRename}
+              onCancel={closeCtxMenu}
+            />
+          )}
+
+          {ctxMenu.mode === "category" && (
+            <div
+              className={styles.ctxCategoryList}
+              data-testid="ctx-category-list"
+            >
+              {BREAKDOWN_CATEGORIES.map((cat) => {
+                const meta = CATEGORY_META[cat];
+                const colorVar = `var(${meta.colorToken.replace("--cat-", "--ds-cat-")})`;
+                const isCurrent = cat === ctxMenu.category;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    role="menuitem"
+                    className={styles.ctxItem}
+                    onClick={() => handleCommitCategory(cat)}
+                    aria-current={isCurrent || undefined}
+                    data-testid={`ctx-category-option-${cat}`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={styles.ctxCatDot}
+                      // @ts-expect-error CSS custom property
+                      style={{ "--cat-color": colorVar }}
+                    />
+                    <span>{meta.labelIt}</span>
+                    {isCurrent && (
+                      <span className={styles.ctxKbd} aria-hidden="true">
+                        ●
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -837,6 +980,59 @@ interface CesarePanelProps {
   suggestions: SceneOccurrenceWithElement[];
   onAccept: (occurrenceId: string) => void;
   onIgnore: (occurrenceId: string) => void;
+}
+
+interface RenameFormProps {
+  initialName: string;
+  onCommit: (next: string) => void;
+  onCancel: () => void;
+}
+
+function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
+  const [value, setValue] = useState(initialName);
+  return (
+    <form
+      className={styles.ctxRenameForm}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onCommit(value);
+      }}
+    >
+      <input
+        type="text"
+        value={value}
+        maxLength={200}
+        className={styles.ctxRenameInput}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        aria-label="Nuovo nome elemento"
+        data-testid="ctx-rename-input"
+      />
+      <div className={styles.ctxRenameActions}>
+        <button
+          type="button"
+          className={styles.ctxRenameBtn}
+          onClick={onCancel}
+        >
+          Annulla
+        </button>
+        <button
+          type="submit"
+          className={[styles.ctxRenameBtn, styles.ctxRenameBtnPrimary].join(
+            " ",
+          )}
+          data-testid="ctx-rename-save"
+        >
+          Salva
+        </button>
+      </div>
+    </form>
+  );
 }
 
 function CesarePanel({ suggestions, onAccept, onIgnore }: CesarePanelProps) {

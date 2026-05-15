@@ -610,3 +610,92 @@
     transition: none;
   }
 }
+
+/* View tabs (Per scena / Per progetto / Matrice) in the viewbar */
+.viewbarLeft {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+/* Table / matrix tab wrappers */
+.tableWrap {
+  max-inline-size: 1340px;
+  margin: var(--ds-space-4) auto var(--ds-space-10);
+  padding: 0 var(--ds-space-6);
+}
+
+/* Context menu — rename form */
+.ctxRenameForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-3);
+}
+
+.ctxRenameInput {
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  color: var(--ds-text);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
+  border-radius: 4px;
+  padding: 6px var(--ds-space-2);
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-accent, var(--ds-text));
+    outline-offset: 1px;
+  }
+}
+
+.ctxRenameActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+}
+
+.ctxRenameBtn {
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  padding: 4px var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: 4px;
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+    outline: none;
+  }
+}
+
+.ctxRenameBtnPrimary {
+  background: var(--ds-text);
+  color: var(--ds-surface);
+  border-color: var(--ds-text);
+
+  &:hover,
+  &:focus-visible {
+    background: var(--ds-text);
+    color: var(--ds-surface);
+    opacity: 0.9;
+  }
+}
+
+/* Context menu — category list (Cambia categoria) */
+.ctxCategoryList {
+  display: flex;
+  flex-direction: column;
+  max-block-size: 320px;
+  overflow-y: auto;
+}
+
+.ctxCatDot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--cat-color, var(--ds-text-3));
+}
