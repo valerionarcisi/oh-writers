@@ -8,24 +8,28 @@
   inline-size: min(100%, var(--modal-width));
   max-block-size: calc(100vh - var(--space-8));
   overflow: hidden;
+  margin: auto;
+}
+
+.dialog:not([open]) {
+  display: none;
+}
+
+.dialog[open] {
   display: flex;
   flex-direction: column;
-  margin: auto;
+  animation: modalPanelIn 160ms ease-out;
+}
 
-  &[data-size="sm"] { --modal-width: 360px; }
-  &[data-size="md"] { --modal-width: 480px; }
-  &[data-size="lg"] { --modal-width: 640px; }
-  &[data-size="xl"] { --modal-width: 880px; }
+.dialog[data-size="sm"] { --modal-width: 360px; }
+.dialog[data-size="md"] { --modal-width: 480px; }
+.dialog[data-size="lg"] { --modal-width: 640px; }
+.dialog[data-size="xl"] { --modal-width: 880px; }
 
-  &::backdrop {
-    background: oklch(0% 0 0 / 0.35);
-    backdrop-filter: blur(2px);
-    animation: modalBackdropFade 140ms ease-out;
-  }
-
-  &[open] {
-    animation: modalPanelIn 160ms ease-out;
-  }
+.dialog::backdrop {
+  background: oklch(0% 0 0 / 0.35);
+  backdrop-filter: blur(2px);
+  animation: modalBackdropFade 140ms ease-out;
 }
 
 .header {
