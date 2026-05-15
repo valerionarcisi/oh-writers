@@ -289,26 +289,25 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
     return est > 0 && Math.abs(act - est) > 0.5;
   });
 
+  const metaBarItems = [
+    { id: "scene", label: "Scene", value: sceneCount },
+    ...(shootingDays
+      ? [{ id: "gg", label: "Giornate", value: shootingDays }]
+      : []),
+    { id: "voci", label: "Voci", value: linesForView.length },
+    ...(linesWithDelta.length > 0
+      ? [
+          {
+            id: "delta",
+            label: "Scostamento",
+            value: linesWithDelta.length,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className={styles.page} data-testid="budget-page-v2">
-      <MetaBar
-        items={[
-          { id: "scene", label: "Scene", value: sceneCount },
-          ...(shootingDays
-            ? [{ id: "gg", label: "Giornate", value: shootingDays }]
-            : []),
-          { id: "voci", label: "Voci", value: linesForView.length },
-          ...(linesWithDelta.length > 0
-            ? [
-                {
-                  id: "delta",
-                  label: "Scostamento",
-                  value: linesWithDelta.length,
-                },
-              ]
-            : []),
-        ]}
-      />
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
         <SegmentedControl
           options={[
@@ -362,6 +361,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           {versionLabel} ▾
         </button>
       </Viewbar>
+      <MetaBar items={metaBarItems} />
 
       <main className={styles.main} id="main">
         <div className={styles.content}>
