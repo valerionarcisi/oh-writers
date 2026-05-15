@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dashboard · Proposta A · Industry Typewriter</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #fafaf8;
+        --paper: #ffffff;
+        --ink: #111110;
+        --ink-2: #3a3a37;
+        --ink-3: #6b6b66;
+        --ink-4: #9a9a93;
+        --line: #e7e6e1;
+        --line-soft: #f1f0eb;
+        --accent: #1f4ed8;
+        --accent-soft: #ecf1ff;
+        --ok: #047857;
+        --warn: #b45309;
+        --rose: #be123c;
+        --radius-sm: 4px;
+        --radius-md: 6px;
+        --radius-lg: 10px;
+        --s1: 4px;
+        --s2: 8px;
+        --s3: 12px;
+        --s4: 16px;
+        --s5: 20px;
+        --s6: 24px;
+        --s8: 32px;
+        --s10: 48px;
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--bg); color: var(--ink);
+        font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      .mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
+      .display { font-family: var(--font-display); letter-spacing: -0.01em; }
+      [data-num] { font-variant-numeric: tabular-nums; }
+
+      /* Shell */
+      .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+      .nav {
+        background: var(--paper);
+        border-inline-end: 1px solid var(--line);
+        padding: var(--s6) var(--s5);
+        display: flex; flex-direction: column; gap: var(--s5);
+      }
+      .brand { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+      .nav-section { display: flex; flex-direction: column; gap: 2px; }
+      .nav-label {
+        font-family: var(--font-mono); font-size: 10.5px;
+        text-transform: uppercase; color: var(--ink-4); letter-spacing: 0.1em;
+        padding: 0 var(--s2) var(--s2);
+      }
+      .nav a {
+        display: flex; align-items: center; gap: var(--s2);
+        padding: 6px var(--s2); color: var(--ink-2); text-decoration: none;
+        font-size: 13px; border-radius: var(--radius-sm);
+      }
+      .nav a.active { background: var(--ink); color: var(--paper); }
+
+      .main { padding: var(--s8) var(--s10) var(--s10); max-width: 1280px; }
+
+      /* Hero strip */
+      .hero {
+        display: flex; align-items: baseline; justify-content: space-between;
+        gap: var(--s6); margin-bottom: var(--s5);
+      }
+      .hero-left h1 {
+        font-family: var(--font-display);
+        font-weight: 500; font-size: 36px; margin: 0 0 var(--s2);
+        letter-spacing: -0.02em;
+      }
+      .hero-strip {
+        font-family: var(--font-mono); font-size: 12px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      .hero-strip b { color: var(--ink); font-weight: 700; }
+      .hero-right { display: flex; gap: var(--s2); }
+      .btn {
+        font: inherit; cursor: pointer;
+        padding: 8px 14px; border-radius: var(--radius-sm);
+        border: 1px solid var(--line); background: var(--paper);
+        color: var(--ink); font-size: 13px;
+        display: inline-flex; align-items: center; gap: var(--s2);
+      }
+      .btn:hover { background: var(--line-soft); }
+      .btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+      .btn.primary:hover { background: #000; }
+
+      /* Viewbar tabline */
+      .viewbar {
+        border-block: 1px solid var(--line);
+        padding: 0; margin: var(--s5) 0 var(--s4);
+        display: flex; align-items: stretch; justify-content: space-between;
+        background: var(--paper);
+      }
+      .tabs { display: flex; }
+      .tab {
+        font-family: var(--font-mono); font-size: 12px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        padding: 14px var(--s4); color: var(--ink-3);
+        background: transparent; border: none; cursor: pointer;
+        border-bottom: 2px solid transparent; margin-bottom: -1px;
+      }
+      .tab .count { color: var(--ink-4); margin-inline-start: 6px; font-weight: 400; }
+      .tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+      .tab:hover:not(.active) { color: var(--ink-2); }
+      .toolbar { display: flex; align-items: center; gap: var(--s3); padding-inline: var(--s4); }
+      .search {
+        display: flex; align-items: center; gap: var(--s2);
+        border: 1px solid var(--line); border-radius: var(--radius-sm);
+        padding: 6px 10px; min-width: 240px; background: var(--bg);
+      }
+      .search input {
+        border: none; outline: none; background: transparent;
+        font: inherit; flex: 1; color: var(--ink);
+      }
+      .filter-chip {
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        padding: 5px 10px; border: 1px solid var(--line);
+        border-radius: 999px; background: var(--paper); color: var(--ink-2);
+        cursor: pointer;
+      }
+      .filter-chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+      .view-toggle {
+        display: inline-flex; border: 1px solid var(--line);
+        border-radius: var(--radius-sm); overflow: hidden;
+      }
+      .view-toggle button {
+        background: var(--paper); border: none; padding: 6px 10px;
+        color: var(--ink-3); cursor: pointer;
+        font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+      }
+      .view-toggle button.active { background: var(--ink); color: var(--paper); }
+
+      /* Continue strip */
+      .continue {
+        margin: var(--s4) 0 var(--s6);
+        display: flex; gap: var(--s4); align-items: stretch;
+      }
+      .continue h3 {
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.12em;
+        color: var(--ink-4); margin: 0 0 var(--s2);
+      }
+      .continue-card {
+        flex: 1; background: var(--paper);
+        border: 1px solid var(--line); border-radius: var(--radius-md);
+        padding: var(--s4); display: flex; gap: var(--s4); align-items: center;
+        text-decoration: none; color: inherit;
+      }
+      .continue-card:hover { border-color: var(--ink-4); }
+      .continue-thumb {
+        width: 64px; height: 84px; flex: none;
+        background: linear-gradient(160deg, #1d1d1b, #3a3a37);
+        color: var(--paper); border-radius: 3px;
+        display: flex; flex-direction: column; justify-content: space-between;
+        padding: 8px; font-family: var(--font-display); font-size: 11px;
+        box-shadow: 2px 2px 0 rgba(0,0,0,0.06);
+      }
+      .continue-body { flex: 1; }
+      .continue-title { font-family: var(--font-display); font-size: 18px; font-weight: 500; }
+      .continue-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+      .continue-last { color: var(--ink-2); font-size: 13px; margin-top: 6px; }
+
+      /* Section heading */
+      .section-h {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin: var(--s6) 0 var(--s3);
+      }
+      .section-h h2 {
+        font-family: var(--font-mono); font-size: 12px;
+        text-transform: uppercase; letter-spacing: 0.12em;
+        color: var(--ink-3); margin: 0; font-weight: 500;
+      }
+      .section-h .count { color: var(--ink-4); font-family: var(--font-mono); font-size: 11px; }
+
+      /* Grid view */
+      .grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4);
+      }
+      .card {
+        background: var(--paper); border: 1px solid var(--line);
+        border-radius: var(--radius-md); padding: var(--s5);
+        display: flex; flex-direction: column; gap: var(--s3);
+        text-decoration: none; color: inherit; position: relative;
+      }
+      .card:hover { border-color: var(--ink-3); box-shadow: 0 2px 0 rgba(0,0,0,0.04); }
+      .card-head {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3);
+      }
+      .card-poster {
+        width: 52px; height: 68px; flex: none;
+        background: linear-gradient(160deg, #1d1d1b, #4a4a45);
+        color: var(--paper); border-radius: 3px;
+        font-family: var(--font-display); font-size: 9px;
+        display: flex; align-items: flex-end; padding: 6px; line-height: 1.1;
+        box-shadow: 2px 2px 0 rgba(0,0,0,0.06);
+      }
+      .card-poster.warm { background: linear-gradient(160deg, #5b2410, #a14a1c); }
+      .card-poster.cool { background: linear-gradient(160deg, #14304a, #2b5c8a); }
+      .card-poster.olive { background: linear-gradient(160deg, #2e3a16, #5a6b2a); }
+      .card-pin { color: var(--ink-4); font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
+      .card-pin.on { color: var(--accent); }
+      .card-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; line-height: 1.15; }
+      .card-meta {
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+      }
+      .kpis {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        border-block: 1px solid var(--line-soft);
+        padding-block: var(--s3); gap: var(--s2);
+      }
+      .kpi-num { font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+      .kpi-lbl { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-4); }
+      .progress {
+        height: 4px; background: var(--line-soft); border-radius: 2px; overflow: hidden;
+      }
+      .progress > i { display: block; height: 100%; background: var(--ink); }
+      .card-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+      .avatars { display: flex; }
+      .avatar {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: var(--line); border: 1.5px solid var(--paper);
+        margin-left: -6px; font-size: 10px; color: var(--ink-2);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-mono);
+      }
+      .avatar:first-child { margin-left: 0; }
+      .last-activity { font-size: 12px; color: var(--ink-3); }
+      .last-activity b { color: var(--ink-2); font-weight: 600; }
+      .role-tag {
+        font-family: var(--font-mono); font-size: 9.5px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--ink-4); border: 1px solid var(--line);
+        padding: 2px 6px; border-radius: 2px;
+      }
+
+      /* List view */
+      .list { display: none; }
+      .view-grid .list { display: none; }
+      .view-list .grid { display: none; }
+      .view-list .list { display: block; }
+      .list-table {
+        width: 100%; border-collapse: collapse;
+        background: var(--paper);
+        border: 1px solid var(--line); border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .list-table th, .list-table td {
+        text-align: left; padding: var(--s3) var(--s4);
+        border-bottom: 1px solid var(--line-soft); font-size: 13px;
+      }
+      .list-table tr:last-child td { border-bottom: none; }
+      .list-table th {
+        font-family: var(--font-mono); font-size: 10.5px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--ink-4); font-weight: 500; background: var(--bg);
+      }
+      .list-table td.t-title { font-family: var(--font-display); font-size: 16px; }
+      .list-table td .meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; }
+      .list-table tr:hover td { background: var(--line-soft); }
+      .pct-bar { display: inline-flex; align-items: center; gap: 8px; min-width: 100px; }
+      .pct-bar .progress { width: 70px; }
+
+      /* Empty state */
+      .empty {
+        margin-top: var(--s8);
+        border: 1px dashed var(--line-soft);
+        background: var(--paper);
+        border-radius: var(--radius-md);
+        padding: var(--s10);
+        display: none; /* enable to preview */
+        text-align: center;
+      }
+      .empty pre {
+        font-family: var(--font-mono); color: var(--ink-3);
+        font-size: 12px; line-height: 1.3; margin: 0 auto var(--s5);
+      }
+      .empty h2 { font-family: var(--font-display); font-size: 32px; font-weight: 500; margin: 0 0 var(--s2); }
+      .empty p { color: var(--ink-2); max-width: 480px; margin: 0 auto var(--s5); }
+      .empty-cta { display: inline-flex; gap: var(--s2); }
+    </style>
+  </head>
+  <body>
+    <div class="app view-grid" id="app">
+      <aside class="nav">
+        <div class="brand">Oh Writers</div>
+        <div class="nav-section">
+          <div class="nav-label">Lavoro</div>
+          <a class="active" href="#">Dashboard</a>
+          <a href="#">Team</a>
+          <a href="#">Notifiche</a>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Recenti</div>
+          <a href="#">Non fa ridere</a>
+          <a href="#">L'ultima estate</a>
+          <a href="#">Vetro rotto</a>
+        </div>
+      </aside>
+
+      <main class="main">
+        <!-- Hero -->
+        <section class="hero">
+          <div class="hero-left">
+            <h1>I tuoi progetti</h1>
+            <div class="hero-strip">
+              <b>4</b> progetti attivi · <b data-num>142</b> scene totali ·
+              <b data-num>18</b> giornate · ultima modifica <b>15 mag</b>
+            </div>
+          </div>
+          <div class="hero-right">
+            <button class="btn">Importa Fountain</button>
+            <button class="btn primary">＋ Nuovo progetto</button>
+          </div>
+        </section>
+
+        <!-- Viewbar -->
+        <div class="viewbar">
+          <div class="tabs">
+            <button class="tab active">Tutti <span class="count" data-num>6</span></button>
+            <button class="tab">Personali <span class="count" data-num>3</span></button>
+            <button class="tab">Condivisi <span class="count" data-num>1</span></button>
+            <button class="tab">Archiviati <span class="count" data-num>2</span></button>
+          </div>
+          <div class="toolbar">
+            <div class="search">
+              <span class="mono" style="color:var(--ink-4)">⌕</span>
+              <input placeholder="Cerca progetto…" />
+            </div>
+            <button class="filter-chip">Formato</button>
+            <button class="filter-chip">Genere</button>
+            <button class="filter-chip">Ruolo</button>
+            <button class="filter-chip on">Ultima modifica ↓</button>
+            <div class="view-toggle">
+              <button class="active" onclick="setView('grid')">▦ Grid</button>
+              <button onclick="setView('list')">≡ Lista</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Continue -->
+        <section class="continue">
+          <div style="flex:1">
+            <h3>Continua da dove eri</h3>
+            <a class="continue-card" href="#">
+              <div class="continue-thumb">Non fa<br/>ridere</div>
+              <div class="continue-body">
+                <div class="continue-title">Non fa ridere</div>
+                <div class="continue-meta">Sceneggiatura · scena 12 · pagina 8</div>
+                <div class="continue-last">Maria ha modificato la scena 12 · 2h fa</div>
+              </div>
+            </a>
+          </div>
+          <div style="flex:1">
+            <h3>&nbsp;</h3>
+            <a class="continue-card" href="#">
+              <div class="continue-thumb" style="background:linear-gradient(160deg,#5b2410,#a14a1c)">L'ultima<br/>estate</div>
+              <div class="continue-body">
+                <div class="continue-title">L'ultima estate</div>
+                <div class="continue-meta">Breakdown · cast · scena 7</div>
+                <div class="continue-last">Hai modificato il breakdown · ieri</div>
+              </div>
+            </a>
+          </div>
+        </section>
+
+        <!-- Section heading -->
+        <div class="section-h">
+          <h2>Tutti i progetti</h2>
+          <span class="count">6 risultati</span>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid">
+          <a class="card" href="#">
+            <div class="card-head">
+              <div class="card-poster">Non fa<br/>ridere</div>
+              <span class="card-pin on" title="Pinned">★</span>
+            </div>
+            <div>
+              <div class="card-title">Non fa ridere</div>
+              <div class="card-meta">Corto · Commedia · IT · v3</div>
+            </div>
+            <div class="kpis">
+              <div><div class="kpi-num" data-num>24</div><div class="kpi-lbl">Scene</div></div>
+              <div><div class="kpi-num" data-num>18p</div><div class="kpi-lbl">Pagine</div></div>
+              <div><div class="kpi-num" data-num>62%</div><div class="kpi-lbl">Completo</div></div>
+            </div>
+            <div class="progress"><i style="width:62%"></i></div>
+            <div class="card-foot">
+              <div class="avatars">
+                <div class="avatar">V</div>
+                <div class="avatar">M</div>
+                <div class="avatar">+1</div>
+              </div>
+              <div class="last-activity"><b>Maria</b> · 2h fa</div>
+            </div>
+            <span class="role-tag" style="position:absolute;top:var(--s4);right:var(--s4);">Owner</span>
+          </a>
+
+          <a class="card" href="#">
+            <div class="card-head">
+              <div class="card-poster warm">L'ultima<br/>estate</div>
+              <span class="card-pin">☆</span>
+            </div>
+            <div>
+              <div class="card-title">L'ultima estate</div>
+              <div class="card-meta">Lungo · Drama · IT · v1</div>
+            </div>
+            <div class="kpis">
+              <div><div class="kpi-num" data-num>78</div><div class="kpi-lbl">Scene</div></div>
+              <div><div class="kpi-num" data-num>94p</div><div class="kpi-lbl">Pagine</div></div>
+              <div><div class="kpi-num" data-num>40%</div><div class="kpi-lbl">Completo</div></div>
+            </div>
+            <div class="progress"><i style="width:40%"></i></div>
+            <div class="card-foot">
+              <div class="avatars"><div class="avatar">V</div></div>
+              <div class="last-activity"><b>Tu</b> · ieri</div>
+            </div>
+            <span class="role-tag" style="position:absolute;top:var(--s4);right:var(--s4);">Owner</span>
+          </a>
+
+          <a class="card" href="#">
+            <div class="card-head">
+              <div class="card-poster cool">Vetro<br/>rotto</div>
+              <span class="card-pin">☆</span>
+            </div>
+            <div>
+              <div class="card-title">Vetro rotto</div>
+              <div class="card-meta">Pilot · Thriller · IT · v2</div>
+            </div>
+            <div class="kpis">
+              <div><div class="kpi-num" data-num>32</div><div class="kpi-lbl">Scene</div></div>
+              <div><div class="kpi-num" data-num>56p</div><div class="kpi-lbl">Pagine</div></div>
+              <div><div class="kpi-num" data-num>85%</div><div class="kpi-lbl">Completo</div></div>
+            </div>
+            <div class="progress"><i style="width:85%"></i></div>
+            <div class="card-foot">
+              <div class="avatars"><div class="avatar">V</div><div class="avatar">G</div></div>
+              <div class="last-activity"><b>Giuseppe</b> · 3 giorni fa</div>
+            </div>
+            <span class="role-tag" style="position:absolute;top:var(--s4);right:var(--s4);">Editor</span>
+          </a>
+
+          <a class="card" href="#">
+            <div class="card-head">
+              <div class="card-poster olive">Il mese<br/>di marzo</div>
+              <span class="card-pin">☆</span>
+            </div>
+            <div>
+              <div class="card-title">Il mese di marzo</div>
+              <div class="card-meta">Corto · Drama · IT · v1</div>
+            </div>
+            <div class="kpis">
+              <div><div class="kpi-num" data-num>8</div><div class="kpi-lbl">Scene</div></div>
+              <div><div class="kpi-num" data-num>11p</div><div class="kpi-lbl">Pagine</div></div>
+              <div><div class="kpi-num" data-num>22%</div><div class="kpi-lbl">Completo</div></div>
+            </div>
+            <div class="progress"><i style="width:22%"></i></div>
+            <div class="card-foot">
+              <div class="avatars"><div class="avatar">V</div></div>
+              <div class="last-activity"><b>Tu</b> · 1 sett fa</div>
+            </div>
+            <span class="role-tag" style="position:absolute;top:var(--s4);right:var(--s4);">Owner</span>
+          </a>
+
+          <a class="card" href="#">
+            <div class="card-head">
+              <div class="card-poster" style="background:linear-gradient(160deg,#3a1d4a,#6b3a8a)">Notte<br/>europea</div>
+              <span class="card-pin">☆</span>
+            </div>
+            <div>
+              <div class="card-title">Notte europea</div>
+              <div class="card-meta">Serie · Drama · IT · v0</div>
+            </div>
+            <div class="kpis">
+              <div><div class="kpi-num" data-num>—</div><div class="kpi-lbl">Scene</div></div>
+              <div><div class="kpi-num" data-num>—</div><div class="kpi-lbl">Pagine</div></div>
+              <div><div class="kpi-num" data-num>5%</div><div class="kpi-lbl">Completo</div></div>
+            </div>
+            <div class="progress"><i style="width:5%"></i></div>
+            <div class="card-foot">
+              <div class="avatars"><div class="avatar">V</div><div class="avatar">M</div><div class="avatar">G</div></div>
+              <div class="last-activity">solo logline · oggi</div>
+            </div>
+            <span class="role-tag" style="position:absolute;top:var(--s4);right:var(--s4);">Owner</span>
+          </a>
+
+          <a class="card" href="#" style="opacity:0.7">
+            <div class="card-head">
+              <div class="card-poster" style="background:linear-gradient(160deg,#2a2a28,#555550)">Demo</div>
+              <span class="card-pin">☆</span>
+            </div>
+            <div>
+              <div class="card-title">Esempio · Tutorial</div>
+              <div class="card-meta">Corto · Demo · IT</div>
+            </div>
+            <div class="kpis">
+              <div><div class="kpi-num" data-num>12</div><div class="kpi-lbl">Scene</div></div>
+              <div><div class="kpi-num" data-num>9p</div><div class="kpi-lbl">Pagine</div></div>
+              <div><div class="kpi-num" data-num>100%</div><div class="kpi-lbl">Completo</div></div>
+            </div>
+            <div class="progress"><i style="width:100%"></i></div>
+            <div class="card-foot">
+              <div class="avatars"><div class="avatar">★</div></div>
+              <div class="last-activity">read-only</div>
+            </div>
+            <span class="role-tag" style="position:absolute;top:var(--s4);right:var(--s4);">Viewer</span>
+          </a>
+        </div>
+
+        <!-- List -->
+        <div class="list">
+          <table class="list-table">
+            <thead>
+              <tr>
+                <th style="width:36%">Titolo</th>
+                <th>Formato</th>
+                <th>Scene</th>
+                <th>Completo</th>
+                <th>Ultima modifica</th>
+                <th>Collaboratori</th>
+                <th>Ruolo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="t-title">Non fa ridere</td>
+                <td><span class="meta">Corto · Commedia</span></td>
+                <td data-num>24</td>
+                <td><div class="pct-bar"><div class="progress" style="flex:none"><i style="width:62%"></i></div><span class="mono" data-num>62%</span></div></td>
+                <td>15 mag · <span class="meta">Maria</span></td>
+                <td><div class="avatars"><div class="avatar">V</div><div class="avatar">M</div><div class="avatar">+1</div></div></td>
+                <td><span class="role-tag">Owner</span></td>
+              </tr>
+              <tr>
+                <td class="t-title">L'ultima estate</td>
+                <td><span class="meta">Lungo · Drama</span></td>
+                <td data-num>78</td>
+                <td><div class="pct-bar"><div class="progress" style="flex:none"><i style="width:40%"></i></div><span class="mono" data-num>40%</span></div></td>
+                <td>14 mag · <span class="meta">Tu</span></td>
+                <td><div class="avatars"><div class="avatar">V</div></div></td>
+                <td><span class="role-tag">Owner</span></td>
+              </tr>
+              <tr>
+                <td class="t-title">Vetro rotto</td>
+                <td><span class="meta">Pilot · Thriller</span></td>
+                <td data-num>32</td>
+                <td><div class="pct-bar"><div class="progress" style="flex:none"><i style="width:85%"></i></div><span class="mono" data-num>85%</span></div></td>
+                <td>12 mag · <span class="meta">Giuseppe</span></td>
+                <td><div class="avatars"><div class="avatar">V</div><div class="avatar">G</div></div></td>
+                <td><span class="role-tag">Editor</span></td>
+              </tr>
+              <tr>
+                <td class="t-title">Il mese di marzo</td>
+                <td><span class="meta">Corto · Drama</span></td>
+                <td data-num>8</td>
+                <td><div class="pct-bar"><div class="progress" style="flex:none"><i style="width:22%"></i></div><span class="mono" data-num>22%</span></div></td>
+                <td>8 mag · <span class="meta">Tu</span></td>
+                <td><div class="avatars"><div class="avatar">V</div></div></td>
+                <td><span class="role-tag">Owner</span></td>
+              </tr>
+              <tr>
+                <td class="t-title">Notte europea</td>
+                <td><span class="meta">Serie · Drama</span></td>
+                <td data-num>—</td>
+                <td><div class="pct-bar"><div class="progress" style="flex:none"><i style="width:5%"></i></div><span class="mono" data-num>5%</span></div></td>
+                <td>oggi · <span class="meta">Tu</span></td>
+                <td><div class="avatars"><div class="avatar">V</div><div class="avatar">M</div><div class="avatar">G</div></div></td>
+                <td><span class="role-tag">Owner</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty state (preview) -->
+        <section class="empty" id="empty">
+          <pre>   ┌───────────────────────────┐
+   │  FADE IN:                 │
+   │                           │
+   │  Una pagina bianca.       │
+   │                           │
+   │                  ▌        │
+   └───────────────────────────┘</pre>
+          <h2 class="display">Pagina bianca</h2>
+          <p>Inizia da una logline, importa un Fountain già scritto, o parti da un template pensato per il tuo formato.</p>
+          <div class="empty-cta">
+            <button class="btn primary">＋ Nuovo progetto</button>
+            <button class="btn">Importa Fountain</button>
+            <button class="btn">Template</button>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      function setView(v) {
+        const app = document.getElementById('app');
+        app.classList.remove('view-grid','view-list');
+        app.classList.add('view-' + v);
+        document.querySelectorAll('.view-toggle button').forEach((b,i) => {
+          b.classList.toggle('active', (v==='grid' && i===0) || (v==='list' && i===1));
+        });
+      }
+    </script>
+  </body>
+</html>

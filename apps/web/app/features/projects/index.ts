@@ -9,6 +9,23 @@ export { TitlePageForm } from "./components/TitlePageForm";
 export { TitlePageEditor } from "./components/TitlePageEditor";
 export { TitlePageDraftPanel } from "./components/TitlePageDraftPanel";
 export { DraftMetaBadge } from "./components/DraftMetaBadge";
+export { DashboardPage } from "./components/dashboard/DashboardPage";
+export { DashboardHero } from "./components/dashboard/DashboardHero";
+export { DashboardViewbar } from "./components/dashboard/DashboardViewbar";
+export { DashboardFilters } from "./components/dashboard/DashboardFilters";
+export { ProjectCardGrid } from "./components/dashboard/ProjectCardGrid";
+export { ProjectCardCompact } from "./components/dashboard/ProjectCardCompact";
+export { ProjectCoverGradient } from "./components/dashboard/ProjectCoverGradient";
+export { DashboardEmptyState } from "./components/dashboard/DashboardEmptyState";
+export * from "./dashboard.schema";
+export {
+  getDashboardProjects,
+  dashboardProjectsQueryOptions,
+} from "./server/dashboard.server";
+export {
+  useDashboardProjects,
+  useDashboardView,
+} from "./hooks/useDashboard";
 export * from "./hooks/useProjects";
 export * from "./hooks/useTitlePage";
 export * from "./hooks/useTitlePageState";

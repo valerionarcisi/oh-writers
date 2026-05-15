@@ -1,0 +1,41 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-10) var(--ds-space-6);
+  background: var(--ds-card-bg);
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  text-align: center;
+}
+
+.illustration {
+  inline-size: clamp(160px, 40%, 240px);
+  block-size: auto;
+  color: var(--ds-text-3);
+}
+
+.heading {
+  font-family: var(--ds-font-display);
+  font-size: 32px;
+  font-weight: 500;
+  margin: 0;
+  color: var(--ds-text);
+  letter-spacing: -0.01em;
+}
+
+.body {
+  font-size: 14px;
+  color: var(--ds-text-2);
+  max-inline-size: 480px;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.actions {
+  display: flex;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
