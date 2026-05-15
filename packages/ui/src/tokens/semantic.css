@@ -9,12 +9,17 @@
   --ds-surface-alt:  var(--ds-linen-100);
   --ds-surface-deep: var(--ds-linen-200);
 
-  /* Text */
+  /* Text — text-mute and text-faint shifted up the linen scale so helper
+     labels, KPI captions, meta rows and counters clear WCAG AA (4.5:1 body
+     / 3:1 large/UI) against --ds-bg and --ds-surface in both themes. The
+     trade-off is that text-3 and text-mute now share a tone — hierarchy
+     becomes: text > text-2 > {text-3 / mute} > faint. The paper-warm scale
+     is preserved (no new primitives, no hardcoded values). */
   --ds-text:         var(--ds-linen-800);
   --ds-text-2:       var(--ds-linen-700);
   --ds-text-3:       var(--ds-linen-600);
-  --ds-text-mute:    var(--ds-linen-500);
-  --ds-text-faint:   var(--ds-linen-400);
+  --ds-text-mute:    var(--ds-linen-600);
+  --ds-text-faint:   var(--ds-linen-500);
   --ds-text-on-dark: var(--ds-linen-50);
 
   /* Lines */
