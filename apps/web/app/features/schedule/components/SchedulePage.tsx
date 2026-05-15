@@ -35,17 +35,13 @@ import { UnscheduledTray } from "./UnscheduledTray";
 import { SceneDrawer } from "./SceneDrawer";
 import { ShootingDayDrawer } from "./ShootingDayDrawer";
 import { ScheduleCesareBanner } from "./ScheduleCesareBanner";
-import { ScheduleCalendarView } from "./ScheduleCalendarView";
-import { ScheduleTimelineView } from "./ScheduleTimelineView";
 import { ScheduleDayView } from "./ScheduleDayView";
 import styles from "./SchedulePage.module.css";
 
-type ViewTab = "strip" | "calendar" | "timeline" | "day";
+type ViewTab = "strip" | "day";
 
 const TABS: ReadonlyArray<{ id: ViewTab; label: string }> = [
   { id: "strip", label: "Strip Board" },
-  { id: "calendar", label: "Calendario" },
-  { id: "timeline", label: "Timeline" },
   { id: "day", label: "Giornata" },
 ];
 
@@ -185,11 +181,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
 
   const handleSelectDayInView = (dayId: string) => {
     setActiveDayId(dayId);
-  };
-
-  const handleSelectDayFromOtherTab = (dayId: string) => {
-    setActiveDayId(dayId);
-    setTab("day");
   };
 
   const suggestions = useMemo<Suggestion[]>(
@@ -352,18 +343,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                     />
                   </div>
                 </>
-              ))
-              .with("calendar", () => (
-                <ScheduleCalendarView
-                  schedule={schedule}
-                  onSelectDay={handleSelectDayFromOtherTab}
-                />
-              ))
-              .with("timeline", () => (
-                <ScheduleTimelineView
-                  schedule={schedule}
-                  onSelectDay={handleSelectDayFromOtherTab}
-                />
               ))
               .with("day", () => (
                 <ScheduleDayView
