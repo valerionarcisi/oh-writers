@@ -83,13 +83,40 @@
 }
 
 .main {
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-12);
+  padding: var(--ds-space-6) var(--ds-space-6) var(--ds-space-12);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--ds-space-10);
   align-items: start;
+  container-type: inline-size;
+}
+
+.drillWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.backLink {
+  all: unset;
+  cursor: pointer;
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  color: var(--ds-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  align-self: flex-start;
+  padding: 4px 0;
+  transition: color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover { color: var(--ds-text); }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
 }
 
 .content {

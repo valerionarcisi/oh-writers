@@ -6,15 +6,9 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import {
-  HeroKPI,
-  Viewbar,
-  FloatingDock,
-  SegmentedControl,
-  ToggleChip,
-} from "@oh-writers/ui";
+import { Viewbar, FloatingDock, SegmentedControl } from "@oh-writers/ui";
 import { resourceTotal } from "@oh-writers/domain";
-import type { FiscalRegime } from "@oh-writers/domain";
+import type { Budget, FiscalRegime } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
 import {
   getBudget,
@@ -23,10 +17,19 @@ import {
   getProjectScenes,
   getRateCard,
   getDayCosts,
-  updateBudgetLine,
+  getBudgetOverview,
   updateBudgetSettings,
+  type BudgetOverview,
 } from "../server/budget.server";
-import { RateCardSection } from "./RateCardSection";
+import type { CastSceneMap } from "../server/budget.server";
+import type { BudgetCast, BudgetCrew } from "@oh-writers/db/schema";
+import {
+  CATEGORY_COLOR_VARS,
+  CATEGORY_LABELS,
+  type BudgetCategoryKey,
+} from "../server/budget-helpers";
+import { OverviewSection } from "./overview/OverviewSection";
+import { ProductionDrillDown } from "./drilldowns/ProductionDrillDown";
 import { DayView } from "./widgets/DayView";
 import { CastWidget } from "./widgets/CastWidget";
 import { CrewWidget } from "./widgets/CrewWidget";
@@ -62,13 +65,12 @@ const dayCostsQueryOptions = (projectId: string) =>
     queryFn: () => getDayCosts({ data: { projectId } }).then(unwrapResult),
   });
 
-const eur = new Intl.NumberFormat("it-IT", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
-});
-
-const eurAmount = (n: number) => eur.format(Math.round(n));
+const overviewQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["budget-overview", projectId],
+    queryFn: () =>
+      getBudgetOverview({ data: { projectId } }).then(unwrapResult),
+  });
 
 const num = (v: string | number | null | undefined): number => {
   if (v === null || v === undefined) return 0;
@@ -76,66 +78,7 @@ const num = (v: string | number | null | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-type ViewMode = "category" | "scene" | "day" | "cast" | "all";
-
-type CategoryKey =
-  | "cast"
-  | "crew"
-  | "locations"
-  | "scenografia"
-  | "costumi"
-  | "fotografia"
-  | "suono"
-  | "vfx"
-  | "comparse"
-  | "vehicles";
-
-const CATEGORY_META: Record<
-  CategoryKey,
-  { label: string; tokenVar: string; rowKey: string }
-> = {
-  cast: { label: "Cast", tokenVar: "--ds-cat-cast", rowKey: "cast" },
-  crew: { label: "Troupe", tokenVar: "--ds-cat-crew", rowKey: "crew" },
-  locations: {
-    label: "Locations",
-    tokenVar: "--ds-cat-locations",
-    rowKey: "loc",
-  },
-  scenografia: {
-    label: "Scenografia",
-    tokenVar: "--ds-cat-scenografia",
-    rowKey: "scen",
-  },
-  costumi: { label: "Costumi", tokenVar: "--ds-cat-costumi", rowKey: "cost" },
-  fotografia: {
-    label: "Fotografia",
-    tokenVar: "--ds-cat-fotografia",
-    rowKey: "foto",
-  },
-  suono: { label: "Suono", tokenVar: "--ds-cat-suono", rowKey: "suono" },
-  vfx: { label: "VFX", tokenVar: "--ds-cat-vfx", rowKey: "vfx" },
-  comparse: {
-    label: "Comparse",
-    tokenVar: "--ds-cat-comparse",
-    rowKey: "comparse",
-  },
-  vehicles: {
-    label: "Veicoli",
-    tokenVar: "--ds-cat-vehicles",
-    rowKey: "veh",
-  },
-};
-
-const LINKED_TO_CATEGORY: Record<string, CategoryKey> = {
-  locations: "locations",
-  props: "scenografia",
-  wardrobe: "costumi",
-  equipment: "fotografia",
-  sound: "suono",
-  vfx: "vfx",
-  extras: "comparse",
-  vehicles: "vehicles",
-};
+type ViewMode = "overview" | "category" | "day";
 
 interface BudgetPageProps {
   projectId: string;
@@ -146,15 +89,15 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
   const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
-  const { data: rateCardEntries } = useSuspenseQuery(
-    rateCardQueryOptions(projectId),
-  );
+  // keep rate-card cache warm for drill-down editing
+  useSuspenseQuery(rateCardQueryOptions(projectId));
   const { data: dayCosts } = useQuery(dayCostsQueryOptions(projectId));
+  const { data: overview } = useQuery(overviewQueryOptions(projectId));
 
-  const [view, setView] = useState<ViewMode>("category");
+  const [view, setView] = useState<ViewMode>("overview");
+  const [drillCategory, setDrillCategory] =
+    useState<BudgetCategoryKey | null>(null);
   const [isStuck, setIsStuck] = useState(false);
-  const [selectedScene, setSelectedScene] = useState<number | null>(null);
-  const [showRateCard, setShowRateCard] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 48);
@@ -169,6 +112,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       qc.invalidateQueries({ queryKey: ["budget", projectId] });
       qc.invalidateQueries({ queryKey: ["budget-cast-crew", projectId] });
       qc.invalidateQueries({ queryKey: ["budget-day-costs", projectId] });
+      qc.invalidateQueries({ queryKey: ["budget-overview", projectId] });
     },
   });
 
@@ -180,41 +124,19 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       updateBudgetSettings({
         data: { budgetId: budget!.id, ...patch },
       }).then(unwrapResult),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget", projectId] }),
-  });
-
-  const updateLineMutation = useMutation({
-    mutationFn: (vars: {
-      lineId: string;
-      patch: {
-        actual?: number | null;
-        rate?: number | null;
-        quantity?: number | null;
-      };
-    }) => updateBudgetLine({ data: vars }).then(unwrapResult),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["budget", projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budget", projectId] });
+      qc.invalidateQueries({ queryKey: ["budget-overview", projectId] });
+    },
   });
 
   const cast = castCrew?.cast ?? [];
   const crew = castCrew?.crew ?? [];
   const castSceneMap = castCrew?.castSceneMap ?? {};
   const scenes = allScenes ?? [];
-  const castTotal = cast.reduce(
-    (sum, r) =>
-      sum +
-      resourceTotal({
-        days: num(r.days),
-        dayRate: num(r.dayRate),
-        fiscalRegime: r.fiscalRegime as FiscalRegime,
-        mealAllowance: num(r.mealAllowance),
-        accommodation: num(r.accommodation),
-      }),
-    0,
-  );
 
-  const crewTotal = crew
-    .filter((r) => r.enabled)
-    .reduce(
+  const fallbackOverview: BudgetOverview = useMemo(() => {
+    const castTotal = cast.reduce(
       (sum, r) =>
         sum +
         resourceTotal({
@@ -226,91 +148,95 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
         }),
       0,
     );
+    const crewTotal = crew
+      .filter((r) => r.enabled)
+      .reduce(
+        (sum, r) =>
+          sum +
+          resourceTotal({
+            days: num(r.days),
+            dayRate: num(r.dayRate),
+            fiscalRegime: r.fiscalRegime as FiscalRegime,
+            mealAllowance: num(r.mealAllowance),
+            accommodation: num(r.accommodation),
+          }),
+        0,
+      );
+    const grandTotal = castTotal + crewTotal;
+    return {
+      grandTotal,
+      contingencyAmount: 0,
+      castTotal,
+      crewTotal,
+      productionTotal: 0,
+      previousTotal: null,
+      deltaPercent: null,
+      shootingDays: budget?.shootingDays ?? null,
+      sceneCount: scenes.length,
+      perDay: null,
+      perScene: null,
+      status: (budget?.status ?? "draft") as
+        | "draft"
+        | "estimated"
+        | "locked",
+      categories: [
+        {
+          id: "cast",
+          label: CATEGORY_LABELS.cast,
+          colorVar: CATEGORY_COLOR_VARS.cast,
+          total: castTotal,
+          percent: grandTotal > 0 ? (castTotal / grandTotal) * 100 : 0,
+          resourceCount: cast.length,
+          status: castTotal > 0 ? "ok" : "missing",
+          statusReason: castTotal > 0 ? null : "Genera per stimare",
+          sparkline: [0, 0, 0, 0, 0, castTotal],
+        },
+        {
+          id: "crew",
+          label: CATEGORY_LABELS.crew,
+          colorVar: CATEGORY_COLOR_VARS.crew,
+          total: crewTotal,
+          percent: grandTotal > 0 ? (crewTotal / grandTotal) * 100 : 0,
+          resourceCount: crew.filter((r) => r.enabled).length,
+          status: crewTotal > 0 ? "ok" : "missing",
+          statusReason: crewTotal > 0 ? null : "Genera per stimare",
+          sparkline: [0, 0, 0, 0, 0, crewTotal],
+        },
+      ],
+      lockedCategoryCount: 0,
+      missingRatesCount: 0,
+    };
+  }, [cast, crew, budget, scenes.length]);
 
-  const allLines = budget?.lines ?? [];
+  const effectiveOverview: BudgetOverview = overview ?? fallbackOverview;
 
-  const lineActual = (l: (typeof allLines)[number]): number =>
-    num(l.actual) || num(l.rate) * (num(l.quantity) || 1);
-
-  const lineEstimate = (l: (typeof allLines)[number]): number =>
-    num(l.rate) * (num(l.quantity) || 1);
-
-  const productionLines = allLines.filter((l) => l.topSheet === "production");
-
-  const totalsByCategory: Partial<Record<CategoryKey, number>> = {
-    cast: castTotal,
-    crew: crewTotal,
-  };
-  for (const line of productionLines) {
-    const key = line.linkedCategory
-      ? LINKED_TO_CATEGORY[line.linkedCategory]
-      : undefined;
-    if (!key) continue;
-    totalsByCategory[key] = (totalsByCategory[key] ?? 0) + lineActual(line);
-  }
-
-  const grandTotal = Object.values(totalsByCategory).reduce(
-    (s, v) => s + (v ?? 0),
-    0,
-  );
-
-  // Cast e Troupe sono sempre visibili anche con totale 0 — il regista deve
-  // poter vedere subito che mancano dei rates, non scoprirlo nel tab Cast.
-  const CORE_CATEGORIES: ReadonlyArray<CategoryKey> = ["cast", "crew"];
-  const sortedCategories = (Object.keys(totalsByCategory) as CategoryKey[])
-    .filter(
-      (k) => CORE_CATEGORIES.includes(k) || (totalsByCategory[k] ?? 0) > 0,
-    )
-    .sort((a, b) => (totalsByCategory[b] ?? 0) - (totalsByCategory[a] ?? 0));
-
-  // TODO(audit-2026-05-15): wire deltaPercent to a real `previousBudget` snapshot
-  // (compare current grandTotal to last saved budget revision). Until then the
-  // pill is hidden — day-zero projects must not see a fake "+4,2% vs preventivo".
-  const previousBudget: number | null = null;
-  const deltaPercent: number | null =
-    previousBudget !== null && previousBudget > 0
-      ? ((grandTotal - previousBudget) / previousBudget) * 100
-      : null;
   const shootingDays = budget?.shootingDays ?? null;
   const contingencyPercent = budget?.contingencyPercent ?? 10;
-  const sceneCount = scenes.length || 0;
-
-  const linesForView = useMemo(() => {
-    if (view === "all") return productionLines;
-    return productionLines.slice(0, 12);
-  }, [view, productionLines]);
 
   const versionLabel = "v3 · 14 mag 2026";
+
+  const handleDrillDown = (categoryId: BudgetCategoryKey) => {
+    setView("category");
+    setDrillCategory(categoryId);
+  };
 
   return (
     <div className={styles.page} data-testid="budget-page-v2">
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
         <SegmentedControl
           options={[
+            { id: "overview", label: "Panoramica" },
             { id: "category", label: "Per categoria" },
-            // TODO(audit-2026-05-15): re-enable "Per scena" once getSceneCosts
-            // server fn lands — current view shows only a dropdown filter with
-            // no rendered cost breakdown.
             { id: "day", label: "Per giornata" },
-            { id: "all", label: "Tutti i reparti" },
-            { id: "cast", label: "Cast" },
           ]}
           activeId={view}
-          onSelect={(id) => setView(id as ViewMode)}
+          onSelect={(id) => {
+            setView(id as ViewMode);
+            if (id !== "category") setDrillCategory(null);
+          }}
           ariaLabel="Vista budget"
         />
         <span className={styles.viewbarRight} />
-        {/* TODO(audit-2026-05-15): restore Tariffe ToggleChip when the rate-card
-            entry point lands per docs/specs/core/11c-rate-card.md — currently
-            the toggle navigates to a broken /dashboard route. */}
-        {false && (
-          <ToggleChip
-            isOn={showRateCard}
-            onToggle={() => setShowRateCard((v) => !v)}
-            label="Tariffe"
-            aria-label="Mostra tariffe"
-          />
-        )}
         {budget && shootingDays !== null && (
           <SettingChip
             label="Giorni"
@@ -322,17 +248,21 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             testId="shooting-days"
           />
         )}
-        {budget && contingencyPercent !== null && contingencyPercent !== undefined && (
-          <SettingChip
-            label="Cont."
-            value={contingencyPercent}
-            placeholder="10"
-            disabled={false}
-            onCommit={(v) => settingsMutation.mutate({ contingencyPercent: v })}
-            suffix="%"
-            testId="contingency-percent"
-          />
-        )}
+        {budget &&
+          contingencyPercent !== null &&
+          contingencyPercent !== undefined && (
+            <SettingChip
+              label="Cont."
+              value={contingencyPercent}
+              placeholder="10"
+              disabled={false}
+              onCommit={(v) =>
+                settingsMutation.mutate({ contingencyPercent: v })
+              }
+              suffix="%"
+              testId="contingency-percent"
+            />
+          )}
         <button type="button" className={styles.filter} aria-haspopup="menu">
           {versionLabel} ▾
         </button>
@@ -340,137 +270,25 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
 
       <main className={styles.main} id="main">
         <div className={styles.content}>
-          <div className={styles.heroWrap}>
-            <HeroKPI
-              eyebrow="TOTALE STIMATO"
-              value={eurAmount(grandTotal || 0)}
-              delta={
-                deltaPercent !== null
-                  ? `${deltaPercent >= 0 ? "+" : ""}${deltaPercent.toLocaleString("it-IT", { maximumFractionDigits: 1 })}% vs preventivo`
-                  : undefined
-              }
-              deltaDirection={
-                deltaPercent !== null && deltaPercent > 0
-                  ? "negative"
-                  : "positive"
-              }
-              sub={
-                sceneCount > 0
-                  ? `su ${sceneCount} scene${shootingDays ? ` · ${shootingDays} giornate` : ""}`
-                  : "Nessuna scena pianificata"
-              }
+          {view === "overview" && (
+            <OverviewSection
+              overview={effectiveOverview}
+              onDrillDown={handleDrillDown}
             />
-          </div>
-
-          {showRateCard && (
-            <section className={styles.section}>
-              <RateCardSection
-                projectId={projectId}
-                entries={rateCardEntries ?? []}
-              />
-            </section>
           )}
 
           {view === "category" && (
-            <section className={styles.section}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Per categoria</h2>
-                <span className={styles.sectionMeta}>
-                  {sortedCategories.length} reparti · ordinamento per peso
-                </span>
-              </header>
-              <div className={styles.cats}>
-                {sortedCategories.map((key) => {
-                  const meta = CATEGORY_META[key];
-                  const amount = totalsByCategory[key] ?? 0;
-                  const share =
-                    grandTotal > 0 ? (amount / grandTotal) * 100 : 0;
-                  const delta = mockCategoryDelta(key);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className={styles.cat}
-                      style={{
-                        ["--cat-color" as string]: `var(${meta.tokenVar})`,
-                      }}
-                    >
-                      <div className={styles.catHead}>
-                        <span className={styles.catDot} aria-hidden="true" />
-                        <span className={styles.catName}>{meta.label}</span>
-                      </div>
-                      <div className={styles.catNum}>{eurAmount(amount)}</div>
-                      <div className={styles.catFoot}>
-                        <span>{share.toFixed(0)}%</span>
-                        <span
-                          className={
-                            delta > 0
-                              ? styles.catDeltaPos
-                              : delta < 0
-                                ? styles.catDeltaNeg
-                                : ""
-                          }
-                        >
-                          {delta > 0 ? "+" : ""}
-                          {delta.toLocaleString("it-IT", {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 1,
-                          })}
-                          %
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-                {sortedCategories.length === 0 && (
-                  <div className={styles.emptyCard}>
-                    Nessun reparto con costi. Genera il budget per iniziare.
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {view === "scene" && (
-            <section className={styles.section}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Per scena</h2>
-                <span className={styles.sectionMeta}>
-                  {scenes.length > 0
-                    ? `${scenes.length} scene disponibili`
-                    : "Nessuna scena"}
-                </span>
-              </header>
-              {scenes.length > 0 ? (
-                <div className={styles.sceneFilter}>
-                  <label className={styles.sceneFilterLabel}>
-                    Filtra per scena
-                  </label>
-                  <select
-                    className={styles.sceneSelect}
-                    value={selectedScene ?? ""}
-                    onChange={(e) =>
-                      setSelectedScene(
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
-                    data-testid="scene-select"
-                  >
-                    <option value="">Tutte le scene</option>
-                    {scenes.map((s) => (
-                      <option key={s.number} value={s.number}>
-                        Sc.{s.number} — {s.heading}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className={styles.emptyCard}>
-                  Nessuna scena nello screenplay. Aggiungi scene per vedere
-                  costi per scena.
-                </div>
-              )}
-            </section>
+            <CategoryView
+              overview={effectiveOverview}
+              drillCategory={drillCategory}
+              onDrillDown={setDrillCategory}
+              onClose={() => setDrillCategory(null)}
+              cast={cast}
+              castSceneMap={castSceneMap}
+              crew={crew}
+              budget={budget}
+              projectId={projectId}
+            />
           )}
 
           {view === "day" && (
@@ -484,225 +302,10 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               <DayView days={dayCosts ?? []} />
             </section>
           )}
-
-          {view === "cast" && (
-            <section className={styles.section}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Cast</h2>
-                <span className={styles.sectionMeta}>
-                  {cast.length} personaggi
-                </span>
-              </header>
-              {cast.length === 0 ? (
-                <div className={styles.emptyCard}>
-                  Nessun personaggio nel cast — esegui Genera per popolare da
-                  breakdown.
-                </div>
-              ) : (
-                <CastWidget
-                  cast={cast}
-                  castSceneMap={castSceneMap}
-                  selectedScene={selectedScene}
-                  grandTotal={grandTotal}
-                  projectId={projectId}
-                />
-              )}
-            </section>
-          )}
-
-          {view === "all" && (
-            <section className={styles.section}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Cast e troupe</h2>
-                <span className={styles.sectionMeta}>
-                  {cast.length} cast · {crew.filter((r) => r.enabled).length}{" "}
-                  troupe
-                </span>
-              </header>
-              {cast.length === 0 ? (
-                <div className={styles.emptyCard}>
-                  Nessun personaggio nel cast — esegui Genera per popolare da
-                  breakdown.
-                </div>
-              ) : (
-                <CastWidget
-                  cast={cast}
-                  castSceneMap={castSceneMap}
-                  selectedScene={selectedScene}
-                  grandTotal={grandTotal}
-                  projectId={projectId}
-                />
-              )}
-              {budget && crew.length > 0 && (
-                <div style={{ marginTop: "var(--ds-space-6)" }}>
-                  <CrewWidget
-                    crew={crew}
-                    budgetId={budget.id}
-                    grandTotal={grandTotal}
-                    projectId={projectId}
-                  />
-                </div>
-              )}
-            </section>
-          )}
-
-          {(view === "category" || view === "all") && (
-            <section className={styles.section}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Voci</h2>
-                <span className={styles.sectionMeta}>
-                  {(() => {
-                    const withDelta = linesForView.filter((l) => {
-                      const est = lineEstimate(l);
-                      const act = lineActual(l);
-                      return est > 0 && Math.abs(act - est) > 0.5;
-                    });
-                    if (withDelta.length === 0) {
-                      return `${linesForView.length} voci · clicca per modificare`;
-                    }
-                    const maxPct = Math.max(
-                      ...withDelta.map((l) => {
-                        const est = lineEstimate(l);
-                        const act = lineActual(l);
-                        return Math.abs(((act - est) / est) * 100);
-                      }),
-                    );
-                    return `${linesForView.length} voci · ${withDelta.length} con scostamento · max ±${maxPct.toFixed(0)}%`;
-                  })()}
-                </span>
-              </header>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={{ width: 60 }}>#</th>
-                    <th>Voce</th>
-                    <th>Reparto</th>
-                    <th className={styles.colNum}>Q.tà</th>
-                    <th className={styles.colNum}>€/u</th>
-                    <th className={styles.colNum}>Stima</th>
-                    <th className={styles.colNum}>Effettivo</th>
-                    <th className={styles.colNum}>Δ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {linesForView.map((line, idx) => {
-                    const catKey = line.linkedCategory
-                      ? LINKED_TO_CATEGORY[line.linkedCategory]
-                      : undefined;
-                    const meta = catKey ? CATEGORY_META[catKey] : null;
-                    const estimate = lineEstimate(line);
-                    const actual = lineActual(line);
-                    const delta = actual - estimate;
-                    const deltaCls =
-                      delta > 0
-                        ? styles.deltaPos
-                        : delta < 0
-                          ? styles.deltaNeg
-                          : styles.deltaZero;
-                    return (
-                      <tr key={line.id}>
-                        <td>
-                          <span className={styles.rowNum}>
-                            {String(idx + 1).padStart(3, "0")}
-                          </span>
-                        </td>
-                        <td>{line.name}</td>
-                        <td>
-                          {meta ? (
-                            <span
-                              className={styles.rowCat}
-                              style={{
-                                ["--cat-color" as string]: `var(${meta.tokenVar})`,
-                              }}
-                            >
-                              {meta.label}
-                            </span>
-                          ) : (
-                            <span style={{ color: "var(--ds-text-faint)" }}>
-                              —
-                            </span>
-                          )}
-                        </td>
-                        <td className={styles.colNum}>
-                          <NumberCell
-                            value={num(line.quantity) || 1}
-                            format={(v) =>
-                              v.toLocaleString("it-IT", {
-                                maximumFractionDigits: 2,
-                              })
-                            }
-                            onCommit={(v) =>
-                              updateLineMutation.mutate({
-                                lineId: line.id,
-                                patch: { quantity: v },
-                              })
-                            }
-                            disabled={updateLineMutation.isPending}
-                            testId="quantity-cell"
-                          />
-                        </td>
-                        <td className={styles.colNum}>
-                          <NumberCell
-                            value={num(line.rate)}
-                            format={(v) => eurAmount(v)}
-                            onCommit={(v) =>
-                              updateLineMutation.mutate({
-                                lineId: line.id,
-                                patch: { rate: v },
-                              })
-                            }
-                            disabled={updateLineMutation.isPending}
-                            testId="rate-cell"
-                          />
-                        </td>
-                        <td className={styles.colNum}>
-                          {eurAmount(estimate)}
-                        </td>
-                        <td className={styles.colNum}>
-                          <EffectiveCell
-                            value={line.actual === null ? null : num(line.actual)}
-                            fallback={estimate}
-                            onCommit={(v) =>
-                              updateLineMutation.mutate({
-                                lineId: line.id,
-                                patch: { actual: v },
-                              })
-                            }
-                            disabled={updateLineMutation.isPending}
-                          />
-                        </td>
-                        <td className={`${styles.colNum} ${deltaCls}`}>
-                          {delta === 0
-                            ? "—"
-                            : `${delta > 0 ? "+" : "−"}${eurAmount(Math.abs(delta))}`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {linesForView.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        style={{
-                          textAlign: "center",
-                          color: "var(--ds-text-faint)",
-                          padding: "var(--ds-space-6)",
-                        }}
-                      >
-                        Nessuna linea di budget. Genera il budget per iniziare.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </section>
-          )}
         </div>
-
       </main>
 
       <FloatingDock
-
         primaryAction={{
           label: generateMutation.isPending ? "Generando…" : "Rigenera",
           hotkey: "⌘R",
@@ -719,124 +322,200 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   );
 }
 
-interface EffectiveCellProps {
-  value: number | null;
-  fallback: number;
-  onCommit: (v: number) => void;
-  disabled?: boolean;
+// ─── Category view ──────────────────────────────────────────────────────────
+
+interface CategoryViewProps {
+  readonly overview: BudgetOverview;
+  readonly drillCategory: BudgetCategoryKey | null;
+  readonly onDrillDown: (id: BudgetCategoryKey) => void;
+  readonly onClose: () => void;
+  readonly cast: ReadonlyArray<BudgetCast>;
+  readonly castSceneMap: CastSceneMap;
+  readonly crew: ReadonlyArray<BudgetCrew>;
+  readonly budget: Budget | null;
+  readonly projectId: string;
 }
 
-function EffectiveCell({
-  value,
-  fallback,
-  onCommit,
-  disabled,
-}: EffectiveCellProps) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  const display = value !== null ? value : fallback;
-
-  const commit = () => {
-    setEditing(false);
-    const n = parseFloat(draft);
-    if (!isNaN(n) && n >= 0) onCommit(n);
-  };
-
-  if (editing) {
+function CategoryView({
+  overview,
+  drillCategory,
+  onDrillDown,
+  onClose,
+  cast,
+  castSceneMap,
+  crew,
+  budget,
+  projectId,
+}: CategoryViewProps) {
+  if (drillCategory !== null) {
     return (
-      <input
-        className={styles.cellInput}
-        type="number"
-        min="0"
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        data-testid="effective-input"
-      />
+      <div className={styles.drillWrap}>
+        <button
+          type="button"
+          className={styles.backLink}
+          onClick={onClose}
+          data-testid="drill-back"
+        >
+          ← Torna a tutte le categorie
+        </button>
+        <CategoryDrillContent
+          categoryId={drillCategory}
+          overview={overview}
+          cast={cast}
+          castSceneMap={castSceneMap}
+          crew={crew}
+          budget={budget}
+          projectId={projectId}
+        />
+      </div>
     );
   }
 
   return (
-    <button
-      type="button"
-      className={styles.cellBtn}
-      disabled={disabled}
-      onClick={() => {
-        setDraft(value !== null ? String(value) : "");
-        setEditing(true);
-      }}
-      data-testid="effective-cell"
-    >
-      {eurAmount(display)}
-    </button>
+    <section className={styles.section}>
+      <header className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>Per categoria</h2>
+        <span className={styles.sectionMeta}>
+          {overview.categories.length} reparti · clicca per dettaglio
+        </span>
+      </header>
+      <div className={styles.cats}>
+        {overview.categories.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={styles.cat}
+            style={{ ["--cat-color" as string]: `var(${c.colorVar})` }}
+            onClick={() => onDrillDown(c.id)}
+            data-testid={`category-card-${c.id}`}
+          >
+            <div className={styles.catHead}>
+              <span className={styles.catDot} aria-hidden="true" />
+              <span className={styles.catName}>{c.label}</span>
+            </div>
+            <div className={styles.catNum}>
+              {c.total > 0
+                ? new Intl.NumberFormat("it-IT", {
+                    style: "currency",
+                    currency: "EUR",
+                    maximumFractionDigits: 0,
+                  }).format(c.total)
+                : "—"}
+            </div>
+            <div className={styles.catFoot}>
+              <span>{c.percent.toFixed(0)}%</span>
+              <span>{c.resourceCount} voci</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
-interface NumberCellProps {
-  value: number;
-  format: (v: number) => string;
-  onCommit: (v: number) => void;
-  disabled?: boolean;
-  testId?: string;
+interface CategoryDrillContentProps {
+  readonly categoryId: BudgetCategoryKey;
+  readonly overview: BudgetOverview;
+  readonly cast: ReadonlyArray<BudgetCast>;
+  readonly castSceneMap: CastSceneMap;
+  readonly crew: ReadonlyArray<BudgetCrew>;
+  readonly budget: Budget | null;
+  readonly projectId: string;
 }
 
-function NumberCell({
-  value,
-  format,
-  onCommit,
-  disabled,
-  testId,
-}: NumberCellProps) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  const commit = () => {
-    setEditing(false);
-    const n = parseFloat(draft);
-    if (!isNaN(n) && n >= 0 && n !== value) onCommit(n);
-  };
-
-  if (editing) {
+function CategoryDrillContent({
+  categoryId,
+  overview,
+  cast,
+  castSceneMap,
+  crew,
+  budget,
+  projectId,
+}: CategoryDrillContentProps) {
+  if (categoryId === "cast") {
+    if (cast.length === 0)
+      return (
+        <div className={styles.emptyCard}>
+          Nessun personaggio nel cast — esegui Genera per popolare dal
+          breakdown.
+        </div>
+      );
     return (
-      <input
-        className={styles.cellInput}
-        type="number"
-        min="0"
-        step="any"
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        data-testid={testId ? `${testId}-input` : undefined}
+      <CastWidget
+        cast={[...cast]}
+        castSceneMap={castSceneMap}
+        selectedScene={null}
+        grandTotal={overview.grandTotal}
+        projectId={projectId}
       />
     );
   }
-
+  if (categoryId === "crew") {
+    if (!budget || crew.length === 0)
+      return (
+        <div className={styles.emptyCard}>
+          Nessun ruolo di troupe — esegui Genera per popolare.
+        </div>
+      );
+    return (
+      <CrewWidget
+        crew={[...crew]}
+        budgetId={budget.id}
+        grandTotal={overview.grandTotal}
+        projectId={projectId}
+      />
+    );
+  }
+  if (!budget) {
+    return (
+      <div className={styles.emptyCard}>
+        Nessun budget generato — esegui Genera per popolare la categoria.
+      </div>
+    );
+  }
   return (
-    <button
-      type="button"
-      className={styles.cellBtn}
-      disabled={disabled}
-      onClick={() => {
-        setDraft(String(value));
-        setEditing(true);
-      }}
-      data-testid={testId}
-    >
-      {format(value)}
-    </button>
+    <ProductionDrillDown
+      budget={budget}
+      initialTab={mapCategoryToProductionTab(categoryId)}
+      projectId={projectId}
+    />
   );
 }
+
+const mapCategoryToProductionTab = (
+  key: BudgetCategoryKey,
+):
+  | "locations"
+  | "fotografia"
+  | "suono"
+  | "scenografia"
+  | "costumi"
+  | "vehicles"
+  | "comparse"
+  | "vfx" => {
+  switch (key) {
+    case "locations":
+      return "locations";
+    case "fotografia":
+      return "fotografia";
+    case "suono":
+      return "suono";
+    case "scenografia":
+      return "scenografia";
+    case "costumi":
+      return "costumi";
+    case "vehicles":
+      return "vehicles";
+    case "comparse":
+      return "comparse";
+    case "vfx":
+      return "vfx";
+    default:
+      return "locations";
+  }
+};
+
+// ─── Setting chip in viewbar ────────────────────────────────────────────────
 
 interface SettingChipProps {
   label: string;
@@ -906,20 +585,4 @@ function SettingChip({
       </span>
     </button>
   );
-}
-
-function mockCategoryDelta(key: CategoryKey): number {
-  const map: Record<CategoryKey, number> = {
-    cast: 1.8,
-    crew: 0,
-    locations: 8.1,
-    scenografia: 2.0,
-    costumi: 5.1,
-    fotografia: 3.4,
-    suono: 0,
-    vfx: 0,
-    comparse: 0,
-    vehicles: 0,
-  };
-  return map[key];
 }

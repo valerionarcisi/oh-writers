@@ -52,10 +52,13 @@ import {
 import { ProjectNotFoundError } from "~/features/projects";
 import {
   aggregateProductionLines,
+  computeBudgetOverview,
   computeDayCosts,
+  type BudgetOverview,
   type PerElementLineCost,
   type DayCost,
 } from "./budget-helpers";
+import { resourceTotal } from "@oh-writers/domain";
 import { getProjectBreakdownRows } from "~/features/breakdown/server/breakdown.server";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1352,6 +1355,125 @@ export const getDayCosts = createServerFn({ method: "GET" })
               });
             })(),
             (e) => new DbError("getDayCosts", e),
+          ),
+        ),
+      ),
+  );
+
+// ─── getBudgetOverview ────────────────────────────────────────────────────────
+//
+// Returns the executive aggregation used by the Panoramica view. Builds on top
+// of `findBudgetWithLines` + cast/crew rows + a count of scenes for cost/scene.
+// Returns `null` when no budget exists yet (day-zero) so the UI can render an
+// empty-state.
+//
+// TODO(spec-overview): wire `previousTotal` to a real snapshot when
+// `getPreviousBudgetSnapshot` lands. Currently hardcoded to null.
+
+export type { BudgetOverview } from "./budget-helpers";
+
+export const getBudgetOverview = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        BudgetOverview | null,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            (async (): Promise<BudgetOverview | null> => {
+              const projectId = access.project.id;
+              const budget = await db.query.budgets.findFirst({
+                where: eq(budgets.projectId, projectId),
+              });
+              if (!budget) return null;
+
+              const [lineRows, castRows, crewRows] = await Promise.all([
+                db.query.budgetLines.findMany({
+                  where: eq(budgetLines.budgetId, budget.id),
+                }),
+                db.query.budgetCast.findMany({
+                  where: eq(budgetCast.budgetId, budget.id),
+                }),
+                db.query.budgetCrew.findMany({
+                  where: eq(budgetCrew.budgetId, budget.id),
+                }),
+              ]);
+
+              const SLUGLINE_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT)\.?\b/i;
+              const cleanCast = castRows.filter(
+                (r) => !SLUGLINE_PREFIX.test(r.name),
+              );
+
+              const castTotal = cleanCast.reduce(
+                (sum, r) =>
+                  sum +
+                  resourceTotal({
+                    days: Number(r.days),
+                    dayRate: Number(r.dayRate),
+                    fiscalRegime: r.fiscalRegime as FiscalRegime,
+                    mealAllowance: Number(r.mealAllowance),
+                    accommodation: Number(r.accommodation),
+                  }),
+                0,
+              );
+              const castMissingRates = cleanCast.filter(
+                (r) => Number(r.dayRate) <= 0,
+              ).length;
+
+              const enabledCrew = crewRows.filter((r) => r.enabled);
+              const crewTotal = enabledCrew.reduce(
+                (sum, r) =>
+                  sum +
+                  resourceTotal({
+                    days: Number(r.days),
+                    dayRate: Number(r.dayRate),
+                    fiscalRegime: r.fiscalRegime as FiscalRegime,
+                    mealAllowance: Number(r.mealAllowance),
+                    accommodation: Number(r.accommodation),
+                  }),
+                0,
+              );
+
+              const screenplay = await db.query.screenplays.findFirst({
+                where: eq(screenplays.projectId, projectId),
+              });
+              const sceneCount = screenplay
+                ? await db
+                    .select({ id: scenes.id })
+                    .from(scenes)
+                    .where(eq(scenes.screenplayId, screenplay.id))
+                    .then((r) => r.length)
+                : 0;
+
+              return computeBudgetOverview({
+                lines: lineRows.map((l) => ({
+                  topSheet: l.topSheet,
+                  linkedCategory: l.linkedCategory,
+                  rate: l.rate !== null ? Number(l.rate) : null,
+                  quantity: l.quantity !== null ? Number(l.quantity) : null,
+                  actual: l.actual !== null ? Number(l.actual) : null,
+                })),
+                resources: {
+                  castTotal,
+                  castCount: cleanCast.length,
+                  castMissingRates,
+                  crewTotal,
+                  crewEnabledCount: enabledCrew.length,
+                },
+                contingencyPercent: Number(budget.contingencyPercent),
+                shootingDays: budget.shootingDays,
+                sceneCount,
+                status: budget.status as "draft" | "estimated" | "locked",
+                previousTotal: null,
+              });
+            })(),
+            (e) => new DbError("getBudgetOverview", e),
           ),
         ),
       ),

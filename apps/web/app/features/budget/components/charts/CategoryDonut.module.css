@@ -1,0 +1,87 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-6);
+}
+
+.chartWrap {
+  position: relative;
+  inline-size: 168px;
+  block-size: 168px;
+  flex-shrink: 0;
+}
+
+.svg {
+  inline-size: 100%;
+  block-size: 100%;
+  transform: rotate(0deg);
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.centerLabel {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ds-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.centerSub {
+  margin-block-start: 4px;
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-size: 12px;
+  color: var(--ds-text-2);
+}
+
+.dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+}
+
+.legendLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendPct {
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  color: var(--ds-text-faint);
+  font-variant-numeric: tabular-nums;
+}

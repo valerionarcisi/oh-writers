@@ -1,0 +1,23 @@
+.root {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  block-size: 22px;
+  min-inline-size: 64px;
+}
+
+.bar,
+.barLast {
+  flex: 1;
+  background: var(--cat-color, var(--ds-text-faint));
+  border-radius: 1px;
+  min-block-size: 2px;
+}
+
+.bar {
+  opacity: 0.45;
+}
+
+.barLast {
+  opacity: 1;
+}
