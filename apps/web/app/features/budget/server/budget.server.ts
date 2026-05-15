@@ -40,6 +40,7 @@ import {
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb, type Db } from "~/server/db";
+import { withProjectAccess } from "~/server/pipeline";
 import {
   BudgetNotFoundError,
   BudgetLineNotFoundError,
@@ -48,6 +49,7 @@ import {
   ForbiddenError,
   DbError,
 } from "../budget.errors";
+import { ProjectNotFoundError } from "~/features/projects";
 import { resolveBudgetAccessByProjectId } from "./budget-access";
 import {
   aggregateProductionLines,
@@ -80,31 +82,35 @@ const parseLine = (row: typeof budgetLines.$inferSelect): BudgetLine =>
     actual: row.actual !== null ? Number(row.actual) : null,
   });
 
-const loadBudgetWithLines = async (
+/** Find the budget for a project. Returns `null` when none exists yet — that
+ *  is a real domain state ("budget not generated"), not an error. */
+const findBudgetWithLines = (
   db: Db,
   projectId: string,
-): Promise<Budget | null> => {
-  const budget = await db.query.budgets.findFirst({
-    where: eq(budgets.projectId, projectId),
-  });
-  if (!budget) return null;
-
-  const lines = await db.query.budgetLines.findMany({
-    where: eq(budgetLines.budgetId, budget.id),
-    orderBy: (t) => t.sortOrder,
-  });
-
-  return BudgetSchema.parse({
-    id: budget.id,
-    projectId: budget.projectId,
-    currency: budget.currency,
-    contingencyPercent: Number(budget.contingencyPercent),
-    shootingDays: budget.shootingDays,
-    status: budget.status,
-    generatedAt: budget.generatedAt?.toISOString() ?? null,
-    lines: lines.map(parseLine),
-  });
-};
+): ResultAsync<Budget | null, DbError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const budget = await db.query.budgets.findFirst({
+        where: eq(budgets.projectId, projectId),
+      });
+      if (!budget) return null;
+      const lines = await db.query.budgetLines.findMany({
+        where: eq(budgetLines.budgetId, budget.id),
+        orderBy: (t) => t.sortOrder,
+      });
+      return BudgetSchema.parse({
+        id: budget.id,
+        projectId: budget.projectId,
+        currency: budget.currency,
+        contingencyPercent: Number(budget.contingencyPercent),
+        shootingDays: budget.shootingDays,
+        status: budget.status,
+        generatedAt: budget.generatedAt?.toISOString() ?? null,
+        lines: lines.map(parseLine),
+      });
+    })(),
+    (e) => new DbError("findBudgetWithLines", e),
+  );
 
 const loadRateOverrides = async (
   db: Db,
@@ -128,6 +134,19 @@ const resolveVersionId = async (
   return screenplay?.currentVersionId ?? null;
 };
 
+// loadBudgetWithLines kept as a Promise-returning helper for callers inside
+// the same handler that already manage their own ResultAsync envelope (e.g.
+// generateBudget's transactional body). New callers should use
+// `findBudgetWithLines`.
+const loadBudgetWithLines = async (
+  db: Db,
+  projectId: string,
+): Promise<Budget | null> => {
+  const result = await findBudgetWithLines(db, projectId);
+  if (result.isErr()) throw result.error;
+  return result.value;
+};
+
 // ─── getBudget ────────────────────────────────────────────────────────────────
 
 export const getBudget = createServerFn({ method: "GET" })
@@ -135,25 +154,14 @@ export const getBudget = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<Budget | null, ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canView(access.value))
-        return toShape(err(new ForbiddenError("view budget")));
-
-      const result = await ResultAsync.fromPromise(
-        loadBudgetWithLines(db, data.projectId),
-        (e) => new DbError("getBudget", e),
-      );
-      return toShape(result);
-    },
+    }): Promise<
+      ResultShape<Budget | null, ProjectNotFoundError | ForbiddenError | DbError>
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          findBudgetWithLines(db, access.project.id),
+        ),
+      ),
   );
 
 // ─── generateBudget ───────────────────────────────────────────────────────────
@@ -646,31 +654,20 @@ export const getBudgetSummary = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<BudgetSummary | null, ForbiddenError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canView(access.value))
-        return toShape(err(new ForbiddenError("view budget")));
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const budget = await loadBudgetWithLines(db, data.projectId);
-          if (!budget) return null;
-          return computeBudgetSummary(budget.lines, budget.contingencyPercent);
-        })(),
-        (e) => new DbError("getBudgetSummary", e),
-      );
-
-      return toShape(result);
-    },
+      ResultShape<
+        BudgetSummary | null,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          findBudgetWithLines(db, access.project.id).map((budget) =>
+            budget
+              ? computeBudgetSummary(budget.lines, budget.contingencyPercent)
+              : null,
+          ),
+        ),
+      ),
   );
 
 // ─── getCastAndCrew ───────────────────────────────────────────────────────────
@@ -689,27 +686,18 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
           crew: BudgetCrew[];
           castSceneMap: CastSceneMap;
         } | null,
-        ForbiddenError | DbError
+        ProjectNotFoundError | ForbiddenError | DbError
       >
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canView(access.value))
-        return toShape(err(new ForbiddenError("view budget")));
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const budget = await db.query.budgets.findFirst({
-            where: eq(budgets.projectId, data.projectId),
-          });
-          if (!budget) return null;
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            (async () => {
+              const projectId = access.project.id;
+              const budget = await db.query.budgets.findFirst({
+                where: eq(budgets.projectId, projectId),
+              });
+              if (!budget) return null;
 
           const SLUGLINE_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT)\.?\b/i;
 
@@ -743,13 +731,12 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
             ].sort((a, b) => a - b);
           }
 
-          return { cast, crew, castSceneMap };
-        })(),
-        (e) => new DbError("getCastAndCrew", e),
-      );
-
-      return toShape(result);
-    },
+              return { cast, crew, castSceneMap };
+            })(),
+            (e) => new DbError("getCastAndCrew", e),
+          ),
+        ),
+      ),
   );
 
 // ─── getProjectScenes ─────────────────────────────────────────────────────────
@@ -761,38 +748,27 @@ export const getProjectScenes = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<SceneChip[], ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canView(access.value))
-        return toShape(err(new ForbiddenError("view budget")));
-
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          const screenplay = await db.query.screenplays.findFirst({
-            where: eq(screenplays.projectId, data.projectId),
-          });
-          if (!screenplay?.currentVersionId) return [];
-
-          const rows = await db
-            .select({ number: scenes.number, heading: scenes.heading })
-            .from(scenes)
-            .where(eq(scenes.screenplayId, screenplay.id))
-            .orderBy(scenes.number);
-          return rows;
-        })(),
-        (e) => new DbError("getProjectScenes", e),
-      );
-
-      return toShape(result);
-    },
+    }): Promise<
+      ResultShape<SceneChip[], ProjectNotFoundError | ForbiddenError | DbError>
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            (async () => {
+              const screenplay = await db.query.screenplays.findFirst({
+                where: eq(screenplays.projectId, access.project.id),
+              });
+              if (!screenplay?.currentVersionId) return [];
+              return db
+                .select({ number: scenes.number, heading: scenes.heading })
+                .from(scenes)
+                .where(eq(scenes.screenplayId, screenplay.id))
+                .orderBy(scenes.number);
+            })(),
+            (e) => new DbError("getProjectScenes", e),
+          ),
+        ),
+      ),
   );
 
 // ─── updateBudgetCastRow ──────────────────────────────────────────────────────
@@ -1071,26 +1047,23 @@ export const getRateCard = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<ProjectRateCard[], ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
-
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-
-      const result = await ResultAsync.fromPromise(
-        db.query.projectRateCard.findMany({
-          where: eq(projectRateCard.projectId, data.projectId),
-          orderBy: (t, { asc }) => asc(t.sortOrder),
-        }),
-        (e) => new DbError("getRateCard", e),
-      );
-      return toShape(result);
-    },
+    }): Promise<
+      ResultShape<
+        ProjectRateCard[],
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            db.query.projectRateCard.findMany({
+              where: eq(projectRateCard.projectId, access.project.id),
+              orderBy: (t, { asc }) => asc(t.sortOrder),
+            }),
+            (e) => new DbError("getRateCard", e),
+          ),
+        ),
+      ),
   );
 
 // ─── upsertRateEntry ──────────────────────────────────────────────────────────
@@ -1221,30 +1194,23 @@ export const getDayCosts = createServerFn({ method: "GET" })
   .handler(
     async ({
       data,
-    }): Promise<ResultShape<DayCost[], ForbiddenError | DbError>> => {
-      const user = await requireUser();
-      const db = await getDb();
+    }): Promise<
+      ResultShape<DayCost[], ProjectNotFoundError | ForbiddenError | DbError>
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            (async (): Promise<DayCost[]> => {
+              const projectId = access.project.id;
+              const schedule = await db.query.schedules.findFirst({
+                where: eq(schedules.projectId, projectId),
+              });
+              if (!schedule) return [];
 
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canView(access.value))
-        return toShape(err(new ForbiddenError("view budget")));
-
-      const result = await ResultAsync.fromPromise(
-        (async (): Promise<DayCost[]> => {
-          const schedule = await db.query.schedules.findFirst({
-            where: eq(schedules.projectId, data.projectId),
-          });
-          if (!schedule) return [];
-
-          const budget = await db.query.budgets.findFirst({
-            where: eq(budgets.projectId, data.projectId),
-          });
-          if (!budget) return [];
+              const budget = await db.query.budgets.findFirst({
+                where: eq(budgets.projectId, projectId),
+              });
+              if (!budget) return [];
 
           const dayRows = await db.query.shootingDays.findMany({
             where: and(
@@ -1395,21 +1361,20 @@ export const getDayCosts = createServerFn({ method: "GET" })
             sceneIds: dayScenes.get(d.id) ?? [],
           }));
 
-          return computeDayCosts({
-            days,
-            totalShootingDays: dayRows.length,
-            contingencyPercent: Number(budget.contingencyPercent),
-            castCostsByScene,
-            totalCrewCost,
-            perElementLineCosts,
-            otherLinesTotalCost,
-          });
-        })(),
-        (e) => new DbError("getDayCosts", e),
-      );
-
-      return toShape(result);
-    },
+              return computeDayCosts({
+                days,
+                totalShootingDays: dayRows.length,
+                contingencyPercent: Number(budget.contingencyPercent),
+                castCostsByScene,
+                totalCrewCost,
+                perElementLineCosts,
+                otherLinesTotalCost,
+              });
+            })(),
+            (e) => new DbError("getDayCosts", e),
+          ),
+        ),
+      ),
   );
 
 // ─── queryOptions helpers (client) ───────────────────────────────────────────
