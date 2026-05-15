@@ -66,11 +66,13 @@ function PanelBody({
 }: ScreenplayCesarePanelProps) {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const polishQ = useQuery(polishQueryOptions(screenplayId));
+  const hasContent = sceneTotal > 0;
+  const polishQ = useQuery(polishQueryOptions(screenplayId, { hasContent }));
   const staleQ = useQuery(staleScenesOptions(versionId ?? ""));
   const allSuggestions = polishQ.data?.suggestions ?? [];
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [flash, setFlash] = useState<string | null>(null);
+  const [notFoundIds, setNotFoundIds] = useState<Set<string>>(new Set());
   const suggestions = allSuggestions.filter((s) => !appliedIds.has(s.id));
   const staleScenes = staleQ.data ?? [];
 
@@ -79,11 +81,16 @@ function PanelBody({
     const ok = onApplyEdit(find, replace);
     if (ok) {
       setAppliedIds((prev) => new Set(prev).add(id));
+      setNotFoundIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       setFlash("Modifica applicata · Cmd+Z per annullare");
       window.setTimeout(() => setFlash(null), 2400);
     } else {
-      setFlash("Testo non trovato — ignorato");
-      window.setTimeout(() => setFlash(null), 2400);
+      setNotFoundIds((prev) => new Set(prev).add(id));
     }
   };
 
@@ -113,17 +120,19 @@ function PanelBody({
       <section className={styles.notes}>
         <div className={styles.notesHeadRow}>
           <p className={styles.notesHead}>
-            {polishQ.isFetching
-              ? "Cesare sta leggendo…"
-              : suggestions.length > 0
-                ? `${suggestions.length} rifiniture proposte`
-                : "Nessuna rifinitura — buon ritmo."}
+            {!hasContent
+              ? "Scrivi almeno una scena per iniziare."
+              : polishQ.isFetching
+                ? "Cesare sta leggendo…"
+                : suggestions.length > 0
+                  ? `${suggestions.length} rifiniture proposte`
+                  : "Nessuna rifinitura — buon ritmo."}
           </p>
           <button
             type="button"
             className={styles.refresh}
             onClick={handleRefresh}
-            disabled={polishQ.isFetching}
+            disabled={polishQ.isFetching || !hasContent}
             aria-label="Rilegge la sceneggiatura"
             title="Rilegge la sceneggiatura"
           >
@@ -161,7 +170,18 @@ function PanelBody({
                         Sc. {s.scene}
                       </span>
                     </p>
-                    <p className={styles.suggestionMessage}>{s.message}</p>
+                    <p className={styles.suggestionMessage}>
+                      {s.message}
+                      {notFoundIds.has(s.id) && (
+                        <span
+                          className={styles.notFoundTag}
+                          title="Testo non trovato nella sceneggiatura"
+                          aria-label="Testo non trovato nella sceneggiatura"
+                        >
+                          ! testo non trovato
+                        </span>
+                      )}
+                    </p>
                     {canApply && (
                       <div className={styles.editPreview}>
                         <span className={styles.editFind}>{s.find}</span>
@@ -172,6 +192,10 @@ function PanelBody({
                       </div>
                     )}
                     {canApply && (
+                      // TODO(audit-2026-05-15): re-enable Applica once
+                      // handleApplyEdit in ScreenplayEditor.tsx is verified to
+                      // hit the correct PM range. Diff preview above stays
+                      // visible so users can still SEE the suggestion.
                       <button
                         type="button"
                         className={styles.applyBtn}
@@ -179,6 +203,9 @@ function PanelBody({
                           handleApply(s.id, s.find as string, s.replace as string)
                         }
                         data-testid={`cesare-apply-${s.id}`}
+                        disabled
+                        aria-disabled="true"
+                        title="Funzione in revisione"
                       >
                         Applica
                       </button>

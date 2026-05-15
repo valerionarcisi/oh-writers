@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useRef, useState } from "react";
+import { Calendar, Pencil, X } from "lucide-react";
 import type { ShootingDayView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
 import { PageCountBar } from "./PageCountBar";
@@ -27,6 +27,26 @@ export function ShootingDayColumn({
   onDayClick,
 }: ShootingDayColumnProps) {
   const [dragOver, setDragOver] = useState(false);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
+
+  const formatDate = (iso: string): string => {
+    const [y, m, d] = iso.split("-");
+    if (!y || !m || !d) return iso;
+    return `${d}/${m}/${y}`;
+  };
+
+  const openDatePicker = () => {
+    setIsEditingDate(true);
+    requestAnimationFrame(() => {
+      const el = dateInputRef.current;
+      if (!el) return;
+      el.focus();
+      const picker = (el as HTMLInputElement & { showPicker?: () => void })
+        .showPicker;
+      if (typeof picker === "function") picker.call(el);
+    });
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -84,14 +104,50 @@ export function ShootingDayColumn({
             <X size={12} strokeWidth={2} />
           </button>
         </div>
-        <input
-          type="date"
-          className={styles.dateInput}
-          value={day.date ?? ""}
-          data-testid={`day-date-${day.dayNumber}`}
+        <div
+          className={styles.dateWrap}
           onClick={(e) => e.stopPropagation()}
-          onChange={(e) => onDateChange(day.id, e.target.value || null)}
-        />
+        >
+          {isEditingDate || day.date ? (
+            <>
+              <input
+                ref={dateInputRef}
+                type="date"
+                className={styles.dateInput}
+                value={day.date ?? ""}
+                data-testid={`day-date-${day.dayNumber}`}
+                hidden={!isEditingDate}
+                onChange={(e) =>
+                  onDateChange(day.id, e.target.value || null)
+                }
+                onBlur={() => setIsEditingDate(false)}
+              />
+              {!isEditingDate && day.date && (
+                <button
+                  type="button"
+                  className={styles.dateDisplay}
+                  onClick={openDatePicker}
+                  aria-label="Modifica data"
+                  title="Modifica data"
+                >
+                  <span>{formatDate(day.date)}</span>
+                  <Pencil size={11} strokeWidth={2} aria-hidden="true" />
+                </button>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              className={styles.dateSet}
+              onClick={openDatePicker}
+              data-testid={`day-date-set-${day.dayNumber}`}
+              aria-label="Imposta data"
+            >
+              <Calendar size={12} strokeWidth={2} aria-hidden="true" />
+              <span>Imposta data</span>
+            </button>
+          )}
+        </div>
         <PageCountBar pages={day.totalPageCount} />
       </div>
 

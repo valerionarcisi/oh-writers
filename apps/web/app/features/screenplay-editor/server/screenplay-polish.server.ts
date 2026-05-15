@@ -262,7 +262,10 @@ const mockPolishForContent = (content: string): PolishSuggestion[] => {
   return out;
 };
 
-export const polishQueryOptions = (screenplayId: string) => ({
+export const polishQueryOptions = (
+  screenplayId: string,
+  options: { hasContent?: boolean } = {},
+) => ({
   queryKey: ["screenplay-polish", screenplayId] as const,
   queryFn: async (): Promise<{ suggestions: PolishSuggestion[] }> => {
     const r = await getScreenplayPolish({ data: { screenplayId } });
@@ -272,5 +275,8 @@ export const polishQueryOptions = (screenplayId: string) => ({
   // Polish is heavy + expensive on token budget — refresh every 5 minutes,
   // not on every keystroke. The user can also manually refresh via a button.
   staleTime: 5 * 60 * 1000,
-  enabled: screenplayId.length > 0,
+  // Skip the server roundtrip entirely while the screenplay has no scene
+  // headings — otherwise the mock branch fires 5 fake suggestions on a
+  // blank document and the panel feels noisy.
+  enabled: screenplayId.length > 0 && options.hasContent !== false,
 });

@@ -111,9 +111,48 @@
   border-radius: 50%;
   background: var(--chip-accent);
   flex-shrink: 0;
+  display: inline-block;
 }
 
 .elementPillActive {
+  color: var(--ds-text);
+  background: color-mix(in srgb, var(--chip-accent) 12%, transparent);
+  border-color: var(--chip-accent);
+  font-weight: 600;
+}
+
+/* Wrapper button that hosts the DS Pill primitive. The Pill renders the
+ * visual chip; this button only provides interactivity, focus ring, and
+ * the aria-pressed semantics driven by `currentElement`. */
+.elementChip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: var(--ds-radius-pill, 999px);
+}
+
+.elementChip:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+.elementChipPill {
+  border: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease;
+}
+
+.elementChip:hover .elementChipPill {
+  color: var(--ds-text);
+  border-color: var(--chip-accent);
+}
+
+.elementChipActive .elementChipPill {
   color: var(--ds-text);
   background: color-mix(in srgb, var(--chip-accent) 12%, transparent);
   border-color: var(--chip-accent);

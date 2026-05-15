@@ -27,7 +27,7 @@ const defaultLabels: LoglineBlockLabels = {
   accept: "Accetta",
   reject: "Rifiuta",
   placeholder:
-    "Un [protagonista] deve [obiettivo] prima di [posta in gioco]\u2026",
+    "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",
   counter: (used, max) => `${used} / ${max}`,
   rateLimited: "Cesare sta prendendo fiato \u2014 riprova tra un istante.",
 };

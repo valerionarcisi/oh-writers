@@ -250,6 +250,21 @@
   outline-offset: 2px;
 }
 
+.notFoundTag {
+  display: inline-block;
+  margin-inline-start: var(--ds-space-2);
+  padding: 1px 6px;
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-error, #b04a2a) 12%, transparent);
+  color: var(--ds-error, #b04a2a);
+  font-family: var(--ds-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: baseline;
+}
+
 .flash {
   margin: 0;
   padding: var(--ds-space-2) var(--ds-space-3);

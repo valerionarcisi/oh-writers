@@ -26,13 +26,13 @@ function NewProjectPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>New Project</h1>
+      <h1 className={styles.title}>Nuovo progetto</h1>
       <div className={styles.formWrapper}>
         <ProjectForm
           onSubmit={handleSubmit}
           onCancel={() => navigate({ to: "/dashboard" })}
           isSubmitting={createProject.isPending}
-          submitLabel="Create project"
+          submitLabel="Crea progetto"
         />
         {createProject.error && (
           <p className={styles.error}>{createProject.error.message}</p>

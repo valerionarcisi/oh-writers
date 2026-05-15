@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Pill } from "@oh-writers/ui";
 import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
@@ -61,20 +62,30 @@ export function ScreenplayElementChips({
       role="toolbar"
       aria-label="Converti blocco corrente"
     >
-      {ELEMENT_ORDER.map((el) => (
-        <button
-          key={el}
-          type="button"
-          className={`${styles.elementPill} ${currentElement === el ? styles.elementPillActive : ""}`}
-          style={{ "--chip-accent": ELEMENT_COLORS[el] } as CSSProperties}
-          title={`${ELEMENT_LABELS[el]} (${ELEMENT_SHORTCUTS[el]})`}
-          aria-pressed={currentElement === el}
-          onClick={() => onSetElement(el)}
-        >
-          <span className={styles.chipDot} aria-hidden="true" />
-          {ELEMENT_LABELS[el]}
-        </button>
-      ))}
+      {ELEMENT_ORDER.map((el) => {
+        const isActive = currentElement === el;
+        return (
+          <button
+            key={el}
+            type="button"
+            className={`${styles.elementChip} ${isActive ? styles.elementChipActive : ""}`}
+            style={{ "--chip-accent": ELEMENT_COLORS[el] } as CSSProperties}
+            data-color={ELEMENT_COLORS[el]}
+            title={`${ELEMENT_LABELS[el]} (${ELEMENT_SHORTCUTS[el]})`}
+            aria-pressed={isActive}
+            onClick={() => onSetElement(el)}
+          >
+            <Pill
+              tone={isActive ? "clay" : "neutral"}
+              size="sm"
+              className={styles.elementChipPill}
+            >
+              <span className={styles.chipDot} aria-hidden="true" />
+              {ELEMENT_LABELS[el]}
+            </Pill>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -69,7 +69,7 @@ const DOCUMENT_LABELS: Record<DocumentType, string> = {
 };
 
 const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
-  [DocumentTypes.LOGLINE]: "Un [protagonista] deve [obiettivo] prima di [posta in gioco]…",
+  [DocumentTypes.LOGLINE]: "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",
   [DocumentTypes.SOGGETTO]: "Inizia il tuo soggetto qui…",
   [DocumentTypes.SYNOPSIS]: "Inizia la tua sinossi qui…",
   [DocumentTypes.OUTLINE]: "",
