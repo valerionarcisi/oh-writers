@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { match } from "ts-pattern";
 import {
   Viewbar,
   FloatingDock,
@@ -11,6 +12,8 @@ import {
   SegmentedControl,
 } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
+import { formatDayHours } from "@oh-writers/domain";
+import { useVersionsDrawer } from "~/features/versions";
 import {
   scheduleQueryOptions,
   generateSchedule,
@@ -26,9 +29,19 @@ import { StripBoard } from "./StripBoard";
 import { UnscheduledTray } from "./UnscheduledTray";
 import { SceneDrawer } from "./SceneDrawer";
 import { ShootingDayDrawer } from "./ShootingDayDrawer";
+import { ScheduleCesareBanner } from "./ScheduleCesareBanner";
+import { ScheduleStubView } from "./ScheduleStubView";
+import { ScheduleDayView } from "./ScheduleDayView";
 import styles from "./SchedulePage.module.css";
 
-type ViewTab = "day" | "byScene" | "all";
+type ViewTab = "strip" | "calendar" | "timeline" | "day";
+
+const TABS: ReadonlyArray<{ id: ViewTab; label: string }> = [
+  { id: "strip", label: "Strip Board" },
+  { id: "calendar", label: "Calendario" },
+  { id: "timeline", label: "Timeline" },
+  { id: "day", label: "Giornata" },
+];
 
 interface SchedulePageProps {
   projectId: string;
@@ -38,12 +51,14 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const schedule = data?.isOk ? data.value : null;
+  const versionsDrawer = useVersionsDrawer();
 
-  const [tab, setTab] = useState<ViewTab>("day");
+  const [tab, setTab] = useState<ViewTab>("strip");
   const [isStuck, setIsStuck] = useState(false);
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
   const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
   const [selectedDay, setSelectedDay] = useState<ShootingDayView | null>(null);
+  const [activeDayId, setActiveDayId] = useState<string | null>(null);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 48);
@@ -152,6 +167,20 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     setSelectedDay(day);
   };
 
+  const handleSelectDayInView = (dayId: string) => {
+    setActiveDayId(dayId);
+  };
+
+  const handleOpenVersions = () => {
+    if (!schedule?.screenplayId) return;
+    // TODO Spec 12d: dedicated schedule version scope. For now we surface the
+    // screenplay history because the schedule is bound to a screenplay snapshot.
+    versionsDrawer.open({
+      kind: "screenplay",
+      screenplayId: schedule.screenplayId,
+    });
+  };
+
   const sceneCount = schedule
     ? schedule.shootingDays.reduce((s, d) => s + d.strips.length, 0) +
       schedule.unscheduledStrips.length
@@ -160,8 +189,13 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const totalHours = schedule
     ? schedule.shootingDays.reduce(
         (sum, d) =>
-          sum +
-          d.strips.reduce((s, st) => s + (st.estimatedHours ?? 0), 0),
+          sum + d.strips.reduce((s, st) => s + (st.resolvedHours ?? 0), 0),
+        0,
+      )
+    : 0;
+  const totalPages = schedule
+    ? schedule.shootingDays.reduce(
+        (sum, d) => sum + d.strips.reduce((s, st) => s + st.pageCount, 0),
         0,
       )
     : 0;
@@ -174,14 +208,10 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         isScrolled={isStuck}
         className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
       >
-        <SegmentedControl
-          options={[
-            { id: "day", label: "Per giornata" },
-            { id: "byScene", label: "Per scena" },
-            { id: "all", label: "Tutti i giorni" },
-          ]}
+        <SegmentedControl<ViewTab>
+          options={TABS}
           activeId={tab}
-          onSelect={(id) => setTab(id as ViewTab)}
+          onSelect={setTab}
           ariaLabel="Vista piano di lavorazione"
         />
         <span className={styles.viewbarRight} />
@@ -198,25 +228,19 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         <VersionTrigger
           variant="pill"
           versionLabel={versionLabel}
-          onClick={() => {
-            /* TODO Spec 12d: wire schedule version scope */
-          }}
+          onClick={handleOpenVersions}
         />
       </Viewbar>
 
       <main className={styles.main} id="main">
         <header className={styles.eyebrowRow}>
           <span className={styles.eyebrow}>
-            PIANO DI RIPRESA · {dayCount} {dayCount === 1 ? "GIORNATA" : "GIORNATE"}
+            PIANO DI RIPRESA · <strong>{dayCount}</strong>{" "}
+            {dayCount === 1 ? "GIORNATA" : "GIORNATE"} · {sceneCount} SCENE
           </span>
           <span className={styles.eyebrowMeta}>
-            {sceneCount} {sceneCount === 1 ? "scena" : "scene"}
-            {totalHours > 0 && (
-              <>
-                {" · "}
-                {formatHours(totalHours)} totali
-              </>
-            )}
+            {totalPages > 0 && <>{totalPages} pag · </>}
+            {totalHours > 0 && <>{formatDayHours(totalHours)} totali</>}
           </span>
         </header>
 
@@ -237,32 +261,62 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
             </button>
           </div>
         ) : (
-          <div className={styles.boardCard}>
-            <div className={styles.boardScroll}>
-              <StripBoard
-                schedule={schedule}
-                draggingStripId={draggingStripId}
-                viewMode="days"
-                onDragStart={setDraggingStripId}
-                onDrop={handleDrop}
-                onLockToggle={(stripId) => lockMutation.mutate(stripId)}
-                onDateChange={(dayId, date) =>
-                  dateMutation.mutate({ dayId, date })
-                }
-                onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
-                onAddDay={() => addDayMutation.mutate()}
-                onStripClick={handleStripClick}
-                onDayClick={handleDayClick}
-              />
-            </div>
-            <UnscheduledTray
-              strips={schedule.unscheduledStrips}
-              onDragStart={setDraggingStripId}
-              onDrop={handleDropUnscheduled}
-              onLockToggle={(stripId) => lockMutation.mutate(stripId)}
-              onStripClick={handleStripClick}
-            />
-          </div>
+          <>
+            {match(tab)
+              .with("strip", () => (
+                <>
+                  <ScheduleCesareBanner />
+                  <div className={styles.boardCard}>
+                    <div className={styles.boardScroll}>
+                      <StripBoard
+                        schedule={schedule}
+                        draggingStripId={draggingStripId}
+                        viewMode="days"
+                        onDragStart={setDraggingStripId}
+                        onDrop={handleDrop}
+                        onLockToggle={(stripId) =>
+                          lockMutation.mutate(stripId)
+                        }
+                        onDateChange={(dayId, date) =>
+                          dateMutation.mutate({ dayId, date })
+                        }
+                        onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
+                        onAddDay={() => addDayMutation.mutate()}
+                        onStripClick={handleStripClick}
+                        onDayClick={handleDayClick}
+                      />
+                    </div>
+                    <UnscheduledTray
+                      strips={schedule.unscheduledStrips}
+                      onDragStart={setDraggingStripId}
+                      onDrop={handleDropUnscheduled}
+                      onLockToggle={(stripId) => lockMutation.mutate(stripId)}
+                      onStripClick={handleStripClick}
+                    />
+                  </div>
+                </>
+              ))
+              .with("calendar", () => (
+                <ScheduleStubView
+                  title="Vista calendario"
+                  description="Griglia settimanale / mensile con weekend, festività, riposi e company-move. In arrivo dopo l'estensione dello schema shooting_days (date di chiusura, vincoli temporali)."
+                />
+              ))
+              .with("timeline", () => (
+                <ScheduleStubView
+                  title="Vista timeline"
+                  description="Gantt orizzontale con lane per location: blocchi continuativi, milestone (inizio riprese, move, wrap) e KPI ore. In arrivo con i campi locationId + schedule_milestones."
+                />
+              ))
+              .with("day", () => (
+                <ScheduleDayView
+                  schedule={schedule}
+                  dayId={activeDayId}
+                  onSelectDay={handleSelectDayInView}
+                />
+              ))
+              .exhaustive()}
+          </>
         )}
       </main>
 
@@ -299,12 +353,4 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
       />
     </div>
   );
-}
-
-function formatHours(hours: number): string {
-  if (hours <= 0) return "0h";
-  const whole = Math.floor(hours);
-  const minutes = Math.round((hours - whole) * 60);
-  if (minutes === 0) return `${whole}h`;
-  return `${whole}h ${minutes}m`;
 }

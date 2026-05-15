@@ -1,0 +1,38 @@
+.stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-12) var(--ds-space-6);
+  background: var(--ds-surface);
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  text-align: center;
+  color: var(--ds-text-2);
+}
+
+.eyebrow {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ds-text-mute);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 28px;
+  color: var(--ds-text);
+}
+
+.description {
+  margin: 0;
+  max-width: 480px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ds-text-3);
+}

@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { Lock, LockOpen } from "lucide-react";
-import { pageCountColor } from "@oh-writers/domain";
 import type { StripView } from "../server/schedule.server";
 import styles from "./StripCard.module.css";
 
@@ -11,6 +10,14 @@ interface StripCardProps {
   onStripClick: (sceneId: string) => void;
 }
 
+const formatHours = (h: number): string => {
+  if (h <= 0) return "—";
+  const whole = Math.floor(h);
+  const minutes = Math.round((h - whole) * 60);
+  if (minutes === 0) return `${whole}h`;
+  return `${whole}h ${minutes}m`;
+};
+
 export function StripCard({
   strip,
   onDragStart,
@@ -18,7 +25,10 @@ export function StripCard({
   onStripClick,
 }: StripCardProps) {
   const dragged = useRef(false);
-  const pageColor = pageCountColor(strip.pageCount);
+  const hours = strip.resolvedHours;
+  const slugMeta = [strip.timeOfDay, strip.intExt]
+    .filter((v): v is string => Boolean(v))
+    .join(" · ");
 
   return (
     <div
@@ -45,37 +55,27 @@ export function StripCard({
         dragged.current = false;
       }}
     >
-      <div className={styles.colorBand} data-color={strip.bannerColor} />
+      <span className={styles.colorBand} aria-hidden="true" />
 
-      <div className={styles.body}>
-        <div className={styles.topRow}>
-          <span className={styles.sceneNumber}>Sc. {strip.sceneNumber}</span>
-          <span
-            className={styles.pageCount}
-            data-color={pageColor}
-            title={`${strip.pageCount} pagine`}
-          >
-            {strip.pageCount}p
-          </span>
-        </div>
+      <span className={styles.sceneNumber}>SC. {strip.sceneNumber}</span>
 
-        <div className={styles.location}>{strip.location}</div>
+      <span className={styles.title}>
+        <span className={styles.heading}>{strip.location}</span>
+        {slugMeta && <small className={styles.slug}>{slugMeta}</small>}
+      </span>
 
-        {strip.sceneHeading && (
-          <div className={styles.heading}>{strip.sceneHeading}</div>
-        )}
+      <span className={styles.pages}>
+        {strip.pageCount} <small>p</small>
+      </span>
 
-        <div className={styles.meta}>
-          <span>{strip.intExt}</span>
-          {strip.timeOfDay && <span>· {strip.timeOfDay}</span>}
-        </div>
-      </div>
+      <span className={styles.hours}>{formatHours(hours)}</span>
 
       <button
         type="button"
         className={styles.lockBtn}
         data-testid={`strip-lock-${strip.id}`}
         title={strip.isLocked ? "Sblocca" : "Blocca"}
+        aria-label={strip.isLocked ? "Sblocca scena" : "Blocca scena"}
         onClick={(e) => {
           e.stopPropagation();
           onLockToggle(strip.id);

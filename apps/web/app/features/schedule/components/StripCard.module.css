@@ -1,27 +1,22 @@
-/* StripCard — Variant Schedule 1 (strip board mono).
- * Border-left colored 3px come categoria-locazione. Niente band, niente
- * shadow. Heading in Fraunces italic; numeri/meta in Courier mono. */
-.strip {
-  display: flex;
-  align-items: stretch;
-  background: var(--ds-surface);
-  border-radius: 2px;
-  border-inline-start: 3px solid var(--strip-color, var(--ds-line));
+/* StripCard — Industry strip-board row. Color band (8px) on inline-start as
+ * the dominant visual signature, mono SC.N, italic display heading,
+ * cast/pages/hours columns inline (mockup A). */
 
-  &[data-color="white"] { --strip-color: var(--ds-line); }
-  &[data-color="yellow"] { --strip-color: #c98a2b; }
-  &[data-color="blue"] { --strip-color: #3a6b8b; }
-  &[data-color="green"] { --strip-color: #5a6b3c; }
-  &[data-color="red"] { --strip-color: #b33a28; }
-  &[data-color="pink"] { --strip-color: #c4729a; }
-  &[data-color="grey"] { --strip-color: #71706a; }
+.strip {
+  display: grid;
+  grid-template-columns: 8px 64px 1fr 64px 80px 28px;
+  align-items: center;
+  min-height: 44px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
   cursor: grab;
   user-select: none;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease,
-    opacity 120ms ease;
   position: relative;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease),
+    opacity var(--ds-duration-1) var(--ds-ease);
 
   &:hover {
     background: var(--ds-surface-alt);
@@ -31,63 +26,49 @@
     cursor: grabbing;
   }
 
-  &.dragging {
-    opacity: 0.4;
-  }
-
   &.locked {
     cursor: default;
-    opacity: 0.65;
+    opacity: 0.72;
   }
 
   &:hover .lockBtn {
     opacity: 1;
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
 }
 
-/* ─── Color band (deprecated — only kept so old TSX with .colorBand
- *     doesn't break the layout. Now invisible; left-border carries the color). */
+/* Color band — dominant 8px stripe on inline-start, full row height. */
 .colorBand {
-  display: none;
+  align-self: stretch;
+  border-start-start-radius: var(--ds-radius-sm);
+  border-end-start-radius: var(--ds-radius-sm);
+  background: var(--strip-color, var(--ds-line));
 }
 
-.colorBand[data-color="white"] {
-  background: rgba(255, 255, 255, 0.25);
+.strip[data-color="white"] {
+  --strip-color: #d8d6cd;
 }
-.colorBand[data-color="yellow"] {
-  background: #f59e0b;
+.strip[data-color="yellow"] {
+  --strip-color: #c98a2b;
 }
-.colorBand[data-color="blue"] {
-  background: #3b82f6;
+.strip[data-color="blue"] {
+  --strip-color: #3a6b8b;
 }
-.colorBand[data-color="green"] {
-  background: #22c55e;
+.strip[data-color="green"] {
+  --strip-color: #5a6b3c;
 }
-.colorBand[data-color="red"] {
-  background: #ef4444;
+.strip[data-color="red"] {
+  --strip-color: #b33a28;
 }
-.colorBand[data-color="pink"] {
-  background: #ec4899;
+.strip[data-color="pink"] {
+  --strip-color: #c4729a;
 }
-.colorBand[data-color="grey"] {
-  background: #6b7280;
-}
-
-/* ─── Body ─── */
-.body {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.topRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.strip[data-color="grey"] {
+  --strip-color: #71706a;
 }
 
 .sceneNumber {
@@ -97,91 +78,96 @@
   color: var(--ds-text);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  padding-inline-start: var(--ds-space-3);
+  white-space: nowrap;
 }
 
-.pageCount {
-  font-size: 10px;
-  font-weight: var(--weight-semibold);
-  padding: 1px 5px;
-  border-radius: var(--radius-full);
-  line-height: 1.4;
+.title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline: var(--ds-space-2);
+  min-width: 0;
 }
 
-.pageCount[data-color="green"] {
-  background: rgba(34, 197, 94, 0.18);
-  color: #4ade80;
-}
-
-.pageCount[data-color="yellow"] {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
-}
-
-.pageCount[data-color="red"] {
-  background: rgba(239, 68, 68, 0.18);
-  color: #f87171;
-}
-
-.location {
+.heading {
   font-family: var(--ds-font-display);
   font-style: italic;
   font-weight: 500;
   font-size: 14px;
   color: var(--ds-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.2;
-}
-
-.heading {
-  font-family: var(--ds-font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ds-text-mute);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.meta {
-  display: flex;
-  gap: var(--space-1);
+.slug {
   font-family: var(--ds-font-mono);
   font-size: 10px;
-  color: var(--ds-text-mute);
-  letter-spacing: 0.04em;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-mute);
 }
 
-/* ─── Lock button ─── */
-.lockBtn {
-  position: absolute;
-  inset-block-start: var(--space-2);
-  inset-inline-end: var(--space-2);
-  background: var(--ds-surface-deep);
-  border: 1px solid var(--ds-line);
-  border-radius: var(--radius-sm);
+.pages {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-2);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.pages small {
   color: var(--ds-text-mute);
-  padding: 3px;
+  margin-inline-start: 2px;
+}
+
+.hours {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-mute);
+  text-align: end;
+  padding-inline-end: var(--ds-space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.lockBtn {
+  background: transparent;
+  border: 0;
+  color: var(--ds-text-mute);
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   opacity: 0;
+  border-radius: var(--ds-radius-sm);
   transition:
-    opacity 120ms ease,
-    color 120ms ease,
-    background 120ms ease;
+    opacity var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease),
+    background var(--ds-duration-1) var(--ds-ease);
 
   &:hover {
     color: var(--ds-text);
     background: var(--ds-overlay);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+    opacity: 1;
   }
 }
 
 .strip.locked .lockBtn {
   opacity: 1;
   color: var(--ds-text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip,
+  .lockBtn {
+    transition: none;
+  }
 }

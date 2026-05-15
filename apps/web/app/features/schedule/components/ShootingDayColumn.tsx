@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Calendar, Pencil, X } from "lucide-react";
+import { computeDayKpis, formatDayHours } from "@oh-writers/domain";
 import type { ShootingDayView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
-import { PageCountBar } from "./PageCountBar";
 import styles from "./ShootingDayColumn.module.css";
 
 interface ShootingDayColumnProps {
@@ -15,6 +15,43 @@ interface ShootingDayColumnProps {
   onStripClick: (sceneId: string) => void;
   onDayClick: (dayId: string) => void;
 }
+
+const ITALIAN_WEEKDAYS = [
+  "domenica",
+  "lunedì",
+  "martedì",
+  "mercoledì",
+  "giovedì",
+  "venerdì",
+  "sabato",
+];
+const ITALIAN_MONTHS = [
+  "gennaio",
+  "febbraio",
+  "marzo",
+  "aprile",
+  "maggio",
+  "giugno",
+  "luglio",
+  "agosto",
+  "settembre",
+  "ottobre",
+  "novembre",
+  "dicembre",
+];
+
+const formatLongDate = (iso: string): string => {
+  const [y, m, d] = iso.split("-").map((p) => parseInt(p, 10));
+  if (!y || !m || !d) return iso;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return `${ITALIAN_WEEKDAYS[dt.getUTCDay()]} ${d} ${ITALIAN_MONTHS[m - 1]}`;
+};
+
+const formatShortDate = (iso: string): string => {
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+};
 
 export function ShootingDayColumn({
   day,
@@ -30,11 +67,18 @@ export function ShootingDayColumn({
   const [isEditingDate, setIsEditingDate] = useState(false);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
 
-  const formatDate = (iso: string): string => {
-    const [y, m, d] = iso.split("-");
-    if (!y || !m || !d) return iso;
-    return `${d}/${m}/${y}`;
-  };
+  const kpis = useMemo(
+    () =>
+      computeDayKpis(
+        day.strips.map((s) => ({
+          pageCount: s.pageCount,
+          resolvedHours: s.resolvedHours,
+          location: s.location,
+          intExt: s.intExt,
+        })),
+      ),
+    [day.strips],
+  );
 
   const openDatePicker = () => {
     setIsEditingDate(true);
@@ -67,9 +111,14 @@ export function ShootingDayColumn({
     prep: "prep",
   };
 
+  const isRest = day.dayType === "rest";
+
   return (
-    <div className={styles.column} data-testid={`day-column-${day.dayNumber}`}>
-      <div
+    <article
+      className={`${styles.column} ${isRest ? styles.rest : ""}`}
+      data-testid={`day-column-${day.dayNumber}`}
+    >
+      <header
         className={styles.header}
         onClick={() => onDayClick(day.id)}
         title="Apri dettagli giorno"
@@ -79,22 +128,18 @@ export function ShootingDayColumn({
             className={styles.dayNumber}
             data-testid={`day-header-${day.dayNumber}`}
           >
-            Gg {day.dayNumber}
+            GIORNO {String(day.dayNumber).padStart(2, "0")}
           </span>
           {day.dayType !== "shoot" && (
             <span className={styles.dayTypeBadge} data-type={day.dayType}>
               {dayTypeLabel[day.dayType]}
             </span>
           )}
-          <span className={styles.hoursIndicator}>
-            {day.totalHours % 1 === 0
-              ? `${day.totalHours}h`
-              : `${day.totalHours.toFixed(1)}h`}
-          </span>
           <button
             type="button"
             className={styles.removeBtn}
             title="Rimuovi giorno"
+            aria-label="Rimuovi giorno"
             data-testid={`remove-day-${day.dayNumber}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -104,10 +149,8 @@ export function ShootingDayColumn({
             <X size={12} strokeWidth={2} />
           </button>
         </div>
-        <div
-          className={styles.dateWrap}
-          onClick={(e) => e.stopPropagation()}
-        >
+
+        <div className={styles.dateWrap} onClick={(e) => e.stopPropagation()}>
           {isEditingDate || day.date ? (
             <>
               <input
@@ -117,9 +160,7 @@ export function ShootingDayColumn({
                 value={day.date ?? ""}
                 data-testid={`day-date-${day.dayNumber}`}
                 hidden={!isEditingDate}
-                onChange={(e) =>
-                  onDateChange(day.id, e.target.value || null)
-                }
+                onChange={(e) => onDateChange(day.id, e.target.value || null)}
                 onBlur={() => setIsEditingDate(false)}
               />
               {!isEditingDate && day.date && (
@@ -130,7 +171,7 @@ export function ShootingDayColumn({
                   aria-label="Modifica data"
                   title="Modifica data"
                 >
-                  <span>{formatDate(day.date)}</span>
+                  <span>{formatLongDate(day.date)}</span>
                   <Pencil size={11} strokeWidth={2} aria-hidden="true" />
                 </button>
               )}
@@ -148,8 +189,32 @@ export function ShootingDayColumn({
             </button>
           )}
         </div>
-        <PageCountBar pages={day.totalPageCount} />
-      </div>
+
+        {!isRest && (
+          <div className={styles.kpiRow} aria-label="Riepilogo giornata">
+            <span className={styles.kpi}>
+              <b>{kpis.sceneCount}</b> SCENE
+            </span>
+            <span className={styles.kpi}>
+              <b>{kpis.totalPages}</b> PAG
+            </span>
+            <span
+              className={styles.kpi}
+              data-tone={kpis.totalHours > 10 ? "warn" : "default"}
+            >
+              <b>{formatDayHours(kpis.totalHours)}</b>
+            </span>
+            {kpis.primaryLocation && (
+              <span className={styles.kpiLoc} title={kpis.primaryLocation}>
+                {kpis.intExtMix} · {kpis.primaryLocation}
+              </span>
+            )}
+          </div>
+        )}
+        {isRest && (
+          <div className={styles.restLabel}>— giorno di riposo —</div>
+        )}
+      </header>
 
       <div
         className={`${styles.stripsArea} ${dragOver ? styles.dragOver : ""}`}
@@ -168,6 +233,8 @@ export function ShootingDayColumn({
           />
         ))}
       </div>
-    </div>
+    </article>
   );
 }
+
+export { formatShortDate };
