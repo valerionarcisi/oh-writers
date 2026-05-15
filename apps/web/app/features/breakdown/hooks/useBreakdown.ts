@@ -17,6 +17,9 @@ import {
   addBreakdownOccurrence,
   removeBreakdownOccurrence,
   setOccurrenceStatus,
+  mergeBreakdownElements,
+  bulkRenameBreakdownElements,
+  bulkSetOccurrenceStatusForElements,
 } from "../server/breakdown.server";
 import { suggestBreakdownForScene } from "../server/cesare-suggest.server";
 import { runAutoSpoglioForVersion } from "../server/auto-spoglio.server";
@@ -280,6 +283,41 @@ export const useRemoveBreakdownOccurrence = () => {
     mutationFn: async (
       input: Parameters<typeof removeBreakdownOccurrence>[0]["data"],
     ) => unwrapResult(await removeBreakdownOccurrence({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
+  });
+};
+
+export const useMergeBreakdownElements = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Parameters<typeof mergeBreakdownElements>[0]["data"],
+    ) => unwrapResult(await mergeBreakdownElements({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
+  });
+};
+
+export const useBulkRenameBreakdownElements = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Parameters<typeof bulkRenameBreakdownElements>[0]["data"],
+    ) => unwrapResult(await bulkRenameBreakdownElements({ data: input })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
+  });
+};
+
+export const useBulkSetOccurrenceStatusForElements = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Parameters<
+        typeof bulkSetOccurrenceStatusForElements
+      >[0]["data"],
+    ) =>
+      unwrapResult(
+        await bulkSetOccurrenceStatusForElements({ data: input }),
+      ),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["breakdown"] }),
   });
 };

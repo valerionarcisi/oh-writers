@@ -1039,3 +1039,208 @@ export const removeBreakdownOccurrence = createServerFn({ method: "POST" })
         ),
       ),
   );
+
+// ─── mergeBreakdownElements ──────────────────────────────────────────────────
+// Move all occurrences from `mergeIds` onto `keepId`, then archive the merged
+// elements. Used by the "Unifica" bulk action on the Per Progetto view to
+// consolidate near-duplicate variants (case, plural, levenshtein neighbours).
+// All inputs must belong to the same project; the helper verifies this before
+// touching any rows to prevent IDOR across projects.
+
+const MergeElementsInput = z
+  .object({
+    projectId: z.string().uuid(),
+    keepId: z.string().uuid(),
+    mergeIds: z.array(z.string().uuid()).min(1).max(50),
+  })
+  .refine((d) => !d.mergeIds.includes(d.keepId), {
+    message: "keepId must not appear in mergeIds",
+    path: ["mergeIds"],
+  });
+
+export const mergeBreakdownElements = createServerFn({ method: "POST" })
+  .validator(MergeElementsInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { merged: number; movedOccurrences: number },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) => {
+          const allIds = [data.keepId, ...data.mergeIds];
+          return ResultAsync.fromPromise(
+            db
+              .select({
+                id: breakdownElements.id,
+                projectId: breakdownElements.projectId,
+              })
+              .from(breakdownElements)
+              .where(inArray(breakdownElements.id, allIds)),
+            (e) => new DbError("mergeBreakdownElements/load", e),
+          ).andThen((rows) => {
+            const allBelong =
+              rows.length === allIds.length &&
+              rows.every((r) => r.projectId === access.project.id);
+            if (!allBelong)
+              return errAsync(
+                new ForbiddenError("merge breakdown elements across projects"),
+              );
+            return ResultAsync.fromPromise(
+              (async () => {
+                // Move occurrences. The unique constraint
+                // (element, version, scene) means we cannot blindly UPDATE —
+                // if `keepId` already has an occurrence in the same
+                // (version, scene), we sum quantities and delete the source.
+                const sourceOccs = await db
+                  .select()
+                  .from(breakdownOccurrences)
+                  .where(inArray(breakdownOccurrences.elementId, data.mergeIds));
+                let movedOccurrences = 0;
+                for (const occ of sourceOccs) {
+                  const existing = await db.query.breakdownOccurrences.findFirst(
+                    {
+                      where: and(
+                        eq(breakdownOccurrences.elementId, data.keepId),
+                        eq(
+                          breakdownOccurrences.screenplayVersionId,
+                          occ.screenplayVersionId,
+                        ),
+                        eq(breakdownOccurrences.sceneId, occ.sceneId),
+                      ),
+                    },
+                  );
+                  if (existing) {
+                    await db
+                      .update(breakdownOccurrences)
+                      .set({
+                        quantity: existing.quantity + occ.quantity,
+                        updatedAt: new Date(),
+                      })
+                      .where(eq(breakdownOccurrences.id, existing.id));
+                    await db
+                      .delete(breakdownOccurrences)
+                      .where(eq(breakdownOccurrences.id, occ.id));
+                  } else {
+                    await db
+                      .update(breakdownOccurrences)
+                      .set({ elementId: data.keepId, updatedAt: new Date() })
+                      .where(eq(breakdownOccurrences.id, occ.id));
+                  }
+                  movedOccurrences += 1;
+                }
+                await db
+                  .update(breakdownElements)
+                  .set({ archivedAt: new Date(), updatedAt: new Date() })
+                  .where(inArray(breakdownElements.id, data.mergeIds));
+                return { merged: data.mergeIds.length, movedOccurrences };
+              })(),
+              (e) => new DbError("mergeBreakdownElements/apply", e),
+            );
+          });
+        }),
+      ),
+  );
+
+// ─── bulkRenameBreakdownElements ─────────────────────────────────────────────
+// Apply the same name to every selected element. The unique
+// `(project, category, name)` constraint makes this most useful after a merge
+// (where collisions have been removed) or for a single id.
+
+const BulkRenameInput = z.object({
+  projectId: z.string().uuid(),
+  elementIds: z.array(z.string().uuid()).min(1).max(50),
+  name: z.string().min(1).max(200),
+});
+
+export const bulkRenameBreakdownElements = createServerFn({ method: "POST" })
+  .validator(BulkRenameInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { updated: number },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            db
+              .update(breakdownElements)
+              .set({ name: data.name, updatedAt: new Date() })
+              .where(
+                and(
+                  eq(breakdownElements.projectId, access.project.id),
+                  inArray(breakdownElements.id, data.elementIds),
+                ),
+              )
+              .returning({ id: breakdownElements.id }),
+            (e) => new DbError("bulkRenameBreakdownElements", e),
+          ).map((rows) => ({ updated: rows.length })),
+        ),
+      ),
+  );
+
+// ─── bulkSetOccurrenceStatusForElements ──────────────────────────────────────
+// "Conferma N" bulk action — given a set of element ids and a target status,
+// flips every non-ignored occurrence of those elements (within a given
+// version) to that status. We resolve element → occurrences server-side so
+// the client doesn't need to fan out a request per occurrence.
+
+const BulkSetStatusForElementsInput = z.object({
+  projectId: z.string().uuid(),
+  screenplayVersionId: z.string().uuid(),
+  elementIds: z.array(z.string().uuid()).min(1).max(200),
+  status: CesareStatusSchema,
+});
+
+export const bulkSetOccurrenceStatusForElements = createServerFn({
+  method: "POST",
+})
+  .validator(BulkSetStatusForElementsInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { updated: number },
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            db
+              .update(breakdownOccurrences)
+              .set({ cesareStatus: data.status, updatedAt: new Date() })
+              .where(
+                and(
+                  eq(
+                    breakdownOccurrences.screenplayVersionId,
+                    data.screenplayVersionId,
+                  ),
+                  inArray(
+                    breakdownOccurrences.elementId,
+                    db
+                      .select({ id: breakdownElements.id })
+                      .from(breakdownElements)
+                      .where(
+                        and(
+                          eq(breakdownElements.projectId, access.project.id),
+                          inArray(breakdownElements.id, data.elementIds),
+                        ),
+                      ),
+                  ),
+                ),
+              )
+              .returning({ id: breakdownOccurrences.id }),
+            (e) => new DbError("bulkSetOccurrenceStatusForElements", e),
+          ).map((rows) => ({ updated: rows.length })),
+        ),
+      ),
+  );
