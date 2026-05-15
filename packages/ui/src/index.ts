@@ -124,6 +124,12 @@ export type { ViewbarProps } from "./shell/Viewbar/Viewbar";
 export { FloatingDock } from "./shell/FloatingDock/FloatingDock";
 export type { FloatingDockProps, DockAction } from "./shell/FloatingDock/FloatingDock";
 
+export { CommandPalette } from "./shell/CommandPalette/CommandPalette";
+export type {
+  CommandPaletteProps,
+  CommandPaletteItem,
+} from "./shell/CommandPalette/CommandPalette";
+
 // ─── DS-v2 Composites ───────────────────────────────────────
 export { HeroKPI } from "./composites/HeroKPI/HeroKPI";
 export type { HeroKPIProps, DeltaDirection } from "./composites/HeroKPI/HeroKPI";

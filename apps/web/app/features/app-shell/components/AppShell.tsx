@@ -1,10 +1,11 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { TopBar, SkipLink } from "@oh-writers/ui";
+import { TopBar, SkipLink, CommandPalette } from "@oh-writers/ui";
 import type {
   SaveState,
   TopBarSection,
   TopBarSectionGroup,
+  CommandPaletteItem,
   ProjectSwitcherItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
@@ -50,6 +51,7 @@ export function AppShell({
 }: AppShellProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isPaletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     const main = document.getElementById("main-content");
@@ -58,6 +60,21 @@ export function AppShell({
     const onScroll = () => setIsScrolled(main.scrollTop > 0);
     main.addEventListener("scroll", onScroll, { passive: true });
     return () => main.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   const handleBrandClick = () => {
@@ -79,6 +96,84 @@ export function AppShell({
   const handleAllProjects = () => {
     void router.navigate({ to: "/dashboard" });
   };
+
+  const paletteItems = useMemo<CommandPaletteItem[]>(
+    () => [
+      {
+        id: "nav:dashboard",
+        label: "Vai alla Dashboard",
+        group: "Navigazione",
+        icon: "compass",
+        keywords: ["home", "progetti", "start"],
+        onSelect: () => console.log("[palette] nav:dashboard"),
+      },
+      {
+        id: "nav:screenplay",
+        label: "Apri sceneggiatura",
+        group: "Navigazione",
+        icon: "file-text",
+        keywords: ["script", "fountain", "editor"],
+        onSelect: () => console.log("[palette] nav:screenplay"),
+      },
+      {
+        id: "nav:locations",
+        label: "Apri sopralluoghi",
+        group: "Navigazione",
+        icon: "map-pin",
+        keywords: ["location", "scouting"],
+        onSelect: () => console.log("[palette] nav:locations"),
+      },
+      {
+        id: "act:new-scene",
+        label: "Nuova scena",
+        group: "Azioni",
+        icon: "plus",
+        keywords: ["aggiungi", "create"],
+        onSelect: () => console.log("[palette] act:new-scene"),
+      },
+      {
+        id: "act:ask-cesare",
+        label: "Chiedi a Cesare",
+        group: "Azioni",
+        icon: "comment",
+        keywords: ["ai", "assistente", "rifinitura"],
+        onSelect: () => console.log("[palette] act:ask-cesare"),
+      },
+      {
+        id: "act:export-pdf",
+        label: "Esporta in PDF",
+        group: "Azioni",
+        icon: "download",
+        keywords: ["export", "stampa", "scarica"],
+        onSelect: () => console.log("[palette] act:export-pdf"),
+      },
+      {
+        id: "scene:goto",
+        label: "Vai alla scena…",
+        group: "Scena",
+        icon: "search",
+        keywords: ["jump", "salta"],
+        onSelect: () => console.log("[palette] scene:goto"),
+      },
+      {
+        id: "scene:pin",
+        label: "Pinna scena corrente",
+        group: "Scena",
+        icon: "pin",
+        keywords: ["fissa", "preferita"],
+        onSelect: () => console.log("[palette] scene:pin"),
+      },
+      {
+        id: "scene:comment",
+        label: "Commenta scena corrente",
+        group: "Scena",
+        icon: "comment",
+        keywords: ["nota", "feedback"],
+        onSelect: () => console.log("[palette] scene:comment"),
+      },
+    ],
+    [],
+  );
 
   return (
     <VersionsDrawerProvider>
@@ -103,7 +198,7 @@ export function AppShell({
           onBrandClick={handleBrandClick}
           onProjectClick={handleBrandClick}
           onSectionClick={undefined}
-          onSearch={undefined}
+          onSearch={openPalette}
           onBell={undefined}
           onAskCesare={undefined}
           onAvatarClick={undefined}
@@ -112,6 +207,11 @@ export function AppShell({
           {children}
         </main>
         <VersionsDrawer />
+        <CommandPalette
+          isOpen={isPaletteOpen}
+          onClose={closePalette}
+          items={paletteItems}
+        />
       </div>
     </VersionsDrawerProvider>
   );
