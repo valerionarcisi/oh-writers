@@ -147,6 +147,71 @@ const loadBudgetWithLines = async (
   return result.value;
 };
 
+// ─── Lookup helpers (Phase 2b) ──────────────────────────────────────────────
+//
+// Each `findXById` returns `ResultAsync<X, NotFoundError | DbError>`. They are
+// the canonical way to fetch a row by id; never `Promise<X | null>`. Combine
+// with `withProjectAccess` to derive the project scope when the handler input
+// only has a child-entity id.
+
+const findBudgetRowById = (
+  db: Db,
+  id: string,
+): ResultAsync<typeof budgets.$inferSelect, BudgetNotFoundError | DbError> =>
+  ResultAsync.fromPromise(
+    db.query.budgets.findFirst({ where: eq(budgets.id, id) }),
+    (e) => new DbError("findBudgetRowById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new BudgetNotFoundError(id)),
+  );
+
+const findBudgetLineRowById = (
+  db: Db,
+  id: string,
+): ResultAsync<
+  typeof budgetLines.$inferSelect,
+  BudgetLineNotFoundError | DbError
+> =>
+  ResultAsync.fromPromise(
+    db.query.budgetLines.findFirst({ where: eq(budgetLines.id, id) }),
+    (e) => new DbError("findBudgetLineRowById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new BudgetLineNotFoundError(id)),
+  );
+
+const findBudgetCastRowById = (
+  db: Db,
+  id: string,
+): ResultAsync<typeof budgetCast.$inferSelect, DbError> =>
+  ResultAsync.fromPromise(
+    db.query.budgetCast.findFirst({ where: eq(budgetCast.id, id) }),
+    (e) => new DbError("findBudgetCastRowById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new DbError("findBudgetCastRowById", "row not found")),
+  );
+
+const findBudgetCrewRowById = (
+  db: Db,
+  id: string,
+): ResultAsync<typeof budgetCrew.$inferSelect, DbError> =>
+  ResultAsync.fromPromise(
+    db.query.budgetCrew.findFirst({ where: eq(budgetCrew.id, id) }),
+    (e) => new DbError("findBudgetCrewRowById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new DbError("findBudgetCrewRowById", "row not found")),
+  );
+
+const findRateEntryById = (
+  db: Db,
+  id: string,
+): ResultAsync<typeof projectRateCard.$inferSelect, DbError> =>
+  ResultAsync.fromPromise(
+    db.query.projectRateCard.findFirst({ where: eq(projectRateCard.id, id) }),
+    (e) => new DbError("findRateEntryById", e),
+  ).andThen((row) =>
+    row ? ok(row) : err(new DbError("findRateEntryById", "entry not found")),
+  );
+
 // ─── getBudget ────────────────────────────────────────────────────────────────
 
 export const getBudget = createServerFn({ method: "GET" })
@@ -172,140 +237,130 @@ export const generateBudget = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<Budget, ForbiddenError | NoBreakdownError | DbError>
-    > => {
-      const user = await requireUser();
-      const db = await getDb();
+      ResultShape<
+        Budget,
+        ProjectNotFoundError | ForbiddenError | NoBreakdownError | DbError
+      >
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db, access }) => {
+          const project = access.project;
+          const projectId = project.id;
+          return ResultAsync.fromPromise(
+            (async (): Promise<Budget> => {
+              // resolve current screenplay version
+              const versionId = await resolveVersionId(db, projectId);
+              if (!versionId) throw new NoBreakdownError();
 
-      const access = await resolveBudgetAccessByProjectId(
-        db,
-        user.id,
-        data.projectId,
-      );
-      if (access.isErr()) return toShape(err(access.error));
-      if (!canEdit(access.value))
-        return toShape(err(new ForbiddenError("generate budget")));
+              // load breakdown rows
+              const breakdownResult = await getProjectBreakdownRows(
+                db,
+                projectId,
+                versionId,
+              );
+              if (breakdownResult.isErr()) throw breakdownResult.error;
+              const rows = breakdownResult.value;
+              if (rows.length === 0) throw new NoBreakdownError();
 
-      // load project for format
-      const project = await db.query.projects.findFirst({
-        where: eq(projects.id, data.projectId),
-      });
-      if (!project)
-        return toShape(err(new DbError("generateBudget", "project not found")));
+              // resolve shooting days:
+              // 1. manual override on existing budget wins
+              // 2. count actual days from schedule if one exists
+              // 3. fall back to estimate from scene count
+              const existingBudget = await db.query.budgets.findFirst({
+                where: eq(budgets.projectId, projectId),
+              });
 
-      // resolve current screenplay version
-      const versionId = await resolveVersionId(db, data.projectId);
-      if (!versionId) return toShape(err(new NoBreakdownError()));
+              const scheduleInfo = await (async () => {
+                const schedule = await db.query.schedules.findFirst({
+                  where: eq(schedules.projectId, projectId),
+                });
+                if (!schedule) return null;
+                const dayRows = await db
+                  .select({ id: shootingDays.id })
+                  .from(shootingDays)
+                  .where(eq(shootingDays.scheduleId, schedule.id));
+                const stripRows = await db
+                  .select({
+                    shootingDayId: strips.shootingDayId,
+                    sceneId: strips.sceneId,
+                  })
+                  .from(strips)
+                  .where(eq(strips.scheduleId, schedule.id));
+                const sceneTodays = new Map<string, Set<string>>();
+                for (const s of stripRows) {
+                  if (!s.shootingDayId) continue;
+                  const set = sceneTodays.get(s.sceneId) ?? new Set();
+                  set.add(s.shootingDayId);
+                  sceneTodays.set(s.sceneId, set);
+                }
+                return {
+                  dayCount: dayRows.length > 0 ? dayRows.length : null,
+                  sceneTodays,
+                };
+              })();
 
-      // load breakdown rows
-      const breakdownResult = await getProjectBreakdownRows(
-        db,
-        data.projectId,
-        versionId,
-      );
-      if (breakdownResult.isErr()) return toShape(err(breakdownResult.error));
+              const resolvedShootingDays =
+                existingBudget?.shootingDays ??
+                scheduleInfo?.dayCount ??
+                estimateShootingDays(
+                  rows.reduce(
+                    (max, r) =>
+                      Math.max(
+                        max,
+                        ...r.scenesPresent.map((s) => s.sceneNumber),
+                      ),
+                    0,
+                  ),
+                  project.format ?? "feature",
+                );
 
-      const rows = breakdownResult.value;
-      if (rows.length === 0) return toShape(err(new NoBreakdownError()));
+              // load rate overrides
+              const rateOverrides = existingBudget
+                ? await loadRateOverrides(db, existingBudget.id)
+                : {};
 
-      // resolve shooting days:
-      // 1. manual override on existing budget wins
-      // 2. count actual days from schedule if one exists
-      // 3. fall back to estimate from scene count
-      const existingBudget = await db.query.budgets.findFirst({
-        where: eq(budgets.projectId, data.projectId),
-      });
+              // generate lines from breakdown
+              const generatedLines = generateBudgetLines(
+                {
+                  rows: rows.map((r) => ({
+                    element: {
+                      id: r.element.id,
+                      name: r.element.name,
+                      category: r.element.category,
+                      castTier: r.element.castTier,
+                    },
+                    totalQuantity: r.totalQuantity,
+                    scenesPresent: r.scenesPresent,
+                  })),
+                  shootingDays: resolvedShootingDays,
+                },
+                rateOverrides,
+              );
 
-      const scheduleInfo = await (async () => {
-        const schedule = await db.query.schedules.findFirst({
-          where: eq(schedules.projectId, data.projectId),
-        });
-        if (!schedule) return null;
-        const dayRows = await db
-          .select({ id: shootingDays.id })
-          .from(shootingDays)
-          .where(eq(shootingDays.scheduleId, schedule.id));
-        const stripRows = await db
-          .select({
-            shootingDayId: strips.shootingDayId,
-            sceneId: strips.sceneId,
-          })
-          .from(strips)
-          .where(eq(strips.scheduleId, schedule.id));
-        const sceneTodays = new Map<string, Set<string>>();
-        for (const s of stripRows) {
-          if (!s.shootingDayId) continue;
-          const set = sceneTodays.get(s.sceneId) ?? new Set();
-          set.add(s.shootingDayId);
-          sceneTodays.set(s.sceneId, set);
-        }
-        return {
-          dayCount: dayRows.length > 0 ? dayRows.length : null,
-          sceneTodays,
-        };
-      })();
-
-      const resolvedShootingDays =
-        existingBudget?.shootingDays ??
-        scheduleInfo?.dayCount ??
-        estimateShootingDays(
-          rows.reduce(
-            (max, r) =>
-              Math.max(max, ...r.scenesPresent.map((s) => s.sceneNumber)),
-            0,
-          ),
-          project.format ?? "feature",
-        );
-
-      // load rate overrides
-      const rateOverrides = existingBudget
-        ? await loadRateOverrides(db, existingBudget.id)
-        : {};
-
-      // generate lines from breakdown
-      const generatedLines = generateBudgetLines(
-        {
-          rows: rows.map((r) => ({
-            element: {
-              id: r.element.id,
-              name: r.element.name,
-              category: r.element.category,
-              castTier: r.element.castTier,
-            },
-            totalQuantity: r.totalQuantity,
-            scenesPresent: r.scenesPresent,
-          })),
-          shootingDays: resolvedShootingDays,
-        },
-        rateOverrides,
-      );
-
-      // upsert budget + replace lines atomically
-      const result = await ResultAsync.fromPromise(
-        (async () => {
-          let budgetId: string;
-          if (existingBudget) {
-            budgetId = existingBudget.id;
-            await db
-              .update(budgets)
-              .set({
-                status: "estimated",
-                generatedAt: new Date(),
-                updatedAt: new Date(),
-              })
-              .where(eq(budgets.id, budgetId));
-          } else {
-            const [inserted] = await db
-              .insert(budgets)
-              .values({
-                projectId: data.projectId,
-                shootingDays: resolvedShootingDays,
-                status: "estimated",
-                generatedAt: new Date(),
-              })
-              .returning();
-            budgetId = inserted!.id;
-          }
+              // upsert budget + replace lines atomically
+              let budgetId: string;
+              if (existingBudget) {
+                budgetId = existingBudget.id;
+                await db
+                  .update(budgets)
+                  .set({
+                    status: "estimated",
+                    generatedAt: new Date(),
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(budgets.id, budgetId));
+              } else {
+                const [inserted] = await db
+                  .insert(budgets)
+                  .values({
+                    projectId,
+                    shootingDays: resolvedShootingDays,
+                    status: "estimated",
+                    generatedAt: new Date(),
+                  })
+                  .returning();
+                budgetId = inserted!.id;
+              }
 
           // 1. Split generated lines into per-element and aggregate
           const { perElement, aggregate } =
@@ -441,10 +496,10 @@ export const generateBudget = createServerFn({ method: "POST" })
             }
           }
 
-          // Load rate card for this project to pre-fill cast rates
-          const rateCardRows = await db.query.projectRateCard.findMany({
-            where: eq(projectRateCard.projectId, data.projectId),
-          });
+              // Load rate card for this project to pre-fill cast rates
+              const rateCardRows = await db.query.projectRateCard.findMany({
+                where: eq(projectRateCard.projectId, projectId),
+              });
           const rateByName = new Map(
             rateCardRows.map((r) => [r.name.toLowerCase(), r]),
           );
@@ -501,18 +556,25 @@ export const generateBudget = createServerFn({ method: "POST" })
             );
           }
 
-          return loadBudgetWithLines(db, data.projectId);
-        })(),
-        (e) => new DbError("generateBudget/persist", e),
-      );
-
-      if (result.isErr()) return toShape(err(result.error));
-      if (!result.value)
-        return toShape(
-          err(new DbError("generateBudget", "budget missing after insert")),
-        );
-      return toShape(ok(result.value));
-    },
+              const reloaded = await loadBudgetWithLines(db, projectId);
+              if (!reloaded)
+                throw new DbError(
+                  "generateBudget",
+                  "budget missing after insert",
+                );
+              return reloaded;
+            })(),
+            (e: unknown) =>
+              (e instanceof NoBreakdownError
+                ? e
+                : e instanceof DbError
+                  ? e
+                  : new DbError("generateBudget", e)) as
+                | NoBreakdownError
+                | DbError,
+          );
+        }),
+      ),
   );
 
 // ─── updateBudgetLine ─────────────────────────────────────────────────────────
