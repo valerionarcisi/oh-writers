@@ -5,46 +5,6 @@
   flex-wrap: wrap;
 }
 
-.tabs {
-  display: flex;
-  border: var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.tab {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  background: var(--ds-surface);
-  border: none;
-  border-inline-end: var(--border);
-  cursor: pointer;
-  color: var(--ds-text-2);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .tab {
-    transition:
-      background var(--duration-fast) var(--ease-default),
-      color var(--duration-fast) var(--ease-default);
-  }
-}
-
-.tab:last-child {
-  border-inline-end: none;
-}
-
-.tab:hover {
-  background: var(--ds-surface-deep);
-  color: var(--ds-text);
-}
-
-.tab.active {
-  background: var(--ds-action);
-  color: var(--ds-text-on-dark);
-}
-
 .search {
   flex: 1;
   min-inline-size: 180px;

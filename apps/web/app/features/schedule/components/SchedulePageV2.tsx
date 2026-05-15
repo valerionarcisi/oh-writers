@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Viewbar, ViewbarSep, FloatingDock, VersionTrigger } from "@oh-writers/ui";
+import { Viewbar, FloatingDock, VersionTrigger, Tabs } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
   scheduleQueryOptions,
@@ -169,31 +169,15 @@ export function SchedulePageV2({ projectId }: SchedulePageV2Props) {
         isScrolled={isStuck}
         className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
       >
-        <button
-          type="button"
-          className={`${styles.filter} ${tab === "day" ? styles.isActive : ""}`}
-          onClick={() => setTab("day")}
-          aria-pressed={tab === "day"}
-        >
-          Per giornata
-        </button>
-        <button
-          type="button"
-          className={`${styles.filter} ${tab === "byScene" ? styles.isActive : ""}`}
-          onClick={() => setTab("byScene")}
-          aria-pressed={tab === "byScene"}
-        >
-          Per scena
-        </button>
-        <button
-          type="button"
-          className={`${styles.filter} ${tab === "all" ? styles.isActive : ""}`}
-          onClick={() => setTab("all")}
-          aria-pressed={tab === "all"}
-        >
-          Tutti i giorni
-        </button>
-        <ViewbarSep />
+        <Tabs
+          tabs={[
+            { id: "day", label: "Per giornata" },
+            { id: "byScene", label: "Per scena" },
+            { id: "all", label: "Tutti i giorni" },
+          ]}
+          activeId={tab}
+          onSelect={(id) => setTab(id as ViewTab)}
+        />
         <span className={styles.viewbarRight} />
         {dayCount > 0 && (
           <button
@@ -276,24 +260,28 @@ export function SchedulePageV2({ projectId }: SchedulePageV2Props) {
         )}
       </main>
 
-      <SceneDrawer
-        strip={selectedStrip}
-        screenplayVersionId={schedule?.screenplayVersionId ?? null}
-        onClose={() => setSelectedStrip(null)}
-      />
+      {selectedStrip && (
+        <SceneDrawer
+          strip={selectedStrip}
+          screenplayVersionId={schedule?.screenplayVersionId ?? null}
+          onClose={() => setSelectedStrip(null)}
+        />
+      )}
 
-      <ShootingDayDrawer
-        day={selectedDay}
-        onClose={() => setSelectedDay(null)}
-        onEffortChange={(stripId, estimatedHours) =>
-          effortMutation.mutate({ stripId, estimatedHours })
-        }
-      />
+      {selectedDay && (
+        <ShootingDayDrawer
+          day={selectedDay}
+          onClose={() => setSelectedDay(null)}
+          onEffortChange={(stripId, estimatedHours) =>
+            effortMutation.mutate({ stripId, estimatedHours })
+          }
+        />
+      )}
 
       <FloatingDock
         label="PIANO DI RIPRESA"
         primaryAction={{
-          label: schedule ? "Rigenera da breakdown" : "Pre-fill da breakdown",
+          label: schedule ? "Rigenera" : "Genera",
           hotkey: "⌘⇧P",
           onClick: () => generateMutation.mutate(),
         }}

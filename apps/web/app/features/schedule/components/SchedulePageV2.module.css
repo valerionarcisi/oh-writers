@@ -49,11 +49,6 @@
     color: var(--ds-text);
   }
 
-  &.isActive {
-    background: var(--ds-surface-deep);
-    color: var(--ds-text);
-  }
-
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
@@ -97,6 +92,7 @@
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-0), var(--ds-shadow-2);
   padding: var(--ds-space-6);
   display: flex;
   flex-direction: column;
@@ -120,6 +116,7 @@
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-0), var(--ds-shadow-2);
   color: var(--ds-text-2);
 }
 

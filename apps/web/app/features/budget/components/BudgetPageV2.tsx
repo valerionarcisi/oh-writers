@@ -8,10 +8,10 @@ import {
 } from "@tanstack/react-query";
 import {
   HeroKPI,
-  MarginNote,
   Viewbar,
-  ViewbarSep,
   FloatingDock,
+  Tabs,
+  ToggleChip,
 } from "@oh-writers/ui";
 import { resourceTotal } from "@oh-writers/domain";
 import type { FiscalRegime } from "@oh-writers/domain";
@@ -28,6 +28,8 @@ import {
 } from "../server/budget.server";
 import { RateCardSection } from "./RateCardSection";
 import { DayView } from "./widgets/DayView";
+import { CastWidget } from "./widgets/CastWidget";
+import { CrewWidget } from "./widgets/CrewWidget";
 import styles from "./BudgetPageV2.module.css";
 
 const budgetQueryOptions = (projectId: string) =>
@@ -74,7 +76,7 @@ const num = (v: string | number | null | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-type ViewMode = "category" | "scene" | "day" | "all";
+type ViewMode = "category" | "scene" | "day" | "cast" | "all";
 
 type CategoryKey =
   | "cast"
@@ -184,16 +186,19 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
   const updateLineMutation = useMutation({
     mutationFn: (vars: {
       lineId: string;
-      patch: { actual?: number | null };
+      patch: {
+        actual?: number | null;
+        rate?: number | null;
+        quantity?: number | null;
+      };
     }) => updateBudgetLine({ data: vars }).then(unwrapResult),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["budget", projectId] }),
   });
 
   const cast = castCrew?.cast ?? [];
   const crew = castCrew?.crew ?? [];
+  const castSceneMap = castCrew?.castSceneMap ?? {};
   const scenes = allScenes ?? [];
-  const hasDayCosts = (dayCosts?.length ?? 0) > 0;
-
   const castTotal = cast.reduce(
     (sum, r) =>
       sum +
@@ -268,69 +273,46 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
   return (
     <div className={styles.page} data-testid="budget-page-v2">
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
-        <button
-          type="button"
-          className={`${styles.filter} ${view === "category" ? styles.isActive : ""}`}
-          onClick={() => setView("category")}
-        >
-          Per categoria
-        </button>
-        <button
-          type="button"
-          className={`${styles.filter} ${view === "scene" ? styles.isActive : ""}`}
-          onClick={() => setView("scene")}
-        >
-          Per scena
-        </button>
-        <button
-          type="button"
-          className={`${styles.filter} ${view === "day" ? styles.isActive : ""}`}
-          onClick={() => setView("day")}
-          disabled={!hasDayCosts}
-          title={
-            !hasDayCosts
-              ? "Pianifica le giornate nello schedule per attivare questa vista"
-              : undefined
-          }
-        >
-          Per giornata
-        </button>
-        <ViewbarSep />
-        <button
-          type="button"
-          className={`${styles.filter} ${view === "all" ? styles.isActive : ""}`}
-          onClick={() => setView("all")}
-        >
-          Tutti i reparti
-        </button>
-        <ViewbarSep />
-        <button
-          type="button"
-          className={`${styles.filter} ${showRateCard ? styles.isActive : ""}`}
-          onClick={() => setShowRateCard((v) => !v)}
-          aria-pressed={showRateCard}
-        >
-          Tariffe
-        </button>
+        <Tabs
+          tabs={[
+            { id: "category", label: "Per categoria" },
+            { id: "scene", label: "Per scena" },
+            { id: "day", label: "Per giornata" },
+            { id: "all", label: "Tutti i reparti" },
+            { id: "cast", label: "Cast" },
+          ]}
+          activeId={view}
+          onSelect={(id) => setView(id as ViewMode)}
+        />
         <span className={styles.viewbarRight} />
-        <SettingChip
-          label="Giorni"
-          value={shootingDays}
-          placeholder="—"
-          disabled={!budget}
-          onCommit={(v) => settingsMutation.mutate({ shootingDays: v })}
-          suffix=""
-          testId="shooting-days"
+        <ToggleChip
+          isOn={showRateCard}
+          onToggle={() => setShowRateCard((v) => !v)}
+          label="Tariffe"
+          aria-label="Mostra tariffe"
         />
-        <SettingChip
-          label="Cont."
-          value={contingencyPercent}
-          placeholder="10"
-          disabled={!budget}
-          onCommit={(v) => settingsMutation.mutate({ contingencyPercent: v })}
-          suffix="%"
-          testId="contingency-percent"
-        />
+        {shootingDays !== null && (
+          <SettingChip
+            label="Giorni"
+            value={shootingDays}
+            placeholder="—"
+            disabled={!budget}
+            onCommit={(v) => settingsMutation.mutate({ shootingDays: v })}
+            suffix=""
+            testId="shooting-days"
+          />
+        )}
+        {contingencyPercent !== null && contingencyPercent !== undefined && (
+          <SettingChip
+            label="Cont."
+            value={contingencyPercent}
+            placeholder="10"
+            disabled={!budget}
+            onCommit={(v) => settingsMutation.mutate({ contingencyPercent: v })}
+            suffix="%"
+            testId="contingency-percent"
+          />
+        )}
         <button type="button" className={styles.filter} aria-haspopup="menu">
           {versionLabel} ▾
         </button>
@@ -475,6 +457,67 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
             </section>
           )}
 
+          {view === "cast" && (
+            <section className={styles.section}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Cast</h2>
+                <span className={styles.sectionMeta}>
+                  {cast.length} personaggi
+                </span>
+              </header>
+              {cast.length === 0 ? (
+                <div className={styles.emptyCard}>
+                  Nessun personaggio nel cast — esegui Genera per popolare da
+                  breakdown.
+                </div>
+              ) : (
+                <CastWidget
+                  cast={cast}
+                  castSceneMap={castSceneMap}
+                  selectedScene={selectedScene}
+                  grandTotal={grandTotal}
+                  projectId={projectId}
+                />
+              )}
+            </section>
+          )}
+
+          {view === "all" && (
+            <section className={styles.section}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Cast e troupe</h2>
+                <span className={styles.sectionMeta}>
+                  {cast.length} cast · {crew.filter((r) => r.enabled).length}{" "}
+                  troupe
+                </span>
+              </header>
+              {cast.length === 0 ? (
+                <div className={styles.emptyCard}>
+                  Nessun personaggio nel cast — esegui Genera per popolare da
+                  breakdown.
+                </div>
+              ) : (
+                <CastWidget
+                  cast={cast}
+                  castSceneMap={castSceneMap}
+                  selectedScene={selectedScene}
+                  grandTotal={grandTotal}
+                  projectId={projectId}
+                />
+              )}
+              {budget && crew.length > 0 && (
+                <div style={{ marginTop: "var(--ds-space-6)" }}>
+                  <CrewWidget
+                    crew={crew}
+                    budgetId={budget.id}
+                    grandTotal={grandTotal}
+                    projectId={projectId}
+                  />
+                </div>
+              )}
+            </section>
+          )}
+
           {(view === "category" || view === "all") && (
             <section className={styles.section}>
               <header className={styles.sectionHead}>
@@ -489,6 +532,8 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
                     <th style={{ width: 60 }}>#</th>
                     <th>Voce</th>
                     <th>Reparto</th>
+                    <th className={styles.colNum}>Q.tà</th>
+                    <th className={styles.colNum}>€/u</th>
                     <th className={styles.colNum}>Stima</th>
                     <th className={styles.colNum}>Effettivo</th>
                     <th className={styles.colNum}>Δ</th>
@@ -532,6 +577,38 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
                               —
                             </span>
                           )}
+                        </td>
+                        <td className={styles.colNum}>
+                          <NumberCell
+                            value={num(line.quantity) || 1}
+                            format={(v) =>
+                              v.toLocaleString("it-IT", {
+                                maximumFractionDigits: 2,
+                              })
+                            }
+                            onCommit={(v) =>
+                              updateLineMutation.mutate({
+                                lineId: line.id,
+                                patch: { quantity: v },
+                              })
+                            }
+                            disabled={updateLineMutation.isPending}
+                            testId="quantity-cell"
+                          />
+                        </td>
+                        <td className={styles.colNum}>
+                          <NumberCell
+                            value={num(line.rate)}
+                            format={(v) => eurAmount(v)}
+                            onCommit={(v) =>
+                              updateLineMutation.mutate({
+                                lineId: line.id,
+                                patch: { rate: v },
+                              })
+                            }
+                            disabled={updateLineMutation.isPending}
+                            testId="rate-cell"
+                          />
                         </td>
                         <td className={styles.colNum}>
                           {eurAmount(estimate)}

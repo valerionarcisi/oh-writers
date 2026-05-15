@@ -1,3 +1,4 @@
+import { Tabs } from "@oh-writers/ui";
 import styles from "./ProjectFilters.module.css";
 
 export type FilterTab = "all" | "personal" | "archived";
@@ -34,17 +35,11 @@ export function ProjectFilters({
 }: ProjectFiltersProps) {
   return (
     <div className={styles.bar}>
-      <div className={styles.tabs}>
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className={`${styles.tab} ${activeTab === tab.key ? styles.active : ""}`}
-            onClick={() => onTabChange(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={TABS.map((t) => ({ id: t.key, label: t.label }))}
+        activeId={activeTab}
+        onSelect={(id) => onTabChange(id as FilterTab)}
+      />
 
       <div className={styles.search}>
         <input

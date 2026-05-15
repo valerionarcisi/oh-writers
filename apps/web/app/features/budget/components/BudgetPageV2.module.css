@@ -76,11 +76,6 @@
     color: var(--ds-text);
   }
 
-  &.isActive {
-    background: var(--ds-surface-deep);
-    color: var(--ds-text);
-  }
-
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
