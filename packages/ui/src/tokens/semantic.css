@@ -55,11 +55,27 @@
   --ds-diff-intra:     rgba(139, 58, 26, 0.28);
   --ds-diff-neutral:   transparent;
 
-  /* Typography stacks
-     Two-font system. Inter for UI, Fraunces for display.
-     Courier Prime is screenplay-only (industry standard for fountain).
-     `--ds-font-serif` and `--ds-font-script` are aliases kept for
-     backward compatibility — do not introduce new fonts. */
+  /* Typography stacks — two-font UI system.
+   *
+   *   --ds-font-sans     Inter      → every UI surface (Dashboard, Budget,
+   *                                   Schedule, Outline, Settings, table
+   *                                   headers, eyebrows, chip labels, etc.)
+   *   --ds-font-display  Fraunces   → display / hero (page H1, big totals,
+   *                                   drawer titles)
+   *   --ds-font-mono     Courier    → ONLY inside "screenplay artifact"
+   *                                   surfaces: screenplay editor body, the
+   *                                   per-scene script preview in Breakdown,
+   *                                   the title page (Frontespizio), and any
+   *                                   eyebrow that sits ON TOP of one of
+   *                                   those (e.g. "FRONTESPIZIO · PAG. 1").
+   *
+   * RULE: if the surface you're styling represents a screenwriting artifact
+   * (it would be printed as part of the script), use mono. Otherwise (it's a
+   * tool/dashboard surface), use sans. Display is for hero numerals and
+   * landmark titles in either context.
+   *
+   * `--ds-font-serif` and `--ds-font-script` are aliases kept only for
+   * backward-compat; do not introduce new fonts. */
   --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
   --ds-font-display: "Fraunces", Georgia, serif;
   --ds-font-mono:    "Courier Prime", "Courier New", ui-monospace, monospace;
