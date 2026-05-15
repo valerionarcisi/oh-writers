@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Piano di Lavorazione · A · Strip Board</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,1,500&family=Inter:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d7;
+        --clay: #8b3a1a;
+        --leaf: #5a6b3c;
+
+        /* Industry strip board flag colors — muted for paper ambient */
+        --flag-white: #fbfaf6;
+        --flag-yellow: #e6c47a;
+        --flag-blue: #6b8aa8;
+        --flag-green: #8aa066;
+        --flag-pink: #d39ab5;
+        --flag-red: #c06a55;
+        --flag-grey: #a09e96;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "Courier Prime", ui-monospace, monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--paper-1); color: var(--ink-1); font-family: var(--font-sans); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      .topbar { position: sticky; top: 0; z-index: 40; height: 48px; background: var(--paper-1); border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-6); }
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark { width: 22px; height: 22px; border-radius: 50%; background: var(--ink-1); display: grid; place-items: center; color: var(--paper-1); font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 600; }
+      .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .breadcrumb-project { font-family: var(--font-display); font-style: italic; font-weight: 500; color: var(--ink-1); }
+      .breadcrumb-section { color: var(--ink-1); font-weight: 500; }
+      .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+      .save-pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .save-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--leaf); }
+
+      /* VIEW BAR */
+      .viewbar { position: sticky; top: 48px; z-index: 30; background: var(--paper-1); border-bottom: 1px solid var(--line); padding: var(--space-2) var(--space-6); display: flex; align-items: center; gap: var(--space-3); }
+      .segmented { display: inline-flex; background: var(--paper-2); border-radius: var(--radius-sm); padding: 2px; }
+      .segmented button { height: 26px; padding: 0 12px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; border-radius: 3px; }
+      .segmented button.is-active { background: var(--page); color: var(--ink-1); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+      .viewbar-right { margin-inline-start: auto; display: inline-flex; align-items: center; gap: var(--space-2); }
+      .filter { height: 28px; padding: 0 10px; border-radius: var(--radius-sm); font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 6px; }
+      .filter:hover { background: var(--paper-2); color: var(--ink-1); }
+      .version-pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--paper-2); font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+      .version-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--clay); }
+
+      main { padding: var(--space-6) var(--space-6) var(--space-10); max-width: 1600px; margin: 0 auto; }
+
+      /* Eyebrow */
+      .eyebrow-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-5); }
+      .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase; }
+      .eyebrow strong { color: var(--ink-1); font-weight: 700; }
+      .eyebrow-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); letter-spacing: 0.06em; }
+
+      /* KPI strip */
+      .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+      .kpi { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+      .kpi-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase; }
+      .kpi-value { font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--ink-1); margin-top: 2px; }
+      .kpi-sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
+
+      /* Strip board */
+      .board-wrap { display: grid; grid-template-columns: 1fr 280px; gap: var(--space-5); align-items: start; }
+      .board { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+      .day-block { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }
+      .day-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--paper-1); border-bottom: 1px solid var(--line-soft); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+      .day-num { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--ink-1); letter-spacing: 0.08em; }
+      .day-date { font-family: var(--font-display); font-style: italic; font-size: 14px; color: var(--ink-2); }
+      .day-meta { margin-inline-start: auto; display: inline-flex; gap: var(--space-4); font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .day-meta b { color: var(--ink-1); font-weight: 700; }
+      .conflict-tag { font-family: var(--font-mono); font-size: 10px; color: var(--flag-red); padding: 2px 6px; border: 1px solid var(--flag-red); border-radius: 999px; letter-spacing: 0.06em; text-transform: uppercase; }
+      .strips { display: flex; flex-direction: column; }
+      .strip { display: grid; grid-template-columns: 4px 56px 1fr 110px 80px 56px 32px; align-items: center; min-height: 36px; padding: 0; border-bottom: 1px solid var(--line-soft); cursor: grab; transition: background 120ms ease; }
+      .strip:last-child { border-bottom: 0; }
+      .strip:hover { background: var(--paper-1); }
+      .strip-flag { align-self: stretch; }
+      .strip[data-flag="white"] .strip-flag { background: var(--flag-white); border-right: 1px solid var(--line); }
+      .strip[data-flag="yellow"] .strip-flag { background: var(--flag-yellow); }
+      .strip[data-flag="blue"] .strip-flag { background: var(--flag-blue); }
+      .strip[data-flag="green"] .strip-flag { background: var(--flag-green); }
+      .strip[data-flag="pink"] .strip-flag { background: var(--flag-pink); }
+      .strip[data-flag="red"] .strip-flag { background: var(--flag-red); }
+      .strip[data-flag="grey"] .strip-flag { background: var(--flag-grey); }
+      .strip-sc { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--ink-1); padding-inline-start: var(--space-3); letter-spacing: 0.04em; }
+      .strip-title { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 14px; color: var(--ink-1); padding-inline-start: var(--space-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .strip-title small { font-family: var(--font-mono); font-style: normal; font-size: 10px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.06em; margin-inline-start: 8px; }
+      .strip-cast { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .strip-pages { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); text-align: right; }
+      .strip-hours { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-align: right; padding-inline-end: var(--space-3); }
+      .strip-lock { display: grid; place-items: center; color: var(--ink-4); opacity: 0; transition: opacity 120ms ease; }
+      .strip:hover .strip-lock { opacity: 1; }
+      .strip.is-locked { opacity: 0.7; cursor: default; }
+      .strip.is-locked .strip-lock { opacity: 1; color: var(--clay); }
+      .strip.has-conflict { background: rgba(192, 106, 85, 0.06); }
+      .strip.has-conflict .strip-title::after { content: " ⚠"; color: var(--flag-red); }
+
+      .day-total { display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) var(--space-4); background: var(--paper-2); border-radius: 0 0 var(--radius-sm) var(--radius-sm); font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+      .progress { flex: 1; height: 4px; background: var(--paper-3); border-radius: 999px; margin: 0 var(--space-3); overflow: hidden; position: relative; }
+      .progress > i { display: block; height: 100%; background: var(--leaf); border-radius: 999px; }
+      .progress.is-over > i { background: var(--flag-red); }
+
+      /* Legend / side */
+      .side { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: 96px; }
+      .panel { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); }
+      .panel h4 { margin: 0 0 var(--space-3); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+      .legend { display: flex; flex-direction: column; gap: var(--space-2); }
+      .legend-row { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+      .legend-sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); }
+      .legend-sw[data-c="white"] { background: var(--flag-white); }
+      .legend-sw[data-c="yellow"] { background: var(--flag-yellow); border-color: transparent; }
+      .legend-sw[data-c="blue"] { background: var(--flag-blue); border-color: transparent; }
+      .legend-sw[data-c="green"] { background: var(--flag-green); border-color: transparent; }
+      .legend-sw[data-c="pink"] { background: var(--flag-pink); border-color: transparent; }
+      .legend-sw[data-c="red"] { background: var(--flag-red); border-color: transparent; }
+      .legend-sw[data-c="grey"] { background: var(--flag-grey); border-color: transparent; }
+
+      .cesare { background: linear-gradient(180deg, var(--page), var(--paper-1)); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); }
+      .cesare-tag { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--leaf); }
+      .cesare-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--leaf); }
+      .cesare h4 { margin: var(--space-2) 0; font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 16px; color: var(--ink-1); }
+      .cesare-card { background: var(--paper-1); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: var(--space-3); margin-bottom: var(--space-2); }
+      .cesare-card p { margin: 0 0 var(--space-2); font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+      .cesare-card p b { font-family: var(--font-mono); font-weight: 700; color: var(--ink-1); font-size: 12px; }
+      .cesare-actions { display: flex; gap: var(--space-2); }
+      .cesare-actions button { font-family: var(--font-mono); font-size: 11px; padding: 4px 10px; border-radius: var(--radius-sm); }
+      .cesare-actions .apply { background: var(--ink-1); color: var(--paper-1); }
+      .cesare-actions .ignore { color: var(--ink-3); }
+
+      /* Floating dock */
+      .dock { position: fixed; bottom: var(--space-5); left: 50%; transform: translateX(-50%); background: var(--ink-1); color: var(--paper-1); border-radius: 999px; padding: 6px 8px 6px 16px; display: inline-flex; align-items: center; gap: var(--space-3); z-index: 50; box-shadow: 0 12px 32px rgba(28,26,23,0.25); }
+      .dock-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--ink-4); text-transform: uppercase; }
+      .dock-btn { padding: 6px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: 11px; color: var(--paper-1); }
+      .dock-btn.primary { background: var(--paper-1); color: var(--ink-1); font-weight: 600; }
+      .dock-btn kbd { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); margin-inline-start: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">C</div>
+        <div class="breadcrumb">
+          <span class="breadcrumb-project">Il Ritorno della Quercia</span>
+          <span>·</span><span class="breadcrumb-section">Piano di Lavorazione</span>
+        </div>
+      </div>
+      <div></div>
+      <div class="topbar-right"><span class="save-pill">Salvato · 2 min fa</span></div>
+    </div>
+
+    <div class="viewbar">
+      <div class="segmented" role="tablist" aria-label="Vista piano">
+        <button class="is-active">Strip Board</button>
+        <button>Calendario</button>
+        <button>Timeline</button>
+        <button>Giornata</button>
+      </div>
+      <div class="viewbar-right">
+        <button class="filter">Tutte le giornate ▾</button>
+        <button class="filter">Tutti i reparti ▾</button>
+        <div class="version-pill"><span class="dot"></span>v3 · 14 mag 2026</div>
+      </div>
+    </div>
+
+    <main>
+      <header class="eyebrow-row">
+        <span class="eyebrow">PIANO DI RIPRESA · <strong>18 GIORNATE</strong> · 62 SCENE</span>
+        <span class="eyebrow-meta">Inizio · 03 GIU 2026 · 142h totali</span>
+      </header>
+
+      <section class="kpis">
+        <div class="kpi"><div class="kpi-label">Giornate</div><div class="kpi-value">18</div><div class="kpi-sub">12 INT · 6 EXT</div></div>
+        <div class="kpi"><div class="kpi-label">Scene pianificate</div><div class="kpi-value">58<span style="color:var(--ink-4);font-size:14px;"> / 62</span></div><div class="kpi-sub">4 da assegnare</div></div>
+        <div class="kpi"><div class="kpi-label">Pagine totali</div><div class="kpi-value">114 ⅜</div><div class="kpi-sub">media 6 ⅜ / giornata</div></div>
+        <div class="kpi"><div class="kpi-label">Cast giorni</div><div class="kpi-value">47</div><div class="kpi-sub">8 attori · DOOD pronto</div></div>
+        <div class="kpi"><div class="kpi-label">Conflitti</div><div class="kpi-value" style="color:var(--flag-red);">3</div><div class="kpi-sub">2 cast · 1 location</div></div>
+      </section>
+
+      <div class="board-wrap">
+        <section class="board" aria-label="Strip board">
+
+          <article class="day-block">
+            <header class="day-head">
+              <span class="day-num">GIORNO 01</span>
+              <span class="day-date">mercoledì 3 giugno</span>
+              <span class="day-meta"><span>5 SCENE</span><span><b>6 ⅜</b> PAG</span><span><b>9h 30m</b></span><span>EST. CASCINA</span></span>
+            </header>
+            <div class="strips">
+              <div class="strip" data-flag="yellow"><div class="strip-flag"></div><div class="strip-sc">SC. 1</div><div class="strip-title">EST. CASCINA — GIORNO<small>1 ⅛ · ALBA</small></div><div class="strip-cast">1, 3, 5</div><div class="strip-pages">1 ⅛</div><div class="strip-hours">1h 45m</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="yellow"><div class="strip-flag"></div><div class="strip-sc">SC. 2</div><div class="strip-title">EST. CASCINA / AIA — GIORNO<small>2 · MATTINA</small></div><div class="strip-cast">1, 3</div><div class="strip-pages">2</div><div class="strip-hours">2h 30m</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="white"><div class="strip-flag"></div><div class="strip-sc">SC. 4</div><div class="strip-title">INT. CASCINA / CUCINA — GIORNO<small>⅞ · MATTINA</small></div><div class="strip-cast">1, 2, 3, 5</div><div class="strip-pages">⅞</div><div class="strip-hours">1h 15m</div><div class="strip-lock">⚿</div></div>
+              <div class="strip is-locked" data-flag="white"><div class="strip-flag"></div><div class="strip-sc">SC. 5</div><div class="strip-title">INT. CASCINA / SALA — GIORNO<small>1 ⅜</small></div><div class="strip-cast">1, 2</div><div class="strip-pages">1 ⅜</div><div class="strip-hours">2h</div><div class="strip-lock">🔒</div></div>
+              <div class="strip" data-flag="yellow"><div class="strip-flag"></div><div class="strip-sc">SC. 7</div><div class="strip-title">EST. CASCINA / FRUTTETO — TRAMONTO<small>1</small></div><div class="strip-cast">1, 5</div><div class="strip-pages">1</div><div class="strip-hours">2h</div><div class="strip-lock">◯</div></div>
+            </div>
+            <div class="day-total"><span>9h 30m / 10h pianificate</span><div class="progress"><i style="width:95%"></i></div><span><b>95%</b></span></div>
+          </article>
+
+          <article class="day-block">
+            <header class="day-head">
+              <span class="day-num">GIORNO 02</span>
+              <span class="day-date">giovedì 4 giugno</span>
+              <span class="day-meta"><span>4 SCENE</span><span><b>7 ⅛</b> PAG</span><span style="color:var(--flag-red);"><b>11h 15m</b> ⚠</span><span>INT. CASCINA</span><span class="conflict-tag">Cast 3 non disp.</span></span>
+            </header>
+            <div class="strips">
+              <div class="strip has-conflict" data-flag="white"><div class="strip-flag"></div><div class="strip-sc">SC. 8</div><div class="strip-title">INT. CASCINA / CAMERA — NOTTE<small>2 ⅜</small></div><div class="strip-cast">1, 2, <b style="color:var(--flag-red)">3</b></div><div class="strip-pages">2 ⅜</div><div class="strip-hours">3h 30m</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="blue"><div class="strip-flag"></div><div class="strip-sc">SC. 9</div><div class="strip-title">INT. CASCINA / CORRIDOIO — NOTTE<small>1 ⅝</small></div><div class="strip-cast">1, 2</div><div class="strip-pages">1 ⅝</div><div class="strip-hours">2h 30m</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="white"><div class="strip-flag"></div><div class="strip-sc">SC. 11</div><div class="strip-title">INT. CASCINA / CUCINA — NOTTE<small>1 ⅛</small></div><div class="strip-cast">1, 2, 5</div><div class="strip-pages">1 ⅛</div><div class="strip-hours">2h</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="blue"><div class="strip-flag"></div><div class="strip-sc">SC. 14</div><div class="strip-title">INT. CASCINA / CANTINA — NOTTE<small>2</small></div><div class="strip-cast">2, 5</div><div class="strip-pages">2</div><div class="strip-hours">3h 15m</div><div class="strip-lock">◯</div></div>
+            </div>
+            <div class="day-total"><span style="color:var(--flag-red);">11h 15m / 10h — fuoriora</span><div class="progress is-over"><i style="width:112%"></i></div><span><b>112%</b></span></div>
+          </article>
+
+          <article class="day-block">
+            <header class="day-head">
+              <span class="day-num">GIORNO 03</span>
+              <span class="day-date">venerdì 5 giugno</span>
+              <span class="day-meta"><span>3 SCENE</span><span><b>5 ⅛</b> PAG</span><span><b>8h</b></span><span>EST. BOSCO</span></span>
+            </header>
+            <div class="strips">
+              <div class="strip" data-flag="green"><div class="strip-flag"></div><div class="strip-sc">SC. 16</div><div class="strip-title">EST. BOSCO / RADURA — GIORNO<small>2 ⅜</small></div><div class="strip-cast">1, 5, 7</div><div class="strip-pages">2 ⅜</div><div class="strip-hours">3h 30m</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="green"><div class="strip-flag"></div><div class="strip-sc">SC. 17</div><div class="strip-title">EST. BOSCO / SENTIERO — GIORNO<small>1 ⅝</small></div><div class="strip-cast">1, 7</div><div class="strip-pages">1 ⅝</div><div class="strip-hours">2h 30m</div><div class="strip-lock">◯</div></div>
+              <div class="strip" data-flag="pink"><div class="strip-flag"></div><div class="strip-sc">SC. 19</div><div class="strip-title">EST. BOSCO / RUSCELLO — MAGIC HOUR<small>1 ⅛</small></div><div class="strip-cast">1</div><div class="strip-pages">1 ⅛</div><div class="strip-hours">2h</div><div class="strip-lock">◯</div></div>
+            </div>
+            <div class="day-total"><span>8h / 10h pianificate</span><div class="progress"><i style="width:80%"></i></div><span><b>80%</b></span></div>
+          </article>
+
+          <article class="day-block">
+            <header class="day-head" style="background:var(--paper-2);">
+              <span class="day-num" style="color:var(--ink-3);">DOM. 07</span>
+              <span class="day-date" style="color:var(--ink-3);">domenica · riposo</span>
+              <span class="day-meta"><span style="font-family:var(--font-display);font-style:italic;color:var(--ink-3);">— giorno di riposo —</span></span>
+            </header>
+          </article>
+
+        </section>
+
+        <aside class="side">
+          <div class="panel">
+            <h4>Legenda colori</h4>
+            <div class="legend">
+              <div class="legend-row"><span class="legend-sw" data-c="white"></span>Int. giorno</div>
+              <div class="legend-row"><span class="legend-sw" data-c="yellow"></span>Est. giorno</div>
+              <div class="legend-row"><span class="legend-sw" data-c="blue"></span>Int. notte</div>
+              <div class="legend-row"><span class="legend-sw" data-c="green"></span>Est. notte / bosco</div>
+              <div class="legend-row"><span class="legend-sw" data-c="pink"></span>Magic hour</div>
+              <div class="legend-row"><span class="legend-sw" data-c="red"></span>Stunt / VFX</div>
+              <div class="legend-row"><span class="legend-sw" data-c="grey"></span>Da definire</div>
+            </div>
+          </div>
+          <div class="cesare">
+            <span class="cesare-tag">Cesare · 2 suggerimenti</span>
+            <h4>Posso accorparti il giorno 3</h4>
+            <div class="cesare-card">
+              <p>Sposta <b>SC. 14</b> dal giorno 02 al giorno 04: stessa location interna ma fuori dalla finestra di indisponibilità di <b>Cast 3</b>. Recuperi <b>1h 45m</b> di fuoriora.</p>
+              <div class="cesare-actions"><button class="apply">Applica</button><button class="ignore">Ignora</button></div>
+            </div>
+            <div class="cesare-card">
+              <p>Le scene <b>SC. 16 / 17 / 19</b> nel bosco condividono il sentiero nord. Pianificale in <b>ordine geografico</b> per ridurre i company move a 1.</p>
+              <div class="cesare-actions"><button class="apply">Riordina</button><button class="ignore">Ignora</button></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <div class="dock">
+      <span class="dock-label">PIANO DI LAVORAZIONE</span>
+      <button class="dock-btn primary">Rigenera<kbd>⌘⇧P</kbd></button>
+      <button class="dock-btn">Esporta<kbd>⌘E</kbd></button>
+      <button class="dock-btn">Stampa<kbd>⌘P</kbd></button>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Cast · drill-down</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee; --paper-2: #ebe9e3; --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17; --ink-2: #44413c; --ink-3: #71706a; --ink-4: #a09e96; --ink-5: #c4c2b9;
+        --line: #d8d6cd; --line-soft: #e3e1d780;
+        --clay: #8b3a1a; --clay-soft: #f4dccb;
+        --leaf: #5a6b3c; --leaf-soft: #e5e9d8;
+        --warn: #b07515; --warn-soft: #f3e2bf;
+
+        --c-cast: #6b3e7a;
+        --c-cast-soft: #ebe0f0;
+
+        --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+        --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 48px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--paper-1); color: var(--ink-1);
+        font-family: var(--font-sans); font-size: 14px; line-height: 1.55;
+      }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      .topbar {
+        position: sticky; top: 0; z-index: 40; height: 48px;
+        background: var(--paper-1); border-bottom: 1px solid var(--line-soft);
+        display: grid; grid-template-columns: 1fr auto 1fr;
+        align-items: center; padding: 0 var(--space-6);
+      }
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: var(--ink-1); color: var(--paper-1);
+        display: grid; place-items: center;
+        font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 600;
+      }
+      .crumbs { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .crumb-proj { font-family: var(--font-display); font-style: italic; color: var(--ink-1); }
+      .crumb-link { color: var(--ink-2); cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+      .crumb-link:hover { background: var(--paper-2); color: var(--ink-1); }
+      .crumb-sep { color: var(--ink-4); }
+      .crumb-current { color: var(--ink-1); font-weight: 500; font-family: var(--font-display); font-style: italic; }
+      .topbar-center { display: flex; justify-content: center; }
+      .viewbar {
+        display: inline-flex; background: var(--paper-2);
+        border-radius: 999px; padding: 3px; gap: 2px;
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .vb-tab { height: 26px; padding: 0 var(--space-3); border-radius: 999px; color: var(--ink-3); }
+      .vb-tab.is-active { background: var(--paper-1); color: var(--ink-1); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+      .topbar-right { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-3); }
+      .version-pill {
+        font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
+        padding: 4px var(--space-3); border: 1px solid var(--line);
+        border-radius: 999px; background: var(--paper-1);
+      }
+      .avatar {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: var(--clay); color: var(--paper-1);
+        display: grid; place-items: center; font-size: 11px;
+        font-weight: 600; font-family: var(--font-mono);
+      }
+
+      main {
+        max-width: 1320px; margin: 0 auto;
+        padding: var(--space-8) var(--space-6) var(--space-10);
+      }
+
+      /* Sub-nav for categories */
+      .subnav {
+        display: flex; gap: var(--space-2);
+        margin-bottom: var(--space-6);
+        padding-bottom: var(--space-3);
+        border-bottom: 1px solid var(--line-soft);
+        overflow-x: auto;
+      }
+      .subnav-tab {
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        padding: 6px var(--space-3); border-radius: var(--radius-sm);
+        color: var(--ink-3); white-space: nowrap;
+        display: inline-flex; align-items: center; gap: 6px;
+        transition: background 150ms, color 150ms;
+      }
+      .subnav-tab:hover { background: var(--paper-2); color: var(--ink-1); }
+      .subnav-tab.is-active { background: var(--c-cast-soft); color: var(--c-cast); }
+      .subnav-tab .pip {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--cat-color, var(--ink-4));
+      }
+      .subnav-tab.is-active .pip { background: var(--c-cast); }
+
+      /* Header */
+      .cat-head {
+        display: grid; grid-template-columns: 1fr auto;
+        align-items: center; gap: var(--space-6);
+        margin-bottom: var(--space-6);
+        padding-left: var(--space-4);
+        border-left: 3px solid var(--c-cast);
+      }
+      .cat-eyebrow {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--c-cast); text-transform: uppercase; letter-spacing: 0.1em;
+      }
+      .cat-title {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 38px; letter-spacing: -0.02em;
+        margin: 0; line-height: 1;
+      }
+      .cat-meta {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+        margin-top: var(--space-2);
+      }
+      .cat-actions { display: flex; gap: var(--space-2); }
+      .btn {
+        height: 30px; padding: 0 var(--space-4);
+        border: 1px solid var(--line); border-radius: var(--radius-sm);
+        background: var(--page); font-size: 12px;
+        font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--ink-2);
+      }
+      .btn:hover { background: var(--paper-2); }
+      .btn-primary { background: var(--c-cast); color: var(--paper-1); border-color: var(--c-cast); }
+
+      /* Summary strip */
+      .summary {
+        display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
+        gap: 0;
+        background: var(--page); border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--space-6);
+        overflow: hidden;
+      }
+      .summary > div {
+        padding: var(--space-4) var(--space-5);
+        border-right: 1px solid var(--line-soft);
+      }
+      .summary > div:last-child { border-right: 0; }
+      .sum-l {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+        margin-bottom: 2px;
+      }
+      .sum-v {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 24px; line-height: 1.1;
+      }
+      .sum-total { background: var(--c-cast-soft); }
+      .sum-total .sum-v { font-size: 32px; color: var(--c-cast); }
+      .sum-f {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); margin-top: 2px;
+      }
+
+      /* Stacked bar — regime fiscale composition */
+      .stacked-card {
+        background: var(--page); border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        margin-bottom: var(--space-6);
+      }
+      .stacked-head {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin-bottom: var(--space-4);
+      }
+      .stacked-title {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 17px;
+      }
+      .stacked-meta {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .stack-bar {
+        height: 28px; display: flex; border-radius: 4px; overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .stack-bar > div {
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+        color: white;
+      }
+      .stack-piva { background: #6b3e7a; }
+      .stack-priv { background: #8a5b94; }
+      .stack-none { background: #b69dbd; color: var(--ink-2); }
+      .stack-legend {
+        display: flex; gap: var(--space-5);
+        margin-top: var(--space-3);
+        font-family: var(--font-mono); font-size: 11px;
+      }
+      .legend-item { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); }
+      .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+      .legend-dot.piva { background: #6b3e7a; }
+      .legend-dot.priv { background: #8a5b94; }
+      .legend-dot.none { background: #b69dbd; }
+
+      /* Alert */
+      .alert {
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-sm);
+        background: var(--warn-soft);
+        border-left: 3px solid var(--warn);
+        font-size: 13px;
+        margin-bottom: var(--space-6);
+      }
+      .alert b { font-weight: 600; }
+      .alert .tag {
+        font-family: var(--font-mono); font-size: 10px; color: var(--warn);
+        text-transform: uppercase; letter-spacing: 0.08em;
+        margin-right: var(--space-2);
+      }
+
+      /* Table */
+      table.cast {
+        width: 100%; border-collapse: collapse;
+        background: var(--page);
+        border: 1px solid var(--line); border-radius: var(--radius-lg);
+        overflow: hidden;
+      }
+      table.cast thead th {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+        text-align: left; font-weight: 500;
+        padding: var(--space-3) var(--space-4);
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line);
+      }
+      table.cast thead th.num { text-align: right; }
+      table.cast tbody td {
+        padding: var(--space-3) var(--space-4);
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 13px;
+      }
+      table.cast tbody tr:last-child td { border-bottom: 0; }
+      table.cast tbody tr:hover { background: var(--paper-1); }
+      table.cast tbody td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+      .actor {
+        display: flex; align-items: center; gap: var(--space-3);
+      }
+      .actor-av {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--c-cast-soft); color: var(--c-cast);
+        display: grid; place-items: center;
+        font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      }
+      .actor-name {
+        font-family: var(--font-display); font-style: italic;
+        font-size: 15px; font-weight: 500;
+      }
+      .actor-role {
+        font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .scene-pills {
+        display: inline-flex; gap: 4px; flex-wrap: wrap;
+      }
+      .scene-pill {
+        font-family: var(--font-mono); font-size: 10px;
+        padding: 1px 6px; border-radius: 3px;
+        background: var(--paper-2); color: var(--ink-2);
+      }
+      .regime-pill {
+        display: inline-block;
+        font-family: var(--font-mono); font-size: 10px;
+        padding: 2px 8px; border-radius: 999px;
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .regime-piva { background: var(--c-cast-soft); color: var(--c-cast); }
+      .regime-priv { background: #efe5f1; color: #8a5b94; }
+      .regime-none { background: var(--paper-2); color: var(--ink-3); }
+      .editable {
+        font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+        cursor: pointer; padding: 2px 6px; border-radius: 3px;
+        border: 1px dashed transparent;
+        transition: background 150ms, border-color 150ms;
+      }
+      .editable:hover { background: var(--paper-2); border-color: var(--line); }
+      .editable.missing { background: var(--warn-soft); color: var(--warn); font-style: italic; }
+      .table-foot td {
+        background: var(--paper-1);
+        font-family: var(--font-mono); font-size: 12px;
+        font-weight: 600; color: var(--ink-1);
+        text-transform: uppercase; letter-spacing: 0.04em;
+      }
+
+      /* Day-heatmap for actor availability */
+      .heat {
+        display: flex; gap: 2px;
+      }
+      .heat-day {
+        width: 12px; height: 16px; border-radius: 2px;
+        background: var(--paper-2);
+      }
+      .heat-day.l1 { background: var(--c-cast-soft); }
+      .heat-day.l2 { background: #c8b0d0; }
+      .heat-day.l3 { background: var(--c-cast); }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">o</div>
+        <div class="crumbs">
+          <span class="crumb-proj">Le rondini di marzo</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-link">Budget</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-current">Cast</span>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="viewbar" role="tablist">
+          <button class="vb-tab">Panoramica</button>
+          <button class="vb-tab is-active">Per categoria</button>
+          <button class="vb-tab">Per giornata</button>
+          <button class="vb-tab">Voci</button>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="version-pill">v3 · 14 mag</span>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <main>
+      <nav class="subnav">
+        <button class="subnav-tab is-active"><span class="pip"></span>Cast</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #3d6b4a"></span>Troupe</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #9a5128"></span>Locations</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #34487a"></span>Fotografia</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #8a5a1f"></span>Scenografia</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #8b3565"></span>Costumi</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #2e6868"></span>Suono</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #6b4032"></span>Veicoli</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #2f5868"></span>Comparse</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #6a5d2a"></span>VFX</button>
+      </nav>
+
+      <div class="cat-head">
+        <div>
+          <div class="cat-eyebrow">Categoria · 24 % del budget</div>
+          <h1 class="cat-title">Cast</h1>
+          <div class="cat-meta">6 personaggi · 38 giornate · medie € 19.500 / ruolo</div>
+        </div>
+        <div class="cat-actions">
+          <button class="btn">Importa rate card</button>
+          <button class="btn">Aggiungi attore</button>
+          <button class="btn btn-primary">Rigenera tariffe</button>
+        </div>
+      </div>
+
+      <div class="alert">
+        <span class="tag">2 rate mancanti</span>
+        <b>Anna Russo</b> e <b>Marco Vinciguerra</b> non hanno day-rate impostata. La stima totale esclude i loro compensi.
+      </div>
+
+      <div class="summary">
+        <div class="sum-total">
+          <div class="sum-l">Totale Cast</div>
+          <div class="sum-v" data-num>€ 117.300</div>
+          <div class="sum-f">24 % del budget · +1,8 % vs v2</div>
+        </div>
+        <div>
+          <div class="sum-l">Day-rate media</div>
+          <div class="sum-v" data-num>€ 920</div>
+          <div class="sum-f">range 450 — 2.400</div>
+        </div>
+        <div>
+          <div class="sum-l">Giornate totali</div>
+          <div class="sum-v" data-num>127</div>
+          <div class="sum-f">media 21 / attore</div>
+        </div>
+        <div>
+          <div class="sum-l">Vitto & alloggio</div>
+          <div class="sum-v" data-num>€ 8.400</div>
+          <div class="sum-f">14 trasferte</div>
+        </div>
+        <div>
+          <div class="sum-l">Magg. fiscale</div>
+          <div class="sum-v" data-num>€ 6.200</div>
+          <div class="sum-f">+20 % privato</div>
+        </div>
+      </div>
+
+      <div class="stacked-card">
+        <div class="stacked-head">
+          <span class="stacked-title">Distribuzione per regime fiscale</span>
+          <span class="stacked-meta">€ 117 K totali · 6 attori</span>
+        </div>
+        <div class="stack-bar">
+          <div class="stack-piva" style="flex: 78">€ 91 K · 78 %</div>
+          <div class="stack-priv" style="flex: 18">€ 21 K · 18 %</div>
+          <div class="stack-none" style="flex: 4">€ 5 K · 4 %</div>
+        </div>
+        <div class="stack-legend">
+          <span class="legend-item"><span class="legend-dot piva"></span>P.IVA · 4 attori</span>
+          <span class="legend-item"><span class="legend-dot priv"></span>Privato (+20 %) · 1 attore</span>
+          <span class="legend-item"><span class="legend-dot none"></span>Senza regime · 1 attore</span>
+        </div>
+      </div>
+
+      <table class="cast">
+        <thead>
+          <tr>
+            <th style="width: 22%">Attore / Personaggio</th>
+            <th style="width: 14%">Presenze scene</th>
+            <th style="width: 12%">Giorni</th>
+            <th style="width: 10%">Regime</th>
+            <th class="num" style="width: 10%">Day-rate</th>
+            <th class="num" style="width: 10%">Vitto/alloggio</th>
+            <th class="num" style="width: 12%">Totale</th>
+            <th class="num" style="width: 10%">Δ vs v2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="actor">
+                <div class="actor-av">GR</div>
+                <div>
+                  <div class="actor-name">Giulia Russo</div>
+                  <div class="actor-role">Protagonista · Elena</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="scene-pills">
+                <span class="scene-pill">12</span><span class="scene-pill">14</span>
+                <span class="scene-pill">17</span><span class="scene-pill">+38</span>
+              </div>
+            </td>
+            <td><span class="editable" data-num>32</span></td>
+            <td><span class="regime-pill regime-piva">P.IVA</span></td>
+            <td class="num"><span class="editable">€ 2.400</span></td>
+            <td class="num"><span class="editable">€ 1.800</span></td>
+            <td class="num" data-num>€ 78.600</td>
+            <td class="num" style="color: var(--clay)">+3,2 %</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="actor">
+                <div class="actor-av">LM</div>
+                <div>
+                  <div class="actor-name">Luca Marini</div>
+                  <div class="actor-role">Co-prot. · Pietro</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="scene-pills">
+                <span class="scene-pill">12</span><span class="scene-pill">15</span>
+                <span class="scene-pill">+26</span>
+              </div>
+            </td>
+            <td><span class="editable" data-num>24</span></td>
+            <td><span class="regime-pill regime-piva">P.IVA</span></td>
+            <td class="num"><span class="editable">€ 1.200</span></td>
+            <td class="num"><span class="editable">€ 600</span></td>
+            <td class="num" data-num>€ 29.400</td>
+            <td class="num">—</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="actor">
+                <div class="actor-av">AR</div>
+                <div>
+                  <div class="actor-name">Anna Russo</div>
+                  <div class="actor-role">Comprimaria · Madre</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="scene-pills">
+                <span class="scene-pill">3</span><span class="scene-pill">11</span>
+                <span class="scene-pill">+9</span>
+              </div>
+            </td>
+            <td><span class="editable" data-num>12</span></td>
+            <td><span class="regime-pill regime-priv">Privato</span></td>
+            <td class="num"><span class="editable missing">imposta</span></td>
+            <td class="num"><span class="editable">€ 0</span></td>
+            <td class="num" style="color: var(--warn);">stima n/d</td>
+            <td class="num">—</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="actor">
+                <div class="actor-av">MV</div>
+                <div>
+                  <div class="actor-name">Marco Vinciguerra</div>
+                  <div class="actor-role">Comprimario · Padre</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="scene-pills">
+                <span class="scene-pill">8</span><span class="scene-pill">+11</span>
+              </div>
+            </td>
+            <td><span class="editable" data-num>11</span></td>
+            <td><span class="regime-pill regime-piva">P.IVA</span></td>
+            <td class="num"><span class="editable missing">imposta</span></td>
+            <td class="num"><span class="editable">€ 0</span></td>
+            <td class="num" style="color: var(--warn);">stima n/d</td>
+            <td class="num">—</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="actor">
+                <div class="actor-av">SF</div>
+                <div>
+                  <div class="actor-name">Sara Ferri</div>
+                  <div class="actor-role">Cameo · Dottoressa</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="scene-pills">
+                <span class="scene-pill">22</span><span class="scene-pill">38</span>
+              </div>
+            </td>
+            <td><span class="editable" data-num>2</span></td>
+            <td><span class="regime-pill regime-none">Forfait</span></td>
+            <td class="num"><span class="editable">€ 2.500</span></td>
+            <td class="num"><span class="editable">€ 0</span></td>
+            <td class="num" data-num>€ 5.000</td>
+            <td class="num">—</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="actor">
+                <div class="actor-av">EC</div>
+                <div>
+                  <div class="actor-name">Emanuele Costa</div>
+                  <div class="actor-role">Cameo · Vicino</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="scene-pills">
+                <span class="scene-pill">9</span><span class="scene-pill">14</span>
+                <span class="scene-pill">+5</span>
+              </div>
+            </td>
+            <td><span class="editable" data-num>5</span></td>
+            <td><span class="regime-pill regime-piva">P.IVA</span></td>
+            <td class="num"><span class="editable">€ 450</span></td>
+            <td class="num"><span class="editable">€ 0</span></td>
+            <td class="num" data-num>€ 2.250</td>
+            <td class="num" style="color: var(--leaf)">−4,0 %</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="table-foot">
+            <td>Totale Cast</td>
+            <td></td>
+            <td data-num>127 gg</td>
+            <td></td>
+            <td class="num">media € 920</td>
+            <td class="num">€ 8.400</td>
+            <td class="num">€ 117.300</td>
+            <td class="num" style="color: var(--clay)">+1,8 %</td>
+          </tr>
+        </tfoot>
+      </table>
+    </main>
+  </body>
+</html>

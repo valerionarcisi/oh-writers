@@ -1,0 +1,1692 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Proposta E · Radical</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Bichromy + categories (muted) */
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+
+        /* Three accents, nothing else */
+        --clay: #8b3a1a; /* user action / page */
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c; /* Cesare / agent */
+        --leaf-soft: #e5e9d8;
+
+        /* category rails — muted, low chroma */
+        --c-cast: #6b3e7a;
+        --c-crew: #3d6b4a;
+        --c-locations: #9a5128;
+        --c-vehicles: #2c6168;
+        --c-scenografia: #8a5a1f;
+        --c-costumi: #8b3565;
+        --c-fotografia: #34487a;
+        --c-suono: #5a6b25;
+        --c-vfx: #6a3e8a;
+        --c-comparse: #7a5524;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+        --space-12: 64px;
+        --space-16: 96px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings:
+          "ss01" on,
+          "kern" on;
+      }
+      [data-num] {
+        font-variant-numeric: tabular-nums;
+      }
+      .mono {
+        font-family: var(--font-mono);
+      }
+
+      .ico {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        stroke-width: 1.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        flex-shrink: 0;
+      }
+      .ico-sm {
+        width: 12px;
+        height: 12px;
+      }
+      .ico-md {
+        width: 16px;
+        height: 16px;
+      }
+      .ico-lg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         TOP STRIP — inline, not fixed, sticky on scroll
+         ──────────────────────────────────────────────────────── */
+      .top-strip {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--paper-1);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-6);
+        font-size: 13px;
+        color: var(--ink-3);
+        border-bottom: 1px solid transparent;
+        transition: border-color 200ms;
+      }
+      .top-strip.is-scrolled {
+        border-bottom-color: var(--line);
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 15px;
+        color: var(--ink-2);
+        cursor: pointer;
+        padding: 4px 8px;
+        margin: -4px -8px;
+        border-radius: 4px;
+      }
+      .brand:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .brand .mark {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--clay);
+        position: relative;
+        flex-shrink: 0;
+      }
+      .brand .mark::after {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        background: var(--paper-1);
+        border-radius: 50%;
+      }
+      .brand b {
+        color: var(--ink-1);
+        font-weight: 500;
+      }
+      .brand .sep {
+        color: var(--ink-4);
+        font-style: normal;
+        margin: 0 4px;
+      }
+      .brand .kbd {
+        font-family: var(--font-mono);
+        font-style: normal;
+        font-size: 10px;
+        color: var(--ink-4);
+        background: var(--paper-2);
+        padding: 1px 5px;
+        border-radius: 3px;
+        margin-left: 6px;
+      }
+
+      /* Cesare badge on brand (only when activity) */
+      .brand-cesare {
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border-radius: 99px;
+        background: var(--leaf-soft);
+        color: var(--leaf);
+        display: grid;
+        place-items: center;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 4px;
+        cursor: pointer;
+      }
+      .brand-cesare::after {
+        content: "";
+        position: absolute;
+        top: -1px;
+        right: -1px;
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+        animation: pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.4);
+        }
+      }
+
+      /* meta inline in top-strip */
+      .meta-right {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 12px;
+        color: var(--ink-4);
+      }
+      .meta-right .pill {
+        font-family: var(--font-mono);
+        color: var(--ink-3);
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+        letter-spacing: 0.04em;
+      }
+      .meta-right .iconbtn {
+        all: unset;
+        cursor: pointer;
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        border-radius: 4px;
+      }
+      .meta-right .iconbtn:hover {
+        color: var(--ink-1);
+        background: var(--paper-2);
+      }
+      .meta-right .avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--paper-3);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink-2);
+        display: grid;
+        place-items: center;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         PAGE LAYOUT — reading-width centered + margin slots
+         ──────────────────────────────────────────────────────── */
+      main {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-6) 200px;
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: var(--space-10);
+      }
+
+      /* page title — minimal label, NOT decorative */
+      .page-title {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+        padding: var(--space-3) 0 var(--space-5);
+        margin-bottom: 0;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--ink-4);
+      }
+      .page-title h1 {
+        margin: 0;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-1);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+      }
+
+      /* inline action bar — sticky under top-strip on scroll */
+      .action-bar {
+        grid-column: 1 / -1;
+        position: sticky;
+        top: 47px;
+        z-index: 35;
+        background: var(--paper-1);
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        padding: 10px 0;
+        margin-bottom: var(--space-5);
+        font-size: 13px;
+        border-bottom: 1px solid transparent;
+        transition: border-color 200ms, padding 200ms;
+      }
+      .action-bar.is-stuck {
+        border-bottom-color: var(--line);
+        padding: 8px 0;
+      }
+      .action-bar .btn {
+        cursor: pointer;
+        padding: 0;
+        background: transparent;
+        border: none;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-2);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .action-bar .btn:hover {
+        color: var(--clay);
+      }
+      .action-bar .btn.primary {
+        font-weight: 600;
+        color: var(--ink-1);
+      }
+      .action-bar .btn.primary:hover {
+        color: var(--clay);
+      }
+      .action-bar .btn.primary::before {
+        content: "→";
+        margin-right: 2px;
+        color: var(--clay);
+      }
+      .action-bar .sep {
+        width: 1px;
+        height: 14px;
+        background: var(--line);
+      }
+      .action-bar .saved {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .action-bar .saved .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+
+      /* view switcher (per categoria / giornata / dipartimento) */
+      .view-switch {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: var(--space-5);
+        margin-bottom: var(--space-8);
+        font-size: 14px;
+      }
+      .view-switch button {
+        all: unset;
+        cursor: pointer;
+        color: var(--ink-3);
+        font-weight: 500;
+        padding: 4px 0;
+        position: relative;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+      }
+      .view-switch button:hover {
+        color: var(--ink-1);
+      }
+      .view-switch button.active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .view-switch button.active::after {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--clay);
+      }
+      .view-switch button .count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        font-weight: 400;
+      }
+      .view-switch button.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         HERO — minimal KPI, no card
+         ──────────────────────────────────────────────────────── */
+      .hero {
+        grid-column: 1 / -1;
+        margin-bottom: var(--space-10);
+      }
+      .hero-num {
+        font-family: var(--font-display);
+        font-size: 96px;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+        line-height: 0.92;
+        margin: 0 0 var(--space-4);
+      }
+      .hero-num .cur {
+        color: var(--ink-4);
+        font-weight: 400;
+        font-size: 56px;
+      }
+      .hero-meta {
+        display: flex;
+        gap: var(--space-5);
+        align-items: center;
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .hero-meta b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .hero-meta .delta {
+        color: var(--clay);
+        font-weight: 600;
+      }
+      .hero-meta .vs-bench {
+        color: var(--ink-2);
+      }
+      .hero-meta .vs-bench b {
+        color: var(--clay);
+      }
+      .stack-bar {
+        margin-top: var(--space-5);
+        display: flex;
+        height: 4px;
+        background: var(--paper-3);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .stack-bar > div {
+        height: 100%;
+      }
+      .stack-legend {
+        margin-top: var(--space-3);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-5);
+        font-size: 12px;
+      }
+      .stack-legend .item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-3);
+      }
+      .stack-legend .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .stack-legend b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         CONTENT BLOCK — table with margin slot
+         ──────────────────────────────────────────────────────── */
+      .content {
+        display: contents;
+      }
+      .content-main {
+        grid-column: 1;
+      }
+      .margin-rail {
+        grid-column: 2;
+        position: relative;
+      }
+
+      .section-label {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 20px;
+        font-weight: 400;
+        color: var(--ink-2);
+        padding: var(--space-5) 0 var(--space-3);
+        margin-top: var(--space-3);
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+      }
+      .section-label:first-child {
+        border-top: none;
+        padding-top: 0;
+        margin-top: 0;
+      }
+      .section-label .num {
+        font-family: var(--font-mono);
+        font-style: normal;
+        font-size: 11px;
+        color: var(--clay);
+        letter-spacing: 0.1em;
+      }
+      .section-label .meta {
+        margin-left: auto;
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-size: 11px;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .row {
+        position: relative;
+        display: grid;
+        grid-template-columns: 12px 1fr auto auto;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4) 0;
+        border-bottom: 1px solid var(--line-soft);
+        cursor: pointer;
+      }
+      .row:hover {
+        background: var(--paper-2);
+        margin-inline: calc(-1 * var(--space-3));
+        padding-inline: var(--space-3);
+        border-radius: 4px;
+      }
+      .row .rail {
+        width: 3px;
+        height: 28px;
+        border-radius: 2px;
+      }
+      .row .head .name {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--ink-1);
+      }
+      .row .head .meta {
+        font-size: 12px;
+        color: var(--ink-3);
+        margin-top: 2px;
+      }
+      .row .badge {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink-3);
+        background: var(--paper-2);
+        padding: 1px 6px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-left: 6px;
+      }
+      .row .total {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 18px;
+        color: var(--ink-1);
+        font-variant-numeric: tabular-nums;
+      }
+      .row .total.zero {
+        color: var(--ink-4);
+        font-style: italic;
+      }
+      .row .caret {
+        color: var(--ink-4);
+      }
+      .row.empty .head .name {
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+
+      /* row with Cesare note attached */
+      .row.has-note {
+        position: relative;
+      }
+      .row.has-note::before {
+        content: "";
+        position: absolute;
+        right: -16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 1px;
+        background: var(--leaf);
+        opacity: 0.4;
+      }
+
+      /* nested table */
+      .nested {
+        padding: var(--space-3) 0 var(--space-4) var(--space-6);
+        margin-left: 15px;
+        border-left: 1px solid var(--line);
+      }
+      .nested table {
+        width: 100%;
+        font-size: 13px;
+        border-collapse: collapse;
+      }
+      .nested th {
+        text-align: start;
+        padding: 8px 8px 8px 0;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-4);
+        border-bottom: 1px solid var(--line);
+      }
+      .nested th.num {
+        text-align: end;
+      }
+      .nested td {
+        padding: 10px 8px 10px 0;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--ink-2);
+        vertical-align: middle;
+      }
+      .nested .num {
+        text-align: end;
+        font-family: var(--font-mono);
+      }
+      .nested .tot {
+        font-family: var(--font-display);
+        font-weight: 500;
+        color: var(--ink-1);
+        font-size: 15px;
+      }
+      .editable {
+        all: unset;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        text-align: end;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        min-width: 70px;
+        color: var(--ink-1);
+      }
+      .editable:hover {
+        border-color: var(--line);
+      }
+      .editable:focus {
+        border-color: var(--clay);
+        background: var(--clay-soft);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .chip .ico {
+        width: 10px;
+        height: 10px;
+      }
+      .chip-ai {
+        color: var(--leaf);
+        background: var(--leaf-soft);
+      }
+      .chip-stale {
+        color: var(--clay);
+        background: var(--clay-soft);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         MARGIN NOTES — Cesare lives here
+         ──────────────────────────────────────────────────────── */
+      .note {
+        position: absolute;
+        right: 0;
+        width: 100%;
+        max-width: 260px;
+        padding: var(--space-3) var(--space-4);
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--ink-2);
+        background: var(--paper-1);
+        border-left: 2px solid var(--leaf);
+        cursor: pointer;
+        transition:
+          background 150ms,
+          transform 200ms ease;
+      }
+      .note:hover {
+        background: var(--leaf-soft);
+        transform: translateX(-2px);
+      }
+      .note .head {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--leaf);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: 6px;
+      }
+      .note .body {
+        font-family: var(--font-display);
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--ink-1);
+        font-weight: 400;
+      }
+      .note .body em {
+        font-style: italic;
+        color: var(--ink-2);
+      }
+      .note .body b {
+        font-weight: 600;
+      }
+      .note .actions {
+        margin-top: var(--space-3);
+        display: flex;
+        gap: var(--space-2);
+        align-items: center;
+      }
+      .note .actions button {
+        all: unset;
+        cursor: pointer;
+        font-size: 11px;
+        color: var(--ink-3);
+        padding: 4px 0;
+        font-weight: 500;
+      }
+      .note .actions .accept {
+        color: var(--leaf);
+        font-weight: 600;
+      }
+      .note .actions .accept::before {
+        content: "→ ";
+      }
+      .note .actions .reject:hover {
+        color: var(--ink-1);
+      }
+      .note .meta {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        color: var(--ink-4);
+        margin-left: auto;
+        letter-spacing: 0.04em;
+      }
+
+      .note-section {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        margin: var(--space-5) 0 var(--space-3);
+        padding-left: var(--space-4);
+        border-left: 2px solid var(--ink-5);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         QUICK-ASK ⌘.  — centered, minimal
+         ──────────────────────────────────────────────────────── */
+      .qa-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        background: rgba(28, 26, 23, 0.06);
+        backdrop-filter: blur(2px);
+        display: grid;
+        place-items: start center;
+        padding-top: 18vh;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+      .qa-overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .qa-card {
+        width: 540px;
+        background: var(--paper-1);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 24px 64px rgba(28, 26, 23, 0.14);
+        overflow: hidden;
+        transform: translateY(-6px);
+        transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .qa-overlay.is-open .qa-card {
+        transform: translateY(0);
+      }
+      .qa-input {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 18px;
+        font-size: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .qa-input .leaf {
+        color: var(--leaf);
+      }
+      .qa-input input {
+        all: unset;
+        flex: 1;
+        font-size: 16px;
+        font-family: var(--font-display);
+        font-weight: 400;
+        color: var(--ink-1);
+      }
+      .qa-input input::placeholder {
+        color: var(--ink-4);
+        font-style: italic;
+      }
+      .qa-input .kbd {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        background: var(--paper-2);
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      .qa-context {
+        padding: 8px 18px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        background: var(--paper-2);
+        border-bottom: 1px solid var(--line);
+      }
+      .qa-context b {
+        color: var(--ink-2);
+        text-transform: none;
+        letter-spacing: 0;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .qa-quick {
+        padding: 10px 18px;
+      }
+      .qa-quick-title {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        margin: 6px 0 6px;
+      }
+      .qa-quick-item {
+        padding: 8px 0;
+        font-size: 14px;
+        color: var(--ink-2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .qa-quick-item:hover {
+        color: var(--clay);
+      }
+      .qa-quick-item .ico {
+        opacity: 0.6;
+      }
+      .qa-foot {
+        padding: 10px 18px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 11px;
+        color: var(--ink-4);
+      }
+      .qa-foot .pillz {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .qa-foot .pillz .kbd {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 1px 5px;
+        background: var(--paper-2);
+        border-radius: 3px;
+        color: var(--ink-3);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         MANIFEST DRAWER — open right side, full book style
+         ──────────────────────────────────────────────────────── */
+      .manifest-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 75;
+        background: rgba(28, 26, 23, 0.18);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms;
+      }
+      .manifest-overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .manifest-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 640px;
+        background: var(--paper-1);
+        border-left: 1px solid var(--line);
+        z-index: 76;
+        transform: translateX(100%);
+        transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+        overflow-y: auto;
+        padding: var(--space-10) var(--space-12);
+      }
+      .manifest-overlay.is-open ~ .manifest-drawer,
+      .manifest-drawer.is-open {
+        transform: translateX(0);
+      }
+      .manifest-close {
+        position: absolute;
+        top: var(--space-5);
+        right: var(--space-5);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        background: transparent;
+        border: none;
+      }
+      .manifest-close:hover {
+        color: var(--ink-1);
+      }
+      .manifest h2 {
+        font-family: var(--font-display);
+        font-size: 36px;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        margin: 0 0 var(--space-2);
+      }
+      .manifest h2 em {
+        font-style: italic;
+        color: var(--clay);
+      }
+      .manifest .stamp {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--leaf);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: var(--space-8);
+      }
+      .manifest h3 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 400;
+        font-size: 22px;
+        color: var(--ink-2);
+        margin: var(--space-10) 0 var(--space-4);
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid var(--line);
+      }
+      .manifest p {
+        font-family: var(--font-display);
+        font-size: 16px;
+        line-height: 1.65;
+        color: var(--ink-1);
+        margin: 0 0 var(--space-4);
+        font-weight: 400;
+      }
+      .manifest p em {
+        font-style: italic;
+        color: var(--ink-2);
+      }
+      .manifest p b {
+        font-weight: 600;
+      }
+      .manifest p a {
+        color: var(--clay);
+        text-decoration: none;
+        border-bottom: 1px solid var(--clay-soft);
+      }
+      .manifest p a:hover {
+        background: var(--clay-soft);
+      }
+      .manifest-item {
+        padding: var(--space-4) 0;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: var(--space-4);
+        align-items: baseline;
+      }
+      .manifest-item:last-child {
+        border-bottom: none;
+      }
+      .manifest-item .marker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--leaf);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        flex-shrink: 0;
+        width: 90px;
+        padding-top: 4px;
+      }
+      .manifest-item .marker.warn {
+        color: var(--clay);
+      }
+      .manifest-item .body p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         CESARE TRACE BAR — bottom thin strip showing activity
+         ──────────────────────────────────────────────────────── */
+      .trace {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        padding: var(--space-2) var(--space-6);
+        background: var(--paper-1);
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-4);
+      }
+      .trace .pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+      .trace .pulse.idle {
+        background: var(--ink-5);
+      }
+      .trace .what {
+        color: var(--ink-2);
+      }
+      .trace .what b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .trace .save {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .trace .save .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+      .trace a {
+        color: var(--clay);
+        text-decoration: none;
+        text-transform: none;
+        letter-spacing: 0;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      /* ⌘J palette overlay placeholder (visually hinted, not used in demo) */
+      .nav-hint {
+        position: fixed;
+        bottom: var(--space-8);
+        right: var(--space-6);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+      .nav-hint .kbd {
+        padding: 1px 5px;
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        color: var(--ink-3);
+      }
+    </style>
+  </head>
+
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-check" viewBox="0 0 24 24"
+          ><polyline points="20 6 9 17 4 12"
+        /></symbol>
+        <symbol id="i-arrow-right" viewBox="0 0 24 24"
+          ><line x1="5" y1="12" x2="19" y2="12" /><polyline
+            points="12 5 19 12 12 19"
+        /></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"
+          ><path
+            d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"
+        /></symbol>
+        <symbol id="i-trend-up" viewBox="0 0 24 24"
+          ><polyline points="22 7 13.5 15.5 8.5 10.5 1 18" /><polyline
+            points="16 7 22 7 22 13"
+        /></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"
+          ><circle cx="11" cy="11" r="7" /><line
+            x1="21"
+            y1="21"
+            x2="16.65"
+            y2="16.65"
+        /></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"
+          ><path
+            d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+          /><path d="M13.7 21a2 2 0 0 1-3.4 0"
+        /></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"
+          ><circle cx="12" cy="12" r="3"
+        /></symbol>
+        <symbol id="i-chev-right" viewBox="0 0 24 24"
+          ><polyline points="9 6 15 12 9 18"
+        /></symbol>
+        <symbol id="i-chev-down" viewBox="0 0 24 24"
+          ><polyline points="6 9 12 15 18 9"
+        /></symbol>
+        <symbol id="i-book" viewBox="0 0 24 24"
+          ><path
+            d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"
+          /><path
+            d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+        /></symbol>
+        <symbol id="i-list" viewBox="0 0 24 24"
+          ><line x1="8" y1="6" x2="21" y2="6" /><line
+            x1="8"
+            y1="12"
+            x2="21"
+            y2="12"
+          /><line x1="8" y1="18" x2="21" y2="18"
+        /></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"
+          ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+            points="7 10 12 15 17 10"
+          /><line x1="12" y1="15" x2="12" y2="3"
+        /></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24"
+          ><path
+            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+          /><circle cx="12" cy="13" r="4"
+        /></symbol>
+        <symbol id="i-zap" viewBox="0 0 24 24"
+          ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+        /></symbol>
+      </defs>
+    </svg>
+
+    <!-- ─── top strip: brand + meta, inline, sticky on scroll ─── -->
+    <div class="top-strip" id="topStrip">
+      <div class="brand">
+        <span class="mark"></span>
+        <span>oh <b>writers</b></span>
+        <span class="sep">/</span>
+        <span>Team Thriller</span>
+        <span class="brand-cesare" title="2 note di Cesare nel manifest">2</span>
+      </div>
+      <div class="meta-right">
+        <span class="pill">PROD TT-026</span>
+        <button class="iconbtn" title="Cerca"><svg class="ico"><use href="#i-search" /></svg></button>
+        <button class="iconbtn" title="Notifiche"><svg class="ico"><use href="#i-bell" /></svg></button>
+        <button class="iconbtn" title="Impostazioni"><svg class="ico"><use href="#i-settings" /></svg></button>
+        <div class="avatar">VN</div>
+      </div>
+    </div>
+
+    <main>
+      <!-- page title (minimal, scannabile) -->
+      <div class="page-title">
+        <h1>Budget</h1>
+        <span>· Per categoria</span>
+      </div>
+
+      <!-- inline action bar -->
+      <div class="action-bar">
+        <button class="btn primary">Rigenera budget</button>
+        <span class="sep"></span>
+        <button class="btn">Snapshot</button>
+        <button class="btn">Esporta PDF</button>
+        <button class="btn">Confronta target</button>
+        <span class="saved"
+          ><span class="dot"></span>Salvato · 14:32</span
+        >
+      </div>
+
+      <!-- view switcher -->
+      <div class="view-switch">
+        <button class="active">Per categoria <span class="count">/ 8</span></button>
+        <button>Per giornata <span class="count">/ 5</span></button>
+        <button>Per dipartimento</button>
+        <button class="disabled">Cash flow</button>
+      </div>
+
+      <!-- hero -->
+      <div class="hero">
+        <div class="hero-num" data-num>10 617<span class="cur"> €</span></div>
+        <div class="hero-meta">
+          <span><b class="delta">2 123 €</b>/giorno</span>
+          <span><b>28</b> elementi</span>
+          <span class="vs-bench">vs. mediana genere <b>+12%</b></span>
+        </div>
+        <div class="stack-bar">
+          <div style="width: 69%; background: var(--c-crew)"></div>
+          <div style="width: 21%; background: var(--c-scenografia)"></div>
+          <div style="width: 1%; background: var(--c-vfx)"></div>
+          <div style="width: 9%; background: var(--clay)"></div>
+        </div>
+        <div class="stack-legend">
+          <span class="item"
+            ><span class="dot" style="background: var(--c-crew)"></span>Crew
+            <b>7 350 €</b></span
+          >
+          <span class="item"
+            ><span class="dot" style="background: var(--c-scenografia)"></span
+            >Scenografia <b>2 222 €</b></span
+          >
+          <span class="item"
+            ><span class="dot" style="background: var(--c-vfx)"></span>VFX
+            <b>3 500 €</b></span
+          >
+          <span class="item"
+            ><span class="dot" style="background: var(--clay)"></span
+            >Contingenza <b>965 €</b></span
+          >
+        </div>
+      </div>
+
+      <!-- content + margin rail -->
+      <div class="content-main">
+        <div class="section-label">
+          <span class="num">I.</span> Cast &amp; Crew
+          <span class="meta">25 persone</span>
+        </div>
+
+        <div class="row">
+          <span class="rail" style="background: var(--c-cast)"></span>
+          <div class="head">
+            <span class="name">Cast<span class="badge">6 attori</span></span>
+            <span class="meta">3 lead · 3 supporting · Tea, Milco, Luca…</span>
+          </div>
+          <span class="total" data-num>4 200 €</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row has-note" data-note="note-troupe">
+          <span class="rail" style="background: var(--c-crew)"></span>
+          <div class="head">
+            <span class="name">Troupe<span class="badge">19 ruoli</span></span>
+            <span class="meta">7 dipartimenti · Fotografia 2 200, Regia 750…</span>
+          </div>
+          <span class="total" data-num>7 350 €</span>
+          <svg class="ico caret"><use href="#i-chev-down" /></svg>
+        </div>
+        <div class="nested">
+          <table>
+            <thead>
+              <tr>
+                <th>Dipartimento</th>
+                <th class="num">Ruoli</th>
+                <th class="num">Totale</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Fotografia</td><td class="num">5</td><td class="num tot">2 200 €</td></tr>
+              <tr><td>Regia</td><td class="num">2</td><td class="num tot">750 €</td></tr>
+              <tr><td>Suono</td><td class="num">2</td><td class="num tot">650 €</td></tr>
+              <tr><td>Arte</td><td class="num">3</td><td class="num tot">1 350 €</td></tr>
+              <tr><td>Costumi &amp; Trucco</td><td class="num">4</td><td class="num tot">1 350 €</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-label">
+          <span class="num">II.</span> Produzione · da breakdown
+          <span class="meta">8 categorie</span>
+        </div>
+
+        <div class="row empty">
+          <span class="rail" style="background: var(--c-locations)"></span>
+          <div class="head">
+            <span class="name">Locations</span>
+            <span class="meta">Nessuna location nel breakdown</span>
+          </div>
+          <span class="total zero">—</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row empty">
+          <span class="rail" style="background: var(--c-vehicles)"></span>
+          <div class="head">
+            <span class="name">Veicoli</span>
+            <span class="meta">Nessun veicolo nel breakdown</span>
+          </div>
+          <span class="total zero">—</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row has-note" data-note="note-scenografia">
+          <span class="rail" style="background: var(--c-scenografia)"></span>
+          <div class="head">
+            <span class="name">Scenografia<span class="badge">22 elementi</span></span>
+            <span class="meta">Aggregato breakdown · 1 riga legacy "Bloody knife"</span>
+          </div>
+          <span class="total" data-num>2 302 €</span>
+          <svg class="ico caret"><use href="#i-chev-down" /></svg>
+        </div>
+        <div class="nested">
+          <table>
+            <thead>
+              <tr>
+                <th>Elemento</th>
+                <th class="num">Qta</th>
+                <th class="num">€ / unità</th>
+                <th class="num">Effettivo</th>
+                <th class="num">Totale</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <b>Aggregato breakdown</b>
+                  <span class="chip chip-ai" style="margin-left: 6px"
+                    ><svg class="ico"><use href="#i-sparkle" /></svg>AI</span
+                  >
+                </td>
+                <td class="num">22</td>
+                <td class="num"><input class="editable" value="80" data-num /></td>
+                <td class="num"><input class="editable" value="2222" data-num /></td>
+                <td class="num tot">2 222 €</td>
+              </tr>
+              <tr>
+                <td>
+                  Bloody knife
+                  <span class="chip chip-stale" style="margin-left: 6px"
+                    >Legacy</span
+                  >
+                </td>
+                <td class="num">1</td>
+                <td class="num"><input class="editable" value="80" data-num /></td>
+                <td class="num"><input class="editable" value="" data-num /></td>
+                <td class="num tot">80 €</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row has-note" data-note="note-vfx">
+          <span class="rail" style="background: var(--c-vfx)"></span>
+          <div class="head">
+            <span class="name">VFX / SFX<span class="badge">5 elementi</span></span>
+            <span class="meta">Pugno, Sparizioni, Colpo</span>
+          </div>
+          <span class="total" data-num>3 500 €</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row">
+          <span class="rail" style="background: var(--c-fotografia)"></span>
+          <div class="head">
+            <span class="name">Fotografia<span class="badge">3 elementi</span></span>
+            <span class="meta">Coltello, Forno Pizza, Forno</span>
+          </div>
+          <span class="total" data-num>1 800 €</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row">
+          <span class="rail" style="background: var(--c-suono)"></span>
+          <div class="head">
+            <span class="name">Suono<span class="badge">8 elementi</span></span>
+            <span class="meta">Risate, Applauso, Voice Over, +5</span>
+          </div>
+          <span class="total" data-num>400 €</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row">
+          <span class="rail" style="background: var(--c-comparse)"></span>
+          <div class="head">
+            <span class="name">Comparse<span class="badge">5 elementi</span></span>
+            <span class="meta">Pubblico, Comici, Clienti</span>
+          </div>
+          <span class="total" data-num>120 €</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+
+        <div class="row">
+          <span class="rail" style="background: var(--c-costumi)"></span>
+          <div class="head">
+            <span class="name">Costumi &amp; Make-up</span>
+            <span class="meta">5 makeup · 1 wardrobe</span>
+          </div>
+          <span class="total" data-num>450 €</span>
+          <svg class="ico caret"><use href="#i-chev-right" /></svg>
+        </div>
+      </div>
+
+      <!-- ─── MARGIN RAIL — Cesare margin notes ─── -->
+      <aside class="margin-rail">
+        <div class="note-section">Note di Cesare · 2</div>
+
+        <div class="note" id="note-scenografia">
+          <div class="head">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Cesare
+            <span class="meta">14:31</span>
+          </div>
+          <div class="body">
+            La voce <em>Scenografia · Aggregato</em> è gonfiata del
+            <b>27×</b> rispetto alla tariffa AI.<br />
+            Provo a riportarla a <b>1 760 €</b>?
+          </div>
+          <div class="actions">
+            <button class="accept">Accetta proposta</button>
+            <button class="reject">Apri</button>
+          </div>
+        </div>
+
+        <div class="note" id="note-vfx" style="margin-top: 56px">
+          <div class="head">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Cesare
+            <span class="meta">14:31</span>
+          </div>
+          <div class="body">
+            <em>VFX / SFX</em> a <b>3 500 €</b> è alto per 5 elementi.
+            Posso suggerire un <em>in-camera trick</em> per uno o due
+            effetti e ridurre la spesa.
+          </div>
+          <div class="actions">
+            <button class="accept">Vedi alternative</button>
+            <button class="reject">Ignora</button>
+          </div>
+        </div>
+
+        <div class="note-section">Manifest</div>
+
+        <div class="note" style="border-left-color: var(--ink-4)">
+          <div class="head" style="color: var(--ink-3)">
+            <svg class="ico ico-sm"><use href="#i-book" /></svg>Report progetto
+          </div>
+          <div class="body" style="font-size: 12px">
+            Il <em>manifest</em> raccoglie tutte le osservazioni di Cesare su
+            <b>scrittura</b> e <b>produzione</b>. <br />Aggiornato 4 minuti fa.
+          </div>
+          <div class="actions">
+            <button class="accept" style="color: var(--clay)">Apri manifest</button>
+            <button class="reject">⌘M</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- ─── trace bar bottom ─── -->
+    <div class="trace">
+      <span class="pulse"></span>
+      <span class="what"
+        ><b>Cesare</b> · sta analizzando il rapporto budget / schedule</span
+      >
+      <a>Manifest</a>
+      <span class="save"><span class="dot"></span>Salvato 14:32</span>
+    </div>
+
+    <!-- ─── nav hint ⌘J ─── -->
+    <!--<div class="nav-hint">
+      <span class="kbd">⌘J</span> Vai a
+      <span style="margin-left: 12px"></span>
+      <span class="kbd">⌘.</span> Chiedi
+      <span style="margin-left: 12px"></span>
+      <span class="kbd">⌘M</span> Manifest
+    </div>-->
+
+    <!-- ─── quick-ask overlay (closed) ─── -->
+    <div class="qa-overlay" id="qa">
+      <div class="qa-card">
+        <div class="qa-input">
+          <svg class="ico leaf"><use href="#i-sparkle" /></svg>
+          <input placeholder="Chiedi a Cesare…" />
+          <span class="kbd">⌘.</span>
+        </div>
+        <div class="qa-context">
+          Contesto · <b>Budget · Team Thriller</b>
+        </div>
+        <div class="qa-quick">
+          <div class="qa-quick-title">Suggerimenti rapidi</div>
+          <div class="qa-quick-item">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>
+            Dove posso tagliare i costi?
+          </div>
+          <div class="qa-quick-item">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>
+            Confronta con un altro short
+          </div>
+          <div class="qa-quick-item">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>
+            Quali sono i rischi del giorno più caro?
+          </div>
+        </div>
+        <div class="qa-foot">
+          <span class="pillz"><span class="kbd">⏎</span> Invia</span>
+          <span class="pillz"><span class="kbd">⌘⏎</span> + Aggiungi al manifest</span>
+          <span class="pillz" style="margin-left: auto"
+            ><span class="kbd">esc</span> Chiudi</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── manifest drawer (closed) ─── -->
+    <div class="manifest-overlay" id="manifestOverlay"></div>
+    <aside class="manifest-drawer" id="manifestDrawer">
+      <button class="manifest-close">Chiudi ✕</button>
+      <div class="manifest">
+        <div class="stamp">Manifest · aggiornato 4 minuti fa</div>
+        <h2>Lo <em>stato</em> del tuo progetto</h2>
+        <p style="font-family: var(--font-display); font-size: 16px; color: var(--ink-3); margin-bottom: var(--space-8); font-style: italic;">
+          Una lettura continua di <b>Team Thriller</b>, raccolta da Cesare
+          mentre osserva la scrittura e la produzione.
+        </p>
+
+        <h3>Scrittura</h3>
+        <div class="manifest-item">
+          <span class="marker">Sc. 5 / Atto II</span>
+          <div class="body">
+            <p>
+              Il dialogo tra <em>Giulio</em> e <em>Maria</em> è
+              <b>tecnicamente solido ma corto</b>: 4 battute, scena
+              che si conclude in 38 secondi. La transizione
+              <em>"È bravo, eh? Ma non ride nessuno"</em> ha potenziale —
+              può portare più tensione drammatica.
+              <a href="#">Apri scena →</a>
+            </p>
+          </div>
+        </div>
+        <div class="manifest-item">
+          <span class="marker">Atto III</span>
+          <div class="body">
+            <p>
+              Manca una scena <b>climax visibile</b> tra la pizzeria e
+              la chiusura. L'Atto III è 3 scene contro 5 dell'Atto II.
+              <a href="#">Vedi outline →</a>
+            </p>
+          </div>
+        </div>
+
+        <h3>Produzione</h3>
+        <div class="manifest-item">
+          <span class="marker warn">Budget</span>
+          <div class="body">
+            <p>
+              Il totale <b>10 617 €</b> è
+              <em>+12% sopra la mediana</em> per
+              <b>short comedy IT</b>. Due voci possono essere ottimizzate:
+              <em>Scenografia</em> (gonfiata del 27×) e <em>VFX</em>
+              (3 500 € per 5 effetti facili). Ho preparato due proposte —
+              vedile nelle <a href="#">note in margine</a>.
+            </p>
+          </div>
+        </div>
+        <div class="manifest-item">
+          <span class="marker">Schedule</span>
+          <div class="body">
+            <p>
+              Lo <b>schedule non è ancora generato</b>. Senza giorni di
+              ripresa, il <em>"Per giornata"</em> resta inattivo e
+              non posso stimare i picchi di costo.
+              <a href="#">Genera schedule →</a>
+            </p>
+          </div>
+        </div>
+        <div class="manifest-item">
+          <span class="marker">Breakdown</span>
+          <div class="body">
+            <p>
+              28 elementi taggati. Nessun veicolo né location esterna —
+              <em>è coerente con un set unico</em>? Se sì, possiamo
+              chiudere il breakdown.
+              <a href="#">Apri breakdown →</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <script>
+      const qa = document.getElementById("qa");
+      const overlay = document.getElementById("manifestOverlay");
+      const drawer = document.getElementById("manifestDrawer");
+      const topStrip = document.getElementById("topStrip");
+      const actionBar = document.querySelector(".action-bar");
+
+      const onScroll = () => {
+        const y = window.scrollY;
+        topStrip?.classList.toggle("is-scrolled", y > 8);
+        // sticky action-bar attiva quando il titolo è scrollato fuori
+        actionBar?.classList.toggle("is-stuck", y > 200);
+      };
+      document.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      const toggleQa = (open) => {
+        const next = open !== undefined ? open : !qa.classList.contains("is-open");
+        qa.classList.toggle("is-open", next);
+        if (next) qa.querySelector("input")?.focus();
+      };
+
+      const toggleManifest = (open) => {
+        const next =
+          open !== undefined ? open : !drawer.classList.contains("is-open");
+        drawer.classList.toggle("is-open", next);
+        overlay.classList.toggle("is-open", next);
+      };
+
+      document.querySelector(".manifest-close")?.addEventListener("click", () => toggleManifest(false));
+      overlay?.addEventListener("click", () => toggleManifest(false));
+      qa?.addEventListener("click", (e) => {
+        if (e.target === qa) toggleQa(false);
+      });
+      document.querySelector(".trace a")?.addEventListener("click", () => toggleManifest(true));
+      document.querySelector(".brand-cesare")?.addEventListener("click", () => toggleManifest(true));
+
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+          e.preventDefault();
+          toggleQa();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === "m") {
+          e.preventDefault();
+          toggleManifest();
+        }
+        if (e.key === "Escape") {
+          toggleQa(false);
+          toggleManifest(false);
+        }
+      });
+    </script>
+  </body>
+</html>

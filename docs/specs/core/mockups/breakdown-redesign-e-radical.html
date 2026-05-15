@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Breakdown · Working Page · E</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+
+        --c-cast: #6b3e7a;
+        --c-cast-soft: #ead8f0;
+        --c-locations: #9a5128;
+        --c-locations-soft: #f4ddc7;
+        --c-props: #8a5a1f;
+        --c-props-soft: #f4e6c2;
+        --c-vehicles: #2c6168;
+        --c-wardrobe: #8b3565;
+        --c-wardrobe-soft: #f0d8e4;
+        --c-vfx: #6a3e8a;
+        --c-vfx-soft: #e3d8f0;
+        --c-sound: #5a6b25;
+        --c-sound-soft: #e5e9c8;
+        --c-extras: #7a5524;
+        --c-extras-soft: #f0e2c5;
+        --c-equipment: #34487a;
+        --c-equipment-soft: #d8def0;
+
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --font-script: "Courier Prime", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .ico {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        stroke-width: 1.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        flex-shrink: 0;
+      }
+      .ico-sm {
+        width: 12px;
+        height: 12px;
+      }
+      [data-num] {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* top strip — same as budget */
+      .top-strip {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--paper-1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 24px;
+        font-size: 13px;
+        color: var(--ink-3);
+        border-bottom: 1px solid transparent;
+        transition: border-color 200ms;
+      }
+      .top-strip.is-scrolled {
+        border-bottom-color: var(--line);
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 15px;
+        color: var(--ink-2);
+        cursor: pointer;
+      }
+      .brand .mark {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--clay);
+        position: relative;
+      }
+      .brand .mark::after {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        background: var(--paper-1);
+        border-radius: 50%;
+      }
+      .brand b {
+        color: var(--ink-1);
+        font-weight: 500;
+      }
+      .brand .sep {
+        color: var(--ink-4);
+        font-style: normal;
+        margin: 0 4px;
+      }
+      .brand-cesare {
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border-radius: 99px;
+        background: var(--leaf-soft);
+        color: var(--leaf);
+        display: grid;
+        place-items: center;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 4px;
+      }
+      .brand-cesare::after {
+        content: "";
+        position: absolute;
+        top: -1px;
+        right: -1px;
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+        animation: pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.4); }
+      }
+      .meta-right {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--ink-4);
+      }
+      .meta-right .pill {
+        font-family: var(--font-mono);
+        color: var(--ink-3);
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+      }
+      .meta-right .iconbtn {
+        cursor: pointer;
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        background: transparent;
+        border: none;
+      }
+      .meta-right .avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--paper-3);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink-2);
+        display: grid;
+        place-items: center;
+      }
+
+      /* layout shell — 3 cols: scene list / script / element panel + margin */
+      main {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px 24px 80px;
+      }
+
+      .page-title {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        padding: 12px 0 20px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--ink-4);
+      }
+      .page-title h1 {
+        margin: 0;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-1);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+      }
+
+      .action-bar {
+        position: sticky;
+        top: 48px;
+        z-index: 35;
+        background: var(--paper-1);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 0;
+        margin-bottom: 20px;
+        font-size: 13px;
+        border-bottom: 1px solid transparent;
+        transition: border-color 200ms;
+      }
+      .action-bar.is-stuck { border-bottom-color: var(--line); padding: 8px 0; }
+      .action-bar .btn {
+        cursor: pointer;
+        padding: 0;
+        background: transparent;
+        border: none;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-2);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .action-bar .btn:hover { color: var(--clay); }
+      .action-bar .btn.primary {
+        font-weight: 600;
+        color: var(--ink-1);
+      }
+      .action-bar .btn.primary::before {
+        content: "→";
+        margin-right: 2px;
+        color: var(--clay);
+      }
+      .action-bar .sep { width: 1px; height: 14px; background: var(--line); }
+      .action-bar .saved {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .action-bar .saved .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+
+      /* 3-col layout */
+      .grid {
+        display: grid;
+        grid-template-columns: 220px 1fr 260px;
+        gap: 32px;
+        align-items: start;
+      }
+
+      /* SCENE LIST (left) */
+      .scene-list h3 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-2);
+        margin: 0 0 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .scene-list h3 .num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        font-style: normal;
+      }
+      .scene {
+        padding: 10px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 4px;
+        border-left: 2px solid transparent;
+      }
+      .scene:hover { background: var(--paper-2); }
+      .scene.active {
+        background: var(--clay-soft);
+        border-left-color: var(--clay);
+      }
+      .scene .num {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        font-weight: 600;
+      }
+      .scene .heading {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-1);
+        margin: 2px 0;
+        line-height: 1.3;
+      }
+      .scene .stats {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .scene .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .scene.active .heading { color: var(--clay); }
+
+      /* SCRIPT (center) */
+      .script-area { display: flex; flex-direction: column; }
+      .scene-header {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scene-header .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: 6px;
+      }
+      .scene-header h2 {
+        margin: 0;
+        font-family: var(--font-script);
+        font-size: 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--ink-1);
+      }
+      .scene-header .meta {
+        margin-top: 8px;
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .scene-header .meta b { color: var(--ink-1); font-weight: 600; }
+
+      .script-page {
+        background: var(--page);
+        padding: 36px 48px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 8px 24px rgba(28, 26, 23, 0.04);
+        font-family: var(--font-script);
+        font-size: 12pt;
+        line-height: 1.5;
+      }
+      .script-page p { margin: 0 0 12px; }
+      .tag {
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .tag:hover { box-shadow: inset 0 0 0 1px currentColor; }
+      .tag-cast { background: var(--c-cast-soft); color: var(--c-cast); }
+      .tag-location { background: var(--c-locations-soft); color: var(--c-locations); }
+      .tag-props { background: var(--c-props-soft); color: var(--c-props); }
+      .tag-wardrobe { background: var(--c-wardrobe-soft); color: var(--c-wardrobe); }
+      .tag-vfx { background: var(--c-vfx-soft); color: var(--c-vfx); }
+      .tag-sound { background: var(--c-sound-soft); color: var(--c-sound); }
+      .tag-extras { background: var(--c-extras-soft); color: var(--c-extras); }
+      .tag-equipment { background: var(--c-equipment-soft); color: var(--c-equipment); }
+
+      /* ELEMENT PANEL + margin notes (right) */
+      .element-panel h3 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-2);
+        margin: 0 0 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .element-panel h3 .num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        font-style: normal;
+      }
+      .cat {
+        margin-bottom: 12px;
+      }
+      .cat-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ink-3);
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid var(--line);
+      }
+      .cat-head .swatch {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .cat-head .count {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        font-weight: 500;
+      }
+      .cat-items { display: flex; flex-wrap: wrap; gap: 4px; }
+      .cat-item {
+        font-size: 12px;
+        padding: 3px 8px;
+        background: var(--paper-2);
+        color: var(--ink-2);
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .cat-item:hover { background: var(--paper-3); }
+      .cat-item.ai {
+        position: relative;
+      }
+      .cat-item.ai::after {
+        content: "AI";
+        position: absolute;
+        top: -8px;
+        right: -4px;
+        font-family: var(--font-mono);
+        font-size: 8px;
+        color: var(--leaf);
+        font-weight: 600;
+        background: var(--paper-1);
+        padding: 0 2px;
+      }
+
+      /* note from Cesare on scene */
+      .note {
+        margin-top: 24px;
+        padding: 12px 16px;
+        background: var(--paper-1);
+        border-left: 2px solid var(--leaf);
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .note .head {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--leaf);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .note .body {
+        font-family: var(--font-display);
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--ink-1);
+      }
+      .note .body em { font-style: italic; color: var(--ink-2); }
+      .note .actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+      }
+      .note .actions .accept {
+        color: var(--leaf);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .note .actions .accept::before { content: "→ "; }
+      .note .actions .reject {
+        color: var(--ink-4);
+        cursor: pointer;
+      }
+
+      /* trace bar bottom */
+      .trace {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        padding: 8px 24px;
+        background: var(--paper-1);
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-4);
+      }
+      .trace .pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+      .trace .what b { color: var(--ink-1); font-weight: 600; }
+      .trace a {
+        color: var(--clay);
+        text-decoration: none;
+        text-transform: none;
+        letter-spacing: 0;
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .trace .save {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .trace .save .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></symbol>
+      </defs>
+    </svg>
+
+    <div class="top-strip" id="topStrip">
+      <div class="brand">
+        <span class="mark"></span>
+        <span>oh <b>writers</b></span>
+        <span class="sep">/</span>
+        <span>Team Thriller</span>
+        <span class="brand-cesare" title="2 note di Cesare nel manifest">2</span>
+      </div>
+      <div class="meta-right">
+        <span class="pill">PROD TT-026</span>
+        <button class="iconbtn"><svg class="ico"><use href="#i-search" /></svg></button>
+        <button class="iconbtn"><svg class="ico"><use href="#i-bell" /></svg></button>
+        <button class="iconbtn"><svg class="ico"><use href="#i-settings" /></svg></button>
+        <div class="avatar">VN</div>
+      </div>
+    </div>
+
+    <main>
+      <div class="page-title">
+        <h1>Breakdown</h1>
+        <span>· Per scena · 28 / 28 taggate</span>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn primary">Auto-tag scena</button>
+        <span class="sep"></span>
+        <button class="btn">← Scena prec.</button>
+        <button class="btn">Scena succ. →</button>
+        <button class="btn">Filtri categoria</button>
+        <button class="btn">Esporta</button>
+        <span class="saved"><span class="dot"></span>Auto-tagged · 14:32</span>
+      </div>
+
+      <div class="grid">
+        <!-- LEFT: scene list -->
+        <aside class="scene-list">
+          <h3>Scene <span class="num">28 / 28</span></h3>
+          <div class="scene">
+            <div class="num">01</div>
+            <div class="heading">INT. APPARTAMENTO — NOTTE</div>
+            <div class="stats">
+              <span class="dot" style="background: var(--c-cast)"></span>
+              <span class="dot" style="background: var(--c-props)"></span>
+              <span class="dot" style="background: var(--c-sound)"></span>
+            </div>
+          </div>
+          <div class="scene">
+            <div class="num">02</div>
+            <div class="heading">EXT. STRADA NAPOLI — GIORNO</div>
+            <div class="stats">
+              <span class="dot" style="background: var(--c-locations)"></span>
+              <span class="dot" style="background: var(--c-vehicles)"></span>
+              <span class="dot" style="background: var(--c-extras)"></span>
+            </div>
+          </div>
+          <div class="scene active">
+            <div class="num">03</div>
+            <div class="heading">INT. PIZZERIA SOTTOSCALA — SERA</div>
+            <div class="stats">
+              <span class="dot" style="background: var(--c-cast)"></span>
+              <span class="dot" style="background: var(--c-props)"></span>
+              <span class="dot" style="background: var(--c-equipment)"></span>
+              <span class="dot" style="background: var(--c-wardrobe)"></span>
+              <span class="dot" style="background: var(--c-extras)"></span>
+            </div>
+          </div>
+          <div class="scene">
+            <div class="num">04</div>
+            <div class="heading">INT. CUCINA PIZZERIA — SERA</div>
+            <div class="stats">
+              <span class="dot" style="background: var(--c-props)"></span>
+              <span class="dot" style="background: var(--c-cast)"></span>
+            </div>
+          </div>
+          <div class="scene">
+            <div class="num">05</div>
+            <div class="heading">INT. PALCO OPEN MIC — NOTTE</div>
+            <div class="stats">
+              <span class="dot" style="background: var(--c-cast)"></span>
+              <span class="dot" style="background: var(--c-equipment)"></span>
+              <span class="dot" style="background: var(--c-extras)"></span>
+            </div>
+          </div>
+          <div class="scene">
+            <div class="num">06</div>
+            <div class="heading">INT. SALA — NOTTE</div>
+          </div>
+          <div class="scene">
+            <div class="num">07</div>
+            <div class="heading">EXT. BANCONE — GIORNO</div>
+          </div>
+        </aside>
+
+        <!-- CENTER: script + tagged elements -->
+        <div class="script-area">
+          <div class="scene-header">
+            <div class="eyebrow">Sc. 3 · Atto I · pag. 4</div>
+            <h2>INT. PIZZERIA SOTTOSCALA — SERA</h2>
+            <div class="meta">
+              <span>Personaggi <b>3</b></span>
+              <span>Elementi <b>12</b></span>
+              <span>Tempo stimato <b>~2′ 40″</b></span>
+              <span>Effort <b>3.5 ore</b></span>
+            </div>
+          </div>
+          <div class="script-page">
+            <p>Il forno a legna sputa una vampata.
+              <span class="tag tag-cast">FRANCESCO</span>, 42, magro,
+              maglietta zozza di farina, infila la
+              <span class="tag tag-props">pala</span> dentro la bocca rovente.
+              Tira fuori una <span class="tag tag-props">pizza fumante</span>
+              e la fa scivolare sul <span class="tag tag-location">bancone</span>.</p>
+            <p>In fondo alla sala il <span class="tag tag-extras">pubblico</span> ride.
+              Sul <span class="tag tag-location">palco improvvisato</span>,
+              <span class="tag tag-cast">GIULIO</span>, 28, in
+              <span class="tag tag-wardrobe">giacca stropicciata</span>, regge un
+              <span class="tag tag-equipment">microfono</span> che gracchia.</p>
+            <p><span class="tag tag-cast">MARIA</span>, 65, occhiali da lettura
+              sulla punta del naso, lo guarda da dietro il
+              <span class="tag tag-location">bancone</span>.</p>
+            <p>Il <span class="tag tag-props">forno</span> scoppietta. Una
+              <span class="tag tag-vfx">luce calda</span> taglia la stanza.
+              <span class="tag tag-sound">Risate in sottofondo</span>.</p>
+          </div>
+        </div>
+
+        <!-- RIGHT: element panel + margin note -->
+        <aside class="element-panel">
+          <h3>Elementi <span class="num">12 in scena</span></h3>
+
+          <div class="cat">
+            <div class="cat-head">
+              <span class="swatch" style="background: var(--c-cast)"></span>Cast
+              <span class="count">3</span>
+            </div>
+            <div class="cat-items">
+              <span class="cat-item">Francesco</span>
+              <span class="cat-item">Giulio</span>
+              <span class="cat-item">Maria</span>
+            </div>
+          </div>
+
+          <div class="cat">
+            <div class="cat-head">
+              <span class="swatch" style="background: var(--c-locations)"></span>Locations
+              <span class="count">2</span>
+            </div>
+            <div class="cat-items">
+              <span class="cat-item">Bancone</span>
+              <span class="cat-item">Palco</span>
+            </div>
+          </div>
+
+          <div class="cat">
+            <div class="cat-head">
+              <span class="swatch" style="background: var(--c-props)"></span>Props
+              <span class="count">3</span>
+            </div>
+            <div class="cat-items">
+              <span class="cat-item">Pala</span>
+              <span class="cat-item">Pizza fumante</span>
+              <span class="cat-item ai">Forno</span>
+            </div>
+          </div>
+
+          <div class="cat">
+            <div class="cat-head">
+              <span class="swatch" style="background: var(--c-vfx)"></span>VFX
+              <span class="count">1</span>
+            </div>
+            <div class="cat-items">
+              <span class="cat-item ai">Luce calda</span>
+            </div>
+          </div>
+
+          <div class="note">
+            <div class="head">
+              <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Cesare
+            </div>
+            <div class="body">
+              Ho taggato <em>"luce calda"</em> come VFX, ma potrebbe essere
+              <b>fotografia</b> (luce pratica del forno). Confermi?
+            </div>
+            <div class="actions">
+              <span class="accept">Sì, sposta in Fotografia</span>
+              <span class="reject">Mantieni VFX</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <div class="trace">
+      <span class="pulse"></span>
+      <span class="what"><b>Cesare</b> · sta confrontando il breakdown con il treatment</span>
+      <a>Manifest</a>
+      <span class="save"><span class="dot"></span>Auto-tagged 14:32</span>
+    </div>
+
+    <script>
+      const topStrip = document.getElementById("topStrip");
+      const actionBar = document.querySelector(".action-bar");
+      const onScroll = () => {
+        const y = window.scrollY;
+        topStrip?.classList.toggle("is-scrolled", y > 8);
+        actionBar?.classList.toggle("is-stuck", y > 120);
+      };
+      document.addEventListener("scroll", onScroll, { passive: true });
+    </script>
+  </body>
+</html>

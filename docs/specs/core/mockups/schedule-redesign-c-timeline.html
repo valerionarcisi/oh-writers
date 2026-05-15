@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Piano di Lavorazione · C · Timeline</title>
+    <meta name="viewport" content="width=1600, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,1,500&family=Inter:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root{
+        --paper-1:#f5f3ee;--paper-2:#ebe9e3;--paper-3:#e2dfd6;--page:#ffffff;
+        --ink-1:#1c1a17;--ink-2:#44413c;--ink-3:#71706a;--ink-4:#a09e96;
+        --line:#d8d6cd;--line-soft:#e3e1d7;
+        --clay:#8b3a1a;--leaf:#5a6b3c;
+        --flag-white:#fbfaf6;--flag-yellow:#e6c47a;--flag-blue:#6b8aa8;--flag-green:#8aa066;--flag-pink:#d39ab5;--flag-red:#c06a55;--flag-grey:#a09e96;
+        --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:48px;
+        --font-sans:"Inter",sans-serif;--font-display:"Fraunces",Georgia,serif;--font-mono:"Courier Prime",monospace;
+        --radius-sm:4px;--radius-md:8px;
+        --col-w:48px;
+      }
+      *{box-sizing:border-box}
+      html,body{margin:0;background:var(--paper-1);color:var(--ink-1);font-family:var(--font-sans);font-size:14px;line-height:1.55}
+      button{font-family:inherit;color:inherit;background:transparent;border:0;cursor:pointer;padding:0}
+
+      .topbar{position:sticky;top:0;z-index:40;height:48px;background:var(--paper-1);border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 var(--space-6)}
+      .brand{display:flex;align-items:center;gap:var(--space-3)}
+      .brand-mark{width:22px;height:22px;border-radius:50%;background:var(--ink-1);color:var(--paper-1);display:grid;place-items:center;font-family:var(--font-display);font-style:italic;font-size:13px;font-weight:600}
+      .breadcrumb{display:flex;align-items:center;gap:var(--space-2);font-size:13px;color:var(--ink-3)}
+      .breadcrumb-project{font-family:var(--font-display);font-style:italic;color:var(--ink-1)}
+      .breadcrumb-section{color:var(--ink-1);font-weight:500}
+      .topbar-right{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-3)}
+      .save-pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+      .save-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--leaf)}
+
+      .viewbar{position:sticky;top:48px;z-index:30;background:var(--paper-1);border-bottom:1px solid var(--line);padding:var(--space-2) var(--space-6);display:flex;align-items:center;gap:var(--space-3)}
+      .segmented{display:inline-flex;background:var(--paper-2);border-radius:var(--radius-sm);padding:2px}
+      .segmented button{height:26px;padding:0 12px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.05em;border-radius:3px}
+      .segmented button.is-active{background:var(--page);color:var(--ink-1);box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+      .viewbar-right{margin-inline-start:auto;display:inline-flex;align-items:center;gap:var(--space-2)}
+      .filter{height:28px;padding:0 10px;border-radius:var(--radius-sm);font-size:12px;color:var(--ink-3);font-family:var(--font-mono);display:inline-flex;align-items:center;gap:6px}
+      .filter:hover{background:var(--paper-2);color:var(--ink-1)}
+      .version-pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:var(--paper-2);font-family:var(--font-mono);font-size:11px;color:var(--ink-2)}
+      .version-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--clay)}
+
+      main{padding:var(--space-6) var(--space-6) var(--space-10);max-width:1700px;margin:0 auto}
+      .eyebrow-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--space-4)}
+      .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.12em;color:var(--ink-3);text-transform:uppercase}
+      .eyebrow strong{color:var(--ink-1)}
+
+      .timeline{background:var(--page);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden}
+      .tl-scroll{overflow-x:auto}
+      .tl-grid{display:grid;grid-template-columns:220px repeat(26, var(--col-w));min-width:max-content}
+
+      /* Header */
+      .tl-corner{padding:var(--space-3) var(--space-4);background:var(--paper-1);border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.1em;position:sticky;left:0;z-index:3}
+      .tl-day-col{border-bottom:1px solid var(--line);border-right:1px solid var(--line-soft);background:var(--paper-1);padding:var(--space-2) 6px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--ink-3);position:relative}
+      .tl-day-col .num{display:block;font-size:12px;color:var(--ink-1);font-weight:700;letter-spacing:0.04em}
+      .tl-day-col.is-weekend{background:var(--paper-2);color:var(--ink-4)}
+      .tl-day-col.is-today{box-shadow:inset 0 -3px 0 var(--clay)}
+
+      /* Row group label */
+      .tl-rowhead{padding:var(--space-3) var(--space-4);background:var(--paper-1);border-right:1px solid var(--line);border-bottom:1px solid var(--line-soft);font-family:var(--font-mono);font-size:11px;color:var(--ink-2);letter-spacing:0.06em;text-transform:uppercase;font-weight:700;position:sticky;left:0;z-index:2;display:flex;align-items:center;gap:var(--space-2)}
+      .tl-rowhead small{font-family:var(--font-mono);font-size:10px;color:var(--ink-4);font-weight:400;text-transform:none;letter-spacing:0}
+      .tl-cell{border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);background:var(--page);height:42px;position:relative}
+      .tl-cell.is-weekend{background:var(--paper-1)}
+
+      /* Bars */
+      .bar{position:absolute;top:8px;bottom:8px;border-radius:3px;background:var(--flag-grey);color:var(--paper-1);font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;padding:0 8px;letter-spacing:0.04em;cursor:grab;box-shadow:0 1px 2px rgba(28,26,23,0.08)}
+      .bar[data-c="yellow"]{background:var(--flag-yellow);color:var(--ink-1)}
+      .bar[data-c="white"]{background:var(--flag-white);color:var(--ink-1);border:1px solid var(--line)}
+      .bar[data-c="blue"]{background:var(--flag-blue)}
+      .bar[data-c="green"]{background:var(--flag-green)}
+      .bar[data-c="pink"]{background:var(--flag-pink);color:var(--ink-1)}
+      .bar[data-c="red"]{background:var(--flag-red)}
+      .bar.is-prep{background:repeating-linear-gradient(45deg,var(--paper-2) 0 6px,var(--paper-3) 6px 12px);color:var(--ink-2);border:1px dashed var(--line)}
+      .bar.is-travel{background:var(--ink-4);color:var(--paper-1)}
+      .bar b{font-weight:700;margin-inline-end:4px}
+
+      /* Milestones (markers above grid) */
+      .milestones{display:grid;grid-template-columns:220px repeat(26,var(--col-w));align-items:center;background:var(--page);border-bottom:1px solid var(--line)}
+      .ms-label{padding:var(--space-2) var(--space-4);font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.1em;background:var(--paper-1);border-right:1px solid var(--line);position:sticky;left:0;z-index:2}
+      .ms-cell{height:32px;position:relative;border-right:1px solid var(--line-soft)}
+      .ms{position:absolute;top:50%;transform:translate(-50%,-50%);font-family:var(--font-display);font-style:italic;font-size:11px;color:var(--clay);white-space:nowrap;background:var(--paper-1);padding:2px 8px;border:1px solid var(--clay);border-radius:999px}
+      .ms::before{content:"";position:absolute;left:50%;bottom:-6px;width:1px;height:6px;background:var(--clay)}
+
+      /* Footer KPIs */
+      .kpis-row{display:grid;grid-template-columns:220px repeat(26,var(--col-w));border-top:1px solid var(--line);background:var(--paper-1)}
+      .kpis-label{padding:var(--space-2) var(--space-4);font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.1em;border-right:1px solid var(--line);position:sticky;left:0;z-index:2;background:var(--paper-1)}
+      .kpi-cell{border-right:1px solid var(--line-soft);padding:4px 2px;text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--ink-2)}
+      .kpi-bar{height:18px;background:var(--paper-2);border-radius:2px;position:relative;overflow:hidden}
+      .kpi-bar i{display:block;height:100%;background:var(--leaf);border-radius:2px}
+      .kpi-bar.is-over i{background:var(--flag-red)}
+      .kpi-bar span{position:absolute;inset:0;display:grid;place-items:center;font-size:9px;color:var(--ink-1);font-weight:700}
+
+      .legend-row{display:flex;gap:var(--space-4);margin-top:var(--space-4);font-family:var(--font-mono);font-size:11px;color:var(--ink-3);align-items:center;flex-wrap:wrap}
+      .leg{display:inline-flex;align-items:center;gap:6px}
+      .leg .sw{width:14px;height:10px;border-radius:2px;background:var(--flag-grey)}
+      .leg[data-c="yellow"] .sw{background:var(--flag-yellow)}
+      .leg[data-c="white"] .sw{background:var(--flag-white);border:1px solid var(--line)}
+      .leg[data-c="blue"] .sw{background:var(--flag-blue)}
+      .leg[data-c="green"] .sw{background:var(--flag-green)}
+      .leg[data-c="pink"] .sw{background:var(--flag-pink)}
+      .leg[data-c="red"] .sw{background:var(--flag-red)}
+      .leg.prep .sw{background:repeating-linear-gradient(45deg,var(--paper-2) 0 4px,var(--paper-3) 4px 8px);border:1px dashed var(--line)}
+      .leg.travel .sw{background:var(--ink-4)}
+
+      .cesare-banner{margin-top:var(--space-4);background:linear-gradient(180deg,var(--page),var(--paper-1));border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4);display:flex;align-items:center;gap:var(--space-4)}
+      .cesare-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--leaf);white-space:nowrap}
+      .cesare-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--leaf)}
+      .cesare-banner p{margin:0;font-family:var(--font-display);font-style:italic;font-size:15px;color:var(--ink-1);flex:1}
+      .cesare-banner b{font-family:var(--font-mono);font-style:normal;font-weight:700;color:var(--ink-1);font-size:13px}
+      .cesare-banner .apply{background:var(--ink-1);color:var(--paper-1);font-family:var(--font-mono);font-size:11px;padding:6px 12px;border-radius:var(--radius-sm)}
+      .cesare-banner .ignore{color:var(--ink-3);font-family:var(--font-mono);font-size:11px;padding:6px 12px}
+
+      .dock{position:fixed;bottom:var(--space-5);left:50%;transform:translateX(-50%);background:var(--ink-1);color:var(--paper-1);border-radius:999px;padding:6px 8px 6px 16px;display:inline-flex;align-items:center;gap:var(--space-3);z-index:50;box-shadow:0 12px 32px rgba(28,26,23,0.25)}
+      .dock-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;color:var(--ink-4);text-transform:uppercase}
+      .dock-btn{padding:6px 12px;border-radius:999px;font-family:var(--font-mono);font-size:11px;color:var(--paper-1)}
+      .dock-btn.primary{background:var(--paper-1);color:var(--ink-1);font-weight:600}
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark">C</div><div class="breadcrumb"><span class="breadcrumb-project">Il Ritorno della Quercia</span><span>·</span><span class="breadcrumb-section">Piano di Lavorazione</span></div></div>
+      <div></div>
+      <div class="topbar-right"><span class="save-pill">Salvato · 2 min fa</span></div>
+    </div>
+
+    <div class="viewbar">
+      <div class="segmented">
+        <button>Strip Board</button>
+        <button>Calendario</button>
+        <button class="is-active">Timeline</button>
+        <button>Giornata</button>
+      </div>
+      <div class="viewbar-right">
+        <button class="filter">Per location ▾</button>
+        <button class="filter">Zoom: Giornaliero ▾</button>
+        <div class="version-pill"><span class="dot"></span>v3 · 14 mag 2026</div>
+      </div>
+    </div>
+
+    <main>
+      <header class="eyebrow-row">
+        <span class="eyebrow">PIANO DI RIPRESA · <strong>TIMELINE</strong> · 02 GIU → 28 GIU 2026 · 4 LOCATION</span>
+        <span class="eyebrow">SCORRI →</span>
+      </header>
+
+      <section class="timeline" aria-label="Timeline di produzione">
+        <div class="tl-scroll">
+
+          <!-- Milestones row -->
+          <div class="milestones">
+            <div class="ms-label">Milestone</div>
+            <div class="ms-cell"></div><div class="ms-cell"><span class="ms">Inizio riprese</span></div>
+            <div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div>
+            <div class="ms-cell"><span class="ms">Move Toscana</span></div>
+            <div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div>
+            <div class="ms-cell"><span class="ms">Settimana stunt</span></div>
+            <div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div>
+            <div class="ms-cell"><span class="ms">Block lago</span></div>
+            <div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div><div class="ms-cell"></div>
+            <div class="ms-cell"><span class="ms">Wrap</span></div>
+          </div>
+
+          <!-- Header -->
+          <div class="tl-grid">
+            <div class="tl-corner">Giugno 2026</div>
+            <div class="tl-day-col"><span class="num">02</span>Mar</div>
+            <div class="tl-day-col is-today"><span class="num">03</span>Mer</div>
+            <div class="tl-day-col"><span class="num">04</span>Gio</div>
+            <div class="tl-day-col"><span class="num">05</span>Ven</div>
+            <div class="tl-day-col is-weekend"><span class="num">06</span>Sab</div>
+            <div class="tl-day-col is-weekend"><span class="num">07</span>Dom</div>
+            <div class="tl-day-col"><span class="num">08</span>Lun</div>
+            <div class="tl-day-col"><span class="num">09</span>Mar</div>
+            <div class="tl-day-col"><span class="num">10</span>Mer</div>
+            <div class="tl-day-col"><span class="num">11</span>Gio</div>
+            <div class="tl-day-col"><span class="num">12</span>Ven</div>
+            <div class="tl-day-col is-weekend"><span class="num">13</span>Sab</div>
+            <div class="tl-day-col is-weekend"><span class="num">14</span>Dom</div>
+            <div class="tl-day-col"><span class="num">15</span>Lun</div>
+            <div class="tl-day-col"><span class="num">16</span>Mar</div>
+            <div class="tl-day-col"><span class="num">17</span>Mer</div>
+            <div class="tl-day-col"><span class="num">18</span>Gio</div>
+            <div class="tl-day-col"><span class="num">19</span>Ven</div>
+            <div class="tl-day-col is-weekend"><span class="num">20</span>Sab</div>
+            <div class="tl-day-col is-weekend"><span class="num">21</span>Dom</div>
+            <div class="tl-day-col"><span class="num">22</span>Lun</div>
+            <div class="tl-day-col"><span class="num">23</span>Mar</div>
+            <div class="tl-day-col"><span class="num">24</span>Mer</div>
+            <div class="tl-day-col"><span class="num">25</span>Gio</div>
+            <div class="tl-day-col"><span class="num">26</span>Ven</div>
+            <div class="tl-day-col"><span class="num">27</span>Sab</div>
+
+            <!-- Row: CASCINA -->
+            <div class="tl-rowhead">Cascina<small>3 giorni · 9 scene</small></div>
+            <div class="tl-cell"><div class="bar is-prep" style="left:4px;right:4px">PREP</div></div>
+            <div class="tl-cell"><div class="bar" data-c="yellow" style="left:4px;right:-44px"><b>G01</b> EXT/INT giorno</div></div>
+            <div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="blue" style="left:4px;right:4px"><b>G02</b> INT notte</div></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+
+            <!-- Row: BOSCO -->
+            <div class="tl-rowhead">Bosco<small>2 giorni · 5 scene</small></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="green" style="left:4px;right:-44px"><b>G03</b> EXT giorno/magic</div></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"><div class="bar is-travel" style="left:4px;right:4px">MOVE</div></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+
+            <!-- Row: PAESE -->
+            <div class="tl-rowhead">Paese (Toscana)<small>3 giorni · 9 scene</small></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="yellow" style="left:4px;right:-44px"><b>G04</b> Piazza giorno</div></div>
+            <div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="blue" style="left:4px;right:-44px"><b>G05</b> Piazza notte</div></div>
+            <div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+
+            <!-- Row: CAMPI -->
+            <div class="tl-rowhead">Campi e strade<small>2 giorni · 4 scene · stunt</small></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="green" style="left:4px;right:-44px"><b>G07</b> Campi</div></div>
+            <div class="tl-cell"><div class="bar" data-c="red" style="left:4px;right:4px"><b>G08</b> STUNT</div></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+
+            <!-- Row: CASA -->
+            <div class="tl-rowhead">Casa Bianca<small>3 giorni · 7 scene</small></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="white" style="left:4px;right:-44px"><b>G09</b> INT giorno</div></div>
+            <div class="tl-cell"><div class="bar" data-c="blue" style="left:4px;right:-44px"><b>G10</b> INT notte</div></div>
+            <div class="tl-cell"><div class="bar" data-c="yellow" style="left:4px;right:4px"><b>G11</b> Giardino</div></div>
+            <div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+
+            <!-- Row: LAGO -->
+            <div class="tl-rowhead">Lago<small>2 giorni · 4 scene · magic hour</small></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+            <div class="tl-cell"><div class="bar" data-c="pink" style="left:4px;right:-44px"><b>G12</b> Lago magic</div></div>
+            <div class="tl-cell"><div class="bar" data-c="yellow" style="left:4px;right:4px"><b>G13</b> Spiaggia</div></div>
+            <div class="tl-cell is-weekend"></div><div class="tl-cell is-weekend"></div>
+            <div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div><div class="tl-cell"></div>
+          </div>
+
+          <!-- KPI row -->
+          <div class="kpis-row">
+            <div class="kpis-label">Ore stimate / giornata</div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>prep</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:95%"></i><span>9h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar is-over"><i style="width:100%"></i><span>11h15</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:80%"></i><span>8h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:40%"></i><span>4h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:90%"></i><span>9h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar is-over"><i style="width:100%"></i><span>10h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:95%"></i><span>9h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:85%"></i><span>8h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar is-over"><i style="width:100%"></i><span>10h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:85%"></i><span>8h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:90%"></i><span>9h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:75%"></i><span>7h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:80%"></i><span>8h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:65%"></i><span>6h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:0%"></i><span>—</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:85%"></i><span>8h30</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:90%"></i><span>9h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:70%"></i><span>7h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:60%"></i><span>6h</span></div></div>
+            <div class="kpi-cell"><div class="kpi-bar"><i style="width:50%"></i><span>WRAP</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="legend-row">
+        <span class="leg" data-c="yellow"><span class="sw"></span>Est. giorno</span>
+        <span class="leg" data-c="white"><span class="sw"></span>Int. giorno</span>
+        <span class="leg" data-c="blue"><span class="sw"></span>Int. notte</span>
+        <span class="leg" data-c="green"><span class="sw"></span>Est. notte / natura</span>
+        <span class="leg" data-c="pink"><span class="sw"></span>Magic hour</span>
+        <span class="leg" data-c="red"><span class="sw"></span>Stunt / VFX</span>
+        <span class="leg prep"><span class="sw"></span>Prep</span>
+        <span class="leg travel"><span class="sw"></span>Move / travel</span>
+      </div>
+
+      <div class="cesare-banner">
+        <span class="cesare-tag">Cesare</span>
+        <p>La <b>Settimana 2</b> ha tre giornate sopra le 9h. Posso ridistribuire <b>SC.36</b> e <b>SC.41</b> per scendere a 8h45 media senza spostare i milestone Toscana e Stunt.</p>
+        <button class="apply">Mostra simulazione</button>
+        <button class="ignore">Ignora</button>
+      </div>
+    </main>
+
+    <div class="dock">
+      <span class="dock-label">PIANO DI LAVORAZIONE</span>
+      <button class="dock-btn primary">Rigenera</button>
+      <button class="dock-btn">Esporta</button>
+      <button class="dock-btn">Stampa</button>
+    </div>
+  </body>
+</html>

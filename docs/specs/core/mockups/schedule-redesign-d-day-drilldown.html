@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Piano di Lavorazione · D · Giornata</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,1,500;9..144,1,600&family=Inter:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root{
+        --paper-1:#f5f3ee;--paper-2:#ebe9e3;--paper-3:#e2dfd6;--page:#ffffff;
+        --ink-1:#1c1a17;--ink-2:#44413c;--ink-3:#71706a;--ink-4:#a09e96;
+        --line:#d8d6cd;--line-soft:#e3e1d7;
+        --clay:#8b3a1a;--leaf:#5a6b3c;
+        --flag-yellow:#e6c47a;--flag-blue:#6b8aa8;--flag-green:#8aa066;--flag-red:#c06a55;--flag-white:#fbfaf6;
+        --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:48px;
+        --font-sans:"Inter",sans-serif;--font-display:"Fraunces",Georgia,serif;--font-mono:"Courier Prime",monospace;
+        --radius-sm:4px;--radius-md:8px;
+      }
+      *{box-sizing:border-box}
+      html,body{margin:0;background:var(--paper-1);color:var(--ink-1);font-family:var(--font-sans);font-size:14px;line-height:1.55}
+      button{font-family:inherit;color:inherit;background:transparent;border:0;cursor:pointer;padding:0}
+
+      .topbar{position:sticky;top:0;z-index:40;height:48px;background:var(--paper-1);border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 var(--space-6)}
+      .brand{display:flex;align-items:center;gap:var(--space-3)}
+      .brand-mark{width:22px;height:22px;border-radius:50%;background:var(--ink-1);color:var(--paper-1);display:grid;place-items:center;font-family:var(--font-display);font-style:italic;font-size:13px;font-weight:600}
+      .breadcrumb{display:flex;align-items:center;gap:var(--space-2);font-size:13px;color:var(--ink-3)}
+      .breadcrumb-project{font-family:var(--font-display);font-style:italic;color:var(--ink-1)}
+      .breadcrumb-section{color:var(--ink-1);font-weight:500}
+      .topbar-right{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-3)}
+      .save-pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+      .save-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--leaf)}
+
+      .viewbar{position:sticky;top:48px;z-index:30;background:var(--paper-1);border-bottom:1px solid var(--line);padding:var(--space-2) var(--space-6);display:flex;align-items:center;gap:var(--space-3)}
+      .segmented{display:inline-flex;background:var(--paper-2);border-radius:var(--radius-sm);padding:2px}
+      .segmented button{height:26px;padding:0 12px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.05em;border-radius:3px}
+      .segmented button.is-active{background:var(--page);color:var(--ink-1);box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+      .viewbar-right{margin-inline-start:auto;display:inline-flex;align-items:center;gap:var(--space-2)}
+      .filter{height:28px;padding:0 10px;border-radius:var(--radius-sm);font-size:12px;color:var(--ink-3);font-family:var(--font-mono);display:inline-flex;align-items:center;gap:6px}
+      .filter:hover{background:var(--paper-2);color:var(--ink-1)}
+      .day-nav{display:inline-flex;align-items:center;gap:var(--space-1);font-family:var(--font-mono);font-size:11px;color:var(--ink-2)}
+      .day-nav button{height:24px;padding:0 8px;border-radius:var(--radius-sm)}
+      .day-nav button:hover{background:var(--paper-2)}
+      .version-pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:var(--paper-2);font-family:var(--font-mono);font-size:11px;color:var(--ink-2)}
+      .version-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--clay)}
+
+      main{padding:var(--space-6) var(--space-6) var(--space-10);max-width:1400px;margin:0 auto}
+
+      .hero{display:grid;grid-template-columns:1fr auto;gap:var(--space-6);align-items:end;margin-bottom:var(--space-6)}
+      .hero h1{margin:0;font-family:var(--font-display);font-style:italic;font-weight:500;font-size:48px;line-height:1.05;color:var(--ink-1)}
+      .hero h1 small{display:block;font-family:var(--font-mono);font-style:normal;font-size:11px;color:var(--ink-3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:var(--space-2);font-weight:700}
+      .hero-meta{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-2);font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+      .hero-meta .row{display:flex;gap:var(--space-4)}
+      .hero-meta b{color:var(--ink-1);font-weight:700}
+      .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:var(--leaf);color:var(--paper-1);font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;text-transform:uppercase}
+
+      .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:var(--space-5);align-items:start}
+      .col{display:flex;flex-direction:column;gap:var(--space-5)}
+
+      .card{background:var(--page);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden}
+      .card-head{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line-soft);background:var(--paper-1)}
+      .card-head h3{margin:0;font-family:var(--font-mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+      .card-head .h-meta{font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+      .card-body{padding:var(--space-4)}
+
+      /* Timeline ore */
+      .day-bar{display:flex;align-items:stretch;height:42px;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--paper-1)}
+      .seg{display:flex;align-items:center;justify-content:center;padding:0 var(--space-2);white-space:nowrap}
+      .seg.crew{background:var(--ink-4);color:var(--paper-1);flex:1}
+      .seg.set{background:var(--leaf);flex:3}
+      .seg.shoot{background:var(--clay);flex:8;font-weight:700}
+      .seg.lunch{background:var(--paper-3);color:var(--ink-2);flex:1.5}
+      .seg.wrap{background:var(--ink-3);flex:1}
+      .time-ruler{display:grid;grid-template-columns:repeat(13,1fr);font-family:var(--font-mono);font-size:10px;color:var(--ink-4);padding:6px 0 0;letter-spacing:0.04em}
+      .time-ruler span{text-align:left}
+
+      /* Strip elenco scena */
+      .scenes-list{display:flex;flex-direction:column}
+      .scn{display:grid;grid-template-columns:6px 64px 1fr 90px 60px;align-items:center;min-height:48px;border-bottom:1px solid var(--line-soft);padding:8px 0}
+      .scn:last-child{border-bottom:0}
+      .scn-flag{align-self:stretch;background:var(--flag-yellow)}
+      .scn[data-c="white"] .scn-flag{background:var(--flag-white);border-right:1px solid var(--line)}
+      .scn[data-c="blue"] .scn-flag{background:var(--flag-blue)}
+      .scn[data-c="green"] .scn-flag{background:var(--flag-green)}
+      .scn[data-c="red"] .scn-flag{background:var(--flag-red)}
+      .scn-sc{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink-1);padding-inline-start:var(--space-3);letter-spacing:0.04em}
+      .scn-title{padding-inline-start:var(--space-3)}
+      .scn-title .h{font-family:var(--font-display);font-style:italic;font-weight:500;font-size:15px;color:var(--ink-1)}
+      .scn-title .sub{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+      .scn-cast{font-family:var(--font-mono);font-size:11px;color:var(--ink-2);text-align:right;padding-inline-end:var(--space-3)}
+      .scn-pages{font-family:var(--font-mono);font-size:11px;color:var(--ink-2);text-align:right;padding-inline-end:var(--space-3)}
+
+      /* Cast call */
+      .cast-row{display:grid;grid-template-columns:32px 1fr 80px 70px 70px;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--line-soft);font-family:var(--font-mono);font-size:12px}
+      .cast-row:last-child{border-bottom:0}
+      .av{width:28px;height:28px;border-radius:50%;background:var(--clay);color:var(--paper-1);display:grid;place-items:center;font-family:var(--font-mono);font-size:11px;font-weight:700}
+      .av.b{background:var(--flag-blue)}
+      .av.g{background:var(--leaf)}
+      .av.r{background:var(--flag-red)}
+      .av.y{background:var(--flag-yellow);color:var(--ink-1)}
+      .cast-name{display:flex;flex-direction:column;gap:2px}
+      .cast-name .n{font-family:var(--font-display);font-style:italic;font-weight:500;font-size:14px;color:var(--ink-1)}
+      .cast-name .role{color:var(--ink-3);font-size:11px}
+      .cast-time{color:var(--ink-1);font-weight:700}
+      .cast-status{color:var(--ink-3)}
+      .cast-status.ok{color:var(--leaf)}
+      .cast-status.warn{color:var(--flag-red)}
+
+      /* Location */
+      .loc{display:grid;grid-template-columns:120px 1fr;gap:var(--space-4);padding:var(--space-3) 0;border-bottom:1px solid var(--line-soft)}
+      .loc:last-child{border-bottom:0}
+      .loc-thumb{width:120px;height:80px;background:linear-gradient(135deg,var(--paper-2),var(--paper-3));border-radius:var(--radius-sm);display:grid;place-items:center;font-family:var(--font-display);font-style:italic;color:var(--ink-4);font-size:12px}
+      .loc-name{font-family:var(--font-display);font-style:italic;font-weight:500;font-size:16px;color:var(--ink-1)}
+      .loc-addr{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-top:2px;letter-spacing:0.04em}
+      .loc-meta{display:flex;gap:var(--space-3);margin-top:var(--space-2);font-family:var(--font-mono);font-size:11px;color:var(--ink-2)}
+      .loc-meta b{color:var(--ink-1);font-weight:700}
+
+      /* Departments */
+      .dept{display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) 0;border-bottom:1px solid var(--line-soft);font-family:var(--font-mono);font-size:12px}
+      .dept:last-child{border-bottom:0}
+      .dept .lbl{color:var(--ink-3);text-transform:uppercase;letter-spacing:0.08em;font-size:10px}
+      .dept .v{color:var(--ink-1);font-weight:700}
+      .dept .v small{color:var(--ink-3);font-weight:400;margin-inline-start:6px}
+
+      /* Sun */
+      .sun{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-3) 0;font-family:var(--font-mono);font-size:11px;color:var(--ink-2);border-bottom:1px solid var(--line-soft)}
+      .sun:last-child{border-bottom:0}
+      .sun b{color:var(--ink-1);font-weight:700}
+      .sun-row{display:flex;gap:var(--space-4)}
+      .magic{color:var(--clay);font-weight:700}
+
+      /* Cesare */
+      .cesare{background:linear-gradient(180deg,var(--page),var(--paper-1));border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4)}
+      .cesare-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--leaf)}
+      .cesare-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--leaf)}
+      .cesare h4{margin:var(--space-2) 0;font-family:var(--font-display);font-style:italic;font-weight:500;font-size:17px;color:var(--ink-1)}
+      .cesare p{margin:0 0 var(--space-3);font-size:13px;color:var(--ink-2);line-height:1.5}
+      .cesare p b{font-family:var(--font-mono);font-weight:700;color:var(--ink-1);font-size:12px}
+      .cesare-actions{display:flex;gap:var(--space-2)}
+      .cesare-actions .apply{background:var(--ink-1);color:var(--paper-1);font-family:var(--font-mono);font-size:11px;padding:6px 12px;border-radius:var(--radius-sm)}
+      .cesare-actions .ignore{color:var(--ink-3);font-family:var(--font-mono);font-size:11px;padding:6px 12px}
+
+      .dock{position:fixed;bottom:var(--space-5);left:50%;transform:translateX(-50%);background:var(--ink-1);color:var(--paper-1);border-radius:999px;padding:6px 8px 6px 16px;display:inline-flex;align-items:center;gap:var(--space-3);z-index:50;box-shadow:0 12px 32px rgba(28,26,23,0.25)}
+      .dock-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;color:var(--ink-4);text-transform:uppercase}
+      .dock-btn{padding:6px 12px;border-radius:999px;font-family:var(--font-mono);font-size:11px;color:var(--paper-1)}
+      .dock-btn.primary{background:var(--paper-1);color:var(--ink-1);font-weight:600}
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark">C</div><div class="breadcrumb"><span class="breadcrumb-project">Il Ritorno della Quercia</span><span>·</span><span class="breadcrumb-section">Piano · Giornata 02</span></div></div>
+      <div></div>
+      <div class="topbar-right"><span class="save-pill">Salvato · 2 min fa</span></div>
+    </div>
+
+    <div class="viewbar">
+      <div class="segmented">
+        <button>Strip Board</button>
+        <button>Calendario</button>
+        <button>Timeline</button>
+        <button class="is-active">Giornata</button>
+      </div>
+      <div class="viewbar-right">
+        <div class="day-nav"><button>‹ G 01</button><span style="padding:0 var(--space-2)"><b style="color:var(--ink-1);font-family:var(--font-display);font-style:italic;font-size:14px">Giornata 02</b></span><button>G 03 ›</button></div>
+        <button class="filter">Anteprima Call Sheet</button>
+        <div class="version-pill"><span class="dot"></span>v3 · 14 mag 2026</div>
+      </div>
+    </div>
+
+    <main>
+      <header class="hero">
+        <h1><small>GIORNATA 02 · GIOVEDÌ 4 GIUGNO 2026</small>Cascina — notte interna<span style="color:var(--clay);font-size:32px;display:block;margin-top:6px;font-style:italic">4 scene · 7 ⅛ pagine</span></h1>
+        <div class="hero-meta">
+          <span class="status-pill">Pianificata · 1 conflitto</span>
+          <div class="row"><span>Crew call <b>14:00</b></span><span>Shoot <b>15:00</b></span><span>Wrap <b>02:15</b></span></div>
+          <div class="row" style="color:var(--flag-red)">Sforamento previsto · <b>+1h 15m</b></div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div class="col">
+
+          <section class="card">
+            <header class="card-head"><h3>Andamento giornaliero</h3><span class="h-meta">12h 15m totali · pranzo 19:30</span></header>
+            <div class="card-body">
+              <div class="day-bar">
+                <div class="seg crew">Crew call</div>
+                <div class="seg set">Set prep</div>
+                <div class="seg shoot">RIPRESE · SC.8 → SC.14</div>
+                <div class="seg lunch">Pranzo</div>
+                <div class="seg shoot">RIPRESE</div>
+                <div class="seg wrap">Wrap</div>
+              </div>
+              <div class="time-ruler"><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>00</span><span>01</span><span>02</span></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header class="card-head"><h3>Scene della giornata</h3><span class="h-meta">4 scene · 7 ⅛ pag · 11h 15m</span></header>
+            <div class="card-body" style="padding:0">
+              <div class="scenes-list" style="padding:0 var(--space-4)">
+                <div class="scn" data-c="white"><div class="scn-flag"></div><div class="scn-sc">SC. 8</div><div class="scn-title"><div class="h">INT. cascina · camera da letto</div><div class="sub">Notte · cast 1, 2, 3 · 12 inquadrature</div></div><div class="scn-cast">3h 30m</div><div class="scn-pages">2 ⅜ p</div></div>
+                <div class="scn" data-c="blue"><div class="scn-flag"></div><div class="scn-sc">SC. 9</div><div class="scn-title"><div class="h">INT. cascina · corridoio</div><div class="sub">Notte · cast 1, 2 · steadycam</div></div><div class="scn-cast">2h 30m</div><div class="scn-pages">1 ⅝ p</div></div>
+                <div class="scn" data-c="white"><div class="scn-flag"></div><div class="scn-sc">SC. 11</div><div class="scn-title"><div class="h">INT. cascina · cucina</div><div class="sub">Notte · cast 1, 2, 5</div></div><div class="scn-cast">2h</div><div class="scn-pages">1 ⅛ p</div></div>
+                <div class="scn" data-c="blue"><div class="scn-flag"></div><div class="scn-sc">SC. 14</div><div class="scn-title"><div class="h">INT. cascina · cantina</div><div class="sub">Notte · cast 2, 5 · piano effetti speciali (acqua)</div></div><div class="scn-cast">3h 15m</div><div class="scn-pages">2 p</div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header class="card-head"><h3>Cast richiesto · DOOD</h3><span class="h-meta">5 attori</span></header>
+            <div class="card-body" style="padding:0 var(--space-4)">
+              <div class="cast-row"><div class="av">1</div><div class="cast-name"><span class="n">Elena Marchetti</span><span class="role">Anna (protagonista)</span></div><div class="cast-time">12:30</div><div class="cast-status">trucco 13:00</div><div class="cast-status ok">conf.</div></div>
+              <div class="cast-row"><div class="av b">2</div><div class="cast-name"><span class="n">Giorgio Lante</span><span class="role">Tomas</span></div><div class="cast-time">12:30</div><div class="cast-status">trucco 13:15</div><div class="cast-status ok">conf.</div></div>
+              <div class="cast-row"><div class="av r">3</div><div class="cast-name"><span class="n">Marta Bellucci</span><span class="role">Sofia</span></div><div class="cast-time">— —</div><div class="cast-status warn">indisp.</div><div class="cast-status warn">⚠ CONFLITTO</div></div>
+              <div class="cast-row"><div class="av g">5</div><div class="cast-name"><span class="n">Renzo Pasquali</span><span class="role">Il nonno</span></div><div class="cast-time">17:00</div><div class="cast-status">trucco 17:30</div><div class="cast-status ok">conf.</div></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="cesare">
+            <span class="cesare-tag">Cesare · 1 conflitto</span>
+            <h4>Marta Bellucci non è disponibile</h4>
+            <p>La scena <b>SC. 8</b> richiede l'attrice <b>Marta Bellucci (Sofia)</b> che ha bloccato il <b>4 giugno</b> per impegni precedenti. Posso spostare SC.8 al <b>giorno 04</b>, dove il cast è già convocato per scene notturne nella stessa location.</p>
+              <div class="cesare-actions"><button class="apply">Sposta a giorno 04</button><button class="ignore">Tieni così</button></div>
+          </section>
+
+          <section class="card">
+            <header class="card-head"><h3>Location</h3><span class="h-meta">2 set · 1 location</span></header>
+            <div class="card-body">
+              <div class="loc">
+                <div class="loc-thumb">📷 Cascina del Sole</div>
+                <div>
+                  <div class="loc-name">Cascina del Sole</div>
+                  <div class="loc-addr">VIA DEI CIPRESSI 12 · 50050 CERTALDO (FI)</div>
+                  <div class="loc-meta"><span>distanza base <b>42 km</b></span><span>parcheggio <b>OK</b></span><span>permesso <b>fino 03:00</b></span></div>
+                </div>
+              </div>
+              <div class="loc">
+                <div class="loc-thumb" style="background:linear-gradient(135deg,#3a3530,#1c1a17);color:var(--paper-2)">🌙 cantina</div>
+                <div>
+                  <div class="loc-name">Cantina (cascina)</div>
+                  <div class="loc-addr">SET INTERNO · ACCESSO LATERALE</div>
+                  <div class="loc-meta"><span>generatore <b>richiesto</b></span><span>acqua piano <b>SI</b></span></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header class="card-head"><h3>Reparti</h3><span class="h-meta">11 reparti attivi</span></header>
+            <div class="card-body" style="padding:var(--space-2) var(--space-4)">
+              <div class="dept"><span class="lbl">Camera</span><span class="v">Steadycam <small>+ B-cam</small></span></div>
+              <div class="dept"><span class="lbl">Luci</span><span class="v">Notte interna <small>HMI 4K · pratici tungsteno</small></span></div>
+              <div class="dept"><span class="lbl">Suono</span><span class="v">Boom + 4 radio</span></div>
+              <div class="dept"><span class="lbl">Costumi</span><span class="v">Cambio × 2 <small>Anna · Tomas</small></span></div>
+              <div class="dept"><span class="lbl">Trucco</span><span class="v">2 postazioni</span></div>
+              <div class="dept"><span class="lbl">FX</span><span class="v">Acqua per cantina <small>SC. 14</small></span></div>
+              <div class="dept"><span class="lbl">Catering</span><span class="v">22 coperti · 19:30</span></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header class="card-head"><h3>Sole · meteo · magic hour</h3><span class="h-meta">Certaldo · 4 giu</span></header>
+            <div class="card-body" style="padding:var(--space-2) var(--space-4)">
+              <div class="sun"><b>Alba</b> 05:38<span>·</span><b>Tramonto</b> 20:51<span class="sun-row magic">· Magic hour 20:30 → 21:10</span></div>
+              <div class="sun"><b>Meteo</b> sereno · 19° / 26°<span>·</span><b>Pioggia</b> 5%</div>
+              <div class="sun"><b>Luna</b> calante · 78%<span>·</span><b>Vento</b> 8 km/h NE</div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+
+    <div class="dock">
+      <span class="dock-label">GIORNATA 02</span>
+      <button class="dock-btn primary">Genera Call Sheet</button>
+      <button class="dock-btn">PDF</button>
+      <button class="dock-btn">Notifica troupe</button>
+    </div>
+  </body>
+</html>

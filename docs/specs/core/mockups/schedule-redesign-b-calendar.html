@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Piano di Lavorazione · B · Calendario</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,1,500&family=Inter:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee; --paper-2: #ebe9e3; --paper-3: #e2dfd6; --page: #ffffff;
+        --ink-1: #1c1a17; --ink-2: #44413c; --ink-3: #71706a; --ink-4: #a09e96;
+        --line: #d8d6cd; --line-soft: #e3e1d7;
+        --clay: #8b3a1a; --leaf: #5a6b3c;
+        --flag-white:#fbfaf6; --flag-yellow:#e6c47a; --flag-blue:#6b8aa8; --flag-green:#8aa066; --flag-pink:#d39ab5; --flag-red:#c06a55; --flag-grey:#a09e96;
+        --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:48px;
+        --font-sans:"Inter",sans-serif; --font-display:"Fraunces",Georgia,serif; --font-mono:"Courier Prime",monospace;
+        --radius-sm:4px; --radius-md:8px;
+      }
+      *{box-sizing:border-box}
+      html,body{margin:0;background:var(--paper-1);color:var(--ink-1);font-family:var(--font-sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+      button{font-family:inherit;font-size:inherit;color:inherit;background:transparent;border:0;cursor:pointer;padding:0}
+
+      .topbar{position:sticky;top:0;z-index:40;height:48px;background:var(--paper-1);border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 var(--space-6)}
+      .brand{display:flex;align-items:center;gap:var(--space-3)}
+      .brand-mark{width:22px;height:22px;border-radius:50%;background:var(--ink-1);color:var(--paper-1);display:grid;place-items:center;font-family:var(--font-display);font-style:italic;font-size:13px;font-weight:600}
+      .breadcrumb{display:flex;align-items:center;gap:var(--space-2);font-size:13px;color:var(--ink-3)}
+      .breadcrumb-project{font-family:var(--font-display);font-style:italic;color:var(--ink-1)}
+      .breadcrumb-section{color:var(--ink-1);font-weight:500}
+      .topbar-right{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-3)}
+      .save-pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+      .save-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--leaf)}
+
+      .viewbar{position:sticky;top:48px;z-index:30;background:var(--paper-1);border-bottom:1px solid var(--line);padding:var(--space-2) var(--space-6);display:flex;align-items:center;gap:var(--space-3)}
+      .segmented{display:inline-flex;background:var(--paper-2);border-radius:var(--radius-sm);padding:2px}
+      .segmented button{height:26px;padding:0 12px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.05em;border-radius:3px}
+      .segmented button.is-active{background:var(--page);color:var(--ink-1);box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+      .viewbar-right{margin-inline-start:auto;display:inline-flex;align-items:center;gap:var(--space-2)}
+      .filter{height:28px;padding:0 10px;border-radius:var(--radius-sm);font-size:12px;color:var(--ink-3);font-family:var(--font-mono);display:inline-flex;align-items:center;gap:6px}
+      .filter:hover{background:var(--paper-2);color:var(--ink-1)}
+      .version-pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:var(--paper-2);font-family:var(--font-mono);font-size:11px;color:var(--ink-2)}
+      .version-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--clay)}
+
+      main{padding:var(--space-6) var(--space-6) var(--space-10);max-width:1600px;margin:0 auto}
+      .eyebrow-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--space-4)}
+      .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.12em;color:var(--ink-3);text-transform:uppercase}
+      .eyebrow strong{color:var(--ink-1)}
+      .month-nav{display:inline-flex;align-items:center;gap:var(--space-3);font-family:var(--font-display);font-style:italic;font-size:20px;color:var(--ink-1)}
+      .month-nav button{font-family:var(--font-mono);font-size:14px;color:var(--ink-3);padding:4px 8px;border-radius:var(--radius-sm)}
+      .month-nav button:hover{background:var(--paper-2);color:var(--ink-1)}
+
+      .cal{background:var(--page);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden}
+      .cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--paper-1);border-bottom:1px solid var(--line)}
+      .cal-head .dow{padding:var(--space-2) var(--space-3);font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-3);text-align:left}
+      .cal-head .dow:nth-child(n+6){color:var(--ink-4)}
+      .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:160px}
+      .cell{border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);padding:var(--space-2) var(--space-3);display:flex;flex-direction:column;gap:6px;position:relative;background:var(--page)}
+      .cell:nth-child(7n){border-right:0}
+      .cell.is-other{background:var(--paper-1);color:var(--ink-4)}
+      .cell.is-weekend{background:var(--paper-1)}
+      .cell.is-today{box-shadow:inset 0 0 0 2px var(--clay)}
+      .cell-head{display:flex;align-items:center;justify-content:space-between}
+      .cell-date{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);font-weight:700;letter-spacing:0.04em}
+      .cell.is-today .cell-date{color:var(--clay)}
+      .day-tag{font-family:var(--font-mono);font-size:10px;color:var(--paper-1);background:var(--ink-1);padding:1px 6px;border-radius:999px;letter-spacing:0.06em}
+      .day-tag.rest{background:var(--ink-4)}
+      .day-tag.prep{background:var(--leaf)}
+      .day-tag.travel{background:var(--flag-blue)}
+
+      .pills{display:flex;flex-direction:column;gap:3px;overflow:hidden}
+      .pill{display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:3px;background:var(--paper-1);font-family:var(--font-mono);font-size:10px;color:var(--ink-2);border-left:3px solid var(--flag-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pill[data-c="yellow"]{border-left-color:var(--flag-yellow)}
+      .pill[data-c="white"]{border-left-color:var(--flag-grey)}
+      .pill[data-c="blue"]{border-left-color:var(--flag-blue)}
+      .pill[data-c="green"]{border-left-color:var(--flag-green)}
+      .pill[data-c="pink"]{border-left-color:var(--flag-pink)}
+      .pill[data-c="red"]{border-left-color:var(--flag-red);background:rgba(192,106,85,0.08)}
+      .pill b{color:var(--ink-1);font-weight:700}
+
+      .cell-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:10px;color:var(--ink-4);letter-spacing:0.06em;text-transform:uppercase}
+      .cell-foot b{color:var(--ink-2);font-weight:700}
+      .cell-conflict{color:var(--flag-red)}
+
+      /* Side rail */
+      .layout{display:grid;grid-template-columns:1fr 300px;gap:var(--space-5);align-items:start}
+      .side{display:flex;flex-direction:column;gap:var(--space-4);position:sticky;top:96px}
+      .panel{background:var(--page);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4)}
+      .panel h4{margin:0 0 var(--space-3);font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+      .summary{display:flex;flex-direction:column;gap:var(--space-2);font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+      .summary-row{display:flex;justify-content:space-between}
+      .summary-row b{color:var(--ink-1);font-weight:700}
+
+      .cesare{background:linear-gradient(180deg,var(--page),var(--paper-1));border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4)}
+      .cesare-tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--leaf)}
+      .cesare-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--leaf)}
+      .cesare h4{margin:var(--space-2) 0;font-family:var(--font-display);font-style:italic;font-size:16px;font-weight:500}
+      .cesare-card{background:var(--paper-1);border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:var(--space-3)}
+      .cesare-card p{margin:0 0 var(--space-2);font-size:13px;color:var(--ink-2)}
+      .cesare-card b{font-family:var(--font-mono);font-weight:700;color:var(--ink-1);font-size:12px}
+      .cesare-actions button{font-family:var(--font-mono);font-size:11px;padding:4px 10px;border-radius:var(--radius-sm)}
+      .cesare-actions .apply{background:var(--ink-1);color:var(--paper-1)}
+      .cesare-actions .ignore{color:var(--ink-3);margin-inline-start:var(--space-2)}
+
+      .dock{position:fixed;bottom:var(--space-5);left:50%;transform:translateX(-50%);background:var(--ink-1);color:var(--paper-1);border-radius:999px;padding:6px 8px 6px 16px;display:inline-flex;align-items:center;gap:var(--space-3);z-index:50;box-shadow:0 12px 32px rgba(28,26,23,0.25)}
+      .dock-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;color:var(--ink-4);text-transform:uppercase}
+      .dock-btn{padding:6px 12px;border-radius:999px;font-family:var(--font-mono);font-size:11px;color:var(--paper-1)}
+      .dock-btn.primary{background:var(--paper-1);color:var(--ink-1);font-weight:600}
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">C</div>
+        <div class="breadcrumb"><span class="breadcrumb-project">Il Ritorno della Quercia</span><span>·</span><span class="breadcrumb-section">Piano di Lavorazione</span></div>
+      </div>
+      <div></div>
+      <div class="topbar-right"><span class="save-pill">Salvato · 2 min fa</span></div>
+    </div>
+
+    <div class="viewbar">
+      <div class="segmented">
+        <button>Strip Board</button>
+        <button class="is-active">Calendario</button>
+        <button>Timeline</button>
+        <button>Giornata</button>
+      </div>
+      <div class="viewbar-right">
+        <button class="filter">◀ Settimana</button>
+        <button class="filter">Mese ▾</button>
+        <div class="version-pill"><span class="dot"></span>v3 · 14 mag 2026</div>
+      </div>
+    </div>
+
+    <main>
+      <header class="eyebrow-row">
+        <div class="month-nav"><button>‹</button><span>Giugno 2026</span><button>›</button></div>
+        <span class="eyebrow">PIANO DI RIPRESA · <strong>18 GIORNATE</strong> · INIZIO 03 GIU · FINE 28 GIU</span>
+      </header>
+
+      <div class="layout">
+        <section class="cal" aria-label="Calendario mensile">
+          <div class="cal-head">
+            <div class="dow">Lun</div><div class="dow">Mar</div><div class="dow">Mer</div><div class="dow">Gio</div><div class="dow">Ven</div><div class="dow">Sab</div><div class="dow">Dom</div>
+          </div>
+          <div class="cal-grid">
+            <div class="cell is-other"><div class="cell-head"><span class="cell-date">26</span></div></div>
+            <div class="cell is-other"><div class="cell-head"><span class="cell-date">27</span></div></div>
+            <div class="cell is-other"><div class="cell-head"><span class="cell-date">28</span></div></div>
+            <div class="cell is-other"><div class="cell-head"><span class="cell-date">29</span></div></div>
+            <div class="cell is-other"><div class="cell-head"><span class="cell-date">30</span></div></div>
+            <div class="cell is-other is-weekend"><div class="cell-head"><span class="cell-date">31</span></div></div>
+            <div class="cell is-other is-weekend"><div class="cell-head"><span class="cell-date">01</span></div></div>
+
+            <div class="cell"><div class="cell-head"><span class="cell-date">02</span><span class="day-tag prep">PREP</span></div><div class="pills"><div class="pill" data-c="grey">Scout · cascina</div><div class="pill" data-c="grey">Prove cast</div></div></div>
+            <div class="cell is-today"><div class="cell-head"><span class="cell-date">03</span><span class="day-tag">G 01</span></div><div class="pills"><div class="pill" data-c="yellow"><b>SC.1</b> Cascina · alba</div><div class="pill" data-c="yellow"><b>SC.2</b> Cascina aia</div><div class="pill" data-c="white"><b>SC.4</b> Cucina</div><div class="pill" data-c="white">+2</div></div><div class="cell-foot"><span>5 SCENE · 6⅜p</span><b>9h30</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">04</span><span class="day-tag">G 02</span></div><div class="pills"><div class="pill" data-c="red"><b>SC.8</b> Camera notte ⚠</div><div class="pill" data-c="blue"><b>SC.9</b> Corridoio</div><div class="pill" data-c="white"><b>SC.11</b> Cucina</div><div class="pill" data-c="blue">+1</div></div><div class="cell-foot cell-conflict"><span>Cast 3 ⚠</span><b>11h15</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">05</span><span class="day-tag">G 03</span></div><div class="pills"><div class="pill" data-c="green"><b>SC.16</b> Bosco radura</div><div class="pill" data-c="green"><b>SC.17</b> Sentiero</div><div class="pill" data-c="pink"><b>SC.19</b> Magic hour</div></div><div class="cell-foot"><span>3 SCENE · 5⅛p</span><b>8h</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">06</span><span class="day-tag travel">TRA</span></div><div class="pills"><div class="pill" data-c="grey">Trasferimento → Toscana</div></div><div class="cell-foot"><span>Company move</span><b>4h</b></div></div>
+            <div class="cell is-weekend"><div class="cell-head"><span class="cell-date">07</span><span class="day-tag rest">RIP</span></div><div class="pills"><div class="pill" data-c="grey" style="font-style:italic;border-left-color:transparent;color:var(--ink-4)">riposo</div></div></div>
+            <div class="cell is-weekend"><div class="cell-head"><span class="cell-date">08</span><span class="day-tag rest">RIP</span></div></div>
+
+            <div class="cell"><div class="cell-head"><span class="cell-date">09</span><span class="day-tag">G 04</span></div><div class="pills"><div class="pill" data-c="yellow"><b>SC.22</b> Piazza paese</div><div class="pill" data-c="yellow"><b>SC.23</b> Bar esterno</div><div class="pill" data-c="white"><b>SC.24</b> Bar interno</div></div><div class="cell-foot"><span>3 SCENE · 5p</span><b>9h</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">10</span><span class="day-tag">G 05</span></div><div class="pills"><div class="pill" data-c="yellow"><b>SC.25</b> Piazza notte</div><div class="pill" data-c="blue"><b>SC.27</b> Vicolo</div><div class="pill" data-c="blue"><b>SC.28</b> Portone</div></div><div class="cell-foot"><span>3 SCENE · 4½p</span><b>10h</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">11</span><span class="day-tag">G 06</span></div><div class="pills"><div class="pill" data-c="white"><b>SC.30</b> Chiesa</div><div class="pill" data-c="white"><b>SC.31</b> Sacrestia</div><div class="pill" data-c="yellow"><b>SC.32</b> Sagrato</div></div><div class="cell-foot"><span>3 SCENE · 6p</span><b>9h30</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">12</span><span class="day-tag">G 07</span></div><div class="pills"><div class="pill" data-c="green"><b>SC.34</b> Campo grano</div><div class="pill" data-c="green"><b>SC.35</b> Campo grano</div><div class="pill" data-c="pink"><b>SC.36</b> Tramonto</div></div><div class="cell-foot"><span>3 SCENE · 4⅜p</span><b>8h30</b></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">13</span><span class="day-tag">G 08</span></div><div class="pills"><div class="pill" data-c="red"><b>SC.40</b> Stunt cavallo ⚠</div><div class="pill" data-c="yellow"><b>SC.41</b> Strada bianca</div></div><div class="cell-foot"><span>2 SCENE · 5p · VFX</span><b>10h</b></div></div>
+            <div class="cell is-weekend"><div class="cell-head"><span class="cell-date">14</span><span class="day-tag rest">RIP</span></div></div>
+            <div class="cell is-weekend"><div class="cell-head"><span class="cell-date">15</span><span class="day-tag rest">RIP</span></div></div>
+
+            <div class="cell"><div class="cell-head"><span class="cell-date">16</span><span class="day-tag">G 09</span></div><div class="pills"><div class="pill" data-c="white"><b>SC.42</b> Casa Bianca / salone</div><div class="pill" data-c="white"><b>SC.43</b> Casa Bianca / scale</div></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">17</span><span class="day-tag">G 10</span></div><div class="pills"><div class="pill" data-c="blue"><b>SC.45</b> Salone notte</div><div class="pill" data-c="blue"><b>SC.46</b> Studio</div><div class="pill" data-c="blue"><b>SC.47</b> Studio</div></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">18</span><span class="day-tag">G 11</span></div><div class="pills"><div class="pill" data-c="yellow"><b>SC.50</b> Giardino</div><div class="pill" data-c="yellow"><b>SC.51</b> Giardino</div></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">19</span><span class="day-tag">G 12</span></div><div class="pills"><div class="pill" data-c="pink"><b>SC.53</b> Lago magic</div><div class="pill" data-c="green"><b>SC.54</b> Lago tramonto</div></div></div>
+            <div class="cell"><div class="cell-head"><span class="cell-date">20</span><span class="day-tag">G 13</span></div><div class="pills"><div class="pill" data-c="white"><b>SC.55</b> Pontile</div><div class="pill" data-c="yellow"><b>SC.56</b> Spiaggia</div></div></div>
+            <div class="cell is-weekend"><div class="cell-head"><span class="cell-date">21</span><span class="day-tag rest">RIP</span></div></div>
+            <div class="cell is-weekend"><div class="cell-head"><span class="cell-date">22</span><span class="day-tag rest">RIP</span></div></div>
+          </div>
+        </section>
+
+        <aside class="side">
+          <div class="panel">
+            <h4>Riepilogo mese</h4>
+            <div class="summary">
+              <div class="summary-row"><span>Giornate</span><b>13 / 18</b></div>
+              <div class="summary-row"><span>Scene</span><b>42 / 62</b></div>
+              <div class="summary-row"><span>Pagine</span><b>76 ⅜ / 114 ⅜</b></div>
+              <div class="summary-row"><span>Ore stimate</span><b>112h</b></div>
+              <div class="summary-row"><span>Company move</span><b>3</b></div>
+              <div class="summary-row" style="color:var(--flag-red)"><span>Conflitti</span><b>2</b></div>
+            </div>
+          </div>
+          <div class="cesare">
+            <span class="cesare-tag">Cesare</span>
+            <h4>Bilancia il carico settimana 2</h4>
+            <div class="cesare-card">
+              <p>Settimana <b>09–13 giu</b> ha tre giornate sopra le <b>9h30</b>. Suggerisco di spostare <b>SC.36</b> (magic hour, 1⅛p) al giorno <b>12</b>: stesso campo, libera 40 min al giorno 07.</p>
+              <div class="cesare-actions"><button class="apply">Applica</button><button class="ignore">Ignora</button></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <div class="dock">
+      <span class="dock-label">PIANO DI LAVORAZIONE</span>
+      <button class="dock-btn primary">Rigenera</button>
+      <button class="dock-btn">Esporta</button>
+      <button class="dock-btn">Stampa</button>
+    </div>
+  </body>
+</html>

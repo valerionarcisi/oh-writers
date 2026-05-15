@@ -76,4 +76,40 @@ describe("resourceTotal", () => {
     });
     expect(total).toBe(10 * 100);
   });
+
+  it("forfait: fixed fee × fiscal multiplier, days and allowances ignored", () => {
+    const total = resourceTotal({
+      days: 10,
+      dayRate: 4000,
+      fiscalRegime: "privato",
+      mealAllowance: 50,
+      accommodation: 200,
+      rateUnit: "forfait",
+    });
+    expect(total).toBe(4000 * 1.2);
+  });
+
+  it("forfait piva: no markup", () => {
+    const total = resourceTotal({
+      days: 5,
+      dayRate: 2000,
+      fiscalRegime: "piva",
+      mealAllowance: 100,
+      accommodation: 0,
+      rateUnit: "forfait",
+    });
+    expect(total).toBe(2000);
+  });
+
+  it("posa: same formula as giornata, unit semantics are caller's responsibility", () => {
+    const total = resourceTotal({
+      days: 16,
+      dayRate: 200,
+      fiscalRegime: "piva",
+      mealAllowance: 0,
+      accommodation: 0,
+      rateUnit: "posa",
+    });
+    expect(total).toBe(16 * 200);
+  });
 });

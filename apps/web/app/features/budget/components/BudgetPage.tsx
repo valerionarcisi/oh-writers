@@ -33,6 +33,8 @@ import { ProductionDrillDown } from "./drilldowns/ProductionDrillDown";
 import { DayView } from "./widgets/DayView";
 import { CastWidget } from "./widgets/CastWidget";
 import { CrewWidget } from "./widgets/CrewWidget";
+import { CategoryFlatTable } from "./CategoryFlatTable";
+import { SectionIds, type SectionId } from "./flat-sections";
 import styles from "./BudgetPage.module.css";
 
 const budgetQueryOptions = (projectId: string) =>
@@ -98,6 +100,10 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const [drillCategory, setDrillCategory] =
     useState<BudgetCategoryKey | null>(null);
   const [isStuck, setIsStuck] = useState(false);
+  const [selectedScene, setSelectedScene] = useState<number | null>(null);
+  const [showRateCard, setShowRateCard] = useState(false);
+  const [focusSection, setFocusSection] = useState<SectionId | null>(null);
+  const [detailSection, setDetailSection] = useState<SectionId | null>(null);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 48);
@@ -277,18 +283,58 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             />
           )}
 
-          {view === "category" && (
-            <CategoryView
-              overview={effectiveOverview}
-              drillCategory={drillCategory}
-              onDrillDown={setDrillCategory}
-              onClose={() => setDrillCategory(null)}
-              cast={cast}
-              castSceneMap={castSceneMap}
-              crew={crew}
-              budget={budget}
-              projectId={projectId}
-            />
+          {view === "category" && budget && (
+            <section className={styles.section}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Tutte le voci</h2>
+                <span className={styles.sectionMeta}>
+                  Modifica diretta · ⌘K per cercare · Tab per saltare campo
+                </span>
+              </header>
+              <CategoryFlatTable
+                projectId={projectId}
+                budget={budget}
+                cast={cast}
+                crew={crew}
+                onOpenDetail={(id) => setDetailSection(id)}
+                initialFocusSection={focusSection}
+              />
+            </section>
+          )}
+
+          {view === "category" && detailSection && budget && (
+            <section className={styles.section}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>
+                  Vista dettagliata · {detailSection}
+                </h2>
+                <button
+                  type="button"
+                  className={styles.filter}
+                  onClick={() => setDetailSection(null)}
+                >
+                  Chiudi ✕
+                </button>
+              </header>
+              {detailSection === SectionIds.CAST && (
+                <CastWidget
+                  cast={cast}
+                  castSceneMap={castSceneMap}
+                  selectedScene={selectedScene}
+                  grandTotal={effectiveOverview.grandTotal}
+                  projectId={projectId}
+                  budgetId={budget.id}
+                />
+              )}
+              {detailSection === SectionIds.CREW && (
+                <CrewWidget
+                  crew={crew}
+                  budgetId={budget.id}
+                  grandTotal={effectiveOverview.grandTotal}
+                  projectId={projectId}
+                />
+              )}
+            </section>
           )}
 
           {view === "day" && (

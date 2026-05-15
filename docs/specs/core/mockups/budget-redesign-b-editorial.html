@@ -1,0 +1,1676 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Proposta B · Editorial Light</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #fafaf9;
+        --paper: #ffffff;
+        --ink: #0a0a0a;
+        --ink-2: #404043;
+        --ink-3: #6f6f74;
+        --ink-4: #9d9da3;
+        --line: #e8e8e5;
+        --line-2: #d6d6d2;
+        --line-soft: #f1f1ee;
+
+        --accent: #2b5fff; /* deep cobalt */
+        --accent-soft: #eaf0ff;
+        --warn: #b45309;
+        --warn-soft: #fff7ed;
+        --ok: #047857;
+        --ok-soft: #ecfdf5;
+        --rose: #be123c;
+
+        /* category accents (used as 2px left rail or dot, NOT fills) */
+        --c-cast: #5b2e8a;
+        --c-crew: #065f46;
+        --c-locations: #9a3412;
+        --c-vehicles: #155e75;
+        --c-scenografia: #92400e;
+        --c-costumi: #9d174d;
+        --c-fotografia: #1e3a8a;
+        --c-suono: #4d7c0f;
+        --c-vfx: #6b21a8;
+        --c-comparse: #854d0e;
+        --c-stunt: #9f1239;
+        --c-regia: #44403c;
+        --c-produzione: #7c2d12;
+
+        --radius-sm: 4px;
+        --radius-md: 6px;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display:
+          "Inter Tight", "Inter", -apple-system, system-ui, sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings: "ss01" on;
+      }
+      [data-num] {
+        font-variant-numeric: tabular-nums;
+      }
+      .mono {
+        font-family: var(--font-mono);
+        font-feature-settings: "zero" on;
+      }
+
+      .ico {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        flex-shrink: 0;
+      }
+      .ico-sm {
+        width: 12px;
+        height: 12px;
+      }
+      .ico-md {
+        width: 16px;
+        height: 16px;
+      }
+      .ico-lg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ─── Shell ──────────────────────────────────────────────── */
+      .app {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        min-height: 100vh;
+      }
+      .nav {
+        background: var(--paper);
+        border-inline-end: 1px solid var(--line);
+        padding: var(--space-6) var(--space-5);
+        font-size: 13px;
+      }
+      .nav-brand {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--space-8);
+      }
+      .nav-brand b {
+        color: var(--accent);
+      }
+      .nav-section {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin: var(--space-6) 0 var(--space-2);
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 6px 8px;
+        border-radius: var(--radius-sm);
+        color: var(--ink-2);
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .nav-item:hover {
+        color: var(--ink);
+        background: var(--line-soft);
+      }
+      .nav-item.active {
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      main {
+        padding: var(--space-8) var(--space-10);
+        max-width: 1280px;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-6);
+      }
+      .breadcrumb {
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .breadcrumb b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .breadcrumb .sep {
+        color: var(--ink-4);
+        margin-inline: 6px;
+      }
+      .icon-btn {
+        all: unset;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        border-radius: var(--radius-sm);
+      }
+      .icon-btn:hover {
+        color: var(--ink);
+        background: var(--line-soft);
+      }
+
+      /* ─── Progress (super minimal, dotted) ─────────────────── */
+      .progress {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 12px;
+        color: var(--ink-3);
+        margin-bottom: var(--space-8);
+      }
+      .progress-step {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .progress-step .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        background: var(--line-2);
+      }
+      .progress-step.done .dot {
+        background: var(--ok);
+      }
+      .progress-step.active .dot {
+        background: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+      }
+      .progress-step.active {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .progress-divider {
+        height: 1px;
+        flex: 0 0 24px;
+        background: var(--line-2);
+      }
+
+      /* ─── Hero (editorial style) ───────────────────────────── */
+      .hero {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: var(--space-10);
+        padding-bottom: var(--space-8);
+        border-bottom: 1px solid var(--line);
+        margin-bottom: var(--space-8);
+      }
+      .hero-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-3);
+        margin-bottom: var(--space-3);
+      }
+      .hero-total {
+        font-family: var(--font-display);
+        font-size: 72px;
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        line-height: 0.95;
+        margin: 0 0 var(--space-3);
+      }
+      .hero-total .cur {
+        color: var(--ink-3);
+        font-weight: 400;
+        font-size: 44px;
+      }
+      .hero-meta {
+        display: flex;
+        gap: var(--space-4);
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .hero-meta b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .hero-meta .delta {
+        color: var(--warn);
+        font-weight: 600;
+      }
+      .hero-meta .trend {
+        color: var(--ok);
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .stack-bar {
+        margin-top: var(--space-5);
+        display: flex;
+        height: 6px;
+        border-radius: 99px;
+        overflow: hidden;
+        background: var(--line);
+      }
+      .stack-bar > div {
+        height: 100%;
+      }
+      .stack-legend {
+        margin-top: var(--space-3);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-5);
+        font-size: 12px;
+      }
+      .stack-legend .item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-3);
+      }
+      .stack-legend .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .stack-legend b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .bench {
+        padding-inline-start: var(--space-6);
+        border-inline-start: 1px solid var(--line);
+      }
+      .bench h4 {
+        margin: 0 0 var(--space-3);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-3);
+      }
+      .bench .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 13px;
+        color: var(--ink-2);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .bench .row:last-child {
+        border-bottom: none;
+      }
+      .bench .row b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .bench .indicator {
+        margin-top: var(--space-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        color: var(--warn);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .bench .indicator .ico {
+        color: var(--warn);
+      }
+
+      /* ─── Tabs (underline editorial) ───────────────────────── */
+      .tabs {
+        display: flex;
+        gap: var(--space-6);
+        border-bottom: 1px solid var(--line);
+        margin-bottom: var(--space-6);
+      }
+      .tab {
+        all: unset;
+        cursor: pointer;
+        padding: 10px 0;
+        font-size: 14px;
+        color: var(--ink-3);
+        position: relative;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tab .count {
+        font-size: 11px;
+        color: var(--ink-4);
+        background: var(--line-soft);
+        padding: 1px 6px;
+        border-radius: 99px;
+      }
+      .tab:hover {
+        color: var(--ink);
+      }
+      .tab.active {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--ink);
+      }
+      .tab.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ─── Config bar ───────────────────────────────────────── */
+      .config-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .config-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .config-pill .v {
+        color: var(--ink);
+        font-weight: 600;
+        font-family: var(--font-mono);
+      }
+      .config-pill .v:hover {
+        background: var(--line-soft);
+        cursor: pointer;
+      }
+      .scene-strip {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+      .scene-chip {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 99px;
+        color: var(--ink-3);
+        cursor: pointer;
+        border: 1px solid var(--line);
+      }
+      .scene-chip:hover {
+        border-color: var(--line-2);
+        color: var(--ink);
+      }
+      .scene-chip.active {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+      .scene-chip b {
+        font-weight: 600;
+      }
+      .scene-chip.active b {
+        color: var(--paper);
+      }
+
+      /* ─── Grid ─────────────────────────────────────────────── */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: var(--space-10);
+        align-items: start;
+      }
+      .col-main {
+        display: flex;
+        flex-direction: column;
+      }
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        padding: var(--space-5) 0 var(--space-2);
+        margin-top: var(--space-3);
+        border-top: 1px solid var(--line);
+      }
+      .section-label:first-child {
+        border-top: none;
+        padding-top: 0;
+        margin-top: 0;
+      }
+
+      /* ─── Rows (editorial, no card chrome) ─────────────────── */
+      .row {
+        display: grid;
+        grid-template-columns: 12px 1fr auto auto;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4) 0;
+        border-bottom: 1px solid var(--line-soft);
+        cursor: pointer;
+        position: relative;
+      }
+      .row:hover {
+        background: var(--line-soft);
+        margin-inline: calc(-1 * var(--space-3));
+        padding-inline: var(--space-3);
+        border-radius: var(--radius-sm);
+      }
+      .row:hover {
+        border-bottom-color: var(--line);
+      }
+      .row .rail {
+        width: 3px;
+        height: 28px;
+        border-radius: 2px;
+      }
+      .row .head {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .row .head .name {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--ink);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .row .head .name .ico {
+        color: var(--ink-3);
+      }
+      .row .head .meta {
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .row .badge {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink-3);
+        background: var(--line-soft);
+        padding: 1px 6px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .row .total {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .row .total.zero {
+        color: var(--ink-4);
+      }
+      .row .caret {
+        color: var(--ink-4);
+      }
+      .row.empty .head .name {
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+
+      /* ─── Nested table (drill-down) ────────────────────────── */
+      .nested {
+        padding: var(--space-4) 0 var(--space-5) var(--space-6);
+        margin-left: 15px;
+        border-left: 1px dashed var(--line-2);
+      }
+      .nested table {
+        width: 100%;
+        font-size: 13px;
+        border-collapse: collapse;
+      }
+      .nested th {
+        text-align: start;
+        padding: 6px 8px 6px 0;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ink-4);
+        border-bottom: 1px solid var(--line);
+      }
+      .nested th.num {
+        text-align: end;
+      }
+      .nested td {
+        padding: 10px 8px 10px 0;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--ink-2);
+      }
+      .nested .num {
+        text-align: end;
+        font-family: var(--font-mono);
+      }
+      .nested .tot {
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .editable {
+        all: unset;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        text-align: end;
+        padding: 4px 6px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        min-width: 70px;
+      }
+      .editable:hover {
+        border-color: var(--line);
+      }
+      .editable:focus {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      /* ─── Chip ─────────────────────────────────────────────── */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .chip .ico {
+        width: 10px;
+        height: 10px;
+      }
+      .chip-ai {
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+      .chip-stale {
+        color: var(--warn);
+        background: var(--warn-soft);
+      }
+      .chip-lead {
+        color: var(--ink);
+        border: 1px solid var(--ink);
+      }
+
+      /* ─── Empty state inline ───────────────────────────────── */
+      .empty-state {
+        padding: var(--space-3) 0 var(--space-3) 24px;
+        font-size: 13px;
+        color: var(--ink-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .empty-state a {
+        margin-inline-start: auto;
+        color: var(--accent);
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .empty-state a:hover {
+        text-decoration: underline;
+      }
+
+      /* ─── Sidebar ──────────────────────────────────────────── */
+      .col-side {
+        position: sticky;
+        top: var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+      }
+      .side-card {
+        padding-bottom: var(--space-5);
+        border-bottom: 1px solid var(--line);
+      }
+      .side-card:last-child {
+        border-bottom: none;
+      }
+      .side-card h3 {
+        margin: 0 0 var(--space-4);
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .side-card h3 .trend {
+        color: var(--ok);
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+      }
+
+      .compo-bars {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .compo-bar {
+        font-size: 12px;
+      }
+      .compo-bar .meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .compo-bar .meta .left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-2);
+      }
+      .compo-bar .meta .left .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .compo-bar .meta .right {
+        font-family: var(--font-mono);
+        font-weight: 500;
+      }
+      .compo-bar .track {
+        height: 3px;
+        background: var(--line);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .compo-bar .fill {
+        height: 100%;
+      }
+
+      .totals .row-t {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        padding: 4px 0;
+        color: var(--ink-3);
+      }
+      .totals .row-t span:last-child {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .totals .row-t.grand {
+        border-top: 1px solid var(--ink);
+        margin-top: var(--space-2);
+        padding-top: var(--space-3);
+      }
+      .totals .row-t.grand span:first-child {
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .totals .row-t.grand span:last-child {
+        font-family: var(--font-display);
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .day-mini {
+        display: flex;
+        align-items: end;
+        gap: 4px;
+        height: 36px;
+        margin: var(--space-3) 0;
+      }
+      .day-mini .b {
+        flex: 1;
+        background: var(--ink-3);
+        opacity: 0.4;
+        border-radius: 2px 2px 0 0;
+      }
+      .day-mini .b.hot {
+        background: var(--warn);
+        opacity: 1;
+      }
+      .day-cta {
+        font-size: 12px;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .actions button {
+        all: unset;
+        cursor: pointer;
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid var(--line-2);
+        border-radius: var(--radius-sm);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-align: center;
+        background: var(--paper);
+      }
+      .actions button:hover {
+        border-color: var(--ink-3);
+      }
+      .actions button.primary {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+      .actions button.primary:hover {
+        background: #1f1f1f;
+      }
+      .actions .row2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- icon sprite (compact subset) -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-overview" viewBox="0 0 24 24"
+          ><rect x="3" y="3" width="7" height="7" rx="1" /><rect
+            x="14"
+            y="3"
+            width="7"
+            height="7"
+            rx="1"
+          /><rect x="3" y="14" width="7" height="7" rx="1" /><rect
+            x="14"
+            y="14"
+            width="7"
+            height="7"
+            rx="1"
+          /></symbol
+        >
+        <symbol id="i-file" viewBox="0 0 24 24"
+          ><path
+            d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"
+          /><polyline points="14 3 14 8 19 8"
+        /></symbol>
+        <symbol id="i-breakdown" viewBox="0 0 24 24"
+          ><line x1="3" y1="6" x2="21" y2="6" /><line
+            x1="3"
+            y1="12"
+            x2="21"
+            y2="12"
+          /><line x1="3" y1="18" x2="21" y2="18" /><circle
+            cx="6"
+            cy="6"
+            r="1.3"
+            fill="currentColor"
+            stroke="none"
+          /><circle
+            cx="11"
+            cy="12"
+            r="1.3"
+            fill="currentColor"
+            stroke="none"
+          /><circle
+            cx="17"
+            cy="18"
+            r="1.3"
+            fill="currentColor"
+            stroke="none"
+          /></symbol
+        >
+        <symbol id="i-calendar" viewBox="0 0 24 24"
+          ><rect x="3" y="4" width="18" height="18" rx="2" /><line
+            x1="16"
+            y1="2"
+            x2="16"
+            y2="6"
+          /><line x1="8" y1="2" x2="8" y2="6" /><line
+            x1="3"
+            y1="10"
+            x2="21"
+            y2="10"
+        /></symbol>
+        <symbol id="i-wallet" viewBox="0 0 24 24"
+          ><path
+            d="M20 12V8H6a2 2 0 0 1-2-2V18a2 2 0 0 0 2 2h14v-4"
+          /><path d="M20 12a2 2 0 0 0 0 4h2v-4Z" /><path
+            d="M4 6V5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v3"
+        /></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"
+          ><path
+            d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"
+          /><circle cx="12" cy="10" r="3"
+        /></symbol>
+        <symbol id="i-car" viewBox="0 0 24 24"
+          ><path d="M19 17h2v-5l-2-5H5L3 12v5h2" /><path
+            d="M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0"
+          /><path d="M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0"
+        /></symbol>
+        <symbol id="i-landmark" viewBox="0 0 24 24"
+          ><line x1="3" y1="22" x2="21" y2="22" /><line
+            x1="6"
+            y1="18"
+            x2="6"
+            y2="11"
+          /><line x1="10" y1="18" x2="10" y2="11" /><line
+            x1="14"
+            y1="18"
+            x2="14"
+            y2="11"
+          /><line x1="18" y1="18" x2="18" y2="11" /><polygon
+            points="12 2 20 8 4 8"
+          /><line x1="3" y1="18" x2="21" y2="18"
+        /></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24"
+          ><rect x="2" y="7" width="14" height="12" rx="2" /><path
+            d="M16 11l5-3v8l-5-3z"
+          /><circle cx="9" cy="13" r="3"
+        /></symbol>
+        <symbol id="i-mic" viewBox="0 0 24 24"
+          ><rect x="9" y="2" width="6" height="12" rx="3" /><path
+            d="M19 11a7 7 0 0 1-14 0"
+          /><line x1="12" y1="18" x2="12" y2="22" /><line
+            x1="8"
+            y1="22"
+            x2="16"
+            y2="22"
+        /></symbol>
+        <symbol id="i-shirt" viewBox="0 0 24 24"
+          ><path
+            d="M20.4 4.6 16 3l-2 2-2-2L8 3 3.6 4.6 6 9l3-1v13h6V8l3 1 2.4-4.4Z"
+        /></symbol>
+        <symbol id="i-users" viewBox="0 0 24 24"
+          ><path
+            d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+          /><circle cx="9" cy="7" r="4" /><path
+            d="M22 21v-2a4 4 0 0 0-3-3.87"
+          /><path d="M16 3.13a4 4 0 0 1 0 7.75"
+        /></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"
+          ><path
+            d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"
+        /></symbol>
+        <symbol id="i-clapper" viewBox="0 0 24 24"
+          ><rect x="3" y="9" width="18" height="12" rx="1" /><path
+            d="M3 9 5 4l4 1 4-1 4 1 4-1-2 5"
+        /></symbol>
+        <symbol id="i-screenplay" viewBox="0 0 24 24"
+          ><path
+            d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"
+          /><polyline points="14 3 14 8 19 8" /><line
+            x1="9"
+            y1="13"
+            x2="15"
+            y2="13"
+          /><line x1="9" y1="17" x2="13" y2="17"
+        /></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"
+          ><path
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"
+          /><circle cx="12" cy="12" r="3"
+        /></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"
+          ><polyline points="20 6 9 17 4 12"
+        /></symbol>
+        <symbol id="i-trend-up" viewBox="0 0 24 24"
+          ><polyline points="22 7 13.5 15.5 8.5 10.5 1 18" /><polyline
+            points="16 7 22 7 22 13"
+        /></symbol>
+        <symbol id="i-arrow-right" viewBox="0 0 24 24"
+          ><line x1="5" y1="12" x2="19" y2="12" /><polyline
+            points="12 5 19 12 12 19"
+        /></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"
+          ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+            points="7 10 12 15 17 10"
+          /><line x1="12" y1="15" x2="12" y2="3"
+        /></symbol>
+        <symbol id="i-camera-fl" viewBox="0 0 24 24"
+          ><path
+            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+          /><circle cx="12" cy="13" r="4"
+        /></symbol>
+        <symbol id="i-zap" viewBox="0 0 24 24"
+          ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+        /></symbol>
+        <symbol id="i-chev-down" viewBox="0 0 24 24"
+          ><polyline points="6 9 12 15 18 9"
+        /></symbol>
+        <symbol id="i-chev-right" viewBox="0 0 24 24"
+          ><polyline points="9 6 15 12 9 18"
+        /></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"
+          ><path
+            d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+          /><line x1="12" y1="9" x2="12" y2="13" /><circle
+            cx="12"
+            cy="17"
+            r="0.8"
+            fill="currentColor"
+            stroke="none"
+        /></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"
+          ><polyline points="3 6 5 6 21 6" /><path
+            d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+        /></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"
+          ><line x1="12" y1="5" x2="12" y2="19" /><line
+            x1="5"
+            y1="12"
+            x2="19"
+            y2="12"
+        /></symbol>
+        <symbol id="i-flame" viewBox="0 0 24 24"
+          ><path
+            d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.3-2.4 0-6 2.5-6.5 0 2 1 4 3 5.5s3.5 4 3.5 6.5a7 7 0 1 1-14 0c0-1.6.7-3 1.5-4 .5 1.5 1.5 2.5 2 3"
+        /></symbol>
+        <symbol id="i-target" viewBox="0 0 24 24"
+          ><circle cx="12" cy="12" r="9" /><circle
+            cx="12"
+            cy="12"
+            r="5"
+          /><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"
+        /></symbol>
+      </defs>
+    </svg>
+
+    <div class="app">
+      <aside class="nav">
+        <div class="nav-brand">oh<b>writers.</b></div>
+        <div class="nav-section">Project</div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-overview" /></svg>Overview
+        </div>
+        <div class="nav-section">Writing</div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg>Soggetto
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg>Synopsis
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg>Outline
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg>Treatment
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-screenplay" /></svg>Screenplay
+        </div>
+        <div class="nav-section">Production</div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-breakdown" /></svg>Breakdown
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-calendar" /></svg>Schedule
+        </div>
+        <div class="nav-item active">
+          <svg class="ico ico-md"><use href="#i-wallet" /></svg>Budget
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-pin" /></svg>Locations
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-settings" /></svg>Settings
+        </div>
+      </aside>
+
+      <main>
+        <div class="top">
+          <div class="breadcrumb">
+            Projects <span class="sep">/</span> <b>Team Thriller</b>
+            <span class="sep">/</span> Budget
+          </div>
+          <div style="display: flex; gap: 4px">
+            <button class="icon-btn" title="Snapshot">
+              <svg class="ico ico-md"><use href="#i-camera-fl" /></svg>
+            </button>
+            <button class="icon-btn" title="Esporta">
+              <svg class="ico ico-md"><use href="#i-download" /></svg>
+            </button>
+            <button class="icon-btn" title="Impostazioni">
+              <svg class="ico ico-md"><use href="#i-settings" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="progress">
+          <span class="progress-step done"><span class="dot"></span>Soggetto</span>
+          <span class="progress-divider"></span>
+          <span class="progress-step done"><span class="dot"></span>Breakdown</span>
+          <span class="progress-divider"></span>
+          <span class="progress-step"><span class="dot"></span>Schedule</span>
+          <span class="progress-divider"></span>
+          <span class="progress-step done"><span class="dot"></span>Tariffe</span>
+          <span class="progress-divider"></span>
+          <span class="progress-step active"
+            ><span class="dot"></span>Budget</span
+          >
+        </div>
+
+        <section class="hero">
+          <div>
+            <div class="hero-label">Totale progetto · Short Comedy · 5 giorni</div>
+            <h1 class="hero-total" data-num>
+              10 617<span class="cur">€</span>
+            </h1>
+            <div class="hero-meta">
+              <span><b class="mono delta">2 123 €</b>/giorno</span>
+              <span><b>28</b> elementi</span>
+              <span class="trend">
+                <svg class="ico ico-sm"><use href="#i-trend-up" /></svg>+320 € da
+                ieri
+              </span>
+            </div>
+            <div class="stack-bar">
+              <div style="width: 0.1%; background: var(--c-cast)"></div>
+              <div style="width: 69%; background: var(--c-crew)"></div>
+              <div style="width: 0.8%; background: var(--c-locations)"></div>
+              <div style="width: 21%; background: var(--c-scenografia)"></div>
+              <div style="width: 9%; background: var(--accent)"></div>
+            </div>
+            <div class="stack-legend">
+              <span class="item"
+                ><span class="dot" style="background: var(--c-crew)"></span>Crew
+                <b class="mono">7 350 €</b></span
+              >
+              <span class="item"
+                ><span class="dot" style="background: var(--c-scenografia)"></span
+                >Scenografia <b class="mono">2 222 €</b></span
+              >
+              <span class="item"
+                ><span class="dot" style="background: var(--accent)"></span
+                >Contingenza <b class="mono">965 €</b></span
+              >
+              <span class="item"
+                ><span class="dot" style="background: var(--c-cast)"></span>Cast
+                <b class="mono">0 €</b></span
+              >
+            </div>
+          </div>
+          <div class="bench">
+            <h4>
+              <svg
+                class="ico ico-sm"
+                style="display: inline-block; vertical-align: middle"
+              >
+                <use href="#i-target" /></svg
+              >&nbsp;Benchmark · Short Comedy IT
+            </h4>
+            <div class="row">
+              <span>Mediana</span><span class="mono">9 480 €</span>
+            </div>
+            <div class="row">
+              <span>10° / 90° pct</span><span class="mono">6.2k / 14k €</span>
+            </div>
+            <div class="row">
+              <span>€/giorno mediana</span><span class="mono">1 896 €</span>
+            </div>
+            <div class="indicator">
+              <svg class="ico ico-sm"><use href="#i-zap" /></svg>+12% sopra
+              mediana del genere
+            </div>
+          </div>
+        </section>
+
+        <div class="tabs">
+          <button class="tab active">
+            Per categoria <span class="count">8</span>
+          </button>
+          <button class="tab">Per giornata <span class="count">5</span></button>
+          <button class="tab">Per dipartimento</button>
+          <button class="tab disabled">Cash flow</button>
+        </div>
+
+        <div class="config-bar">
+          <span class="config-pill"
+            >Giorni ripresa <span class="v" data-num>&nbsp;5&nbsp;</span></span
+          >
+          <span class="config-pill"
+            >Contingenza <span class="v" data-num>&nbsp;10%&nbsp;</span></span
+          >
+          <div class="scene-strip">
+            <span class="scene-chip active">Tutte · 28</span>
+            <span class="scene-chip"><b>Sc.1</b> Appartamento</span>
+            <span class="scene-chip"><b>Sc.2</b> Strada</span>
+            <span class="scene-chip"><b>Sc.3</b> Pizzeria</span>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="col-main">
+            <div class="section-label">Cast & Crew</div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-cast)"></span>
+              <div class="head">
+                <span class="name">Cast<span class="badge">6 attori</span></span>
+                <span class="meta">3 lead · 3 supporting · Tea, Milco, Luca…</span>
+              </div>
+              <span class="total" data-num>4 200 €</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-crew)"></span>
+              <div class="head">
+                <span class="name">Troupe<span class="badge">19 ruoli</span></span>
+                <span class="meta">7 dipartimenti · Fotografia 2.200 €, Regia 750 €…</span>
+              </div>
+              <span class="total" data-num>7 350 €</span>
+              <svg class="ico caret"><use href="#i-chev-down" /></svg>
+            </div>
+            <div class="nested">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dipartimento</th>
+                    <th class="num">Ruoli</th>
+                    <th class="num">Totale</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <svg
+                        class="ico"
+                        style="
+                          display: inline;
+                          margin-right: 6px;
+                          color: var(--c-fotografia);
+                          vertical-align: middle;
+                        "
+                        ><use href="#i-camera" /></svg
+                      >Fotografia
+                    </td>
+                    <td class="num">5</td>
+                    <td class="num tot">2 200 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <svg
+                        class="ico"
+                        style="
+                          display: inline;
+                          margin-right: 6px;
+                          color: var(--c-regia);
+                          vertical-align: middle;
+                        "
+                        ><use href="#i-clapper" /></svg
+                      >Regia
+                    </td>
+                    <td class="num">2</td>
+                    <td class="num tot">750 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <svg
+                        class="ico"
+                        style="
+                          display: inline;
+                          margin-right: 6px;
+                          color: var(--c-suono);
+                          vertical-align: middle;
+                        "
+                        ><use href="#i-mic" /></svg
+                      >Suono
+                    </td>
+                    <td class="num">2</td>
+                    <td class="num tot">650 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <svg
+                        class="ico"
+                        style="
+                          display: inline;
+                          margin-right: 6px;
+                          color: var(--c-scenografia);
+                          vertical-align: middle;
+                        "
+                        ><use href="#i-landmark" /></svg
+                      >Arte
+                    </td>
+                    <td class="num">3</td>
+                    <td class="num tot">1 350 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <svg
+                        class="ico"
+                        style="
+                          display: inline;
+                          margin-right: 6px;
+                          color: var(--c-costumi);
+                          vertical-align: middle;
+                        "
+                        ><use href="#i-shirt" /></svg
+                      >Costumi & Trucco
+                    </td>
+                    <td class="num">4</td>
+                    <td class="num tot">1 350 €</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="section-label">Produzione · da breakdown</div>
+
+            <div class="row empty">
+              <span class="rail" style="background: var(--c-locations)"></span>
+              <div class="head">
+                <span class="name">Locations</span>
+                <span class="meta">Nessuna location nel breakdown</span>
+              </div>
+              <span class="total zero" data-num>—</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+            <div class="empty-state">
+              Non hai ancora marcato scene come "esterni" o "set".
+              <a href="#"
+                >Apri breakdown
+                <svg class="ico ico-sm"><use href="#i-arrow-right" /></svg
+              ></a>
+            </div>
+
+            <div class="row empty">
+              <span class="rail" style="background: var(--c-vehicles)"></span>
+              <div class="head">
+                <span class="name">Veicoli</span>
+                <span class="meta">Nessun veicolo nel breakdown</span>
+              </div>
+              <span class="total zero" data-num>—</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-scenografia)"></span>
+              <div class="head">
+                <span class="name"
+                  >Scenografia<span class="badge">22 elementi</span></span
+                >
+                <span class="meta"
+                  >Aggregato breakdown · 1 riga legacy "Bloody knife"</span
+                >
+              </div>
+              <span class="total" data-num>2 302 €</span>
+              <svg class="ico caret"><use href="#i-chev-down" /></svg>
+            </div>
+            <div class="nested">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Elemento</th>
+                    <th class="num">Qta</th>
+                    <th class="num">€ / unità</th>
+                    <th class="num">Effettivo</th>
+                    <th class="num">Totale</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <b>Aggregato breakdown</b>
+                      <span class="chip chip-ai" style="margin-left: 6px"
+                        ><svg class="ico"><use href="#i-sparkle" /></svg>AI</span
+                      >
+                    </td>
+                    <td class="num">22</td>
+                    <td class="num">
+                      <input class="editable" value="80" data-num />
+                    </td>
+                    <td class="num">
+                      <input
+                        class="editable"
+                        value="2222"
+                        style="background: var(--accent-soft)"
+                        data-num
+                      />
+                    </td>
+                    <td class="num tot">2 222 €</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Bloody knife
+                      <span class="chip chip-stale" style="margin-left: 6px"
+                        ><svg class="ico"><use href="#i-alert" /></svg
+                        >Legacy</span
+                      >
+                    </td>
+                    <td class="num">1</td>
+                    <td class="num">
+                      <input class="editable" value="80" data-num />
+                    </td>
+                    <td class="num">
+                      <input class="editable" value="" data-num />
+                    </td>
+                    <td class="num tot">80 €</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                style="
+                  margin-top: 12px;
+                  font-size: 12px;
+                  color: var(--ink-3);
+                  display: flex;
+                  justify-content: space-between;
+                "
+              >
+                <span
+                  >Riga
+                  <b style="color: var(--warn)">legacy</b> pre-spec — puoi
+                  rimuoverla.</span
+                >
+                <a
+                  href="#"
+                  style="
+                    color: var(--accent);
+                    font-weight: 600;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                  "
+                >
+                  <svg class="ico ico-sm"><use href="#i-trash" /></svg>Rimuovi
+                  legacy
+                </a>
+              </div>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-fotografia)"></span>
+              <div class="head">
+                <span class="name"
+                  >Fotografia<span class="badge">3 elementi</span></span
+                >
+                <span class="meta">Coltello, Forno Pizza, Forno</span>
+              </div>
+              <span class="total" data-num>1 800 €</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-suono)"></span>
+              <div class="head">
+                <span class="name">Suono<span class="badge">8 elementi</span></span>
+                <span class="meta">Risate, Applauso, Voice Over, +5</span>
+              </div>
+              <span class="total" data-num>400 €</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-vfx)"></span>
+              <div class="head">
+                <span class="name"
+                  >VFX / SFX<span class="badge">5 elementi</span></span
+                >
+                <span class="meta">Pugno, Sparizioni, Colpo</span>
+              </div>
+              <span class="total" data-num>3 500 €</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-comparse)"></span>
+              <div class="head">
+                <span class="name"
+                  >Comparse<span class="badge">5 elementi</span></span
+                >
+                <span class="meta">Pubblico, Comici, Clienti</span>
+              </div>
+              <span class="total" data-num>120 €</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+
+            <div class="row">
+              <span class="rail" style="background: var(--c-costumi)"></span>
+              <div class="head">
+                <span class="name">Costumi & Make-up</span>
+                <span class="meta">5 makeup · 1 wardrobe</span>
+              </div>
+              <span class="total" data-num>450 €</span>
+              <svg class="ico caret"><use href="#i-chev-right" /></svg>
+            </div>
+          </div>
+
+          <aside class="col-side">
+            <div class="side-card">
+              <h3>
+                Composizione
+                <span class="trend"
+                  ><svg class="ico ico-sm"><use href="#i-trend-up" /></svg
+                  >+320 €</span
+                >
+              </h3>
+              <div class="compo-bars">
+                <div class="compo-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span class="dot" style="background: var(--c-crew)"></span
+                      >Crew</span
+                    >
+                    <span class="right">7 350 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 69%; background: var(--c-crew)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="compo-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span class="dot" style="background: var(--c-vfx)"></span
+                      >VFX / SFX</span
+                    >
+                    <span class="right">3 500 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 33%; background: var(--c-vfx)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="compo-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-scenografia)"
+                      ></span
+                      >Scenografia</span
+                    >
+                    <span class="right">2 302 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 22%; background: var(--c-scenografia)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="compo-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-fotografia)"
+                      ></span
+                      >Fotografia</span
+                    >
+                    <span class="right">1 800 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 17%; background: var(--c-fotografia)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="compo-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span class="dot" style="background: var(--c-costumi)"></span
+                      >Costumi</span
+                    >
+                    <span class="right">450 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 4%; background: var(--c-costumi)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="compo-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span class="dot" style="background: var(--c-suono)"></span
+                      >Suono</span
+                    >
+                    <span class="right">400 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 4%; background: var(--c-suono)"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="side-card totals">
+              <h3>Riepilogo</h3>
+              <div class="row-t"><span>Subtotale</span><span>9 652 €</span></div>
+              <div class="row-t">
+                <span>Contingenza 10%</span><span>965,20 €</span>
+              </div>
+              <div class="row-t grand">
+                <span>Totale</span><span data-num>10 617 €</span>
+              </div>
+            </div>
+
+            <div class="side-card">
+              <h3>
+                Costo per giornata
+                <span style="color: var(--warn); font-weight: 500"
+                  ><svg class="ico ico-sm"><use href="#i-flame" /></svg> Gg
+                  3</span
+                >
+              </h3>
+              <div class="day-mini">
+                <div class="b" style="height: 60%"></div>
+                <div class="b" style="height: 70%"></div>
+                <div class="b hot" style="height: 100%"></div>
+                <div class="b" style="height: 65%"></div>
+                <div class="b" style="height: 45%"></div>
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--ink-3);
+                  display: flex;
+                  justify-content: space-between;
+                "
+              >
+                <span>Media <b class="mono">2 123 €</b></span>
+                <span>Picco <b class="mono">3 200 €</b></span>
+              </div>
+              <div style="margin-top: 12px">
+                <a class="day-cta"
+                  >Apri vista giornata
+                  <svg class="ico ico-sm"><use href="#i-arrow-right" /></svg
+                ></a>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="primary">
+                <svg class="ico ico-sm"><use href="#i-zap" /></svg>Rigenera
+                budget
+              </button>
+              <div class="row2">
+                <button>
+                  <svg class="ico ico-sm"><use href="#i-camera-fl" /></svg
+                  >Snapshot
+                </button>
+                <button>
+                  <svg class="ico ico-sm"><use href="#i-download" /></svg>Esporta
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

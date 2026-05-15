@@ -11,6 +11,9 @@ import {
 import { projects } from "./projects";
 import { breakdownElements } from "./breakdown";
 
+export const RATE_UNITS = ["giornata", "posa", "forfait"] as const;
+export type RateUnitDb = (typeof RATE_UNITS)[number];
+
 export const FISCAL_REGIMES = ["piva", "privato", "none"] as const;
 export type FiscalRegimeDb = (typeof FISCAL_REGIMES)[number];
 
@@ -107,6 +110,7 @@ export const budgetCast = pgTable("budget_cast", {
   name: text("name").notNull(),
   days: numeric("days").notNull().default("1"),
   dayRate: numeric("day_rate").notNull().default("0"),
+  rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("giornata"),
   fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
     .notNull()
     .default("piva"),
@@ -127,6 +131,7 @@ export const budgetCrew = pgTable("budget_crew", {
   department: text("department").notNull(),
   days: numeric("days").notNull().default("1"),
   dayRate: numeric("day_rate").notNull().default("0"),
+  rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("giornata"),
   fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
     .notNull()
     .default("piva"),
@@ -138,7 +143,32 @@ export const budgetCrew = pgTable("budget_crew", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const projectRateCard = pgTable(
+  "project_rate_card",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    role: text("role"),
+    rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("giornata"),
+    rateValue: numeric("rate_value").notNull().default("0"),
+    mealAllowance: numeric("meal_allowance").notNull().default("0"),
+    accommodation: numeric("accommodation").notNull().default("0"),
+    fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
+      .notNull()
+      .default("piva"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [unique("project_rate_card_project_name_uq").on(t.projectId, t.name)],
+);
+
 export type BudgetCast = typeof budgetCast.$inferSelect;
 export type NewBudgetCast = typeof budgetCast.$inferInsert;
 export type BudgetCrew = typeof budgetCrew.$inferSelect;
 export type NewBudgetCrew = typeof budgetCrew.$inferInsert;
+export type ProjectRateCard = typeof projectRateCard.$inferSelect;
+export type NewProjectRateCard = typeof projectRateCard.$inferInsert;

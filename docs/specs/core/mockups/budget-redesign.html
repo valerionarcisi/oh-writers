@@ -1,0 +1,2580 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget — Team Thriller · Oh Writers (mockup)</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0a0a0c;
+        --surface: #13131a;
+        --surface-raised: #1a1a24;
+        --surface-hover: #1f1f2b;
+        --border: #262630;
+        --border-strong: #3a3a48;
+        --fg: #e8e8ec;
+        --fg-muted: #8b8b95;
+        --fg-dim: #5a5a64;
+
+        --accent: #ff7a59;
+        --mint: #5eead4;
+        --amber: #ffb74d;
+        --rose: #fb7185;
+
+        --c-cast: #a78bfa;
+        --c-crew: #34d399;
+        --c-locations: #fb923c;
+        --c-vehicles: #22d3ee;
+        --c-scenografia: #f59e0b;
+        --c-costumi: #ec4899;
+        --c-fotografia: #60a5fa;
+        --c-suono: #a3e635;
+        --c-vfx: #c084fc;
+        --c-comparse: #fbbf24;
+        --c-stunt: #f472b6;
+        --c-regia: #94a3b8;
+        --c-produzione: #f97316;
+
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+
+        --font-sans:
+          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        --font-display: "Inter Tight", "Inter", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-num] {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ─── Icons ─────────────────────────────────────────────────── */
+      .ico {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+      .ico-sm {
+        width: 14px;
+        height: 14px;
+      }
+      .ico-md {
+        width: 18px;
+        height: 18px;
+      }
+      .ico-lg {
+        width: 22px;
+        height: 22px;
+      }
+      .ico-xl {
+        width: 28px;
+        height: 28px;
+      }
+
+      .ico-tile {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      .ico-tile .ico {
+        width: 20px;
+        height: 20px;
+        stroke-width: 1.6;
+      }
+      .ico-tile-sm {
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius-sm);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      .ico-tile-sm .ico {
+        width: 16px;
+        height: 16px;
+        stroke-width: 1.7;
+      }
+
+      /* ─── Layout ─────────────────────────────────────────────── */
+      .app {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        min-height: 100vh;
+      }
+      .nav {
+        background: #08080a;
+        border-inline-end: 1px solid var(--border);
+        padding: var(--space-5);
+        font-size: 13px;
+      }
+      .nav-brand {
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: var(--space-6);
+        letter-spacing: -0.02em;
+      }
+      .nav-brand b {
+        color: var(--accent);
+      }
+      .nav-section {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--fg-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: var(--space-5) 0 var(--space-2);
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 6px 8px;
+        border-radius: var(--radius-sm);
+        color: var(--fg-muted);
+        cursor: pointer;
+      }
+      .nav-item:hover {
+        background: var(--surface-raised);
+        color: var(--fg);
+      }
+      .nav-item.active {
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent);
+      }
+
+      main {
+        padding: var(--space-6) var(--space-8);
+        max-width: 1280px;
+        width: 100%;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-5);
+      }
+      .breadcrumb {
+        color: var(--fg-muted);
+        font-size: 13px;
+      }
+      .breadcrumb b {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      .top-actions {
+        display: flex;
+        gap: var(--space-2);
+      }
+      .icon-btn {
+        all: unset;
+        cursor: pointer;
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        color: var(--fg-muted);
+        background: var(--surface);
+      }
+      .icon-btn:hover {
+        background: var(--surface-raised);
+        color: var(--fg);
+        border-color: var(--border-strong);
+      }
+
+      /* ─── Onboarding progress ───────────────────────────────────── */
+      .progress {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-2) var(--space-3);
+        margin-bottom: var(--space-5);
+        font-size: 12px;
+      }
+      .progress-step {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--fg-muted);
+        padding: 2px 8px;
+        border-radius: 99px;
+      }
+      .progress-step.done {
+        color: var(--mint);
+      }
+      .progress-step.active {
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        font-weight: 600;
+      }
+      .progress-step.todo {
+        color: var(--fg-dim);
+      }
+      .progress-divider {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* ─── Hero KPI ──────────────────────────────────────────────── */
+      .hero {
+        background:
+          linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--accent) 4%, transparent),
+            transparent 60%
+          ),
+          var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        margin-bottom: var(--space-5);
+        display: grid;
+        grid-template-columns: 1.6fr 1fr;
+        gap: var(--space-6);
+        align-items: center;
+      }
+      .hero-left .label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--fg-muted);
+        margin-bottom: var(--space-2);
+      }
+      .hero-total {
+        font-family: var(--font-display);
+        font-size: 56px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1;
+        margin-bottom: var(--space-2);
+      }
+      .hero-total .cur {
+        color: var(--fg-muted);
+        font-weight: 400;
+        font-size: 36px;
+        margin-left: 6px;
+      }
+      .hero-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        font-size: 13px;
+        color: var(--fg-muted);
+      }
+      .hero-meta .trend {
+        color: var(--mint);
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .hero-meta .delta {
+        color: var(--amber);
+        font-weight: 600;
+      }
+      .hero-meta .dot-sep {
+        color: var(--fg-dim);
+      }
+
+      .stack-bar {
+        margin-top: var(--space-5);
+        display: flex;
+        height: 14px;
+        border-radius: 99px;
+        overflow: hidden;
+        gap: 2px;
+        background: var(--border);
+        padding: 2px;
+      }
+      .stack-bar > div {
+        border-radius: 99px;
+        transition: filter 200ms;
+      }
+      .stack-bar > div:hover {
+        filter: brightness(1.2);
+      }
+
+      .stack-legend {
+        margin-top: var(--space-3);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        font-size: 12px;
+      }
+      .stack-legend .item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--fg-muted);
+      }
+      .stack-legend .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        display: inline-block;
+      }
+      .stack-legend b {
+        color: var(--fg);
+        font-weight: 600;
+      }
+
+      .bench {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+      }
+      .bench h4 {
+        margin: 0 0 var(--space-2);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--fg-muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .bench .row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        padding: 4px 0;
+      }
+      .bench .row span:last-child {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .bench .indicator {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .bench .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: color-mix(in srgb, var(--amber) 14%, transparent);
+        color: var(--amber);
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-weight: 600;
+        font-size: 12px;
+      }
+      .ai-note {
+        font-size: 11px;
+        color: var(--fg-dim);
+        margin-top: var(--space-2);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      /* ─── Tabs ─────────────────────────────────────────────────── */
+      .tabs {
+        display: flex;
+        gap: var(--space-1);
+        margin-bottom: var(--space-5);
+        padding: 4px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        width: fit-content;
+      }
+      .tab {
+        all: unset;
+        cursor: pointer;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--fg-muted);
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tab:hover {
+        background: var(--surface-raised);
+        color: var(--fg);
+      }
+      .tab.active {
+        background: var(--accent);
+        color: #0a0a0c;
+        font-weight: 600;
+      }
+      .tab.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .tab .badge {
+        background: rgba(255, 255, 255, 0.18);
+        padding: 1px 6px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      /* ─── Config bar ───────────────────────────────────────────── */
+      .config-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-bottom: var(--space-5);
+        font-size: 12px;
+        color: var(--fg-muted);
+      }
+      .config-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        padding: 6px 14px;
+        cursor: pointer;
+      }
+      .config-pill b {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      .config-pill:hover {
+        background: var(--surface-raised);
+      }
+
+      .scene-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        padding: 6px 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        color: var(--fg-muted);
+        cursor: pointer;
+      }
+      .scene-chip:hover {
+        background: var(--surface-raised);
+      }
+      .scene-chip.active {
+        background: color-mix(in srgb, var(--c-cast) 14%, transparent);
+        color: var(--c-cast);
+        border-color: color-mix(in srgb, var(--c-cast) 30%, transparent);
+      }
+      .scene-strip {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+      }
+
+      /* ─── Grid ──────────────────────────────────────────────────── */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: var(--space-5);
+        align-items: start;
+      }
+      .col-main {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+      .group-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--fg-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding-block: var(--space-1);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .group-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* ─── Card (Cast / Troupe / Category) ──────────────────────── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        transition: border-color 150ms;
+      }
+      .card:hover {
+        border-color: var(--border-strong);
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        cursor: pointer;
+        user-select: none;
+      }
+      .card-head:hover {
+        background: var(--surface-hover);
+      }
+      .card-head .title {
+        font-weight: 600;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .card-head .meta {
+        color: var(--fg-muted);
+        font-size: 12px;
+        margin-inline-end: var(--space-2);
+      }
+      .card-head .total {
+        font-weight: 700;
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+        min-width: 90px;
+        text-align: end;
+      }
+      .card-head .total.zero {
+        color: var(--fg-dim);
+        font-weight: 500;
+      }
+      .card-head .caret {
+        color: var(--fg-muted);
+        transition: transform 150ms;
+      }
+      .card.open .card-head .caret {
+        transform: rotate(180deg);
+      }
+      .card-body {
+        border-block-start: 1px solid var(--border);
+      }
+      .card.closed .card-body {
+        display: none;
+      }
+
+      .badge-count {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        color: var(--fg-muted);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 99px;
+        margin-inline-start: 2px;
+      }
+
+      /* ─── Department rows ──────────────────────────────────────── */
+      .dept-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        cursor: pointer;
+        border-block-end: 1px solid var(--border);
+        font-size: 14px;
+      }
+      .dept-row:last-child {
+        border-block-end: none;
+      }
+      .dept-row:hover {
+        background: var(--surface-hover);
+      }
+      .dept-row .dept-name {
+        font-weight: 500;
+      }
+      .dept-row .dept-roles {
+        color: var(--fg-muted);
+        font-size: 12px;
+      }
+      .dept-row .dept-tot {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        min-width: 92px;
+        text-align: end;
+      }
+
+      /* ─── Category accordions ──────────────────────────────────── */
+      .cat-body {
+        background: var(--surface-raised);
+        padding: var(--space-3) var(--space-4) var(--space-4);
+        border-block-start: 1px solid var(--border);
+      }
+      .cat-empty {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        background: var(--surface-raised);
+        border-block-start: 1px solid var(--border);
+        color: var(--fg-muted);
+        font-size: 13px;
+      }
+      .cat-empty a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        margin-inline-start: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .cat-empty a:hover {
+        text-decoration: underline;
+      }
+
+      .elem-table {
+        width: 100%;
+        font-size: 13px;
+      }
+      .elem-table th {
+        text-align: start;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--fg-muted);
+        padding: 8px 8px 8px 0;
+        border-block-end: 1px solid var(--border);
+      }
+      .elem-table th.num {
+        text-align: end;
+      }
+      .elem-table td {
+        padding: 10px 8px 10px 0;
+        border-block-end: 1px solid var(--border);
+        vertical-align: middle;
+      }
+      .elem-table tr:last-child td {
+        border-block-end: none;
+      }
+      .elem-table .num {
+        text-align: end;
+        font-variant-numeric: tabular-nums;
+      }
+      .elem-table .tot {
+        font-weight: 600;
+      }
+      .elem-table .editable {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        padding: 4px 8px;
+        color: var(--fg);
+        font-variant-numeric: tabular-nums;
+        font-size: 13px;
+        text-align: end;
+        min-width: 78px;
+        font-family: inherit;
+      }
+      .elem-table .editable:hover {
+        background: var(--surface);
+        border-color: var(--border);
+      }
+      .elem-table .editable:focus {
+        outline: none;
+        background: var(--surface);
+        border-color: var(--accent);
+      }
+      .elem-table .stale-row {
+        opacity: 0.85;
+      }
+      .elem-table .stale-row td:first-child {
+        position: relative;
+        padding-inline-start: 12px;
+      }
+      .elem-table .stale-row td:first-child::before {
+        content: "";
+        position: absolute;
+        inset-inline-start: 0;
+        top: 12px;
+        bottom: 12px;
+        width: 2px;
+        background: var(--amber);
+        border-radius: 2px;
+      }
+
+      /* ─── Chips ───────────────────────────────────────────────── */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .chip .ico {
+        width: 10px;
+        height: 10px;
+        stroke-width: 2.5;
+      }
+      .chip-auto {
+        background: color-mix(in srgb, var(--c-cast) 14%, transparent);
+        color: var(--c-cast);
+      }
+      .chip-manual {
+        background: color-mix(in srgb, var(--accent) 16%, transparent);
+        color: var(--accent);
+      }
+      .chip-stale {
+        background: color-mix(in srgb, var(--amber) 16%, transparent);
+        color: var(--amber);
+      }
+
+      /* ─── Sidebar ──────────────────────────────────────────────── */
+      .col-side {
+        position: sticky;
+        top: var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+      .donut-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-5);
+      }
+      .donut-card h3 {
+        margin: 0 0 var(--space-4);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--fg-muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .donut-card h3 .snap {
+        font-size: 11px;
+        color: var(--mint);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .donut-wrap {
+        display: flex;
+        justify-content: center;
+        margin-bottom: var(--space-4);
+      }
+      .donut {
+        width: 170px;
+        height: 170px;
+        position: relative;
+      }
+      .donut svg.ring {
+        transform: rotate(-90deg);
+      }
+      .donut .center {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+      .donut .big {
+        font-family: var(--font-display);
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .donut .small {
+        font-size: 11px;
+        color: var(--fg-muted);
+        margin-top: 2px;
+      }
+
+      .cat-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .cat-bar {
+        font-size: 12px;
+      }
+      .cat-bar .meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .cat-bar .meta .left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--fg-muted);
+      }
+      .cat-bar .meta .left .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        display: inline-block;
+      }
+      .cat-bar .meta .right {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: var(--fg);
+      }
+      .cat-bar .track {
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .cat-bar .fill {
+        height: 100%;
+        border-radius: 2px;
+      }
+
+      .total-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-4) var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .total-card .row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .total-card .row span:first-child {
+        color: var(--fg-muted);
+      }
+      .total-card .row span:last-child {
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+      }
+      .total-card .row.grand {
+        padding-top: var(--space-2);
+        border-top: 1px solid var(--border);
+        margin-top: var(--space-2);
+      }
+      .total-card .row.grand span:first-child {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      .total-card .row.grand span:last-child {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .total-card .trend {
+        font-size: 12px;
+        color: var(--mint);
+        margin-top: 2px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2);
+      }
+      .actions button {
+        all: unset;
+        cursor: pointer;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--fg);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .actions button:hover {
+        background: var(--surface-raised);
+        border-color: var(--border-strong);
+      }
+      .actions button.primary {
+        background: var(--accent);
+        color: #0a0a0c;
+        font-weight: 600;
+        border-color: var(--accent);
+        grid-column: span 2;
+      }
+      .actions button.primary:hover {
+        filter: brightness(1.1);
+      }
+
+      /* ─── Day teaser ───────────────────────────────────────────── */
+      .day-teaser {
+        background: linear-gradient(
+          135deg,
+          color-mix(in srgb, var(--c-fotografia) 8%, var(--surface)),
+          var(--surface)
+        );
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        font-size: 13px;
+      }
+      .day-teaser h4 {
+        margin: 0 0 var(--space-3);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--fg-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .day-teaser h4 .warn {
+        color: var(--rose);
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 600;
+      }
+      .day-bars {
+        display: flex;
+        align-items: end;
+        gap: 4px;
+        height: 50px;
+      }
+      .day-bars .bar {
+        flex: 1;
+        background: var(--c-fotografia);
+        border-radius: 3px 3px 0 0;
+        opacity: 0.7;
+        transition: opacity 150ms;
+      }
+      .day-bars .bar:hover {
+        opacity: 1;
+      }
+      .day-bars .bar.expensive {
+        background: var(--rose);
+      }
+      .day-meta {
+        margin-top: var(--space-2);
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--fg-muted);
+      }
+      .day-meta b {
+        color: var(--fg);
+      }
+      .day-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: var(--space-3);
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ─── SVG sprite (lucide-style) ───────────────────────────── -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <!-- generic icons -->
+        <symbol id="i-overview" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 3 14 8 19 8" />
+        </symbol>
+        <symbol id="i-screenplay" viewBox="0 0 24 24">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 3 14 8 19 8" />
+          <line x1="9" y1="13" x2="15" y2="13" />
+          <line x1="9" y1="17" x2="13" y2="17" />
+        </symbol>
+        <symbol id="i-breakdown" viewBox="0 0 24 24">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+          <circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="11" cy="12" r="1.5" fill="currentColor" stroke="none" />
+          <circle cx="17" cy="18" r="1.5" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="i-calendar" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </symbol>
+        <symbol id="i-wallet" viewBox="0 0 24 24">
+          <path d="M20 12V8H6a2 2 0 0 1-2-2V18a2 2 0 0 0 2 2h14v-4" />
+          <path d="M20 12a2 2 0 0 0 0 4h2v-4Z" />
+          <path d="M4 6V5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v3" />
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
+          />
+          <circle cx="12" cy="12" r="3" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12" />
+        </symbol>
+        <symbol id="i-circle" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+        </symbol>
+        <symbol id="i-dot" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="i-arrow-up" viewBox="0 0 24 24">
+          <line x1="12" y1="19" x2="12" y2="5" />
+          <polyline points="5 12 12 5 19 12" />
+        </symbol>
+        <symbol id="i-arrow-right" viewBox="0 0 24 24">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </symbol>
+        <symbol id="i-zap" viewBox="0 0 24 24">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </symbol>
+        <symbol id="i-chevron-down" viewBox="0 0 24 24">
+          <polyline points="6 9 12 15 18 9" />
+        </symbol>
+        <symbol id="i-chevron-right" viewBox="0 0 24 24">
+          <polyline points="9 6 15 12 9 18" />
+        </symbol>
+        <symbol id="i-download" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24">
+          <path
+            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+          />
+          <circle cx="12" cy="13" r="4" />
+        </symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+          <line x1="3" y1="20" x2="21" y2="20" />
+        </symbol>
+        <symbol id="i-target" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="5" />
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24">
+          <path
+            d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"
+          />
+        </symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24">
+          <path
+            d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+          />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24">
+          <polyline points="3 6 5 6 21 6" />
+          <path
+            d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </symbol>
+        <symbol id="i-filter" viewBox="0 0 24 24">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+        </symbol>
+        <symbol id="i-info" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <circle cx="12" cy="8" r="0.8" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="i-trend-up" viewBox="0 0 24 24">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 1 18" />
+          <polyline points="16 7 22 7 22 13" />
+        </symbol>
+        <symbol id="i-flame" viewBox="0 0 24 24">
+          <path
+            d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.3-2.4 0-6 2.5-6.5 0 2 1 4 3 5.5s3.5 4 3.5 6.5a7 7 0 1 1-14 0c0-1.6.7-3 1.5-4 .5 1.5 1.5 2.5 2 3"
+          />
+        </symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24">
+          <path d="M12 20h9" />
+          <path
+            d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"
+          />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </symbol>
+
+        <!-- domain icons -->
+        <symbol id="i-cast" viewBox="0 0 24 24">
+          <!-- theatre masks: two overlapping circles with eyes/mouth -->
+          <circle cx="9" cy="11" r="5" />
+          <circle cx="15" cy="13" r="5" />
+          <path d="M7.5 10.5h.01" />
+          <path d="M10.5 10.5h.01" />
+          <path d="M8 13.5c.5.5 1.5.5 2 0" />
+        </symbol>
+        <symbol id="i-clapper" viewBox="0 0 24 24">
+          <rect x="3" y="9" width="18" height="12" rx="1" />
+          <path d="M3 9 5 4l4 1 4-1 4 1 4-1-2 5" />
+          <line x1="6" y1="6" x2="4" y2="9" />
+          <line x1="11" y1="5" x2="9" y2="9" />
+          <line x1="16" y1="6" x2="14" y2="9" />
+        </symbol>
+        <symbol id="i-camera-pro" viewBox="0 0 24 24">
+          <rect x="2" y="7" width="14" height="12" rx="2" />
+          <path d="M16 11l5-3v8l-5-3z" />
+          <circle cx="9" cy="13" r="3" />
+        </symbol>
+        <symbol id="i-mic" viewBox="0 0 24 24">
+          <rect x="9" y="2" width="6" height="12" rx="3" />
+          <path d="M19 11a7 7 0 0 1-14 0" />
+          <line x1="12" y1="18" x2="12" y2="22" />
+          <line x1="8" y1="22" x2="16" y2="22" />
+        </symbol>
+        <symbol id="i-landmark" viewBox="0 0 24 24">
+          <line x1="3" y1="22" x2="21" y2="22" />
+          <line x1="6" y1="18" x2="6" y2="11" />
+          <line x1="10" y1="18" x2="10" y2="11" />
+          <line x1="14" y1="18" x2="14" y2="11" />
+          <line x1="18" y1="18" x2="18" y2="11" />
+          <polygon points="12 2 20 8 4 8" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </symbol>
+        <symbol id="i-shirt" viewBox="0 0 24 24">
+          <path
+            d="M20.4 4.6 16 3l-2 2-2-2L8 3 3.6 4.6 6 9l3-1v13h6V8l3 1 2.4-4.4Z"
+          />
+        </symbol>
+        <symbol id="i-briefcase" viewBox="0 0 24 24">
+          <rect x="2" y="7" width="20" height="14" rx="2" />
+          <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+          <line x1="2" y1="13" x2="22" y2="13" />
+        </symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24">
+          <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z" />
+          <circle cx="12" cy="10" r="3" />
+        </symbol>
+        <symbol id="i-car" viewBox="0 0 24 24">
+          <path
+            d="M19 17h2v-5l-2-5H5L3 12v5h2"
+          />
+          <path d="M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0" />
+          <path d="M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0" />
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </symbol>
+        <symbol id="i-paw" viewBox="0 0 24 24">
+          <circle cx="11" cy="4" r="2" />
+          <circle cx="18" cy="8" r="2" />
+          <circle cx="20" cy="14" r="2" />
+          <circle cx="4" cy="14" r="2" />
+          <path
+            d="M8 21c0-3 2-5 4-5s4 2 4 5c0 1.5-1 2-2 2h-4c-1 0-2-.5-2-2Z"
+          />
+        </symbol>
+        <symbol id="i-megaphone" viewBox="0 0 24 24">
+          <path d="M3 11v3a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z" />
+          <path d="M14 6.5a5 5 0 0 1 0 11" />
+          <path d="M17.5 4a8 8 0 0 1 0 16" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="app">
+      <!-- ─── Side nav ─── -->
+      <aside class="nav">
+        <div class="nav-brand">oh<b>writers</b></div>
+        <div class="nav-section">Project</div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-overview" /></svg> Overview
+        </div>
+        <div class="nav-section">Writing</div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg> Soggetto
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg> Synopsis
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg> Outline
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-file" /></svg> Treatment
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-screenplay" /></svg> Screenplay
+        </div>
+        <div class="nav-section">Production</div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-breakdown" /></svg> Breakdown
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-calendar" /></svg> Schedule
+        </div>
+        <div class="nav-item active">
+          <svg class="ico ico-md"><use href="#i-wallet" /></svg> Budget
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-pin" /></svg> Locations
+        </div>
+        <div class="nav-item">
+          <svg class="ico ico-md"><use href="#i-settings" /></svg> Settings
+        </div>
+      </aside>
+
+      <!-- ─── Main ─── -->
+      <main>
+        <div class="top">
+          <div class="breadcrumb">
+            Projects › <b>Team Thriller</b> › Budget
+          </div>
+          <div class="top-actions">
+            <button class="icon-btn" title="Snapshot">
+              <svg class="ico ico-md"><use href="#i-camera" /></svg>
+            </button>
+            <button class="icon-btn" title="Benchmark">
+              <svg class="ico ico-md"><use href="#i-chart" /></svg>
+            </button>
+            <button class="icon-btn" title="Esporta PDF">
+              <svg class="ico ico-md"><use href="#i-download" /></svg>
+            </button>
+            <button class="icon-btn" title="Impostazioni">
+              <svg class="ico ico-md"><use href="#i-settings" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- onboarding -->
+        <div class="progress">
+          <span class="progress-step done">
+            <svg class="ico ico-sm"><use href="#i-check" /></svg> Soggetto
+          </span>
+          <span class="progress-divider"></span>
+          <span class="progress-step done">
+            <svg class="ico ico-sm"><use href="#i-check" /></svg> Breakdown
+          </span>
+          <span class="progress-divider"></span>
+          <span class="progress-step todo">
+            <svg class="ico ico-sm"><use href="#i-circle" /></svg> Schedule
+          </span>
+          <span class="progress-divider"></span>
+          <span class="progress-step done">
+            <svg class="ico ico-sm"><use href="#i-check" /></svg> Tariffe
+          </span>
+          <span class="progress-divider"></span>
+          <span class="progress-step active">
+            <svg class="ico ico-sm"><use href="#i-dot" /></svg> Budget
+          </span>
+        </div>
+
+        <!-- hero -->
+        <section class="hero">
+          <div class="hero-left">
+            <div class="label">Totale progetto · Short comedy · 5 giorni</div>
+            <div class="hero-total" data-num>
+              10 617<span class="cur">€</span>
+            </div>
+            <div class="hero-meta">
+              <span><span class="delta" data-num>2 123 €</span> / giorno</span>
+              <span class="dot-sep">·</span>
+              <span><b style="color: var(--fg)">28</b> elementi breakdown</span>
+              <span class="dot-sep">·</span>
+              <span class="trend">
+                <svg class="ico ico-sm"><use href="#i-trend-up" /></svg>
+                320 € da ieri
+              </span>
+            </div>
+            <div class="stack-bar">
+              <div style="width: 0.1%; background: var(--c-cast)"></div>
+              <div style="width: 69%; background: var(--c-crew)"></div>
+              <div style="width: 0.8%; background: var(--c-locations)"></div>
+              <div style="width: 0.8%; background: var(--c-vehicles)"></div>
+              <div style="width: 21%; background: var(--c-scenografia)"></div>
+              <div style="width: 9%; background: var(--accent)"></div>
+            </div>
+            <div class="stack-legend">
+              <span class="item"
+                ><span class="dot" style="background: var(--c-crew)"></span
+                >Crew <b data-num>7 350 €</b></span
+              >
+              <span class="item"
+                ><span class="dot" style="background: var(--c-scenografia)"></span
+                >Scenografia <b data-num>2 222 €</b></span
+              >
+              <span class="item"
+                ><span class="dot" style="background: var(--accent)"></span
+                >Contingenza <b data-num>965 €</b></span
+              >
+              <span class="item"
+                ><span class="dot" style="background: var(--c-cast)"></span
+                >Cast <b data-num>0 €</b></span
+              >
+            </div>
+          </div>
+
+          <div class="bench">
+            <h4>
+              <svg class="ico ico-sm"><use href="#i-target" /></svg> Benchmark ·
+              Short Comedy IT
+            </h4>
+            <div class="row">
+              <span>Mediana</span><span data-num>9 480 €</span>
+            </div>
+            <div class="row">
+              <span>10° / 90° pct</span><span data-num>6.2k / 14k €</span>
+            </div>
+            <div class="row">
+              <span>€/giorno mediana</span><span data-num>1 896 €</span>
+            </div>
+            <div class="indicator">
+              <span class="pill">
+                <svg class="ico ico-sm"><use href="#i-zap" /></svg> +12% sopra
+                mediana
+              </span>
+              <div class="ai-note">
+                <svg class="ico ico-sm"><use href="#i-info" /></svg> 47 progetti
+                simili · 8 mag 2026
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- tabs -->
+        <div class="tabs">
+          <button class="tab active">
+            Per categoria <span class="badge">8</span>
+          </button>
+          <button class="tab">Per giornata <span class="badge">5</span></button>
+          <button class="tab">Per dipartimento</button>
+          <button class="tab disabled">
+            Cash flow
+            <svg class="ico ico-sm" style="stroke: var(--c-vfx)">
+              <use href="#i-sparkle" /></svg
+            >
+          </button>
+        </div>
+
+        <!-- config -->
+        <div class="config-bar">
+          <span class="config-pill">Giorni ripresa <b data-num>5</b></span>
+          <span class="config-pill">Contingenza <b data-num>10%</b></span>
+          <span
+            style="
+              margin-left: auto;
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              color: var(--fg-dim);
+              font-size: 11px;
+            "
+            ><svg class="ico ico-sm"><use href="#i-filter" /></svg> Filtra per
+            scena</span
+          >
+          <div class="scene-strip">
+            <span class="scene-chip active">Tutte · 28</span>
+            <span class="scene-chip"
+              ><b style="color: var(--fg)">Sc.1</b> Appartamento</span
+            >
+            <span class="scene-chip"
+              ><b style="color: var(--fg)">Sc.2</b> Strada</span
+            >
+            <span class="scene-chip"
+              ><b style="color: var(--fg)">Sc.3</b> Pizzeria</span
+            >
+            <span class="scene-chip"
+              ><b style="color: var(--fg)">Sc.4</b> Palco</span
+            >
+          </div>
+        </div>
+
+        <!-- grid -->
+        <div class="grid">
+          <div class="col-main">
+            <!-- ───────── Cast & Crew ───────── -->
+            <div class="group-label">Cast & Crew</div>
+
+            <div class="card open">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-cast) 14%,
+                      transparent
+                    );
+                    color: var(--c-cast);
+                  "
+                >
+                  <svg class="ico"><use href="#i-cast" /></svg>
+                </div>
+                <div class="title">
+                  Cast<span class="badge-count">6 attori</span>
+                </div>
+                <span class="meta">3 lead · 3 supporting</span>
+                <span class="total" data-num>4 200 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+              <div class="card-body">
+                <table class="elem-table" style="padding: 0 var(--space-4)">
+                  <thead>
+                    <tr>
+                      <th>Attore</th>
+                      <th class="num">Gg</th>
+                      <th class="num">€ / giorno</th>
+                      <th>Regime</th>
+                      <th class="num">Vitto + Alloggio</th>
+                      <th class="num">Totale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div
+                          style="
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                          "
+                        >
+                          <span
+                            style="
+                              width: 24px;
+                              height: 24px;
+                              border-radius: 99px;
+                              background: color-mix(
+                                in srgb,
+                                var(--c-cast) 18%,
+                                transparent
+                              );
+                              color: var(--c-cast);
+                              font-size: 11px;
+                              font-weight: 700;
+                              display: grid;
+                              place-items: center;
+                            "
+                            >TE</span
+                          >
+                          <span><b>Tea</b> Falco</span>
+                          <span class="chip chip-auto">
+                            <svg class="ico"><use href="#i-sparkle" /></svg>
+                            Lead
+                          </span>
+                        </div>
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="5" data-num />
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="600" data-num />
+                      </td>
+                      <td>
+                        <span
+                          style="
+                            font-size: 11px;
+                            color: var(--fg-muted);
+                            background: var(--surface-raised);
+                            padding: 2px 8px;
+                            border-radius: 99px;
+                          "
+                          >P.IVA</span
+                        >
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="150" data-num />
+                      </td>
+                      <td class="num tot" data-num>3 150 €</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div
+                          style="
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                          "
+                        >
+                          <span
+                            style="
+                              width: 24px;
+                              height: 24px;
+                              border-radius: 99px;
+                              background: color-mix(
+                                in srgb,
+                                var(--c-cast) 18%,
+                                transparent
+                              );
+                              color: var(--c-cast);
+                              font-size: 11px;
+                              font-weight: 700;
+                              display: grid;
+                              place-items: center;
+                            "
+                            >MI</span
+                          >
+                          <span><b>Milco</b> Bianchi</span>
+                        </div>
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="3" data-num />
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="350" data-num />
+                      </td>
+                      <td>
+                        <span
+                          style="
+                            font-size: 11px;
+                            color: var(--fg-muted);
+                            background: var(--surface-raised);
+                            padding: 2px 8px;
+                            border-radius: 99px;
+                          "
+                          >P.IVA</span
+                        >
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="0" data-num />
+                      </td>
+                      <td class="num tot" data-num>1 050 €</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div
+                          style="
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                          "
+                        >
+                          <span
+                            style="
+                              width: 24px;
+                              height: 24px;
+                              border-radius: 99px;
+                              background: color-mix(
+                                in srgb,
+                                var(--c-cast) 18%,
+                                transparent
+                              );
+                              color: var(--c-cast);
+                              font-size: 11px;
+                              font-weight: 700;
+                              display: grid;
+                              place-items: center;
+                            "
+                            >LU</span
+                          >
+                          <span>Luca Rossi</span>
+                          <span
+                            class="chip"
+                            style="
+                              background: color-mix(
+                                in srgb,
+                                var(--fg-muted) 14%,
+                                transparent
+                              );
+                              color: var(--fg-muted);
+                            "
+                            >Supporting</span
+                          >
+                        </div>
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="1" data-num />
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="0" data-num />
+                      </td>
+                      <td>
+                        <span
+                          style="
+                            font-size: 11px;
+                            color: var(--fg-muted);
+                            background: var(--surface-raised);
+                            padding: 2px 8px;
+                            border-radius: 99px;
+                          "
+                          >P.IVA</span
+                        >
+                      </td>
+                      <td class="num">
+                        <input class="editable" value="0" data-num />
+                      </td>
+                      <td class="num tot zero" data-num>0 €</td>
+                    </tr>
+                    <tr>
+                      <td colspan="6" style="padding-top: 12px">
+                        <a
+                          href="#"
+                          style="
+                            color: var(--accent);
+                            font-weight: 600;
+                            font-size: 12px;
+                            text-decoration: none;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 4px;
+                          "
+                        >
+                          <svg class="ico ico-sm"><use href="#i-plus" /></svg>
+                          Aggiungi attore
+                        </a>
+                        <span
+                          style="
+                            float: right;
+                            color: var(--fg-muted);
+                            font-size: 12px;
+                          "
+                          >Mostra +3 supporting</span
+                        >
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card open">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-crew) 14%,
+                      transparent
+                    );
+                    color: var(--c-crew);
+                  "
+                >
+                  <svg class="ico"><use href="#i-clapper" /></svg>
+                </div>
+                <div class="title">
+                  Troupe<span class="badge-count">19 ruoli</span>
+                </div>
+                <span class="meta">7 dipartimenti</span>
+                <span class="total" data-num>7 350 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+              <div class="card-body">
+                <div
+                  class="dept-row"
+                  style="
+                    background: var(--surface-raised);
+                    border-block-end: none;
+                  "
+                >
+                  <div
+                    class="ico-tile"
+                    style="
+                      background: color-mix(
+                        in srgb,
+                        var(--c-fotografia) 14%,
+                        transparent
+                      );
+                      color: var(--c-fotografia);
+                    "
+                  >
+                    <svg class="ico"><use href="#i-camera-pro" /></svg>
+                  </div>
+                  <div>
+                    <div class="dept-name">Fotografia</div>
+                    <div class="dept-roles">5 ruoli · espansi sotto</div>
+                  </div>
+                  <div class="dept-tot" data-num>2 200 €</div>
+                  <svg
+                    class="ico ico-sm"
+                    style="color: var(--fg-muted); transform: rotate(90deg)"
+                  >
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </div>
+                <!-- nested role rows -->
+                <div
+                  style="
+                    background: var(--surface-raised);
+                    padding: 0 var(--space-4) var(--space-3) 56px;
+                    border-block-end: 1px solid var(--border);
+                  "
+                >
+                  <table class="elem-table">
+                    <thead>
+                      <tr>
+                        <th>Ruolo</th>
+                        <th class="num">Gg</th>
+                        <th class="num">€ / giorno</th>
+                        <th>Regime</th>
+                        <th class="num">Totale</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <span><b>DOP</b> · Direttore Fotografia</span>
+                        </td>
+                        <td class="num">
+                          <input class="editable" value="5" data-num />
+                        </td>
+                        <td class="num">
+                          <input class="editable" value="800" data-num />
+                        </td>
+                        <td>
+                          <span
+                            style="
+                              font-size: 11px;
+                              color: var(--fg-muted);
+                              background: var(--surface);
+                              padding: 2px 8px;
+                              border-radius: 99px;
+                            "
+                            >P.IVA</span
+                          >
+                        </td>
+                        <td class="num tot" data-num>4 000 €</td>
+                      </tr>
+                      <tr>
+                        <td>Operatore Camera</td>
+                        <td class="num">
+                          <input class="editable" value="5" data-num />
+                        </td>
+                        <td class="num">
+                          <input class="editable" value="450" data-num />
+                        </td>
+                        <td>
+                          <span
+                            style="
+                              font-size: 11px;
+                              color: var(--fg-muted);
+                              background: var(--surface);
+                              padding: 2px 8px;
+                              border-radius: 99px;
+                            "
+                            >P.IVA</span
+                          >
+                        </td>
+                        <td class="num tot" data-num>2 250 €</td>
+                      </tr>
+                      <tr>
+                        <td>1° Assistente Operatore</td>
+                        <td class="num">
+                          <input class="editable" value="5" data-num />
+                        </td>
+                        <td class="num">
+                          <input class="editable" value="300" data-num />
+                        </td>
+                        <td>
+                          <span
+                            style="
+                              font-size: 11px;
+                              color: var(--fg-muted);
+                              background: var(--surface);
+                              padding: 2px 8px;
+                              border-radius: 99px;
+                            "
+                            >P.IVA</span
+                          >
+                        </td>
+                        <td class="num tot" data-num>1 500 €</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span style="color: var(--fg-muted)"
+                            >Capo Elettricista
+                            <span
+                              class="chip"
+                              style="
+                                background: color-mix(
+                                  in srgb,
+                                  var(--fg-muted) 14%,
+                                  transparent
+                                );
+                                color: var(--fg-muted);
+                                margin-left: 4px;
+                              "
+                              >Disabilitato</span
+                            ></span
+                          >
+                        </td>
+                        <td class="num" style="color: var(--fg-dim)">5</td>
+                        <td class="num" style="color: var(--fg-dim)">400</td>
+                        <td>
+                          <span
+                            style="
+                              font-size: 11px;
+                              color: var(--fg-dim);
+                              padding: 2px 8px;
+                            "
+                            >—</span
+                          >
+                        </td>
+                        <td class="num tot zero" data-num>—</td>
+                      </tr>
+                      <tr>
+                        <td colspan="5" style="padding-top: 10px">
+                          <a
+                            href="#"
+                            style="
+                              color: var(--accent);
+                              font-weight: 600;
+                              font-size: 12px;
+                              text-decoration: none;
+                              display: inline-flex;
+                              align-items: center;
+                              gap: 4px;
+                            "
+                          >
+                            <svg class="ico ico-sm"><use href="#i-plus" /></svg>
+                            Aggiungi ruolo Fotografia
+                          </a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="dept-row">
+                  <div
+                    class="ico-tile"
+                    style="
+                      background: color-mix(
+                        in srgb,
+                        var(--c-regia) 14%,
+                        transparent
+                      );
+                      color: var(--c-regia);
+                    "
+                  >
+                    <svg class="ico"><use href="#i-clapper" /></svg>
+                  </div>
+                  <div>
+                    <div class="dept-name">Regia</div>
+                    <div class="dept-roles">2 ruoli · 1° AD, 2° AD</div>
+                  </div>
+                  <div class="dept-tot" data-num>750 €</div>
+                  <svg class="ico ico-sm" style="color: var(--fg-muted)">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </div>
+                <div class="dept-row">
+                  <div
+                    class="ico-tile"
+                    style="
+                      background: color-mix(
+                        in srgb,
+                        var(--c-suono) 14%,
+                        transparent
+                      );
+                      color: var(--c-suono);
+                    "
+                  >
+                    <svg class="ico"><use href="#i-mic" /></svg>
+                  </div>
+                  <div>
+                    <div class="dept-name">Suono</div>
+                    <div class="dept-roles">2 ruoli · Fonico, Microfonista</div>
+                  </div>
+                  <div class="dept-tot" data-num>650 €</div>
+                  <svg class="ico ico-sm" style="color: var(--fg-muted)">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </div>
+                <div class="dept-row">
+                  <div
+                    class="ico-tile"
+                    style="
+                      background: color-mix(
+                        in srgb,
+                        var(--c-scenografia) 14%,
+                        transparent
+                      );
+                      color: var(--c-scenografia);
+                    "
+                  >
+                    <svg class="ico"><use href="#i-landmark" /></svg>
+                  </div>
+                  <div>
+                    <div class="dept-name">Arte</div>
+                    <div class="dept-roles">
+                      3 ruoli · Scenografo, Arredatore, +1
+                    </div>
+                  </div>
+                  <div class="dept-tot" data-num>1 350 €</div>
+                  <svg class="ico ico-sm" style="color: var(--fg-muted)">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </div>
+                <div class="dept-row">
+                  <div
+                    class="ico-tile"
+                    style="
+                      background: color-mix(
+                        in srgb,
+                        var(--c-costumi) 14%,
+                        transparent
+                      );
+                      color: var(--c-costumi);
+                    "
+                  >
+                    <svg class="ico"><use href="#i-shirt" /></svg>
+                  </div>
+                  <div>
+                    <div class="dept-name">Costumi & Trucco</div>
+                    <div class="dept-roles">
+                      4 ruoli · Costumista, Truccatrice, +2
+                    </div>
+                  </div>
+                  <div class="dept-tot" data-num>1 350 €</div>
+                  <svg class="ico ico-sm" style="color: var(--fg-muted)">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </div>
+                <div class="dept-row">
+                  <div
+                    class="ico-tile"
+                    style="
+                      background: color-mix(
+                        in srgb,
+                        var(--c-produzione) 14%,
+                        transparent
+                      );
+                      color: var(--c-produzione);
+                    "
+                  >
+                    <svg class="ico"><use href="#i-briefcase" /></svg>
+                  </div>
+                  <div>
+                    <div class="dept-name">Produzione</div>
+                    <div class="dept-roles">3 ruoli · DdP, Segretaria, Runner</div>
+                  </div>
+                  <div class="dept-tot" data-num>1 050 €</div>
+                  <svg class="ico ico-sm" style="color: var(--fg-muted)">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───────── Produzione ───────── -->
+            <div class="group-label">Produzione · da breakdown</div>
+
+            <!-- Locations EMPTY -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-locations) 14%,
+                      transparent
+                    );
+                    color: var(--c-locations);
+                  "
+                >
+                  <svg class="ico"><use href="#i-pin" /></svg>
+                </div>
+                <div class="title">Locations</div>
+                <span class="meta">Nessuna location nel breakdown</span>
+                <span class="total zero" data-num>0 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+              <div class="cat-empty">
+                <svg class="ico ico-sm" style="color: var(--c-locations)"
+                  ><use href="#i-info"
+                /></svg>
+                <span>Non hai ancora marcato scene come "esterni" o "set"</span>
+                <a href="#"
+                  >Apri breakdown
+                  <svg class="ico ico-sm"><use href="#i-arrow-right" /></svg
+                ></a>
+              </div>
+            </div>
+
+            <!-- Vehicles EMPTY -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-vehicles) 14%,
+                      transparent
+                    );
+                    color: var(--c-vehicles);
+                  "
+                >
+                  <svg class="ico"><use href="#i-car" /></svg>
+                </div>
+                <div class="title">Veicoli</div>
+                <span class="meta">Nessun veicolo nel breakdown</span>
+                <span class="total zero" data-num>0 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+            </div>
+
+            <!-- Scenografia POPULATED with stale -->
+            <div class="card open">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-scenografia) 14%,
+                      transparent
+                    );
+                    color: var(--c-scenografia);
+                  "
+                >
+                  <svg class="ico"><use href="#i-landmark" /></svg>
+                </div>
+                <div class="title">
+                  Scenografia<span class="badge-count"
+                    >1 aggregato + 1 legacy</span
+                  >
+                </div>
+                <span class="meta">14 elementi props · 8 set dress</span>
+                <span class="total" data-num>2 302 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+              <div class="cat-body">
+                <table class="elem-table">
+                  <thead>
+                    <tr>
+                      <th>Elemento</th>
+                      <th class="num">Qta</th>
+                      <th class="num">€ / unità</th>
+                      <th class="num">Effettivo</th>
+                      <th class="num">Totale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <b>Aggregato breakdown</b>
+                        <span
+                          class="chip chip-auto"
+                          style="margin-left: 6px"
+                        >
+                          <svg class="ico"><use href="#i-sparkle" /></svg> AI
+                        </span>
+                      </td>
+                      <td class="num">22</td>
+                      <td class="num">
+                        <input class="editable" value="80" data-num />
+                      </td>
+                      <td class="num">
+                        <input
+                          class="editable"
+                          value="2222"
+                          style="
+                            background: color-mix(
+                              in srgb,
+                              var(--accent) 8%,
+                              transparent
+                            );
+                          "
+                          data-num
+                        />
+                      </td>
+                      <td class="num tot" data-num>2 222 €</td>
+                    </tr>
+                    <tr class="stale-row">
+                      <td>
+                        Bloody knife
+                        <span
+                          class="chip chip-stale"
+                          style="margin-left: 6px"
+                        >
+                          <svg class="ico"><use href="#i-alert" /></svg> Legacy
+                        </span>
+                      </td>
+                      <td class="num">1</td>
+                      <td class="num">
+                        <input class="editable" value="80" data-num />
+                      </td>
+                      <td class="num"><input class="editable" value="" /></td>
+                      <td class="num tot" data-num>80 €</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div
+                  style="
+                    margin-top: 8px;
+                    font-size: 12px;
+                    color: var(--fg-muted);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  "
+                >
+                  <span
+                    >Riga
+                    <b style="color: var(--amber)">legacy</b> pre-spec — puoi
+                    rimuoverla o lasciarla.</span
+                  >
+                  <a
+                    href="#"
+                    style="
+                      color: var(--accent);
+                      font-weight: 600;
+                      text-decoration: none;
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 4px;
+                    "
+                  >
+                    <svg class="ico ico-sm"><use href="#i-trash" /></svg> Rimuovi
+                    legacy
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fotografia -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-fotografia) 14%,
+                      transparent
+                    );
+                    color: var(--c-fotografia);
+                  "
+                >
+                  <svg class="ico"><use href="#i-camera-pro" /></svg>
+                </div>
+                <div class="title">
+                  Fotografia<span class="badge-count">3 elementi</span>
+                </div>
+                <span class="meta">Coltello, Forno Pizza, Forno</span>
+                <span class="total" data-num>1 800 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+            </div>
+
+            <!-- Suono -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-suono) 14%,
+                      transparent
+                    );
+                    color: var(--c-suono);
+                  "
+                >
+                  <svg class="ico"><use href="#i-mic" /></svg>
+                </div>
+                <div class="title">
+                  Suono<span class="badge-count">8 elementi</span>
+                </div>
+                <span class="meta">Risate, Applauso, Voice Over, +5</span>
+                <span class="total" data-num>400 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+            </div>
+
+            <!-- Comparse -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-comparse) 14%,
+                      transparent
+                    );
+                    color: var(--c-comparse);
+                  "
+                >
+                  <svg class="ico"><use href="#i-users" /></svg>
+                </div>
+                <div class="title">
+                  Comparse<span class="badge-count">5 elementi</span>
+                </div>
+                <span class="meta">Pubblico, Comici, Clienti</span>
+                <span class="total" data-num>120 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+            </div>
+
+            <!-- VFX -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-vfx) 14%,
+                      transparent
+                    );
+                    color: var(--c-vfx);
+                  "
+                >
+                  <svg class="ico"><use href="#i-sparkle" /></svg>
+                </div>
+                <div class="title">
+                  VFX / SFX<span class="badge-count">5 elementi</span>
+                </div>
+                <span class="meta">Pugno, Sparizioni, Colpo</span>
+                <span class="total" data-num>3 500 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+            </div>
+
+            <!-- Costumi -->
+            <div class="card">
+              <div class="card-head">
+                <div
+                  class="ico-tile-sm"
+                  style="
+                    background: color-mix(
+                      in srgb,
+                      var(--c-costumi) 14%,
+                      transparent
+                    );
+                    color: var(--c-costumi);
+                  "
+                >
+                  <svg class="ico"><use href="#i-shirt" /></svg>
+                </div>
+                <div class="title">Costumi & Make-up</div>
+                <span class="meta">5 elementi makeup · 1 wardrobe</span>
+                <span class="total" data-num>450 €</span>
+                <svg class="ico ico-sm caret"><use href="#i-chevron-down" /></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- ───────── Sidebar ───────── -->
+          <aside class="col-side">
+            <div class="donut-card">
+              <h3>
+                Composizione
+                <span class="snap">
+                  <svg class="ico ico-sm"><use href="#i-trend-up" /></svg>
+                  320 € da ieri
+                </span>
+              </h3>
+              <div class="donut-wrap">
+                <div class="donut">
+                  <svg class="ring" viewBox="0 0 100 100" width="170" height="170">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="var(--border)"
+                      stroke-width="10"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="var(--c-crew)"
+                      stroke-width="10"
+                      stroke-dasharray="173 251"
+                      stroke-dashoffset="0"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="var(--c-scenografia)"
+                      stroke-width="10"
+                      stroke-dasharray="53 251"
+                      stroke-dashoffset="-173"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="var(--accent)"
+                      stroke-width="10"
+                      stroke-dasharray="23 251"
+                      stroke-dashoffset="-226"
+                    />
+                  </svg>
+                  <div class="center">
+                    <div class="big" data-num>10.6k €</div>
+                    <div class="small">5 gg · 28 elementi</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cat-bars">
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span class="dot" style="background: var(--c-crew)"></span
+                      >Crew</span
+                    >
+                    <span class="right" data-num>7 350 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 69%; background: var(--c-crew)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-vfx)"
+                      ></span
+                      >VFX / SFX</span
+                    >
+                    <span class="right" data-num>3 500 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 33%; background: var(--c-vfx)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-scenografia)"
+                      ></span
+                      >Scenografia</span
+                    >
+                    <span class="right" data-num>2 302 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 22%; background: var(--c-scenografia)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-fotografia)"
+                      ></span
+                      >Fotografia</span
+                    >
+                    <span class="right" data-num>1 800 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 17%; background: var(--c-fotografia)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-costumi)"
+                      ></span
+                      >Costumi</span
+                    >
+                    <span class="right" data-num>450 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 4%; background: var(--c-costumi)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span class="dot" style="background: var(--c-suono)"></span
+                      >Suono</span
+                    >
+                    <span class="right" data-num>400 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 4%; background: var(--c-suono)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="cat-bar">
+                  <div class="meta">
+                    <span class="left"
+                      ><span
+                        class="dot"
+                        style="background: var(--c-comparse)"
+                      ></span
+                      >Comparse</span
+                    >
+                    <span class="right" data-num>120 €</span>
+                  </div>
+                  <div class="track">
+                    <div
+                      class="fill"
+                      style="width: 1%; background: var(--c-comparse)"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="total-card">
+              <div class="row">
+                <span>Subtotale</span><span data-num>9 652 €</span>
+              </div>
+              <div class="row">
+                <span>Contingenza 10%</span><span data-num>965,20 €</span>
+              </div>
+              <div class="row grand">
+                <span>Totale</span><span data-num>10 617 €</span>
+              </div>
+              <div class="trend">
+                <svg class="ico ico-sm"><use href="#i-trend-up" /></svg>
+                320 € da snapshot di ieri
+              </div>
+            </div>
+
+            <div class="day-teaser">
+              <h4>
+                Costo per giornata
+                <span class="warn">
+                  <svg class="ico ico-sm"><use href="#i-flame" /></svg>
+                  Gg 3 più caro
+                </span>
+              </h4>
+              <div class="day-bars">
+                <div class="bar" style="height: 60%"></div>
+                <div class="bar" style="height: 70%"></div>
+                <div class="bar expensive" style="height: 100%"></div>
+                <div class="bar" style="height: 65%"></div>
+                <div class="bar" style="height: 45%"></div>
+              </div>
+              <div class="day-meta">
+                <span>Media <b data-num>2 123 €</b></span>
+                <span>Picco <b data-num>3 200 €</b></span>
+              </div>
+              <a class="day-cta">
+                Apri vista giornata
+                <svg class="ico ico-sm"><use href="#i-arrow-right" /></svg>
+              </a>
+            </div>
+
+            <div class="actions">
+              <button class="primary">
+                <svg class="ico ico-sm"><use href="#i-zap" /></svg> Rigenera
+                budget
+              </button>
+              <button>
+                <svg class="ico ico-sm"><use href="#i-camera" /></svg> Snapshot
+              </button>
+              <button>
+                <svg class="ico ico-sm"><use href="#i-download" /></svg> Esporta
+              </button>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      document.querySelectorAll(".card-head").forEach((h) => {
+        h.addEventListener("click", () => {
+          const card = h.closest(".card");
+          card.classList.toggle("open");
+          card.classList.toggle("closed");
+        });
+      });
+    </script>
+  </body>
+</html>

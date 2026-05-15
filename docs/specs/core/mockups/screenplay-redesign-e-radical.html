@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Screenplay · Editorial Page · E</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --font-script: "Courier Prime", monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      .ico {
+        width: 16px; height: 16px;
+        stroke: currentColor; stroke-width: 1.4;
+        stroke-linecap: round; stroke-linejoin: round;
+        fill: none; flex-shrink: 0;
+      }
+      .ico-sm { width: 12px; height: 12px; }
+
+      /* top strip — identical */
+      .top-strip {
+        position: sticky; top: 0; z-index: 40;
+        background: var(--paper-1);
+        display: flex; align-items: center;
+        gap: 12px; padding: 12px 24px;
+        font-size: 13px; color: var(--ink-3);
+        border-bottom: 1px solid transparent;
+        transition: border-color 200ms;
+      }
+      .top-strip.is-scrolled { border-bottom-color: var(--line); }
+      .brand {
+        display: inline-flex; align-items: center; gap: 10px;
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 15px;
+        color: var(--ink-2); cursor: pointer;
+      }
+      .brand .mark {
+        width: 18px; height: 18px; border-radius: 50%;
+        background: var(--clay); position: relative;
+      }
+      .brand .mark::after {
+        content: ""; position: absolute; inset: 4px;
+        background: var(--paper-1); border-radius: 50%;
+      }
+      .brand b { color: var(--ink-1); font-weight: 500; }
+      .brand .sep { color: var(--ink-4); font-style: normal; margin: 0 4px; }
+      .brand-cesare {
+        position: relative; width: 22px; height: 22px;
+        border-radius: 99px; background: var(--leaf-soft);
+        color: var(--leaf); display: grid; place-items: center;
+        font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+        margin-left: 4px;
+      }
+      .brand-cesare::after {
+        content: ""; position: absolute; top: -1px; right: -1px;
+        width: 6px; height: 6px; border-radius: 99px; background: var(--leaf);
+        animation: pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.4); }
+      }
+      .meta-right {
+        margin-left: auto;
+        display: inline-flex; align-items: center;
+        gap: 12px; font-size: 12px; color: var(--ink-4);
+      }
+      .meta-right .pill {
+        font-family: var(--font-mono); color: var(--ink-3);
+        padding: 3px 10px; border: 1px solid var(--line);
+        border-radius: 99px;
+      }
+      .meta-right .iconbtn {
+        cursor: pointer; width: 26px; height: 26px;
+        display: grid; place-items: center;
+        color: var(--ink-3); background: transparent; border: none;
+      }
+      .meta-right .avatar {
+        width: 24px; height: 24px; border-radius: 50%;
+        background: var(--paper-3); font-size: 10px; font-weight: 600;
+        color: var(--ink-2); display: grid; place-items: center;
+      }
+
+      /* EDITORIAL action bar — sober writing controls */
+      .action-bar {
+        position: sticky; top: 48px; z-index: 35;
+        background: var(--paper-1);
+        display: flex; align-items: center; gap: 16px;
+        padding: 10px 24px; font-size: 13px;
+        border-bottom: 1px solid transparent;
+        transition: border-color 200ms;
+      }
+      .action-bar.is-stuck { border-bottom-color: var(--line); padding: 8px 24px; }
+      .action-bar .btn {
+        cursor: pointer; padding: 0;
+        background: transparent; border: none;
+        font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+        color: var(--ink-2);
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .action-bar .btn:hover { color: var(--clay); }
+      .action-bar .sep { width: 1px; height: 14px; background: var(--line); }
+      .action-bar .right {
+        margin-left: auto;
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.06em;
+        display: inline-flex; align-items: center; gap: 12px;
+      }
+      .action-bar .right .dot {
+        width: 5px; height: 5px; border-radius: 99px; background: var(--leaf);
+        display: inline-block; margin-right: 4px;
+      }
+
+      /* EDITORIAL LAYOUT — outline / page / margin */
+      .editor-shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 16px 24px 60px;
+        display: grid;
+        grid-template-columns: 230px 1fr 260px;
+        gap: 28px;
+        align-items: start;
+      }
+
+      /* OUTLINE LEFT (Table of contents like a book) */
+      .outline {
+        position: sticky;
+        top: 110px;
+        height: fit-content;
+      }
+      .outline h3 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-2);
+        margin: 0 0 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .outline h3 .num {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-4); font-style: normal;
+      }
+      .outline-section {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 13px;
+        color: var(--ink-3);
+        padding: 16px 10px 6px;
+        border-top: 1px solid var(--line);
+        margin-top: 8px;
+      }
+      .outline-section:first-of-type {
+        border-top: none; margin-top: 0;
+      }
+      .outline-item {
+        display: flex; gap: 10px;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: var(--ink-2);
+        border-radius: 3px;
+        cursor: pointer;
+        align-items: baseline;
+        border-left: 2px solid transparent;
+      }
+      .outline-item:hover { background: var(--paper-2); }
+      .outline-item.active {
+        background: var(--clay-soft);
+        color: var(--clay);
+        border-left-color: var(--clay);
+      }
+      .outline-item .scno {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-4); min-width: 18px; font-weight: 600;
+      }
+      .outline-item.active .scno { color: var(--clay); }
+      .outline-item .title { flex: 1; line-height: 1.35; }
+
+      /* CENTER — page paper with chapter opener inside */
+      .center { display: flex; flex-direction: column; }
+
+      /* the chapter opener is INSIDE the editor — IT IS THE CONTENT */
+      .opener {
+        position: relative;
+        padding: 0 0 var(--space-5, 20px);
+        margin-bottom: 16px;
+      }
+      .opener .meta {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        margin-bottom: 8px;
+      }
+      .opener h1 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 400;
+        font-size: 28px;
+        margin: 0 0 6px;
+        color: var(--ink-1);
+        letter-spacing: -0.01em;
+      }
+      .opener .stats {
+        display: flex; gap: 18px;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .opener .stats b {
+        font-family: var(--font-mono);
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      .page-wrap { display: flex; justify-content: center; }
+      .page {
+        background: var(--page);
+        max-width: 640px;
+        width: 100%;
+        padding: 56px 84px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.04),
+          0 8px 24px rgba(28, 26, 23, 0.04);
+        font-family: var(--font-script);
+        font-size: 12pt;
+        line-height: 1.5;
+        color: var(--ink-1);
+        position: relative;
+      }
+      .page-num {
+        position: absolute;
+        top: 22px; right: 32px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        letter-spacing: 0.06em;
+      }
+
+      /* drop-cap on the CURRENT scene heading — this is the editorial signature */
+      .sp-heading-opener {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-style: italic;
+        font-size: 28px;
+        color: var(--ink-1);
+        margin: 0 0 18px;
+        line-height: 1.05;
+        text-transform: none;
+        letter-spacing: -0.01em;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .sp-heading-opener .scno {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-style: normal;
+        color: var(--clay);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        margin-right: 12px;
+        vertical-align: 4px;
+      }
+      .sp-heading-opener em {
+        color: var(--ink-2);
+        font-weight: 400;
+      }
+
+      .sp-action { margin: 0 0 12px; }
+      .sp-character {
+        text-align: center;
+        text-transform: uppercase;
+        margin: 18px 0 0;
+        font-weight: 700;
+      }
+      .sp-paren {
+        text-align: center;
+        font-style: italic;
+        color: var(--ink-3);
+        margin: 0;
+      }
+      .sp-dialog {
+        text-align: center;
+        margin: 0 90px 0 90px;
+      }
+      .sp-transition {
+        text-align: end;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        margin-top: 24px;
+      }
+
+      /* AI inline ghost suggestion */
+      .sp-suggest {
+        background: var(--leaf-soft);
+        color: var(--ink-1);
+        font-style: italic;
+        padding: 1px 5px;
+        border-radius: 3px;
+        position: relative;
+        cursor: pointer;
+        border-bottom: 1px dotted var(--leaf);
+      }
+      .sp-suggest:hover { background: var(--leaf); color: var(--paper-1); }
+      .sp-suggest::before {
+        content: "✦";
+        color: var(--leaf);
+        margin-right: 3px;
+      }
+
+      /* RIGHT MARGIN — Cesare notes attached to the scene */
+      .margin {
+        position: sticky;
+        top: 110px;
+        height: fit-content;
+      }
+      .margin h4 {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        margin: 0 0 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--line);
+      }
+      .note {
+        margin-bottom: 18px;
+        padding: 10px 14px;
+        background: var(--paper-1);
+        border-left: 2px solid var(--leaf);
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .note .head {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--leaf);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .note .body {
+        font-family: var(--font-display);
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--ink-1);
+      }
+      .note .body em { font-style: italic; color: var(--ink-2); }
+      .note .body b { font-weight: 600; }
+      .note .quote {
+        font-family: var(--font-script);
+        font-size: 11px;
+        color: var(--ink-3);
+        padding: 6px 10px;
+        margin: 8px 0;
+        border-left: 2px solid var(--ink-5);
+        background: var(--paper-2);
+      }
+      .note .actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+      }
+      .note .actions .accept {
+        color: var(--leaf);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .note .actions .accept::before { content: "→ "; }
+      .note .actions .reject {
+        color: var(--ink-4);
+        cursor: pointer;
+      }
+      .note.production {
+        border-left-color: var(--ink-4);
+      }
+      .note.production .head { color: var(--ink-3); }
+
+      /* trace bar bottom — same */
+      .trace {
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+        padding: 8px 24px;
+        background: var(--paper-1);
+        border-top: 1px solid var(--line);
+        display: flex; align-items: center; gap: 16px;
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.12em;
+        color: var(--ink-4);
+      }
+      .trace .pulse {
+        width: 6px; height: 6px; border-radius: 99px; background: var(--leaf);
+      }
+      .trace .what b { color: var(--ink-1); font-weight: 600; }
+      .trace a {
+        color: var(--clay); text-decoration: none;
+        text-transform: none; letter-spacing: 0;
+        font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+      }
+      .trace .save {
+        margin-left: auto;
+        display: inline-flex; align-items: center; gap: 4px;
+      }
+      .trace .save .dot {
+        width: 5px; height: 5px; border-radius: 99px; background: var(--leaf);
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></symbol>
+      </defs>
+    </svg>
+
+    <div class="top-strip" id="topStrip">
+      <div class="brand">
+        <span class="mark"></span>
+        <span>oh <b>writers</b></span>
+        <span class="sep">/</span>
+        <span>Team Thriller</span>
+        <span class="brand-cesare" title="2 note di Cesare">2</span>
+      </div>
+      <div class="meta-right">
+        <span class="pill">PROD TT-026</span>
+        <button class="iconbtn"><svg class="ico"><use href="#i-search" /></svg></button>
+        <button class="iconbtn"><svg class="ico"><use href="#i-bell" /></svg></button>
+        <button class="iconbtn"><svg class="ico"><use href="#i-settings" /></svg></button>
+        <div class="avatar">VN</div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn">Outline</button>
+      <button class="btn">Anteprima</button>
+      <button class="btn">Cronologia</button>
+      <button class="btn">Esporta PDF</button>
+      <span class="sep"></span>
+      <button class="btn">Confronta versioni</button>
+      <span class="right">
+        <span><span class="dot"></span>Salvato 14:32</span>
+        <span>28 pg · 4 312 parole</span>
+      </span>
+    </div>
+
+    <div class="editor-shell">
+      <!-- LEFT: table of contents -->
+      <aside class="outline">
+        <h3>Indice <span class="num">28 pg</span></h3>
+        <div class="outline-section">Atto I</div>
+        <div class="outline-item"><span class="scno">01</span><span class="title">INT. APPARTAMENTO — NOTTE</span></div>
+        <div class="outline-item"><span class="scno">02</span><span class="title">EXT. STRADA NAPOLI — GIORNO</span></div>
+        <div class="outline-item active"><span class="scno">03</span><span class="title">INT. PIZZERIA SOTTOSCALA — SERA</span></div>
+        <div class="outline-item"><span class="scno">04</span><span class="title">INT. CUCINA PIZZERIA — SERA</span></div>
+        <div class="outline-section">Atto II</div>
+        <div class="outline-item"><span class="scno">05</span><span class="title">INT. PALCO OPEN MIC — NOTTE</span></div>
+        <div class="outline-item"><span class="scno">06</span><span class="title">INT. SALA — NOTTE</span></div>
+        <div class="outline-item"><span class="scno">07</span><span class="title">EXT. BANCONE — GIORNO</span></div>
+        <div class="outline-item"><span class="scno">08</span><span class="title">INT. CUCINA — NOTTE</span></div>
+        <div class="outline-section">Atto III</div>
+        <div class="outline-item"><span class="scno">09</span><span class="title">EXT. STRADA ESTERNA — ALBA</span></div>
+      </aside>
+
+      <!-- CENTER: page -->
+      <div class="center">
+        <div class="opener">
+          <div class="meta">Sc. 3 · Atto I · pag. 4 / 28</div>
+          <h1><em>Non fa ridere</em></h1>
+          <div class="stats">
+            <span>Battute <b>4</b></span>
+            <span>Personaggi <b>3</b></span>
+            <span>Tempo lettura <b>~2′ 40″</b></span>
+          </div>
+        </div>
+
+        <div class="page-wrap">
+          <article class="page">
+            <span class="page-num">4.</span>
+
+            <div class="sp-heading-opener">
+              <span class="scno">SC. 3</span>
+              INT. <em>Pizzeria Sottoscala</em> — Sera
+            </div>
+
+            <p class="sp-action">
+              Il forno a legna sputa una vampata. <b>FRANCESCO</b>, 42,
+              magro, maglietta zozza di farina, infila la pala dentro la
+              bocca rovente. Tira fuori una
+              <span class="sp-suggest">pizza fumante</span> e la fa
+              scivolare sul bancone.
+            </p>
+            <p class="sp-action">
+              In fondo alla sala il pubblico ride. Sul palco improvvisato,
+              <b>GIULIO</b>, 28, in giacca stropicciata, regge un microfono
+              che gracchia.
+            </p>
+
+            <p class="sp-character">GIULIO</p>
+            <p class="sp-paren">(al pubblico, sudato)</p>
+            <p class="sp-dialog">
+              Mio padre apriva il ristorante alle sei. Io a sei l'unica
+              cosa che apro è Instagram.
+            </p>
+
+            <p class="sp-action">
+              <b>MARIA</b>, 65, occhiali da lettura sulla punta del naso,
+              lo guarda da dietro il bancone. Scuote la testa con tenerezza.
+            </p>
+
+            <p class="sp-character">MARIA</p>
+            <p class="sp-paren">(piano, a Francesco)</p>
+            <p class="sp-dialog">È bravo, eh? Ma non ride nessuno.</p>
+
+            <p class="sp-character">FRANCESCO</p>
+            <p class="sp-dialog">Mamma, è proprio quello il punto.</p>
+
+            <p class="sp-action">
+              Maria sospira. Il forno scoppietta. Una luce calda taglia la
+              stanza.
+            </p>
+
+            <p class="sp-transition">DISSOLVENZA A NERO.</p>
+          </article>
+        </div>
+      </div>
+
+      <!-- RIGHT: Cesare margin notes -->
+      <aside class="margin">
+        <h4>Note di Cesare · 2</h4>
+
+        <div class="note">
+          <div class="head">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>
+            Scrittura
+          </div>
+          <div class="body">
+            La scena chiude in <b>38 secondi</b> con quattro battute.
+            La transizione
+            <span class="quote">"È bravo, eh? Ma non ride nessuno."</span>
+            <em>potrebbe portare più tensione</em>: provo a estendere
+            con una micro-azione di Francesco?
+          </div>
+          <div class="actions">
+            <span class="accept">Vedi proposta</span>
+            <span class="reject">Ignora</span>
+          </div>
+        </div>
+
+        <div class="note production">
+          <div class="head">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>
+            Produzione
+          </div>
+          <div class="body">
+            <em>"Pizza fumante"</em> e <em>"luce calda"</em> non sono ancora
+            nel breakdown. Vuoi che li aggiunga come props / VFX?
+          </div>
+          <div class="actions">
+            <span class="accept" style="color: var(--clay)">Aggiungi al breakdown</span>
+            <span class="reject">Poi</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="trace">
+      <span class="pulse"></span>
+      <span class="what"><b>Cesare</b> · sta leggendo l'Atto I</span>
+      <a>Manifest</a>
+      <span class="save"><span class="dot"></span>Salvato 14:32</span>
+    </div>
+
+    <script>
+      const topStrip = document.getElementById("topStrip");
+      const actionBar = document.querySelector(".action-bar");
+      const onScroll = () => {
+        const y = window.scrollY;
+        topStrip?.classList.toggle("is-scrolled", y > 8);
+        actionBar?.classList.toggle("is-stuck", y > 80);
+      };
+      document.addEventListener("scroll", onScroll, { passive: true });
+    </script>
+  </body>
+</html>

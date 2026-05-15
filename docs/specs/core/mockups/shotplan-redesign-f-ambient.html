@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Piano di Ripresa · F · Planner</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+
+        /* Plan accents */
+        --plan-1: #34487a;
+        --plan-2: #5a6b3c;
+        --plan-3: #8b3a1a;
+        --plan-1-soft: #dde2ee;
+        --plan-2-soft: #e5e9d8;
+        --plan-3-soft: #f4dccb;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+        --space-12: 64px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--paper-1); color: var(--ink-1); font-family: var(--font-sans); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      /* TOP BAR (identical shell) */
+      .topbar { position: sticky; top: 0; z-index: 40; height: 48px; background: var(--paper-1); border-bottom: 1px solid transparent; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-6); transition: border-color 200ms ease; }
+      .topbar.is-scrolled { border-bottom-color: var(--line); }
+      .brand { display: flex; align-items: center; gap: var(--space-3); position: relative; }
+      .brand-mark { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-1); display: grid; place-items: center; color: var(--paper-1); font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 600; cursor: pointer; }
+      .brand-mark::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--leaf); border: 1.5px solid var(--paper-1); animation: cesare-pulse 1.8s ease-in-out infinite; }
+      @keyframes cesare-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } }
+      .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .breadcrumb-project { font-family: var(--font-display); font-style: italic; font-weight: 500; color: var(--ink-1); }
+      .breadcrumb-sep { color: var(--ink-4); }
+      .breadcrumb-anchor { position: relative; display: inline-flex; }
+      .breadcrumb-section { color: var(--ink-1); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; margin: -4px -8px; border-radius: var(--radius-sm); font-size: 13px; transition: background 150ms ease; }
+      .breadcrumb-section:hover { background: var(--paper-2); }
+      .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+      .topbar-btn { height: 30px; padding: 0 var(--space-3); border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12px; font-family: var(--font-mono); transition: background 150ms ease, color 150ms ease; }
+      .topbar-btn:hover { background: var(--paper-2); color: var(--ink-1); }
+      .topbar-btn kbd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); background: var(--paper-2); padding: 1px 4px; border-radius: 3px; }
+      .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--clay); color: var(--paper-1); display: grid; place-items: center; font-size: 11px; font-weight: 600; font-family: var(--font-mono); }
+      .presence { display: inline-flex; align-items: center; }
+      .presence-av { width: 24px; height: 24px; border-radius: 50%; color: var(--paper-1); display: grid; place-items: center; font-size: 10px; font-weight: 600; font-family: var(--font-mono); border: 2px solid var(--paper-1); }
+      .presence-av + .presence-av { margin-inline-start: -8px; }
+      .presence-av-1 { background: #5e7c8a; }
+      .presence-av-2 { background: #8a6244; }
+      .save-pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .save-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--leaf); }
+      .bell { position: relative; width: 30px; height: 30px; border-radius: var(--radius-sm); display: grid; place-items: center; color: var(--ink-3); transition: background 150ms ease, color 150ms ease; }
+      .bell:hover { background: var(--paper-2); color: var(--ink-1); }
+
+      /* VIEW BAR */
+      .viewbar { position: sticky; top: 48px; z-index: 30; background: var(--paper-1); border-bottom: 1px solid transparent; padding: var(--space-2) var(--space-6); display: flex; align-items: center; gap: var(--space-2); transition: border-color 200ms ease; }
+      .viewbar.is-stuck { border-bottom-color: var(--line); }
+      .filter { height: 28px; padding: 0 10px; border-radius: var(--radius-sm); font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 6px; }
+      .filter:hover { background: var(--paper-2); color: var(--ink-1); }
+      .filter.is-active { background: var(--paper-3); color: var(--ink-1); }
+
+      /* MAIN — Planner full width */
+      main { padding: var(--space-8) var(--space-6) var(--space-12); max-width: 1440px; margin: 0 auto; }
+
+      /* 2D Scene render area */
+      .scene-render { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-6); display: grid; grid-template-columns: 240px 1fr; gap: var(--space-6); align-items: stretch; }
+      .render-info { display: flex; flex-direction: column; gap: var(--space-2); }
+      .render-info-eyebrow { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+      .render-info-title { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 24px; line-height: 1.1; color: var(--ink-1); margin: 0; }
+      .render-info-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); line-height: 1.6; margin-top: var(--space-2); }
+      .render-info-meta dt { display: inline; color: var(--ink-4); }
+      .render-info-meta dd { display: inline; margin: 0 0 0 6px; color: var(--ink-1); }
+      .render-info-meta dl { margin: 0; }
+      .render-info-cta { margin-top: auto; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--clay); padding-top: var(--space-3); border-top: 1px solid var(--line-soft); }
+      .render-canvas { position: relative; background: var(--paper-1); border-radius: var(--radius-md); min-height: 220px; overflow: hidden; }
+      .render-canvas svg { width: 100%; height: 100%; display: block; }
+      .render-legend { position: absolute; bottom: var(--space-3); left: var(--space-3); display: flex; gap: var(--space-3); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+      .render-legend-item { display: flex; align-items: center; gap: 4px; }
+      .render-legend-item::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-4); }
+      .render-legend-cam::before { background: var(--clay); border-radius: 1px; }
+      .render-legend-char::before { background: var(--leaf); }
+      .render-legend-obj::before { background: var(--ink-4); border-radius: 1px; }
+
+      /* OR confirmation */
+      .or-header { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--clay-soft); border: 1px solid #e9c3a8; }
+      .or-header-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--clay); color: var(--paper-1); display: grid; place-items: center; flex-shrink: 0; }
+      .or-header-text { flex: 1; }
+      .or-header-title { font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--ink-1); }
+      .or-header-sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .or-header-shortcut { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); padding: 4px 8px; background: var(--paper-1); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+
+      /* Plan confirm radio + badge */
+      .plan-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); background: var(--page); position: relative; cursor: pointer; margin-bottom: var(--space-2); transition: border-color 150ms ease; flex-shrink: 0; }
+      .plan-radio:hover { border-color: var(--ink-3); }
+      .plan.is-confirmed .plan-radio { border-color: var(--clay); }
+      .plan.is-confirmed .plan-radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--clay); }
+      .plan-badge { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px; background: var(--paper-2); color: var(--ink-3); margin-top: 4px; align-self: flex-start; }
+      .plan.is-confirmed .plan-badge { background: var(--clay); color: var(--paper-1); }
+      .plan { opacity: 0.55; transition: opacity 200ms ease; }
+      .plan.is-confirmed { opacity: 1; }
+      .plan:hover { opacity: 0.85; }
+      .plan.is-confirmed:hover { opacity: 1; }
+      .plan-meta { cursor: pointer; }
+
+      /* Shot tooltip */
+      .shot { position: relative; }
+      .shot-tip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--ink-1); color: var(--paper-1); padding: 8px 10px; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 150ms ease; z-index: 20; box-shadow: 0 8px 20px -4px rgba(0,0,0,0.3); }
+      .shot-tip::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: var(--ink-1); }
+      .shot-tip-line { display: block; }
+      .shot-tip-line + .shot-tip-line { color: var(--ink-5); margin-top: 2px; }
+      .shot:hover .shot-tip { opacity: 1; }
+
+      /* Shortcut hint on dock buttons */
+      .btn-key { font-family: var(--font-mono); font-size: 10px; padding: 1px 4px; background: rgba(255,255,255,0.18); border-radius: 3px; margin-inline-start: 4px; }
+      .btn-ghost .btn-key { background: var(--paper-2); color: var(--ink-4); }
+
+      .day-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-6); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+      .day-eyebrow { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); margin-bottom: var(--space-2); }
+      .day-title { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 42px; line-height: 1; letter-spacing: -0.02em; margin: 0; }
+      .day-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); display: flex; gap: var(--space-3); align-items: center; }
+      .day-meta span::before { content: "·"; margin-inline-end: var(--space-2); color: var(--ink-4); }
+      .day-meta span:first-child::before { display: none; }
+
+      /* Ruler */
+      .ruler { display: grid; grid-template-columns: 140px 1fr; gap: var(--space-3); margin-bottom: var(--space-2); padding-inline-start: 0; }
+      .ruler-label { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.08em; align-self: end; }
+      .ruler-marks { position: relative; height: 24px; }
+      .ruler-marks::before { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: var(--line); }
+      .ruler-tick { position: absolute; bottom: 0; height: 8px; width: 1px; background: var(--ink-4); }
+      .ruler-tick span { position: absolute; bottom: 10px; left: 0; transform: translateX(-50%); font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+
+      /* Plan tracks */
+      .plan { display: grid; grid-template-columns: 140px 1fr; gap: var(--space-3); margin-bottom: var(--space-3); align-items: stretch; position: relative; }
+      .plan-meta { padding: var(--space-3); border-radius: var(--radius-md); background: var(--page); border: 1px solid var(--line); border-inline-start: 3px solid var(--plan-1); display: flex; flex-direction: column; gap: 2px; }
+      .plan-1 .plan-meta { border-inline-start-color: var(--plan-1); }
+      .plan-2 .plan-meta { border-inline-start-color: var(--plan-2); }
+      .plan-3 .plan-meta { border-inline-start-color: var(--plan-3); }
+      .plan-name { font-size: 12px; font-weight: 600; color: var(--ink-1); }
+      .plan-sub { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); }
+      .plan-track { position: relative; background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-2); min-height: 64px; }
+      .plan-track::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px); background-size: 12.5% 100%; pointer-events: none; opacity: 0.6; }
+      .shot { position: absolute; top: var(--space-2); bottom: var(--space-2); border-radius: var(--radius-sm); display: flex; flex-direction: column; justify-content: center; padding: 6px 10px; cursor: pointer; transition: transform 150ms ease; }
+      .shot:hover { transform: translateY(-1px); }
+      .shot-label { font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--ink-1); }
+      .shot-sub { font-family: var(--font-mono); font-size: 9px; color: var(--ink-3); margin-top: 2px; }
+      .plan-1 .shot { background: var(--plan-1-soft); border: 1px solid var(--plan-1); }
+      .plan-2 .shot { background: var(--plan-2-soft); border: 1px solid var(--plan-2); }
+      .plan-3 .shot { background: var(--plan-3-soft); border: 1px solid var(--plan-3); }
+      .shot.is-suggested { opacity: 0.55; background: var(--page); border-style: dashed; }
+      .shot.is-suggested::after { content: "AI"; position: absolute; top: -6px; right: -6px; font-family: var(--font-mono); font-size: 9px; background: var(--leaf); color: var(--paper-1); padding: 1px 4px; border-radius: 3px; }
+
+      /* Cesare floating card above active plan */
+      .cesare-card { position: absolute; top: -90px; left: 140px; width: 360px; background: var(--page); border: 1px solid var(--leaf); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); box-shadow: 0 8px 24px -8px rgba(28,26,23,0.18); z-index: 5; }
+      .cesare-card::after { content: ""; position: absolute; bottom: -7px; left: 32px; width: 12px; height: 12px; background: var(--page); border-right: 1px solid var(--leaf); border-bottom: 1px solid var(--leaf); transform: rotate(45deg); }
+      .cesare-card-head { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--leaf); margin-bottom: 6px; }
+      .cesare-card-head::before { content: ""; width: 6px; height: 6px; background: var(--leaf); border-radius: 50%; animation: cesare-pulse 1.8s ease-in-out infinite; }
+      .cesare-card-text { font-family: var(--font-display); font-style: italic; font-size: 13.5px; line-height: 1.4; color: var(--ink-1); margin-bottom: var(--space-2); }
+      .cesare-card-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+      .cesare-card-actions button { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); padding: 4px 8px; border-radius: var(--radius-sm); }
+      .cesare-card-actions .yes { background: var(--leaf-soft); color: var(--leaf); }
+
+      /* Day summary cards */
+      .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-top: var(--space-10); }
+      .sum-card { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); }
+      .sum-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 6px; }
+      .sum-num { font-family: var(--font-display); font-size: 28px; font-weight: 400; line-height: 1; letter-spacing: -0.02em; }
+      .sum-foot { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); margin-top: 6px; }
+
+      /* DOCK */
+      .dock { position: fixed; bottom: var(--space-5); right: var(--space-5); z-index: 70; background: var(--page); border: 1px solid var(--line); border-radius: 100px; padding: 6px; display: flex; align-items: center; gap: 4px; box-shadow: 0 12px 32px -8px rgba(28,26,23,0.18); }
+      .dock-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); padding: 0 10px; border-inline-end: 1px solid var(--line); margin-inline-end: 2px; }
+      .btn { height: 34px; padding: 0 14px; border-radius: 100px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; transition: background 150ms ease, color 150ms ease; }
+      .btn-primary { background: var(--clay); color: var(--paper-1); }
+      .btn-primary:hover { background: #75301a; }
+      .btn-ghost { color: var(--ink-2); }
+      .btn-ghost:hover { background: var(--paper-1); color: var(--ink-1); }
+      .dock-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+      .dock-cesare { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; height: 34px; border-radius: 100px; background: var(--leaf-soft); color: var(--leaf); font-size: 12px; font-weight: 500; }
+      .dock-cesare-dot { width: 7px; height: 7px; background: var(--leaf); border-radius: 50%; animation: cesare-pulse 1.8s ease-in-out infinite; }
+      .dock-cesare-count { font-family: var(--font-mono); font-size: 11px; background: var(--leaf); color: var(--paper-1); padding: 1px 5px; border-radius: 100px; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <!-- TOP BAR -->
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <button class="brand-mark"><span style="font-family: var(--font-display); font-style: italic">O</span></button>
+        <nav class="breadcrumb">
+          <span class="breadcrumb-project">Non fa ridere</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-anchor">
+            <button class="breadcrumb-section">
+              Piano di ripresa
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </span>
+        </nav>
+      </div>
+      <div></div>
+      <div class="topbar-right">
+        <span class="save-pill">Salvato 8s fa</span>
+        <button class="topbar-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="bell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></button>
+        <button class="topbar-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9l6 3"/></svg>
+          Chiedi a Cesare
+          <kbd>⌘.</kbd>
+        </button>
+        <div class="presence">
+          <span class="presence-av presence-av-1">SM</span>
+          <span class="presence-av presence-av-2">LR</span>
+        </div>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <!-- VIEW BAR -->
+    <div class="viewbar" id="viewbar">
+      <button class="filter is-active">Giorno 4</button>
+      <button class="filter">Tutti i giorni</button>
+      <button class="filter">Per scena</button>
+      <button class="filter" style="margin-inline-start: auto">v2 · 14 mag 2026 ▾</button>
+    </div>
+
+    <!-- MAIN -->
+    <main>
+      <!-- Day header — compact, no decorative h1 (info already in track + render below) -->
+      <div class="day-head">
+        <div class="day-eyebrow">Giornata 4 · martedì 2 giugno 2026 · Pizzeria Sottoscala</div>
+        <div class="day-meta">
+          <span>6 scene</span>
+          <span>22 inquadrature</span>
+          <span>7h 20m / 8h</span>
+          <span>3 piani candidati</span>
+        </div>
+      </div>
+
+      <!-- 2D Scene render -->
+      <div class="scene-render">
+        <div class="render-info">
+          <div class="render-info-eyebrow">Anteprima blocking · Sc.3</div>
+          <h3 class="render-info-title">Int. Pizzeria Sottoscala</h3>
+          <dl class="render-info-meta">
+            <div><dt>Personaggi</dt> <dd>Giulia · Sergio · Cameriere</dd></div>
+            <div><dt>Camera</dt> <dd>3 posizioni (master + due CU)</dd></div>
+            <div><dt>Luce</dt> <dd>Pratica calda + key da finestra</dd></div>
+            <div><dt>Note</dt> <dd>Tavolo centrale, finestra a SO</dd></div>
+          </dl>
+          <div class="render-info-cta">⇧⌘V · vista 3D · ⇧⌘B · blocking editor</div>
+        </div>
+        <div class="render-canvas">
+          <svg viewBox="0 0 600 220" preserveAspectRatio="xMidYMid meet">
+            <!-- Room walls -->
+            <rect x="40" y="20" width="520" height="180" fill="none" stroke="#d8d6cd" stroke-width="2" rx="4"/>
+            <!-- Window (light source) -->
+            <line x1="40" y1="50" x2="40" y2="110" stroke="#8b3a1a" stroke-width="4" stroke-linecap="round"/>
+            <text x="20" y="80" font-family="IBM Plex Mono, monospace" font-size="9" fill="#71706a" text-anchor="middle" transform="rotate(-90 20 80)">FINESTRA</text>
+            <!-- Door -->
+            <line x1="540" y1="170" x2="560" y2="200" stroke="#a09e96" stroke-width="2"/>
+            <text x="555" y="215" font-family="IBM Plex Mono, monospace" font-size="9" fill="#a09e96" text-anchor="end">PORTA</text>
+            <!-- Tables -->
+            <rect x="120" y="60" width="60" height="40" fill="#e2dfd6" stroke="#a09e96" stroke-width="1" rx="2"/>
+            <rect x="260" y="90" width="80" height="50" fill="#f4dccb" stroke="#8b3a1a" stroke-width="1.5" rx="2"/>
+            <text x="300" y="120" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8b3a1a" text-anchor="middle" font-weight="500">TAVOLO PRINCIPALE</text>
+            <rect x="420" y="60" width="60" height="40" fill="#e2dfd6" stroke="#a09e96" stroke-width="1" rx="2"/>
+            <rect x="420" y="140" width="60" height="40" fill="#e2dfd6" stroke="#a09e96" stroke-width="1" rx="2"/>
+            <!-- Bar -->
+            <rect x="120" y="160" width="120" height="20" fill="#ebe9e3" stroke="#a09e96" stroke-width="1" rx="2"/>
+            <text x="180" y="174" font-family="IBM Plex Mono, monospace" font-size="9" fill="#71706a" text-anchor="middle">BANCO</text>
+            <!-- Characters (leaf dots) -->
+            <g>
+              <circle cx="280" cy="100" r="7" fill="#5a6b3c"/>
+              <text x="280" y="84" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5a6b3c" text-anchor="middle" font-weight="600">GIULIA</text>
+            </g>
+            <g>
+              <circle cx="320" cy="130" r="7" fill="#5a6b3c"/>
+              <text x="320" y="156" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5a6b3c" text-anchor="middle" font-weight="600">SERGIO</text>
+            </g>
+            <g>
+              <circle cx="180" cy="155" r="6" fill="#a09e96"/>
+              <text x="180" y="200" font-family="IBM Plex Mono, monospace" font-size="9" fill="#a09e96" text-anchor="middle">CAMERIERE</text>
+            </g>
+            <!-- Cameras (clay rects with cone) -->
+            <g>
+              <rect x="380" y="50" width="14" height="10" fill="#8b3a1a" rx="1"/>
+              <path d="M 380 60 L 360 100 L 400 100 Z" fill="#8b3a1a" opacity="0.15" stroke="#8b3a1a" stroke-width="1" stroke-dasharray="2,2"/>
+              <text x="387" y="44" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8b3a1a" text-anchor="middle" font-weight="600">A · MASTER</text>
+            </g>
+            <g>
+              <rect x="200" y="95" width="12" height="9" fill="#8b3a1a" rx="1"/>
+              <path d="M 212 99 L 270 95 L 270 110 Z" fill="#8b3a1a" opacity="0.15" stroke="#8b3a1a" stroke-width="1" stroke-dasharray="2,2"/>
+              <text x="205" y="90" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8b3a1a" text-anchor="middle" font-weight="600">B · CU G</text>
+            </g>
+            <g>
+              <rect x="380" y="135" width="12" height="9" fill="#8b3a1a" rx="1"/>
+              <path d="M 380 139 L 340 130 L 340 145 Z" fill="#8b3a1a" opacity="0.15" stroke="#8b3a1a" stroke-width="1" stroke-dasharray="2,2"/>
+              <text x="386" y="158" font-family="IBM Plex Mono, monospace" font-size="9" fill="#8b3a1a" text-anchor="middle" font-weight="600">C · CU S</text>
+            </g>
+          </svg>
+          <div class="render-legend">
+            <span class="render-legend-item render-legend-cam">Camera</span>
+            <span class="render-legend-item render-legend-char">Personaggio</span>
+            <span class="render-legend-item render-legend-obj">Arredo</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OR header — confirmation prompt -->
+      <div class="or-header">
+        <div class="or-header-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M9 6l-6 6 6 6M21 12"/></svg>
+        </div>
+        <div class="or-header-text">
+          <div class="or-header-title">Quale piano confermi per la giornata?</div>
+          <div class="or-header-sub">I 3 piani sono mutualmente esclusivi — solo uno verrà eseguito. Clicca il pallino o premi 1·2·3.</div>
+        </div>
+        <span class="or-header-shortcut">1 · 2 · 3</span>
+      </div>
+
+      <!-- Ruler -->
+      <div class="ruler">
+        <div class="ruler-label">Ore</div>
+        <div class="ruler-marks">
+          <div class="ruler-tick" style="left: 0%"><span>09:00</span></div>
+          <div class="ruler-tick" style="left: 12.5%"><span>10:00</span></div>
+          <div class="ruler-tick" style="left: 25%"><span>11:00</span></div>
+          <div class="ruler-tick" style="left: 37.5%"><span>12:00</span></div>
+          <div class="ruler-tick" style="left: 50%"><span>13:00</span></div>
+          <div class="ruler-tick" style="left: 62.5%"><span>14:00</span></div>
+          <div class="ruler-tick" style="left: 75%"><span>15:00</span></div>
+          <div class="ruler-tick" style="left: 87.5%"><span>16:00</span></div>
+          <div class="ruler-tick" style="left: 100%"><span>17:00</span></div>
+        </div>
+      </div>
+
+      <!-- Plan 1 — CONFIRMED — with Cesare floating card -->
+      <div class="plan plan-1 is-confirmed" data-key="1" style="margin-top: 100px;">
+        <div class="plan-meta">
+          <div class="plan-radio" title="Conferma questo piano (1)"></div>
+          <div class="plan-name">Piano A · Sala</div>
+          <div class="plan-sub">Master + copertura</div>
+          <div class="plan-sub" style="color: var(--clay)">3h 40m</div>
+          <span class="plan-badge">CONFERMATO</span>
+        </div>
+        <div class="plan-track">
+          <div class="cesare-card">
+            <div class="cesare-card-head">Cesare · Aiuto regia</div>
+            <div class="cesare-card-text">Piano A sta accumulando 3h 40m con sole 3 scene. Considera split: sposta sc.7 su Piano B per recuperare luce.</div>
+            <div class="cesare-card-actions">
+              <button class="yes">Sposta su B</button>
+              <button>Spiega</button>
+              <button>Ignora</button>
+            </div>
+          </div>
+          <div class="shot" style="left: 1%; width: 22%" title="SC.3 — Master · 45 minuti · DOP: Lensa 32mm">
+            <div class="shot-label">SC.3 — Master</div><div class="shot-sub">45'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.3 · Master shot · 45 min</span><span class="shot-tip-line">Lensa 32mm · dolly leggero</span></div>
+          </div>
+          <div class="shot" style="left: 24%; width: 14%" title="SC.3 — CU Giulia · 30 minuti">
+            <div class="shot-label">SC.3 — CU Giulia</div><div class="shot-sub">30'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.3 · CU Giulia · 30 min</span><span class="shot-tip-line">85mm · tavolo principale</span></div>
+          </div>
+          <div class="shot" style="left: 39%; width: 14%">
+            <div class="shot-label">SC.3 — CU Sergio</div><div class="shot-sub">30'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.3 · CU Sergio · 30 min</span><span class="shot-tip-line">85mm · reverse di Giulia</span></div>
+          </div>
+          <div class="shot is-suggested" style="left: 54%; width: 12%">
+            <div class="shot-label">SC.3 — OTS</div><div class="shot-sub">25'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.3 · OTS — suggerito da Cesare</span><span class="shot-tip-line">Coerente con copertura dialogica</span></div>
+          </div>
+          <div class="shot" style="left: 67%; width: 18%">
+            <div class="shot-label">SC.7 — Master</div><div class="shot-sub">40'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.7 · Master · 40 min</span><span class="shot-tip-line">Wide statico, finestra controluce</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan 2 -->
+      <div class="plan plan-2" data-key="2">
+        <div class="plan-meta">
+          <div class="plan-radio" title="Conferma questo piano (2)"></div>
+          <div class="plan-name">Piano B · Cucina</div>
+          <div class="plan-sub">Insert + dettagli</div>
+          <div class="plan-sub" style="color: var(--leaf)">1h 50m</div>
+          <span class="plan-badge">CANDIDATO</span>
+        </div>
+        <div class="plan-track">
+          <div class="shot" style="left: 38%; width: 12%">
+            <div class="shot-label">SC.5 — Wide</div><div class="shot-sub">25'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.5 · Wide · 25 min</span><span class="shot-tip-line">Cucina, controluce mattino</span></div>
+          </div>
+          <div class="shot" style="left: 51%; width: 10%">
+            <div class="shot-label">SC.5 — Insert</div><div class="shot-sub">20'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.5 · Insert · 20 min</span><span class="shot-tip-line">Macro su oggetti tavolo</span></div>
+          </div>
+          <div class="shot is-suggested" style="left: 62%; width: 14%">
+            <div class="shot-label">SC.5 — Reverse</div><div class="shot-sub">30'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.5 · Reverse — suggerito da Cesare</span><span class="shot-tip-line">Per coerenza con master sc.3</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan 3 -->
+      <div class="plan plan-3" data-key="3">
+        <div class="plan-meta">
+          <div class="plan-radio" title="Conferma questo piano (3)"></div>
+          <div class="plan-name">Piano C · Esterno</div>
+          <div class="plan-sub">Notte · luce naturale</div>
+          <div class="plan-sub" style="color: var(--ink-3)">1h 50m</div>
+          <span class="plan-badge">CANDIDATO</span>
+        </div>
+        <div class="plan-track">
+          <div class="shot" style="left: 78%; width: 8%">
+            <div class="shot-label">SC.4 — Wide</div><div class="shot-sub">15'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.4 · Wide · 15 min</span><span class="shot-tip-line">Vicolo, luce magica</span></div>
+          </div>
+          <div class="shot" style="left: 87%; width: 11%">
+            <div class="shot-label">SC.4 — Tracking</div><div class="shot-sub">22'</div>
+            <div class="shot-tip"><span class="shot-tip-line">SC.4 · Tracking · 22 min</span><span class="shot-tip-line">Dolly su rotaie, 12m</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day summary -->
+      <div class="summary">
+        <div class="sum-card">
+          <div class="sum-label">Tempo previsto</div>
+          <div class="sum-num">7h 20m</div>
+          <div class="sum-foot">su 8h disponibili</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Costo giornata</div>
+          <div class="sum-num" data-num>48.500 €</div>
+          <div class="sum-foot">+ 4% vs media</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Cast richiesto</div>
+          <div class="sum-num">5</div>
+          <div class="sum-foot">3 principali · 2 secondari</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-label">Suggerite da Cesare</div>
+          <div class="sum-num" style="color: var(--leaf)">3</div>
+          <div class="sum-foot">inquadrature pre-fill</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- DOCK -->
+    <div class="dock">
+      <span class="dock-label">Piano</span>
+      <button class="btn btn-primary" title="Pre-popola le inquadrature dal breakdown">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 19v-6h6"/></svg>
+        Pre-fill da breakdown
+        <span class="btn-key">⇧⌘P</span>
+      </button>
+      <button class="btn btn-ghost" title="Esporta il piano confermato in PDF">Esporta<span class="btn-key">⌘E</span></button>
+      <button class="btn btn-ghost" title="Stampa per la troupe">Stampa<span class="btn-key">⌘P</span></button>
+      <div class="dock-sep"></div>
+      <button class="dock-cesare" title="2 note di Cesare">
+        <span class="dock-cesare-dot"></span>
+        Cesare
+        <span class="dock-cesare-count">2</span>
+      </button>
+    </div>
+
+    <script>
+      const topbar = document.getElementById('topbar');
+      const viewbar = document.getElementById('viewbar');
+      window.addEventListener('scroll', () => {
+        const y = window.scrollY;
+        topbar.classList.toggle('is-scrolled', y > 4);
+        viewbar.classList.toggle('is-stuck', y > 48);
+      });
+
+      // Plan confirmation — mutually exclusive (OR)
+      const plans = document.querySelectorAll('.plan');
+      const confirmPlan = (planEl) => {
+        plans.forEach(p => {
+          p.classList.remove('is-confirmed');
+          const badge = p.querySelector('.plan-badge');
+          if (badge) badge.textContent = 'CANDIDATO';
+        });
+        planEl.classList.add('is-confirmed');
+        const badge = planEl.querySelector('.plan-badge');
+        if (badge) badge.textContent = 'CONFERMATO';
+      };
+      plans.forEach(p => {
+        p.querySelector('.plan-meta').addEventListener('click', () => confirmPlan(p));
+      });
+      document.addEventListener('keydown', (e) => {
+        if (['1','2','3'].includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          const target = document.querySelector('.plan[data-key="' + e.key + '"]');
+          if (target) confirmPlan(target);
+        }
+      });
+    </script>
+  </body>
+</html>

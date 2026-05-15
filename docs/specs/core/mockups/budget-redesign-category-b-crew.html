@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Troupe · drill-down</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee; --paper-2: #ebe9e3;
+        --page: #ffffff;
+        --ink-1: #1c1a17; --ink-2: #44413c; --ink-3: #71706a; --ink-4: #a09e96; --ink-5: #c4c2b9;
+        --line: #d8d6cd; --line-soft: #e3e1d780;
+        --clay: #8b3a1a; --clay-soft: #f4dccb;
+        --leaf: #5a6b3c; --leaf-soft: #e5e9d8;
+        --warn: #b07515; --warn-soft: #f3e2bf;
+
+        --c-crew: #3d6b4a;
+        --c-crew-soft: #dde7df;
+
+        --d-regia: #3d6b4a;
+        --d-foto: #34487a;
+        --d-suono: #2e6868;
+        --d-arte: #8a5a1f;
+        --d-cost: #8b3565;
+        --d-trucco: #6b3e7a;
+        --d-prod: #9a5128;
+
+        --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+        --space-5: 20px; --space-6: 24px; --space-8: 32px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--paper-1); color: var(--ink-1); font-family: var(--font-sans); font-size: 14px; line-height: 1.55; }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      .topbar { position: sticky; top: 0; z-index: 40; height: 48px; background: var(--paper-1); border-bottom: 1px solid var(--line-soft); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-6); }
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark { width: 22px; height: 22px; border-radius: 50%; background: var(--ink-1); color: var(--paper-1); display: grid; place-items: center; font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 600; }
+      .crumbs { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .crumb-proj { font-family: var(--font-display); font-style: italic; color: var(--ink-1); }
+      .crumb-link { color: var(--ink-2); cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+      .crumb-link:hover { background: var(--paper-2); color: var(--ink-1); }
+      .crumb-sep { color: var(--ink-4); }
+      .crumb-current { color: var(--ink-1); font-weight: 500; font-family: var(--font-display); font-style: italic; }
+      .topbar-center { display: flex; justify-content: center; }
+      .viewbar { display: inline-flex; background: var(--paper-2); border-radius: 999px; padding: 3px; gap: 2px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+      .vb-tab { height: 26px; padding: 0 var(--space-3); border-radius: 999px; color: var(--ink-3); }
+      .vb-tab.is-active { background: var(--paper-1); color: var(--ink-1); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+      .topbar-right { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-3); }
+      .version-pill { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); padding: 4px var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: var(--paper-1); }
+      .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--clay); color: var(--paper-1); display: grid; place-items: center; font-size: 11px; font-weight: 600; font-family: var(--font-mono); }
+
+      main { max-width: 1320px; margin: 0 auto; padding: var(--space-8) var(--space-6); }
+
+      .subnav { display: flex; gap: var(--space-2); margin-bottom: var(--space-6); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); overflow-x: auto; }
+      .subnav-tab { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px var(--space-3); border-radius: var(--radius-sm); color: var(--ink-3); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+      .subnav-tab:hover { background: var(--paper-2); color: var(--ink-1); }
+      .subnav-tab.is-active { background: var(--c-crew-soft); color: var(--c-crew); }
+      .subnav-tab .pip { width: 6px; height: 6px; border-radius: 50%; background: var(--cat-color, var(--ink-4)); }
+      .subnav-tab.is-active .pip { background: var(--c-crew); }
+
+      .cat-head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-6); margin-bottom: var(--space-6); padding-left: var(--space-4); border-left: 3px solid var(--c-crew); }
+      .cat-eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--c-crew); text-transform: uppercase; letter-spacing: 0.1em; }
+      .cat-title { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 38px; letter-spacing: -0.02em; margin: 0; line-height: 1; }
+      .cat-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: var(--space-2); }
+      .cat-actions { display: flex; gap: var(--space-2); }
+      .btn { height: 30px; padding: 0 var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--page); font-size: 12px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+      .btn:hover { background: var(--paper-2); }
+      .btn-primary { background: var(--c-crew); color: var(--paper-1); border-color: var(--c-crew); }
+
+      /* Layout: donut left + dept list right */
+      .top-row {
+        display: grid; grid-template-columns: 1fr 1.4fr;
+        gap: var(--space-6); margin-bottom: var(--space-6);
+      }
+      .card { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); }
+      .card-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-4); }
+      .card-title { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 17px; }
+      .card-meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+
+      .donut-block { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; }
+      .donut {
+        position: relative; width: 220px; height: 220px; border-radius: 50%;
+        background: conic-gradient(
+          var(--d-foto) 0deg 119deg,
+          var(--d-regia) 119deg 184deg,
+          var(--d-prod) 184deg 241deg,
+          var(--d-arte) 241deg 285deg,
+          var(--d-suono) 285deg 314deg,
+          var(--d-cost) 314deg 339deg,
+          var(--d-trucco) 339deg 360deg
+        );
+      }
+      .donut::after { content: ""; position: absolute; inset: 32px; background: var(--page); border-radius: 50%; }
+      .donut-center { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; text-align: center; }
+      .donut-center b { display: block; font-family: var(--font-display); font-style: italic; font-size: 24px; font-weight: 500; }
+      .donut-center span { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+      .donut-legend { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
+      .leg-item { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+      .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+      .leg-num { color: var(--ink-3); }
+
+      /* Dept accordion */
+      .dept { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--page); margin-bottom: var(--space-3); border-left: 3px solid var(--dept-color); overflow: hidden; }
+      .dept-head { display: grid; grid-template-columns: 28px 1fr auto auto auto; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; }
+      .dept-head:hover { background: var(--paper-1); }
+      .dept-caret { color: var(--ink-3); font-family: var(--font-mono); transition: transform 150ms; }
+      .dept.is-open .dept-caret { transform: rotate(90deg); }
+      .dept-name { font-family: var(--font-display); font-style: italic; font-size: 16px; font-weight: 500; }
+      .dept-tag { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+      .dept-bar { width: 120px; height: 8px; background: var(--paper-2); border-radius: 2px; overflow: hidden; }
+      .dept-bar span { display: block; height: 100%; background: var(--dept-color); }
+      .dept-amount { font-family: var(--font-mono); font-size: 13px; font-weight: 500; min-width: 70px; text-align: right; }
+      .dept-pct { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); min-width: 40px; text-align: right; }
+
+      .dept-body { padding: 0 var(--space-4) var(--space-3); display: none; }
+      .dept.is-open .dept-body { display: block; }
+      table.roles { width: 100%; border-collapse: collapse; }
+      table.roles thead th { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; text-align: left; font-weight: 500; padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--line-soft); }
+      table.roles thead th.num { text-align: right; }
+      table.roles tbody td { padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+      table.roles tbody tr:last-child td { border-bottom: 0; }
+      table.roles tbody td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+      .role-name { font-family: var(--font-display); font-style: italic; font-size: 14px; font-weight: 500; }
+      .role-key { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+      .editable { font-family: var(--font-mono); font-variant-numeric: tabular-nums; cursor: pointer; padding: 1px 5px; border-radius: 3px; border: 1px dashed transparent; }
+      .editable:hover { background: var(--paper-2); border-color: var(--line); }
+      .toggle { width: 28px; height: 16px; background: var(--paper-3); border-radius: 999px; position: relative; cursor: pointer; }
+      .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: var(--page); border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.15); transition: left 150ms; }
+      .toggle.is-on { background: var(--c-crew); }
+      .toggle.is-on::after { left: 14px; }
+      .dept-foot td { background: var(--paper-1); font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+      .summary { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr); gap: 0; background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-lg); margin-bottom: var(--space-6); overflow: hidden; }
+      .summary > div { padding: var(--space-4) var(--space-5); border-right: 1px solid var(--line-soft); }
+      .summary > div:last-child { border-right: 0; }
+      .sum-total { background: var(--c-crew-soft); }
+      .sum-l { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+      .sum-v { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 24px; line-height: 1.1; }
+      .sum-total .sum-v { font-size: 32px; color: var(--c-crew); }
+      .sum-f { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">o</div>
+        <div class="crumbs">
+          <span class="crumb-proj">Le rondini di marzo</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-link">Budget</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-current">Troupe</span>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="viewbar"><button class="vb-tab">Panoramica</button><button class="vb-tab is-active">Per categoria</button><button class="vb-tab">Per giornata</button><button class="vb-tab">Voci</button></div>
+      </div>
+      <div class="topbar-right"><span class="version-pill">v3 · 14 mag</span><div class="avatar">VN</div></div>
+    </header>
+
+    <main>
+      <nav class="subnav">
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #6b3e7a"></span>Cast</button>
+        <button class="subnav-tab is-active"><span class="pip"></span>Troupe</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #9a5128"></span>Locations</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #34487a"></span>Fotografia</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #8a5a1f"></span>Scenografia</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #8b3565"></span>Costumi</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #2e6868"></span>Suono</button>
+        <button class="subnav-tab"><span class="pip" style="--cat-color: #6b4032"></span>Veicoli</button>
+      </nav>
+
+      <div class="cat-head">
+        <div>
+          <div class="cat-eyebrow">Categoria · 23 % del budget</div>
+          <h1 class="cat-title">Troupe</h1>
+          <div class="cat-meta">18 ruoli · 7 reparti · 38 giornate</div>
+        </div>
+        <div class="cat-actions">
+          <button class="btn">Carica modello CCNL</button>
+          <button class="btn">Aggiungi ruolo</button>
+          <button class="btn btn-primary">Rigenera</button>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="sum-total">
+          <div class="sum-l">Totale Troupe</div>
+          <div class="sum-v" data-num>€ 112.250</div>
+          <div class="sum-f">23 % · invariato vs v2</div>
+        </div>
+        <div>
+          <div class="sum-l">Ruoli attivi</div>
+          <div class="sum-v" data-num>16 / 18</div>
+          <div class="sum-f">2 disattivati</div>
+        </div>
+        <div>
+          <div class="sum-l">Giornate-uomo</div>
+          <div class="sum-v" data-num>608</div>
+          <div class="sum-f">media 38 / ruolo</div>
+        </div>
+        <div>
+          <div class="sum-l">Day-rate media</div>
+          <div class="sum-v" data-num>€ 372</div>
+          <div class="sum-f">range 150 — 800</div>
+        </div>
+        <div>
+          <div class="sum-l">Reparto top</div>
+          <div class="sum-v">Fotografia</div>
+          <div class="sum-f">€ 37 K · 33 %</div>
+        </div>
+      </div>
+
+      <div class="top-row">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Spesa per reparto</span>
+            <span class="card-meta">7 reparti</span>
+          </div>
+          <div class="donut-block">
+            <div class="donut">
+              <div class="donut-center">
+                <b data-num>€ 112 K</b>
+                <span>16 ruoli attivi</span>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-foto)"></span><span>Fotografia</span><span class="leg-num">33 %</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-regia)"></span><span>Regia</span><span class="leg-num">18 %</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-prod)"></span><span>Produzione</span><span class="leg-num">16 %</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-arte)"></span><span>Arte</span><span class="leg-num">12 %</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-suono)"></span><span>Suono</span><span class="leg-num">8 %</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-cost)"></span><span>Costumi</span><span class="leg-num">7 %</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background: var(--d-trucco)"></span><span>Trucco</span><span class="leg-num">6 %</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="dept is-open" style="--dept-color: var(--d-foto);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Fotografia</div>
+                <div class="dept-tag">5 ruoli · DOP · operatore · 1° AC · gaffer · best boy</div>
+              </div>
+              <div class="dept-bar"><span style="width: 100%"></span></div>
+              <div class="dept-amount" data-num>€ 37.250</div>
+              <div class="dept-pct">33 %</div>
+            </div>
+            <div class="dept-body">
+              <table class="roles">
+                <thead>
+                  <tr>
+                    <th style="width: 30%">Ruolo</th>
+                    <th style="width: 18%">Persona</th>
+                    <th class="num" style="width: 10%">Giorni</th>
+                    <th class="num" style="width: 12%">Day-rate</th>
+                    <th class="num" style="width: 14%">Totale</th>
+                    <th style="width: 8%">Attivo</th>
+                    <th class="num" style="width: 8%">Δ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><div class="role-name">Direttore della Fotografia</div><div class="role-key">DOP</div></td>
+                    <td>Tommaso Greci</td>
+                    <td class="num"><span class="editable">38</span></td>
+                    <td class="num"><span class="editable">€ 800</span></td>
+                    <td class="num" data-num>€ 30.400</td>
+                    <td><div class="toggle is-on"></div></td>
+                    <td class="num">—</td>
+                  </tr>
+                  <tr>
+                    <td><div class="role-name">Operatore</div><div class="role-key">CAM OP</div></td>
+                    <td>Giuseppe Latini</td>
+                    <td class="num"><span class="editable">38</span></td>
+                    <td class="num"><span class="editable">€ 450</span></td>
+                    <td class="num" data-num>€ 17.100</td>
+                    <td><div class="toggle is-on"></div></td>
+                    <td class="num">—</td>
+                  </tr>
+                  <tr>
+                    <td><div class="role-name">1° Assistente Operatore</div><div class="role-key">FOCUS</div></td>
+                    <td>—</td>
+                    <td class="num"><span class="editable">38</span></td>
+                    <td class="num"><span class="editable">€ 300</span></td>
+                    <td class="num" data-num>€ 11.400</td>
+                    <td><div class="toggle is-on"></div></td>
+                    <td class="num">—</td>
+                  </tr>
+                  <tr>
+                    <td><div class="role-name">Capo Elettricista</div><div class="role-key">GAFFER</div></td>
+                    <td>—</td>
+                    <td class="num"><span class="editable">38</span></td>
+                    <td class="num"><span class="editable">€ 400</span></td>
+                    <td class="num" data-num>€ 15.200</td>
+                    <td><div class="toggle is-on"></div></td>
+                    <td class="num">—</td>
+                  </tr>
+                  <tr>
+                    <td><div class="role-name">Elettricista</div><div class="role-key">BEST BOY</div></td>
+                    <td>—</td>
+                    <td class="num"><span class="editable">28</span></td>
+                    <td class="num"><span class="editable">€ 250</span></td>
+                    <td class="num" data-num>€ 7.000</td>
+                    <td><div class="toggle is-on"></div></td>
+                    <td class="num">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="dept" style="--dept-color: var(--d-regia);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Regia</div>
+                <div class="dept-tag">2 ruoli · 1° AD · 2° AD</div>
+              </div>
+              <div class="dept-bar"><span style="width: 55%"></span></div>
+              <div class="dept-amount" data-num>€ 20.100</div>
+              <div class="dept-pct">18 %</div>
+            </div>
+          </div>
+
+          <div class="dept" style="--dept-color: var(--d-prod);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Produzione</div>
+                <div class="dept-tag">3 ruoli · DP · segreteria · runner</div>
+              </div>
+              <div class="dept-bar"><span style="width: 48%"></span></div>
+              <div class="dept-amount" data-num>€ 17.950</div>
+              <div class="dept-pct">16 %</div>
+            </div>
+          </div>
+
+          <div class="dept" style="--dept-color: var(--d-arte);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Arte</div>
+                <div class="dept-tag">3 ruoli · scenografo · arredatore · attrezzista</div>
+              </div>
+              <div class="dept-bar"><span style="width: 38%"></span></div>
+              <div class="dept-amount" data-num>€ 13.600</div>
+              <div class="dept-pct">12 %</div>
+            </div>
+          </div>
+
+          <div class="dept" style="--dept-color: var(--d-suono);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Suono</div>
+                <div class="dept-tag">2 ruoli · fonico · microfonista</div>
+              </div>
+              <div class="dept-bar"><span style="width: 24%"></span></div>
+              <div class="dept-amount" data-num>€ 8.950</div>
+              <div class="dept-pct">8 %</div>
+            </div>
+          </div>
+
+          <div class="dept" style="--dept-color: var(--d-cost);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Costumi</div>
+                <div class="dept-tag">2 ruoli · costumista · ass. costumi</div>
+              </div>
+              <div class="dept-bar"><span style="width: 22%"></span></div>
+              <div class="dept-amount" data-num>€ 7.850</div>
+              <div class="dept-pct">7 %</div>
+            </div>
+          </div>
+
+          <div class="dept" style="--dept-color: var(--d-trucco);">
+            <div class="dept-head">
+              <span class="dept-caret">›</span>
+              <div>
+                <div class="dept-name">Trucco</div>
+                <div class="dept-tag">2 ruoli · trucco · parrucchiere</div>
+              </div>
+              <div class="dept-bar"><span style="width: 18%"></span></div>
+              <div class="dept-amount" data-num>€ 6.550</div>
+              <div class="dept-pct">6 %</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

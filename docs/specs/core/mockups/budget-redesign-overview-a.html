@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Overview A · Executive</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+        --warn: #b07515;
+        --warn-soft: #f3e2bf;
+
+        --c-cast: #6b3e7a;
+        --c-crew: #3d6b4a;
+        --c-locations: #9a5128;
+        --c-scenografia: #8a5a1f;
+        --c-costumi: #8b3565;
+        --c-fotografia: #34487a;
+        --c-suono: #2e6868;
+        --c-vfx: #6a5d2a;
+        --c-veicoli: #6b4032;
+        --c-comparse: #2f5868;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px; line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      /* Topbar */
+      .topbar {
+        position: sticky; top: 0; z-index: 40; height: 48px;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line-soft);
+        display: grid; grid-template-columns: 1fr auto 1fr;
+        align-items: center; padding: 0 var(--space-6);
+      }
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark {
+        width: 22px; height: 22px; border-radius: 50%;
+        background: var(--ink-1); color: var(--paper-1);
+        display: grid; place-items: center;
+        font-family: var(--font-display); font-style: italic;
+        font-size: 13px; font-weight: 600;
+      }
+      .crumbs { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .crumb-current { color: var(--ink-1); font-weight: 500; }
+      .crumb-sep { color: var(--ink-4); }
+      .crumb-proj { font-family: var(--font-display); font-style: italic; color: var(--ink-1); }
+
+      .topbar-center { display: flex; justify-content: center; }
+      .viewbar {
+        display: inline-flex; align-items: center;
+        background: var(--paper-2); border-radius: 999px;
+        padding: 3px; gap: 2px;
+        font-family: var(--font-mono); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .vb-tab {
+        height: 26px; padding: 0 var(--space-3);
+        border-radius: 999px; color: var(--ink-3);
+        transition: background 150ms, color 150ms;
+      }
+      .vb-tab:hover { color: var(--ink-1); }
+      .vb-tab.is-active { background: var(--paper-1); color: var(--ink-1); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+
+      .topbar-right { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-3); }
+      .version-pill {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3);
+        padding: 4px var(--space-3);
+        border: 1px solid var(--line); border-radius: 999px;
+        background: var(--paper-1);
+      }
+      .avatar {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: var(--clay); color: var(--paper-1);
+        display: grid; place-items: center;
+        font-size: 11px; font-weight: 600;
+        font-family: var(--font-mono);
+      }
+
+      /* Main grid */
+      main {
+        max-width: 1320px; margin: 0 auto;
+        padding: var(--space-8) var(--space-6) var(--space-10);
+      }
+      .page-head {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin-bottom: var(--space-6);
+      }
+      .page-title {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 34px; letter-spacing: -0.02em;
+        margin: 0;
+      }
+      .page-sub {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      .page-actions { display: flex; gap: var(--space-2); }
+      .btn {
+        height: 32px; padding: 0 var(--space-4);
+        border: 1px solid var(--line); border-radius: var(--radius-sm);
+        background: var(--page); color: var(--ink-1);
+        font-size: 13px; font-weight: 500;
+        display: inline-flex; align-items: center; gap: 6px;
+        transition: background 150ms, border-color 150ms;
+      }
+      .btn:hover { background: var(--paper-2); }
+      .btn-primary { background: var(--ink-1); color: var(--paper-1); border-color: var(--ink-1); }
+      .btn-primary:hover { background: var(--ink-2); }
+      .btn kbd {
+        font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
+        padding: 1px 4px; border-radius: 3px; background: var(--paper-2);
+      }
+      .btn-primary kbd { color: var(--ink-5); background: rgba(255,255,255,0.1); }
+
+      /* Hero strip */
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(340px, 1fr) minmax(280px, auto) 2fr;
+        gap: var(--space-8);
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6) var(--space-8);
+        margin-bottom: var(--space-6);
+      }
+      .hero-total .eyebrow {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em;
+        margin-bottom: var(--space-2);
+      }
+      .hero-total .value {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 52px; letter-spacing: -0.02em;
+        line-height: 1;
+      }
+      .hero-total .sub {
+        margin-top: var(--space-2); font-size: 13px; color: var(--ink-3);
+      }
+      .hero-total .delta {
+        display: inline-block;
+        font-family: var(--font-mono); font-size: 11px;
+        padding: 2px 8px; border-radius: 999px; margin-top: var(--space-3);
+        background: var(--leaf-soft); color: var(--leaf);
+      }
+      .hero-total .delta.is-neg { background: var(--clay-soft); color: var(--clay); }
+
+      .hero-donut {
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column; gap: var(--space-3);
+      }
+      .donut {
+        position: relative; width: 200px; height: 200px;
+        border-radius: 50%;
+        background: conic-gradient(
+          var(--c-cast) 0deg 86deg,         /* 24% */
+          var(--c-crew) 86deg 169deg,       /* 23% */
+          var(--c-locations) 169deg 230deg, /* 17% */
+          var(--c-fotografia) 230deg 273deg,/* 12% */
+          var(--c-scenografia) 273deg 309deg,
+          var(--c-costumi) 309deg 332deg,
+          var(--c-suono) 332deg 348deg,
+          var(--c-vfx) 348deg 360deg
+        );
+      }
+      .donut::after {
+        content: ""; position: absolute; inset: 28px;
+        background: var(--page); border-radius: 50%;
+      }
+      .donut-center {
+        position: absolute; inset: 0; display: grid; place-items: center;
+        z-index: 1; text-align: center;
+      }
+      .donut-center b {
+        display: block; font-family: var(--font-display); font-style: italic;
+        font-size: 22px; font-weight: 500;
+      }
+      .donut-center span {
+        display: block; font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+      }
+
+      .hero-kpis {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-4);
+      }
+      .kpi {
+        padding: var(--space-3) var(--space-4);
+        border-left: 3px solid var(--ink-5);
+        background: var(--paper-1);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      }
+      .kpi-label {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      .kpi-value {
+        font-family: var(--font-display); font-style: italic;
+        font-size: 22px; font-weight: 500; margin-top: 2px;
+      }
+      .kpi-foot {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); margin-top: 2px;
+      }
+      .kpi.cast { border-left-color: var(--c-cast); }
+      .kpi.crew { border-left-color: var(--c-crew); }
+      .kpi.prod { border-left-color: var(--c-locations); }
+      .kpi.cont { border-left-color: var(--warn); }
+      .kpi.days { border-left-color: var(--ink-3); }
+      .kpi.scene { border-left-color: var(--ink-3); }
+
+      /* Section heads */
+      .sect-head {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin: var(--space-8) 0 var(--space-4);
+      }
+      .sect-title {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 22px; margin: 0;
+      }
+      .sect-meta {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+      }
+
+      /* Two-col split */
+      .split {
+        display: grid; grid-template-columns: 1.4fr 1fr;
+        gap: var(--space-6);
+      }
+      .card {
+        background: var(--page); border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+      }
+      .card-head {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin-bottom: var(--space-4);
+      }
+      .card-title {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 17px;
+      }
+      .card-meta {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+      }
+
+      /* Top-5 bar chart */
+      .bars { display: flex; flex-direction: column; gap: var(--space-3); }
+      .bar-row {
+        display: grid; grid-template-columns: 130px 1fr 90px;
+        align-items: center; gap: var(--space-3);
+      }
+      .bar-label {
+        font-size: 13px;
+      }
+      .bar-track {
+        height: 16px; background: var(--paper-2); border-radius: 3px;
+        position: relative; overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%; border-radius: 3px;
+        background: var(--cat); position: relative;
+      }
+      .bar-fill::after {
+        content: ""; position: absolute; top: 0; right: -3px; height: 100%; width: 3px;
+        background: rgba(0,0,0,0.08);
+      }
+      .bar-val {
+        font-family: var(--font-mono); font-size: 12px; color: var(--ink-1);
+        text-align: right; font-weight: 500;
+      }
+      .bar-pct {
+        font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+        text-align: right;
+      }
+
+      /* Alert list */
+      .alerts { display: flex; flex-direction: column; gap: var(--space-3); }
+      .alert {
+        display: flex; align-items: flex-start; gap: var(--space-3);
+        padding: var(--space-3); border-radius: var(--radius-sm);
+        background: var(--warn-soft);
+        border-left: 3px solid var(--warn);
+        font-size: 13px;
+      }
+      .alert.info { background: var(--paper-2); border-left-color: var(--ink-3); }
+      .alert.ok { background: var(--leaf-soft); border-left-color: var(--leaf); }
+      .alert b { font-weight: 600; }
+      .alert-tag {
+        font-family: var(--font-mono); font-size: 10px;
+        text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--warn);
+      }
+      .alert.ok .alert-tag { color: var(--leaf); }
+      .alert.info .alert-tag { color: var(--ink-3); }
+
+      /* Categories grid */
+      .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+      .cat-card {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        border-left: 3px solid var(--cat-color, var(--ink-5));
+        text-align: left;
+        display: flex; flex-direction: column; gap: var(--space-2);
+        transition: background 150ms, border-color 150ms, transform 150ms;
+        cursor: pointer;
+      }
+      .cat-card:hover {
+        background: var(--paper-1);
+        transform: translateY(-1px);
+      }
+      .cat-top { display: flex; align-items: baseline; justify-content: space-between; }
+      .cat-name {
+        font-family: var(--font-display); font-style: italic;
+        font-weight: 500; font-size: 17px;
+      }
+      .cat-share {
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .cat-amount {
+        font-family: var(--font-mono); font-size: 19px; font-weight: 500;
+      }
+      .cat-spark {
+        height: 22px; display: flex; align-items: flex-end; gap: 2px;
+        margin-top: var(--space-1);
+      }
+      .cat-spark span {
+        flex: 1; background: var(--cat-color); border-radius: 1px;
+        opacity: 0.5;
+      }
+      .cat-spark span:last-child { opacity: 1; }
+      .cat-foot {
+        display: flex; align-items: center; justify-content: space-between;
+        font-family: var(--font-mono); font-size: 10px;
+        color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .delta-pos { color: var(--clay); }
+      .delta-neg { color: var(--leaf); }
+      .cat-status {
+        display: inline-flex; align-items: center; gap: 4px;
+      }
+      .cat-status .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--leaf);
+      }
+      .cat-status.warn .dot { background: var(--warn); }
+      .cat-status.locked .dot { background: var(--ink-3); }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">o</div>
+        <div class="crumbs">
+          <span class="crumb-proj">Le rondini di marzo</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-current">Budget</span>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="viewbar" role="tablist">
+          <button class="vb-tab is-active">Panoramica</button>
+          <button class="vb-tab">Per categoria</button>
+          <button class="vb-tab">Per giornata</button>
+          <button class="vb-tab">Voci</button>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="version-pill">v3 · 14 mag · stimato</span>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Panoramica budget</h1>
+          <div class="page-sub">stimato · 38 giornate · 64 scene · 12 location</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn">Esporta <kbd>⌘E</kbd></button>
+          <button class="btn">Snapshot</button>
+          <button class="btn btn-primary">Rigenera <kbd>⌘R</kbd></button>
+        </div>
+      </div>
+
+      <section class="hero">
+        <div class="hero-total">
+          <div class="eyebrow">Totale stimato</div>
+          <div class="value" data-num>€ 487.320</div>
+          <div class="delta is-neg">+4,2% vs preventivo (v2 · 8 mag)</div>
+          <div class="sub">contingency 10% inclusa · 38 giornate · media € 12.824/giorno</div>
+        </div>
+
+        <div class="hero-donut">
+          <div class="donut">
+            <div class="donut-center">
+              <b data-num>€ 487 K</b>
+              <span>9 categorie</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-kpis">
+          <div class="kpi cast">
+            <div class="kpi-label">Cast</div>
+            <div class="kpi-value" data-num>€ 117 K</div>
+            <div class="kpi-foot">24 % · 6 ruoli</div>
+          </div>
+          <div class="kpi crew">
+            <div class="kpi-label">Troupe</div>
+            <div class="kpi-value" data-num>€ 112 K</div>
+            <div class="kpi-foot">23 % · 18 ruoli</div>
+          </div>
+          <div class="kpi prod">
+            <div class="kpi-label">Production</div>
+            <div class="kpi-value" data-num>€ 213 K</div>
+            <div class="kpi-foot">44 % · 7 reparti</div>
+          </div>
+          <div class="kpi cont">
+            <div class="kpi-label">Contingency</div>
+            <div class="kpi-value" data-num>€ 44 K</div>
+            <div class="kpi-foot">10 % imp.</div>
+          </div>
+          <div class="kpi days">
+            <div class="kpi-label">Costo / giornata</div>
+            <div class="kpi-value" data-num>€ 12.824</div>
+            <div class="kpi-foot">range € 8 K — 19 K</div>
+          </div>
+          <div class="kpi scene">
+            <div class="kpi-label">Costo / scena</div>
+            <div class="kpi-value" data-num>€ 7.614</div>
+            <div class="kpi-foot">media 64 scene</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="sect-head">
+        <h2 class="sect-title">Top reparti & avvisi</h2>
+        <span class="sect-meta">5 reparti maggiori · 3 avvisi</span>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Distribuzione spesa</span>
+            <span class="card-meta">€ in migliaia</span>
+          </div>
+          <div class="bars">
+            <div class="bar-row" style="--cat: var(--c-locations);">
+              <span class="bar-label">📍 Locations</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 72%"></div></div>
+              <div>
+                <div class="bar-val" data-num>€ 84 K</div>
+                <div class="bar-pct">17 %</div>
+              </div>
+            </div>
+            <div class="bar-row" style="--cat: var(--c-cast);">
+              <span class="bar-label">🎭 Cast</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 100%"></div></div>
+              <div>
+                <div class="bar-val" data-num>€ 117 K</div>
+                <div class="bar-pct">24 %</div>
+              </div>
+            </div>
+            <div class="bar-row" style="--cat: var(--c-crew);">
+              <span class="bar-label">🎬 Troupe</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 96%"></div></div>
+              <div>
+                <div class="bar-val" data-num>€ 112 K</div>
+                <div class="bar-pct">23 %</div>
+              </div>
+            </div>
+            <div class="bar-row" style="--cat: var(--c-fotografia);">
+              <span class="bar-label">📷 Fotografia</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 50%"></div></div>
+              <div>
+                <div class="bar-val" data-num>€ 58 K</div>
+                <div class="bar-pct">12 %</div>
+              </div>
+            </div>
+            <div class="bar-row" style="--cat: var(--c-scenografia);">
+              <span class="bar-label">🏛 Scenografia</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 36%"></div></div>
+              <div>
+                <div class="bar-val" data-num>€ 42 K</div>
+                <div class="bar-pct">9 %</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Stato & avvisi</span>
+            <span class="card-meta">3 da risolvere</span>
+          </div>
+          <div class="alerts">
+            <div class="alert">
+              <div>
+                <div class="alert-tag">Rate mancante</div>
+                <div><b>2 attori senza day-rate</b> — Anna, Marco. Imposta tariffe per evitare stima a zero.</div>
+              </div>
+            </div>
+            <div class="alert">
+              <div>
+                <div class="alert-tag">Scostamento</div>
+                <div><b>Costumi +18% vs v2</b> — 3 voci modificate manualmente sopra la stima AI.</div>
+              </div>
+            </div>
+            <div class="alert info">
+              <div>
+                <div class="alert-tag">Mancante</div>
+                <div><b>VFX non stimato</b> — 4 scene con tag VFX nel breakdown ma nessuna riga budget.</div>
+              </div>
+            </div>
+            <div class="alert ok">
+              <div>
+                <div class="alert-tag">Pronto</div>
+                <div><b>Cast & Troupe coperti al 100 %</b> — tutte le tariffe definite, pronto per il lock.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sect-head">
+        <h2 class="sect-title">Reparti</h2>
+        <span class="sect-meta">9 categorie · clicca per dettaglio</span>
+      </div>
+
+      <div class="cats">
+        <button class="cat-card" style="--cat-color: var(--c-cast);">
+          <div class="cat-top"><span class="cat-name">Cast</span><span class="cat-share">24 %</span></div>
+          <div class="cat-amount" data-num>€ 117 K</div>
+          <div class="cat-spark">
+            <span style="height: 30%"></span><span style="height: 40%"></span><span style="height: 50%"></span>
+            <span style="height: 60%"></span><span style="height: 70%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>6 ruoli · 38 gg</span>
+            <span class="delta-pos">+1,8 %</span>
+            <span class="cat-status warn"><span class="dot"></span>2 rate mancanti</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-crew);">
+          <div class="cat-top"><span class="cat-name">Troupe</span><span class="cat-share">23 %</span></div>
+          <div class="cat-amount" data-num>€ 112 K</div>
+          <div class="cat-spark">
+            <span style="height: 60%"></span><span style="height: 65%"></span><span style="height: 70%"></span>
+            <span style="height: 78%"></span><span style="height: 85%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>18 ruoli · 7 reparti</span>
+            <span>—</span>
+            <span class="cat-status"><span class="dot"></span>completo</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-locations);">
+          <div class="cat-top"><span class="cat-name">Locations</span><span class="cat-share">17 %</span></div>
+          <div class="cat-amount" data-num>€ 84 K</div>
+          <div class="cat-spark">
+            <span style="height: 40%"></span><span style="height: 55%"></span><span style="height: 60%"></span>
+            <span style="height: 72%"></span><span style="height: 80%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>12 location · 38 gg</span>
+            <span class="delta-pos">+8,1 %</span>
+            <span class="cat-status"><span class="dot"></span>completo</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-fotografia);">
+          <div class="cat-top"><span class="cat-name">Fotografia</span><span class="cat-share">12 %</span></div>
+          <div class="cat-amount" data-num>€ 58 K</div>
+          <div class="cat-spark">
+            <span style="height: 50%"></span><span style="height: 60%"></span><span style="height: 70%"></span>
+            <span style="height: 78%"></span><span style="height: 88%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>noleggio · 38 gg</span>
+            <span class="delta-pos">+3,4 %</span>
+            <span class="cat-status"><span class="dot"></span>completo</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-scenografia);">
+          <div class="cat-top"><span class="cat-name">Scenografia</span><span class="cat-share">9 %</span></div>
+          <div class="cat-amount" data-num>€ 42 K</div>
+          <div class="cat-spark">
+            <span style="height: 30%"></span><span style="height: 50%"></span><span style="height: 60%"></span>
+            <span style="height: 65%"></span><span style="height: 78%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>props · set dressing</span>
+            <span class="delta-pos">+2,0 %</span>
+            <span class="cat-status"><span class="dot"></span>completo</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-costumi);">
+          <div class="cat-top"><span class="cat-name">Costumi</span><span class="cat-share">7 %</span></div>
+          <div class="cat-amount" data-num>€ 34 K</div>
+          <div class="cat-spark">
+            <span style="height: 40%"></span><span style="height: 50%"></span><span style="height: 65%"></span>
+            <span style="height: 80%"></span><span style="height: 95%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>+make-up · 6 personaggi</span>
+            <span class="delta-pos">+5,1 %</span>
+            <span class="cat-status warn"><span class="dot"></span>scostamento</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-suono);">
+          <div class="cat-top"><span class="cat-name">Suono</span><span class="cat-share">4 %</span></div>
+          <div class="cat-amount" data-num>€ 20 K</div>
+          <div class="cat-spark">
+            <span style="height: 50%"></span><span style="height: 55%"></span><span style="height: 60%"></span>
+            <span style="height: 70%"></span><span style="height: 80%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>noleggio + post</span>
+            <span>—</span>
+            <span class="cat-status"><span class="dot"></span>completo</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-veicoli);">
+          <div class="cat-top"><span class="cat-name">Veicoli</span><span class="cat-share">2 %</span></div>
+          <div class="cat-amount" data-num>€ 11 K</div>
+          <div class="cat-spark">
+            <span style="height: 20%"></span><span style="height: 30%"></span><span style="height: 45%"></span>
+            <span style="height: 60%"></span><span style="height: 75%"></span><span style="height: 100%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>4 veicoli</span>
+            <span>—</span>
+            <span class="cat-status"><span class="dot"></span>completo</span>
+          </div>
+        </button>
+
+        <button class="cat-card" style="--cat-color: var(--c-vfx);">
+          <div class="cat-top"><span class="cat-name">VFX</span><span class="cat-share">0 %</span></div>
+          <div class="cat-amount" data-num>—</div>
+          <div class="cat-spark">
+            <span style="height: 10%"></span><span style="height: 10%"></span><span style="height: 10%"></span>
+            <span style="height: 10%"></span><span style="height: 10%"></span><span style="height: 10%"></span>
+          </div>
+          <div class="cat-foot">
+            <span>4 scene da stimare</span>
+            <span>—</span>
+            <span class="cat-status warn"><span class="dot"></span>mancante</span>
+          </div>
+        </button>
+      </div>
+    </main>
+  </body>
+</html>

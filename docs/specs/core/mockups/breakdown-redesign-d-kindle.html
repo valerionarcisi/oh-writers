@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Breakdown · Kindle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+        --rust: #a3411f;
+        --rust-soft: #f0d7c8;
+
+        --c-cast: #6b3e7a;
+        --c-cast-soft: #ead8f0;
+        --c-locations: #9a5128;
+        --c-locations-soft: #f4ddc7;
+        --c-props: #8a5a1f;
+        --c-props-soft: #f4e6c2;
+        --c-vehicles: #2c6168;
+        --c-vehicles-soft: #d4e9ec;
+        --c-wardrobe: #8b3565;
+        --c-wardrobe-soft: #f0d8e4;
+        --c-vfx: #6a3e8a;
+        --c-vfx-soft: #e3d8f0;
+        --c-sound: #5a6b25;
+        --c-sound-soft: #e5e9c8;
+        --c-extras: #7a5524;
+        --c-extras-soft: #f0e2c5;
+        --c-equipment: #34487a;
+        --c-equipment-soft: #d8def0;
+
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --font-script: "Courier Prime", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .ico {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        stroke-width: 1.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        flex-shrink: 0;
+      }
+      .ico-sm {
+        width: 13px;
+        height: 13px;
+      }
+
+      /* shell */
+      .shell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 32px;
+      }
+      .shell-brand {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .shell-brand .mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--clay);
+        position: relative;
+      }
+      .shell-brand .mark::after {
+        content: "";
+        position: absolute;
+        inset: 5px;
+        background: var(--paper-1);
+        border-radius: 50%;
+      }
+      .shell-brand b {
+        font-weight: 500;
+        font-style: italic;
+      }
+      .shell-meta {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .shell-meta b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .shell-meta .pill {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+      }
+      .shell-meta .iconbtn {
+        cursor: pointer;
+        color: var(--ink-3);
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        background: transparent;
+        border: none;
+      }
+      .shell-meta .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--paper-3);
+        border: 1px solid var(--line);
+        font-size: 11px;
+        font-weight: 600;
+        display: grid;
+        place-items: center;
+      }
+      .nav-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 0 32px;
+        border-bottom: 1px solid var(--line);
+      }
+      .nav-tab {
+        padding: 12px 14px;
+        font-size: 13px;
+        color: var(--ink-3);
+        position: relative;
+        font-weight: 500;
+      }
+      .nav-tab.active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .nav-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 14px;
+        right: 14px;
+        height: 2px;
+        background: var(--ink-1);
+      }
+      .nav-tab .group {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        margin-inline-end: 8px;
+      }
+      .nav-tab .sep {
+        width: 1px;
+        height: 14px;
+        background: var(--line);
+        margin: 0 8px;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      /* layout */
+      .breakdown-shell {
+        display: grid;
+        grid-template-columns: 240px 1fr 280px;
+        gap: 28px;
+        padding: 24px 32px 120px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      /* left: scene list */
+      .scene-list {
+        position: sticky;
+        top: 24px;
+        height: fit-content;
+      }
+      .scene-list h3 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-2);
+        margin: 0 0 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .scene-list h3 .num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        font-style: normal;
+      }
+      .scene {
+        padding: 10px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 4px;
+        border-left: 2px solid transparent;
+      }
+      .scene:hover {
+        background: var(--paper-2);
+      }
+      .scene.active {
+        background: var(--clay-soft);
+        border-left-color: var(--clay);
+      }
+      .scene .num {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        font-weight: 600;
+      }
+      .scene .heading {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-1);
+        margin: 2px 0;
+        line-height: 1.3;
+      }
+      .scene .stats {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .scene .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .scene.active .heading {
+        color: var(--clay);
+      }
+
+      /* center: script page + tagged elements */
+      .script-area {
+        display: flex;
+        flex-direction: column;
+      }
+      .scene-header {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scene-header .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        margin-bottom: 6px;
+      }
+      .scene-header h2 {
+        margin: 0;
+        font-family: var(--font-script);
+        font-size: 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: var(--ink-1);
+      }
+      .scene-header .meta {
+        margin-top: 8px;
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--ink-3);
+      }
+      .scene-header .meta b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      .script-page {
+        background: var(--page);
+        padding: 36px 48px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        box-shadow:
+          0 1px 2px rgba(28, 24, 20, 0.04),
+          0 8px 24px rgba(28, 24, 20, 0.04);
+        font-family: var(--font-script);
+        font-size: 12pt;
+        line-height: 1.5;
+      }
+      .script-page p {
+        margin: 0 0 12px;
+      }
+
+      /* tagged element */
+      .tag {
+        background: var(--paper-2);
+        padding: 1px 6px;
+        border-radius: 3px;
+        position: relative;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .tag-cast {
+        background: var(--c-cast-soft);
+        color: var(--c-cast);
+      }
+      .tag-location {
+        background: var(--c-locations-soft);
+        color: var(--c-locations);
+      }
+      .tag-props {
+        background: var(--c-props-soft);
+        color: var(--c-props);
+      }
+      .tag-vehicles {
+        background: var(--c-vehicles-soft);
+        color: var(--c-vehicles);
+      }
+      .tag-wardrobe {
+        background: var(--c-wardrobe-soft);
+        color: var(--c-wardrobe);
+      }
+      .tag-vfx {
+        background: var(--c-vfx-soft);
+        color: var(--c-vfx);
+      }
+      .tag-sound {
+        background: var(--c-sound-soft);
+        color: var(--c-sound);
+      }
+      .tag-extras {
+        background: var(--c-extras-soft);
+        color: var(--c-extras);
+      }
+      .tag-equipment {
+        background: var(--c-equipment-soft);
+        color: var(--c-equipment);
+      }
+
+      /* right: element panel */
+      .element-panel {
+        position: sticky;
+        top: 24px;
+        height: fit-content;
+      }
+      .element-panel h3 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-2);
+        margin: 0 0 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .element-panel h3 .num {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        font-style: normal;
+      }
+
+      .cat {
+        margin-bottom: 16px;
+      }
+      .cat-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ink-3);
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 6px;
+      }
+      .cat-head .swatch {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+      }
+      .cat-head .count {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        font-weight: 500;
+      }
+      .cat-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .cat-item {
+        font-size: 12px;
+        padding: 3px 8px;
+        background: var(--paper-2);
+        color: var(--ink-2);
+        border-radius: 3px;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .cat-item:hover {
+        border-color: var(--ink-4);
+      }
+      .cat-item.ai {
+        position: relative;
+      }
+      .cat-item.ai::after {
+        content: "AI";
+        position: absolute;
+        top: -8px;
+        right: -4px;
+        font-family: var(--font-mono);
+        font-size: 8px;
+        color: var(--clay);
+        font-weight: 600;
+        background: var(--paper-1);
+        padding: 0 2px;
+      }
+      .cat-add {
+        font-size: 12px;
+        color: var(--ink-4);
+        padding: 3px 8px;
+        cursor: pointer;
+      }
+      .cat-add:hover {
+        color: var(--clay);
+      }
+
+      /* liquid dock */
+      .dock {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: rgba(251, 246, 236, 0.7);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid rgba(28, 24, 20, 0.08);
+        box-shadow:
+          0 2px 8px rgba(28, 24, 20, 0.06),
+          0 12px 28px rgba(28, 24, 20, 0.08);
+        border-radius: 99px;
+      }
+      .dock-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        font-size: 12px;
+        color: var(--ink-2);
+        border-right: 1px solid var(--line);
+      }
+      .dock-status .pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+      .dock-btn {
+        cursor: pointer;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-2);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 99px;
+        background: transparent;
+        border: none;
+      }
+      .dock-btn:hover {
+        background: rgba(232, 224, 208, 0.6);
+        color: var(--ink-1);
+      }
+      .dock-btn.primary {
+        background: var(--ink-1);
+        color: var(--paper-1);
+        font-weight: 600;
+      }
+      .dock-divider {
+        width: 1px;
+        height: 18px;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .dock-icon {
+        cursor: pointer;
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        border-radius: 99px;
+        background: transparent;
+        border: none;
+      }
+      .dock-icon:hover {
+        color: var(--ink-1);
+        background: rgba(232, 224, 208, 0.6);
+      }
+      .dock-kbd {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        margin-left: 4px;
+        padding: 1px 5px;
+        background: var(--paper-3);
+        border-radius: 3px;
+        border: 1px solid var(--line);
+      }
+      .dock-cesare {
+        background: var(--leaf-soft);
+        border: 1px solid var(--leaf);
+        padding: 6px 12px 6px 8px;
+        font-size: 12px;
+        color: var(--leaf);
+        font-weight: 600;
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        border-radius: 99px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-search" viewBox="0 0 24 24"
+          ><circle cx="11" cy="11" r="7" /><line
+            x1="21"
+            y1="21"
+            x2="16.65"
+            y2="16.65"
+        /></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"
+          ><path
+            d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+          /><path d="M13.7 21a2 2 0 0 1-3.4 0"
+        /></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"
+          ><path
+            d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"
+        /></symbol>
+        <symbol id="i-tag" viewBox="0 0 24 24"
+          ><path
+            d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+          /><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"
+        /></symbol>
+        <symbol id="i-filter" viewBox="0 0 24 24"
+          ><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"
+        /></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"
+          ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+            points="7 10 12 15 17 10"
+          /><line x1="12" y1="15" x2="12" y2="3"
+        /></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"
+          ><circle cx="12" cy="12" r="3"
+        /></symbol>
+        <symbol id="i-prev" viewBox="0 0 24 24"
+          ><polyline points="15 18 9 12 15 6"
+        /></symbol>
+        <symbol id="i-next" viewBox="0 0 24 24"
+          ><polyline points="9 18 15 12 9 6"
+        /></symbol>
+      </defs>
+    </svg>
+
+    <div class="shell">
+      <div class="shell-brand">
+        <span class="mark"></span><span>oh <b>writers</b></span>
+      </div>
+      <div class="shell-meta">
+        <span>Team Thriller <b>·</b> Short Comedy</span>
+        <span class="pill">PROD TT-026</span>
+        <button class="iconbtn">
+          <svg class="ico"><use href="#i-search" /></svg>
+        </button>
+        <button class="iconbtn">
+          <svg class="ico"><use href="#i-bell" /></svg>
+        </button>
+        <div class="avatar">VN</div>
+      </div>
+    </div>
+
+    <nav class="nav-tabs">
+      <span class="nav-tab"><span class="group">Project</span> Overview</span>
+      <span class="sep"></span>
+      <span class="nav-tab"><span class="group">Writing</span> Soggetto</span>
+      <span class="nav-tab">Synopsis</span>
+      <span class="nav-tab">Outline</span>
+      <span class="nav-tab">Treatment</span>
+      <span class="nav-tab">Screenplay</span>
+      <span class="sep"></span>
+      <span class="nav-tab active"
+        ><span class="group">Production</span> Breakdown</span
+      >
+      <span class="nav-tab">Schedule</span>
+      <span class="nav-tab">Budget</span>
+      <span class="nav-tab">Locations</span>
+    </nav>
+
+    <div class="breakdown-shell">
+      <!-- scene list -->
+      <aside class="scene-list">
+        <h3>Scene <span class="num">28 / 28</span></h3>
+        <div class="scene">
+          <div class="num">01</div>
+          <div class="heading">INT. APPARTAMENTO — NOTTE</div>
+          <div class="stats">
+            <span class="dot" style="background: var(--c-cast)"></span
+            ><span class="dot" style="background: var(--c-props)"></span
+            ><span class="dot" style="background: var(--c-sound)"></span>
+          </div>
+        </div>
+        <div class="scene">
+          <div class="num">02</div>
+          <div class="heading">EXT. STRADA NAPOLI — GIORNO</div>
+          <div class="stats">
+            <span class="dot" style="background: var(--c-locations)"></span
+            ><span class="dot" style="background: var(--c-vehicles)"></span
+            ><span class="dot" style="background: var(--c-extras)"></span>
+          </div>
+        </div>
+        <div class="scene active">
+          <div class="num">03</div>
+          <div class="heading">INT. PIZZERIA SOTTOSCALA — SERA</div>
+          <div class="stats">
+            <span class="dot" style="background: var(--c-cast)"></span
+            ><span class="dot" style="background: var(--c-props)"></span
+            ><span class="dot" style="background: var(--c-equipment)"></span
+            ><span class="dot" style="background: var(--c-wardrobe)"></span
+            ><span class="dot" style="background: var(--c-extras)"></span>
+          </div>
+        </div>
+        <div class="scene">
+          <div class="num">04</div>
+          <div class="heading">INT. CUCINA PIZZERIA — SERA</div>
+          <div class="stats">
+            <span class="dot" style="background: var(--c-props)"></span
+            ><span class="dot" style="background: var(--c-cast)"></span>
+          </div>
+        </div>
+        <div class="scene">
+          <div class="num">05</div>
+          <div class="heading">INT. PALCO OPEN MIC — NOTTE</div>
+          <div class="stats">
+            <span class="dot" style="background: var(--c-cast)"></span
+            ><span class="dot" style="background: var(--c-equipment)"></span
+            ><span class="dot" style="background: var(--c-extras)"></span>
+          </div>
+        </div>
+        <div class="scene">
+          <div class="num">06</div>
+          <div class="heading">INT. SALA — NOTTE</div>
+        </div>
+        <div class="scene">
+          <div class="num">07</div>
+          <div class="heading">EXT. BANCONE — GIORNO</div>
+        </div>
+      </aside>
+
+      <!-- center -->
+      <div class="script-area">
+        <div class="scene-header">
+          <div class="eyebrow">Scena 3 · Atto I · pag. 4</div>
+          <h2>INT. PIZZERIA SOTTOSCALA — SERA</h2>
+          <div class="meta">
+            <span>Personaggi <b>3</b></span>
+            <span>Elementi <b>12</b></span>
+            <span>Tempo stimato <b>~2′ 40″</b></span>
+            <span>Effort <b>3.5 ore</b></span>
+          </div>
+        </div>
+
+        <div class="script-page">
+          <p>
+            Il forno a legna sputa una vampata.
+            <span class="tag tag-cast">FRANCESCO</span>, 42, magro, maglietta
+            zozza di farina, infila la
+            <span class="tag tag-props">pala</span> dentro la bocca rovente.
+            Tira fuori una <span class="tag tag-props">pizza fumante</span> e la
+            fa scivolare sul
+            <span class="tag tag-location">bancone</span>.
+          </p>
+          <p>
+            In fondo alla sala il
+            <span class="tag tag-extras">pubblico</span> ride. Sul
+            <span class="tag tag-location">palco improvvisato</span>,
+            <span class="tag tag-cast">GIULIO</span>, 28, in
+            <span class="tag tag-wardrobe">giacca stropicciata</span>, regge un
+            <span class="tag tag-equipment">microfono</span> che gracchia.
+          </p>
+          <p>
+            <span class="tag tag-cast">MARIA</span>, 65, occhiali da lettura
+            sulla punta del naso, lo guarda da dietro il
+            <span class="tag tag-location">bancone</span>. Scuote la testa con
+            tenerezza.
+          </p>
+          <p>
+            Il <span class="tag tag-props">forno</span> scoppietta. Una
+            <span class="tag tag-vfx">luce calda</span> taglia la stanza.
+            <span class="tag tag-sound">Risate in sottofondo</span>.
+          </p>
+        </div>
+      </div>
+
+      <!-- right: elements -->
+      <aside class="element-panel">
+        <h3>Elementi <span class="num">12 in scena</span></h3>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span class="swatch" style="background: var(--c-cast)"></span>Cast
+            <span class="count">3</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Francesco</span>
+            <span class="cat-item">Giulio</span>
+            <span class="cat-item">Maria</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span class="swatch" style="background: var(--c-locations)"></span
+            >Locations <span class="count">2</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Bancone</span>
+            <span class="cat-item">Palco</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span class="swatch" style="background: var(--c-props)"></span>Props
+            <span class="count">3</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Pala</span>
+            <span class="cat-item">Pizza fumante</span>
+            <span class="cat-item ai">Forno</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span
+              class="swatch"
+              style="background: var(--c-wardrobe)"
+            ></span
+            >Costumi <span class="count">1</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Giacca stropicciata</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span
+              class="swatch"
+              style="background: var(--c-equipment)"
+            ></span
+            >Equipment <span class="count">1</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Microfono</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span class="swatch" style="background: var(--c-extras)"></span
+            >Comparse <span class="count">1</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Pubblico</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span class="swatch" style="background: var(--c-vfx)"></span>VFX
+            <span class="count">1</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item ai">Luce calda</span>
+          </div>
+        </div>
+
+        <div class="cat">
+          <div class="cat-head">
+            <span class="swatch" style="background: var(--c-sound)"></span>Suono
+            <span class="count">1</span>
+          </div>
+          <div class="cat-items">
+            <span class="cat-item">Risate in sottofondo</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- dock contextual to breakdown -->
+    <div class="dock">
+      <div class="dock-status">
+        <span class="pulse"></span>
+        Auto-tagged · 14:32
+      </div>
+      <button class="dock-cesare">
+        <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Auto-tag scena
+        <span class="dock-kbd">⌘T</span>
+      </button>
+      <button class="dock-btn">
+        <svg class="ico ico-sm"><use href="#i-prev" /></svg>Scena prec.
+      </button>
+      <button class="dock-btn">
+        Scena succ. <svg class="ico ico-sm"><use href="#i-next" /></svg>
+      </button>
+      <div class="dock-divider"></div>
+      <button class="dock-icon" title="Filtri categoria">
+        <svg class="ico"><use href="#i-filter" /></svg>
+      </button>
+      <button class="dock-icon" title="Esporta breakdown">
+        <svg class="ico"><use href="#i-download" /></svg>
+      </button>
+      <button class="dock-icon" title="Impostazioni">
+        <svg class="ico"><use href="#i-settings" /></svg>
+      </button>
+    </div>
+  </body>
+</html>

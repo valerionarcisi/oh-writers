@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · F · Ambient Cesare</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+
+        --c-cast: #6b3e7a;
+        --c-crew: #3d6b4a;
+        --c-locations: #9a5128;
+        --c-scenografia: #8a5a1f;
+        --c-costumi: #8b3565;
+        --c-fotografia: #34487a;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+        --space-12: 64px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings: "ss01" on, "kern" on;
+      }
+      [data-num] {
+        font-variant-numeric: tabular-nums;
+      }
+      button {
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      /* ─────────────── TOP BAR — minimal, 48px ─────────────── */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        height: 48px;
+        background: var(--paper-1);
+        border-bottom: 1px solid transparent;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        padding: 0 var(--space-6);
+        transition: border-color 200ms ease;
+      }
+      .topbar.is-scrolled {
+        border-bottom-color: var(--line);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        position: relative;
+      }
+      .brand-mark {
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--ink-1);
+        display: grid;
+        place-items: center;
+        color: var(--paper-1);
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        bottom: -2px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--leaf);
+        border: 1.5px solid var(--paper-1);
+        opacity: 0;
+        transition: opacity 200ms ease;
+      }
+      .brand-mark.is-active::after {
+        opacity: 1;
+        animation: cesare-pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes cesare-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.6; }
+      }
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .breadcrumb-project {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        color: var(--ink-1);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        margin: -4px -8px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        transition: background 150ms ease;
+      }
+      .breadcrumb-project:hover {
+        background: var(--paper-2);
+      }
+      .breadcrumb-project svg {
+        opacity: 0.5;
+      }
+
+      /* Project switcher popover */
+      .proj-popover {
+        position: absolute;
+        top: 100%;
+        left: -8px;
+        margin-top: 6px;
+        width: 380px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+        padding: var(--space-3);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-4px);
+        transition: opacity 180ms ease, transform 180ms ease;
+        z-index: 50;
+        text-align: left;
+      }
+      .proj-popover.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      .proj-search {
+        width: 100%;
+        height: 32px;
+        padding: 0 var(--space-3);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--ink-1);
+        background: var(--paper-1);
+        margin-bottom: var(--space-3);
+        outline: 0;
+      }
+      .proj-search:focus {
+        border-color: var(--clay);
+        background: var(--page);
+      }
+      .proj-search::placeholder {
+        color: var(--ink-4);
+      }
+      .proj-group + .proj-group {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--line-soft);
+      }
+      .proj-group-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        padding: 0 var(--space-2) var(--space-2);
+      }
+      .proj-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
+        width: 100%;
+        text-align: left;
+        transition: background 150ms ease;
+      }
+      .proj-item:hover {
+        background: var(--paper-1);
+      }
+      .proj-item.is-current {
+        background: var(--clay-soft);
+      }
+      .proj-thumb {
+        width: 28px;
+        height: 36px;
+        border-radius: 3px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--paper-1);
+      }
+      .proj-thumb-1 { background: linear-gradient(135deg, #8b3a1a 0%, #5a6b3c 100%); }
+      .proj-thumb-2 { background: linear-gradient(135deg, #34487a 0%, #6b3e7a 100%); }
+      .proj-thumb-3 { background: linear-gradient(135deg, #5a6b3c 0%, #8a5a1f 100%); }
+      .proj-thumb-4 { background: linear-gradient(135deg, #8b3565 0%, #34487a 100%); }
+      .proj-thumb-5 { background: #c4c2b9; color: var(--ink-3); }
+      .proj-info { flex: 1; min-width: 0; }
+      .proj-name {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink-1);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .proj-meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 2px;
+      }
+      .proj-meta span::before { content: "·"; margin: 0 4px; color: var(--ink-4); }
+      .proj-meta span:first-child::before { display: none; }
+      .proj-current-mark {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--clay);
+        flex-shrink: 0;
+      }
+      .proj-foot {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--line-soft);
+      }
+      .proj-new {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        width: 100%;
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        color: var(--clay);
+        font-weight: 500;
+        transition: background 150ms ease;
+      }
+      .proj-new:hover {
+        background: var(--clay-soft);
+      }
+      .breadcrumb-sep {
+        color: var(--ink-4);
+      }
+      .breadcrumb-anchor {
+        position: relative;
+        display: inline-flex;
+      }
+      .breadcrumb-section {
+        color: var(--ink-1);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        margin: -4px -8px;
+        border-radius: var(--radius-sm);
+        transition: background 150ms ease;
+        font-size: 13px;
+      }
+      .breadcrumb-section:hover {
+        background: var(--paper-2);
+      }
+      .breadcrumb-section svg {
+        opacity: 0.5;
+      }
+
+      .topbar-center {
+        display: flex;
+        justify-content: center;
+      }
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-3);
+      }
+
+      .topbar-btn {
+        height: 30px;
+        padding: 0 var(--space-3);
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-3);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .topbar-btn:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .topbar-btn kbd {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+        background: var(--paper-2);
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      .topbar-btn:hover kbd {
+        background: var(--paper-3);
+      }
+
+      .avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--clay);
+        color: var(--paper-1);
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 600;
+        font-family: var(--font-mono);
+      }
+
+      /* Presence — stacked collaborator avatars */
+      .presence {
+        display: inline-flex;
+        align-items: center;
+      }
+      .presence-av {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--ink-3);
+        color: var(--paper-1);
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        font-weight: 600;
+        font-family: var(--font-mono);
+        border: 2px solid var(--paper-1);
+      }
+      .presence-av + .presence-av {
+        margin-inline-start: -8px;
+      }
+      .presence-av-1 { background: #5e7c8a; }
+      .presence-av-2 { background: #8a6244; }
+      .presence-av-3 { background: #6b6b3c; }
+
+      /* Save status pill */
+      .save-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+      }
+      .save-pill::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--leaf);
+      }
+      .save-pill.is-saving {
+        color: var(--ink-1);
+      }
+      .save-pill.is-saving::before {
+        background: var(--clay);
+        animation: cesare-pulse 1s ease-in-out infinite;
+      }
+
+      /* Notifications bell */
+      .bell {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius-sm);
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .bell:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .bell-dot {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        min-width: 14px;
+        height: 14px;
+        padding: 0 4px;
+        border-radius: 100px;
+        background: var(--clay);
+        color: var(--paper-1);
+        font-family: var(--font-mono);
+        font-size: 9px;
+        font-weight: 600;
+        display: grid;
+        place-items: center;
+        border: 1.5px solid var(--paper-1);
+      }
+
+      /* ─────────────── SECTION POPOVER (anchored to breadcrumb) ─────────────── */
+      .nav-popover {
+        position: absolute;
+        top: 100%;
+        left: -8px;
+        margin-top: 6px;
+        width: 320px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+        padding: var(--space-3);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-4px);
+        transition: opacity 180ms ease, transform 180ms ease;
+        z-index: 50;
+        text-align: left;
+      }
+      .nav-popover.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      .nav-group + .nav-group {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--line-soft);
+      }
+      .nav-group-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        padding: 0 var(--space-2) var(--space-2);
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
+        color: var(--ink-2);
+        font-size: 13px;
+        width: 100%;
+        text-align: left;
+      }
+      .nav-item:hover {
+        background: var(--paper-1);
+        color: var(--ink-1);
+      }
+      .nav-item.is-current {
+        background: var(--clay-soft);
+        color: var(--clay);
+      }
+      .nav-item svg {
+        width: 14px;
+        height: 14px;
+        opacity: 0.7;
+      }
+      .nav-item.is-current svg {
+        opacity: 1;
+      }
+
+      /* ─────────────── VIEW BAR (filtri only — top) ─────────────── */
+      .viewbar {
+        position: sticky;
+        top: 48px;
+        z-index: 30;
+        background: var(--paper-1);
+        border-bottom: 1px solid transparent;
+        padding: var(--space-2) var(--space-6);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        transition: border-color 200ms ease;
+      }
+      .viewbar.is-stuck {
+        border-bottom-color: var(--line);
+      }
+      .filter {
+        height: 28px;
+        padding: 0 10px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .filter:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .filter.is-active {
+        background: var(--paper-3);
+        color: var(--ink-1);
+      }
+
+      /* ─────────────── FLOATING ACTION DOCK (bottom-right, contextual) ─────────────── */
+      .dock {
+        position: fixed;
+        bottom: var(--space-5);
+        right: var(--space-5);
+        z-index: 70;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 100px;
+        padding: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+      }
+      .dock-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        padding: 0 10px;
+        border-inline-end: 1px solid var(--line);
+        margin-inline-end: 2px;
+      }
+      .btn {
+        height: 34px;
+        padding: 0 14px;
+        border-radius: 100px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .btn-primary {
+        background: var(--clay);
+        color: var(--paper-1);
+      }
+      .btn-primary:hover {
+        background: #75301a;
+      }
+      .btn-ghost {
+        color: var(--ink-2);
+      }
+      .btn-ghost:hover {
+        background: var(--paper-1);
+        color: var(--ink-1);
+      }
+      .dock-sep {
+        width: 1px;
+        height: 22px;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .dock-cesare {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        height: 34px;
+        border-radius: 100px;
+        background: var(--leaf-soft);
+        color: var(--leaf);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .dock-cesare:hover {
+        background: #d6dcc1;
+      }
+      .dock-cesare-dot {
+        width: 7px;
+        height: 7px;
+        background: var(--leaf);
+        border-radius: 50%;
+        animation: cesare-pulse 1.8s ease-in-out infinite;
+      }
+      .dock-cesare-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        background: var(--leaf);
+        color: var(--paper-1);
+        padding: 1px 5px;
+        border-radius: 100px;
+        font-weight: 500;
+      }
+
+      /* ─────────────── CESARE PEEK (from brand mark) ─────────────── */
+      .peek {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 10px;
+        width: 340px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+        padding: var(--space-4);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-4px);
+        transition: opacity 180ms ease, transform 180ms ease;
+        z-index: 50;
+        text-align: left;
+      }
+      .peek.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      .peek-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--leaf);
+        margin-bottom: var(--space-3);
+      }
+      .peek-head-dot {
+        width: 6px;
+        height: 6px;
+        background: var(--leaf);
+        border-radius: 50%;
+      }
+      .peek-note {
+        padding-block: var(--space-2);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .peek-note:last-of-type {
+        border-bottom: 0;
+      }
+      .peek-note-kind {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-4);
+        margin-bottom: 4px;
+      }
+      .peek-note-text {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--ink-2);
+      }
+      .peek-foot {
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .peek-foot a {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--clay);
+        text-decoration: none;
+      }
+      .peek-foot a:hover {
+        text-decoration: underline;
+      }
+      .peek-foot span {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+      }
+
+      /* ─────────────── MAIN ─────────────── */
+      main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: var(--space-10) var(--space-6) var(--space-12);
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: var(--space-10);
+        align-items: start;
+      }
+
+      .content {
+        min-width: 0;
+      }
+
+      /* Hero */
+      .hero {
+        margin-bottom: var(--space-10);
+      }
+      .hero-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ink-3);
+        margin-bottom: var(--space-3);
+      }
+      .hero-number {
+        font-family: var(--font-display);
+        font-size: 88px;
+        line-height: 0.95;
+        font-weight: 400;
+        letter-spacing: -0.03em;
+        margin-bottom: var(--space-3);
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+      }
+      .hero-number-sub {
+        font-family: var(--font-sans);
+        font-size: 22px;
+        font-weight: 400;
+        color: var(--ink-3);
+      }
+      .hero-delta {
+        font-size: 14px;
+        color: var(--ink-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .hero-delta strong {
+        color: var(--clay);
+        font-weight: 600;
+      }
+      .hero-delta-pill {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 100px;
+        background: var(--clay-soft);
+        color: var(--clay);
+        font-weight: 500;
+      }
+
+      /* Sections */
+      .section + .section {
+        margin-top: var(--space-10);
+      }
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding-bottom: var(--space-3);
+        margin-bottom: var(--space-5);
+        border-bottom: 1px solid var(--line);
+      }
+      .section-title {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ink-2);
+        font-weight: 500;
+      }
+      .section-meta {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+      }
+
+      /* Category cards */
+      .cats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-4);
+      }
+      .cat {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        cursor: pointer;
+        transition: border-color 150ms ease, transform 150ms ease;
+        text-align: left;
+      }
+      .cat:hover {
+        border-color: var(--ink-4);
+        transform: translateY(-1px);
+      }
+      .cat-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-3);
+      }
+      .cat-rail {
+        width: 3px;
+        height: 12px;
+        border-radius: 2px;
+      }
+      .cat-name {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-1);
+      }
+      .cat-num {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 400;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        margin-bottom: var(--space-2);
+      }
+      .cat-foot {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* Table */
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .table th {
+        text-align: left;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        font-weight: 500;
+        padding: var(--space-2) var(--space-3);
+        border-bottom: 1px solid var(--line);
+      }
+      .table td {
+        padding: var(--space-3);
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 13px;
+        color: var(--ink-1);
+      }
+      .table tr:hover td {
+        background: var(--paper-2);
+      }
+      .table .col-num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .table .row-cat {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .table .row-cat::before {
+        content: "";
+        width: 3px;
+        height: 10px;
+        border-radius: 2px;
+      }
+      .row-cat[data-cat="cast"]::before { background: var(--c-cast); }
+      .row-cat[data-cat="loc"]::before { background: var(--c-locations); }
+      .row-cat[data-cat="scen"]::before { background: var(--c-scenografia); }
+      .row-cat[data-cat="cost"]::before { background: var(--c-costumi); }
+      .row-cat[data-cat="foto"]::before { background: var(--c-fotografia); }
+      .row-cat[data-cat="crew"]::before { background: var(--c-crew); }
+
+      .editable {
+        background: transparent;
+        border: 1px dashed transparent;
+        padding: 2px 6px;
+        margin: -2px -6px;
+        border-radius: var(--radius-sm);
+        font: inherit;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        width: 100%;
+        color: inherit;
+      }
+      .editable:hover {
+        border-color: var(--line);
+        background: var(--paper-1);
+      }
+      .editable:focus {
+        outline: none;
+        border-color: var(--clay);
+        background: var(--page);
+      }
+
+      /* ─────────────── MARGIN RAIL (Cesare notes) ─────────────── */
+      aside.margin {
+        position: sticky;
+        top: 96px;
+      }
+      .margin-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        margin-bottom: var(--space-4);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .margin-label::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        background: var(--leaf);
+        border-radius: 50%;
+      }
+      .note {
+        margin-bottom: var(--space-5);
+        padding-inline-start: var(--space-3);
+        border-inline-start: 2px solid var(--leaf-soft);
+      }
+      .note-kind {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--leaf);
+        margin-bottom: var(--space-1);
+      }
+      .note-text {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--ink-2);
+        margin-bottom: var(--space-2);
+      }
+      .note-actions {
+        display: flex;
+        gap: var(--space-2);
+      }
+      .note-actions button {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-3);
+        padding: 3px 6px;
+        border-radius: var(--radius-sm);
+      }
+      .note-actions button:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .note-actions .note-yes:hover {
+        background: var(--leaf-soft);
+        color: var(--leaf);
+      }
+
+      /* ─────────────── CESARE BUBBLE (bottom-right, ambient) ─────────────── */
+      .bubble {
+        position: fixed;
+        bottom: var(--space-6);
+        right: var(--space-6);
+        z-index: 60;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 100px;
+        padding: 8px 14px 8px 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 12px 28px -8px rgba(28, 26, 23, 0.15);
+        cursor: pointer;
+        transition: transform 200ms ease, opacity 200ms ease;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(8px);
+      }
+      .bubble.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      .bubble-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--leaf);
+        border-radius: 50%;
+        animation: cesare-pulse 1.8s ease-in-out infinite;
+      }
+      .bubble-text {
+        font-size: 13px;
+        color: var(--ink-1);
+      }
+      .bubble-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--leaf);
+        font-weight: 500;
+      }
+      .bubble:hover {
+        transform: translateY(-2px);
+      }
+
+      /* Selection contextual mini-toolbar */
+      .selmenu {
+        position: fixed;
+        z-index: 70;
+        background: var(--ink-1);
+        color: var(--paper-1);
+        border-radius: var(--radius-md);
+        padding: 4px;
+        display: flex;
+        gap: 2px;
+        box-shadow: 0 8px 24px -4px rgba(0,0,0,0.3);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 150ms ease;
+      }
+      .selmenu.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .selmenu button {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: var(--radius-sm);
+        color: var(--paper-1);
+      }
+      .selmenu button:hover {
+        background: rgba(255,255,255,0.1);
+      }
+      .selmenu button.is-cesare {
+        color: var(--leaf-soft);
+      }
+
+      /* ─────────────── QUICK-ASK POPOVER (⌘.) ─────────────── */
+      .scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(28, 26, 23, 0.35);
+        backdrop-filter: blur(4px);
+        z-index: 80;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 200ms ease;
+      }
+      .scrim.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .qask {
+        position: fixed;
+        top: 32%;
+        left: 50%;
+        transform: translate(-50%, -8px);
+        width: 540px;
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        z-index: 90;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 200ms ease, transform 200ms ease;
+        box-shadow: 0 24px 64px -12px rgba(28, 26, 23, 0.3);
+      }
+      .qask.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, 0);
+      }
+      .qask-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-3);
+      }
+      .qask-head-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--leaf);
+        border-radius: 50%;
+      }
+      .qask-head-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--leaf);
+      }
+      .qask-head-hint {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+      }
+      .qask-input {
+        width: 100%;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 20px;
+        line-height: 1.4;
+        color: var(--ink-1);
+        background: transparent;
+        border: 0;
+        outline: 0;
+        padding: 0;
+      }
+      .qask-input::placeholder {
+        color: var(--ink-4);
+      }
+      .qask-foot {
+        margin-top: var(--space-4);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
+      .qask-chip {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        color: var(--ink-3);
+      }
+      .qask-chip:hover {
+        background: var(--paper-1);
+        color: var(--ink-1);
+      }
+
+      /* ─────────────── MANIFEST DRAWER ─────────────── */
+      .manifest {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: 480px;
+        background: var(--paper-1);
+        border-inline-start: 1px solid var(--line);
+        z-index: 85;
+        transform: translateX(100%);
+        transition: transform 250ms ease;
+        overflow-y: auto;
+        padding: var(--space-6);
+      }
+      .manifest.is-open {
+        transform: translateX(0);
+        box-shadow: -24px 0 64px -12px rgba(28, 26, 23, 0.18);
+      }
+      .manifest-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-6);
+      }
+      .manifest-head-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--leaf);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .manifest-head-label::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        background: var(--leaf);
+        border-radius: 50%;
+      }
+      .manifest-close {
+        color: var(--ink-3);
+        font-size: 18px;
+      }
+      .manifest h2 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 400;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+        margin: 0 0 var(--space-2);
+      }
+      .manifest-sub {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        margin-bottom: var(--space-6);
+      }
+      .manifest-body p {
+        font-family: var(--font-display);
+        font-size: 16px;
+        line-height: 1.7;
+        color: var(--ink-2);
+        margin: 0 0 var(--space-4);
+      }
+      .manifest-body strong {
+        color: var(--clay);
+        font-weight: 600;
+        font-style: normal;
+        font-family: var(--font-mono);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ──── TOP BAR ──── -->
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <button class="brand-mark is-active" id="brandMark" title="Anteprima note di Cesare" aria-label="Cesare">O</button>
+        <div class="peek" id="peek">
+          <div class="peek-head"><span class="peek-head-dot"></span>Cesare · 3 note nuove</div>
+          <div class="peek-note">
+            <div class="peek-note-kind">Locations · sc.4</div>
+            <div class="peek-note-text">Hai segnato 2.222 € per la Pizzeria. La media per 5 giorni a Roma è ~18.000 €.</div>
+          </div>
+          <div class="peek-note">
+            <div class="peek-note-kind">Fotografia</div>
+            <div class="peek-note-text">DOP chiede unità extra notte per sc.18-21. Aggiungere ~12.000 €?</div>
+          </div>
+          <div class="peek-note">
+            <div class="peek-note-kind">Cast</div>
+            <div class="peek-note-text">Giulia ha firmato per 115k. Aggiornato storico.</div>
+          </div>
+          <div class="peek-foot">
+            <a href="#" id="openManifest">Apri Manifesto →</a>
+            <span>⌘M</span>
+          </div>
+        </div>
+        <nav class="breadcrumb">
+          <span class="breadcrumb-anchor">
+            <button class="breadcrumb-project" id="projectBtn">
+              Non fa ridere
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="proj-popover" id="projectPopover">
+              <input class="proj-search" placeholder="Cerca progetto…" />
+              <div class="proj-group">
+                <div class="proj-group-label">In scrittura</div>
+                <button class="proj-item is-current">
+                  <span class="proj-thumb proj-thumb-1">N</span>
+                  <span class="proj-info">
+                    <span class="proj-name">Non fa ridere</span>
+                    <span class="proj-meta"><span>Lungometraggio</span><span>Commedia drammatica</span><span>v3 oggi</span></span>
+                  </span>
+                  <span class="proj-current-mark">◉ APERTO</span>
+                </button>
+                <button class="proj-item">
+                  <span class="proj-thumb proj-thumb-2">L</span>
+                  <span class="proj-info">
+                    <span class="proj-name">La torre di Babele</span>
+                    <span class="proj-meta"><span>Lungometraggio</span><span>Drammatico</span><span>ieri</span></span>
+                  </span>
+                </button>
+                <button class="proj-item">
+                  <span class="proj-thumb proj-thumb-3">S</span>
+                  <span class="proj-info">
+                    <span class="proj-name">Stagione bianca</span>
+                    <span class="proj-meta"><span>Serie · 6 ep</span><span>Thriller</span><span>3 g fa</span></span>
+                  </span>
+                </button>
+              </div>
+              <div class="proj-group">
+                <div class="proj-group-label">In produzione</div>
+                <button class="proj-item">
+                  <span class="proj-thumb proj-thumb-4">M</span>
+                  <span class="proj-info">
+                    <span class="proj-name">Mareggiata</span>
+                    <span class="proj-meta"><span>Cortometraggio</span><span>Riprese in corso</span><span>oggi</span></span>
+                  </span>
+                </button>
+              </div>
+              <div class="proj-group">
+                <div class="proj-group-label">Archiviati</div>
+                <button class="proj-item">
+                  <span class="proj-thumb proj-thumb-5">D</span>
+                  <span class="proj-info">
+                    <span class="proj-name">Domenica con i miei</span>
+                    <span class="proj-meta"><span>Cortometraggio</span><span>Completato</span><span>nov 2025</span></span>
+                  </span>
+                </button>
+              </div>
+              <div class="proj-foot">
+                <button class="proj-new">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+                  Nuovo progetto
+                </button>
+              </div>
+            </div>
+          </span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-anchor">
+            <button class="breadcrumb-section" id="sectionBtn" aria-haspopup="menu">
+              Budget
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="nav-popover" id="navPopover" role="menu">
+              <div class="nav-group">
+                <div class="nav-group-label">Scrittura</div>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h6M8 16h4"/></svg>
+                  Soggetto
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg>
+                  Synopsis
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg>
+                  Outline
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+                  Treatment
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M4 8h16"/></svg>
+                  Screenplay
+                </button>
+              </div>
+              <div class="nav-group">
+                <div class="nav-group-label">Pre-produzione</div>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M11 11l2 2"/></svg>
+                  Breakdown
+                </button>
+                <button class="nav-item is-current">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/></svg>
+                  Budget
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="6" width="16" height="14" rx="1"/><path d="M4 10h16M9 4v4M15 4v4"/></svg>
+                  Schedule
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2"/></svg>
+                  Locations
+                </button>
+              </div>
+              <div class="nav-group">
+                <div class="nav-group-label">Produzione</div>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h18M3 14h18M7 5l-2 14M17 5l2 14"/></svg>
+                  Piano di ripresa
+                </button>
+                <button class="nav-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M3 12h2M19 12h2M12 3v2M12 19v2"/></svg>
+                  Set
+                </button>
+              </div>
+            </div>
+          </span>
+        </nav>
+      </div>
+
+      <div class="topbar-center"></div>
+
+      <div class="topbar-right">
+        <span class="save-pill" id="savePill">Salvato 12s fa</span>
+        <button class="topbar-btn" id="searchBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="bell" title="Notifiche">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+          <span class="bell-dot">2</span>
+        </button>
+        <button class="topbar-btn" id="askBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9l6 3"/></svg>
+          Chiedi a Cesare
+          <kbd>⌘.</kbd>
+        </button>
+        <div class="presence">
+          <span class="presence-av presence-av-1" title="Sergio Mancini">SM</span>
+          <span class="presence-av presence-av-2" title="Lucia Romano">LR</span>
+          <span class="presence-av presence-av-3" title="Marco Conti">MC</span>
+        </div>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <!-- ──── VIEW BAR (filtri only) ──── -->
+    <div class="viewbar" id="viewbar">
+      <button class="filter is-active">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        Per categoria
+      </button>
+      <button class="filter">Per scena</button>
+      <button class="filter">Per giornata</button>
+      <button class="filter">Tutti i reparti</button>
+      <button class="filter" style="margin-inline-start: auto">v3 · 14 mag 2026 ▾</button>
+    </div>
+
+    <!-- ──── MAIN ──── -->
+    <main>
+      <div class="content">
+        <!-- HERO -->
+        <section class="hero">
+          <div class="hero-label">Totale stimato</div>
+          <div class="hero-number">
+            <span data-num>1.247.000</span>
+            <span class="hero-number-sub">€</span>
+          </div>
+          <div class="hero-delta">
+            <span class="hero-delta-pill">+ <strong data-num>4,2%</strong> vs preventivo</span>
+            <span>su <strong data-num>28</strong> scene · <strong data-num>22</strong> giornate</span>
+          </div>
+        </section>
+
+        <!-- CATEGORIES -->
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Per categoria</h2>
+            <span class="section-meta">10 reparti · ordinamento per peso</span>
+          </div>
+          <div class="cats">
+            <button class="cat">
+              <div class="cat-head"><span class="cat-rail" style="background: var(--c-cast)"></span><span class="cat-name">Cast</span></div>
+              <div class="cat-num" data-num>312.000 €</div>
+              <div class="cat-foot"><span>25%</span><span>+1,8%</span></div>
+            </button>
+            <button class="cat">
+              <div class="cat-head"><span class="cat-rail" style="background: var(--c-locations)"></span><span class="cat-name">Locations</span></div>
+              <div class="cat-num" data-num>198.500 €</div>
+              <div class="cat-foot"><span>16%</span><span>+8,1%</span></div>
+            </button>
+            <button class="cat">
+              <div class="cat-head"><span class="cat-rail" style="background: var(--c-scenografia)"></span><span class="cat-name">Scenografia</span></div>
+              <div class="cat-num" data-num>187.200 €</div>
+              <div class="cat-foot"><span>15%</span><span>+2,0%</span></div>
+            </button>
+            <button class="cat">
+              <div class="cat-head"><span class="cat-rail" style="background: var(--c-crew)"></span><span class="cat-name">Troupe</span></div>
+              <div class="cat-num" data-num>156.800 €</div>
+              <div class="cat-foot"><span>13%</span><span>0,0%</span></div>
+            </button>
+            <button class="cat">
+              <div class="cat-head"><span class="cat-rail" style="background: var(--c-fotografia)"></span><span class="cat-name">Fotografia</span></div>
+              <div class="cat-num" data-num>142.000 €</div>
+              <div class="cat-foot"><span>11%</span><span>+3,4%</span></div>
+            </button>
+            <button class="cat">
+              <div class="cat-head"><span class="cat-rail" style="background: var(--c-costumi)"></span><span class="cat-name">Costumi</span></div>
+              <div class="cat-num" data-num>89.500 €</div>
+              <div class="cat-foot"><span>7%</span><span>+5,1%</span></div>
+            </button>
+          </div>
+        </section>
+
+        <!-- TABLE -->
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Linee di budget</h2>
+            <span class="section-meta">42 voci · effettivo modificabile</span>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 60px">#</th>
+                <th>Voce</th>
+                <th>Reparto</th>
+                <th class="col-num">Stima</th>
+                <th class="col-num">Effettivo</th>
+                <th class="col-num">Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span style="font-family: var(--font-mono); color: var(--ink-4)">001</span></td>
+                <td>Protagonista — Giulia</td>
+                <td><span class="row-cat" data-cat="cast">Cast</span></td>
+                <td class="col-num" data-num>120.000 €</td>
+                <td class="col-num"><input class="editable" value="115.000 €" data-num /></td>
+                <td class="col-num" data-num style="color: var(--leaf)">−5.000 €</td>
+              </tr>
+              <tr>
+                <td><span style="font-family: var(--font-mono); color: var(--ink-4)">002</span></td>
+                <td>Pizzeria Sottoscala — 5 giorni</td>
+                <td><span class="row-cat" data-cat="loc">Locations</span></td>
+                <td class="col-num" data-num>22.500 €</td>
+                <td class="col-num"><input class="editable" value="2.222 €" data-num /></td>
+                <td class="col-num" data-num style="color: var(--clay)">−20.278 €</td>
+              </tr>
+              <tr>
+                <td><span style="font-family: var(--font-mono); color: var(--ink-4)">003</span></td>
+                <td>Scenografo + costruzione set</td>
+                <td><span class="row-cat" data-cat="scen">Scenografia</span></td>
+                <td class="col-num" data-num>78.000 €</td>
+                <td class="col-num"><input class="editable" value="78.000 €" data-num /></td>
+                <td class="col-num" data-num style="color: var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span style="font-family: var(--font-mono); color: var(--ink-4)">004</span></td>
+                <td>DOP + camera operator</td>
+                <td><span class="row-cat" data-cat="foto">Fotografia</span></td>
+                <td class="col-num" data-num>62.000 €</td>
+                <td class="col-num"><input class="editable" value="64.500 €" data-num /></td>
+                <td class="col-num" data-num style="color: var(--clay)">+2.500 €</td>
+              </tr>
+              <tr>
+                <td><span style="font-family: var(--font-mono); color: var(--ink-4)">005</span></td>
+                <td>Costumista + sartoria</td>
+                <td><span class="row-cat" data-cat="cost">Costumi</span></td>
+                <td class="col-num" data-num>34.000 €</td>
+                <td class="col-num"><input class="editable" value="34.000 €" data-num /></td>
+                <td class="col-num" data-num style="color: var(--ink-4)">—</td>
+              </tr>
+              <tr>
+                <td><span style="font-family: var(--font-mono); color: var(--ink-4)">006</span></td>
+                <td>Assistente regia</td>
+                <td><span class="row-cat" data-cat="crew">Troupe</span></td>
+                <td class="col-num" data-num>28.000 €</td>
+                <td class="col-num"><input class="editable" value="28.000 €" data-num /></td>
+                <td class="col-num" data-num style="color: var(--ink-4)">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <!-- ──── MARGIN RAIL — Cesare notes ──── -->
+      <aside class="margin">
+        <div class="margin-label">Note di Cesare</div>
+
+        <div class="note">
+          <div class="note-kind">Locations · sc.4</div>
+          <div class="note-text">Hai segnato 2.222 € per la Pizzeria. La media per location di 5 giorni con permessi comunali a Roma è ~18.000 €. Sicuro non sia un typo?</div>
+          <div class="note-actions">
+            <button class="note-yes">Apri scena</button>
+            <button>Ignora</button>
+          </div>
+        </div>
+
+        <div class="note">
+          <div class="note-kind">Fotografia</div>
+          <div class="note-text">Il DOP ha richiesto un'unità extra notte per sc.18-21. Suggerisco di aggiungere 12.000 € al reparto.</div>
+          <div class="note-actions">
+            <button class="note-yes">Aggiungi</button>
+            <button>Più tardi</button>
+          </div>
+        </div>
+
+        <div class="note">
+          <div class="note-kind">Cast</div>
+          <div class="note-text">Giulia ha già firmato per 115k. Ho aggiornato lo storico, il preventivo originale (120k) resta come riferimento.</div>
+          <div class="note-actions">
+            <button>Ok, grazie</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- ──── FLOATING ACTION DOCK (bottom-right, contextual per page) ──── -->
+    <div class="dock" id="dock">
+      <span class="dock-label">Budget</span>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 19v-6h6"/></svg>
+        Rigenera
+      </button>
+      <button class="btn btn-ghost">Salva</button>
+      <button class="btn btn-ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        Esporta
+      </button>
+      <div class="dock-sep"></div>
+      <button class="dock-cesare" id="dockCesare">
+        <span class="dock-cesare-dot"></span>
+        Cesare
+        <span class="dock-cesare-count">3</span>
+      </button>
+    </div>
+
+    <!-- ──── SELECTION MINI-TOOLBAR (appears on text/row select) ──── -->
+    <div class="selmenu" id="selmenu" style="left: 50%; top: 200px; transform: translateX(-50%)">
+      <button class="is-cesare">✦ Chiedi a Cesare</button>
+      <button>Riformula</button>
+      <button>Analizza</button>
+    </div>
+
+    <!-- ──── QUICK ASK POPOVER ──── -->
+    <div class="scrim" id="scrim"></div>
+    <div class="qask" id="qask">
+      <div class="qask-head">
+        <span class="qask-head-dot"></span>
+        <span class="qask-head-label">Chiedi a Cesare</span>
+        <span class="qask-head-hint">esc per chiudere</span>
+      </div>
+      <input class="qask-input" placeholder="Perché il budget è cresciuto del 4,2%?" autofocus />
+      <div class="qask-foot">
+        <button class="qask-chip">Spiega lo scostamento</button>
+        <button class="qask-chip">Confronta con v2</button>
+        <button class="qask-chip">Mostra benchmark</button>
+        <button class="qask-chip">Suggerisci tagli</button>
+      </div>
+    </div>
+
+    <!-- ──── MANIFEST DRAWER ──── -->
+    <aside class="manifest" id="manifest">
+      <div class="manifest-head">
+        <span class="manifest-head-label">Manifesto · Budget</span>
+        <button class="manifest-close" id="manifestClose">×</button>
+      </div>
+      <h2>Il budget cresce del 4,2%</h2>
+      <div class="manifest-sub">Analisi v3 · 14 maggio 2026 · ore 11:24</div>
+      <div class="manifest-body">
+        <p>Il preventivo ha superato la versione precedente di <strong>52.300 €</strong>. La crescita non è distribuita: tre reparti assorbono il 78% dello scostamento — Locations, Fotografia, Costumi.</p>
+        <p><strong>Locations (+8,1%)</strong> — gli oneri comunali per le strade di Trastevere sono saliti dopo l'ultima delibera. Sergio mi ha segnalato l'aumento ieri.</p>
+        <p><strong>Fotografia (+3,4%)</strong> — il DOP ha chiesto un'unità extra notte per le scene 18-21. È coerente con il treatment, dove sc.20 è descritta come "interno fumoso, ore piccole".</p>
+        <p><strong>Costumi (+5,1%)</strong> — la nuova proposta per Giulia (lana bouclé italiana) costa il 22% in più. È una scelta tonale: hai detto che vuoi farla sembrare più fragile nelle scene domestiche. Confermi?</p>
+        <p>Suggerisco di rivedere la voce <strong>Pizzeria Sottoscala</strong>. Hai segnato 2.222 €, ma il valore di mercato per 5 giorni a Roma è ~18.000 €. Probabilmente è un errore di digitazione o un accordo informale che non ho registrato.</p>
+      </div>
+    </aside>
+
+    <script>
+      const topbar = document.getElementById('topbar');
+      const viewbar = document.getElementById('viewbar');
+      const sectionBtn = document.getElementById('sectionBtn');
+      const navPopover = document.getElementById('navPopover');
+      const projectBtn = document.getElementById('projectBtn');
+      const projectPopover = document.getElementById('projectPopover');
+      const brandMark = document.getElementById('brandMark');
+      const peek = document.getElementById('peek');
+      const manifest = document.getElementById('manifest');
+      const manifestClose = document.getElementById('manifestClose');
+      const openManifestLink = document.getElementById('openManifest');
+      const askBtn = document.getElementById('askBtn');
+      const qask = document.getElementById('qask');
+      const scrim = document.getElementById('scrim');
+      const dockCesare = document.getElementById('dockCesare');
+      const selmenu = document.getElementById('selmenu');
+
+      // Scroll: borders appear on top bar + view bar
+      window.addEventListener('scroll', () => {
+        const y = window.scrollY;
+        topbar.classList.toggle('is-scrolled', y > 4);
+        viewbar.classList.toggle('is-stuck', y > 48);
+      });
+
+      // Section dropdown
+      sectionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navPopover.classList.toggle('is-open');
+        peek.classList.remove('is-open');
+        projectPopover.classList.remove('is-open');
+      });
+      // Project switcher dropdown
+      projectBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        projectPopover.classList.toggle('is-open');
+        navPopover.classList.remove('is-open');
+        peek.classList.remove('is-open');
+        if (projectPopover.classList.contains('is-open')) {
+          setTimeout(() => projectPopover.querySelector('.proj-search').focus(), 80);
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (!sectionBtn.contains(e.target)) navPopover.classList.remove('is-open');
+        if (!projectBtn.contains(e.target) && !projectPopover.contains(e.target)) projectPopover.classList.remove('is-open');
+        if (!brandMark.contains(e.target) && !peek.contains(e.target)) peek.classList.remove('is-open');
+      });
+
+      // Brand mark opens peek (lightweight); peek has "Apri Manifesto" link for full drawer
+      brandMark.addEventListener('click', (e) => {
+        e.stopPropagation();
+        peek.classList.toggle('is-open');
+        navPopover.classList.remove('is-open');
+      });
+      openManifestLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        peek.classList.remove('is-open');
+        manifest.classList.add('is-open');
+      });
+      dockCesare.addEventListener('click', () => manifest.classList.add('is-open'));
+      manifestClose.addEventListener('click', () => manifest.classList.remove('is-open'));
+
+      // Quick ask
+      const openAsk = () => { scrim.classList.add('is-open'); qask.classList.add('is-open'); setTimeout(() => qask.querySelector('input').focus(), 50); };
+      const closeAsk = () => { scrim.classList.remove('is-open'); qask.classList.remove('is-open'); };
+      askBtn.addEventListener('click', openAsk);
+      scrim.addEventListener('click', closeAsk);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '.' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); openAsk(); }
+        if (e.key === 'm' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); manifest.classList.add('is-open'); peek.classList.remove('is-open'); }
+        if (e.key === 'Escape') { closeAsk(); manifest.classList.remove('is-open'); navPopover.classList.remove('is-open'); peek.classList.remove('is-open'); projectPopover.classList.remove('is-open'); }
+      });
+
+      // Selection mini-toolbar (demo: shows on row click)
+      document.querySelectorAll('.table tbody tr').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.tagName === 'INPUT') return;
+          const rect = tr.getBoundingClientRect();
+          selmenu.style.left = (rect.left + rect.width / 2) + 'px';
+          selmenu.style.top = (rect.top - 40) + 'px';
+          selmenu.style.transform = 'translateX(-50%)';
+          selmenu.classList.add('is-visible');
+          setTimeout(() => selmenu.classList.remove('is-visible'), 2500);
+        });
+      });
+    </script>
+  </body>
+</html>

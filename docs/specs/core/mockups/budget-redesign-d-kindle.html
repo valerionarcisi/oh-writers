@@ -1,0 +1,2628 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Proposta D · Kindle</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* paper palette — Kindle stone, low chroma, neutral warm */
+        --paper-0: #efece5; /* page edge */
+        --paper-1: #f5f3ee; /* main bg — linen */
+        --paper-2: #ebe9e3; /* raised */
+        --paper-3: #e2dfd6; /* hover */
+
+        --ink-1: #1c1a17; /* primary text */
+        --ink-2: #44413c; /* secondary */
+        --ink-3: #71706a; /* tertiary */
+        --ink-4: #a09e96; /* quaternary / disabled */
+        --ink-5: #c4c2b9; /* dividers */
+
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+
+        /* accent: warm clay (copper, ink-pressed) — single accent */
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --clay-mark: #a85020;
+
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+        --rust: #a3411f;
+        --rust-soft: #f0d7c8;
+
+        /* category accents — muted, warm, paper-stained */
+        --c-cast: #6b3e7a;
+        --c-crew: #3d6b4a;
+        --c-locations: #9a5128;
+        --c-vehicles: #2c6168;
+        --c-scenografia: #8a5a1f;
+        --c-costumi: #8b3565;
+        --c-fotografia: #34487a;
+        --c-suono: #5a6b25;
+        --c-vfx: #6a3e8a;
+        --c-comparse: #7a5524;
+        --c-stunt: #8e2845;
+        --c-regia: #44403c;
+        --c-produzione: #8a3c1a;
+
+        --radius-sm: 3px;
+        --radius-md: 6px;
+        --radius-pill: 99px;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+        --space-12: 64px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", "Source Serif Pro", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings:
+          "ss01" on,
+          "kern" on;
+        transition: padding-left 240ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      body.cesare-open {
+        padding-left: 400px;
+      }
+      [data-num] {
+        font-variant-numeric: tabular-nums;
+      }
+      .mono {
+        font-family: var(--font-mono);
+        font-feature-settings: "zero" on;
+      }
+
+      .ico {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        stroke-width: 1.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        flex-shrink: 0;
+      }
+      .ico-sm {
+        width: 13px;
+        height: 13px;
+      }
+      .ico-md {
+        width: 16px;
+        height: 16px;
+      }
+      .ico-lg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         TOP SHELL — minimal brand + meta + compact-on-scroll
+         ──────────────────────────────────────────────────────── */
+      .top-wrap {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: var(--paper-1);
+        transition: box-shadow 200ms;
+      }
+      .top-wrap.is-compact {
+        box-shadow: 0 1px 0 var(--line);
+      }
+      .shell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-4) var(--space-8);
+        background: transparent;
+        transition:
+          padding 200ms ease,
+          opacity 150ms;
+      }
+      .top-wrap.is-compact .shell {
+        padding-block: 6px;
+      }
+      .shell-active {
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        transition:
+          opacity 180ms,
+          max-width 220ms ease,
+          margin 200ms;
+        font-size: 13px;
+        color: var(--ink-2);
+        margin-left: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .shell-active::before {
+        content: "/";
+        color: var(--ink-4);
+      }
+      .top-wrap.is-compact .shell-active {
+        opacity: 1;
+        max-width: 420px;
+        margin-left: 12px;
+      }
+      .shell-active b {
+        font-weight: 600;
+        color: var(--ink-1);
+      }
+
+      /* clickable nav trigger when compact */
+      .shell-brand,
+      .shell-active {
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        padding: 4px 6px;
+        margin: -4px -6px;
+      }
+      .shell-brand:hover,
+      .shell-active:hover {
+        background: var(--paper-2);
+      }
+      .nav-caret {
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+        transition:
+          opacity 180ms,
+          max-width 200ms ease;
+        color: var(--ink-4);
+        display: inline-flex;
+        align-items: center;
+      }
+      .top-wrap.is-compact .nav-caret {
+        opacity: 1;
+        max-width: 18px;
+        margin-left: 2px;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         NAV POPOVER — opens on brand/active click when compact
+         ──────────────────────────────────────────────────────── */
+      .nav-popover {
+        position: fixed;
+        top: 56px;
+        left: var(--space-8);
+        z-index: 60;
+        width: 320px;
+        background: rgba(245, 243, 238, 0.92);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid rgba(28, 26, 23, 0.08);
+        border-radius: 12px;
+        box-shadow:
+          0 2px 8px rgba(28, 26, 23, 0.05),
+          0 20px 48px rgba(28, 26, 23, 0.12);
+        padding: var(--space-3);
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+        pointer-events: none;
+        transition:
+          opacity 160ms ease,
+          transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .nav-popover.is-open {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+      .nav-popover-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: var(--paper-2);
+        border-radius: 6px;
+        margin-bottom: var(--space-3);
+        color: var(--ink-3);
+        font-size: 13px;
+      }
+      .nav-popover-search input {
+        all: unset;
+        flex: 1;
+        font-size: 13px;
+        color: var(--ink-1);
+      }
+      .nav-popover-search .kbd {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 1px 5px;
+        background: var(--paper-1);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        color: var(--ink-4);
+      }
+      .nav-popover-section {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        padding: var(--space-2) var(--space-3) 4px;
+      }
+      .nav-popover-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px var(--space-3);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--ink-2);
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .nav-popover-item:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .nav-popover-item.active {
+        background: var(--clay-soft);
+        color: var(--clay);
+      }
+      .nav-popover-item .ico {
+        opacity: 0.7;
+      }
+      .nav-popover-item .badge {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        background: var(--paper-2);
+        padding: 1px 6px;
+        border-radius: 99px;
+      }
+      .nav-popover-item.active .badge {
+        background: rgba(139, 58, 26, 0.12);
+        color: var(--clay);
+      }
+
+      .nav-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 55;
+        background: transparent;
+        pointer-events: none;
+      }
+      .nav-overlay.is-open {
+        pointer-events: auto;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         CESARE SIDEBAR (agent panel · slides from left)
+         ──────────────────────────────────────────────────────── */
+      .cesare-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 400px;
+        background: #f1efea;
+        border-right: 1px solid var(--line);
+        z-index: 70;
+        transform: translateX(-100%);
+        transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 4px 0 20px rgba(28, 26, 23, 0.04);
+      }
+      .cesare-panel.is-open {
+        transform: translateX(0);
+      }
+      .body.cesare-open {
+        padding-left: 400px;
+      }
+
+      .cesare-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 20px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .cesare-head .title {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 18px;
+        color: var(--ink-1);
+        flex: 1;
+      }
+      .cesare-head .title b {
+        color: var(--leaf);
+        margin-right: 4px;
+      }
+      .cesare-head .iconbtn {
+        all: unset;
+        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        border-radius: 4px;
+      }
+      .cesare-head .iconbtn:hover {
+        background: var(--paper-2);
+        color: var(--ink-1);
+      }
+      .cesare-context {
+        padding: 6px 20px 12px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--ink-4);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-bottom: 1px solid var(--line);
+      }
+      .cesare-context b {
+        color: var(--ink-2);
+        font-weight: 600;
+      }
+      .cesare-context .pulse-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+      }
+
+      .cesare-stream {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .msg {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-width: 100%;
+      }
+      .msg-user {
+        align-self: flex-end;
+        max-width: 80%;
+      }
+      .msg-user .bubble {
+        background: var(--paper-2);
+        border-radius: 12px 12px 2px 12px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--ink-1);
+        line-height: 1.5;
+      }
+      .msg-user .meta {
+        font-size: 10px;
+        color: var(--ink-4);
+        align-self: flex-end;
+      }
+      .msg-cesare {
+        align-self: flex-start;
+        max-width: 100%;
+      }
+      .msg-cesare .head-line {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--leaf);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 4px;
+      }
+      .msg-cesare .body {
+        font-size: 13px;
+        color: var(--ink-1);
+        line-height: 1.55;
+        font-family: var(--font-display);
+      }
+      .msg-cesare .body em {
+        font-style: italic;
+        color: var(--ink-2);
+      }
+
+      .diff-card {
+        margin-top: 8px;
+        background: var(--paper-1);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 12px;
+      }
+      .diff-card .diff-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        font-size: 11px;
+        color: var(--ink-3);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        background: var(--paper-2);
+        border-bottom: 1px solid var(--line);
+      }
+      .diff-card .diff-head b {
+        color: var(--ink-1);
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .diff-card .diff-row {
+        display: flex;
+        padding: 10px 12px;
+        gap: 10px;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .diff-card .diff-row .lbl {
+        color: var(--ink-3);
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        min-width: 50px;
+        font-family: var(--font-sans);
+        font-weight: 600;
+      }
+      .diff-card .diff-row.before {
+        background: rgba(196, 69, 69, 0.06);
+        border-bottom: 1px solid var(--line);
+        color: var(--rust);
+      }
+      .diff-card .diff-row.before .lbl {
+        color: var(--rust);
+      }
+      .diff-card .diff-row.before .val {
+        text-decoration: line-through;
+      }
+      .diff-card .diff-row.after {
+        background: rgba(90, 107, 60, 0.08);
+        color: var(--leaf);
+      }
+      .diff-card .diff-row.after .lbl {
+        color: var(--leaf);
+      }
+      .diff-card .diff-actions {
+        display: flex;
+        gap: 6px;
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+      }
+      .diff-card .diff-actions button {
+        all: unset;
+        flex: 1;
+        cursor: pointer;
+        text-align: center;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .diff-card .diff-actions .accept {
+        background: var(--leaf);
+        color: var(--paper-1);
+      }
+      .diff-card .diff-actions .accept:hover {
+        filter: brightness(1.1);
+      }
+      .diff-card .diff-actions .reject {
+        background: transparent;
+        color: var(--ink-3);
+        border: 1px solid var(--line);
+      }
+      .diff-card .diff-actions .reject:hover {
+        border-color: var(--rust);
+        color: var(--rust);
+      }
+
+      .cesare-input {
+        padding: 12px 16px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.4);
+      }
+      .cesare-input-box {
+        background: var(--paper-1);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .cesare-input-box:focus-within {
+        border-color: var(--leaf);
+        box-shadow: 0 0 0 3px rgba(90, 107, 60, 0.1);
+      }
+      .cesare-input-box textarea {
+        all: unset;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        color: var(--ink-1);
+        min-height: 36px;
+        line-height: 1.45;
+      }
+      .cesare-input-box textarea::placeholder {
+        color: var(--ink-4);
+      }
+      .cesare-input-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cesare-input-bar .chip-attach {
+        font-size: 11px;
+        color: var(--ink-3);
+        padding: 3px 8px;
+        background: var(--paper-2);
+        border-radius: 99px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .cesare-input-bar .send {
+        all: unset;
+        cursor: pointer;
+        margin-left: auto;
+        background: var(--ink-1);
+        color: var(--paper-1);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 99px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cesare-input-bar .send:hover {
+        background: #2d2823;
+      }
+      .cesare-input-bar .kbd {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .cesare-suggestions {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .cesare-suggestion {
+        font-size: 11px;
+        color: var(--ink-3);
+        padding: 3px 9px;
+        background: var(--paper-2);
+        border-radius: 99px;
+        cursor: pointer;
+      }
+      .cesare-suggestion:hover {
+        background: var(--leaf-soft);
+        color: var(--leaf);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         INLINE GHOST PROPOSAL (on page)
+         ──────────────────────────────────────────────────────── */
+      .ghost-proposal {
+        position: relative;
+        background: var(--leaf-soft) !important;
+        border: 1px solid var(--leaf) !important;
+        animation: ghost-glow 2.4s ease-in-out infinite;
+      }
+      @keyframes ghost-glow {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(90, 107, 60, 0.18);
+        }
+        50% {
+          box-shadow: 0 0 0 6px rgba(90, 107, 60, 0);
+        }
+      }
+      .ghost-flag {
+        position: absolute;
+        top: -28px;
+        right: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--leaf);
+        background: var(--paper-1);
+        border: 1px solid var(--leaf);
+        padding: 2px 8px;
+        border-radius: 99px;
+        white-space: nowrap;
+      }
+      .ghost-actions {
+        position: absolute;
+        bottom: -32px;
+        right: 0;
+        display: flex;
+        gap: 4px;
+        z-index: 5;
+      }
+      .ghost-actions button {
+        all: unset;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 99px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .ghost-actions .accept {
+        background: var(--leaf);
+        color: var(--paper-1);
+      }
+      .ghost-actions .reject {
+        background: var(--paper-1);
+        color: var(--ink-3);
+        border: 1px solid var(--line);
+      }
+      .top-wrap.is-compact .shell-active b {
+        font-weight: 600;
+        color: var(--ink-1);
+      }
+      .shell-brand {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--ink-1);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .shell-brand .mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--clay);
+        position: relative;
+        flex-shrink: 0;
+      }
+      .shell-brand .mark::after {
+        content: "";
+        position: absolute;
+        inset: 5px;
+        background: var(--paper-1);
+        border-radius: 50%;
+        transition: background 200ms;
+      }
+      .shell-brand b {
+        font-weight: 500;
+        font-style: italic;
+      }
+      .shell-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-5);
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .shell-meta-full {
+        transition: opacity 180ms, max-width 220ms ease;
+      }
+      .top-wrap.is-compact .shell-meta-full {
+        opacity: 0;
+        max-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        margin: 0;
+      }
+      .shell-meta b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .shell-meta .pill {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-pill);
+        letter-spacing: 0.06em;
+      }
+      .shell-meta .avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--paper-3);
+        border: 1px solid var(--line);
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--ink-2);
+        display: grid;
+        place-items: center;
+      }
+      .shell-meta .iconbtn {
+        all: unset;
+        cursor: pointer;
+        color: var(--ink-3);
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius-sm);
+      }
+      .shell-meta .iconbtn:hover {
+        color: var(--ink-1);
+        background: var(--paper-2);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         SECONDARY NAV — tabs sotto la shell (book spine style)
+         ──────────────────────────────────────────────────────── */
+      .nav-tabs {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: 0 var(--space-8);
+        border-bottom: 1px solid var(--line);
+        background: transparent;
+        overflow: hidden;
+        max-height: 50px;
+        opacity: 1;
+        transition:
+          max-height 220ms ease,
+          opacity 160ms ease,
+          border-color 200ms;
+      }
+      .top-wrap.is-compact .nav-tabs {
+        max-height: 0;
+        opacity: 0;
+        border-bottom-color: transparent;
+        pointer-events: none;
+      }
+      .nav-tab {
+        all: unset;
+        cursor: pointer;
+        padding: 12px 14px;
+        font-size: 13px;
+        color: var(--ink-3);
+        position: relative;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+      }
+      .nav-tab:hover {
+        color: var(--ink-1);
+      }
+      .nav-tab.active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .nav-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 14px;
+        right: 14px;
+        height: 2px;
+        background: var(--ink-1);
+      }
+      .nav-tab .sep {
+        width: 1px;
+        height: 14px;
+        background: var(--line);
+        margin: 0 8px;
+      }
+      .nav-tab .group {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--ink-4);
+        margin-inline-end: 8px;
+        pointer-events: none;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         CONTENT (no sidebar, centered reading width)
+         ──────────────────────────────────────────────────────── */
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: var(--space-10) var(--space-8) 120px;
+      }
+
+      .title-block {
+        margin-bottom: var(--space-8);
+        padding-bottom: var(--space-6);
+        border-bottom: 1px solid var(--line);
+      }
+      .title-block .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        margin-bottom: var(--space-3);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .title-block .eyebrow .accent {
+        color: var(--clay);
+      }
+      .title-block h1 {
+        font-family: var(--font-display);
+        font-size: 42px;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+        margin: 0;
+        color: var(--ink-1);
+      }
+      .title-block h1 em {
+        font-style: italic;
+        color: var(--clay);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         HERO — paper page with stacked bar
+         ──────────────────────────────────────────────────────── */
+      .hero {
+        display: grid;
+        grid-template-columns: 1.55fr 1fr;
+        gap: var(--space-10);
+        margin-bottom: var(--space-10);
+      }
+      .hero-num {
+        font-family: var(--font-display);
+        font-size: 88px;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+        line-height: 0.95;
+        margin-bottom: var(--space-4);
+        color: var(--ink-1);
+      }
+      .hero-num .cur {
+        color: var(--ink-4);
+        font-weight: 400;
+        font-size: 52px;
+        margin-left: 6px;
+      }
+      .hero-meta {
+        display: flex;
+        gap: var(--space-5);
+        font-size: 13px;
+        color: var(--ink-3);
+        align-items: center;
+      }
+      .hero-meta b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .hero-meta .delta {
+        color: var(--clay);
+      }
+      .hero-meta .trend {
+        color: var(--leaf);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .hero-meta .sep {
+        color: var(--ink-4);
+      }
+
+      .stack-bar {
+        margin-top: var(--space-5);
+        display: flex;
+        height: 4px;
+        background: var(--paper-3);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .stack-bar > div {
+        height: 100%;
+      }
+      .stack-legend {
+        margin-top: var(--space-3);
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-5);
+        font-size: 12px;
+      }
+      .stack-legend .item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-3);
+      }
+      .stack-legend .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .stack-legend b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+
+      .bench {
+        padding-inline-start: var(--space-6);
+        border-inline-start: 1px solid var(--line);
+      }
+      .bench h4 {
+        margin: 0 0 var(--space-3);
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--ink-2);
+      }
+      .bench .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 13px;
+        color: var(--ink-3);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .bench .row:last-child {
+        border-bottom: none;
+      }
+      .bench .row b {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .bench .pill {
+        margin-top: var(--space-3);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--clay);
+        padding: 4px 10px;
+        background: var(--clay-soft);
+        border-radius: var(--radius-pill);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         VIEW TABS — minimal pill
+         ──────────────────────────────────────────────────────── */
+      .view-tabs {
+        display: flex;
+        align-items: center;
+        gap: var(--space-6);
+        border-bottom: 1px solid var(--line);
+        margin-bottom: var(--space-6);
+      }
+      .view-tab {
+        all: unset;
+        cursor: pointer;
+        padding: 10px 0;
+        font-size: 13px;
+        color: var(--ink-3);
+        position: relative;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .view-tab .count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
+      }
+      .view-tab:hover {
+        color: var(--ink-1);
+      }
+      .view-tab.active {
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .view-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--clay);
+      }
+      .view-tab.disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         CONFIG INLINE
+         ──────────────────────────────────────────────────────── */
+      .config {
+        display: flex;
+        align-items: center;
+        gap: var(--space-5);
+        margin-bottom: var(--space-8);
+        font-size: 13px;
+        color: var(--ink-3);
+      }
+      .config .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .config .v {
+        font-family: var(--font-mono);
+        color: var(--ink-1);
+        font-weight: 600;
+      }
+      .config .v:hover {
+        background: var(--paper-2);
+        border-radius: var(--radius-sm);
+        padding: 0 4px;
+        cursor: pointer;
+      }
+      .config .scene-strip {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
+      }
+      .config .scene-chip {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: var(--radius-pill);
+        color: var(--ink-3);
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: transparent;
+      }
+      .config .scene-chip:hover {
+        color: var(--ink-1);
+        border-color: var(--ink-4);
+      }
+      .config .scene-chip.active {
+        background: var(--ink-1);
+        color: var(--paper-1);
+        border-color: var(--ink-1);
+      }
+      .config .scene-chip b {
+        font-weight: 600;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         BUDGET LAYOUT — main + side (right rail)
+         ──────────────────────────────────────────────────────── */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: var(--space-10);
+        align-items: start;
+      }
+      .col-main {
+        display: flex;
+        flex-direction: column;
+      }
+      .section-label {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--ink-2);
+        padding: var(--space-5) 0 var(--space-3);
+        margin-top: var(--space-3);
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+      }
+      .section-label:first-child {
+        border-top: none;
+        padding-top: 0;
+        margin-top: 0;
+      }
+      .section-label .meta {
+        margin-left: auto;
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-size: 11px;
+        color: var(--ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      /* row — book-line style, left rail color */
+      .row {
+        display: grid;
+        grid-template-columns: 12px 1fr auto auto;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4) 0;
+        border-bottom: 1px solid var(--line-soft);
+        cursor: pointer;
+        position: relative;
+      }
+      .row:hover {
+        background: var(--paper-2);
+        margin-inline: calc(-1 * var(--space-3));
+        padding-inline: var(--space-3);
+        border-radius: var(--radius-sm);
+      }
+      .row .rail {
+        width: 3px;
+        height: 28px;
+        border-radius: 2px;
+      }
+      .row .head .name {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--ink-1);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .row .head .meta {
+        font-size: 12px;
+        color: var(--ink-3);
+        margin-top: 2px;
+      }
+      .row .badge {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink-3);
+        background: var(--paper-2);
+        padding: 1px 6px;
+        border-radius: var(--radius-pill);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .row .total {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-size: 18px;
+        color: var(--ink-1);
+        font-variant-numeric: tabular-nums;
+      }
+      .row .total.zero {
+        color: var(--ink-4);
+      }
+      .row .caret {
+        color: var(--ink-4);
+      }
+      .row.empty .head .name {
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+
+      /* nested table - "footnote" style */
+      .nested {
+        padding: var(--space-3) 0 var(--space-4) var(--space-6);
+        margin-left: 15px;
+        border-left: 1px solid var(--line);
+      }
+      .nested table {
+        width: 100%;
+        font-size: 13px;
+        border-collapse: collapse;
+      }
+      .nested th {
+        text-align: start;
+        padding: 8px 8px 8px 0;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--ink-4);
+        border-bottom: 1px solid var(--line);
+      }
+      .nested th.num {
+        text-align: end;
+      }
+      .nested td {
+        padding: 10px 8px 10px 0;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--ink-2);
+      }
+      .nested tr:last-child td {
+        border-bottom: none;
+      }
+      .nested .num {
+        text-align: end;
+        font-family: var(--font-mono);
+      }
+      .nested .tot {
+        font-family: var(--font-display);
+        font-weight: 500;
+        color: var(--ink-1);
+        font-size: 15px;
+      }
+      .editable {
+        all: unset;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        text-align: end;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        min-width: 70px;
+        color: var(--ink-1);
+      }
+      .editable:hover {
+        border-color: var(--line);
+      }
+      .editable:focus {
+        border-color: var(--clay);
+        background: var(--clay-soft);
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: var(--radius-pill);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .chip .ico {
+        width: 10px;
+        height: 10px;
+      }
+      .chip-ai {
+        color: var(--clay);
+        background: var(--clay-soft);
+      }
+      .chip-stale {
+        color: var(--rust);
+        background: var(--rust-soft);
+      }
+      .chip-lead {
+        color: var(--leaf);
+        background: var(--leaf-soft);
+      }
+
+      .empty-state {
+        padding: var(--space-3) 0 var(--space-3) 24px;
+        font-size: 13px;
+        color: var(--ink-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .empty-state a {
+        margin-inline-start: auto;
+        color: var(--clay);
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .empty-state a:hover {
+        color: var(--clay-mark);
+      }
+
+      /* ────────────────────────────────────────────────────────
+         RIGHT RAIL — minimal, no card chrome
+         ──────────────────────────────────────────────────────── */
+      .col-side {
+        position: sticky;
+        top: var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+      }
+      .side-block {
+        padding-bottom: var(--space-5);
+        border-bottom: 1px solid var(--line);
+      }
+      .side-block:last-child {
+        border-bottom: none;
+      }
+      .side-block h3 {
+        margin: 0 0 var(--space-4);
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--ink-2);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .side-block h3 .small {
+        font-family: var(--font-sans);
+        font-style: normal;
+        font-size: 11px;
+        color: var(--leaf);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+      }
+
+      .cat-bars {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .cat-bar {
+        font-size: 12px;
+      }
+      .cat-bar .meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .cat-bar .meta .left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-2);
+      }
+      .cat-bar .meta .left .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+      }
+      .cat-bar .meta .right {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        color: var(--ink-1);
+      }
+      .cat-bar .track {
+        height: 2px;
+        background: var(--paper-3);
+        border-radius: 1px;
+        overflow: hidden;
+      }
+      .cat-bar .fill {
+        height: 100%;
+      }
+
+      .totals .row-t {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        padding: 6px 0;
+        color: var(--ink-3);
+      }
+      .totals .row-t span:last-child {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        color: var(--ink-1);
+      }
+      .totals .row-t.grand {
+        border-top: 1px solid var(--clay);
+        margin-top: var(--space-2);
+        padding-top: var(--space-3);
+      }
+      .totals .row-t.grand span:first-child {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 16px;
+        color: var(--ink-1);
+      }
+      .totals .row-t.grand span:last-child {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 26px;
+        font-weight: 500;
+        color: var(--clay);
+      }
+
+      .day-mini {
+        display: flex;
+        align-items: end;
+        gap: 4px;
+        height: 40px;
+        margin: var(--space-3) 0;
+      }
+      .day-mini .b {
+        flex: 1;
+        background: var(--ink-3);
+        opacity: 0.35;
+        border-radius: 1px 1px 0 0;
+      }
+      .day-mini .b.hot {
+        background: var(--clay);
+        opacity: 1;
+      }
+
+      /* ────────────────────────────────────────────────────────
+         LIQUID DOCK — floating contextual actions
+         ──────────────────────────────────────────────────────── */
+      .dock {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 8px;
+        background: rgba(251, 246, 236, 0.7);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid rgba(28, 24, 20, 0.08);
+        box-shadow:
+          0 2px 8px rgba(28, 24, 20, 0.06),
+          0 12px 28px rgba(28, 24, 20, 0.08);
+        border-radius: 99px;
+      }
+      .dock-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        font-size: 12px;
+        color: var(--ink-2);
+        border-right: 1px solid var(--line);
+        margin-right: 4px;
+      }
+      .dock-status .pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--leaf);
+        animation: pulse 2.4s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(90, 107, 60, 0.4);
+        }
+        50% {
+          box-shadow: 0 0 0 5px rgba(90, 107, 60, 0);
+        }
+      }
+      .dock-btn {
+        all: unset;
+        cursor: pointer;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-2);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 99px;
+      }
+      .dock-btn:hover {
+        background: rgba(232, 224, 208, 0.6);
+        color: var(--ink-1);
+      }
+      .dock-btn.primary {
+        background: var(--ink-1);
+        color: var(--paper-1);
+        font-weight: 600;
+      }
+      .dock-btn.primary:hover {
+        background: #2d2823;
+      }
+      .dock-divider {
+        width: 1px;
+        height: 18px;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .dock-icon {
+        all: unset;
+        cursor: pointer;
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        color: var(--ink-3);
+        border-radius: 99px;
+      }
+      .dock-icon:hover {
+        color: var(--ink-1);
+        background: rgba(232, 224, 208, 0.6);
+      }
+      .dock-kbd {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-4);
+        margin-left: 4px;
+        padding: 1px 5px;
+        background: var(--paper-3);
+        border-radius: 3px;
+        border: 1px solid var(--line);
+      }
+    </style>
+  </head>
+
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-check" viewBox="0 0 24 24"
+          ><polyline points="20 6 9 17 4 12"
+        /></symbol>
+        <symbol id="i-trend-up" viewBox="0 0 24 24"
+          ><polyline points="22 7 13.5 15.5 8.5 10.5 1 18" /><polyline
+            points="16 7 22 7 22 13"
+        /></symbol>
+        <symbol id="i-arrow-right" viewBox="0 0 24 24"
+          ><line x1="5" y1="12" x2="19" y2="12" /><polyline
+            points="12 5 19 12 12 19"
+        /></symbol>
+        <symbol id="i-zap" viewBox="0 0 24 24"
+          ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+        /></symbol>
+        <symbol id="i-chev-down" viewBox="0 0 24 24"
+          ><polyline points="6 9 12 15 18 9"
+        /></symbol>
+        <symbol id="i-chev-right" viewBox="0 0 24 24"
+          ><polyline points="9 6 15 12 9 18"
+        /></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"
+          ><path
+            d="M12 3l2.4 5.4 5.6 1.1-4 4.1 1 5.7L12 17l-5 2.3 1-5.7-4-4.1 5.6-1.1z"
+        /></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"
+          ><path
+            d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+          /><line x1="12" y1="9" x2="12" y2="13"
+        /></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"
+          ><polyline points="3 6 5 6 21 6" /><path
+            d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+        /></symbol>
+        <symbol id="i-flame" viewBox="0 0 24 24"
+          ><path
+            d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.3-2.4 0-6 2.5-6.5 0 2 1 4 3 5.5s3.5 4 3.5 6.5a7 7 0 1 1-14 0c0-1.6.7-3 1.5-4 .5 1.5 1.5 2.5 2 3"
+        /></symbol>
+        <symbol id="i-target" viewBox="0 0 24 24"
+          ><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5"
+        /></symbol>
+        <symbol id="i-camera-fl" viewBox="0 0 24 24"
+          ><path
+            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+          /><circle cx="12" cy="13" r="4"
+        /></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"
+          ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+            points="7 10 12 15 17 10"
+          /><line x1="12" y1="15" x2="12" y2="3"
+        /></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"
+          ><circle cx="12" cy="12" r="3" /><path
+            d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
+        /></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"
+          ><circle cx="11" cy="11" r="7" /><line
+            x1="21"
+            y1="21"
+            x2="16.65"
+            y2="16.65"
+        /></symbol>
+        <symbol id="i-bolt" viewBox="0 0 24 24"
+          ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+        /></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"
+          ><path
+            d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+          /><path d="M13.7 21a2 2 0 0 1-3.4 0"
+        /></symbol>
+        <symbol id="i-overview" viewBox="0 0 24 24"
+          ><rect x="3" y="3" width="7" height="7" rx="1" /><rect
+            x="14"
+            y="3"
+            width="7"
+            height="7"
+            rx="1"
+          /><rect x="3" y="14" width="7" height="7" rx="1" /><rect
+            x="14"
+            y="14"
+            width="7"
+            height="7"
+            rx="1"
+        /></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24"
+          ><path
+            d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"
+          /><polyline points="14 3 14 8 19 8"
+        /></symbol>
+        <symbol id="i-screenplay" viewBox="0 0 24 24"
+          ><path
+            d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"
+          /><polyline points="14 3 14 8 19 8" /><line
+            x1="9"
+            y1="13"
+            x2="15"
+            y2="13"
+          /><line x1="9" y1="17" x2="13" y2="17"
+        /></symbol>
+        <symbol id="i-breakdown" viewBox="0 0 24 24"
+          ><line x1="3" y1="6" x2="21" y2="6" /><line
+            x1="3"
+            y1="12"
+            x2="21"
+            y2="12"
+          /><line x1="3" y1="18" x2="21" y2="18"
+        /></symbol>
+        <symbol id="i-calendar" viewBox="0 0 24 24"
+          ><rect x="3" y="4" width="18" height="18" rx="2" /><line
+            x1="16"
+            y1="2"
+            x2="16"
+            y2="6"
+          /><line x1="8" y1="2" x2="8" y2="6"
+        /></symbol>
+        <symbol id="i-wallet" viewBox="0 0 24 24"
+          ><path
+            d="M20 12V8H6a2 2 0 0 1-2-2V18a2 2 0 0 0 2 2h14v-4"
+          /><path d="M20 12a2 2 0 0 0 0 4h2v-4Z"
+        /></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"
+          ><path
+            d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"
+          /><circle cx="12" cy="10" r="3"
+        /></symbol>
+      </defs>
+    </svg>
+
+    <!-- ─── TOP WRAP (compact-on-scroll) ─── -->
+    <div class="top-wrap" id="topWrap">
+      <div class="shell">
+        <div class="shell-brand">
+          <span class="mark"></span>
+          <span>oh <b>writers</b></span>
+          <span class="shell-active" id="navTrigger"
+            >Team Thriller <b>· Budget</b
+            ><span class="nav-caret"
+              ><svg class="ico ico-sm"><use href="#i-chev-down" /></svg></span
+          ></span>
+        </div>
+        <div class="shell-meta">
+          <span class="shell-meta-full"
+            >Team Thriller <b>·</b> Short Comedy</span
+          >
+          <span class="pill">PROD TT-026</span>
+          <button class="iconbtn" title="Cerca">
+            <svg class="ico ico-md"><use href="#i-search" /></svg>
+          </button>
+          <button class="iconbtn" title="Notifiche">
+            <svg class="ico ico-md"><use href="#i-bell" /></svg>
+          </button>
+          <div class="avatar">VN</div>
+        </div>
+      </div>
+
+      <nav class="nav-tabs">
+        <span class="nav-tab"><span class="group">Project</span> Overview</span>
+        <span class="sep"></span>
+        <span class="nav-tab"
+          ><span class="group">Writing</span> Soggetto</span
+        >
+        <span class="nav-tab">Synopsis</span>
+        <span class="nav-tab">Outline</span>
+        <span class="nav-tab">Treatment</span>
+        <span class="nav-tab">Screenplay</span>
+        <span class="sep"></span>
+        <span class="nav-tab"
+          ><span class="group">Production</span> Breakdown</span
+        >
+        <span class="nav-tab">Schedule</span>
+        <span class="nav-tab active">Budget</span>
+        <span class="nav-tab">Locations</span>
+      </nav>
+    </div>
+
+    <!-- ─── MAIN ─── -->
+    <main>
+      <div class="title-block">
+        <div class="eyebrow">
+          <span class="accent">CAPITOLO V</span>
+          <span>·</span>
+          <span>Budget</span>
+        </div>
+        <h1>Costi <em>per categoria</em></h1>
+      </div>
+
+      <!-- HERO -->
+      <section class="hero">
+        <div>
+          <div class="hero-num" data-num>
+            10 617<span class="cur">€</span>
+          </div>
+          <div class="hero-meta">
+            <span><b class="delta">2 123 €</b>/giorno</span>
+            <span class="sep">·</span>
+            <span><b>28</b> elementi</span>
+            <span class="sep">·</span>
+            <span class="trend">
+              <svg class="ico ico-sm"><use href="#i-trend-up" /></svg>+320 € da
+              ieri
+            </span>
+          </div>
+          <div class="stack-bar">
+            <div style="width: 69%; background: var(--c-crew)"></div>
+            <div style="width: 21%; background: var(--c-scenografia)"></div>
+            <div style="width: 1%; background: var(--c-vfx)"></div>
+            <div style="width: 9%; background: var(--clay)"></div>
+          </div>
+          <div class="stack-legend">
+            <span class="item"
+              ><span class="dot" style="background: var(--c-crew)"></span>Crew
+              <b>7 350 €</b></span
+            >
+            <span class="item"
+              ><span class="dot" style="background: var(--c-scenografia)"></span
+              >Scenografia <b>2 222 €</b></span
+            >
+            <span class="item"
+              ><span class="dot" style="background: var(--clay)"></span
+              >Contingenza <b>965 €</b></span
+            >
+            <span class="item"
+              ><span class="dot" style="background: var(--c-cast)"></span>Cast
+              <b>0 €</b></span
+            >
+          </div>
+        </div>
+        <div class="bench">
+          <h4>Benchmark · Short Comedy IT</h4>
+          <div class="row">
+            <span>Mediana</span><b>9 480 €</b>
+          </div>
+          <div class="row">
+            <span>10° / 90° pct</span><b>6.2k / 14k €</b>
+          </div>
+          <div class="row">
+            <span>€/giorno mediana</span><b>1 896 €</b>
+          </div>
+          <span class="pill">
+            <svg class="ico ico-sm"><use href="#i-zap" /></svg>+12% sopra
+            mediana del genere
+          </span>
+        </div>
+      </section>
+
+      <!-- VIEW TABS -->
+      <div class="view-tabs">
+        <button class="view-tab active">
+          Per categoria <span class="count">/ 8</span>
+        </button>
+        <button class="view-tab">
+          Per giornata <span class="count">/ 5</span>
+        </button>
+        <button class="view-tab">Per dipartimento</button>
+        <button class="view-tab disabled">Cash flow</button>
+      </div>
+
+      <!-- CONFIG -->
+      <div class="config">
+        <span class="pill"
+          >Giorni ripresa <span class="v">5</span></span
+        >
+        <span class="pill"
+          >Contingenza <span class="v">10%</span></span
+        >
+        <div class="scene-strip">
+          <span class="scene-chip active">Tutte · 28</span>
+          <span class="scene-chip"><b>Sc.1</b> Appartamento</span>
+          <span class="scene-chip"><b>Sc.2</b> Strada</span>
+          <span class="scene-chip"><b>Sc.3</b> Pizzeria</span>
+        </div>
+      </div>
+
+      <!-- GRID -->
+      <div class="grid">
+        <div class="col-main">
+          <div class="section-label">
+            Cast &amp; Crew <span class="meta">25 persone</span>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-cast)"></span>
+            <div class="head">
+              <span class="name">Cast<span class="badge">6 attori</span></span>
+              <span class="meta">3 lead · 3 supporting · Tea, Milco, Luca…</span>
+            </div>
+            <span class="total" data-num>4 200 €</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-crew)"></span>
+            <div class="head">
+              <span class="name">Troupe<span class="badge">19 ruoli</span></span>
+              <span class="meta"
+                >7 dipartimenti · Fotografia 2.200 €, Regia 750 €…</span
+              >
+            </div>
+            <span class="total" data-num>7 350 €</span>
+            <svg class="ico caret"><use href="#i-chev-down" /></svg>
+          </div>
+          <div class="nested">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dipartimento</th>
+                  <th class="num">Ruoli</th>
+                  <th class="num">Totale</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Fotografia</td>
+                  <td class="num">5</td>
+                  <td class="num tot">2 200 €</td>
+                </tr>
+                <tr>
+                  <td>Regia</td>
+                  <td class="num">2</td>
+                  <td class="num tot">750 €</td>
+                </tr>
+                <tr>
+                  <td>Suono</td>
+                  <td class="num">2</td>
+                  <td class="num tot">650 €</td>
+                </tr>
+                <tr>
+                  <td>Arte</td>
+                  <td class="num">3</td>
+                  <td class="num tot">1 350 €</td>
+                </tr>
+                <tr>
+                  <td>Costumi &amp; Trucco</td>
+                  <td class="num">4</td>
+                  <td class="num tot">1 350 €</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section-label">
+            Produzione <span class="meta">da breakdown · 8 categorie</span>
+          </div>
+
+          <div class="row empty">
+            <span class="rail" style="background: var(--c-locations)"></span>
+            <div class="head">
+              <span class="name">Locations</span>
+              <span class="meta">Nessuna location nel breakdown</span>
+            </div>
+            <span class="total zero">—</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+          <div class="empty-state">
+            Non hai ancora marcato scene come "esterni" o "set"
+            <a href="#"
+              >Apri breakdown
+              <svg class="ico ico-sm"><use href="#i-arrow-right" /></svg
+            ></a>
+          </div>
+
+          <div class="row empty">
+            <span class="rail" style="background: var(--c-vehicles)"></span>
+            <div class="head">
+              <span class="name">Veicoli</span>
+              <span class="meta">Nessun veicolo nel breakdown</span>
+            </div>
+            <span class="total zero">—</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-scenografia)"></span>
+            <div class="head">
+              <span class="name"
+                >Scenografia<span class="badge">22 elementi</span></span
+              >
+              <span class="meta"
+                >Aggregato breakdown · 1 riga legacy "Bloody knife"</span
+              >
+            </div>
+            <span class="total" data-num>2 302 €</span>
+            <svg class="ico caret"><use href="#i-chev-down" /></svg>
+          </div>
+          <div class="nested">
+            <table>
+              <thead>
+                <tr>
+                  <th>Elemento</th>
+                  <th class="num">Qta</th>
+                  <th class="num">€ / unità</th>
+                  <th class="num">Effettivo</th>
+                  <th class="num">Totale</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <b>Aggregato breakdown</b>
+                    <span class="chip chip-ai" style="margin-left: 6px"
+                      ><svg class="ico"><use href="#i-sparkle" /></svg>AI</span
+                    >
+                  </td>
+                  <td class="num">22</td>
+                  <td class="num">
+                    <input class="editable" value="80" data-num />
+                  </td>
+                  <td class="num" style="position: relative; padding-top: 30px; padding-bottom: 36px">
+                    <input
+                      class="editable ghost-proposal"
+                      value="1760"
+                      data-num
+                    />
+                    <span class="ghost-flag">
+                      <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>
+                      Cesare propone
+                    </span>
+                    <div class="ghost-actions">
+                      <button class="reject">Rifiuta</button>
+                      <button class="accept">
+                        <svg class="ico ico-sm"><use href="#i-check" /></svg>
+                        Accetta
+                      </button>
+                    </div>
+                  </td>
+                  <td class="num tot">1 760 €</td>
+                </tr>
+                <tr>
+                  <td>
+                    Bloody knife
+                    <span class="chip chip-stale" style="margin-left: 6px"
+                      ><svg class="ico"><use href="#i-alert" /></svg
+                      >Legacy</span
+                    >
+                  </td>
+                  <td class="num">1</td>
+                  <td class="num">
+                    <input class="editable" value="80" data-num />
+                  </td>
+                  <td class="num">
+                    <input class="editable" value="" data-num />
+                  </td>
+                  <td class="num tot">80 €</td>
+                </tr>
+              </tbody>
+            </table>
+            <div
+              style="
+                margin-top: 12px;
+                font-size: 12px;
+                color: var(--ink-3);
+                display: flex;
+                justify-content: space-between;
+              "
+            >
+              <span
+                >Riga
+                <b style="color: var(--rust)">legacy</b> pre-spec — puoi
+                rimuoverla.</span
+              >
+              <a
+                href="#"
+                style="
+                  color: var(--clay);
+                  font-weight: 600;
+                  text-decoration: none;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                "
+              >
+                <svg class="ico ico-sm"><use href="#i-trash" /></svg>Rimuovi
+                legacy
+              </a>
+            </div>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-fotografia)"></span>
+            <div class="head">
+              <span class="name"
+                >Fotografia<span class="badge">3 elementi</span></span
+              >
+              <span class="meta">Coltello, Forno Pizza, Forno</span>
+            </div>
+            <span class="total" data-num>1 800 €</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-suono)"></span>
+            <div class="head">
+              <span class="name">Suono<span class="badge">8 elementi</span></span>
+              <span class="meta">Risate, Applauso, Voice Over, +5</span>
+            </div>
+            <span class="total" data-num>400 €</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-vfx)"></span>
+            <div class="head">
+              <span class="name"
+                >VFX / SFX<span class="badge">5 elementi</span></span
+              >
+              <span class="meta">Pugno, Sparizioni, Colpo</span>
+            </div>
+            <span class="total" data-num>3 500 €</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-comparse)"></span>
+            <div class="head">
+              <span class="name"
+                >Comparse<span class="badge">5 elementi</span></span
+              >
+              <span class="meta">Pubblico, Comici, Clienti</span>
+            </div>
+            <span class="total" data-num>120 €</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+
+          <div class="row">
+            <span class="rail" style="background: var(--c-costumi)"></span>
+            <div class="head">
+              <span class="name">Costumi &amp; Make-up</span>
+              <span class="meta">5 makeup · 1 wardrobe</span>
+            </div>
+            <span class="total" data-num>450 €</span>
+            <svg class="ico caret"><use href="#i-chev-right" /></svg>
+          </div>
+        </div>
+
+        <aside class="col-side">
+          <div class="side-block">
+            <h3>
+              <span>Composizione</span>
+              <span class="small"
+                ><svg class="ico ico-sm"><use href="#i-trend-up" /></svg
+                >+320 €</span
+              >
+            </h3>
+            <div class="cat-bars">
+              <div class="cat-bar">
+                <div class="meta">
+                  <span class="left"
+                    ><span class="dot" style="background: var(--c-crew)"></span
+                    >Crew</span
+                  >
+                  <span class="right">7 350 €</span>
+                </div>
+                <div class="track">
+                  <div
+                    class="fill"
+                    style="width: 69%; background: var(--c-crew)"
+                  ></div>
+                </div>
+              </div>
+              <div class="cat-bar">
+                <div class="meta">
+                  <span class="left"
+                    ><span class="dot" style="background: var(--c-vfx)"></span
+                    >VFX / SFX</span
+                  >
+                  <span class="right">3 500 €</span>
+                </div>
+                <div class="track">
+                  <div
+                    class="fill"
+                    style="width: 33%; background: var(--c-vfx)"
+                  ></div>
+                </div>
+              </div>
+              <div class="cat-bar">
+                <div class="meta">
+                  <span class="left"
+                    ><span
+                      class="dot"
+                      style="background: var(--c-scenografia)"
+                    ></span
+                    >Scenografia</span
+                  >
+                  <span class="right">2 302 €</span>
+                </div>
+                <div class="track">
+                  <div
+                    class="fill"
+                    style="width: 22%; background: var(--c-scenografia)"
+                  ></div>
+                </div>
+              </div>
+              <div class="cat-bar">
+                <div class="meta">
+                  <span class="left"
+                    ><span
+                      class="dot"
+                      style="background: var(--c-fotografia)"
+                    ></span
+                    >Fotografia</span
+                  >
+                  <span class="right">1 800 €</span>
+                </div>
+                <div class="track">
+                  <div
+                    class="fill"
+                    style="width: 17%; background: var(--c-fotografia)"
+                  ></div>
+                </div>
+              </div>
+              <div class="cat-bar">
+                <div class="meta">
+                  <span class="left"
+                    ><span class="dot" style="background: var(--c-costumi)"></span
+                    >Costumi</span
+                  >
+                  <span class="right">450 €</span>
+                </div>
+                <div class="track">
+                  <div
+                    class="fill"
+                    style="width: 4%; background: var(--c-costumi)"
+                  ></div>
+                </div>
+              </div>
+              <div class="cat-bar">
+                <div class="meta">
+                  <span class="left"
+                    ><span class="dot" style="background: var(--c-suono)"></span
+                    >Suono</span
+                  >
+                  <span class="right">400 €</span>
+                </div>
+                <div class="track">
+                  <div
+                    class="fill"
+                    style="width: 4%; background: var(--c-suono)"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="side-block totals">
+            <h3>Riepilogo</h3>
+            <div class="row-t"><span>Subtotale</span><span>9 652 €</span></div>
+            <div class="row-t">
+              <span>Contingenza 10%</span><span>965,20 €</span>
+            </div>
+            <div class="row-t grand">
+              <span>Totale</span><span data-num>10 617 €</span>
+            </div>
+          </div>
+
+          <div class="side-block">
+            <h3>
+              <span>Costo / giornata</span>
+              <span style="color: var(--clay); font-weight: 500"
+                ><svg class="ico ico-sm"><use href="#i-flame" /></svg>Gg 3</span
+              >
+            </h3>
+            <div class="day-mini">
+              <div class="b" style="height: 60%"></div>
+              <div class="b" style="height: 70%"></div>
+              <div class="b hot" style="height: 100%"></div>
+              <div class="b" style="height: 65%"></div>
+              <div class="b" style="height: 45%"></div>
+            </div>
+            <div
+              style="
+                font-size: 12px;
+                color: var(--ink-3);
+                display: flex;
+                justify-content: space-between;
+              "
+            >
+              <span>Media <b class="mono" style="color: var(--ink-1)">2 123 €</b></span>
+              <span>Picco <b class="mono" style="color: var(--ink-1)">3 200 €</b></span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <!-- ─── CESARE SIDEBAR (agent panel) ─── -->
+    <aside class="cesare-panel is-open" id="cesarePanel">
+      <div class="cesare-head">
+        <div class="title"><b>✦</b>Cesare</div>
+        <button class="iconbtn" title="Cronologia">
+          <svg class="ico ico-sm"><use href="#i-search" /></svg>
+        </button>
+        <button class="iconbtn" title="Chiudi (⌘K)">
+          <svg
+            class="ico ico-sm"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+            fill="none"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="cesare-context">
+        <span class="pulse-dot"></span>
+        Contesto · <b>Budget · Team Thriller</b>
+      </div>
+
+      <div class="cesare-stream">
+        <div class="msg msg-user">
+          <div class="bubble">
+            Suggerisci dove tagliare i costi senza compromettere la qualità.
+          </div>
+          <span class="meta">14:31</span>
+        </div>
+
+        <div class="msg msg-cesare">
+          <div class="head-line">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Cesare
+          </div>
+          <div class="body">
+            Ho analizzato il budget: sei <b>+12% sopra mediana</b> per
+            <em>short comedy IT</em>. Tre tagli possibili che mantengono
+            la <em>fattibilità produttiva</em>:
+          </div>
+        </div>
+
+        <div class="msg msg-cesare">
+          <div class="head-line">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Proposta 1 di 3
+          </div>
+          <div class="body">
+            La voce <em>Scenografia · Aggregato breakdown</em> ha un tasso
+            effettivo gonfiato del 27.7× rispetto alla tariffa AI. Suggerisco
+            di riportarla a un valore più allineato col benchmark.
+          </div>
+
+          <div class="diff-card">
+            <div class="diff-head">
+              <svg class="ico ico-sm"><use href="#i-wallet" /></svg>
+              Modifica · <b>Scenografia · Effettivo</b>
+            </div>
+            <div class="diff-row before">
+              <span class="lbl">Prima</span><span class="val">2 222 €</span>
+            </div>
+            <div class="diff-row after">
+              <span class="lbl">Dopo</span><span class="val">1 760 €</span>
+            </div>
+            <div class="diff-actions">
+              <button class="reject">
+                <svg
+                  class="ico ico-sm"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                Rifiuta
+              </button>
+              <button class="accept">
+                <svg class="ico ico-sm"><use href="#i-check" /></svg>Accetta
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg msg-cesare">
+          <div class="head-line">
+            <svg class="ico ico-sm"><use href="#i-sparkle" /></svg>Proposta 2 di 3
+          </div>
+          <div class="body">
+            <em>VFX / SFX</em> a 3.500 € è alto per 5 elementi. Posso
+            suggerire alternative pratiche (es. sostituire un VFX con un
+            in-camera trick) — vuoi che le elenchi?
+          </div>
+        </div>
+      </div>
+
+      <div class="cesare-input">
+        <div class="cesare-input-box">
+          <textarea
+            placeholder="Continua la conversazione o chiedi a Cesare di proporre modifiche…"
+          ></textarea>
+          <div class="cesare-input-bar">
+            <span class="chip-attach">
+              <svg class="ico ico-sm" viewBox="0 0 24 24">
+                <path
+                  d="M21 11.5a8.4 8.4 0 0 1-11.86 7.79L3 21l1.71-6.14A8.5 8.5 0 1 1 21 11.5z"
+                />
+              </svg>
+              Pagina Budget
+            </span>
+            <span class="chip-attach">
+              <svg class="ico ico-sm"><use href="#i-wallet" /></svg>
+              28 elementi
+            </span>
+            <button class="send">
+              Invia <span class="kbd">⏎</span>
+            </button>
+          </div>
+          <div class="cesare-suggestions">
+            <span class="cesare-suggestion">Mostra le alternative VFX</span>
+            <span class="cesare-suggestion">Distribuisci diversamente i giorni</span>
+            <span class="cesare-suggestion">Confronta con un altro progetto</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─── NAV POPOVER / COMMAND PALETTE ⌘J ─── -->
+    <div class="nav-overlay" id="navOverlay"></div>
+    <div class="nav-popover" id="navPopover">
+      <div class="nav-popover-search">
+        <svg class="ico ico-sm" style="color: var(--ink-3)">
+          <use href="#i-search" />
+        </svg>
+        <input placeholder="Cerca o chiedi a Cesare…" />
+        <span class="kbd">⌘K</span>
+      </div>
+
+      <div class="nav-popover-section">Chiedi a Cesare</div>
+      <div class="nav-popover-item" style="background: var(--leaf-soft)">
+        <svg
+          class="ico ico-sm"
+          style="color: var(--leaf); opacity: 1"
+        >
+          <use href="#i-sparkle" />
+        </svg>
+        <span style="color: var(--leaf); font-weight: 600"
+          >Suggerisci dove tagliare i costi</span
+        >
+        <span class="badge" style="background: var(--leaf-soft); color: var(--leaf)">AI</span>
+      </div>
+
+      <div class="nav-popover-section">Vai a</div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-overview" /></svg>Overview
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-file" /></svg>Soggetto
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-file" /></svg>Synopsis
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-file" /></svg>Outline
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-screenplay" /></svg>Screenplay
+        <span class="badge">28 pg</span>
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-breakdown" /></svg>Breakdown
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-calendar" /></svg>Schedule
+      </div>
+      <div class="nav-popover-item active">
+        <svg class="ico ico-sm"><use href="#i-wallet" /></svg>Budget
+        <span class="badge">10.6k €</span>
+      </div>
+      <div class="nav-popover-item">
+        <svg class="ico ico-sm"><use href="#i-pin" /></svg>Locations
+      </div>
+    </div>
+
+    <!-- ─── CESARE PRESENCE INDICATOR (bottom-left) ─── -->
+    <div
+      style="
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+        z-index: 90;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 14px 7px 10px;
+        background: rgba(245, 243, 238, 0.7);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid rgba(28, 26, 23, 0.08);
+        box-shadow:
+          0 2px 8px rgba(28, 26, 23, 0.05),
+          0 12px 28px rgba(28, 26, 23, 0.08);
+        border-radius: 99px;
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--ink-2);
+      "
+    >
+      <span
+        style="
+          position: relative;
+          width: 8px;
+          height: 8px;
+          flex-shrink: 0;
+        "
+      >
+        <span
+          style="
+            position: absolute;
+            inset: 0;
+            border-radius: 99px;
+            background: var(--leaf);
+          "
+        ></span>
+        <span
+          style="
+            position: absolute;
+            inset: -2px;
+            border-radius: 99px;
+            background: var(--leaf);
+            opacity: 0.3;
+            animation: cesare-pulse 2.4s ease-in-out infinite;
+          "
+        ></span>
+      </span>
+      <span><b style="color: var(--ink-1); font-weight: 600">Cesare</b> · 2 suggerimenti</span>
+      <svg
+        class="ico ico-sm"
+        style="color: var(--ink-4); margin-left: 4px"
+      >
+        <use href="#i-chev-down" />
+      </svg>
+    </div>
+    <style>
+      @keyframes cesare-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.3;
+        }
+        50% {
+          transform: scale(2.5);
+          opacity: 0;
+        }
+      }
+    </style>
+
+    <!-- ─── LIQUID DOCK ─── -->
+    <div class="dock">
+      <div class="dock-status">
+        <span class="pulse"></span>
+        Salvato · 14:32
+      </div>
+      <button class="dock-btn primary">
+        <svg class="ico ico-sm"><use href="#i-zap" /></svg>
+        Rigenera
+        <span class="dock-kbd">⌘R</span>
+      </button>
+      <button class="dock-btn">
+        <svg class="ico ico-sm"><use href="#i-camera-fl" /></svg>
+        Snapshot
+      </button>
+      <button class="dock-btn">
+        <svg class="ico ico-sm"><use href="#i-download" /></svg>
+        Esporta
+      </button>
+      <div class="dock-divider"></div>
+      <button class="dock-icon" title="Apri vista giornata">
+        <svg class="ico ico-md"><use href="#i-flame" /></svg>
+      </button>
+      <button class="dock-icon" title="Benchmark">
+        <svg class="ico ico-md"><use href="#i-target" /></svg>
+      </button>
+      <button class="dock-icon" title="Impostazioni">
+        <svg class="ico ico-md"><use href="#i-settings" /></svg>
+      </button>
+    </div>
+
+    <script>
+      const wrap = document.getElementById("topWrap");
+      const popover = document.getElementById("navPopover");
+      const overlay = document.getElementById("navOverlay");
+      const trigger = document.getElementById("navTrigger");
+      const brand = document.querySelector(".shell-brand");
+      const cesare = document.getElementById("cesarePanel");
+
+      // sync body padding when sidebar is open (starts open in demo)
+      const syncCesare = () => {
+        document.body.classList.toggle(
+          "cesare-open",
+          cesare.classList.contains("is-open"),
+        );
+      };
+      syncCesare();
+
+      const onScroll = () => {
+        wrap.classList.toggle("is-compact", window.scrollY > 40);
+      };
+      document.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      const togglePopover = (open) => {
+        const next =
+          open !== undefined ? open : !popover.classList.contains("is-open");
+        popover.classList.toggle("is-open", next);
+        overlay.classList.toggle("is-open", next);
+        if (next) popover.querySelector("input")?.focus();
+      };
+
+      const toggleCesare = (open) => {
+        const next =
+          open !== undefined ? open : !cesare.classList.contains("is-open");
+        cesare.classList.toggle("is-open", next);
+        syncCesare();
+        if (next) cesare.querySelector("textarea")?.focus();
+      };
+
+      trigger?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        togglePopover();
+      });
+      brand?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        togglePopover();
+      });
+      overlay?.addEventListener("click", () => togglePopover(false));
+
+      // Cesare close button (×)
+      document
+        .querySelectorAll(".cesare-head .iconbtn")
+        .forEach((b) =>
+          b.title?.includes("Chiudi") &&
+          b.addEventListener("click", () => toggleCesare(false)),
+        );
+
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+          e.preventDefault();
+          toggleCesare();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === "j") {
+          e.preventDefault();
+          togglePopover();
+        }
+        if (e.key === "Escape") {
+          togglePopover(false);
+          toggleCesare(false);
+        }
+      });
+    </script>
+  </body>
+</html>

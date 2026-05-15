@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budget · Production · drill-down</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee; --paper-2: #ebe9e3;
+        --page: #ffffff;
+        --ink-1: #1c1a17; --ink-2: #44413c; --ink-3: #71706a; --ink-4: #a09e96; --ink-5: #c4c2b9;
+        --line: #d8d6cd; --line-soft: #e3e1d780;
+        --clay: #8b3a1a; --clay-soft: #f4dccb;
+        --leaf: #5a6b3c; --leaf-soft: #e5e9d8;
+        --warn: #b07515; --warn-soft: #f3e2bf;
+        --danger: #a13a2a; --danger-soft: #f0d9d4;
+
+        /* Production sub-categories */
+        --c-prod: #8b3a1a;          /* clay — Production hub */
+        --c-prod-soft: #f4dccb;
+        --c-locations: #8b3a1a;
+        --c-foto: #34487a;
+        --c-suono: #2e6868;
+        --c-scen: #8a5a1f;
+        --c-cost: #8b3565;
+        --c-veicoli: #5a6b3c;
+        --c-comparse: #6b3e7a;
+        --c-vfx: #34487a;
+        --c-stunt: #a13a2a;
+
+        --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+        --space-5: 20px; --space-6: 24px; --space-8: 32px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--paper-1); color: var(--ink-1); font-family: var(--font-sans); font-size: 14px; line-height: 1.55; }
+      [data-num] { font-variant-numeric: tabular-nums; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      /* Topbar */
+      .topbar { position: sticky; top: 0; z-index: 40; height: 48px; background: var(--paper-1); border-bottom: 1px solid var(--line-soft); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-6); }
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark { width: 22px; height: 22px; border-radius: 50%; background: var(--ink-1); color: var(--paper-1); display: grid; place-items: center; font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 600; }
+      .crumbs { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .crumb-proj { font-family: var(--font-display); font-style: italic; color: var(--ink-1); }
+      .crumb-link { color: var(--ink-2); cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+      .crumb-link:hover { background: var(--paper-2); color: var(--ink-1); }
+      .crumb-sep { color: var(--ink-4); }
+      .crumb-current { color: var(--ink-1); font-weight: 500; font-family: var(--font-display); font-style: italic; }
+      .topbar-center { display: flex; justify-content: center; }
+      .viewbar { display: inline-flex; background: var(--paper-2); border-radius: 999px; padding: 3px; gap: 2px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+      .vb-tab { height: 26px; padding: 0 var(--space-3); border-radius: 999px; color: var(--ink-3); }
+      .vb-tab.is-active { background: var(--paper-1); color: var(--ink-1); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+      .topbar-right { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-3); }
+      .version-pill { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); padding: 4px var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: var(--paper-1); }
+      .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--clay); color: var(--paper-1); display: grid; place-items: center; font-size: 11px; font-weight: 600; font-family: var(--font-mono); }
+
+      main { max-width: 1320px; margin: 0 auto; padding: var(--space-8) var(--space-6); }
+
+      /* Subnav for production sub-categories */
+      .subnav { display: flex; gap: var(--space-2); margin-bottom: var(--space-6); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); overflow-x: auto; }
+      .subnav-tab { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px var(--space-3); border-radius: var(--radius-sm); color: var(--ink-3); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+      .subnav-tab:hover { background: var(--paper-2); color: var(--ink-1); }
+      .subnav-tab.is-active { background: var(--c-prod-soft); color: var(--c-prod); }
+      .subnav-tab .pip { width: 6px; height: 6px; border-radius: 50%; background: var(--cat-color, var(--ink-4)); }
+      .subnav-tab.is-active .pip { background: var(--c-prod); }
+      .subnav-tab .badge { font-size: 10px; color: var(--ink-4); }
+      .subnav-tab.is-active .badge { color: var(--c-prod); }
+
+      /* Cat head */
+      .cat-head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-6); margin-bottom: var(--space-6); padding-left: var(--space-4); border-left: 3px solid var(--c-prod); }
+      .cat-eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--c-prod); text-transform: uppercase; letter-spacing: 0.1em; }
+      .cat-title { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 38px; letter-spacing: -0.02em; margin: 0; line-height: 1; }
+      .cat-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: var(--space-2); }
+      .cat-actions { display: flex; gap: var(--space-2); }
+      .btn { height: 30px; padding: 0 var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--page); font-size: 12px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+      .btn:hover { background: var(--paper-2); }
+      .btn-primary { background: var(--c-prod); color: var(--paper-1); border-color: var(--c-prod); }
+
+      /* KPI strip */
+      .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); margin-bottom: var(--space-6); }
+      .kpi { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+      .kpi.is-warn { border-color: var(--warn); background: var(--warn-soft); }
+      .kpi-lbl { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+      .kpi-val { font-family: var(--font-display); font-style: italic; font-size: 24px; font-weight: 500; }
+      .kpi-foot { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); }
+
+      /* Top row: donut + bar chart */
+      .top-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: var(--space-6); margin-bottom: var(--space-6); }
+      .card { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); }
+      .card-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-4); }
+      .card-title { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 17px; }
+      .card-meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+
+      /* Donut sub-cat split */
+      .donut-block { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; }
+      .donut {
+        position: relative; width: 200px; height: 200px; border-radius: 50%;
+        background: conic-gradient(
+          var(--c-locations) 0deg 122deg,
+          var(--c-foto) 122deg 198deg,
+          var(--c-scen) 198deg 248deg,
+          var(--c-veicoli) 248deg 288deg,
+          var(--c-cost) 288deg 316deg,
+          var(--c-comparse) 316deg 338deg,
+          var(--c-suono) 338deg 352deg,
+          var(--c-vfx) 352deg 360deg
+        );
+      }
+      .donut::after { content: ""; position: absolute; inset: 30px; background: var(--page); border-radius: 50%; }
+      .donut-center { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; text-align: center; }
+      .donut-center b { display: block; font-family: var(--font-display); font-style: italic; font-size: 22px; font-weight: 500; }
+      .donut-center span { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+      .donut-legend { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
+      .leg-item { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); }
+      .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+      .leg-num { color: var(--ink-3); }
+
+      /* Horizontal bar list */
+      .bar-list { display: flex; flex-direction: column; gap: var(--space-3); }
+      .bar-row { display: grid; grid-template-columns: 140px 1fr 90px 60px; gap: var(--space-3); align-items: center; font-size: 13px; }
+      .bar-name { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); display: inline-flex; align-items: center; gap: var(--space-2); }
+      .bar-name .pip { width: 8px; height: 8px; border-radius: 2px; }
+      .bar-track { height: 8px; background: var(--paper-2); border-radius: 4px; overflow: hidden; }
+      .bar-fill { height: 100%; border-radius: 4px; }
+      .bar-amt { font-family: var(--font-mono); font-size: 12px; text-align: right; color: var(--ink-1); }
+      .bar-pct { font-family: var(--font-mono); font-size: 11px; text-align: right; color: var(--ink-3); }
+
+      /* Banner alert */
+      .banner { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-5); font-size: 13px; }
+      .banner.warn { background: var(--warn-soft); border-left: 3px solid var(--warn); color: var(--ink-1); }
+      .banner-ic { font-family: var(--font-mono); font-weight: 600; color: var(--warn); font-size: 11px; }
+      .banner-body b { font-weight: 600; }
+      .banner-link { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warn); text-decoration: underline; cursor: pointer; }
+
+      /* Section: Locations table */
+      .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-3); }
+      .section-title { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 20px; }
+      .filter-bar { display: inline-flex; gap: var(--space-2); align-items: center; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+      .chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px var(--space-3); border-radius: 999px; background: var(--paper-2); color: var(--ink-2); cursor: pointer; }
+      .chip.is-active { background: var(--ink-1); color: var(--paper-1); }
+
+      table.tbl { width: 100%; border-collapse: collapse; background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+      table.tbl thead th { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 500; text-align: left; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); background: var(--paper-1); }
+      table.tbl thead th.right { text-align: right; }
+      table.tbl tbody td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line-soft); font-size: 13px; vertical-align: middle; }
+      table.tbl tbody tr:last-child td { border-bottom: 0; }
+      table.tbl tbody tr:hover { background: var(--paper-1); }
+      table.tbl td.right { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+      table.tbl tfoot td { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); background: var(--paper-1); font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+      table.tbl tfoot td.right { text-align: right; color: var(--ink-1); font-size: 13px; }
+
+      .loc-name { display: flex; flex-direction: column; gap: 2px; }
+      .loc-name b { font-weight: 500; color: var(--ink-1); font-size: 13px; }
+      .loc-name span { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+      .scene-bubbles { display: inline-flex; flex-wrap: wrap; gap: 3px; max-width: 220px; }
+      .scene-bubble { font-family: var(--font-mono); font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--paper-2); color: var(--ink-2); }
+      .tag { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; }
+      .tag.int { background: var(--leaf-soft); color: var(--leaf); }
+      .tag.ext { background: var(--clay-soft); color: var(--clay); }
+      .tag.stale { background: var(--paper-2); color: var(--ink-3); }
+      .tag.missing { background: var(--danger-soft); color: var(--danger); }
+      .tag.ai { background: var(--paper-2); color: var(--ink-3); }
+
+      .rate-cell { display: inline-flex; gap: 6px; align-items: center; }
+      .rate-cell .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+      .rate-cell .miss { font-family: var(--font-mono); font-size: 10px; color: var(--danger); text-transform: uppercase; letter-spacing: 0.06em; }
+      .qty-cell { display: inline-flex; flex-direction: column; align-items: flex-end; }
+      .qty-cell b { font-family: var(--font-mono); font-weight: 500; }
+      .qty-cell span { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-transform: uppercase; }
+
+      /* Right rail: heatmap & notes */
+      .rail-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-top: var(--space-6); }
+      .heatmap { display: grid; gap: 3px; }
+      .hm-row { display: grid; grid-template-columns: 100px 1fr; gap: var(--space-3); align-items: center; }
+      .hm-name { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--ink-3); letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .hm-cells { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+      .hm-cell { aspect-ratio: 1 / 1; border-radius: 2px; background: var(--paper-2); }
+      .hm-axis { display: grid; grid-template-columns: 100px 1fr; gap: var(--space-3); margin-top: var(--space-2); }
+      .hm-axis-vals { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); text-align: center; }
+
+      .stat-list { display: flex; flex-direction: column; gap: var(--space-3); }
+      .stat-item { display: grid; grid-template-columns: 1fr auto; gap: var(--space-3); padding-block: var(--space-2); border-bottom: 1px dashed var(--line-soft); }
+      .stat-item:last-child { border-bottom: 0; }
+      .stat-lbl { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+      .stat-val { font-family: var(--font-mono); font-size: 13px; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+      .stat-val.delta-up { color: var(--clay); }
+      .stat-val.delta-down { color: var(--leaf); }
+
+      footer { max-width: 1320px; margin: 0 auto; padding: var(--space-8) var(--space-6); border-top: 1px solid var(--line-soft); display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.08em; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">o</div>
+        <div class="crumbs">
+          <span class="crumb-proj">Sale Nero</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-link">Budget</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-link">Production</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-current">Locations</span>
+        </div>
+      </div>
+      <div class="topbar-center">
+        <div class="viewbar" role="tablist">
+          <button class="vb-tab">Panoramica</button>
+          <button class="vb-tab is-active">Per categoria</button>
+          <button class="vb-tab">Per giornata</button>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="version-pill">v.07 · bozza</span>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Sub-nav: production sub-categories -->
+      <nav class="subnav" aria-label="Sotto-categorie produzione">
+        <button class="subnav-tab is-active" style="--cat-color: var(--c-locations)"><span class="pip"></span>Locations<span class="badge">7</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-foto)"><span class="pip"></span>Fotografia<span class="badge">1</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-suono)"><span class="pip"></span>Suono<span class="badge">1</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-scen)"><span class="pip"></span>Scenografia<span class="badge">1</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-cost)"><span class="pip"></span>Costumi &amp; Make-up<span class="badge">1</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-veicoli)"><span class="pip"></span>Veicoli<span class="badge">4</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-comparse)"><span class="pip"></span>Comparse<span class="badge">1</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-vfx)"><span class="pip"></span>VFX / SFX<span class="badge">1</span></button>
+        <button class="subnav-tab" style="--cat-color: var(--c-stunt)"><span class="pip"></span>Stunt<span class="badge">0</span></button>
+      </nav>
+
+      <!-- Category head -->
+      <section class="cat-head">
+        <div>
+          <div class="cat-eyebrow">Production · Drill-down</div>
+          <h1 class="cat-title">Locations</h1>
+          <div class="cat-meta">7 luoghi · 23 giornate riprese · 4 INT · 3 EXT</div>
+        </div>
+        <div class="cat-actions">
+          <button class="btn">Esporta CSV</button>
+          <button class="btn">Rate card</button>
+          <button class="btn btn-primary">Aggiungi location</button>
+        </div>
+      </section>
+
+      <!-- KPI strip -->
+      <div class="kpi-strip">
+        <div class="kpi">
+          <span class="kpi-lbl">Totale Production</span>
+          <span class="kpi-val" data-num>€ 187.420</span>
+          <span class="kpi-foot">28,4 % del budget · v.07</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Totale Locations</span>
+          <span class="kpi-val" data-num>€ 63.500</span>
+          <span class="kpi-foot">33,9 % di Production</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Costo medio / giornata</span>
+          <span class="kpi-val" data-num>€ 2.761</span>
+          <span class="kpi-foot">23 giornate riprese</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Δ vs preventivo</span>
+          <span class="kpi-val" data-num>+ 8,2 %</span>
+          <span class="kpi-foot">v.06 → v.07 · +€ 4.760</span>
+        </div>
+        <div class="kpi is-warn">
+          <span class="kpi-lbl">⚠ Senza tariffa</span>
+          <span class="kpi-val" data-num>2 voci</span>
+          <span class="kpi-foot">Bar Centrale · Garage Po</span>
+        </div>
+      </div>
+
+      <!-- Top row: donut Production split + bar chart sub-categories -->
+      <section class="top-row">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Spesa Production</span>
+            <span class="card-meta">8 sotto-categorie</span>
+          </div>
+          <div class="donut-block">
+            <div class="donut">
+              <div class="donut-center">
+                <b data-num>€ 187k</b>
+                <span>Production v.07</span>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-locations)"></span>Locations<span class="leg-num">33,9 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-foto)"></span>Fotografia<span class="leg-num">21,1 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-scen)"></span>Scenografia<span class="leg-num">13,9 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-veicoli)"></span>Veicoli<span class="leg-num">11,1 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-cost)"></span>Costumi<span class="leg-num">7,8 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-comparse)"></span>Comparse<span class="leg-num">6,1 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-suono)"></span>Suono<span class="leg-num">3,9 %</span></span>
+              <span class="leg-item"><span class="leg-dot" style="background: var(--c-vfx)"></span>VFX / SFX<span class="leg-num">2,2 %</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Sotto-categorie · ordine per peso</span>
+            <span class="card-meta">€ 187.420 · v.07</span>
+          </div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-locations)"></span>Locations</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 100%; background: var(--c-locations)"></div></div>
+              <span class="bar-amt" data-num>€ 63.500</span>
+              <span class="bar-pct" data-num>33,9 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-foto)"></span>Fotografia</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 62%; background: var(--c-foto)"></div></div>
+              <span class="bar-amt" data-num>€ 39.580</span>
+              <span class="bar-pct" data-num>21,1 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-scen)"></span>Scenografia</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 41%; background: var(--c-scen)"></div></div>
+              <span class="bar-amt" data-num>€ 26.040</span>
+              <span class="bar-pct" data-num>13,9 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-veicoli)"></span>Veicoli</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 33%; background: var(--c-veicoli)"></div></div>
+              <span class="bar-amt" data-num>€ 20.800</span>
+              <span class="bar-pct" data-num>11,1 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-cost)"></span>Costumi &amp; Make-up</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 23%; background: var(--c-cost)"></div></div>
+              <span class="bar-amt" data-num>€ 14.620</span>
+              <span class="bar-pct" data-num>7,8 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-comparse)"></span>Comparse</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 18%; background: var(--c-comparse)"></div></div>
+              <span class="bar-amt" data-num>€ 11.430</span>
+              <span class="bar-pct" data-num>6,1 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-suono)"></span>Suono</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 12%; background: var(--c-suono)"></div></div>
+              <span class="bar-amt" data-num>€ 7.300</span>
+              <span class="bar-pct" data-num>3,9 %</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name"><span class="pip" style="background: var(--c-vfx)"></span>VFX / SFX</span>
+              <div class="bar-track"><div class="bar-fill" style="width: 6%; background: var(--c-vfx)"></div></div>
+              <span class="bar-amt" data-num>€ 4.150</span>
+              <span class="bar-pct" data-num>2,2 %</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Banner alert -->
+      <div class="banner warn">
+        <span class="banner-ic">⚠ ATTENZIONE</span>
+        <div class="banner-body">
+          <b>2 location senza tariffa giornaliera.</b> Aggiungile alla rate card o inseriscile manualmente — il totale corrente sottostima la voce di € 5.200 stimati.
+          &nbsp; <span class="banner-link">Apri rate card →</span>
+        </div>
+      </div>
+
+      <!-- Locations table -->
+      <section>
+        <div class="section-head">
+          <span class="section-title">Elenco location</span>
+          <div class="filter-bar">
+            <span>Filtra:</span>
+            <span class="chip is-active">Tutte</span>
+            <span class="chip">INT</span>
+            <span class="chip">EXT</span>
+            <span class="chip">Senza tariffa</span>
+            <span class="chip">Stimate IA</span>
+          </div>
+        </div>
+
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th style="width: 22%">Location</th>
+              <th style="width: 8%">Tipo</th>
+              <th style="width: 22%">Scene</th>
+              <th class="right" style="width: 8%">Giornate</th>
+              <th class="right" style="width: 12%">Tariffa / gg</th>
+              <th class="right" style="width: 10%">Totale</th>
+              <th class="right" style="width: 8%">% sub-cat</th>
+              <th style="width: 10%">Stato</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Casa di Lia — Trastevere</b>
+                  <span>roma · interno appartamento</span>
+                </div>
+              </td>
+              <td><span class="tag int">Int</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">3</span><span class="scene-bubble">7</span><span class="scene-bubble">11</span><span class="scene-bubble">14</span><span class="scene-bubble">19</span><span class="scene-bubble">22</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>6</b><span>giornate</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="num">€ 2.500</span></span></td>
+              <td class="right" data-num>€ 15.000</td>
+              <td class="right" data-num>23,6 %</td>
+              <td><span class="tag" style="background: var(--leaf-soft); color: var(--leaf)">Confermata</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Stazione Tiburtina — Binario 17</b>
+                  <span>roma · esterno notte</span>
+                </div>
+              </td>
+              <td><span class="tag ext">Ext</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">1</span><span class="scene-bubble">5</span><span class="scene-bubble">28</span><span class="scene-bubble">34</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>4</b><span>giornate</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="num">€ 4.200</span></span></td>
+              <td class="right" data-num>€ 16.800</td>
+              <td class="right" data-num>26,5 %</td>
+              <td><span class="tag" style="background: var(--leaf-soft); color: var(--leaf)">Confermata</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Bar Centrale — Piazza Vittorio</b>
+                  <span>roma · interno giorno</span>
+                </div>
+              </td>
+              <td><span class="tag int">Int</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">9</span><span class="scene-bubble">12</span><span class="scene-bubble">25</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>3</b><span>giornate</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="miss">Mancante</span></span></td>
+              <td class="right" data-num>€ 0</td>
+              <td class="right" data-num>—</td>
+              <td><span class="tag missing">Senza tariffa</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Garage Po — Quartiere Tuscolano</b>
+                  <span>roma · interno notte</span>
+                </div>
+              </td>
+              <td><span class="tag int">Int</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">18</span><span class="scene-bubble">20</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>2</b><span>giornate</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="miss">Mancante</span></span></td>
+              <td class="right" data-num>€ 0</td>
+              <td class="right" data-num>—</td>
+              <td><span class="tag missing">Senza tariffa</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Lungotevere Aventino</b>
+                  <span>roma · esterno giorno</span>
+                </div>
+              </td>
+              <td><span class="tag ext">Ext</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">2</span><span class="scene-bubble">15</span><span class="scene-bubble">31</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>3</b><span>giornate</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="num">€ 1.800</span> <span class="tag ai">IA</span></span></td>
+              <td class="right" data-num>€ 5.400</td>
+              <td class="right" data-num>8,5 %</td>
+              <td><span class="tag" style="background: var(--warn-soft); color: var(--warn)">Da confermare</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Studio MGM — Teatro di posa 4</b>
+                  <span>cinecittà · interno</span>
+                </div>
+              </td>
+              <td><span class="tag int">Int</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">21</span><span class="scene-bubble">24</span><span class="scene-bubble">26</span><span class="scene-bubble">30</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>4</b><span>giornate</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="num">€ 3.500</span></span></td>
+              <td class="right" data-num>€ 14.000</td>
+              <td class="right" data-num>22,0 %</td>
+              <td><span class="tag" style="background: var(--leaf-soft); color: var(--leaf)">Confermata</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="loc-name">
+                  <b>Spiaggia di Capocotta</b>
+                  <span>ostia · esterno tramonto</span>
+                </div>
+              </td>
+              <td><span class="tag ext">Ext</span></td>
+              <td>
+                <div class="scene-bubbles">
+                  <span class="scene-bubble">33</span>
+                </div>
+              </td>
+              <td class="right"><div class="qty-cell"><b data-num>1</b><span>giornata</span></div></td>
+              <td class="right"><span class="rate-cell"><span class="num">€ 2.300</span> <span class="tag ai">IA</span></span></td>
+              <td class="right" data-num>€ 2.300</td>
+              <td class="right" data-num>3,6 %</td>
+              <td><span class="tag stale">Stale · breakdown</span></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">7 location · 23 giornate riprese</td>
+              <td class="right">23</td>
+              <td class="right">media € 2.761</td>
+              <td class="right" data-num>€ 63.500</td>
+              <td class="right" data-num>100 %</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <!-- Bottom rail: heatmap day x location + side stats -->
+      <section class="rail-row">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Heatmap costi · location × giornata</span>
+            <span class="card-meta">G1 → G24 · solo Locations</span>
+          </div>
+          <div class="heatmap">
+            <div class="hm-row">
+              <span class="hm-name">Casa di Lia</span>
+              <div class="hm-cells">
+                <span class="hm-cell" style="background: var(--paper-2)"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.85"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.85"></span>
+                <span class="hm-cell"></span>
+                <span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.85"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.85"></span>
+                <span class="hm-cell"></span>
+                <span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.85"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.85"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+              </div>
+            </div>
+            <div class="hm-row">
+              <span class="hm-name">Tiburtina</span>
+              <div class="hm-cells">
+                <span class="hm-cell" style="background: var(--c-locations)"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations)"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations)"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations)"></span>
+                <span class="hm-cell"></span>
+              </div>
+            </div>
+            <div class="hm-row">
+              <span class="hm-name">Bar Centrale</span>
+              <div class="hm-cells">
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.4"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.4"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.4"></span>
+              </div>
+            </div>
+            <div class="hm-row">
+              <span class="hm-name">Garage Po</span>
+              <div class="hm-cells">
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.4"></span>
+                <span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.4"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+              </div>
+            </div>
+            <div class="hm-row">
+              <span class="hm-name">Lungotevere</span>
+              <div class="hm-cells">
+                <span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.7"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.7"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.7"></span>
+                <span class="hm-cell"></span>
+              </div>
+            </div>
+            <div class="hm-row">
+              <span class="hm-name">Studio MGM</span>
+              <div class="hm-cells">
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.95"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.95"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.95"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.95"></span>
+              </div>
+            </div>
+            <div class="hm-row">
+              <span class="hm-name">Capocotta</span>
+              <div class="hm-cells">
+                <span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span><span class="hm-cell"></span>
+                <span class="hm-cell" style="background: var(--c-locations); opacity: 0.55"></span>
+                <span class="hm-cell"></span><span class="hm-cell"></span>
+              </div>
+            </div>
+          </div>
+          <div class="hm-axis">
+            <span></span>
+            <div class="hm-axis-vals">
+              <span>G1</span><span></span><span></span><span></span><span>G5</span><span></span><span></span><span></span><span></span><span>G10</span><span></span><span></span><span></span><span></span><span>G15</span><span></span><span></span><span></span><span></span><span>G20</span><span></span><span></span><span></span><span>G24</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Statistiche reparto</span>
+            <span class="card-meta">v.07 · letti da schedule + breakdown</span>
+          </div>
+          <div class="stat-list">
+            <div class="stat-item">
+              <span class="stat-lbl">Location più cara</span>
+              <span class="stat-val" data-num>Tiburtina · € 16.800</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">Più giornate</span>
+              <span class="stat-val" data-num>Casa di Lia · 6 gg</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">% INT / EXT (importi)</span>
+              <span class="stat-val" data-num>70 % · 30 %</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">Tariffa media confermata</span>
+              <span class="stat-val" data-num>€ 3.060 / gg</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">Tariffa media IA</span>
+              <span class="stat-val" data-num>€ 2.050 / gg</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">Δ v.06 → v.07</span>
+              <span class="stat-val delta-up" data-num>+ € 4.760 (+ 8,2 %)</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">Voci stale</span>
+              <span class="stat-val" data-num>1 · Capocotta</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-lbl">Mancano tariffe</span>
+              <span class="stat-val delta-up" data-num>2 voci · € 5.200 stim.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Oh Writers · Budget · Production · Locations</span>
+      <span>mockup statico · 2026-05-15</span>
+    </footer>
+  </body>
+</html>

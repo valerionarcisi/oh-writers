@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Screenplay · F · Editorial</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,1,400;9..144,1,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page: #ffffff;
+        --ink-1: #1c1a17;
+        --ink-2: #44413c;
+        --ink-3: #71706a;
+        --ink-4: #a09e96;
+        --ink-5: #c4c2b9;
+        --line: #d8d6cd;
+        --line-soft: #e3e1d780;
+        --clay: #8b3a1a;
+        --clay-soft: #f4dccb;
+        --leaf: #5a6b3c;
+        --leaf-soft: #e5e9d8;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+        --space-12: 64px;
+
+        --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+        --font-script: "Courier Prime", "Courier New", monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--paper-1); color: var(--ink-1); font-family: var(--font-sans); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+      button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+
+      /* ──── TOP BAR ──── */
+      .topbar { position: sticky; top: 0; z-index: 40; height: 48px; background: var(--paper-1); border-bottom: 1px solid transparent; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 var(--space-6); transition: border-color 200ms ease; }
+      .topbar.is-scrolled { border-bottom-color: var(--line); }
+      .brand { display: flex; align-items: center; gap: var(--space-3); position: relative; }
+      .brand-mark { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-1); display: grid; place-items: center; color: var(--paper-1); font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 600; cursor: pointer; }
+      .brand-mark::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--leaf); border: 1.5px solid var(--paper-1); opacity: 0; }
+      .brand-mark.is-active::after { opacity: 1; animation: cesare-pulse 1.8s ease-in-out infinite; }
+      @keyframes cesare-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } }
+      .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .breadcrumb-project { font-family: var(--font-display); font-style: italic; font-weight: 500; color: var(--ink-1); }
+      .breadcrumb-sep { color: var(--ink-4); }
+      .breadcrumb-anchor { position: relative; display: inline-flex; }
+      .breadcrumb-section { color: var(--ink-1); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; margin: -4px -8px; border-radius: var(--radius-sm); font-size: 13px; transition: background 150ms ease; }
+      .breadcrumb-section:hover { background: var(--paper-2); }
+      .topbar-center { display: flex; justify-content: center; }
+      .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+      .topbar-btn { height: 30px; padding: 0 var(--space-3); border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12px; font-family: var(--font-mono); transition: background 150ms ease, color 150ms ease; }
+      .topbar-btn:hover { background: var(--paper-2); color: var(--ink-1); }
+      .topbar-btn kbd { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); background: var(--paper-2); padding: 1px 4px; border-radius: 3px; }
+      .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--clay); color: var(--paper-1); display: grid; place-items: center; font-size: 11px; font-weight: 600; font-family: var(--font-mono); }
+      .presence { display: inline-flex; align-items: center; }
+      .presence-av { width: 24px; height: 24px; border-radius: 50%; color: var(--paper-1); display: grid; place-items: center; font-size: 10px; font-weight: 600; font-family: var(--font-mono); border: 2px solid var(--paper-1); }
+      .presence-av + .presence-av { margin-inline-start: -8px; }
+      .presence-av-1 { background: #5e7c8a; }
+      .presence-av-2 { background: #8a6244; }
+      .save-pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .save-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--leaf); }
+      .bell { position: relative; width: 30px; height: 30px; border-radius: var(--radius-sm); display: grid; place-items: center; color: var(--ink-3); transition: background 150ms ease, color 150ms ease; }
+      .bell:hover { background: var(--paper-2); color: var(--ink-1); }
+      .bell-dot { position: absolute; top: 4px; right: 4px; min-width: 14px; height: 14px; padding: 0 4px; border-radius: 100px; background: var(--clay); color: var(--paper-1); font-family: var(--font-mono); font-size: 9px; font-weight: 600; display: grid; place-items: center; border: 1.5px solid var(--paper-1); }
+
+      /* Peek + nav popover */
+      .peek { position: absolute; top: 100%; left: 0; margin-top: 10px; width: 340px; background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: 0 12px 32px -8px rgba(28,26,23,0.18); padding: var(--space-4); opacity: 0; pointer-events: none; transform: translateY(-4px); transition: opacity 180ms ease, transform 180ms ease; z-index: 50; text-align: left; }
+      .peek.is-open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+      .peek-head { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--leaf); margin-bottom: var(--space-3); }
+      .peek-head-dot { width: 6px; height: 6px; background: var(--leaf); border-radius: 50%; }
+      .peek-note { padding-block: var(--space-2); border-bottom: 1px solid var(--line-soft); }
+      .peek-note:last-of-type { border-bottom: 0; }
+      .peek-note-kind { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-4); margin-bottom: 4px; }
+      .peek-note-text { font-family: var(--font-display); font-style: italic; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+      .peek-foot { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line-soft); display: flex; justify-content: space-between; align-items: center; }
+      .peek-foot a { font-family: var(--font-mono); font-size: 11px; color: var(--clay); text-decoration: none; }
+      .peek-foot span { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
+
+      /* ──── VIEW BAR ──── */
+      .viewbar { position: sticky; top: 48px; z-index: 30; background: var(--paper-1); border-bottom: 1px solid transparent; padding: var(--space-2) var(--space-6); display: flex; align-items: center; gap: var(--space-2); transition: border-color 200ms ease; }
+      .viewbar.is-stuck { border-bottom-color: var(--line); }
+      .filter { height: 28px; padding: 0 10px; border-radius: var(--radius-sm); font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 6px; }
+      .filter:hover { background: var(--paper-2); color: var(--ink-1); }
+      .filter.is-active { background: var(--paper-3); color: var(--ink-1); }
+
+      /* Toggle chip with dot — for inline tag categories */
+      .toggle-chip { height: 28px; padding: 0 10px; border-radius: 100px; font-size: 12px; font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); background: transparent; border: 1px solid transparent; transition: all 150ms ease; }
+      .toggle-chip:hover { background: var(--paper-2); color: var(--ink-1); }
+      .toggle-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-4); transition: background 150ms ease; }
+      .toggle-chip.is-on { background: var(--page); border-color: var(--line); color: var(--ink-1); }
+      .toggle-chip.is-on .toggle-chip-dot { background: var(--cat-color, var(--ink-1)); }
+      .toggle-chip-key { font-size: 10px; color: var(--ink-4); margin-inline-start: 2px; padding: 1px 4px; background: var(--paper-2); border-radius: 3px; }
+      .vb-sep { width: 1px; height: 18px; background: var(--line); margin: 0 var(--space-2); }
+      .vb-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); margin-inline-end: 6px; }
+
+      /* ──── MAIN — Editorial layout ──── */
+      main { display: grid; grid-template-columns: 280px 1fr 280px; gap: var(--space-8); max-width: 1440px; margin: 0 auto; padding: var(--space-10) var(--space-6) var(--space-12); align-items: start; }
+
+      /* Outline / TOC sinistra */
+      aside.toc { position: sticky; top: 100px; }
+      .toc-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); margin-bottom: var(--space-4); }
+      .toc-act { margin-bottom: var(--space-5); }
+      .toc-act-name { font-family: var(--font-display); font-style: italic; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-bottom: var(--space-2); }
+      .toc-scene { display: flex; gap: var(--space-2); padding: 4px 8px; margin: 0 -8px; border-radius: var(--radius-sm); font-size: 12px; color: var(--ink-3); cursor: pointer; }
+      .toc-scene:hover { background: var(--paper-2); color: var(--ink-1); }
+      .toc-scene.is-current { background: var(--clay-soft); color: var(--clay); }
+      .toc-scene-num { font-family: var(--font-mono); font-size: 10px; width: 22px; flex-shrink: 0; opacity: 0.7; }
+
+      /* Foglio bianco centrale */
+      .editorial { min-width: 0; }
+      .chapter { margin-bottom: var(--space-8); padding-bottom: var(--space-6); border-bottom: 1px solid var(--line); }
+      .chapter-eyebrow { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); margin-bottom: var(--space-3); }
+      .chapter-title { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.02em; margin: 0 0 var(--space-4); color: var(--ink-1); }
+      .chapter-stats { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); display: flex; gap: var(--space-3); }
+      .chapter-stats span::before { content: "·"; margin-inline-end: var(--space-2); color: var(--ink-4); }
+      .chapter-stats span:first-child::before { display: none; }
+
+      .page { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-10) 72px; max-width: 760px; margin: 0 auto; font-family: var(--font-script); font-size: 13.5px; line-height: 1.7; color: var(--ink-1); box-shadow: 0 2px 4px rgba(28,26,23,0.04); }
+      .scene-heading { text-transform: uppercase; font-weight: 700; margin: var(--space-4) 0 var(--space-3); }
+      .scene-heading em { font-style: italic; text-transform: none; font-weight: 400; color: var(--ink-2); }
+      .action { margin: 0 0 var(--space-3); }
+      .character { text-transform: uppercase; margin: var(--space-3) 0 0 22ch; }
+      .parenthetical { color: var(--ink-3); margin: 0 0 0 18ch; }
+      .dialogue { margin: 0 0 var(--space-3) 12ch; max-width: 36ch; }
+      .ghost { color: var(--leaf); background: var(--leaf-soft); border-bottom: 1px dashed var(--leaf); padding: 0 2px; }
+
+      /* Margin Cesare notes destra */
+      aside.margin { position: sticky; top: 100px; }
+      .margin-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); margin-bottom: var(--space-4); display: flex; align-items: center; gap: 6px; }
+      .margin-label::before { content: ""; width: 6px; height: 6px; background: var(--leaf); border-radius: 50%; }
+      .note { margin-bottom: var(--space-5); padding-inline-start: var(--space-3); border-inline-start: 2px solid var(--leaf-soft); }
+      .note-kind { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--leaf); margin-bottom: var(--space-1); }
+      .note-kind.is-prod { color: var(--clay); }
+      .note-text { font-family: var(--font-display); font-style: italic; font-size: 14px; line-height: 1.5; color: var(--ink-2); margin-bottom: var(--space-2); }
+      .note-actions { display: flex; gap: var(--space-2); }
+      .note-actions button { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); padding: 3px 6px; border-radius: var(--radius-sm); }
+      .note-actions button:hover { background: var(--paper-2); color: var(--ink-1); }
+      .note-actions .note-yes:hover { background: var(--leaf-soft); color: var(--leaf); }
+
+      /* ──── FLOATING DOCK ──── */
+      .dock { position: fixed; bottom: var(--space-5); right: var(--space-5); z-index: 70; background: var(--page); border: 1px solid var(--line); border-radius: 100px; padding: 6px; display: flex; align-items: center; gap: 4px; box-shadow: 0 12px 32px -8px rgba(28,26,23,0.18); }
+      .dock-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-4); padding: 0 10px; border-inline-end: 1px solid var(--line); margin-inline-end: 2px; }
+      .btn { height: 34px; padding: 0 14px; border-radius: 100px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; transition: background 150ms ease, color 150ms ease; }
+      .btn-primary { background: var(--clay); color: var(--paper-1); }
+      .btn-primary:hover { background: #75301a; }
+      .btn-ghost { color: var(--ink-2); }
+      .btn-ghost:hover { background: var(--paper-1); color: var(--ink-1); }
+      .dock-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+      .dock-cesare { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; height: 34px; border-radius: 100px; background: var(--leaf-soft); color: var(--leaf); font-size: 12px; font-weight: 500; }
+      .dock-cesare-dot { width: 7px; height: 7px; background: var(--leaf); border-radius: 50%; animation: cesare-pulse 1.8s ease-in-out infinite; }
+      .dock-cesare-count { font-family: var(--font-mono); font-size: 11px; background: var(--leaf); color: var(--paper-1); padding: 1px 5px; border-radius: 100px; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <!-- TOP BAR -->
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <button class="brand-mark is-active" id="brandMark">O</button>
+        <div class="peek" id="peek">
+          <div class="peek-head"><span class="peek-head-dot"></span>Cesare · 4 note nuove</div>
+          <div class="peek-note">
+            <div class="peek-note-kind">Scrittura · sc.3</div>
+            <div class="peek-note-text">"Pizza fumante" come dettaglio sensoriale potrebbe ancorare la scena. Coerente con l'atmosfera già stabilita.</div>
+          </div>
+          <div class="peek-note">
+            <div class="peek-note-kind">Produzione · sc.3</div>
+            <div class="peek-note-text">Aggiungere pizza al breakdown props (sc.3). Costo trascurabile, ma serve in scena.</div>
+          </div>
+          <div class="peek-foot">
+            <a href="#" id="openManifest">Apri Manifesto →</a>
+            <span>⌘M</span>
+          </div>
+        </div>
+        <nav class="breadcrumb">
+          <span class="breadcrumb-project">Non fa ridere</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-anchor">
+            <button class="breadcrumb-section" id="sectionBtn">
+              Screenplay
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </span>
+        </nav>
+      </div>
+      <div class="topbar-center"></div>
+      <div class="topbar-right">
+        <span class="save-pill">Salvato 4s fa</span>
+        <button class="topbar-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="bell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="bell-dot">1</span></button>
+        <button class="topbar-btn" id="askBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9l6 3"/></svg>
+          Chiedi a Cesare
+          <kbd>⌘.</kbd>
+        </button>
+        <div class="presence">
+          <span class="presence-av presence-av-1">SM</span>
+          <span class="presence-av presence-av-2">LR</span>
+        </div>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <!-- VIEW BAR — toggle-chip per categoria + altri overlay -->
+    <div class="viewbar" id="viewbar">
+      <span class="vb-label">Sottolinea</span>
+      <button class="toggle-chip is-on" style="--cat-color: #6b3e7a" title="Mostra/nascondi sottolineature Cast"><span class="toggle-chip-dot"></span>Cast</button>
+      <button class="toggle-chip is-on" style="--cat-color: #9a5128" title="Mostra/nascondi sottolineature Locations"><span class="toggle-chip-dot"></span>Locations</button>
+      <button class="toggle-chip is-on" style="--cat-color: #8a5a1f" title="Mostra/nascondi sottolineature Props"><span class="toggle-chip-dot"></span>Props</button>
+      <button class="toggle-chip" style="--cat-color: #8b3565" title="Mostra/nascondi sottolineature Costumi"><span class="toggle-chip-dot"></span>Costumi</button>
+      <button class="toggle-chip" style="--cat-color: #34487a" title="Mostra/nascondi sottolineature Fotografia"><span class="toggle-chip-dot"></span>Fotografia</button>
+      <button class="toggle-chip" style="--cat-color: #5a6b25" title="Mostra/nascondi sottolineature Suono"><span class="toggle-chip-dot"></span>Suono</button>
+      <span class="vb-sep"></span>
+      <span class="vb-label">Overlay</span>
+      <button class="toggle-chip is-on" style="--cat-color: #5a6b3c" title="Mostra/nascondi note Cesare a margine"><span class="toggle-chip-dot"></span>Cesare<span class="toggle-chip-key">⌥C</span></button>
+      <button class="toggle-chip" title="Mostra/nascondi commenti dei collaboratori"><span class="toggle-chip-dot"></span>Commenti<span class="toggle-chip-key">⌥M</span></button>
+      <button class="toggle-chip is-on" title="Mostra/nascondi numerazione scene"><span class="toggle-chip-dot"></span>Numeri scena</button>
+      <button class="toggle-chip" title="Mostra/nascondi marcature revisioni"><span class="toggle-chip-dot"></span>Revisioni</button>
+      <button class="filter" style="margin-inline-start: auto" title="Versione corrente · click per cambiare">v3 · 14 mag 2026 ▾</button>
+    </div>
+
+    <!-- MAIN -->
+    <main>
+      <!-- TOC sinistra -->
+      <aside class="toc">
+        <div class="toc-label">Indice · Atto I</div>
+        <div class="toc-act">
+          <div class="toc-act-name">Aperture</div>
+          <div class="toc-scene"><span class="toc-scene-num">1.</span>Ext. Strada — Notte</div>
+          <div class="toc-scene"><span class="toc-scene-num">2.</span>Int. Auto — Notte</div>
+          <div class="toc-scene is-current"><span class="toc-scene-num">3.</span>Int. Pizzeria Sottoscala</div>
+          <div class="toc-scene"><span class="toc-scene-num">4.</span>Ext. Vicolo — Notte</div>
+        </div>
+        <div class="toc-act">
+          <div class="toc-act-name">Incidente</div>
+          <div class="toc-scene"><span class="toc-scene-num">5.</span>Int. Cucina — Mattina</div>
+          <div class="toc-scene"><span class="toc-scene-num">6.</span>Int. Sala — Mattina</div>
+        </div>
+      </aside>
+
+      <!-- Foglio bianco centrale -->
+      <div class="editorial">
+        <div class="chapter">
+          <div class="chapter-eyebrow">Sc. 3 · Atto I · pag. 4 / 28</div>
+          <h1 class="chapter-title">Non fa ridere</h1>
+          <div class="chapter-stats">
+            <span>Battute 4</span>
+            <span>Personaggi 3</span>
+            <span>Tempo lettura ~2'40"</span>
+          </div>
+        </div>
+
+        <div class="page">
+          <p class="scene-heading">SC. 3  INT. PIZZERIA SOTTOSCALA — <em>Sera</em></p>
+          <p class="action">Tavoli stretti, luce gialla. <span class="ghost">Una pizza fumante al centro del tavolo.</span> Giulia (28) entra con i capelli ancora bagnati. Cerca qualcuno con lo sguardo.</p>
+          <p class="character">SERGIO</p>
+          <p class="parenthetical">(senza alzare la testa)</p>
+          <p class="dialogue">Sei in ritardo.</p>
+          <p class="character">GIULIA</p>
+          <p class="dialogue">Lo so. Mi sono persa.</p>
+          <p class="action">Lui finalmente la guarda. Sorride a metà.</p>
+          <p class="character">SERGIO</p>
+          <p class="dialogue">Era ironia. Sei sempre in ritardo.</p>
+          <p class="action">Giulia si siede. Si toglie la sciarpa lentamente, come se non sapesse cosa dire.</p>
+        </div>
+      </div>
+
+      <!-- Margin notes destra -->
+      <aside class="margin">
+        <div class="margin-label">Note di Cesare</div>
+
+        <div class="note">
+          <div class="note-kind">✦ Scrittura · sc.3</div>
+          <div class="note-text">"Pizza fumante" come dettaglio sensoriale ancora la scena nell'atmosfera già stabilita. Considerare se mantenere.</div>
+          <div class="note-actions">
+            <button class="note-yes">Accetta</button>
+            <button>Ignora</button>
+          </div>
+        </div>
+
+        <div class="note">
+          <div class="note-kind is-prod">✦ Produzione · sc.3</div>
+          <div class="note-text">Pizza in scena: serve nel breakdown props. Costo trascurabile (~30€), tempo set 10'.</div>
+          <div class="note-actions">
+            <button class="note-yes">Aggiungi al breakdown</button>
+            <button>Più tardi</button>
+          </div>
+        </div>
+
+        <div class="note">
+          <div class="note-kind">✦ Scrittura · sc.3</div>
+          <div class="note-text">Sergio dice "Era ironia" — il dialogo funziona. Si sente che si conoscono da prima, niente è esplicito.</div>
+          <div class="note-actions">
+            <button>Grazie</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- FLOATING DOCK -->
+    <div class="dock">
+      <span class="dock-label">Screenplay</span>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        Esporta PDF
+      </button>
+      <button class="btn btn-ghost">Versione</button>
+      <button class="btn btn-ghost">Confronta</button>
+      <div class="dock-sep"></div>
+      <button class="dock-cesare">
+        <span class="dock-cesare-dot"></span>
+        Cesare
+        <span class="dock-cesare-count">4</span>
+      </button>
+    </div>
+
+    <script>
+      const topbar = document.getElementById('topbar');
+      const viewbar = document.getElementById('viewbar');
+      const brandMark = document.getElementById('brandMark');
+      const peek = document.getElementById('peek');
+      window.addEventListener('scroll', () => {
+        const y = window.scrollY;
+        topbar.classList.toggle('is-scrolled', y > 4);
+        viewbar.classList.toggle('is-stuck', y > 48);
+      });
+      brandMark.addEventListener('click', (e) => {
+        e.stopPropagation();
+        peek.classList.toggle('is-open');
+      });
+      document.addEventListener('click', (e) => {
+        if (!brandMark.contains(e.target) && !peek.contains(e.target)) peek.classList.remove('is-open');
+      });
+      document.querySelectorAll('.toggle-chip').forEach(chip => {
+        chip.addEventListener('click', () => chip.classList.toggle('is-on'));
+      });
+    </script>
+  </body>
+</html>

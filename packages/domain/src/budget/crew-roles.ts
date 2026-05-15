@@ -142,6 +142,9 @@ export const CREW_ROLE_BY_KEY = Object.fromEntries(
 export const FISCAL_REGIMES = ["piva", "privato", "none"] as const;
 export type FiscalRegime = (typeof FISCAL_REGIMES)[number];
 
+export const RATE_UNITS = ["giornata", "posa", "forfait"] as const;
+export type RateUnit = (typeof RATE_UNITS)[number];
+
 export const fiscalMultiplier = (regime: FiscalRegime): number => {
   if (regime === "privato") return 1.2;
   return 1.0;
@@ -153,7 +156,14 @@ export const resourceTotal = (r: {
   fiscalRegime: FiscalRegime;
   mealAllowance: number;
   accommodation: number;
-}): number =>
-  r.days * r.dayRate * fiscalMultiplier(r.fiscalRegime) +
-  r.mealAllowance +
-  r.accommodation;
+  rateUnit?: RateUnit;
+}): number => {
+  if (r.rateUnit === "forfait") {
+    return r.dayRate * fiscalMultiplier(r.fiscalRegime);
+  }
+  return (
+    r.days * r.dayRate * fiscalMultiplier(r.fiscalRegime) +
+    r.mealAllowance +
+    r.accommodation
+  );
+};
