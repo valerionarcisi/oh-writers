@@ -254,8 +254,13 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
     0,
   );
 
+  // Cast e Troupe sono sempre visibili anche con totale 0 — il regista deve
+  // poter vedere subito che mancano dei rates, non scoprirlo nel tab Cast.
+  const CORE_CATEGORIES: ReadonlyArray<CategoryKey> = ["cast", "crew"];
   const sortedCategories = (Object.keys(totalsByCategory) as CategoryKey[])
-    .filter((k) => (totalsByCategory[k] ?? 0) > 0)
+    .filter(
+      (k) => CORE_CATEGORIES.includes(k) || (totalsByCategory[k] ?? 0) > 0,
+    )
     .sort((a, b) => (totalsByCategory[b] ?? 0) - (totalsByCategory[a] ?? 0));
 
   // TODO(audit-2026-05-15): wire deltaPercent to a real `previousBudget` snapshot
@@ -283,7 +288,9 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
         <Tabs
           tabs={[
             { id: "category", label: "Per categoria" },
-            { id: "scene", label: "Per scena" },
+            // TODO(audit-2026-05-15): re-enable "Per scena" once getSceneCosts
+            // server fn lands — current view shows only a dropdown filter with
+            // no rendered cost breakdown.
             { id: "day", label: "Per giornata" },
             { id: "all", label: "Tutti i reparti" },
             { id: "cast", label: "Cast" },
@@ -541,9 +548,26 @@ export function BudgetPageV2({ projectId }: BudgetPageV2Props) {
           {(view === "category" || view === "all") && (
             <section className={styles.section}>
               <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Linee di budget</h2>
+                <h2 className={styles.sectionTitle}>Voci</h2>
                 <span className={styles.sectionMeta}>
-                  {linesForView.length} voci · effettivo modificabile
+                  {(() => {
+                    const withDelta = linesForView.filter((l) => {
+                      const est = lineEstimate(l);
+                      const act = lineActual(l);
+                      return est > 0 && Math.abs(act - est) > 0.5;
+                    });
+                    if (withDelta.length === 0) {
+                      return `${linesForView.length} voci · clicca per modificare`;
+                    }
+                    const maxPct = Math.max(
+                      ...withDelta.map((l) => {
+                        const est = lineEstimate(l);
+                        const act = lineActual(l);
+                        return Math.abs(((act - est) / est) * 100);
+                      }),
+                    );
+                    return `${linesForView.length} voci · ${withDelta.length} con scostamento · max ±${maxPct.toFixed(0)}%`;
+                  })()}
                 </span>
               </header>
               <table className={styles.table}>

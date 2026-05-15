@@ -214,15 +214,17 @@
   }
 }
 
+/* Stats unificate sulle 4 doc pages: counter compatto in basso a sinistra,
+ * stessa convenzione di /soggetto (statsBar). No border, no background. */
 .stickyFooter {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: var(--space-4);
-  margin-block-start: var(--space-6);
-  padding: var(--space-2) var(--space-5);
-  border-block-start: var(--border);
-  background: var(--ds-surface);
+  inline-size: 100%;
+  max-inline-size: 720px;
+  margin-inline: auto;
+  padding-block-start: var(--space-3);
   font-size: var(--text-xs);
   color: var(--ds-text-2);
 }
