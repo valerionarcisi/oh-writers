@@ -8,7 +8,7 @@ import {
   Viewbar,
   FloatingDock,
   VersionTrigger,
-  ViewSwitcher,
+  SegmentedControl,
 } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
@@ -174,7 +174,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         isScrolled={isStuck}
         className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
       >
-        <ViewSwitcher
+        <SegmentedControl
           options={[
             { id: "day", label: "Per giornata" },
             { id: "byScene", label: "Per scena" },
@@ -182,6 +182,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           ]}
           activeId={tab}
           onSelect={(id) => setTab(id as ViewTab)}
+          ariaLabel="Vista piano di lavorazione"
         />
         <span className={styles.viewbarRight} />
         {dayCount > 0 && (

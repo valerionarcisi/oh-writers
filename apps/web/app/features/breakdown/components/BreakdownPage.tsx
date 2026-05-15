@@ -11,7 +11,7 @@ import {
   FloatingDock,
   MarginNote,
   Popover,
-  ViewSwitcher,
+  SegmentedControl,
   VersionTrigger,
   Viewbar,
   ViewbarSep,
@@ -447,7 +447,7 @@ function BreakdownPageContent({ projectId }: Props) {
       >
         <Viewbar>
           <div className={styles.viewbarLeft}>
-            <ViewSwitcher
+            <SegmentedControl
               options={[
                 { id: "per-scene", label: "Per scena" },
                 { id: "per-project", label: "Per progetto" },
@@ -455,66 +455,37 @@ function BreakdownPageContent({ projectId }: Props) {
               ]}
               activeId={viewTab}
               onSelect={(id) => setViewTab(id as ViewTab)}
+              ariaLabel="Vista breakdown"
             />
           </div>
           <ViewbarSep />
           {viewTab === "per-scene" && (
-            <div className={styles.viewbarCenter}>
-              <div className={styles.indiceWrap} ref={underlineWrapRef}>
-                <button
-                  type="button"
-                  className={styles.pillBtn}
-                  aria-haspopup="dialog"
-                  aria-expanded={underlineOpen}
-                  onClick={() => setUnderlineOpen((o) => !o)}
-                  data-testid="breakdown-underline-trigger"
-                >
-                  Sottolinea
-                  <span className={styles.badgeCount} data-num>
-                    {underlineActiveCount}
-                  </span>
-                  ▾
-                </button>
-
-                <Popover
-                  isOpen={underlineOpen}
-                  onClose={() => setUnderlineOpen(false)}
-                  placement="bottom-center"
-                  width={240}
-                >
-                  <div
-                    className={styles.underlineList}
-                    role="group"
-                    aria-label="Categorie sottolineate"
+            <div
+              className={styles.underlineStrip}
+              role="group"
+              aria-label="Categorie sottolineate"
+            >
+              <span className={styles.underlineEyebrow}>Sottolinea</span>
+              {UNDERLINE_CHIPS.map((chip) => {
+                const isOn = underline[chip.key];
+                return (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    className={`${styles.underlineDotBtn} ${isOn ? styles.underlineDotBtnOn : ""}`}
+                    // @ts-expect-error CSS custom property
+                    style={{ "--cat-color": chip.color }}
+                    onClick={() => toggleUnderline(chip.key)}
+                    aria-pressed={isOn}
+                    aria-label={`Mostra sottolineature ${chip.label}`}
+                    title={chip.label}
+                    data-testid={`breakdown-underline-${chip.key}`}
                   >
-                    {UNDERLINE_CHIPS.map((chip) => {
-                      const isOn = underline[chip.key];
-                      return (
-                        <label
-                          key={chip.key}
-                          className={styles.underlineRow}
-                          // @ts-expect-error CSS custom property
-                          style={{ "--cat-color": chip.color }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isOn}
-                            onChange={() => toggleUnderline(chip.key)}
-                            aria-label={`Mostra sottolineature ${chip.label}`}
-                          />
-                          <span
-                            className={styles.underlineDot}
-                            aria-hidden="true"
-                          />
-                          <span className={styles.underlineLabel}>
-                            {chip.label}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </Popover>
-              </div>
+                    <span className={styles.underlineDotMark} aria-hidden="true" />
+                    <span className={styles.underlineDotLabel}>{chip.label}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
           {viewTab !== "per-scene" && <div className={styles.viewbarCenter} />}

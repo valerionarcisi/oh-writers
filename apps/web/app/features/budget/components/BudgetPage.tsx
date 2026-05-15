@@ -10,7 +10,7 @@ import {
   HeroKPI,
   Viewbar,
   FloatingDock,
-  ViewSwitcher,
+  SegmentedControl,
   ToggleChip,
 } from "@oh-writers/ui";
 import { resourceTotal } from "@oh-writers/domain";
@@ -285,7 +285,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   return (
     <div className={styles.page} data-testid="budget-page-v2">
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
-        <ViewSwitcher
+        <SegmentedControl
           options={[
             { id: "category", label: "Per categoria" },
             // TODO(audit-2026-05-15): re-enable "Per scena" once getSceneCosts
@@ -297,6 +297,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           ]}
           activeId={view}
           onSelect={(id) => setView(id as ViewMode)}
+          ariaLabel="Vista budget"
         />
         <span className={styles.viewbarRight} />
         {/* TODO(audit-2026-05-15): restore Tariffe ToggleChip when the rate-card

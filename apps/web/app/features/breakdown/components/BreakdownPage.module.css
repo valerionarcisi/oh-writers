@@ -717,7 +717,74 @@
   background: var(--cat-color, var(--ds-text-3));
 }
 
-/* Underline popover (replaces 6 ToggleChips) */
+/* Sottolinea — 6 inline dot-toggles in the viewbar.
+ * Replaces both the previous 6 ToggleChips strip AND the popover that came
+ * after — neither felt right. This pattern shows all 6 categories at once
+ * with minimal visual weight: dot = colored when active, ghost when off.
+ * Click toggles. Label appears next to dot for clarity. */
+.underlineStrip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  flex: 1;
+  justify-content: center;
+}
+
+.underlineEyebrow {
+  color: var(--ds-text-mute);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin-inline-end: var(--ds-space-1);
+}
+
+.underlineDotBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  color: var(--ds-text-mute);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: color 120ms ease;
+
+  &:hover {
+    color: var(--ds-text);
+    background: var(--ds-surface-alt);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.underlineDotMark {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--cat-color, var(--ds-text-3));
+  opacity: 0.25;
+  transition: opacity 120ms ease;
+}
+
+.underlineDotBtnOn {
+  color: var(--ds-text);
+}
+
+.underlineDotBtnOn .underlineDotMark {
+  opacity: 1;
+}
+
+.underlineDotLabel {
+  /* keep label tight */
+}
+
+/* Legacy underline popover styles (kept until full removal) */
 .underlineList {
   display: flex;
   flex-direction: column;

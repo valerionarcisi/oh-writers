@@ -120,6 +120,12 @@ export type {
   ViewSwitcherOption,
 } from "./primitives/ViewSwitcher/ViewSwitcher";
 
+export { SegmentedControl } from "./primitives/SegmentedControl/SegmentedControl";
+export type {
+  SegmentedControlProps,
+  SegmentedControlOption,
+} from "./primitives/SegmentedControl/SegmentedControl";
+
 // ─── DS-v2 Shell ────────────────────────────────────────────
 export { SkipLink } from "./shell/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./shell/SkipLink/SkipLink";
