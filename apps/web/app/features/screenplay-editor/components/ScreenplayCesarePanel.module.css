@@ -70,32 +70,52 @@
   gap: var(--ds-space-2);
 }
 
-/* Inline loading state when Cesare is reading */
+/* Inline loading state when Cesare is reading.
+ * Indeterminate progress bar — una linea infinita che scorre orizzontale
+ * sotto il testo "Cesare sta leggendo…". Più calma di uno spinner che gira
+ * e visivamente coerente col tono del panel (lettura, non spinning). */
 .loadingInline {
   display: inline-flex;
-  align-items: center;
-  gap: var(--ds-space-2);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  inline-size: 100%;
 }
 
 .spinner {
-  inline-size: 12px;
-  block-size: 12px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ds-line);
-  border-top-color: var(--ds-action);
-  animation: cesareSpin 700ms linear infinite;
+  position: relative;
+  block-size: 2px;
+  inline-size: 100%;
+  background: var(--ds-line);
+  border-radius: 1px;
+  overflow: hidden;
 }
 
-@keyframes cesareSpin {
-  to {
-    transform: rotate(360deg);
+.spinner::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  background: var(--ds-action);
+  border-radius: 1px;
+  animation: cesareLineSlide 1400ms ease-in-out infinite;
+}
+
+@keyframes cesareLineSlide {
+  0% {
+    inset-inline-start: -40%;
+  }
+  100% {
+    inset-inline-start: 100%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
+  .spinner::after {
     animation: none;
-    border-top-color: var(--ds-line);
+    inset-inline-start: 0;
+    inline-size: 100%;
+    opacity: 0.3;
   }
 }
 

@@ -9,7 +9,9 @@
   background: #ffffff;
   color: #111;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
-  padding: var(--space-4);
+  /* Top padding tight — content starts close to top edge, killing the
+   * passive whitespace previously left between card top and first scene. */
+  padding: var(--space-1) var(--space-4) var(--space-4);
   flex-shrink: 0;
 }
 

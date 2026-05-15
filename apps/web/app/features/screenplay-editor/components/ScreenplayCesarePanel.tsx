@@ -118,8 +118,8 @@ function PanelBody({
               "Scrivi almeno una scena per iniziare."
             ) : polishQ.isFetching ? (
               <span className={styles.loadingInline}>
-                <span className={styles.spinner} aria-hidden="true" />
                 Cesare sta leggendo…
+                <span className={styles.spinner} aria-hidden="true" />
               </span>
             ) : suggestions.length > 0 ? (
               `${suggestions.length} rifiniture proposte`

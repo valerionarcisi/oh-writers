@@ -173,7 +173,9 @@
 .layout {
   max-inline-size: 1340px;
   margin-inline: auto;
-  padding: 0 var(--ds-space-6) var(--ds-space-10);
+  /* Top padding aligns editor card baseline with the right panel header,
+   * which has a sticky offset of ~116px under the viewbar. */
+  padding: var(--ds-space-2) var(--ds-space-6) var(--ds-space-10);
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: var(--ds-space-6);
@@ -775,14 +777,14 @@
 
 .underlineRow {
   display: grid;
-  grid-template-columns: 16px 12px 1fr;
+  grid-template-columns: 14px 10px 1fr;
   align-items: center;
   gap: var(--ds-space-2);
-  padding: 6px var(--ds-space-2);
+  padding: 4px var(--ds-space-2);
   border-radius: var(--ds-radius-sm);
   cursor: pointer;
   font-family: var(--ds-font-mono);
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ds-text);
