@@ -33,7 +33,7 @@ import {
 } from "../hooks/useBreakdown";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
-import { ProjectBreakdownTable } from "./ProjectBreakdownTable";
+import { ProjectBreakdownView } from "./ProjectBreakdownView";
 import { BreakdownMatrix } from "./BreakdownMatrix";
 import { CesareAdPanel, useAdAlertStats } from "./CesareAdPanel";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
@@ -661,7 +661,7 @@ function BreakdownPageContent({ projectId }: Props) {
           className={styles.tableWrap}
           data-testid="breakdown-table-view"
         >
-          <ProjectBreakdownTable
+          <ProjectBreakdownView
             projectId={projectId}
             versionId={versionId}
             canEdit={canEdit}
