@@ -1,0 +1,120 @@
+.panel {
+  position: sticky;
+  inset-block-start: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  align-self: start;
+  max-block-size: calc(100vh - 190px);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding-block-end: var(--ds-space-3);
+  border-block-end: 1px solid var(--ds-line);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ds-text);
+
+  &::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ds-leaf, var(--ds-success, #9cb072));
+    box-shadow: 0 0 0 3px var(--ds-leaf-soft, rgba(156, 176, 114, 0.18));
+    flex-shrink: 0;
+  }
+}
+
+.status {
+  margin-inline-start: auto;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  color: var(--ds-text-3);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  overflow-y: auto;
+  margin-inline-end: calc(var(--ds-space-2) * -1);
+  padding-inline-end: var(--ds-space-2);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.groupLabel {
+  margin: 0;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-3);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.item {
+  padding: var(--ds-space-3);
+  background: var(--ds-surface-alt, var(--ds-surface));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+}
+
+.itemCat {
+  margin: 0 0 4px;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-leaf, var(--ds-success, #9cb072));
+}
+
+.itemText {
+  margin: 0;
+  font-family: var(--ds-font-serif, var(--ds-font-sans));
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-text-2);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  padding-block-start: var(--ds-space-3);
+  border-block-start: 1px solid var(--ds-line);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  color: var(--ds-text-3);
+}

@@ -10,6 +10,12 @@ export type {
 } from "./components/LoglineBlock";
 export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
+export { NarrativeDocsShell } from "./components/NarrativeDocsShell";
+export type { NarrativeDocsShellProps } from "./components/NarrativeDocsShell";
+export { NarrativeCesarePanel } from "./components/NarrativeCesarePanel";
+export { LoglinePill } from "./components/LoglinePill";
+export type { LoglinePillProps } from "./components/LoglinePill";
+export { TreatmentToc } from "./components/TreatmentToc";
 export { SaveStatus } from "./components/SaveStatus";
 export * from "./hooks/useDocument";
 export * from "./hooks/useExportSubjectDocx";

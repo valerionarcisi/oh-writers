@@ -3,7 +3,6 @@ import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
 import { FloatingDock } from "@oh-writers/ui";
-import type { DocStat } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -20,7 +19,9 @@ import { ExportPdfModal } from "./ExportPdfModal";
 import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
-import { AIAssistantPanel } from "./AIAssistantPanel";
+import { NarrativeDocsShell } from "./NarrativeDocsShell";
+import { NarrativeCesarePanel } from "./NarrativeCesarePanel";
+import { TreatmentToc } from "./TreatmentToc";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   isBulletListActive,
@@ -33,8 +34,6 @@ import { useSaveStatePublisher } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
 
-const WORDS_PER_PAGE = 250;
-
 const stripHtml = (html: string): string =>
   html
     .replace(/<\/(p|h[1-6]|li|br)>/gi, "\n")
@@ -46,27 +45,10 @@ const stripHtml = (html: string): string =>
     .replace(/&gt;/gi, ">")
     .trim();
 
-const countWords = (text: string): number => {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return 0;
-  return trimmed.split(/\s+/).length;
-};
-
-const estimatePages = (text: string): number =>
-  Math.max(1, Math.ceil(countWords(text) / WORDS_PER_PAGE));
-
 interface NarrativeEditorProps {
   document: DocumentViewWithPermission;
   type: DocumentType;
 }
-
-const DOCUMENT_LABELS: Record<DocumentType, string> = {
-  [DocumentTypes.LOGLINE]: "Logline",
-  [DocumentTypes.SOGGETTO]: "Soggetto",
-  [DocumentTypes.SYNOPSIS]: "Sinossi",
-  [DocumentTypes.OUTLINE]: "Scaletta",
-  [DocumentTypes.TREATMENT]: "Trattamento",
-};
 
 const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
   [DocumentTypes.LOGLINE]: "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",
@@ -76,11 +58,18 @@ const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
   [DocumentTypes.TREATMENT]: "Inizia il tuo trattamento qui…",
 };
 
-type EditorMode = "free" | "assisted";
+// Maps each narrative document type to the visual layout of the shell.
+// SYNOPSIS → focus mode (single column).
+// OUTLINE → editor + Cesare panel.
+// TREATMENT → TOC + editor + Cesare panel.
+const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
+  if (type === DocumentTypes.SYNOPSIS) return "single";
+  if (type === DocumentTypes.TREATMENT) return "three";
+  return "two";
+};
 
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
-  const [mode, setMode] = useState<EditorMode>("free");
   const editorViewRef = useRef<EditorView | null>(null);
   const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
@@ -132,17 +121,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const plainContent = isSynopsis || isTreatment ? stripHtml(content) : content;
   const charCount = plainContent.length;
   const loglineOverCap = isLogline && charCount >= LOGLINE_MAX;
-  const pageEstimate =
-    isSynopsis || isTreatment ? estimatePages(plainContent) : 0;
-  const outlineSceneCount = isOutline
-    ? parseOutline(content).acts.reduce(
-        (total, act) =>
-          total +
-          act.sequences.reduce((s, seq) => s + seq.scenes.length, 0),
-        0,
-      )
-    : 0;
-  const outlineWordCount = isOutline ? countWords(stripHtml(content)) : 0;
 
   // When the active version changes (e.g. after switchToVersion), reload content
   // from the freshly-fetched document. We key on currentVersionId rather than
@@ -151,8 +129,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     setContent(document.content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [document.currentVersionId]);
-
-  // Cmd/Ctrl+S handled by SaveIndicator.
 
   // E2E test hook: trigger a save with raw content bypassing the textarea
   // (textarea has HTML maxLength enforcement — tests use this to verify
@@ -181,27 +157,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     };
   }, [document.id]);
 
-  // Narrative export — only shown on the three narrative pages, not outline.
+  // Narrative export — available on synopsis/treatment/outline. Outline isn't
+  // exported via the narrative PDF route today but we still expose the dock
+  // affordance so the page chrome stays consistent.
   const isNarrative =
     type === DocumentTypes.LOGLINE ||
     type === DocumentTypes.SYNOPSIS ||
     type === DocumentTypes.TREATMENT;
-  const logline = useDocument(document.projectId, DocumentTypes.LOGLINE);
-  const synopsis = useDocument(document.projectId, DocumentTypes.SYNOPSIS);
-  const treatment = useDocument(document.projectId, DocumentTypes.TREATMENT);
-  const extractContent = (q: typeof logline): string => {
-    if (!q.data || !q.data.isOk) return "";
-    return q.data.value.content;
-  };
-  // Prefer the live (dirty) content for the current doc so the button state
-  // reflects what the user is about to export, not the last saved version.
-  const contentFor = (t: DocumentType, q: typeof logline): string =>
-    t === type ? content : extractContent(q);
-  const allEmpty =
-    isNarrative &&
-    contentFor(DocumentTypes.LOGLINE, logline).trim().length === 0 &&
-    contentFor(DocumentTypes.SYNOPSIS, synopsis).trim().length === 0 &&
-    contentFor(DocumentTypes.TREATMENT, treatment).trim().length === 0;
+  const loglineQuery = useDocument(document.projectId, DocumentTypes.LOGLINE);
+  const loglineContent =
+    loglineQuery.data && loglineQuery.data.isOk
+      ? loglineQuery.data.value.content
+      : "";
   const exportPdf = useExportNarrativePdf();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const handleExport = () => {
@@ -241,171 +208,215 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     }
   };
 
-  return (
-    <div className={styles.page}>
-      {isReadOnly && (
+  // ── Editor body — reused inside the shell ──────────────────────────────────
+  const editorBody = isOutline ? (
+    <OutlineEditor
+      value={parseOutline(content)}
+      onChange={(outline) => setContent(serializeOutline(outline))}
+      readOnly={isReadOnly}
+    />
+  ) : isLogline ? (
+    <div className={styles.pageShell}>
+      <TextEditor
+        value={content}
+        onChange={setContent}
+        placeholder={DOCUMENT_PLACEHOLDERS[type]}
+        maxLength={LOGLINE_MAX}
+        singleLine={false}
+        readOnly={isReadOnly}
+      />
+      {loglineOverCap && (
         <div
-          className={styles.readOnlyBadge}
-          data-testid="narrative-readonly-badge"
-          role="status"
+          className={styles.errorMessage}
+          role="alert"
+          data-testid="logline-error"
         >
-          Read only
+          Logline is limited to {LOGLINE_MAX} characters.
         </div>
       )}
-
-      {/* Editor area */}
-      <div
-        className={`${styles.editorArea} ${mode === "assisted" ? styles.assisted : ""}`}
-      >
-        <div className={styles.editorMain}>
-          {isOutline ? (
-            <OutlineEditor
-              value={parseOutline(content)}
-              onChange={(outline) => setContent(serializeOutline(outline))}
-              readOnly={isReadOnly}
-            />
-          ) : isLogline ? (
-            <>
-              <TextEditor
-                value={content}
-                onChange={setContent}
-                placeholder={DOCUMENT_PLACEHOLDERS[type]}
-                maxLength={LOGLINE_MAX}
-                singleLine={false}
-                readOnly={isReadOnly}
-              />
-              {loglineOverCap && (
-                <div
-                  className={styles.errorMessage}
-                  role="alert"
-                  data-testid="logline-error"
-                >
-                  Logline is limited to {LOGLINE_MAX} characters.
-                </div>
-              )}
-              <div className={`${styles.editorFooter} ${styles.charCount}`}>
-                <span
-                  data-testid="char-counter"
-                  className={`${styles.counter} ${charCount > LOGLINE_MAX * 0.9 ? styles.charCountWarn : ""}`}
-                >
-                  {charCount}/{LOGLINE_MAX}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className={styles.pageShell}>
-              {isTreatment && !isReadOnly && (
-                <div className={styles.editorToolbar}>
-                  <button
-                    type="button"
-                    className={`${styles.editorToolbarBtn} ${
-                      editorViewRef.current &&
-                      isHeadingActive(editorViewRef.current.state, 2)
-                        ? styles.editorToolbarBtnActive
-                        : ""
-                    }`}
-                    aria-pressed={
-                      editorViewRef.current
-                        ? isHeadingActive(editorViewRef.current.state, 2)
-                        : false
-                    }
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      const view = editorViewRef.current;
-                      if (!view) return;
-                      toggleHeading(
-                        getNarrativeSchema(true),
-                        2,
-                        view.state,
-                        view.dispatch,
-                      );
-                      view.focus();
-                    }}
-                  >
-                    H2
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.editorToolbarBtn} ${
-                      editorViewRef.current &&
-                      isHeadingActive(editorViewRef.current.state, 3)
-                        ? styles.editorToolbarBtnActive
-                        : ""
-                    }`}
-                    aria-pressed={
-                      editorViewRef.current
-                        ? isHeadingActive(editorViewRef.current.state, 3)
-                        : false
-                    }
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      const view = editorViewRef.current;
-                      if (!view) return;
-                      toggleHeading(
-                        getNarrativeSchema(true),
-                        3,
-                        view.state,
-                        view.dispatch,
-                      );
-                      view.focus();
-                    }}
-                  >
-                    H3
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.editorToolbarBtn} ${
-                      editorViewRef.current &&
-                      isBulletListActive(editorViewRef.current.state)
-                        ? styles.editorToolbarBtnActive
-                        : ""
-                    }`}
-                    aria-pressed={
-                      editorViewRef.current
-                        ? isBulletListActive(editorViewRef.current.state)
-                        : false
-                    }
-                    aria-label="Elenco puntato"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      const view = editorViewRef.current;
-                      if (!view) return;
-                      toggleBulletList(
-                        getNarrativeSchema(true),
-                        view.state,
-                        view.dispatch,
-                      );
-                      view.focus();
-                    }}
-                  >
-                    • List
-                  </button>
-                </div>
-              )}
-              <NarrativeProseMirrorView
-                value={content}
-                onChange={setContent}
-                placeholder={DOCUMENT_PLACEHOLDERS[type]}
-                readOnly={isReadOnly}
-                enableHeadings={isTreatment}
-                onReady={(view) => {
-                  editorViewRef.current = view;
-                  // Re-render the toolbar on every transaction so the active
-                  // pill state reflects the current selection.
-                  const original = view.props.dispatchTransaction;
-                  view.setProps({
-                    dispatchTransaction: (tr) => {
-                      original?.call(view, tr);
-                      forceToolbarUpdate((n) => (n + 1) % 1_000_000);
-                    },
-                  });
-                }}
-              />
-            </div>
-          )}
-        </div>
-        {mode === "assisted" && <AIAssistantPanel type={type} />}
+      <div className={`${styles.editorFooter} ${styles.charCount}`}>
+        <span
+          data-testid="char-counter"
+          className={`${styles.counter} ${charCount > LOGLINE_MAX * 0.9 ? styles.charCountWarn : ""}`}
+        >
+          {charCount}/{LOGLINE_MAX}
+        </span>
       </div>
+    </div>
+  ) : (
+    <div className={styles.pageShell}>
+      {isTreatment && !isReadOnly && (
+        <div className={styles.editorToolbar}>
+          <button
+            type="button"
+            className={`${styles.editorToolbarBtn} ${
+              editorViewRef.current &&
+              isHeadingActive(editorViewRef.current.state, 2)
+                ? styles.editorToolbarBtnActive
+                : ""
+            }`}
+            aria-pressed={
+              editorViewRef.current
+                ? isHeadingActive(editorViewRef.current.state, 2)
+                : false
+            }
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const view = editorViewRef.current;
+              if (!view) return;
+              toggleHeading(
+                getNarrativeSchema(true),
+                2,
+                view.state,
+                view.dispatch,
+              );
+              view.focus();
+            }}
+          >
+            H2
+          </button>
+          <button
+            type="button"
+            className={`${styles.editorToolbarBtn} ${
+              editorViewRef.current &&
+              isHeadingActive(editorViewRef.current.state, 3)
+                ? styles.editorToolbarBtnActive
+                : ""
+            }`}
+            aria-pressed={
+              editorViewRef.current
+                ? isHeadingActive(editorViewRef.current.state, 3)
+                : false
+            }
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const view = editorViewRef.current;
+              if (!view) return;
+              toggleHeading(
+                getNarrativeSchema(true),
+                3,
+                view.state,
+                view.dispatch,
+              );
+              view.focus();
+            }}
+          >
+            H3
+          </button>
+          <button
+            type="button"
+            className={`${styles.editorToolbarBtn} ${
+              editorViewRef.current &&
+              isBulletListActive(editorViewRef.current.state)
+                ? styles.editorToolbarBtnActive
+                : ""
+            }`}
+            aria-pressed={
+              editorViewRef.current
+                ? isBulletListActive(editorViewRef.current.state)
+                : false
+            }
+            aria-label="Elenco puntato"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const view = editorViewRef.current;
+              if (!view) return;
+              toggleBulletList(
+                getNarrativeSchema(true),
+                view.state,
+                view.dispatch,
+              );
+              view.focus();
+            }}
+          >
+            • List
+          </button>
+        </div>
+      )}
+      <NarrativeProseMirrorView
+        value={content}
+        onChange={setContent}
+        placeholder={DOCUMENT_PLACEHOLDERS[type]}
+        readOnly={isReadOnly}
+        enableHeadings={isTreatment}
+        onReady={(view) => {
+          editorViewRef.current = view;
+          // Re-render the toolbar on every transaction so the active
+          // pill state reflects the current selection.
+          const original = view.props.dispatchTransaction;
+          view.setProps({
+            dispatchTransaction: (tr) => {
+              original?.call(view, tr);
+              forceToolbarUpdate((n) => (n + 1) % 1_000_000);
+            },
+          });
+        }}
+      />
+    </div>
+  );
+
+  const readOnlyBadge = isReadOnly ? (
+    <div
+      className={styles.readOnlyBadge}
+      data-testid="narrative-readonly-badge"
+      role="status"
+    >
+      Read only
+    </div>
+  ) : null;
+
+  // The Logline route (if ever wired directly) doesn't get the narrative
+  // shell — the logline lives in the viewbar pill on the other 4 routes.
+  if (isLogline) {
+    return (
+      <div className={styles.page}>
+        {readOnlyBadge}
+        <div className={styles.editorArea}>
+          <div className={styles.editorMain}>{editorBody}</div>
+        </div>
+        {isExportModalOpen && (
+          <ExportPdfModal
+            canIncludeTitlePage={true}
+            isPending={exportPdf.isPending}
+            onClose={() => setIsExportModalOpen(false)}
+            onGenerate={handleGenerate}
+          />
+        )}
+        <FloatingDock
+          primaryAction={{
+            label:
+              isNarrative && exportPdf.isPending
+                ? "Esportando…"
+                : "Esporta PDF",
+            hotkey: "⌘E",
+            onClick: handleExport,
+          }}
+          secondaryActions={[]}
+        />
+      </div>
+    );
+  }
+
+  const layout = layoutForType(type);
+  const rightAside = <NarrativeCesarePanel docType={type} />;
+  const leftAside = isTreatment ? <TreatmentToc content={content} /> : undefined;
+
+  return (
+    <div className={styles.page}>
+      {readOnlyBadge}
+      <NarrativeDocsShell
+        projectId={document.projectId}
+        docType={type}
+        layout={layout}
+        logline={loglineContent}
+        canEditLogline={false}
+        versionLabel={undefined}
+        onOpenVersions={toggleVersionsDrawer}
+        leftAside={leftAside}
+        rightAside={rightAside}
+      >
+        {editorBody}
+      </NarrativeDocsShell>
       {isExportModalOpen && (
         <ExportPdfModal
           canIncludeTitlePage={true}
@@ -414,28 +425,14 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onGenerate={handleGenerate}
         />
       )}
-      {/* Stats moved to MetaBar at the top of the page. Sticky footer here
-       *  removed (was a DocStats duplicate). */}
-
       <FloatingDock
         primaryAction={{
           label:
-            isNarrative && exportPdf.isPending
-              ? "Esportando…"
-              : "Esporta PDF",
+            isNarrative && exportPdf.isPending ? "Esportando…" : "Esporta PDF",
           hotkey: "⌘E",
           onClick: handleExport,
         }}
-        secondaryActions={[
-          {
-            label: "Versioni",
-            onClick: toggleVersionsDrawer,
-          },
-          {
-            label: mode === "free" ? "Modalità: Free" : "Modalità: Assisted",
-            onClick: () => setMode(mode === "free" ? "assisted" : "free"),
-          },
-        ]}
+        secondaryActions={[]}
       />
     </div>
   );

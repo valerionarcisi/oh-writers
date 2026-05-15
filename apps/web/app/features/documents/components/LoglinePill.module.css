@@ -1,0 +1,112 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  max-inline-size: 560px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  block-size: 28px;
+  padding-inline: var(--ds-space-3);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--ds-line);
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  cursor: pointer;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background 120ms ease;
+
+  &:hover {
+    border-color: var(--ds-action);
+    color: var(--ds-text);
+  }
+
+  &[data-empty="true"] {
+    color: var(--ds-text-3);
+    font-style: italic;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.pin {
+  flex-shrink: 0;
+  color: var(--ds-action);
+  font-size: 11px;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+
+.popover {
+  padding: var(--ds-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.popHead {
+  margin: 0;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ds-text-3);
+}
+
+.editor {
+  inline-size: 100%;
+  resize: vertical;
+  min-block-size: 96px;
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  background: var(--ds-surface-alt, var(--ds-surface));
+  color: var(--ds-text);
+  font-family: var(--ds-font-serif, var(--ds-font-sans));
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.5;
+
+  &:focus {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.counter {
+  margin: 0;
+  align-self: flex-end;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  color: var(--ds-text-3);
+}
+
+.readonly {
+  margin: 0;
+  padding: var(--ds-space-3);
+  border-radius: var(--radius-md);
+  background: var(--ds-surface-alt, var(--ds-surface));
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-serif, var(--ds-font-sans));
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.5;
+}

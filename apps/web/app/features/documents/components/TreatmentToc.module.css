@@ -1,0 +1,67 @@
+.toc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+}
+
+.label {
+  margin: 0;
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ds-text-3);
+}
+
+.empty {
+  margin: 0;
+  font-family: var(--ds-font-serif, var(--ds-font-sans));
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ds-text-3);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+  padding: 6px var(--ds-space-2);
+  border-radius: var(--radius-md);
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+
+  &[data-level="3"] {
+    padding-inline-start: var(--ds-space-6);
+    font-size: 12px;
+    color: var(--ds-text-3);
+  }
+}
+
+.num {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-3);
+  min-inline-size: 12px;
+}
+
+.text {
+  min-inline-size: 0;
+}
+
+.textSub {
+  min-inline-size: 0;
+}

@@ -1,16 +1,16 @@
 // IT is the default runtime language (Spec 04f). Hook up the shared i18n
 // layer later to surface English copy for non-IT users.
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import { FloatingDock } from "@oh-writers/ui";
-import { toCartelle } from "~/features/documents/lib/cartelle-counter";
 import {
   ExportPdfModal,
   ExportSiaeModal,
   FreeNarrativeEditor,
-  LoglineBlock,
+  NarrativeCesarePanel,
+  NarrativeDocsShell,
   useAutoSave,
   useDocument,
   useExportSubjectDocx,
@@ -159,7 +159,7 @@ function SoggettoPageReady({
   };
 
   return (
-    <main className={styles.page} data-testid="soggetto-page">
+    <div className={styles.page} data-testid="soggetto-page">
       <ExportSiaeModal
         isOpen={isSiaeOpen}
         onClose={() => setIsSiaeOpen(false)}
@@ -176,27 +176,26 @@ function SoggettoPageReady({
         />
       )}
 
-      <div className={styles.editorMain}>
+      <NarrativeDocsShell
+        projectId={projectId}
+        docType={DocumentTypes.SOGGETTO}
+        layout="two"
+        logline={loglineContent}
+        canEditLogline={canEdit}
+        onLoglineChange={setLoglineContent}
+        onOpenVersions={toggleVersions}
+        rightAside={<NarrativeCesarePanel docType={DocumentTypes.SOGGETTO} />}
+      >
         <div className={styles.pageShell}>
-          <LoglineBlock
-            projectId={projectId}
-            logline={loglineContent === "" ? null : loglineContent}
-            canEdit={canEdit}
-            onChange={setLoglineContent}
-            testId="logline-block"
-          />
-          <hr className={styles.divider} />
-          <p className={styles.sectionLabel}>Soggetto</p>
           <FreeNarrativeEditor
             content={soggettoContent}
             onChange={setSoggettoContent}
             canEdit={canEdit}
             embedded
-            hideCounter
             testId="subject-editor"
           />
         </div>
-      </div>
+      </NarrativeDocsShell>
 
       <FloatingDock
         primaryAction={{
@@ -208,7 +207,6 @@ function SoggettoPageReady({
           },
         }}
         secondaryActions={[
-          { label: "Versioni", onClick: toggleVersions },
           {
             label: "Esporta SIAE",
             onClick: () => {
@@ -218,6 +216,6 @@ function SoggettoPageReady({
           },
         ]}
       />
-    </main>
+    </div>
   );
 }
