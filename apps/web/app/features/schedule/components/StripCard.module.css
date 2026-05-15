@@ -1,21 +1,30 @@
+/* StripCard — Variant Schedule 1 (strip board mono).
+ * Border-left colored 3px come categoria-locazione. Niente band, niente
+ * shadow. Heading in Fraunces italic; numeri/meta in Courier mono. */
 .strip {
   display: flex;
   align-items: stretch;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--ds-line);
   background: var(--ds-surface);
+  border-radius: 2px;
+  border-inline-start: 3px solid var(--strip-color, var(--ds-line));
+
+  &[data-color="white"] { --strip-color: var(--ds-line); }
+  &[data-color="yellow"] { --strip-color: #c98a2b; }
+  &[data-color="blue"] { --strip-color: #3a6b8b; }
+  &[data-color="green"] { --strip-color: #5a6b3c; }
+  &[data-color="red"] { --strip-color: #b33a28; }
+  &[data-color="pink"] { --strip-color: #c4729a; }
+  &[data-color="grey"] { --strip-color: #71706a; }
   cursor: grab;
   user-select: none;
   transition:
-    box-shadow 120ms ease,
     border-color 120ms ease,
+    background 120ms ease,
     opacity 120ms ease;
   position: relative;
 
   &:hover {
-    border-color: var(--ds-line);
-    box-shadow: var(--shadow-sm);
+    background: var(--ds-surface-alt);
   }
 
   &:active {
@@ -31,16 +40,15 @@
     opacity: 0.65;
   }
 
-  /* Show lock button on hover */
   &:hover .lockBtn {
     opacity: 1;
   }
 }
 
-/* ─── Color band ─── */
+/* ─── Color band (deprecated — only kept so old TSX with .colorBand
+ *     doesn't break the layout. Now invisible; left-border carries the color). */
 .colorBand {
-  width: 8px;
-  flex-shrink: 0;
+  display: none;
 }
 
 .colorBand[data-color="white"] {
@@ -83,10 +91,11 @@
 }
 
 .sceneNumber {
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  color: var(--ds-text-2);
-  letter-spacing: var(--tracking-wide);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ds-text);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -114,30 +123,35 @@
 }
 
 .location {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
   color: var(--ds-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: var(--leading-tight);
+  line-height: 1.2;
 }
 
 .heading {
-  font-size: var(--text-xs);
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ds-text-mute);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: var(--leading-tight);
 }
 
 .meta {
   display: flex;
   gap: var(--space-1);
+  font-family: var(--ds-font-mono);
   font-size: 10px;
-  color: var(--ds-text-2);
-  letter-spacing: var(--tracking-wide);
+  color: var(--ds-text-mute);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 

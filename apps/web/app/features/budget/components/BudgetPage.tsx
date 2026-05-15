@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import {
   HeroKPI,
+  MetaBar,
   Viewbar,
   FloatingDock,
   SegmentedControl,
@@ -282,8 +283,32 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
 
   const versionLabel = "v3 · 14 mag 2026";
 
+  const linesWithDelta = linesForView.filter((l) => {
+    const est = lineEstimate(l);
+    const act = lineActual(l);
+    return est > 0 && Math.abs(act - est) > 0.5;
+  });
+
   return (
     <div className={styles.page} data-testid="budget-page-v2">
+      <MetaBar
+        items={[
+          { id: "scene", label: "Scene", value: sceneCount },
+          ...(shootingDays
+            ? [{ id: "gg", label: "Giornate", value: shootingDays }]
+            : []),
+          { id: "voci", label: "Voci", value: linesForView.length },
+          ...(linesWithDelta.length > 0
+            ? [
+                {
+                  id: "delta",
+                  label: "Scostamento",
+                  value: linesWithDelta.length,
+                },
+              ]
+            : []),
+        ]}
+      />
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
         <SegmentedControl
           options={[

@@ -26,6 +26,7 @@ export function StripCard({
       draggable={!strip.isLocked}
       data-testid={`strip-${strip.id}`}
       data-scene={strip.sceneNumber}
+      data-color={strip.bannerColor}
       onMouseDown={() => {
         dragged.current = false;
       }}

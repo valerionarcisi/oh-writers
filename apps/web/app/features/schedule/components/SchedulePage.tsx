@@ -9,6 +9,7 @@ import {
   FloatingDock,
   VersionTrigger,
   SegmentedControl,
+  MetaBar,
 } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
@@ -170,6 +171,15 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
 
   return (
     <div className={styles.page} data-testid="schedule-page-v2">
+      <MetaBar
+        items={[
+          { id: "giornate", label: "Giornate", value: dayCount },
+          { id: "scene", label: "Scene", value: sceneCount },
+          ...(totalHours > 0
+            ? [{ id: "ore", label: "Ore tot.", value: totalHours.toFixed(1) }]
+            : []),
+        ]}
+      />
       <Viewbar
         isScrolled={isStuck}
         className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
