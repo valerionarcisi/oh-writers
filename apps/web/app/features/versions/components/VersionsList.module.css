@@ -56,7 +56,7 @@
 .btnPrimary {
   composes: btn;
   background: var(--ds-action);
-  color: var(--ds-action, #fff);
+  color: var(--ds-text-on-dark, #fff);
   border: 1px solid transparent;
 
   &:hover:not(:disabled) {

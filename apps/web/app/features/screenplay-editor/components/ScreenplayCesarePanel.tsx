@@ -192,10 +192,6 @@ function PanelBody({
                       </div>
                     )}
                     {canApply && (
-                      // TODO(audit-2026-05-15): re-enable Applica once
-                      // handleApplyEdit in ScreenplayEditor.tsx is verified to
-                      // hit the correct PM range. Diff preview above stays
-                      // visible so users can still SEE the suggestion.
                       <button
                         type="button"
                         className={styles.applyBtn}
@@ -203,9 +199,6 @@ function PanelBody({
                           handleApply(s.id, s.find as string, s.replace as string)
                         }
                         data-testid={`cesare-apply-${s.id}`}
-                        disabled
-                        aria-disabled="true"
-                        title="Funzione in revisione"
                       >
                         Applica
                       </button>
