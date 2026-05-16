@@ -48,6 +48,7 @@ import {
   statusForConfidence,
 } from "../lib/llm-spoglio-prompt";
 import { mockFullScriptBreakdown } from "~/mocks/ai-responses";
+import { loadAnthropicStreamingClient } from "~/features/ai/anthropic-client";
 
 export interface StreamFullSpoglioResult {
   scenesProcessed: number;
@@ -491,19 +492,7 @@ const streamFromAnthropic = async (
   scenesForLlm: { sceneNumber: number; heading: string; body: string }[],
   sink: SceneSink,
 ): Promise<void> => {
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
-  if (!apiKey || apiKey.length === 0) {
-    throw new Error(
-      "ANTHROPIC_API_KEY non configurata. Imposta la chiave in apps/web/.env oppure MOCK_AI=true.",
-    );
-  }
-  // Lazy-import the SDK so the dependency stays optional in MOCK_AI envs.
-  const sdkModule = "@anthropic-ai/sdk";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sdk: any = await import(/* @vite-ignore */ sdkModule);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Anthropic = (sdk.default ?? sdk) as any;
-  const client = new Anthropic({ apiKey });
+  const client = await loadAnthropicStreamingClient();
 
   const userPrompt = scenesForLlm
     .map((s) =>
@@ -530,15 +519,9 @@ const streamFromAnthropic = async (
   let cursor = 0;
   const seen = new Set<number>();
 
-  // The SDK's MessageStream emits typed events. We listen for partial
-  // input_json deltas on the tool_use block.
-  stream.on(
-    "inputJson",
-    (delta: { partial_json?: string; partialJson?: string } | string) => {
-      const chunk =
-        typeof delta === "string"
-          ? delta
-          : (delta.partial_json ?? delta.partialJson ?? "");
+  // The SDK's MessageStream emits "inputJson" with a string delta for each
+  // partial JSON chunk from the tool_use block.
+  stream.on("inputJson", (chunk: string) => {
       if (chunk.length === 0) return;
       buffer += chunk;
       const { scenes: ready, nextCursor } = extractCompleteScenes(

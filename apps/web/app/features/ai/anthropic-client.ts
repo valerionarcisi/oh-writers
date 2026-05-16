@@ -74,6 +74,27 @@ interface AnthropicConstructor {
   new (config: { apiKey: string }): AnthropicMessagesClient;
 }
 
+// Minimal typing for the streaming slice of the SDK used by llm-spoglio.
+// The SDK's MessageStream.on("inputJson", ...) fires for each partial JSON
+// delta from a tool_use block. finalMessage() resolves when the stream ends.
+export interface MessageStream {
+  on(
+    event: "inputJson",
+    listener: (delta: string) => void,
+  ): this;
+  finalMessage(): Promise<unknown>;
+}
+
+interface AnthropicStreamingMessagesClient {
+  readonly messages: {
+    stream(args: Record<string, unknown>): MessageStream;
+  };
+}
+
+interface AnthropicStreamingConstructor {
+  new (config: { apiKey: string }): AnthropicStreamingMessagesClient;
+}
+
 const loadAnthropic = async (): Promise<AnthropicConstructor> => {
   const sdkModule = "@anthropic-ai/sdk";
   const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
@@ -81,6 +102,22 @@ const loadAnthropic = async (): Promise<AnthropicConstructor> => {
   } & AnthropicConstructor;
   return (sdk.default ?? sdk) as AnthropicConstructor;
 };
+
+export const loadAnthropicStreamingClient =
+  async (): Promise<AnthropicStreamingMessagesClient> => {
+    const sdkModule = "@anthropic-ai/sdk";
+    const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
+      default?: AnthropicStreamingConstructor;
+    } & AnthropicStreamingConstructor;
+    const Ctor = (sdk.default ?? sdk) as AnthropicStreamingConstructor;
+    const apiKey = process.env["ANTHROPIC_API_KEY"];
+    if (!apiKey || apiKey.length === 0) {
+      throw new Error(
+        "ANTHROPIC_API_KEY is not set. Set it in apps/web/.env or use MOCK_AI=true.",
+      );
+    }
+    return new Ctor({ apiKey });
+  };
 
 export const callHaiku = (
   params: CallHaikuParams,

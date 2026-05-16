@@ -27,8 +27,7 @@ export const screenplays = pgTable("screenplays", {
   title: text("title").notNull(),
   pageCount: integer("page_count").notNull().default(0),
   yjsState: bytea("yjs_state"),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pmDoc: jsonb("pm_doc").$type<Record<string, any> | null>(),
+  pmDoc: jsonb("pm_doc").$type<Record<string, unknown> | null>(),
   content: text("content").notNull().default(""),
   currentVersionId: uuid("current_version_id"),
   createdBy: uuid("created_by")
