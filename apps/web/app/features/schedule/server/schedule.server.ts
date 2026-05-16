@@ -124,113 +124,119 @@ const canEdit = (access: {
 
 // ─── Query helper ─────────────────────────────────────────────────────────────
 
-const loadScheduleView = async (
+const loadScheduleView = (
   db: Db,
   scheduleId: string,
-): Promise<ScheduleView | null> => {
-  const schedule = await db.query.schedules.findFirst({
-    where: eq(schedules.id, scheduleId),
-  });
-  if (!schedule) return null;
+): ResultAsync<ScheduleView, ScheduleNotFoundError | DbError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const schedule = await db.query.schedules.findFirst({
+        where: eq(schedules.id, scheduleId),
+      });
+      if (!schedule) return null;
 
-  const screenplay = await db.query.screenplays.findFirst({
-    where: eq(screenplays.projectId, schedule.projectId),
-  });
-  const screenplayId = screenplay?.id ?? null;
-  const screenplayVersionId = screenplay?.currentVersionId ?? null;
+      const screenplay = await db.query.screenplays.findFirst({
+        where: eq(screenplays.projectId, schedule.projectId),
+      });
+      const screenplayId = screenplay?.id ?? null;
+      const screenplayVersionId = screenplay?.currentVersionId ?? null;
 
-  const days = await db
-    .select()
-    .from(shootingDays)
-    .where(eq(shootingDays.scheduleId, scheduleId))
-    .orderBy(asc(shootingDays.dayNumber));
+      const days = await db
+        .select()
+        .from(shootingDays)
+        .where(eq(shootingDays.scheduleId, scheduleId))
+        .orderBy(asc(shootingDays.dayNumber));
 
-  const allStrips = await db
-    .select({
-      id: strips.id,
-      shootingDayId: strips.shootingDayId,
-      sceneId: strips.sceneId,
-      position: strips.position,
-      bannerColor: strips.bannerColor,
-      isLocked: strips.isLocked,
-      estimatedHours: strips.estimatedHours,
-      sceneNumber: scenes.number,
-      sceneHeading: scenes.heading,
-      location: scenes.location,
-      intExt: scenes.intExt,
-      timeOfDay: scenes.timeOfDay,
-      pageStart: scenes.pageStart,
-      pageEnd: scenes.pageEnd,
-    })
-    .from(strips)
-    .innerJoin(scenes, eq(strips.sceneId, scenes.id))
-    .where(eq(strips.scheduleId, scheduleId))
-    .orderBy(asc(strips.position));
+      const allStrips = await db
+        .select({
+          id: strips.id,
+          shootingDayId: strips.shootingDayId,
+          sceneId: strips.sceneId,
+          position: strips.position,
+          bannerColor: strips.bannerColor,
+          isLocked: strips.isLocked,
+          estimatedHours: strips.estimatedHours,
+          sceneNumber: scenes.number,
+          sceneHeading: scenes.heading,
+          location: scenes.location,
+          intExt: scenes.intExt,
+          timeOfDay: scenes.timeOfDay,
+          pageStart: scenes.pageStart,
+          pageEnd: scenes.pageEnd,
+        })
+        .from(strips)
+        .innerJoin(scenes, eq(strips.sceneId, scenes.id))
+        .where(eq(strips.scheduleId, scheduleId))
+        .orderBy(asc(strips.position));
 
-  const toStripView = (s: (typeof allStrips)[number]): StripView => {
-    const pageCount =
-      s.pageStart != null && s.pageEnd != null && s.pageEnd >= s.pageStart
-        ? Math.max(1, s.pageEnd - s.pageStart)
-        : 1;
-    return {
-      id: s.id,
-      shootingDayId: s.shootingDayId,
-      sceneId: s.sceneId,
-      position: s.position,
-      bannerColor: s.bannerColor as BannerColor,
-      isLocked: s.isLocked,
-      estimatedHours: s.estimatedHours,
-      resolvedHours: resolveEffortHours(pageCount, s.estimatedHours),
-      sceneNumber: s.sceneNumber,
-      sceneHeading: s.sceneHeading,
-      location: s.location,
-      intExt: s.intExt,
-      timeOfDay: s.timeOfDay,
-      pageCount,
-    };
-  };
+      const toStripView = (s: (typeof allStrips)[number]): StripView => {
+        const pageCount =
+          s.pageStart != null && s.pageEnd != null && s.pageEnd >= s.pageStart
+            ? Math.max(1, s.pageEnd - s.pageStart)
+            : 1;
+        return {
+          id: s.id,
+          shootingDayId: s.shootingDayId,
+          sceneId: s.sceneId,
+          position: s.position,
+          bannerColor: s.bannerColor as BannerColor,
+          isLocked: s.isLocked,
+          estimatedHours: s.estimatedHours,
+          resolvedHours: resolveEffortHours(pageCount, s.estimatedHours),
+          sceneNumber: s.sceneNumber,
+          sceneHeading: s.sceneHeading,
+          location: s.location,
+          intExt: s.intExt,
+          timeOfDay: s.timeOfDay,
+          pageCount,
+        };
+      };
 
-  const stripsByDay = new Map<string, StripView[]>();
-  const unscheduled: StripView[] = [];
+      const stripsByDay = new Map<string, StripView[]>();
+      const unscheduled: StripView[] = [];
 
-  for (const s of allStrips) {
-    const view = toStripView(s);
-    if (!s.shootingDayId) {
-      unscheduled.push(view);
-    } else {
-      const arr = stripsByDay.get(s.shootingDayId) ?? [];
-      arr.push(view);
-      stripsByDay.set(s.shootingDayId, arr);
-    }
-  }
+      for (const s of allStrips) {
+        const view = toStripView(s);
+        if (!s.shootingDayId) {
+          unscheduled.push(view);
+        } else {
+          const arr = stripsByDay.get(s.shootingDayId) ?? [];
+          arr.push(view);
+          stripsByDay.set(s.shootingDayId, arr);
+        }
+      }
 
-  const dayViews: ShootingDayView[] = days.map((d) => {
-    const dayStrips = stripsByDay.get(d.id) ?? [];
-    return {
-      id: d.id,
-      dayNumber: d.dayNumber,
-      date: d.date,
-      dayType: d.dayType as ShootingDayView["dayType"],
-      notes: d.notes,
-      strips: dayStrips,
-      totalPageCount: dayStrips.reduce((sum, s) => sum + s.pageCount, 0),
-      totalHours: dayStrips.reduce((sum, s) => sum + s.resolvedHours, 0),
-    };
-  });
+      const dayViews: ShootingDayView[] = days.map((d) => {
+        const dayStrips = stripsByDay.get(d.id) ?? [];
+        return {
+          id: d.id,
+          dayNumber: d.dayNumber,
+          date: d.date,
+          dayType: d.dayType as ShootingDayView["dayType"],
+          notes: d.notes,
+          strips: dayStrips,
+          totalPageCount: dayStrips.reduce((sum, s) => sum + s.pageCount, 0),
+          totalHours: dayStrips.reduce((sum, s) => sum + s.resolvedHours, 0),
+        };
+      });
 
-  return {
-    id: schedule.id,
-    projectId: schedule.projectId,
-    name: schedule.name,
-    startDate: schedule.startDate,
-    countryCode: schedule.countryCode,
-    status: schedule.status as "draft" | "locked",
-    screenplayId,
-    screenplayVersionId,
-    shootingDays: dayViews,
-    unscheduledStrips: unscheduled,
-  };
-};
+      return {
+        id: schedule.id,
+        projectId: schedule.projectId,
+        name: schedule.name,
+        startDate: schedule.startDate,
+        countryCode: schedule.countryCode,
+        status: schedule.status as "draft" | "locked",
+        screenplayId,
+        screenplayVersionId,
+        shootingDays: dayViews,
+        unscheduledStrips: unscheduled,
+      };
+    })(),
+    (e) => new DbError("loadScheduleView", e),
+  ).andThen((view) =>
+    view ? ok(view) : err(new ScheduleNotFoundError(scheduleId)),
+  );
 
 // ─── Server functions ─────────────────────────────────────────────────────────
 
@@ -259,10 +265,13 @@ export const getSchedule = createServerFn({ method: "GET" })
         )
         .andThen((schedule) => {
           if (!schedule) return ok(null);
-          return ResultAsync.fromPromise(
-            loadScheduleView(db, schedule.id),
-            (e) => new DbError("getSchedule/loadView", e),
-          );
+          return loadScheduleView(db, schedule.id)
+            .map((view): ScheduleView | null => view)
+            .mapErr((e) =>
+              e._tag === "ScheduleNotFoundError"
+                ? new DbError("getSchedule/loadView", "schedule row disappeared")
+                : e,
+            );
         });
 
       return toShape(result);
@@ -398,9 +407,10 @@ export const generateSchedule = createServerFn({ method: "POST" })
           );
         })
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("generateSchedule/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("generateSchedule/loadView", "schedule not found after create")
+              : e,
           ),
         );
 
@@ -535,9 +545,10 @@ export const moveStrip = createServerFn({ method: "POST" })
           ).map(() => schedule.id),
         )
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("moveStrip/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("moveStrip/loadView", "schedule not found after update")
+              : e,
           ),
         );
 
@@ -609,9 +620,10 @@ export const updateShootingDay = createServerFn({ method: "POST" })
           ).map(() => schedule.id),
         )
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("updateShootingDay/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("updateShootingDay/loadView", "schedule not found after update")
+              : e,
           ),
         );
 
@@ -687,9 +699,10 @@ export const addShootingDay = createServerFn({ method: "POST" })
           ).map(() => schedule.id),
         )
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("addShootingDay/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("addShootingDay/loadView", "schedule not found after update")
+              : e,
           ),
         );
 
@@ -775,9 +788,10 @@ export const removeShootingDay = createServerFn({ method: "POST" })
           ).map(() => schedule.id),
         )
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("removeShootingDay/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("removeShootingDay/loadView", "schedule not found after update")
+              : e,
           ),
         );
 
@@ -835,9 +849,10 @@ export const toggleStripLock = createServerFn({ method: "POST" })
           ).map(() => schedule.id),
         )
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("toggleStripLock/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("toggleStripLock/loadView", "schedule not found after update")
+              : e,
           ),
         );
 
@@ -905,9 +920,10 @@ export const updateStripEffort = createServerFn({ method: "POST" })
           ).map(() => schedule.id),
         )
         .andThen((scheduleId) =>
-          ResultAsync.fromPromise(
-            loadScheduleView(db, scheduleId).then((v) => v!),
-            (e) => new DbError("updateStripEffort/loadView", e),
+          loadScheduleView(db, scheduleId).mapErr((e) =>
+            e._tag === "ScheduleNotFoundError"
+              ? new DbError("updateStripEffort/loadView", "schedule not found after update")
+              : e,
           ),
         );
 
