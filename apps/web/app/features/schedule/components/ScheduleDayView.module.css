@@ -171,25 +171,25 @@
 }
 
 .scene[data-color="white"] .flag {
-  --strip-color: #d8d6cd;
+  --strip-color: var(--ds-linen-300);
 }
 .scene[data-color="yellow"] .flag {
-  --strip-color: #c98a2b;
+  --strip-color: var(--ds-cat-scenografia);
 }
 .scene[data-color="blue"] .flag {
-  --strip-color: #3a6b8b;
+  --strip-color: var(--ds-info);
 }
 .scene[data-color="green"] .flag {
-  --strip-color: #5a6b3c;
+  --strip-color: var(--ds-leaf-500);
 }
 .scene[data-color="red"] .flag {
-  --strip-color: #b33a28;
+  --strip-color: var(--ds-danger);
 }
 .scene[data-color="pink"] .flag {
-  --strip-color: #c4729a;
+  --strip-color: var(--ds-cat-costumi);
 }
 .scene[data-color="grey"] .flag {
-  --strip-color: #71706a;
+  --strip-color: var(--ds-linen-600);
 }
 
 .sceneNum {

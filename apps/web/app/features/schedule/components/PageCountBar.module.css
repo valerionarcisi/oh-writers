@@ -16,13 +16,13 @@
 }
 
 .fill[data-color="green"] {
-  background: #34d399;
+  background: var(--ds-success);
 }
 .fill[data-color="yellow"] {
-  background: #fbbf24;
+  background: var(--ds-warning);
 }
 .fill[data-color="red"] {
-  background: #f87171;
+  background: var(--ds-danger);
 }
 
 .label {

@@ -22,7 +22,7 @@
   overflow: hidden;
 
   &.expensive {
-    border-color: var(--ds-warning, #f59e0b);
+    border-color: var(--ds-warning);
   }
 }
 
@@ -46,7 +46,7 @@
   min-width: 48px;
 
   &.warn {
-    color: var(--ds-warning, #f59e0b);
+    color: var(--ds-warning);
   }
 }
 
@@ -65,7 +65,7 @@
   transition: width 250ms ease;
 
   &.warn {
-    background: var(--ds-warning, #f59e0b);
+    background: var(--ds-warning);
   }
 }
 
@@ -78,7 +78,7 @@
   text-align: end;
 
   &.warn {
-    color: var(--ds-warning, #f59e0b);
+    color: var(--ds-warning);
   }
 }
 

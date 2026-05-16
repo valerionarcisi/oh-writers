@@ -53,7 +53,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--ds-leaf, var(--ds-success, #5a6b3c));
+  background: var(--ds-agent);
   flex-shrink: 0;
 }
 
@@ -291,7 +291,7 @@
 
 .applyBtn:hover {
   background: var(--ds-action);
-  color: var(--ds-text-on-dark, #fff);
+  color: var(--ds-text-on-dark);
 }
 
 .applyBtn:focus-visible {
@@ -304,8 +304,8 @@
   margin-inline-start: var(--ds-space-2);
   padding: 1px 6px;
   border-radius: var(--ds-radius-pill);
-  background: color-mix(in srgb, var(--ds-error, #b04a2a) 12%, transparent);
-  color: var(--ds-error, #b04a2a);
+  background: color-mix(in srgb, var(--ds-danger) 12%, transparent);
+  color: var(--ds-danger);
   font-family: var(--ds-font-mono);
   font-size: 9px;
   font-weight: 600;

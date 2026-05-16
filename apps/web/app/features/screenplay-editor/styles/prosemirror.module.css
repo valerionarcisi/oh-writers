@@ -9,8 +9,8 @@
   font-family: "Courier Prime", "Courier New", Courier, monospace;
   font-size: 12pt;
   line-height: 1;
-  color: #111;
-  caret-color: #111;
+  color: var(--ds-linen-800);
+  caret-color: var(--ds-linen-800);
   outline: none;
   padding-block-start: 1in;
   padding-block-end: 1in;
@@ -85,7 +85,7 @@
   position: absolute;
   font-family: "Courier Prime", "Courier New", Courier, monospace;
   font-size: 10pt;
-  color: #999;
+  color: var(--ds-text-faint);
   user-select: none;
   pointer-events: none;
 }
@@ -111,6 +111,6 @@
 .editorRoot p.pm-transition:empty::before,
 .editorRoot h2.pm-heading:empty::before {
   content: attr(data-placeholder);
-  color: #bbb;
+  color: var(--ds-text-faint);
   pointer-events: none;
 }
