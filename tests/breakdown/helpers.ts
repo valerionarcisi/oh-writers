@@ -8,7 +8,8 @@ export const TEAM_SCENE_2_ID = "00000000-0000-4000-a000-000000010011";
 
 export const navigateToBreakdown = async (page: Page, projectId: string) => {
   await page.goto(`${BASE_URL}/projects/${projectId}/breakdown`);
-  await expect(page.getByTestId("breakdown-page")).toBeVisible({
+  // BreakdownPage renders data-testid="breakdown-page-v2" since the v2 redesign
+  await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
     timeout: 10_000,
   });
 };

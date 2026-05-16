@@ -140,14 +140,14 @@ export function BlockingCard({
             onCameraRotate={handleCameraRotate}
             onPinClick={onShotSelect}
           />
-          <div className={styles.legend}>
-            <span className={styles.legendItem} data-kind="camera">
+          <div className={styles.legend} aria-label="Legenda blocking">
+            <span className={styles.legendItem} data-kind="camera" aria-label="Camera">
               Camera
             </span>
-            <span className={styles.legendItem} data-kind="actor">
+            <span className={styles.legendItem} data-kind="actor" aria-label="Personaggio">
               Personaggio
             </span>
-            <span className={styles.legendItem} data-kind="furniture">
+            <span className={styles.legendItem} data-kind="furniture" aria-label="Arredo">
               Arredo
             </span>
           </div>

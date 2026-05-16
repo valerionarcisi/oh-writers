@@ -39,6 +39,7 @@ export function ShotBlock({
   return (
     <div
       className={styles.block}
+      data-testid="shot-block"
       style={
         {
           inlineSize: `${Math.max(widthPct, 1)}%`,

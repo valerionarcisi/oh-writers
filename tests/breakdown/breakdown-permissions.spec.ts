@@ -14,6 +14,9 @@ import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
  * the write controls (add element + Cesare suggest) regardless of any
  * client-side guess. The server still enforces; this guards against UI
  * regressions that would call disabled mutations.
+ *
+ * Note: CSV export (breakdown-export-csv) is a read-only operation and
+ * is intentionally available to viewers — it does not mutate state.
  */
 
 test.describe("[Spec 10] Breakdown — permissions", () => {
@@ -21,21 +24,24 @@ test.describe("[Spec 10] Breakdown — permissions", () => {
     authenticatedViewerPage,
   }) => {
     await navigateToBreakdown(authenticatedViewerPage, TEAM_PROJECT_ID);
+    // Write controls must be absent for viewers
     await expect(
       authenticatedViewerPage.getByTestId("add-element-trigger"),
     ).toHaveCount(0);
     await expect(
       authenticatedViewerPage.getByTestId("cesare-suggest-scene"),
     ).toHaveCount(0);
+    // CSV export is a read-only operation — visible to viewers
     await expect(
-      authenticatedViewerPage.getByTestId("breakdown-export-trigger"),
-    ).toHaveCount(0);
+      authenticatedViewerPage.getByTestId("breakdown-export-csv"),
+    ).toBeVisible();
   });
 
   test("[OHW-255] owner sees write controls", async ({ authenticatedPage }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
+    // Export CSV is available for all roles (read-only operation)
     await expect(
-      authenticatedPage.getByTestId("breakdown-export-trigger"),
+      authenticatedPage.getByTestId("breakdown-export-csv"),
     ).toBeVisible();
     // Cesare suggest + add element appear once a scene is selected.
     await expect(

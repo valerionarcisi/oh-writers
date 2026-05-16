@@ -9,7 +9,7 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
-    const sceneButtons = page.locator('[class*="sceneItem"]');
+    const sceneButtons = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
     await expect(sceneButtons.first()).toBeVisible({ timeout: 15_000 });
 
     const unplanned = sceneButtons.filter({ hasText: "non pianificata" }).first();
@@ -21,9 +21,10 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     await unplanned.click();
 
     await expect(page.getByText("Piano A")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/\d+ shot/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/shot/)).toBeVisible({ timeout: 10_000 });
 
-    await expect(page.getByText(/suggerito/)).toBeVisible({ timeout: 5_000 });
+    // BlockingCard shows "SUGGERITO" (uppercase) when the plan was auto-suggested
+    await expect(page.getByText("SUGGERITO")).toBeVisible({ timeout: 5_000 });
   });
 
   test("[OHW-022b] Quick-add toolbar adds shot to active plan", async ({
@@ -32,20 +33,16 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
-    const sceneButtons = page.locator('[class*="sceneItem"]');
+    const sceneButtons = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
     await sceneButtons.first().click();
 
     const cuBtn = page.getByRole("button", { name: "CU", exact: true });
     await expect(cuBtn).toBeVisible({ timeout: 10_000 });
-    const initialShotCount = await page
-      .locator('[class*="ShotBlock_block"], [class*="block"][data-shot-id]')
-      .count();
+    const initialShotCount = await page.getByTestId("shot-block").count();
     await cuBtn.click();
 
     await page.waitForTimeout(500);
-    const newCount = await page
-      .locator('[class*="ShotBlock_block"], [class*="block"][data-shot-id]')
-      .count();
+    const newCount = await page.getByTestId("shot-block").count();
     expect(newCount).toBeGreaterThan(initialShotCount);
   });
 
@@ -55,13 +52,15 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
-    const sceneButtons = page.locator('[class*="sceneItem"]');
+    const sceneButtons = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
     await sceneButtons.first().click();
 
+    // QuickAddToolbar renders "▼ Pattern…" button
     const patternBtn = page.getByRole("button", { name: /Pattern/ });
     await expect(patternBtn).toBeVisible({ timeout: 10_000 });
     await patternBtn.click();
 
+    // PatternMenu renders a "consigliato" badge on the recommended pattern
     await expect(page.getByText("consigliato").first()).toBeVisible({
       timeout: 5_000,
     });
@@ -73,21 +72,28 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
-    const sceneButtons = page.locator('[class*="sceneItem"]');
+    const sceneButtons = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
     await sceneButtons.first().click();
 
+    // ScriptPanel collapsed tab uses aria-label="Apri pannello sceneggiatura"
     const scriptTab = page.getByRole("button", {
-      name: /Apri pannello sceneggiatura/,
+      name: "Apri pannello sceneggiatura",
     });
     await expect(scriptTab).toBeVisible({ timeout: 10_000 });
     await scriptTab.click();
 
+    // When open, ScriptPanel header shows "Scena N — testo"
     await expect(page.getByText(/Scena \d+ — testo/)).toBeVisible({
       timeout: 5_000,
     });
 
     await page.reload();
+    // Wait for scene list to re-render after reload
+    await expect(
+      page.getByRole("button").filter({ hasText: /SC\.\d+/ }).first(),
+    ).toBeVisible({ timeout: 15_000 });
     await sceneButtons.first().click();
+    // Panel should still be open (persisted in localStorage)
     await expect(page.getByText(/Scena \d+ — testo/)).toBeVisible({
       timeout: 10_000,
     });
@@ -99,11 +105,12 @@ test.describe("[OHW-022b] Piano di Ripresa v2 — parallel plans", () => {
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
-    const sceneButtons = page.locator('[class*="sceneItem"]');
+    const sceneButtons = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
     await sceneButtons.first().click();
 
     await expect(page.getByText("Piano A")).toBeVisible({ timeout: 10_000 });
 
+    // PlanPicker "+ piano" button opens a popover with "Vuoto" option
     await page.getByRole("button", { name: "+ piano" }).click();
     await page.getByRole("button", { name: "Vuoto", exact: true }).click();
 

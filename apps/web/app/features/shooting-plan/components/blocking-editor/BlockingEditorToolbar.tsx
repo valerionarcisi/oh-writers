@@ -42,7 +42,6 @@ export function BlockingEditorToolbar({
         type="button"
         className={styles.closeBtn}
         onClick={onClose}
-        aria-label="Chiudi editor"
       >
         ← Chiudi
       </button>
