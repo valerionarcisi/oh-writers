@@ -460,3 +460,7 @@ export const blockingQueryOptions = (sceneId: string, planId: string) =>
     queryKey: ["blocking", sceneId, planId] as const,
     queryFn: () => getOrCreateBlocking({ data: { sceneId, planId } }),
   });
+
+// ─── Test-only exports ─────────────────────────────────────────────────────────
+// Exported for unit tests only. Not part of the public API.
+export const __test__ = { inferTemplateKey, loadOrCreateLocation };

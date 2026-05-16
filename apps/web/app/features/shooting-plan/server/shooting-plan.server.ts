@@ -1454,3 +1454,7 @@ export const addReverseShot = createServerFn({ method: "POST" })
       return toShape(result);
     },
   );
+
+// ─── Test-only exports ─────────────────────────────────────────────────────────
+// Exported for unit tests only. Not part of the public API.
+export const __test__ = { resolveWeights, buildScenarioView };
