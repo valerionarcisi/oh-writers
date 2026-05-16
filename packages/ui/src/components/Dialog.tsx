@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
+import { FocusScope, useDialog, useOverlay, usePreventScroll } from "react-aria";
 import styles from "./Dialog.module.css";
 
 type DialogSize = "sm" | "md" | "lg" | "xl";
@@ -39,11 +40,13 @@ export function Dialog({
   "data-testid": testId,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
+  // Keep the native <dialog> in sync for showModal() / ::backdrop support.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-
     if (isOpen && !dialog.open) {
       dialog.showModal();
     } else if (!isOpen && dialog.open) {
@@ -51,18 +54,31 @@ export function Dialog({
     }
   }, [isOpen]);
 
+  // Bridge native ESC ("cancel" event) to onClose so react-aria and the native
+  // dialog agree on who handles the keyboard dismiss. react-aria also fires onClose
+  // on ESC via useOverlay — preventDefault prevents the native close from double-firing.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-
-    const handleClose = () => onClose();
-    dialog.addEventListener("close", handleClose);
-    return () => dialog.removeEventListener("close", handleClose);
+    const handleCancel = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    dialog.addEventListener("cancel", handleCancel);
+    return () => dialog.removeEventListener("cancel", handleCancel);
   }, [onClose]);
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
-    if (e.target === dialogRef.current) onClose();
-  };
+  // react-aria scroll prevention (harmless alongside native showModal scroll lock).
+  usePreventScroll({ isDisabled: !isOpen });
+
+  // useOverlay provides ESC dismiss and click-outside dismiss on the content element.
+  const { overlayProps } = useOverlay(
+    { isOpen, onClose, isDismissable: true, isKeyboardDismissDisabled: false },
+    contentRef,
+  );
+
+  // useDialog provides role="dialog", aria-labelledby, and other ARIA semantics.
+  const { dialogProps } = useDialog({ "aria-labelledby": titleId }, contentRef);
 
   const classes = [styles.dialog, styles[`size-${size}`], className ?? ""]
     .filter(Boolean)
@@ -74,26 +90,40 @@ export function Dialog({
       id={id}
       data-testid={testId}
       className={classes}
-      onClick={handleBackdropClick}
+      // Clicks that land directly on <dialog> (outside .content) are backdrop clicks.
+      onClick={(e) => {
+        if (e.target === dialogRef.current) onClose();
+      }}
     >
-      <div className={styles.content}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>{title}</h2>
-          {showCloseButton ? (
-            <button
-              type="button"
-              className={styles.closeBtn}
-              aria-label="Close"
-              data-testid="dialog-close"
-              onClick={onClose}
-            >
-              ×
-            </button>
+      <FocusScope contain restoreFocus autoFocus>
+        <div
+          ref={contentRef}
+          className={styles.content}
+          {...overlayProps}
+          {...dialogProps}
+        >
+          <header className={styles.header}>
+            <h2 id={titleId} className={styles.title}>
+              {title}
+            </h2>
+            {showCloseButton ? (
+              <button
+                type="button"
+                className={styles.closeBtn}
+                aria-label="Close"
+                data-testid="dialog-close"
+                onClick={onClose}
+              >
+                ×
+              </button>
+            ) : null}
+          </header>
+          <div className={styles.body}>{children}</div>
+          {actions ? (
+            <footer className={styles.actions}>{actions}</footer>
           ) : null}
-        </header>
-        <div className={styles.body}>{children}</div>
-        {actions ? <footer className={styles.actions}>{actions}</footer> : null}
-      </div>
+        </div>
+      </FocusScope>
     </dialog>
   );
 }
