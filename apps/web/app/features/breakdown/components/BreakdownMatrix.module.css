@@ -43,6 +43,33 @@
   color: var(--ds-text-on-dark, var(--ds-text));
 }
 
+.compactBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ds-text-mute);
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease,
+    border-color 100ms ease;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+}
+
+.compactBtnActive {
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: var(--ds-text-on-dark, var(--ds-text));
+}
+
 /* ─── Grid container ─────────────────────────────────────────────────────── */
 
 .gridWrap {

@@ -20,6 +20,7 @@ export interface MatrixGridProps {
   firstColumnWidth?: number;
   columnWidth?: number;
   rowHeight?: number;
+  compact?: boolean;
   "data-testid"?: string;
 }
 
@@ -32,10 +33,15 @@ export function MatrixGrid({
   firstColumnWidth = 180,
   columnWidth = 72,
   rowHeight = 36,
+  compact = false,
   "data-testid": testId,
 }: MatrixGridProps) {
   return (
-    <div className={styles.wrapper} data-testid={testId}>
+    <div
+      className={styles.wrapper}
+      data-compact={compact ? "true" : undefined}
+      data-testid={testId}
+    >
       <table className={styles.table}>
         <thead>
           <tr>

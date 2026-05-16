@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Rows3 } from "lucide-react";
 import { MatrixGrid, type MatrixRow, type MatrixColumn } from "@oh-writers/ui";
 import { BREAKDOWN_CATEGORIES, CATEGORY_META } from "@oh-writers/domain";
 import {
@@ -134,6 +135,7 @@ export function BreakdownMatrix({
   );
 
   const [heatmap, setHeatmap] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [activeCell, setActiveCell] = useState<{
     elementId: string;
     sceneId: string;
@@ -233,6 +235,21 @@ export function BreakdownMatrix({
         >
           Heatmap
         </button>
+        <button
+          type="button"
+          className={[
+            styles.compactBtn,
+            compact ? styles.compactBtnActive : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          onClick={() => setCompact((c) => !c)}
+          title="Vista compatta"
+          aria-pressed={compact}
+          data-testid="matrix-compact-toggle"
+        >
+          <Rows3 size={16} aria-hidden />
+        </button>
       </div>
 
       <div className={styles.gridWrap}>
@@ -240,6 +257,7 @@ export function BreakdownMatrix({
           rows={matrixRows}
           columns={columns}
           heatmap={heatmap}
+          compact={compact}
           getHeatValue={(rowId, colId) => {
             const entry = cellMap.get(rowId)?.get(colId);
             return entry ? entry.qty / maxQty : 0;

@@ -116,7 +116,22 @@
 }
 
 .elementRow {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto var(--matrix-row-height, 48px);
+
   &:hover .rowHeader {
     background: var(--ds-surface-alt);
   }
+}
+
+/* ─── Compact density mode ───────────────────────────────────────────────── */
+
+.wrapper[data-compact="true"] .elementRow {
+  contain-intrinsic-block-size: auto var(--matrix-row-compact-height, 32px);
+}
+
+.wrapper[data-compact="true"] .cell,
+.wrapper[data-compact="true"] .rowHeader {
+  font-size: var(--text-xs, 0.75rem);
+  padding-block: var(--space-1);
 }
