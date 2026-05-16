@@ -34,6 +34,7 @@ import { DayView } from "./widgets/DayView";
 import { CastWidget } from "./widgets/CastWidget";
 import { CrewWidget } from "./widgets/CrewWidget";
 import { CategoryFlatTable } from "./CategoryFlatTable";
+import { RateCardSection } from "./RateCardSection";
 import { SectionIds, type SectionId } from "./flat-sections";
 import styles from "./BudgetPage.module.css";
 
@@ -91,8 +92,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
   const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
-  // keep rate-card cache warm for drill-down editing
-  useSuspenseQuery(rateCardQueryOptions(projectId));
+  const { data: rateCard } = useSuspenseQuery(rateCardQueryOptions(projectId));
   const { data: dayCosts } = useQuery(dayCostsQueryOptions(projectId));
   const { data: overview } = useQuery(overviewQueryOptions(projectId));
 
@@ -101,7 +101,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
     useState<BudgetCategoryKey | null>(null);
   const [isStuck, setIsStuck] = useState(false);
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
-  const [showRateCard, setShowRateCard] = useState(false);
   const [focusSection, setFocusSection] = useState<SectionId | null>(null);
   const [detailSection, setDetailSection] = useState<SectionId | null>(null);
 
@@ -283,23 +282,37 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             />
           )}
 
-          {view === "category" && budget && (
-            <section className={styles.section}>
-              <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Tutte le voci</h2>
-                <span className={styles.sectionMeta}>
-                  Modifica diretta · ⌘K per cercare · Tab per saltare campo
-                </span>
-              </header>
-              <CategoryFlatTable
+          {view === "category" && (
+            <>
+              <RateCardSection
                 projectId={projectId}
-                budget={budget}
-                cast={cast}
-                crew={crew}
-                onOpenDetail={(id) => setDetailSection(id)}
-                initialFocusSection={focusSection}
+                entries={rateCard ?? []}
               />
-            </section>
+              {budget && (
+                <section className={styles.section}>
+                  <header className={styles.sectionHead}>
+                    <h2 className={styles.sectionTitle}>Tutte le voci</h2>
+                    <span className={styles.sectionMeta}>
+                      Modifica diretta · ⌘K per cercare · Tab per saltare campo
+                    </span>
+                  </header>
+                  <CategoryFlatTable
+                    projectId={projectId}
+                    budget={budget}
+                    cast={cast}
+                    crew={crew}
+                    onOpenDetail={(id) => setDetailSection(id)}
+                    initialFocusSection={focusSection}
+                  />
+                </section>
+              )}
+              {!budget && (
+                <div className={styles.emptyCard}>
+                  Configura le tariffe, poi premi{" "}
+                  <strong>Rigenera</strong> per generare il budget.
+                </div>
+              )}
+            </>
           )}
 
           {view === "category" && detailSection && budget && (
