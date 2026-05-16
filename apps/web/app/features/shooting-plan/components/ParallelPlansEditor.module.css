@@ -1,7 +1,9 @@
+/* ParallelPlansEditor — f-ambient linen theme */
+
 .editor {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--ds-space-4);
   block-size: 100%;
 }
 
@@ -12,17 +14,17 @@
 }
 
 .activeHiddenBanner {
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-amber-subtle);
-  border: 1px solid var(--color-amber);
-  border-radius: var(--radius-md);
-  color: var(--color-amber);
-  font-size: var(--text-sm);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-warning-soft);
+  border: 1px solid color-mix(in oklch, var(--ds-warning) 35%, var(--ds-line));
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-warning);
+  font-size: 12px;
 
   & button {
     background: transparent;
     border: none;
-    color: var(--color-amber);
+    color: var(--ds-warning);
     text-decoration: underline;
     cursor: pointer;
     font: inherit;
@@ -30,42 +32,71 @@
 }
 
 .rulerRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding-inline: var(--space-3);
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--ds-space-3);
+  padding-inline: 0;
+  margin-block-end: var(--ds-space-1);
 }
 
 .rulerLabel {
-  inline-size: 120px;
-  flex-shrink: 0;
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  color: var(--ds-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  align-self: end;
+  padding-block-end: 4px;
 }
 
 .ruler {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  border-block-end: 1px solid var(--color-border);
-  padding-block-end: var(--space-1);
+  position: relative;
+  block-size: 28px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    block-size: 1px;
+    background: var(--ds-line);
+  }
 }
 
 .rulerTick {
+  position: absolute;
+  inset-block-end: 0;
+  block-size: 8px;
+  inline-size: 1px;
+  background: var(--ds-text-faint);
+
+  & span {
+    position: absolute;
+    inset-block-end: 10px;
+    inset-inline-start: 0;
+    translate: -50% 0;
+    font-family: var(--ds-font-sans);
+    font-size: 10px;
+    color: var(--ds-text-3);
+    white-space: nowrap;
+  }
+
   &[data-end] {
-    color: var(--color-fg-secondary);
-    font-weight: var(--weight-semibold);
+    & span {
+      color: var(--ds-text-2);
+      font-weight: 500;
+    }
   }
 }
 
 .tracks {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--ds-space-3);
 }
 
 .detailPanel {
-  margin-block-start: var(--space-3);
+  margin-block-start: var(--ds-space-3);
 }
 
 .empty {
@@ -73,5 +104,7 @@
   align-items: center;
   justify-content: center;
   block-size: 200px;
-  color: var(--color-text-muted);
+  color: var(--ds-text-3);
+  font-family: var(--ds-font-display);
+  font-style: italic;
 }

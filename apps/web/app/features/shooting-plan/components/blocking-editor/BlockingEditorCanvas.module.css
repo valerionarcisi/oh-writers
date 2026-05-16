@@ -1,7 +1,9 @@
+/* BlockingEditorCanvas — f-ambient linen theme */
+
 .canvas {
   display: block;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--ds-surface-alt);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
   touch-action: none;
 }

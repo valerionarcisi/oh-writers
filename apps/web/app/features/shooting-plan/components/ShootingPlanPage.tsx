@@ -83,10 +83,35 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [projectId, selectedScene, activePlanId]);
 
+  const totalShots = scenes.reduce((sum, s) => sum + s.shotCount, 0);
+  const plannedCount = scenes.filter(
+    (s) => s.totalMinutes !== null && s.shotCount > 0,
+  ).length;
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Piano di Ripresa</h1>
+        <div className={styles.headerLeft}>
+          <span className={styles.headerEyebrow}>Piano di ripresa</span>
+          <h1 className={styles.title}>Inquadrature</h1>
+        </div>
+        <div className={styles.headerMeta}>
+          <span className={styles.headerMetaChip}>
+            {scenes.length} {scenes.length === 1 ? "scena" : "scene"}
+          </span>
+          <span className={styles.headerMetaSep}>·</span>
+          <span className={styles.headerMetaChip}>
+            {totalShots} {totalShots === 1 ? "shot" : "shot totali"}
+          </span>
+          {plannedCount > 0 && (
+            <>
+              <span className={styles.headerMetaSep}>·</span>
+              <span className={styles.headerMetaChip}>
+                {plannedCount} pianificate
+              </span>
+            </>
+          )}
+        </div>
       </header>
       <div className={styles.body}>
         <aside className={styles.sceneSidebar}>
@@ -168,10 +193,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         ) : (
           <main className={styles.main}>
             <div className={styles.mainEmpty}>
-              <p>
-                Seleziona una scena dalla lista per iniziare a pianificare gli
-                shot.
-              </p>
+              <p>Seleziona una scena dalla lista per iniziare a pianificare gli shot.</p>
             </div>
           </main>
         )}

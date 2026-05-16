@@ -337,16 +337,17 @@ export function ParallelPlansEditor({
       />
 
       <div className={styles.rulerRow}>
-        <div className={styles.rulerLabel}></div>
+        <div className={styles.rulerLabel}>Ore</div>
         <div className={styles.ruler}>
           {RULER_HOURS.map((h) => (
-            <span
+            <div
               key={h}
               className={styles.rulerTick}
               data-end={h === 8 || undefined}
+              style={{ insetInlineStart: `${(h / 8) * 100}%` }}
             >
-              {h === 8 ? "8h fine GG" : `${h}h`}
-            </span>
+              <span>{h === 8 ? "8h fine GG" : `${h}h`}</span>
+            </div>
           ))}
         </div>
       </div>

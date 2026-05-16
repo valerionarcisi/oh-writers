@@ -1,109 +1,175 @@
+/* PlanTrack — f-ambient linen theme */
+
 .track {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: transparent;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--ds-space-3);
+  align-items: stretch;
+  position: relative;
+  opacity: 0.6;
+  transition: opacity var(--ds-duration-2) var(--ds-ease);
+
+  &[data-active] {
+    opacity: 1;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &[data-active]:hover {
+    opacity: 1;
+  }
 }
 
 .label {
-  inline-size: 120px;
-  flex-shrink: 0;
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-inline-start: 3px solid var(--plan-accent, var(--ds-line));
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  cursor: pointer;
 }
 
 .nameRow {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--ds-space-1);
   flex-wrap: wrap;
 }
 
 .name {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-fg);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-text);
+  flex: 1;
 }
 
 .activeChip {
-  font-size: 8px;
-  background: var(--color-accent-green);
-  color: var(--color-on-accent);
-  font-weight: var(--weight-bold);
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  letter-spacing: var(--tracking-caps);
+  font-size: 9px;
+  font-family: var(--ds-font-sans);
+  background: var(--plan-accent, var(--ds-action));
+  color: var(--ds-text-on-dark);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .makeActiveBtn {
-  font-size: 8px;
+  font-size: 9px;
+  font-family: var(--ds-font-sans);
   background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  letter-spacing: var(--tracking-caps);
+  color: var(--ds-text-3);
+  border: 1px solid var(--ds-line);
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition:
+    color var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease);
 
   &:hover {
-    color: var(--color-accent-green);
-    border-color: var(--color-accent-green);
+    color: var(--plan-accent, var(--ds-action));
+    border-color: var(--plan-accent, var(--ds-action));
   }
 }
 
 .suggestedChip {
-  font-size: 8px;
-  background: var(--color-amber-subtle);
-  color: var(--color-amber);
+  font-size: 9px;
+  font-family: var(--ds-font-sans);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
   padding: 2px 6px;
-  border-radius: var(--radius-full);
-  letter-spacing: var(--tracking-caps);
+  border-radius: var(--ds-radius-pill);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .meta {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  font-size: 10px;
+  font-family: var(--ds-font-sans);
+  color: var(--ds-text-3);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--ds-space-1);
+  margin-block-start: 2px;
+
+  /* Highlight the time figure with the plan accent color */
+  &::first-line {
+    color: var(--plan-accent, var(--ds-text-3));
+  }
 }
 
 .overflowBadge {
-  color: var(--color-error);
-  font-weight: var(--weight-semibold);
+  color: var(--ds-danger);
+  font-weight: 600;
 }
 
 .canvas {
-  flex: 1;
   position: relative;
-  block-size: 30px;
-  background: var(--color-surface-inset);
-  border-radius: var(--radius-sm);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-2);
+  min-block-size: 64px;
   overflow: visible;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      to right,
+      var(--ds-line-soft) 1px,
+      transparent 1px
+    );
+    background-size: 12.5% 100%;
+    pointer-events: none;
+    border-radius: var(--ds-radius-md);
+    opacity: 0.7;
+  }
 }
 
 .blocks {
   display: flex;
   gap: 2px;
   block-size: 100%;
+  min-block-size: 48px;
   align-items: stretch;
+  position: relative;
+  z-index: 1;
 }
 
 .dropIndicator {
   position: absolute;
   inset-block: -2px;
   inline-size: 3px;
-  background: var(--color-accent-blue);
-  box-shadow: 0 0 6px var(--color-accent-blue);
+  background: var(--ds-info);
+  box-shadow: 0 0 6px var(--ds-info);
   border-radius: 2px;
   pointer-events: none;
+  z-index: 2;
 
   &[data-same] {
-    background: var(--color-accent-green);
-    box-shadow: 0 0 6px var(--color-accent-green);
+    background: var(--ds-agent);
+    box-shadow: 0 0 6px var(--ds-agent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    transition: none;
+  }
+
+  .makeActiveBtn {
+    transition: none;
   }
 }

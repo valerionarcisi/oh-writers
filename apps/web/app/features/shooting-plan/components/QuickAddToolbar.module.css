@@ -1,31 +1,41 @@
+/* QuickAddToolbar — f-ambient linen theme */
+
 .root {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  font-size: 11px;
+  font-family: var(--ds-font-sans);
 }
 
 .label {
-  color: var(--color-text-muted);
-  margin-inline-end: var(--space-1);
+  color: var(--ds-text-3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-inline-end: var(--ds-space-1);
 }
 
 .shotBtn {
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-xs);
+  padding: 3px 9px;
+  border-radius: var(--ds-radius-sm);
+  font-weight: 600;
+  font-size: 11px;
+  font-family: var(--ds-font-sans);
   cursor: pointer;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--color-text);
+  color: var(--ds-text);
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
 
   &:hover:not(:disabled) {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
   }
 
   &:disabled {
@@ -33,36 +43,37 @@
     cursor: not-allowed;
   }
 
+  /* Shot size tones — map to ds plan/category accents */
   &[data-tone="green"] {
-    background: color-mix(in oklab, var(--color-accent-green) 14%, var(--color-surface));
-    border-color: color-mix(in oklab, var(--color-accent-green) 35%, var(--color-border));
-    color: var(--color-accent-green);
+    background: color-mix(in oklch, var(--ds-plan-2) 10%, var(--ds-surface));
+    border-color: color-mix(in oklch, var(--ds-plan-2) 25%, var(--ds-line));
+    color: var(--ds-plan-2);
   }
 
   &[data-tone="blue"] {
-    background: color-mix(in oklab, var(--color-accent-blue) 14%, var(--color-surface));
-    border-color: color-mix(in oklab, var(--color-accent-blue) 35%, var(--color-border));
-    color: var(--color-accent-blue);
+    background: color-mix(in oklch, var(--ds-plan-1) 10%, var(--ds-surface));
+    border-color: color-mix(in oklch, var(--ds-plan-1) 25%, var(--ds-line));
+    color: var(--ds-plan-1);
   }
 
   &[data-tone="red"] {
-    background: color-mix(in oklab, var(--color-accent-red) 14%, var(--color-surface));
-    border-color: color-mix(in oklab, var(--color-accent-red) 35%, var(--color-border));
-    color: var(--color-accent-red);
+    background: color-mix(in oklch, var(--ds-plan-3) 10%, var(--ds-surface));
+    border-color: color-mix(in oklch, var(--ds-plan-3) 25%, var(--ds-line));
+    color: var(--ds-plan-3);
   }
 
   &[data-tone="orange"] {
-    background: color-mix(in oklab, var(--color-accent-orange) 14%, var(--color-surface));
-    border-color: color-mix(in oklab, var(--color-accent-orange) 35%, var(--color-border));
-    color: var(--color-accent-orange);
+    background: color-mix(in oklch, var(--ds-cat-locations) 10%, var(--ds-surface));
+    border-color: color-mix(in oklch, var(--ds-cat-locations) 25%, var(--ds-line));
+    color: var(--ds-cat-locations);
   }
 }
 
 .divider {
   inline-size: 1px;
   block-size: 18px;
-  background: var(--color-border);
-  margin-inline: var(--space-1);
+  background: var(--ds-line);
+  margin-inline: var(--ds-space-1);
 }
 
 .patternWrap {
@@ -70,16 +81,19 @@
 }
 
 .patternBtn {
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
+  padding: 3px 9px;
+  border-radius: var(--ds-radius-sm);
   background: transparent;
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-text);
-  font-size: var(--text-xs);
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text-2);
+  font-size: 11px;
+  font-family: var(--ds-font-sans);
   cursor: pointer;
+  transition: background var(--ds-duration-1) var(--ds-ease), color var(--ds-duration-1) var(--ds-ease);
 
   &:hover:not(:disabled) {
-    background: var(--color-surface-hover);
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
   }
 
   &:disabled {
@@ -93,6 +107,14 @@
 }
 
 .hint {
-  color: var(--color-text-muted);
+  color: var(--ds-text-faint);
   font-size: 10px;
+  font-family: var(--ds-font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shotBtn,
+  .patternBtn {
+    transition: none;
+  }
 }

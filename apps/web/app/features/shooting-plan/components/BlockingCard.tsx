@@ -142,13 +142,13 @@ export function BlockingCard({
           />
           <div className={styles.legend}>
             <span className={styles.legendItem} data-kind="camera">
-              ■ CAMERA
+              Camera
             </span>
             <span className={styles.legendItem} data-kind="actor">
-              ● PERSONAGGIO
+              Personaggio
             </span>
             <span className={styles.legendItem} data-kind="furniture">
-              □ ARREDO
+              Arredo
             </span>
           </div>
         </div>

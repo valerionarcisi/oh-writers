@@ -59,8 +59,15 @@ export function PlanTrack(props: PlanTrackProps) {
   const totalMinutes = scenario.totalMinutes;
   const overflowMinutes = Math.max(0, totalMinutes - SHOOTING_DAY_MINUTES);
 
+  const planAccentIndex = Math.min((scenario.position ?? 0) + 1, 3);
+  const planAccent = `var(--ds-plan-${planAccentIndex})`;
+
   return (
-    <div className={styles.track} data-active={isActive || undefined}>
+    <div
+      className={styles.track}
+      data-active={isActive || undefined}
+      style={{ "--plan-accent": planAccent } as React.CSSProperties}
+    >
       <div className={styles.label}>
         <div className={styles.nameRow}>
           <span className={styles.name}>{scenario.name}</span>

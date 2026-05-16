@@ -2,16 +2,16 @@ import type { ShotView } from "../server/shooting-plan.server";
 import styles from "./ShotBlock.module.css";
 
 const SHOT_SIZE_COLORS: Record<string, string> = {
-  EWS: "var(--color-accent-green)",
-  WS: "var(--color-accent-green)",
-  MS: "var(--color-accent-blue)",
-  MCU: "var(--color-accent-blue)",
-  OTS: "var(--color-accent-blue)",
-  TWO_SHOT: "var(--color-accent-blue)",
-  CU: "var(--color-accent-red)",
-  ECU: "var(--color-accent-red)",
-  INSERT: "var(--color-accent-orange)",
-  POV: "var(--color-accent-purple)",
+  EWS: "var(--ds-plan-2)",
+  WS: "var(--ds-plan-2)",
+  MS: "var(--ds-plan-1)",
+  MCU: "var(--ds-plan-1)",
+  OTS: "var(--ds-plan-1)",
+  TWO_SHOT: "var(--ds-plan-1)",
+  CU: "var(--ds-plan-3)",
+  ECU: "var(--ds-plan-3)",
+  INSERT: "var(--ds-cat-locations)",
+  POV: "var(--ds-cat-cast)",
 };
 
 interface ShotBlockProps {
