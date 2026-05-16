@@ -43,65 +43,44 @@ export type GetDocumentData = z.infer<typeof GetDocumentInput>;
 
 // ─── Outline JSON structure ───────────────────────────────────────────────────
 
-export type OutlineScene = {
-  id: string;
+export const OutlineSceneSchema = z.object({
+  id: z.string(),
   /** Scene heading (e.g. INT. LIVING ROOM - DAY). Planning only, not fountain-validated. */
-  heading: string;
-  description: string;
-  characters: string[];
+  heading: z.string().default(""),
+  description: z.string().default(""),
+  characters: z.array(z.string()).default([]),
   /** Estimated page count for this scene, null if unknown. */
-  pageEstimate: number | null;
-  notes: string | null;
-};
+  pageEstimate: z.number().nullable().default(null),
+  notes: z.string().nullable().default(null),
+});
+export type OutlineScene = z.infer<typeof OutlineSceneSchema>;
 
-export type OutlineSequence = {
-  id: string;
-  title: string;
-  scenes: OutlineScene[];
-};
+export const OutlineSequenceSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  scenes: z.array(OutlineSceneSchema).default([]),
+});
+export type OutlineSequence = z.infer<typeof OutlineSequenceSchema>;
 
-export type OutlineAct = {
-  id: string;
-  title: string;
-  sequences: OutlineSequence[];
-};
+export const OutlineActSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  sequences: z.array(OutlineSequenceSchema).default([]),
+});
+export type OutlineAct = z.infer<typeof OutlineActSchema>;
 
-export type OutlineContent = {
-  acts: OutlineAct[];
-};
+export const OutlineContentSchema = z.object({
+  acts: z.array(OutlineActSchema).default([]),
+});
+export type OutlineContent = z.infer<typeof OutlineContentSchema>;
 
 export const emptyOutline = (): OutlineContent => ({ acts: [] });
-
-/** Backfills missing fields added after initial implementation (heading, pageEstimate). */
-const backfillScene = (raw: Partial<OutlineScene> & { id: string }): OutlineScene => ({
-  id: raw.id,
-  heading: raw.heading ?? "",
-  description: raw.description ?? "",
-  characters: raw.characters ?? [],
-  pageEstimate: raw.pageEstimate ?? null,
-  notes: raw.notes ?? null,
-});
-
-const backfillSequence = (raw: Partial<OutlineSequence> & { id: string; title: string }): OutlineSequence => ({
-  id: raw.id,
-  title: raw.title,
-  scenes: (raw.scenes ?? []).map((s) => backfillScene(s as Parameters<typeof backfillScene>[0])),
-});
-
-const backfillAct = (raw: Partial<OutlineAct> & { id: string; title: string }): OutlineAct => ({
-  id: raw.id,
-  title: raw.title,
-  sequences: (raw.sequences ?? []).map((s) => backfillSequence(s as Parameters<typeof backfillSequence>[0])),
-});
 
 export const parseOutline = (raw: string): OutlineContent => {
   if (!raw) return emptyOutline();
   try {
-    const parsed = JSON.parse(raw) as { acts?: unknown[] };
-    const acts = Array.isArray(parsed?.acts) ? parsed.acts : [];
-    return {
-      acts: acts.map((a) => backfillAct(a as Parameters<typeof backfillAct>[0])),
-    };
+    const result = OutlineContentSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : emptyOutline();
   } catch {
     return emptyOutline();
   }

@@ -1,4 +1,4 @@
-import { Schema } from "prosemirror-model";
+import { Schema, type NodeSpec } from "prosemirror-model";
 
 /**
  * Minimal ProseMirror schema for narrative documents (synopsis, treatment).
@@ -11,13 +11,13 @@ import { Schema } from "prosemirror-model";
  *   - true  (treatment): paragraphs + H2/H3 + bullet lists
  */
 
-const baseNodes = {
+const baseNodes: Record<string, NodeSpec> = {
   doc: { content: "block+" },
   paragraph: {
     group: "block",
     content: "inline*",
     parseDOM: [{ tag: "p" }],
-    toDOM: () => ["p", 0] as const,
+    toDOM: () => ["p", 0],
   },
   text: { group: "inline" },
   hard_break: {
@@ -25,11 +25,11 @@ const baseNodes = {
     group: "inline",
     selectable: false,
     parseDOM: [{ tag: "br" }],
-    toDOM: () => ["br"] as const,
+    toDOM: () => ["br"],
   },
-} as const;
+};
 
-const headingNode = {
+const headingNode: NodeSpec = {
   group: "block",
   content: "inline*",
   defining: true,
@@ -38,28 +38,26 @@ const headingNode = {
     { tag: "h2", attrs: { level: 2 } },
     { tag: "h3", attrs: { level: 3 } },
   ],
-  toDOM: (node: { attrs: { level: number } }) =>
-    [`h${node.attrs.level}`, 0] as const,
-} as const;
+  toDOM: (node) => [`h${node.attrs["level"] as number}`, 0],
+};
 
-const listNodes = {
+const listNodes: Record<string, NodeSpec> = {
   bullet_list: {
     group: "block",
     content: "list_item+",
     parseDOM: [{ tag: "ul" }],
-    toDOM: () => ["ul", 0] as const,
+    toDOM: () => ["ul", 0],
   },
   list_item: {
     content: "paragraph block*",
     defining: true,
     parseDOM: [{ tag: "li" }],
-    toDOM: () => ["li", 0] as const,
+    toDOM: () => ["li", 0],
   },
-} as const;
+};
 
 export const synopsisSchema = new Schema({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  nodes: baseNodes as any,
+  nodes: baseNodes,
 });
 
 export const treatmentSchema = new Schema({
@@ -67,8 +65,7 @@ export const treatmentSchema = new Schema({
     ...baseNodes,
     heading: headingNode,
     ...listNodes,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any,
+  },
 });
 
 export const getNarrativeSchema = (enableHeadings: boolean): Schema =>
