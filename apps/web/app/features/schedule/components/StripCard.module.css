@@ -50,25 +50,25 @@
 }
 
 .strip[data-color="white"] {
-  --strip-color: #d8d6cd;
+  --strip-color: var(--ds-linen-300);
 }
 .strip[data-color="yellow"] {
-  --strip-color: #c98a2b;
+  --strip-color: var(--ds-cat-scenografia);
 }
 .strip[data-color="blue"] {
-  --strip-color: #3a6b8b;
+  --strip-color: var(--ds-info);
 }
 .strip[data-color="green"] {
-  --strip-color: #5a6b3c;
+  --strip-color: var(--ds-leaf-500);
 }
 .strip[data-color="red"] {
-  --strip-color: #b33a28;
+  --strip-color: var(--ds-danger);
 }
 .strip[data-color="pink"] {
-  --strip-color: #c4729a;
+  --strip-color: var(--ds-cat-costumi);
 }
 .strip[data-color="grey"] {
-  --strip-color: #71706a;
+  --strip-color: var(--ds-linen-600);
 }
 
 .sceneNumber {

@@ -20,8 +20,8 @@
   inline-size: 100%;
   max-inline-size: 720px;
   margin-inline: auto;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--ds-white);
+  color: var(--ds-linen-800);
   box-shadow: var(--shadow-md);
   border-radius: var(--radius-md);
   padding-block: var(--space-8);
@@ -35,17 +35,17 @@
   --color-surface-muted: rgba(0, 0, 0, 0.02);
   --color-surface-hover: rgba(0, 0, 0, 0.06);
   --color-surface-raised: rgba(0, 0, 0, 0.06);
-  --color-fg-primary: #1a1a1a;
-  --color-fg-secondary: #555;
-  --color-fg: #1a1a1a;
-  --color-text: #1a1a1a;
-  --color-text-muted: #888;
+  --color-fg-primary: var(--ds-linen-800);
+  --color-fg-secondary: var(--ds-linen-600);
+  --color-fg: var(--ds-linen-800);
+  --color-text: var(--ds-linen-800);
+  --color-text-muted: var(--ds-linen-500);
   --border: 1px solid rgba(0, 0, 0, 0.12);
-  --color-warning: #b45309;
-  --color-error: #dc2626;
-  --color-accent: #0f766e;
-  --color-accent-fg: #ffffff;
-  --color-accent-hover: #0d6460;
+  --color-warning: var(--ds-warning);
+  --color-error: var(--ds-danger);
+  --color-accent: var(--ds-cat-crew);
+  --color-accent-fg: var(--ds-white);
+  --color-accent-hover: var(--ds-leaf-500);
 }
 
 /* Status messages */

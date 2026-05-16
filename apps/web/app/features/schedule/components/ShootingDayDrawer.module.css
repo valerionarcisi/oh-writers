@@ -72,19 +72,19 @@
   border: 1px solid var(--ds-line);
 
   &[data-type="travel"] {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
-    border-color: rgba(245, 158, 11, 0.25);
+    background: var(--ds-warning-soft);
+    color: var(--ds-warning);
+    border-color: color-mix(in srgb, var(--ds-warning) 25%, transparent);
   }
   &[data-type="rest"] {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
-    border-color: rgba(34, 197, 94, 0.25);
+    background: var(--ds-success-soft);
+    color: var(--ds-success);
+    border-color: color-mix(in srgb, var(--ds-success) 25%, transparent);
   }
   &[data-type="prep"] {
-    background: rgba(168, 85, 247, 0.15);
-    color: #c084fc;
-    border-color: rgba(168, 85, 247, 0.25);
+    background: color-mix(in srgb, var(--ds-cat-cast) 15%, transparent);
+    color: var(--ds-cat-cast);
+    border-color: color-mix(in srgb, var(--ds-cat-cast) 25%, transparent);
   }
 }
 
@@ -131,13 +131,13 @@
   font-weight: var(--weight-semibold);
 
   &[data-color="green"] {
-    color: #4ade80;
+    color: var(--ds-success);
   }
   &[data-color="yellow"] {
-    color: #fbbf24;
+    color: var(--ds-warning);
   }
   &[data-color="red"] {
-    color: #f87171;
+    color: var(--ds-danger);
   }
 }
 
@@ -154,19 +154,19 @@
   transition: width 200ms ease;
 
   &[data-color="green"] {
-    background: #22c55e;
+    background: var(--ds-success);
   }
   &[data-color="yellow"] {
-    background: #f59e0b;
+    background: var(--ds-warning);
   }
   &[data-color="red"] {
-    background: #ef4444;
+    background: var(--ds-danger);
   }
 }
 
 .overCapacityNote {
   font-size: 10px;
-  color: #f87171;
+  color: var(--ds-danger);
 }
 
 /* ─── Scene list ─── */
@@ -208,25 +208,25 @@
   background: var(--ds-line);
 
   &[data-color="white"] {
-    background: rgba(255, 255, 255, 0.25);
+    background: var(--ds-linen-300);
   }
   &[data-color="yellow"] {
-    background: #f59e0b;
+    background: var(--ds-warning);
   }
   &[data-color="blue"] {
-    background: #3b82f6;
+    background: var(--ds-info);
   }
   &[data-color="green"] {
-    background: #22c55e;
+    background: var(--ds-success);
   }
   &[data-color="red"] {
-    background: #ef4444;
+    background: var(--ds-danger);
   }
   &[data-color="pink"] {
-    background: #ec4899;
+    background: var(--ds-cat-costumi);
   }
   &[data-color="grey"] {
-    background: #6b7280;
+    background: var(--ds-linen-500);
   }
 }
 

@@ -149,32 +149,32 @@
 }
 
 .block[data-color="white"] {
-  --block-color: #d8d6cd;
-  color: #1a1a1a;
+  --block-color: var(--ds-linen-300);
+  color: var(--ds-linen-800);
 }
 .block[data-color="yellow"] {
-  --block-color: #c98a2b;
-  color: #1a1a1a;
+  --block-color: var(--ds-cat-scenografia);
+  color: var(--ds-linen-800);
 }
 .block[data-color="blue"] {
-  --block-color: #3a6b8b;
-  color: #fff;
+  --block-color: var(--ds-info);
+  color: var(--ds-white);
 }
 .block[data-color="green"] {
-  --block-color: #5a6b3c;
-  color: #fff;
+  --block-color: var(--ds-leaf-500);
+  color: var(--ds-white);
 }
 .block[data-color="red"] {
-  --block-color: #b33a28;
-  color: #fff;
+  --block-color: var(--ds-danger);
+  color: var(--ds-white);
 }
 .block[data-color="pink"] {
-  --block-color: #c4729a;
-  color: #1a1a1a;
+  --block-color: var(--ds-cat-costumi);
+  color: var(--ds-linen-800);
 }
 .block[data-color="grey"] {
-  --block-color: #71706a;
-  color: #fff;
+  --block-color: var(--ds-linen-600);
+  color: var(--ds-white);
 }
 
 .blockNum {

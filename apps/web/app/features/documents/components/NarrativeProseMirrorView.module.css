@@ -12,8 +12,8 @@
   font-family: var(--font-serif, Georgia, "Times New Roman", serif);
   font-size: var(--text-base);
   line-height: 1.5;
-  color: #1a1a1a;
-  caret-color: #1a1a1a;
+  color: var(--ds-linen-800);
+  caret-color: var(--ds-linen-800);
 }
 
 .mount :global(.ProseMirror p),
@@ -60,7 +60,7 @@
 .mount :global(.pm-narrative-empty)::before {
   content: attr(data-placeholder);
   pointer-events: none;
-  color: #6b6b6b;
+  color: var(--ds-text-mute);
   opacity: 0.7;
   font-style: italic;
   float: inline-start;

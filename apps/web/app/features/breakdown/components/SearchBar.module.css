@@ -7,7 +7,7 @@
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1-5) var(--space-2);
-  background: var(--ds-surface-alt, #1e1e1e);
+  background: var(--ds-surface-alt);
   border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.3));

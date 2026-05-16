@@ -361,7 +361,7 @@
   border: var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  color: var(--ds-text-on-dark, #fff);
+  color: var(--ds-text-on-dark);
   font-weight: var(--weight-semibold);
 }
 

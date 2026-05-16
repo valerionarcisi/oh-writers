@@ -21,7 +21,7 @@
   inline-size: 100%;
   max-inline-size: 816px;
   min-block-size: 1056px;
-  background: var(--ds-surface, #ffffff);
+  background: var(--ds-white);
   box-shadow: var(--ds-shadow-2, 0 1px 3px rgba(0, 0, 0, 0.08));
   position: relative;
   flex-shrink: 0;
@@ -34,8 +34,8 @@
   font-family: "Courier Prime", "Courier New", Courier, monospace;
   font-size: 12pt;
   line-height: 1.4;
-  color: #111;
-  caret-color: #111;
+  color: var(--ds-linen-800);
+  caret-color: var(--ds-linen-800);
   block-size: calc(1056px - 2in);
 }
 
@@ -117,7 +117,7 @@
 /* Placeholder hints rendered by the placeholders plugin. */
 .editor :global(.tp-placeholder) {
   pointer-events: none;
-  color: #b8b3aa;
+  color: var(--ds-linen-400);
   font-style: italic;
   user-select: none;
 }

@@ -411,8 +411,8 @@
   content: "AI";
   font-family: var(--ds-font-sans);
   font-size: 8px;
-  background: var(--ds-leaf-50, #e5e9d8);
-  color: var(--ds-leaf-500, #5a6b3c);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
   padding: 0 4px;
   border-radius: 4px;
   margin-inline-start: 2px;
@@ -980,11 +980,11 @@
 }
 
 .adAlertCardCritical {
-  --severity-color: var(--ds-danger, #d3413a);
+  --severity-color: var(--ds-danger);
 }
 
 .adAlertCardWarn {
-  --severity-color: var(--ds-warn, #c98a1e);
+  --severity-color: var(--ds-warning);
 }
 
 .adAlertCardInfo {

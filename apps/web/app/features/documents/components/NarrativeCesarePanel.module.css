@@ -36,8 +36,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--ds-leaf, var(--ds-success, #9cb072));
-    box-shadow: 0 0 0 3px var(--ds-leaf-soft, rgba(156, 176, 114, 0.18));
+    background: var(--ds-agent);
+    box-shadow: 0 0 0 3px var(--ds-agent-soft);
     flex-shrink: 0;
   }
 }
@@ -97,7 +97,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ds-leaf, var(--ds-success, #9cb072));
+  color: var(--ds-agent);
 }
 
 .itemText {

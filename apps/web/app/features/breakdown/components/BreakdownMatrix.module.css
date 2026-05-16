@@ -113,7 +113,7 @@
 }
 
 .cellPresent {
-  color: var(--ds-success, #34a853);
+  color: var(--ds-success);
   font-size: 0.9rem;
 }
 
@@ -200,7 +200,7 @@
 
 .removeBtn {
   background: transparent;
-  color: var(--ds-danger, #d93025);
+  color: var(--ds-danger);
   border-color: currentColor;
   margin-inline-end: auto;
 

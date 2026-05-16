@@ -146,11 +146,11 @@
 }
 
 .heavy {
-  border-inline-start: 3px solid var(--ds-warn, #c98a2b);
+  border-inline-start: 3px solid var(--ds-warning);
 }
 
 .light {
-  border-inline-start: 3px solid var(--ds-info, #3a6b8b);
+  border-inline-start: 3px solid var(--ds-info);
   opacity: 0.92;
 }
 
