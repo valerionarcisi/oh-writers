@@ -1,0 +1,153 @@
+/* ShootingPlanDock — fixed bottom toolbar (f-ambient linen) */
+
+.dock {
+  position: fixed;
+  inset-block-end: var(--ds-space-5);
+  inset-inline-end: var(--ds-space-5);
+  z-index: 70;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-pill);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 12px 32px -8px rgba(28, 26, 23, 0.18);
+}
+
+.dockLabel {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+  padding-inline: var(--ds-space-2);
+  border-inline-end: 1px solid var(--ds-line);
+  margin-inline-end: 2px;
+  white-space: nowrap;
+}
+
+.btnPrimary {
+  block-size: 34px;
+  padding-inline: var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  cursor: pointer;
+  transition: background var(--ds-duration-1) var(--ds-ease);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-action-hover);
+  }
+}
+
+.btnGhost {
+  block-size: 34px;
+  padding-inline: var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  background: transparent;
+  color: var(--ds-text-2);
+  cursor: pointer;
+  transition: background var(--ds-duration-1) var(--ds-ease), color var(--ds-duration-1) var(--ds-ease);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+}
+
+.kbd {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.btnGhost .kbd {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text-faint);
+}
+
+.sep {
+  inline-size: 1px;
+  block-size: 22px;
+  background: var(--ds-line);
+  margin-inline: 4px;
+}
+
+.cesareBtn {
+  block-size: 34px;
+  padding-inline: var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  cursor: pointer;
+  transition: background var(--ds-duration-1) var(--ds-ease);
+  white-space: nowrap;
+
+  &:hover {
+    background: color-mix(in oklch, var(--ds-agent) 15%, var(--ds-surface));
+  }
+}
+
+.cesareDot {
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--ds-agent);
+  flex-shrink: 0;
+  animation: cesarePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes cesarePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.cesareCount {
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+  padding: 1px 5px;
+  border-radius: var(--ds-radius-pill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btnPrimary,
+  .btnGhost,
+  .cesareBtn {
+    transition: none;
+  }
+
+  .cesareDot {
+    animation: none;
+  }
+}

@@ -14,7 +14,10 @@ import {
 import { ScriptPanel } from "./ScriptPanel";
 import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
+import { ShootingPlanDock } from "./ShootingPlanDock";
 import styles from "./ShootingPlanPage.module.css";
+
+type ViewTab = "per-scena" | "tutti-i-giorni";
 
 interface ShootingPlanPageProps {
   projectId: string;
@@ -35,6 +38,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     scenesWithPlanSummaryQueryOptions(projectId),
   );
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ViewTab>("per-scena");
 
   const scenes = data?.isOk ? data.value : [];
   const selectedScene =
@@ -67,6 +71,11 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       ? (planQuery.data.value.activeScenarioId ?? null)
       : null;
 
+  const scenarioCount: number =
+    planQuery.data?.isOk && planQuery.data.value != null
+      ? planQuery.data.value.scenarios.length
+      : 0;
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (
@@ -84,16 +93,45 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   }, [projectId, selectedScene, activePlanId]);
 
   const totalShots = scenes.reduce((sum, s) => sum + s.shotCount, 0);
+  const totalMinutesAll = scenes.reduce(
+    (sum, s) => sum + (s.totalMinutes ?? 0),
+    0,
+  );
   const plannedCount = scenes.filter(
     (s) => s.totalMinutes !== null && s.shotCount > 0,
   ).length;
 
   return (
     <div className={styles.page}>
+      {/* View tab bar */}
+      <div className={styles.viewBar}>
+        <button
+          type="button"
+          className={styles.viewTab}
+          data-active={activeTab === "per-scena" || undefined}
+          onClick={() => setActiveTab("per-scena")}
+        >
+          Per scena
+        </button>
+        <button
+          type="button"
+          className={styles.viewTab}
+          data-active={activeTab === "tutti-i-giorni" || undefined}
+          onClick={() => setActiveTab("tutti-i-giorni")}
+        >
+          Tutti i giorni
+        </button>
+      </div>
+
+      {/* KPI bar */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.headerEyebrow}>Piano di ripresa</span>
-          <h1 className={styles.title}>Inquadrature</h1>
+          <h1 className={styles.title}>
+            {selectedScene
+              ? `SC.${selectedScene.sceneNumber} · ${selectedScene.intExt}. ${selectedScene.location}`
+              : "Inquadrature"}
+          </h1>
         </div>
         <div className={styles.headerMeta}>
           <span className={styles.headerMetaChip}>
@@ -101,103 +139,131 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
           </span>
           <span className={styles.headerMetaSep}>·</span>
           <span className={styles.headerMetaChip}>
-            {totalShots} {totalShots === 1 ? "shot" : "shot totali"}
+            {totalShots} {totalShots === 1 ? "inquadratura" : "inquadrature"}
           </span>
+          {totalMinutesAll > 0 && (
+            <>
+              <span className={styles.headerMetaSep}>·</span>
+              <span className={styles.headerMetaChip}>
+                {formatMinutes(totalMinutesAll)} pianificate
+              </span>
+            </>
+          )}
           {plannedCount > 0 && (
             <>
               <span className={styles.headerMetaSep}>·</span>
               <span className={styles.headerMetaChip}>
-                {plannedCount} pianificate
+                {plannedCount} {plannedCount === 1 ? "scena pianificata" : "scene pianificate"}
+              </span>
+            </>
+          )}
+          {scenarioCount > 1 && (
+            <>
+              <span className={styles.headerMetaSep}>·</span>
+              <span className={styles.headerMetaChip} data-highlight>
+                {scenarioCount} piani candidati
               </span>
             </>
           )}
         </div>
       </header>
-      <div className={styles.body}>
-        <aside className={styles.sceneSidebar}>
-          <div className={styles.sidebarLabel}>Scene del progetto</div>
-          {scenes.length === 0 && (
-            <p className={styles.sidebarEmpty}>
-              Nessuna scena trovata. Importa una sceneggiatura per iniziare.
-            </p>
-          )}
-          {scenes.map((scene) => {
-            const isPlanned =
-              scene.totalMinutes !== null && scene.shotCount > 0;
-            return (
-              <button
-                key={scene.sceneId}
-                type="button"
-                className={styles.sceneItem}
-                data-active={scene.sceneId === selectedSceneId || undefined}
-                onClick={() => setSelectedSceneId(scene.sceneId)}
-              >
-                <span className={styles.sceneNumber}>
-                  SC.{scene.sceneNumber}
-                </span>
-                <span className={styles.sceneHeading}>
-                  {scene.intExt}. {scene.location}
-                </span>
-                <span
-                  className={styles.sceneStatus}
-                  data-planned={isPlanned || undefined}
-                >
-                  {isPlanned
-                    ? `● ${scene.shotCount} shot · ${formatMinutes(scene.totalMinutes ?? 0)}`
-                    : "○ non pianificata"}
-                </span>
-              </button>
-            );
-          })}
-        </aside>
 
-        {selectedScene ? (
-          <>
-            <div className={styles.scriptColumn}>
-              <ScriptPanel
-                sceneNumber={selectedScene.sceneNumber}
-                sceneHeading={selectedScene.sceneHeading}
-                sceneNotes={null}
-                storageKey="ohw:shooting-plan:script-panel:open"
-              />
-            </div>
-            <main className={styles.main}>
-              {activePlanId && (
-                <BlockingCard
-                  sceneId={selectedScene.sceneId}
-                  planId={activePlanId}
+      {activeTab === "tutti-i-giorni" ? (
+        <div className={styles.comingSoon}>
+          <p>Vista "Tutti i giorni" — prossimamente.</p>
+        </div>
+      ) : (
+        <div className={styles.body}>
+          <aside className={styles.sceneSidebar}>
+            <div className={styles.sidebarLabel}>Scene del progetto</div>
+            {scenes.length === 0 && (
+              <p className={styles.sidebarEmpty}>
+                Nessuna scena trovata. Importa una sceneggiatura per iniziare.
+              </p>
+            )}
+            {scenes.map((scene) => {
+              const isPlanned =
+                scene.totalMinutes !== null && scene.shotCount > 0;
+              return (
+                <button
+                  key={scene.sceneId}
+                  type="button"
+                  className={styles.sceneItem}
+                  data-active={scene.sceneId === selectedSceneId || undefined}
+                  onClick={() => setSelectedSceneId(scene.sceneId)}
+                >
+                  <span className={styles.sceneNumber}>
+                    SC.{scene.sceneNumber}
+                  </span>
+                  <span className={styles.sceneHeading}>
+                    {scene.intExt}. {scene.location}
+                  </span>
+                  <span
+                    className={styles.sceneStatus}
+                    data-planned={isPlanned || undefined}
+                  >
+                    {isPlanned
+                      ? `● ${scene.shotCount} shot · ${formatMinutes(scene.totalMinutes ?? 0)}`
+                      : "○ non pianificata"}
+                  </span>
+                </button>
+              );
+            })}
+          </aside>
+
+          {selectedScene ? (
+            <>
+              <div className={styles.scriptColumn}>
+                <ScriptPanel
                   sceneNumber={selectedScene.sceneNumber}
-                  onOpenEditor={() => {
-                    void navigate({ to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}` });
+                  sceneHeading={selectedScene.sceneHeading}
+                  sceneNotes={null}
+                  storageKey="ohw:shooting-plan:script-panel:open"
+                />
+              </div>
+              <main className={styles.main}>
+                {activePlanId && (
+                  <BlockingCard
+                    sceneId={selectedScene.sceneId}
+                    planId={activePlanId}
+                    sceneNumber={selectedScene.sceneNumber}
+                    onOpenEditor={() => {
+                      void navigate({ to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}` });
+                    }}
+                  />
+                )}
+                <ParallelPlansEditor
+                  key={selectedScene.sceneId}
+                  sceneId={selectedScene.sceneId}
+                  projectId={projectId}
+                  sceneNumber={selectedScene.sceneNumber}
+                  scenePageStart={null}
+                  scenePageEnd={null}
+                  sceneHasSpecialEffect={false}
+                  onShotListChanged={() => {
+                    if (activePlanId) {
+                      void qc.invalidateQueries({
+                        queryKey: ["blocking", selectedScene.sceneId, activePlanId],
+                      });
+                    }
                   }}
                 />
-              )}
-              <ParallelPlansEditor
-                key={selectedScene.sceneId}
-                sceneId={selectedScene.sceneId}
-                projectId={projectId}
-                sceneNumber={selectedScene.sceneNumber}
-                scenePageStart={null}
-                scenePageEnd={null}
-                sceneHasSpecialEffect={false}
-                onShotListChanged={() => {
-                  if (activePlanId) {
-                    void qc.invalidateQueries({
-                      queryKey: ["blocking", selectedScene.sceneId, activePlanId],
-                    });
-                  }
-                }}
-              />
+              </main>
+            </>
+          ) : (
+            <main className={styles.main}>
+              <div className={styles.mainEmpty}>
+                <p>Seleziona una scena dalla lista per iniziare a pianificare gli shot.</p>
+              </div>
             </main>
-          </>
-        ) : (
-          <main className={styles.main}>
-            <div className={styles.mainEmpty}>
-              <p>Seleziona una scena dalla lista per iniziare a pianificare gli shot.</p>
-            </div>
-          </main>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      <ShootingPlanDock
+        projectId={projectId}
+        suggestedShotCount={0}
+      />
     </div>
   );
 }

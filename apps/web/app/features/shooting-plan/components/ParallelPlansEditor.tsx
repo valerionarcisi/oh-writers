@@ -26,6 +26,7 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import { PlanPicker } from "./PlanPicker";
 import { PlanTrack } from "./PlanTrack";
 import { QuickAddToolbar } from "./QuickAddToolbar";
+import { CesarePlanBanner } from "./CesarePlanBanner";
 import { ShotContextMenu } from "./ShotContextMenu";
 import { ShotDetailPanel } from "./ShotDetailPanel";
 import styles from "./ParallelPlansEditor.module.css";
@@ -327,6 +328,14 @@ export function ParallelPlansEditor({
             mostra
           </button>
         </div>
+      )}
+
+      {plan.scenarios.length >= 2 && (
+        <CesarePlanBanner
+          scenarios={plan.scenarios}
+          activeScenarioId={activeScenarioId ?? null}
+          onConfirm={(scenarioId) => setActiveMut.mutate(scenarioId)}
+        />
       )}
 
       <QuickAddToolbar

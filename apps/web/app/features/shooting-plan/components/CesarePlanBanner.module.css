@@ -1,0 +1,83 @@
+/* CesarePlanBanner — OR confirmation prompt (f-ambient linen) */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-action-soft);
+  border: 1px solid color-mix(in oklch, var(--ds-action) 25%, var(--ds-line));
+}
+
+.iconWrap {
+  flex-shrink: 0;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  display: grid;
+  place-items: center;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ds-text);
+}
+
+.sub {
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  color: var(--ds-text-3);
+}
+
+.pills {
+  display: flex;
+  gap: var(--ds-space-1);
+  flex-shrink: 0;
+}
+
+.pill {
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    border-color: var(--ds-action);
+    color: var(--ds-action);
+    background: var(--ds-action-soft);
+  }
+
+  &[data-active] {
+    background: var(--ds-action);
+    border-color: var(--ds-action);
+    color: var(--ds-text-on-dark);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill {
+    transition: none;
+  }
+}
