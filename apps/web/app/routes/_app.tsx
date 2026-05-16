@@ -41,6 +41,7 @@ const SECTION_LABELS: Record<string, string> = {
   breakdown: "Breakdown",
   budget: "Budget",
   schedule: "Piano",
+  "shooting-plan": "Inquadrature",
   screenplay: "Sceneggiatura",
   soggetto: "Soggetto",
   synopsis: "Sinossi",
@@ -90,6 +91,7 @@ const SECTION_GROUPS: ReadonlyArray<{
       { segment: "breakdown", label: "Breakdown", icon: "clipboard" },
       { segment: "budget", label: "Budget", icon: "file-text" },
       { segment: "schedule", label: "Piano", icon: "clock" },
+      { segment: "shooting-plan", label: "Inquadrature", icon: "camera" },
     ],
   },
 ];
