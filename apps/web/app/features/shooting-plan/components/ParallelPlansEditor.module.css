@@ -101,10 +101,38 @@
 
 .empty {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
   block-size: 200px;
-  color: var(--ds-text-3);
-  font-family: var(--ds-font-display);
-  font-style: italic;
+}
+
+.skeleton {
+  block-size: 40px;
+  inline-size: 100%;
+  border-radius: var(--ds-radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--ds-surface-alt) 25%,
+    var(--ds-surface-deep) 50%,
+    var(--ds-surface-alt) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.editor[data-fetching] {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 150ms var(--ds-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .editor[data-fetching] { transition: none; }
 }

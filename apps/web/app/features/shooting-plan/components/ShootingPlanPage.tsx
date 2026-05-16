@@ -233,7 +233,6 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                   />
                 )}
                 <ParallelPlansEditor
-                  key={selectedScene.sceneId}
                   sceneId={selectedScene.sceneId}
                   projectId={projectId}
                   sceneNumber={selectedScene.sceneNumber}

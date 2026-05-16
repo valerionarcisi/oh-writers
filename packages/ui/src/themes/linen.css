@@ -40,4 +40,12 @@
   --ds-plan-1: #34487a;
   --ds-plan-2: #5a6b3c;
   --ds-plan-3: #8b3a1a;
+
+  /* Override default teal accent with clay for linen theme */
+  --color-accent: var(--ds-clay-500);
+  --color-accent-hover: var(--ds-clay-600);
+  --color-accent-subtle: color-mix(in srgb, var(--ds-clay-500) 10%, transparent);
+  --color-accent-border: color-mix(in srgb, var(--ds-clay-500) 25%, transparent);
+  --color-border-focus: var(--ds-clay-500);
+  --ring-focus: 0 0 0 2px var(--ds-bg, var(--color-bg)), 0 0 0 4px var(--ds-clay-500);
 }

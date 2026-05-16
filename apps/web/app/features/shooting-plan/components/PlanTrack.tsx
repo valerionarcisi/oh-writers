@@ -1,3 +1,4 @@
+import { useRef, useCallback } from "react";
 import { SHOOTING_DAY_MINUTES } from "@oh-writers/domain";
 import type {
   ShotView,
@@ -20,6 +21,7 @@ interface PlanTrackProps {
   onDropOnTrack: (e: React.DragEvent) => void;
   dropIndicatorLeftPct: number | null;
   dropIndicatorIsSamePlan: boolean;
+  onResizeCommit: (shotId: string, minutes: number) => void;
 }
 
 const widthPctForMinutes = (m: number): number =>
@@ -41,7 +43,14 @@ export function PlanTrack(props: PlanTrackProps) {
     onDropOnTrack,
     dropIndicatorLeftPct,
     dropIndicatorIsSamePlan,
+    onResizeCommit,
   } = props;
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const getTrackWidth = useCallback(
+    () => canvasRef.current?.getBoundingClientRect().width ?? 0,
+    [],
+  );
 
   const items: Array<
     | { kind: "shot"; shot: ShotView }
@@ -102,6 +111,7 @@ export function PlanTrack(props: PlanTrackProps) {
       </div>
 
       <div
+        ref={canvasRef}
         className={styles.canvas}
         onDragOver={onDragOverTrack}
         onDrop={onDropOnTrack}
@@ -115,6 +125,7 @@ export function PlanTrack(props: PlanTrackProps) {
                   key={it.shot.id}
                   shot={it.shot}
                   widthPct={widthPct}
+                  getTrackWidth={getTrackWidth}
                   isSelected={it.shot.id === selectedShotId}
                   onSelect={() => onSelectShot(it.shot.id)}
                   onContextMenu={(e) => {
@@ -124,6 +135,7 @@ export function PlanTrack(props: PlanTrackProps) {
                   onDragStart={(e) => onDragStart(it.shot.id, e)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={onDropOnTrack}
+                  onResizeCommit={onResizeCommit}
                 />
               );
             }

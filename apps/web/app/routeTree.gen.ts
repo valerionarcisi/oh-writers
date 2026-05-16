@@ -15,6 +15,7 @@ import { Route as RegisterImport } from './routes/register'
 import { Route as LoginImport } from './routes/login'
 import { Route as AppImport } from './routes/_app'
 import { Route as IndexImport } from './routes/index'
+import { Route as DevTokensImport } from './routes/dev/tokens'
 import { Route as AppDashboardImport } from './routes/_app.dashboard'
 import { Route as AppProjectsNewImport } from './routes/_app.projects.new'
 import { Route as AppProjectsIdImport } from './routes/_app.projects.$id'
@@ -57,6 +58,12 @@ const AppRoute = AppImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const DevTokensRoute = DevTokensImport.update({
+  id: '/dev/tokens',
+  path: '/dev/tokens',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -217,6 +224,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardImport
       parentRoute: typeof AppImport
+    }
+    '/dev/tokens': {
+      id: '/dev/tokens'
+      path: '/dev/tokens'
+      fullPath: '/dev/tokens'
+      preLoaderRoute: typeof DevTokensImport
+      parentRoute: typeof rootRoute
     }
     '/_app/projects/$id': {
       id: '/_app/projects/$id'
@@ -428,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard': typeof AppDashboardRoute
+  '/dev/tokens': typeof DevTokensRoute
   '/projects/$id': typeof AppProjectsIdRoute
   '/projects/new': typeof AppProjectsNewRoute
   '/projects/$id/breakdown': typeof AppProjectsIdBreakdownRoute
@@ -454,6 +469,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard': typeof AppDashboardRoute
+  '/dev/tokens': typeof DevTokensRoute
   '/projects/$id': typeof AppProjectsIdRoute
   '/projects/new': typeof AppProjectsNewRoute
   '/projects/$id/breakdown': typeof AppProjectsIdBreakdownRoute
@@ -480,6 +496,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/dev/tokens': typeof DevTokensRoute
   '/_app/projects/$id': typeof AppProjectsIdRoute
   '/_app/projects/new': typeof AppProjectsNewRoute
   '/_app/projects/$id_/breakdown': typeof AppProjectsIdBreakdownRoute
@@ -508,6 +525,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard'
+    | '/dev/tokens'
     | '/projects/$id'
     | '/projects/new'
     | '/projects/$id/breakdown'
@@ -533,6 +551,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard'
+    | '/dev/tokens'
     | '/projects/$id'
     | '/projects/new'
     | '/projects/$id/breakdown'
@@ -557,6 +576,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_app/dashboard'
+    | '/dev/tokens'
     | '/_app/projects/$id'
     | '/_app/projects/new'
     | '/_app/projects/$id_/breakdown'
@@ -583,6 +603,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  DevTokensRoute: typeof DevTokensRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -590,6 +611,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  DevTokensRoute: DevTokensRoute,
 }
 
 export const routeTree = rootRoute
@@ -605,7 +627,8 @@ export const routeTree = rootRoute
         "/",
         "/_app",
         "/login",
-        "/register"
+        "/register",
+        "/dev/tokens"
       ]
     },
     "/": {
@@ -640,6 +663,9 @@ export const routeTree = rootRoute
     "/_app/dashboard": {
       "filePath": "_app.dashboard.tsx",
       "parent": "/_app"
+    },
+    "/dev/tokens": {
+      "filePath": "dev/tokens.tsx"
     },
     "/_app/projects/$id": {
       "filePath": "_app.projects.$id.tsx",

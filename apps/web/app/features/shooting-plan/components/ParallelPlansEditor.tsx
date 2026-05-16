@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  useSuspenseQuery,
   useQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import type { PatternId, ShotSize, BreakdownSummary } from "@oh-writers/domain";
@@ -18,6 +18,7 @@ import {
   moveShot,
   addReverseShot,
   createShotPlanAndScenario,
+  updateShot,
   type ShotPlanView,
   type ScenarioView,
   type ShotView,
@@ -52,9 +53,10 @@ export function ParallelPlansEditor({
   onShotListChanged,
 }: ParallelPlansEditorProps) {
   const qc = useQueryClient();
-  const { data: planRes } = useSuspenseQuery(
-    shotPlanQueryOptions(sceneId, projectId),
-  );
+  const { data: planRes, isFetching } = useQuery({
+    ...shotPlanQueryOptions(sceneId, projectId),
+    placeholderData: keepPreviousData,
+  });
   const plan: ShotPlanView | null = planRes?.isOk ? planRes.value : null;
 
   const { data: breakdownRes } = useQuery(breakdownSummaryQueryOptions(sceneId));
@@ -188,10 +190,26 @@ export function ParallelPlansEditor({
     onSuccess: invalidate,
   });
 
+  const resizeShotMut = useMutation({
+    mutationFn: (vars: { shotId: string; estimatedMinutes: number }) => {
+      if (!plan) throw new Error("No plan");
+      return updateShot({
+        data: {
+          shotId: vars.shotId,
+          shotPlanId: plan.id,
+          projectId,
+          patch: { estimatedMinutes: vars.estimatedMinutes },
+        },
+      }).then(unwrapResult);
+    },
+    onSuccess: invalidate,
+  });
+
   if (!plan) {
     return (
-      <div className={styles.empty}>
-        <p>Caricamento piano in corso…</p>
+      <div className={styles.empty} aria-busy="true">
+        <div className={styles.skeleton} />
+        <div className={styles.skeleton} style={{ inlineSize: "60%" }} />
       </div>
     );
   }
@@ -294,7 +312,7 @@ export function ParallelPlansEditor({
     (breakdown?.castWithDialogue.length ?? 0) === 2;
 
   return (
-    <div className={styles.editor}>
+    <div className={styles.editor} data-fetching={isFetching || undefined}>
       <div className={styles.pickerRow}>
         <PlanPicker
           scenarios={plan.scenarios}
@@ -380,6 +398,9 @@ export function ParallelPlansEditor({
             dropIndicatorIsSamePlan={
               dropTarget?.scenarioId === s.id &&
               dragState?.sourceScenarioId === s.id
+            }
+            onResizeCommit={(shotId, minutes) =>
+              resizeShotMut.mutate({ shotId, estimatedMinutes: minutes })
             }
           />
         ))}
