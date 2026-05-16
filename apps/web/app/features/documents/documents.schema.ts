@@ -45,9 +45,13 @@ export type GetDocumentData = z.infer<typeof GetDocumentInput>;
 
 export type OutlineScene = {
   id: string;
+  /** Scene heading (e.g. INT. LIVING ROOM - DAY). Planning only, not fountain-validated. */
+  heading: string;
   description: string;
   characters: string[];
-  notes: string;
+  /** Estimated page count for this scene, null if unknown. */
+  pageEstimate: number | null;
+  notes: string | null;
 };
 
 export type OutlineSequence = {
@@ -68,10 +72,36 @@ export type OutlineContent = {
 
 export const emptyOutline = (): OutlineContent => ({ acts: [] });
 
+/** Backfills missing fields added after initial implementation (heading, pageEstimate). */
+const backfillScene = (raw: Partial<OutlineScene> & { id: string }): OutlineScene => ({
+  id: raw.id,
+  heading: raw.heading ?? "",
+  description: raw.description ?? "",
+  characters: raw.characters ?? [],
+  pageEstimate: raw.pageEstimate ?? null,
+  notes: raw.notes ?? null,
+});
+
+const backfillSequence = (raw: Partial<OutlineSequence> & { id: string; title: string }): OutlineSequence => ({
+  id: raw.id,
+  title: raw.title,
+  scenes: (raw.scenes ?? []).map((s) => backfillScene(s as Parameters<typeof backfillScene>[0])),
+});
+
+const backfillAct = (raw: Partial<OutlineAct> & { id: string; title: string }): OutlineAct => ({
+  id: raw.id,
+  title: raw.title,
+  sequences: (raw.sequences ?? []).map((s) => backfillSequence(s as Parameters<typeof backfillSequence>[0])),
+});
+
 export const parseOutline = (raw: string): OutlineContent => {
   if (!raw) return emptyOutline();
   try {
-    return JSON.parse(raw) as OutlineContent;
+    const parsed = JSON.parse(raw) as { acts?: unknown[] };
+    const acts = Array.isArray(parsed?.acts) ? parsed.acts : [];
+    return {
+      acts: acts.map((a) => backfillAct(a as Parameters<typeof backfillAct>[0])),
+    };
   } catch {
     return emptyOutline();
   }
