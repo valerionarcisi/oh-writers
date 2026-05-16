@@ -1,0 +1,1431 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Piano di Ripresa · Tutti i giorni · Calendario</title>
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Linen palette — exact values from linen.css */
+        --paper-1: #f5f3ee;
+        --paper-2: #ebe9e3;
+        --paper-3: #e2dfd6;
+        --page:    #ffffff;
+        --ink-1:   #1c1a17;
+        --ink-2:   #44413c;
+        --ink-3:   #6e6c66;
+        --ink-4:   #88867e;
+        --ink-5:   #c4c2b9;
+        --line:    #d8d6cd;
+        --line-soft: #e3e1d780;
+
+        /* Clay — primary action */
+        --clay:      #8b3a1a;
+        --clay-600:  #75301a;
+        --clay-soft: #f4dccb;
+
+        /* Leaf — Cesare / AI */
+        --leaf:      #5a6b3c;
+        --leaf-soft: #e5e9d8;
+
+        /* Plan accents */
+        --plan-1:      #34487a;
+        --plan-1-soft: #dde2ee;
+        --plan-2:      #5a6b3c;
+        --plan-2-soft: #e5e9d8;
+        --plan-3:      #8b3a1a;
+        --plan-3-soft: #f4dccb;
+
+        /* Spacing */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 48px;
+        --space-12: 64px;
+
+        /* Fonts */
+        --font-sans:    "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
+        --font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+
+        /* Radius */
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        background: var(--paper-1);
+        color: var(--ink-1);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+
+      button {
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      /* ─── TOP BAR ───────────────────────────────────────────── */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        height: 48px;
+        background: var(--paper-1);
+        border-bottom: 1px solid transparent;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        padding: 0 var(--space-6);
+        transition: border-color 200ms ease;
+      }
+      .topbar.is-scrolled { border-bottom-color: var(--line); }
+
+      .brand { display: flex; align-items: center; gap: var(--space-3); }
+      .brand-mark {
+        position: relative;
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: var(--ink-1);
+        display: grid; place-items: center;
+        color: var(--paper-1);
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        right: -2px; bottom: -2px;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--leaf);
+        border: 1.5px solid var(--paper-1);
+        animation: cesare-pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes cesare-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50%       { transform: scale(1.3); opacity: 0.6; }
+      }
+
+      .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--ink-3); }
+      .breadcrumb-project { font-family: var(--font-display); font-style: italic; font-weight: 500; color: var(--ink-1); }
+      .breadcrumb-sep { color: var(--ink-4); }
+      .breadcrumb-section {
+        color: var(--ink-1);
+        font-weight: 500;
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 8px; margin: -4px -8px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        transition: background 150ms ease;
+      }
+      .breadcrumb-section:hover { background: var(--paper-2); }
+
+      .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+
+      .topbar-btn {
+        height: 30px; padding: 0 var(--space-3);
+        border-radius: var(--radius-sm);
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--ink-3); font-size: 12px;
+        font-family: var(--font-mono);
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .topbar-btn:hover { background: var(--paper-2); color: var(--ink-1); }
+      .topbar-btn kbd {
+        font-family: var(--font-mono); font-size: 11px;
+        color: var(--ink-4); background: var(--paper-2);
+        padding: 1px 4px; border-radius: 3px;
+      }
+
+      .avatar {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: var(--clay); color: var(--paper-1);
+        display: grid; place-items: center;
+        font-size: 11px; font-weight: 600; font-family: var(--font-mono);
+      }
+
+      .presence { display: inline-flex; align-items: center; }
+      .presence-av {
+        width: 24px; height: 24px; border-radius: 50%;
+        color: var(--paper-1); display: grid; place-items: center;
+        font-size: 10px; font-weight: 600; font-family: var(--font-mono);
+        border: 2px solid var(--paper-1);
+      }
+      .presence-av + .presence-av { margin-inline-start: -8px; }
+      .presence-av-1 { background: #5e7c8a; }
+      .presence-av-2 { background: #8a6244; }
+
+      .save-pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+      .save-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--leaf); }
+
+      .bell {
+        position: relative; width: 30px; height: 30px;
+        border-radius: var(--radius-sm);
+        display: grid; place-items: center;
+        color: var(--ink-3);
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .bell:hover { background: var(--paper-2); color: var(--ink-1); }
+
+      /* ─── VIEW BAR / TABS ───────────────────────────────────── */
+      .viewbar {
+        position: sticky;
+        top: 48px;
+        z-index: 30;
+        background: var(--paper-1);
+        border-bottom: 1px solid var(--line);
+        padding: 0 var(--space-6);
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+      }
+
+      .tab {
+        height: 44px;
+        padding: 0 var(--space-4);
+        display: inline-flex; align-items: center;
+        font-size: 13px; font-weight: 500;
+        color: var(--ink-3);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: color 150ms ease, border-color 150ms ease;
+        white-space: nowrap;
+      }
+      .tab:hover { color: var(--ink-1); }
+      .tab.is-active { color: var(--clay); border-bottom-color: var(--clay); }
+
+      .viewbar-right {
+        margin-inline-start: auto;
+        display: flex; align-items: center; gap: var(--space-2);
+        padding: var(--space-2) 0;
+      }
+      .filter-btn {
+        height: 28px; padding: 0 10px;
+        border-radius: var(--radius-sm);
+        font-size: 12px; font-family: var(--font-mono);
+        color: var(--ink-3);
+        display: inline-flex; align-items: center; gap: 5px;
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .filter-btn:hover { background: var(--paper-2); color: var(--ink-1); }
+
+      /* ─── SHELL (sidebar + content) ──────────────────────────── */
+      .shell {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        grid-template-rows: 1fr;
+        height: calc(100vh - 48px - 44px - 44px); /* topbar + viewbar + toolbar */
+        overflow: hidden;
+      }
+
+      /* ─── WEEK SIDEBAR ──────────────────────────────────────── */
+      .week-sidebar {
+        background: var(--paper-1);
+        border-inline-end: 1px solid var(--line);
+        overflow-y: auto;
+        padding: var(--space-5) 0;
+      }
+      .week-sidebar-title {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        padding: 0 var(--space-4) var(--space-3);
+      }
+
+      .week-item {
+        display: flex; flex-direction: column;
+        padding: var(--space-2) var(--space-4);
+        cursor: pointer;
+        border-inline-start: 2px solid transparent;
+        transition: background 150ms ease, border-color 150ms ease;
+        text-decoration: none;
+      }
+      .week-item:hover { background: var(--paper-2); }
+      .week-item.is-active {
+        border-inline-start-color: var(--clay);
+        background: color-mix(in srgb, var(--clay) 6%, transparent);
+      }
+      .week-item-label {
+        font-size: 13px; font-weight: 500;
+        color: var(--ink-1);
+      }
+      .week-item.is-active .week-item-label { color: var(--clay); }
+      .week-item-dates {
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--ink-4);
+        margin-top: 1px;
+      }
+      .week-item-meta {
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--ink-3);
+        margin-top: 3px;
+        display: flex; gap: var(--space-2); align-items: center;
+      }
+      .week-item-dot {
+        width: 5px; height: 5px; border-radius: 50%;
+        background: var(--plan-1);
+        display: inline-block;
+      }
+      .week-divider {
+        height: 1px; background: var(--line);
+        margin: var(--space-2) var(--space-4);
+      }
+
+      /* ─── CALENDAR GRID AREA ────────────────────────────────── */
+      .calendar-area {
+        overflow-y: auto;
+        padding: var(--space-6);
+        display: flex; flex-direction: column; gap: var(--space-8);
+      }
+
+      /* ─── WEEK BLOCK ────────────────────────────────────────── */
+      .week-block { display: flex; flex-direction: column; gap: var(--space-3); scroll-margin-top: var(--space-6); }
+
+      .week-block-header {
+        display: flex; align-items: baseline; gap: var(--space-3);
+      }
+      .week-block-title {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 18px; font-weight: 400;
+        color: var(--ink-1);
+      }
+      .week-block-dates {
+        font-family: var(--font-mono);
+        font-size: 11px; color: var(--ink-3);
+      }
+      .week-block-stats {
+        margin-inline-start: auto;
+        display: flex; gap: var(--space-4);
+        font-family: var(--font-mono);
+        font-size: 11px; color: var(--ink-3);
+      }
+      .week-block-stats span { display: flex; align-items: center; gap: 5px; }
+      .week-block-stats strong { color: var(--ink-1); font-weight: 500; }
+
+      /* 7-column grid */
+      .week-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: var(--space-2);
+      }
+
+      /* Column headers */
+      .col-header {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-4);
+        text-align: center;
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid var(--line);
+      }
+
+      /* ─── DAY CELL ──────────────────────────────────────────── */
+      .day-cell {
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: var(--space-3);
+        min-height: 140px;
+        display: flex; flex-direction: column; gap: var(--space-2);
+        position: relative;
+        cursor: pointer;
+        transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+        overflow: hidden;
+      }
+      .day-cell:hover {
+        border-color: #b8b5af;
+        box-shadow: 0 2px 8px rgba(28, 26, 23, 0.08);
+        transform: translateY(-1px);
+      }
+      .day-cell.is-today {
+        border-inline-start: 3px solid var(--clay);
+      }
+      .day-cell.is-today::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, var(--clay) 4%, transparent);
+        pointer-events: none;
+      }
+      .day-cell.is-past {
+        opacity: 0.7;
+      }
+      .day-cell.is-empty {
+        background: var(--paper-1);
+        border-style: dashed;
+        border-color: var(--line);
+        opacity: 0.5;
+        cursor: default;
+      }
+      .day-cell.is-empty:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: var(--line);
+      }
+      .day-cell.is-weekend {
+        background: color-mix(in srgb, var(--paper-2) 60%, var(--page));
+      }
+
+      /* Day cell header row */
+      .day-cell-head {
+        display: flex; align-items: flex-start; justify-content: space-between;
+      }
+      .day-num {
+        font-family: var(--font-display);
+        font-size: 22px; font-weight: 400; line-height: 1;
+        color: var(--ink-1);
+      }
+      .day-cell.is-today .day-num { color: var(--clay); }
+      .day-cell.is-empty .day-num { color: var(--ink-5); }
+
+      .day-abbr {
+        font-family: var(--font-mono);
+        font-size: 9px; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--ink-4);
+        line-height: 1; margin-top: 3px;
+      }
+
+      .day-shooting-num {
+        font-family: var(--font-mono);
+        font-size: 9px; text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--plan-1-soft);
+        color: var(--plan-1);
+        font-weight: 500;
+        flex-shrink: 0;
+      }
+      .day-cell.is-today .day-shooting-num {
+        background: var(--clay-soft);
+        color: var(--clay);
+      }
+
+      /* Location */
+      .day-location {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-size: 12.5px; line-height: 1.25;
+        color: var(--ink-2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
+
+      /* Pills row */
+      .day-pills {
+        display: flex; gap: var(--space-1); flex-wrap: wrap;
+      }
+      .pill {
+        font-family: var(--font-mono);
+        font-size: 10px; font-weight: 500;
+        padding: 2px 7px;
+        border-radius: 100px;
+        display: inline-flex; align-items: center; gap: 3px;
+        white-space: nowrap;
+      }
+      .pill-scene {
+        background: var(--paper-2);
+        color: var(--ink-2);
+      }
+      .pill-shot {
+        background: var(--plan-1-soft);
+        color: var(--plan-1);
+      }
+
+      /* Duration bar */
+      .day-duration {
+        display: flex; flex-direction: column; gap: 4px;
+        margin-top: auto;
+      }
+      .day-duration-label {
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      .day-duration-text {
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--ink-3);
+      }
+      .day-duration-pct {
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--ink-4);
+      }
+      .day-progress {
+        height: 3px;
+        background: var(--paper-3);
+        border-radius: 100px;
+        overflow: hidden;
+      }
+      .day-progress-fill {
+        height: 100%;
+        background: var(--plan-1);
+        border-radius: 100px;
+        transition: width 400ms ease;
+      }
+      .day-cell.is-today .day-progress-fill { background: var(--clay); }
+
+      /* Warning indicator */
+      .day-warning {
+        position: absolute;
+        top: var(--space-2); right: var(--space-2);
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #d4943a;
+      }
+
+      /* Empty placeholder text */
+      .day-empty-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-5);
+        text-align: center;
+        margin: auto;
+      }
+
+      /* ─── BOTTOM TOOLBAR (dock) ─────────────────────────────── */
+      .toolbar {
+        height: 44px;
+        background: var(--page);
+        border-top: 1px solid var(--line);
+        display: flex; align-items: center;
+        padding: 0 var(--space-6);
+        gap: var(--space-2);
+      }
+      .toolbar-label {
+        font-family: var(--font-mono);
+        font-size: 10px; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--ink-4);
+        padding-inline-end: var(--space-3);
+        border-inline-end: 1px solid var(--line);
+        margin-inline-end: var(--space-1);
+      }
+      .toolbar-sep { width: 1px; height: 20px; background: var(--line); margin: 0 var(--space-1); }
+
+      .btn {
+        height: 30px; padding: 0 var(--space-3);
+        border-radius: 100px;
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 12px; font-weight: 500;
+        transition: background 150ms ease, color 150ms ease;
+      }
+      .btn-primary { background: var(--clay); color: var(--paper-1); }
+      .btn-primary:hover { background: var(--clay-600); }
+      .btn-ghost { color: var(--ink-2); }
+      .btn-ghost:hover { background: var(--paper-2); color: var(--ink-1); }
+      .btn-key {
+        font-family: var(--font-mono); font-size: 10px;
+        padding: 1px 4px; border-radius: 3px;
+        background: var(--paper-2); color: var(--ink-4);
+        margin-inline-start: 2px;
+      }
+      .btn-primary .btn-key { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
+
+      .btn-cesare {
+        height: 30px; padding: 0 var(--space-3);
+        border-radius: 100px;
+        background: var(--leaf-soft); color: var(--leaf);
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 12px; font-weight: 500;
+      }
+      .cesare-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--leaf);
+        animation: cesare-pulse 1.8s ease-in-out infinite;
+      }
+      .cesare-count {
+        font-family: var(--font-mono); font-size: 10px;
+        background: var(--leaf); color: var(--paper-1);
+        padding: 1px 5px; border-radius: 100px;
+      }
+
+      /* ─── SCROLLBAR ──────────────────────────────────────────── */
+      .calendar-area::-webkit-scrollbar,
+      .week-sidebar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .calendar-area::-webkit-scrollbar-track,
+      .week-sidebar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .calendar-area::-webkit-scrollbar-thumb,
+      .week-sidebar::-webkit-scrollbar-thumb {
+        background: var(--line);
+        border-radius: 100px;
+      }
+
+      /* ─── HOVER TOOLTIP ──────────────────────────────────────── */
+      .day-cell:not(.is-empty):hover .day-hover-hint { opacity: 1; }
+      .day-hover-hint {
+        position: absolute;
+        bottom: var(--space-2); right: var(--space-2);
+        font-family: var(--font-mono);
+        font-size: 9px; text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-4);
+        opacity: 0;
+        transition: opacity 150ms ease;
+      }
+
+      /* ─── SUMMARY ROW ────────────────────────────────────────── */
+      .summary-row {
+        display: flex; gap: var(--space-4);
+        padding: var(--space-3) var(--space-4);
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-2);
+      }
+      .summary-kpi {
+        display: flex; flex-direction: column; gap: 2px;
+        padding-inline-end: var(--space-4);
+        border-inline-end: 1px solid var(--line-soft);
+      }
+      .summary-kpi:last-child { border-inline-end: 0; }
+      .summary-kpi-label {
+        font-family: var(--font-mono);
+        font-size: 9px; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--ink-4);
+      }
+      .summary-kpi-val {
+        font-family: var(--font-display);
+        font-size: 20px; font-weight: 400; line-height: 1;
+        color: var(--ink-1);
+        letter-spacing: -0.02em;
+      }
+      .summary-kpi-foot {
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--ink-4);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TOP BAR -->
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <button class="brand-mark"><span>O</span></button>
+        <nav class="breadcrumb">
+          <span class="breadcrumb-project">Non fa ridere</span>
+          <span class="breadcrumb-sep">›</span>
+          <span>
+            <button class="breadcrumb-section">
+              Piano di ripresa
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </span>
+        </nav>
+      </div>
+      <div></div>
+      <div class="topbar-right">
+        <span class="save-pill">Salvato 8s fa</span>
+        <button class="topbar-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="bell">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+        </button>
+        <button class="topbar-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9l6 3"/></svg>
+          Chiedi a Cesare
+          <kbd>⌘.</kbd>
+        </button>
+        <div class="presence">
+          <span class="presence-av presence-av-1">SM</span>
+          <span class="presence-av presence-av-2">LR</span>
+        </div>
+        <div class="avatar">VN</div>
+      </div>
+    </header>
+
+    <!-- VIEW BAR / TABS -->
+    <div class="viewbar">
+      <button class="tab" onclick="window.location='shotplan-redesign-f-ambient.html'">Giorno 4</button>
+      <button class="tab is-active">Tutti i giorni</button>
+      <button class="tab">Per scena</button>
+      <div class="viewbar-right">
+        <button class="filter-btn">v2 · 14 mag 2026 ▾</button>
+      </div>
+    </div>
+
+    <!-- MAIN SHELL -->
+    <div class="shell">
+      <!-- WEEK SIDEBAR -->
+      <aside class="week-sidebar" id="weekSidebar">
+        <div class="week-sidebar-title">Settimane</div>
+
+        <a class="week-item" href="#week-1" onclick="scrollToWeek('week-1', this)">
+          <span class="week-item-label">Settimana 1</span>
+          <span class="week-item-dates">2–6 giu 2026</span>
+          <span class="week-item-meta"><span class="week-item-dot"></span>5 giorni · 28 sc</span>
+        </a>
+        <a class="week-item is-active" href="#week-2" onclick="scrollToWeek('week-2', this)">
+          <span class="week-item-label">Settimana 2</span>
+          <span class="week-item-dates">9–13 giu 2026</span>
+          <span class="week-item-meta"><span class="week-item-dot"></span>5 giorni · 31 sc</span>
+        </a>
+        <a class="week-item" href="#week-3" onclick="scrollToWeek('week-3', this)">
+          <span class="week-item-label">Settimana 3</span>
+          <span class="week-item-dates">16–20 giu 2026</span>
+          <span class="week-item-meta"><span class="week-item-dot"></span>4 giorni · 22 sc</span>
+        </a>
+        <a class="week-item" href="#week-4" onclick="scrollToWeek('week-4', this)">
+          <span class="week-item-label">Settimana 4</span>
+          <span class="week-item-dates">23–27 giu 2026</span>
+          <span class="week-item-meta"><span class="week-item-dot"></span>5 giorni · 19 sc</span>
+        </a>
+
+        <div class="week-divider"></div>
+
+        <!-- Project totals -->
+        <div style="padding: var(--space-3) var(--space-4);">
+          <div class="week-sidebar-title" style="padding: 0 0 var(--space-2);">Totale progetto</div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);">Giorni</span>
+              <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--ink-1);">19</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);">Scene</span>
+              <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--ink-1);">100</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);">Inquadrature</span>
+              <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--plan-1);">387</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);">Ore pianificate</span>
+              <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--ink-1);">152h</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- CALENDAR AREA -->
+      <div class="calendar-area" id="calendarArea">
+
+        <!-- ══ SETTIMANA 1 ══════════════════════════════════════ -->
+        <div class="week-block" id="week-1">
+          <div class="week-block-header">
+            <span class="week-block-title">Settimana 1</span>
+            <span class="week-block-dates">2–6 giugno 2026</span>
+            <div class="week-block-stats">
+              <span><strong>5</strong> giorni</span>
+              <span><strong>28</strong> scene</span>
+              <span><strong>94</strong> inq</span>
+              <span><strong>37h</strong> / 40h</span>
+            </div>
+          </div>
+
+          <!-- Column headers -->
+          <div class="week-grid">
+            <div class="col-header">Lun</div>
+            <div class="col-header">Mar</div>
+            <div class="col-header">Mer</div>
+            <div class="col-header">Gio</div>
+            <div class="col-header">Ven</div>
+            <div class="col-header" style="color: var(--ink-5);">Sab</div>
+            <div class="col-header" style="color: var(--ink-5);">Dom</div>
+          </div>
+
+          <div class="week-grid">
+            <!-- Lunedì 2 giu — Giorno 1 -->
+            <div class="day-cell is-past" onclick="goToDay(1)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">2</div>
+                  <div class="day-abbr">LUN</div>
+                </div>
+                <div class="day-shooting-num">G·1</div>
+              </div>
+              <div class="day-location">Int. Appartamento Giulia</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">6 sc</span>
+                <span class="pill pill-shot">18 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">6h / 8h</span>
+                  <span class="day-duration-pct">75%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 75%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Martedì 3 giu — Giorno 2 -->
+            <div class="day-cell is-past" onclick="goToDay(2)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">3</div>
+                  <div class="day-abbr">MAR</div>
+                </div>
+                <div class="day-shooting-num">G·2</div>
+              </div>
+              <div class="day-location">Ext. Piazza del Mercato</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">5 sc</span>
+                <span class="pill pill-shot">21 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h 30m / 8h</span>
+                  <span class="day-duration-pct">94%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 94%"></div></div>
+              </div>
+              <div class="day-warning" title="Giornata quasi al limite"></div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Mercoledì 4 giu — Giorno 3 -->
+            <div class="day-cell is-past" onclick="goToDay(3)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">4</div>
+                  <div class="day-abbr">MER</div>
+                </div>
+                <div class="day-shooting-num">G·3</div>
+              </div>
+              <div class="day-location">Int. Studio del Professore</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">4 sc</span>
+                <span class="pill pill-shot">14 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">5h 20m / 8h</span>
+                  <span class="day-duration-pct">67%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 67%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Giovedì 5 giu — Giorno 4 (TODAY / CURRENT) -->
+            <div class="day-cell is-today" onclick="goToDay(4)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">5</div>
+                  <div class="day-abbr">GIO</div>
+                </div>
+                <div class="day-shooting-num">G·4</div>
+              </div>
+              <div class="day-location">Int. Pizzeria Sottoscala</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">6 sc</span>
+                <span class="pill pill-shot">22 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h 20m / 8h</span>
+                  <span class="day-duration-pct">92%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 92%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Venerdì 6 giu — Giorno 5 -->
+            <div class="day-cell" onclick="goToDay(5)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">6</div>
+                  <div class="day-abbr">VEN</div>
+                </div>
+                <div class="day-shooting-num">G·5</div>
+              </div>
+              <div class="day-location">Ext. Terrazza sul Mare</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">7 sc</span>
+                <span class="pill pill-shot">19 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">6h 40m / 9h</span>
+                  <span class="day-duration-pct">74%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 74%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Sabato 7 giu — non lavorativo -->
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num" style="color: var(--ink-5);">7</div>
+                  <div class="day-abbr" style="color: var(--ink-5);">SAB</div>
+                </div>
+              </div>
+              <div class="day-empty-label">Riposo</div>
+            </div>
+
+            <!-- Domenica 8 giu — non lavorativo -->
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num" style="color: var(--ink-5);">8</div>
+                  <div class="day-abbr" style="color: var(--ink-5);">DOM</div>
+                </div>
+              </div>
+              <div class="day-empty-label">Riposo</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SETTIMANA 2 ══════════════════════════════════════ -->
+        <div class="week-block" id="week-2">
+          <div class="week-block-header">
+            <span class="week-block-title">Settimana 2</span>
+            <span class="week-block-dates">9–13 giugno 2026</span>
+            <div class="week-block-stats">
+              <span><strong>5</strong> giorni</span>
+              <span><strong>31</strong> scene</span>
+              <span><strong>108</strong> inq</span>
+              <span><strong>39h</strong> / 40h</span>
+            </div>
+          </div>
+
+          <div class="week-grid">
+            <div class="col-header">Lun</div>
+            <div class="col-header">Mar</div>
+            <div class="col-header">Mer</div>
+            <div class="col-header">Gio</div>
+            <div class="col-header">Ven</div>
+            <div class="col-header" style="color: var(--ink-5);">Sab</div>
+            <div class="col-header" style="color: var(--ink-5);">Dom</div>
+          </div>
+
+          <div class="week-grid">
+            <!-- Lunedì 9 giu — Giorno 6 -->
+            <div class="day-cell" onclick="goToDay(6)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">9</div>
+                  <div class="day-abbr">LUN</div>
+                </div>
+                <div class="day-shooting-num">G·6</div>
+              </div>
+              <div class="day-location">Int. Bar dei Filosofi</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">5 sc</span>
+                <span class="pill pill-shot">17 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h / 8h</span>
+                  <span class="day-duration-pct">87%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 87%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Martedì 10 giu — Giorno 7 -->
+            <div class="day-cell" onclick="goToDay(7)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">10</div>
+                  <div class="day-abbr">MAR</div>
+                </div>
+                <div class="day-shooting-num">G·7</div>
+              </div>
+              <div class="day-location">Int. Ospedale — Reparto C</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">7 sc</span>
+                <span class="pill pill-shot">24 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">8h / 8h</span>
+                  <span class="day-duration-pct">100%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 100%"></div></div>
+              </div>
+              <div class="day-warning" title="Giornata al limite massimo"></div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Mercoledì 11 giu — Giorno 8 -->
+            <div class="day-cell" onclick="goToDay(8)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">11</div>
+                  <div class="day-abbr">MER</div>
+                </div>
+                <div class="day-shooting-num">G·8</div>
+              </div>
+              <div class="day-location">Ext. Vicolo Fontanella</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">4 sc</span>
+                <span class="pill pill-shot">16 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">5h / 8h</span>
+                  <span class="day-duration-pct">62%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 62%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Giovedì 12 giu — Giorno 9 -->
+            <div class="day-cell" onclick="goToDay(9)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">12</div>
+                  <div class="day-abbr">GIO</div>
+                </div>
+                <div class="day-shooting-num">G·9</div>
+              </div>
+              <div class="day-location">Int. Teatro Margherita</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">8 sc</span>
+                <span class="pill pill-shot">29 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">8h / 10h</span>
+                  <span class="day-duration-pct">80%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 80%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Venerdì 13 giu — Giorno 10 -->
+            <div class="day-cell" onclick="goToDay(10)">
+              <div class="day-cell-head">
+                <div>
+                  <div class="day-num">13</div>
+                  <div class="day-abbr">VEN</div>
+                </div>
+                <div class="day-shooting-num">G·10</div>
+              </div>
+              <div class="day-location">Int. Cucina della Nonna</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">7 sc</span>
+                <span class="pill pill-shot">22 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h 30m / 8h</span>
+                  <span class="day-duration-pct">94%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 94%"></div></div>
+              </div>
+              <div class="day-warning" title="Giornata quasi al limite"></div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Sab/Dom liberi -->
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-5);">14</div><div class="day-abbr" style="color: var(--ink-5);">SAB</div></div>
+              </div>
+              <div class="day-empty-label">Riposo</div>
+            </div>
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-5);">15</div><div class="day-abbr" style="color: var(--ink-5);">DOM</div></div>
+              </div>
+              <div class="day-empty-label">Riposo</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SETTIMANA 3 ══════════════════════════════════════ -->
+        <div class="week-block" id="week-3">
+          <div class="week-block-header">
+            <span class="week-block-title">Settimana 3</span>
+            <span class="week-block-dates">16–20 giugno 2026</span>
+            <div class="week-block-stats">
+              <span><strong>4</strong> giorni</span>
+              <span><strong>22</strong> scene</span>
+              <span><strong>79</strong> inq</span>
+              <span><strong>30h</strong> / 32h</span>
+            </div>
+          </div>
+
+          <div class="week-grid">
+            <div class="col-header">Lun</div>
+            <div class="col-header">Mar</div>
+            <div class="col-header">Mer</div>
+            <div class="col-header">Gio</div>
+            <div class="col-header">Ven</div>
+            <div class="col-header" style="color: var(--ink-5);">Sab</div>
+            <div class="col-header" style="color: var(--ink-5);">Dom</div>
+          </div>
+
+          <div class="week-grid">
+            <!-- Lun 16 — G·11 -->
+            <div class="day-cell" onclick="goToDay(11)">
+              <div class="day-cell-head">
+                <div><div class="day-num">16</div><div class="day-abbr">LUN</div></div>
+                <div class="day-shooting-num">G·11</div>
+              </div>
+              <div class="day-location">Ext. Stazione Centrale</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">5 sc</span>
+                <span class="pill pill-shot">18 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">6h 30m / 8h</span>
+                  <span class="day-duration-pct">81%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 81%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Mar 17 — G·12 -->
+            <div class="day-cell" onclick="goToDay(12)">
+              <div class="day-cell-head">
+                <div><div class="day-num">17</div><div class="day-abbr">MAR</div></div>
+                <div class="day-shooting-num">G·12</div>
+              </div>
+              <div class="day-location">Int. Sala Prove Orchestra</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">6 sc</span>
+                <span class="pill pill-shot">21 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h / 8h</span>
+                  <span class="day-duration-pct">87%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 87%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Mer 18 — libero (nessuna ripresa) -->
+            <div class="day-cell is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-4);">18</div><div class="day-abbr" style="color: var(--ink-4);">MER</div></div>
+              </div>
+              <div class="day-empty-label">Nessuna ripresa</div>
+            </div>
+
+            <!-- Gio 19 — G·13 -->
+            <div class="day-cell" onclick="goToDay(13)">
+              <div class="day-cell-head">
+                <div><div class="day-num">19</div><div class="day-abbr">GIO</div></div>
+                <div class="day-shooting-num">G·13</div>
+              </div>
+              <div class="day-location">Int. Appartamento Giulia</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">5 sc</span>
+                <span class="pill pill-shot">22 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h 30m / 8h</span>
+                  <span class="day-duration-pct">94%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 94%"></div></div>
+              </div>
+              <div class="day-warning"></div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- Ven 20 — G·14 -->
+            <div class="day-cell" onclick="goToDay(14)">
+              <div class="day-cell-head">
+                <div><div class="day-num">20</div><div class="day-abbr">VEN</div></div>
+                <div class="day-shooting-num">G·14</div>
+              </div>
+              <div class="day-location">Ext. Porto Vecchio</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">6 sc</span>
+                <span class="pill pill-shot">18 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">5h / 8h</span>
+                  <span class="day-duration-pct">62%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 62%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-5);">21</div><div class="day-abbr" style="color: var(--ink-5);">SAB</div></div>
+              </div>
+              <div class="day-empty-label">Riposo</div>
+            </div>
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-5);">22</div><div class="day-abbr" style="color: var(--ink-5);">DOM</div></div>
+              </div>
+              <div class="day-empty-label">Riposo</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SETTIMANA 4 ══════════════════════════════════════ -->
+        <div class="week-block" id="week-4">
+          <div class="week-block-header">
+            <span class="week-block-title">Settimana 4</span>
+            <span class="week-block-dates">23–27 giugno 2026</span>
+            <div class="week-block-stats">
+              <span><strong>5</strong> giorni</span>
+              <span><strong>19</strong> scene</span>
+              <span><strong>71</strong> inq</span>
+              <span><strong>38h</strong> / 40h</span>
+            </div>
+          </div>
+
+          <div class="week-grid">
+            <div class="col-header">Lun</div>
+            <div class="col-header">Mar</div>
+            <div class="col-header">Mer</div>
+            <div class="col-header">Gio</div>
+            <div class="col-header">Ven</div>
+            <div class="col-header" style="color: var(--ink-5);">Sab</div>
+            <div class="col-header" style="color: var(--ink-5);">Dom</div>
+          </div>
+
+          <div class="week-grid">
+            <!-- G·15 -->
+            <div class="day-cell" onclick="goToDay(15)">
+              <div class="day-cell-head">
+                <div><div class="day-num">23</div><div class="day-abbr">LUN</div></div>
+                <div class="day-shooting-num">G·15</div>
+              </div>
+              <div class="day-location">Int. Ufficio Comunale</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">3 sc</span>
+                <span class="pill pill-shot">12 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">7h / 8h</span>
+                  <span class="day-duration-pct">87%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 87%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- G·16 -->
+            <div class="day-cell" onclick="goToDay(16)">
+              <div class="day-cell-head">
+                <div><div class="day-num">24</div><div class="day-abbr">MAR</div></div>
+                <div class="day-shooting-num">G·16</div>
+              </div>
+              <div class="day-location">Ext. Campagna Aperta</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">4 sc</span>
+                <span class="pill pill-shot">17 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">8h / 10h</span>
+                  <span class="day-duration-pct">80%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 80%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- G·17 -->
+            <div class="day-cell" onclick="goToDay(17)">
+              <div class="day-cell-head">
+                <div><div class="day-num">25</div><div class="day-abbr">MER</div></div>
+                <div class="day-shooting-num">G·17</div>
+              </div>
+              <div class="day-location">Int. Ospedale — Reparto C</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">4 sc</span>
+                <span class="pill pill-shot">15 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">6h / 8h</span>
+                  <span class="day-duration-pct">75%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 75%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- G·18 -->
+            <div class="day-cell" onclick="goToDay(18)">
+              <div class="day-cell-head">
+                <div><div class="day-num">26</div><div class="day-abbr">GIO</div></div>
+                <div class="day-shooting-num">G·18</div>
+              </div>
+              <div class="day-location">Ext. Tetti del Centro Storico</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">5 sc</span>
+                <span class="pill pill-shot">16 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">8h / 8h</span>
+                  <span class="day-duration-pct">100%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 100%"></div></div>
+              </div>
+              <div class="day-warning"></div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <!-- G·19 — ultimo giorno di riprese -->
+            <div class="day-cell" onclick="goToDay(19)">
+              <div class="day-cell-head">
+                <div><div class="day-num">27</div><div class="day-abbr">VEN</div></div>
+                <div class="day-shooting-num">G·19</div>
+              </div>
+              <div class="day-location">Int. Pizzeria Sottoscala</div>
+              <div class="day-pills">
+                <span class="pill pill-scene">3 sc</span>
+                <span class="pill pill-shot">11 inq</span>
+              </div>
+              <div class="day-duration">
+                <div class="day-duration-label">
+                  <span class="day-duration-text">4h / 8h</span>
+                  <span class="day-duration-pct">50%</span>
+                </div>
+                <div class="day-progress"><div class="day-progress-fill" style="width: 50%"></div></div>
+              </div>
+              <div class="day-hover-hint">Apri →</div>
+            </div>
+
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-5);">28</div><div class="day-abbr" style="color: var(--ink-5);">SAB</div></div>
+              </div>
+              <div class="day-empty-label">Fine riprese</div>
+            </div>
+            <div class="day-cell is-weekend is-empty">
+              <div class="day-cell-head">
+                <div><div class="day-num" style="color: var(--ink-5);">29</div><div class="day-abbr" style="color: var(--ink-5);">DOM</div></div>
+              </div>
+              <div class="day-empty-label">Fine riprese</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom spacer -->
+        <div style="height: var(--space-8);"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM TOOLBAR -->
+    <div class="toolbar">
+      <span class="toolbar-label">Piano</span>
+      <button class="btn btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 19v-6h6"/></svg>
+        Pre-fill da breakdown
+        <span class="btn-key">⌘P</span>
+      </button>
+      <button class="btn btn-ghost">Esporta<span class="btn-key">⌘E</span></button>
+      <button class="btn btn-ghost">Stampa<span class="btn-key">⌘P</span></button>
+      <div class="toolbar-sep"></div>
+      <button class="btn-cesare">
+        <span class="cesare-dot"></span>
+        Cesare
+        <span class="cesare-count">2</span>
+      </button>
+    </div>
+
+    <script>
+      // Topbar scroll shadow
+      const topbar = document.getElementById('topbar');
+      window.addEventListener('scroll', () => {
+        topbar.classList.toggle('is-scrolled', window.scrollY > 4);
+      }, { passive: true });
+
+      // Sidebar active state + smooth scroll
+      function scrollToWeek(id, linkEl) {
+        document.querySelectorAll('.week-item').forEach(el => el.classList.remove('is-active'));
+        linkEl.classList.add('is-active');
+        const target = document.getElementById(id);
+        if (target) {
+          document.getElementById('calendarArea').scrollTo({
+            top: target.offsetTop - 24,
+            behavior: 'smooth',
+          });
+        }
+      }
+
+      // Intersection observer — update sidebar active state on scroll
+      const weekIds = ['week-1', 'week-2', 'week-3', 'week-4'];
+      const sidebarLinks = {
+        'week-1': document.querySelector('a[href="#week-1"]'),
+        'week-2': document.querySelector('a[href="#week-2"]'),
+        'week-3': document.querySelector('a[href="#week-3"]'),
+        'week-4': document.querySelector('a[href="#week-4"]'),
+      };
+
+      const calendarArea = document.getElementById('calendarArea');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            Object.values(sidebarLinks).forEach(el => { if (el) el.classList.remove('is-active'); });
+            if (sidebarLinks[id]) sidebarLinks[id].classList.add('is-active');
+          }
+        });
+      }, {
+        root: calendarArea,
+        rootMargin: '-30% 0px -60% 0px',
+        threshold: 0,
+      });
+
+      weekIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+
+      // Navigate to day view
+      function goToDay(n) {
+        // In production, would navigate to day route; for the mockup, show the existing day view
+        window.location.href = 'shotplan-redesign-f-ambient.html';
+      }
+
+      // Keyboard shortcut — Escape returns to day view
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') window.location.href = 'shotplan-redesign-f-ambient.html';
+      });
+    </script>
+  </body>
+</html>
