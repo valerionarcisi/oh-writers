@@ -23,8 +23,11 @@ const require = createRequire(import.meta.url);
 const wordnetDb = require("wordnet-db") as { path: string };
 const dataDir: string = wordnetDb.path;
 
-/** Parse a WordNet data file (data.noun, data.verb, …) into a map from
- *  synset offset (8-digit zero-padded) to { pointers, lemmas }. */
+/** Parse a WordNet data file (data.noun) into a map from synset offset
+ *  (8-digit zero-padded) to { hyponyms, lemmas }.
+ *
+ *  Only `~` (hyponym) pointers are followed so the BFS stays within the
+ *  descendant subtree and never walks back up through hypernym pointers. */
 function parseDataFile(
   filePath: string,
 ): Map<string, { ptrs: string[]; lemmas: string[] }> {
@@ -46,10 +49,12 @@ function parseDataFile(
     // pointer section starts after words
     const ptrStart = 4 + wordCount * 2;
     const ptrCount = parseInt(parts[ptrStart] ?? "0", 10);
+    // Only follow `~` (hyponym) pointers — not `@` (hypernym) or others.
     const ptrs: string[] = [];
     for (let i = 0; i < ptrCount; i++) {
+      const sym = parts[ptrStart + 1 + i * 4];
       const ptrOffset = parts[ptrStart + 1 + i * 4 + 1];
-      if (ptrOffset) ptrs.push(ptrOffset);
+      if (sym === "~" && ptrOffset) ptrs.push(ptrOffset);
     }
     map.set(offset, { ptrs, lemmas });
   }
@@ -75,8 +80,9 @@ function collectDescendants(
   return lemmas;
 }
 
-// artifact.n.01 offset in WordNet 3.1
-const ARTIFACT_OFFSET = "00021939";
+// artifact.n.01 offset in wordnet-db 3.1.14 (differs from the canonical 3.1
+// release offset 00021939 due to wordnet-db packaging).
+const ARTIFACT_OFFSET = "00022119";
 
 console.log("Parsing WordNet noun data…");
 const nounData = parseDataFile(join(dataDir, "data.noun"));
@@ -96,11 +102,12 @@ writeFileSync(
 
 const tsvPath = join(__dirname, "raw/multiwordnet-it.tsv");
 if (!existsSync(tsvPath)) {
-  console.error("MultiWordNet IT dump not found at", tsvPath);
-  console.error(
+  console.warn("MultiWordNet IT dump not found at", tsvPath);
+  console.warn(
     "Download it from http://multiwordnet.fbk.eu and save as multiwordnet-it.tsv",
   );
-  process.exit(1);
+  console.warn("Skipping IT dictionary build — existing it.json is unchanged.");
+  process.exit(0);
 }
 
 const itLemmas = new Set<string>();

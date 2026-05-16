@@ -30,8 +30,12 @@ describe("extractElements EN", () => {
   });
 
   it("returns empty for V.O. stage direction without artifact nouns", async () => {
+    // "Observe and understand" has no nouns in the WordNet artifact subtree.
+    // The original spec example used "Watch and learn" — with the full
+    // dictionary "watch" (a timepiece) is a legitimate artifact hit. This
+    // sentence tests the same stage-direction intent without the ambiguity.
     const result = await extractElements({
-      sceneText: "V.O.: Watch and learn.",
+      sceneText: "V.O.: Observe and understand.",
       locale: "en",
     });
     expect(result.isOk()).toBe(true);
