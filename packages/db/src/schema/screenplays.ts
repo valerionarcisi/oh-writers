@@ -27,7 +27,11 @@ export const screenplays = pgTable("screenplays", {
   title: text("title").notNull(),
   pageCount: integer("page_count").notNull().default(0),
   yjsState: bytea("yjs_state"),
-  pmDoc: jsonb("pm_doc").$type<Record<string, unknown> | null>(),
+  // pmDoc is an opaque ProseMirror JSON blob. Record<string,any> is intentional:
+  // TanStack's inferred wire types constrain index values to `{}` which is
+  // incompatible with `unknown`. This is the one place where `any` is correct.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pmDoc: jsonb("pm_doc").$type<Record<string, any> | null>(),
   content: text("content").notNull().default(""),
   currentVersionId: uuid("current_version_id"),
   createdBy: uuid("created_by")

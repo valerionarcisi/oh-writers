@@ -189,9 +189,7 @@ const loadScheduleView = async (
 export const getSchedule = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
-    async ({
-      data,
-    }): Promise<ResultShape<ScheduleView | null, ForbiddenError | DbError>> =>
+    async ({ data }) =>
       toShape(
         await withProjectAccess(data.projectId, "view", ({ db }) =>
           ResultAsync.fromPromise(
@@ -218,11 +216,7 @@ export const generateSchedule = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<ScheduleView, ForbiddenError | NoScenesError | DbError>
-    > =>
+    async ({ data }) =>
       toShape(
         await withProjectAccess(data.projectId, "edit", ({ db }) =>
           // Load screenplay for this project
@@ -352,14 +346,7 @@ export const moveStrip = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<
-        ScheduleView,
-        ForbiddenError | StripNotFoundError | ScheduleLockedError | DbError
-      >
-    > =>
+    async ({ data }) =>
       toShape(
         await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
           ResultAsync.fromPromise(
@@ -491,14 +478,7 @@ export const updateShootingDay = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<
-        ScheduleView,
-        ForbiddenError | ShootingDayNotFoundError | DbError
-      >
-    > =>
+    async ({ data }) =>
       toShape(
         await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
           ResultAsync.fromPromise(
@@ -557,14 +537,7 @@ export const addShootingDay = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<
-        ScheduleView,
-        ForbiddenError | ScheduleNotFoundError | DbError
-      >
-    > =>
+    async ({ data }) =>
       toShape(
         await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
           ResultAsync.fromPromise(
@@ -630,14 +603,7 @@ export const addShootingDay = createServerFn({ method: "POST" })
 export const removeShootingDay = createServerFn({ method: "POST" })
   .validator(z.object({ dayId: z.string().uuid() }))
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<
-        ScheduleView,
-        ForbiddenError | ShootingDayNotFoundError | DbError
-      >
-    > =>
+    async ({ data }) =>
       toShape(
         await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
           ResultAsync.fromPromise(
@@ -716,11 +682,7 @@ export const removeShootingDay = createServerFn({ method: "POST" })
 export const toggleStripLock = createServerFn({ method: "POST" })
   .validator(z.object({ stripId: z.string().uuid() }))
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<ScheduleView, ForbiddenError | StripNotFoundError | DbError>
-    > =>
+    async ({ data }) =>
       toShape(
         await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
           ResultAsync.fromPromise(
@@ -779,11 +741,7 @@ export const updateStripEffort = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<ScheduleView, ForbiddenError | StripNotFoundError | DbError>
-    > =>
+    async ({ data }) =>
       toShape(
         await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
           ResultAsync.fromPromise(

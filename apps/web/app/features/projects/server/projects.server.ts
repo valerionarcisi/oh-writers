@@ -97,11 +97,7 @@ export const teamProjectsQueryOptions = (teamId: string) =>
 export const getProjectById = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<ProjectWithDocuments, ProjectNotFoundError | DbError>
-    > => {
+    async ({ data }) => {
       const user = await requireUser();
       const db = await getDb();
 

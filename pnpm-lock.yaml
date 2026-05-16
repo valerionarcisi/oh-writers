@@ -7,6 +7,13 @@ settings:
 importers:
 
   .:
+    dependencies:
+      react-aria:
+        specifier: 3.48.0
+        version: 3.48.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-stately:
+        specifier: 3.46.0
+        version: 3.46.0(react@19.2.4)
     devDependencies:
       '@playwright/test':
         specifier: 1.58.2
@@ -131,9 +138,15 @@ importers:
       react:
         specifier: 19.2.4
         version: 19.2.4
+      react-aria:
+        specifier: 3.48.0
+        version: 3.48.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
+      react-stately:
+        specifier: 3.46.0
+        version: 3.46.0(react@19.2.4)
       ts-pattern:
         specifier: 5.5.0
         version: 5.5.0
@@ -265,13 +278,13 @@ importers:
         specifier: '>=18'
         version: 19.2.4
       react-aria:
-        specifier: ^3.48.0
+        specifier: 3.48.0
         version: 3.48.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-dom:
         specifier: '>=18'
         version: 19.2.4(react@19.2.4)
       react-stately:
-        specifier: ^3.46.0
+        specifier: 3.46.0
         version: 3.46.0(react@19.2.4)
     devDependencies:
       '@testing-library/jest-dom':
