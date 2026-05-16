@@ -9,3 +9,5 @@ export * from "./predictions";
 export * from "./breakdown";
 export * from "./budget";
 export * from "./schedule";
+export * from "./shot-plan";
+export * from "./blocking";

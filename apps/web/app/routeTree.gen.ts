@@ -15,7 +15,6 @@ import { Route as RegisterImport } from './routes/register'
 import { Route as LoginImport } from './routes/login'
 import { Route as AppImport } from './routes/_app'
 import { Route as IndexImport } from './routes/index'
-import { Route as DevTokensImport } from './routes/dev/tokens'
 import { Route as AppDashboardImport } from './routes/_app.dashboard'
 import { Route as AppProjectsNewImport } from './routes/_app.projects.new'
 import { Route as AppProjectsIdImport } from './routes/_app.projects.$id'
@@ -23,6 +22,7 @@ import { Route as AppProjectsIdTreatmentImport } from './routes/_app.projects.$i
 import { Route as AppProjectsIdTitlePageImport } from './routes/_app.projects.$id_.title-page'
 import { Route as AppProjectsIdSynopsisImport } from './routes/_app.projects.$id_.synopsis'
 import { Route as AppProjectsIdSoggettoImport } from './routes/_app.projects.$id_.soggetto'
+import { Route as AppProjectsIdShootingPlanImport } from './routes/_app.projects.$id_.shooting-plan'
 import { Route as AppProjectsIdSettingsImport } from './routes/_app.projects.$id_.settings'
 import { Route as AppProjectsIdScreenplayImport } from './routes/_app.projects.$id_.screenplay'
 import { Route as AppProjectsIdScheduleImport } from './routes/_app.projects.$id_.schedule'
@@ -30,6 +30,7 @@ import { Route as AppProjectsIdOutlineImport } from './routes/_app.projects.$id_
 import { Route as AppProjectsIdBudgetImport } from './routes/_app.projects.$id_.budget'
 import { Route as AppProjectsIdBreakdownImport } from './routes/_app.projects.$id_.breakdown'
 import { Route as AppProjectsIdScreenplayIndexImport } from './routes/_app.projects.$id_.screenplay.index'
+import { Route as AppProjectsIdShootingPlanBlockingEditorImport } from './routes/_app.projects.$id_.shooting-plan_.blocking-editor'
 import { Route as AppProjectsIdScreenplayVersionsImport } from './routes/_app.projects.$id_.screenplay.versions'
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from './routes/_app.projects.$id_.screenplay.versions.$vId'
 import { Route as AppProjectsIdScreenplayDiffV1V2Import } from './routes/_app.projects.$id_.screenplay.diff.$v1.$v2'
@@ -56,12 +57,6 @@ const AppRoute = AppImport.update({
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const DevTokensRoute = DevTokensImport.update({
-  id: '/dev/tokens',
-  path: '/dev/tokens',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -107,6 +102,12 @@ const AppProjectsIdSoggettoRoute = AppProjectsIdSoggettoImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 
+const AppProjectsIdShootingPlanRoute = AppProjectsIdShootingPlanImport.update({
+  id: '/projects/$id_/shooting-plan',
+  path: '/projects/$id/shooting-plan',
+  getParentRoute: () => AppRoute,
+} as any)
+
 const AppProjectsIdSettingsRoute = AppProjectsIdSettingsImport.update({
   id: '/projects/$id_/settings',
   path: '/projects/$id/settings',
@@ -148,6 +149,13 @@ const AppProjectsIdScreenplayIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AppProjectsIdScreenplayRoute,
+  } as any)
+
+const AppProjectsIdShootingPlanBlockingEditorRoute =
+  AppProjectsIdShootingPlanBlockingEditorImport.update({
+    id: '/projects/$id_/shooting-plan_/blocking-editor',
+    path: '/projects/$id/shooting-plan/blocking-editor',
+    getParentRoute: () => AppRoute,
   } as any)
 
 const AppProjectsIdScreenplayVersionsRoute =
@@ -210,13 +218,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardImport
       parentRoute: typeof AppImport
     }
-    '/dev/tokens': {
-      id: '/dev/tokens'
-      path: '/dev/tokens'
-      fullPath: '/dev/tokens'
-      preLoaderRoute: typeof DevTokensImport
-      parentRoute: typeof rootRoute
-    }
     '/_app/projects/$id': {
       id: '/_app/projects/$id'
       path: '/projects/$id'
@@ -273,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProjectsIdSettingsImport
       parentRoute: typeof AppImport
     }
+    '/_app/projects/$id_/shooting-plan': {
+      id: '/_app/projects/$id_/shooting-plan'
+      path: '/projects/$id/shooting-plan'
+      fullPath: '/projects/$id/shooting-plan'
+      preLoaderRoute: typeof AppProjectsIdShootingPlanImport
+      parentRoute: typeof AppImport
+    }
     '/_app/projects/$id_/soggetto': {
       id: '/_app/projects/$id_/soggetto'
       path: '/projects/$id/soggetto'
@@ -307,6 +315,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$id/screenplay/versions'
       preLoaderRoute: typeof AppProjectsIdScreenplayVersionsImport
       parentRoute: typeof AppProjectsIdScreenplayImport
+    }
+    '/_app/projects/$id_/shooting-plan_/blocking-editor': {
+      id: '/_app/projects/$id_/shooting-plan_/blocking-editor'
+      path: '/projects/$id/shooting-plan/blocking-editor'
+      fullPath: '/projects/$id/shooting-plan/blocking-editor'
+      preLoaderRoute: typeof AppProjectsIdShootingPlanBlockingEditorImport
+      parentRoute: typeof AppImport
     }
     '/_app/projects/$id_/screenplay/': {
       id: '/_app/projects/$id_/screenplay/'
@@ -378,10 +393,12 @@ interface AppRouteChildren {
   AppProjectsIdScheduleRoute: typeof AppProjectsIdScheduleRoute
   AppProjectsIdScreenplayRoute: typeof AppProjectsIdScreenplayRouteWithChildren
   AppProjectsIdSettingsRoute: typeof AppProjectsIdSettingsRoute
+  AppProjectsIdShootingPlanRoute: typeof AppProjectsIdShootingPlanRoute
   AppProjectsIdSoggettoRoute: typeof AppProjectsIdSoggettoRoute
   AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute
   AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute
   AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute
+  AppProjectsIdShootingPlanBlockingEditorRoute: typeof AppProjectsIdShootingPlanBlockingEditorRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -394,10 +411,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsIdScheduleRoute: AppProjectsIdScheduleRoute,
   AppProjectsIdScreenplayRoute: AppProjectsIdScreenplayRouteWithChildren,
   AppProjectsIdSettingsRoute: AppProjectsIdSettingsRoute,
+  AppProjectsIdShootingPlanRoute: AppProjectsIdShootingPlanRoute,
   AppProjectsIdSoggettoRoute: AppProjectsIdSoggettoRoute,
   AppProjectsIdSynopsisRoute: AppProjectsIdSynopsisRoute,
   AppProjectsIdTitlePageRoute: AppProjectsIdTitlePageRoute,
   AppProjectsIdTreatmentRoute: AppProjectsIdTreatmentRoute,
+  AppProjectsIdShootingPlanBlockingEditorRoute:
+    AppProjectsIdShootingPlanBlockingEditorRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -408,7 +428,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard': typeof AppDashboardRoute
-  '/dev/tokens': typeof DevTokensRoute
   '/projects/$id': typeof AppProjectsIdRoute
   '/projects/new': typeof AppProjectsNewRoute
   '/projects/$id/breakdown': typeof AppProjectsIdBreakdownRoute
@@ -417,11 +436,13 @@ export interface FileRoutesByFullPath {
   '/projects/$id/schedule': typeof AppProjectsIdScheduleRoute
   '/projects/$id/screenplay': typeof AppProjectsIdScreenplayRouteWithChildren
   '/projects/$id/settings': typeof AppProjectsIdSettingsRoute
+  '/projects/$id/shooting-plan': typeof AppProjectsIdShootingPlanRoute
   '/projects/$id/soggetto': typeof AppProjectsIdSoggettoRoute
   '/projects/$id/synopsis': typeof AppProjectsIdSynopsisRoute
   '/projects/$id/title-page': typeof AppProjectsIdTitlePageRoute
   '/projects/$id/treatment': typeof AppProjectsIdTreatmentRoute
   '/projects/$id/screenplay/versions': typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  '/projects/$id/shooting-plan/blocking-editor': typeof AppProjectsIdShootingPlanBlockingEditorRoute
   '/projects/$id/screenplay/': typeof AppProjectsIdScreenplayIndexRoute
   '/projects/$id/screenplay/versions/$vId': typeof AppProjectsIdScreenplayVersionsVIdRoute
   '/projects/$id/screenplay/diff/$v1/$v2': typeof AppProjectsIdScreenplayDiffV1V2Route
@@ -433,7 +454,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard': typeof AppDashboardRoute
-  '/dev/tokens': typeof DevTokensRoute
   '/projects/$id': typeof AppProjectsIdRoute
   '/projects/new': typeof AppProjectsNewRoute
   '/projects/$id/breakdown': typeof AppProjectsIdBreakdownRoute
@@ -441,11 +461,13 @@ export interface FileRoutesByTo {
   '/projects/$id/outline': typeof AppProjectsIdOutlineRoute
   '/projects/$id/schedule': typeof AppProjectsIdScheduleRoute
   '/projects/$id/settings': typeof AppProjectsIdSettingsRoute
+  '/projects/$id/shooting-plan': typeof AppProjectsIdShootingPlanRoute
   '/projects/$id/soggetto': typeof AppProjectsIdSoggettoRoute
   '/projects/$id/synopsis': typeof AppProjectsIdSynopsisRoute
   '/projects/$id/title-page': typeof AppProjectsIdTitlePageRoute
   '/projects/$id/treatment': typeof AppProjectsIdTreatmentRoute
   '/projects/$id/screenplay/versions': typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  '/projects/$id/shooting-plan/blocking-editor': typeof AppProjectsIdShootingPlanBlockingEditorRoute
   '/projects/$id/screenplay': typeof AppProjectsIdScreenplayIndexRoute
   '/projects/$id/screenplay/versions/$vId': typeof AppProjectsIdScreenplayVersionsVIdRoute
   '/projects/$id/screenplay/diff/$v1/$v2': typeof AppProjectsIdScreenplayDiffV1V2Route
@@ -458,7 +480,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_app/dashboard': typeof AppDashboardRoute
-  '/dev/tokens': typeof DevTokensRoute
   '/_app/projects/$id': typeof AppProjectsIdRoute
   '/_app/projects/new': typeof AppProjectsNewRoute
   '/_app/projects/$id_/breakdown': typeof AppProjectsIdBreakdownRoute
@@ -467,11 +488,13 @@ export interface FileRoutesById {
   '/_app/projects/$id_/schedule': typeof AppProjectsIdScheduleRoute
   '/_app/projects/$id_/screenplay': typeof AppProjectsIdScreenplayRouteWithChildren
   '/_app/projects/$id_/settings': typeof AppProjectsIdSettingsRoute
+  '/_app/projects/$id_/shooting-plan': typeof AppProjectsIdShootingPlanRoute
   '/_app/projects/$id_/soggetto': typeof AppProjectsIdSoggettoRoute
   '/_app/projects/$id_/synopsis': typeof AppProjectsIdSynopsisRoute
   '/_app/projects/$id_/title-page': typeof AppProjectsIdTitlePageRoute
   '/_app/projects/$id_/treatment': typeof AppProjectsIdTreatmentRoute
   '/_app/projects/$id_/screenplay/versions': typeof AppProjectsIdScreenplayVersionsRouteWithChildren
+  '/_app/projects/$id_/shooting-plan_/blocking-editor': typeof AppProjectsIdShootingPlanBlockingEditorRoute
   '/_app/projects/$id_/screenplay/': typeof AppProjectsIdScreenplayIndexRoute
   '/_app/projects/$id_/screenplay/versions/$vId': typeof AppProjectsIdScreenplayVersionsVIdRoute
   '/_app/projects/$id_/screenplay/diff/$v1/$v2': typeof AppProjectsIdScreenplayDiffV1V2Route
@@ -485,7 +508,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard'
-    | '/dev/tokens'
     | '/projects/$id'
     | '/projects/new'
     | '/projects/$id/breakdown'
@@ -494,11 +516,13 @@ export interface FileRouteTypes {
     | '/projects/$id/schedule'
     | '/projects/$id/screenplay'
     | '/projects/$id/settings'
+    | '/projects/$id/shooting-plan'
     | '/projects/$id/soggetto'
     | '/projects/$id/synopsis'
     | '/projects/$id/title-page'
     | '/projects/$id/treatment'
     | '/projects/$id/screenplay/versions'
+    | '/projects/$id/shooting-plan/blocking-editor'
     | '/projects/$id/screenplay/'
     | '/projects/$id/screenplay/versions/$vId'
     | '/projects/$id/screenplay/diff/$v1/$v2'
@@ -509,7 +533,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard'
-    | '/dev/tokens'
     | '/projects/$id'
     | '/projects/new'
     | '/projects/$id/breakdown'
@@ -517,11 +540,13 @@ export interface FileRouteTypes {
     | '/projects/$id/outline'
     | '/projects/$id/schedule'
     | '/projects/$id/settings'
+    | '/projects/$id/shooting-plan'
     | '/projects/$id/soggetto'
     | '/projects/$id/synopsis'
     | '/projects/$id/title-page'
     | '/projects/$id/treatment'
     | '/projects/$id/screenplay/versions'
+    | '/projects/$id/shooting-plan/blocking-editor'
     | '/projects/$id/screenplay'
     | '/projects/$id/screenplay/versions/$vId'
     | '/projects/$id/screenplay/diff/$v1/$v2'
@@ -532,7 +557,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_app/dashboard'
-    | '/dev/tokens'
     | '/_app/projects/$id'
     | '/_app/projects/new'
     | '/_app/projects/$id_/breakdown'
@@ -541,11 +565,13 @@ export interface FileRouteTypes {
     | '/_app/projects/$id_/schedule'
     | '/_app/projects/$id_/screenplay'
     | '/_app/projects/$id_/settings'
+    | '/_app/projects/$id_/shooting-plan'
     | '/_app/projects/$id_/soggetto'
     | '/_app/projects/$id_/synopsis'
     | '/_app/projects/$id_/title-page'
     | '/_app/projects/$id_/treatment'
     | '/_app/projects/$id_/screenplay/versions'
+    | '/_app/projects/$id_/shooting-plan_/blocking-editor'
     | '/_app/projects/$id_/screenplay/'
     | '/_app/projects/$id_/screenplay/versions/$vId'
     | '/_app/projects/$id_/screenplay/diff/$v1/$v2'
@@ -557,7 +583,6 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  DevTokensRoute: typeof DevTokensRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -565,7 +590,6 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  DevTokensRoute: DevTokensRoute,
 }
 
 export const routeTree = rootRoute
@@ -581,8 +605,7 @@ export const routeTree = rootRoute
         "/",
         "/_app",
         "/login",
-        "/register",
-        "/dev/tokens"
+        "/register"
       ]
     },
     "/": {
@@ -600,10 +623,12 @@ export const routeTree = rootRoute
         "/_app/projects/$id_/schedule",
         "/_app/projects/$id_/screenplay",
         "/_app/projects/$id_/settings",
+        "/_app/projects/$id_/shooting-plan",
         "/_app/projects/$id_/soggetto",
         "/_app/projects/$id_/synopsis",
         "/_app/projects/$id_/title-page",
-        "/_app/projects/$id_/treatment"
+        "/_app/projects/$id_/treatment",
+        "/_app/projects/$id_/shooting-plan_/blocking-editor"
       ]
     },
     "/login": {
@@ -615,9 +640,6 @@ export const routeTree = rootRoute
     "/_app/dashboard": {
       "filePath": "_app.dashboard.tsx",
       "parent": "/_app"
-    },
-    "/dev/tokens": {
-      "filePath": "dev/tokens.tsx"
     },
     "/_app/projects/$id": {
       "filePath": "_app.projects.$id.tsx",
@@ -656,6 +678,10 @@ export const routeTree = rootRoute
       "filePath": "_app.projects.$id_.settings.tsx",
       "parent": "/_app"
     },
+    "/_app/projects/$id_/shooting-plan": {
+      "filePath": "_app.projects.$id_.shooting-plan.tsx",
+      "parent": "/_app"
+    },
     "/_app/projects/$id_/soggetto": {
       "filePath": "_app.projects.$id_.soggetto.tsx",
       "parent": "/_app"
@@ -678,6 +704,10 @@ export const routeTree = rootRoute
       "children": [
         "/_app/projects/$id_/screenplay/versions/$vId"
       ]
+    },
+    "/_app/projects/$id_/shooting-plan_/blocking-editor": {
+      "filePath": "_app.projects.$id_.shooting-plan_.blocking-editor.tsx",
+      "parent": "/_app"
     },
     "/_app/projects/$id_/screenplay/": {
       "filePath": "_app.projects.$id_.screenplay.index.tsx",

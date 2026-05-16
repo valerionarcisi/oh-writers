@@ -1,0 +1,109 @@
+.track {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.label {
+  inline-size: 120px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-fg);
+}
+
+.activeChip {
+  font-size: 8px;
+  background: var(--color-accent-green);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-bold);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  letter-spacing: var(--tracking-caps);
+}
+
+.makeActiveBtn {
+  font-size: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  letter-spacing: var(--tracking-caps);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-accent-green);
+    border-color: var(--color-accent-green);
+  }
+}
+
+.suggestedChip {
+  font-size: 8px;
+  background: var(--color-amber-subtle);
+  color: var(--color-amber);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  letter-spacing: var(--tracking-caps);
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.overflowBadge {
+  color: var(--color-error);
+  font-weight: var(--weight-semibold);
+}
+
+.canvas {
+  flex: 1;
+  position: relative;
+  block-size: 30px;
+  background: var(--color-surface-inset);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+}
+
+.blocks {
+  display: flex;
+  gap: 2px;
+  block-size: 100%;
+  align-items: stretch;
+}
+
+.dropIndicator {
+  position: absolute;
+  inset-block: -2px;
+  inline-size: 3px;
+  background: var(--color-accent-blue);
+  box-shadow: 0 0 6px var(--color-accent-blue);
+  border-radius: 2px;
+  pointer-events: none;
+
+  &[data-same] {
+    background: var(--color-accent-green);
+    box-shadow: 0 0 6px var(--color-accent-green);
+  }
+}

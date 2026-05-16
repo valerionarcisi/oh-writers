@@ -9,3 +9,4 @@ export * from "./screenplay/index.js";
 export * from "./subject/index.js";
 export * from "./budget/index.js";
 export * from "./schedule/index.js";
+export * from "./blocking/index.js";

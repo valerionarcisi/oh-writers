@@ -1,0 +1,77 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  block-size: 100%;
+}
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.activeHiddenBanner {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-amber-subtle);
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-md);
+  color: var(--color-amber);
+  font-size: var(--text-sm);
+
+  & button {
+    background: transparent;
+    border: none;
+    color: var(--color-amber);
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+  }
+}
+
+.rulerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-3);
+}
+
+.rulerLabel {
+  inline-size: 120px;
+  flex-shrink: 0;
+}
+
+.ruler {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  border-block-end: 1px solid var(--color-border);
+  padding-block-end: var(--space-1);
+}
+
+.rulerTick {
+  &[data-end] {
+    color: var(--color-fg-secondary);
+    font-weight: var(--weight-semibold);
+  }
+}
+
+.tracks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detailPanel {
+  margin-block-start: var(--space-3);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: 200px;
+  color: var(--color-text-muted);
+}
