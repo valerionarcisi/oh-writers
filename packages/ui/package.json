@@ -24,5 +24,9 @@
     "jsdom": "25.0.1",
     "typescript": "5.9.3",
     "vitest": "2.1.9"
+  },
+  "dependencies": {
+    "react-aria": "3.48.0",
+    "react-stately": "3.46.0"
   }
 }
