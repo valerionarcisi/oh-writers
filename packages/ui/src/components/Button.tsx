@@ -29,6 +29,13 @@ export function Button({
   onPressEnd,
   onPressChange,
   type = "button",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledby,
+  "aria-describedby": ariaDescribedby,
+  "aria-expanded": ariaExpanded,
+  "aria-haspopup": ariaHaspopup,
+  "aria-controls": ariaControls,
+  "aria-pressed": ariaPressed,
   ...rest
 }: ButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
@@ -41,14 +48,13 @@ export function Button({
       onPressEnd,
       onPressChange,
       type,
-      // Preserve aria attributes forwarded by callers
-      "aria-label": rest["aria-label"],
-      "aria-labelledby": rest["aria-labelledby"],
-      "aria-describedby": rest["aria-describedby"],
-      "aria-expanded": rest["aria-expanded"],
-      "aria-haspopup": rest["aria-haspopup"],
-      "aria-controls": rest["aria-controls"],
-      "aria-pressed": rest["aria-pressed"],
+      "aria-label": ariaLabel,
+      "aria-labelledby": ariaLabelledby,
+      "aria-describedby": ariaDescribedby,
+      "aria-expanded": ariaExpanded,
+      "aria-haspopup": ariaHaspopup,
+      "aria-controls": ariaControls,
+      "aria-pressed": ariaPressed,
     },
     ref,
   );
@@ -62,8 +68,8 @@ export function Button({
     .filter(Boolean)
     .join(" ");
 
-  // Spread rest after buttonProps so callers can still override with data-* attributes,
-  // but buttonProps wins for behavior-critical attributes (onClick, aria-*, disabled, type).
+  // rest contains only data-*, event handlers, and non-aria HTML attributes.
+  // buttonProps wins for all behavior-critical attributes.
   return (
     <button ref={ref} className={classes} {...rest} {...buttonProps}>
       {children}
