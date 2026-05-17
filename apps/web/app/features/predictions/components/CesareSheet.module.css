@@ -1,0 +1,472 @@
+/* CesareSheet.module.css — bottom sheet for the Cesare AI assistant */
+
+/* ─── Scrim ─────────────────────────────────────────────────────────────── */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 26, 23, 0.15);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+
+  &[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity var(--ds-duration-3) var(--ds-ease);
+  }
+}
+
+/* ─── Sheet ──────────────────────────────────────────────────────────────── */
+
+.sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 42vh;
+  min-height: 320px;
+  max-height: 520px;
+  background: var(--ds-surface);
+  border-block-start: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+  box-shadow: 0 -8px 32px rgba(28, 26, 23, 0.12);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+
+  &[data-open="true"] {
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: transform var(--ds-duration-3) var(--ds-ease);
+  }
+}
+
+/* ─── Drag handle ────────────────────────────────────────────────────────── */
+
+.handle {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding-block: var(--ds-space-2);
+
+  &::after {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-line);
+  }
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--ds-space-4);
+  padding-block-end: var(--ds-space-3);
+  border-block-end: 1px solid var(--ds-line);
+}
+
+.headerStart {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.headerEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.agentIcon {
+  font-size: 0.9rem;
+  color: var(--ds-agent);
+  line-height: 1;
+}
+
+.agentName {
+  font-family: var(--ds-font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ds-agent);
+  letter-spacing: 0.01em;
+}
+
+.contextChip {
+  font-family: var(--ds-font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ds-text-mute);
+  background: var(--ds-surface-alt, var(--ds-agent-soft));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-pill);
+  padding-inline: var(--ds-space-2);
+  padding-block: 2px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.fullPageBtn {
+  font-family: var(--ds-font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ds-text-mute);
+  background: transparent;
+  border: none;
+  border-radius: var(--ds-radius-sm);
+  padding-inline: var(--ds-space-2);
+  padding-block: var(--ds-space-1);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ds-text);
+    background: var(--ds-agent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent);
+    outline-offset: 2px;
+  }
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-mute);
+  font-size: 0.75rem;
+  cursor: pointer;
+  line-height: 1;
+
+  &:hover {
+    background: var(--ds-surface-alt, rgba(28, 26, 23, 0.06));
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Conversation ───────────────────────────────────────────────────────── */
+
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  min-block-size: 0;
+  padding-inline: var(--ds-space-4);
+  padding-block: var(--ds-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  scroll-behavior: smooth;
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────── */
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  padding-block: var(--ds-space-6);
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 1.5rem;
+  color: var(--ds-agent);
+  line-height: 1;
+}
+
+.emptyText {
+  font-family: var(--ds-font-display, var(--ds-font-sans));
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ds-text);
+  margin: 0;
+}
+
+.emptyHint {
+  font-family: var(--ds-font-sans);
+  font-size: 0.8125rem;
+  color: var(--ds-text-mute);
+  margin: 0;
+}
+
+/* ─── Message bubbles ────────────────────────────────────────────────────── */
+
+.bubble {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  max-width: 88%;
+}
+
+.bubbleUser {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.bubbleAssistant {
+  align-self: flex-start;
+}
+
+.bubbleIcon {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--ds-agent);
+  margin-block-start: 3px;
+  line-height: 1;
+}
+
+.bubbleText {
+  font-family: var(--ds-font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+  padding-inline: var(--ds-space-3);
+  padding-block: var(--ds-space-2);
+  border-radius: var(--ds-radius-md);
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  .bubbleUser & {
+    background: var(--ds-action-soft);
+    color: var(--ds-text);
+    border-end-inline-end-radius: 2px;
+  }
+
+  .bubbleAssistant & {
+    background: var(--ds-agent-soft);
+    color: var(--ds-text);
+    border-end-inline-start-radius: 2px;
+  }
+}
+
+.bubbleLoading {
+  opacity: 0.75;
+}
+
+.loadingDots {
+  font-family: var(--ds-font-sans);
+  font-size: 1.1rem;
+  color: var(--ds-agent);
+  letter-spacing: 0.15em;
+  line-height: 1.2;
+  padding-inline: var(--ds-space-3);
+  padding-block: var(--ds-space-2);
+  background: var(--ds-agent-soft);
+  border-radius: var(--ds-radius-md);
+  border-end-inline-start-radius: 2px;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1;   }
+}
+
+/* ─── Quick prompts ──────────────────────────────────────────────────────── */
+
+.quickPrompts {
+  flex-shrink: 0;
+  display: flex;
+  gap: var(--ds-space-2);
+  padding-inline: var(--ds-space-4);
+  padding-block: var(--ds-space-2);
+  overflow-x: auto;
+  border-block-start: 1px solid var(--ds-line);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.quickPromptBtn {
+  flex-shrink: 0;
+  font-family: var(--ds-font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ds-text-2);
+  background: var(--ds-surface-alt, rgba(28, 26, 23, 0.04));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-pill);
+  padding-inline: var(--ds-space-3);
+  padding-block: var(--ds-space-1);
+  cursor: pointer;
+  white-space: nowrap;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      background var(--ds-duration-1) var(--ds-ease),
+      border-color var(--ds-duration-1) var(--ds-ease);
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--ds-agent-soft);
+    border-color: var(--ds-agent);
+    color: var(--ds-agent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+/* ─── Input row ──────────────────────────────────────────────────────────── */
+
+.inputRow {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-2);
+  padding-inline: var(--ds-space-4);
+  padding-block: var(--ds-space-3);
+  border-block-start: 1px solid var(--ds-line);
+}
+
+.textarea {
+  flex: 1;
+  font-family: var(--ds-font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ds-text);
+  background: var(--ds-surface-alt, rgba(28, 26, 23, 0.04));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding-inline: var(--ds-space-3);
+  padding-block: var(--ds-space-2);
+  resize: none;
+  min-height: 36px;
+  max-height: 120px;
+  overflow-y: auto;
+
+  &::placeholder {
+    color: var(--ds-text-mute);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--ds-agent);
+    box-shadow: 0 0 0 2px rgba(90, 107, 60, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      border-color var(--ds-duration-1) var(--ds-ease),
+      box-shadow var(--ds-duration-1) var(--ds-ease);
+  }
+}
+
+.sendBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+  border: none;
+  border-radius: var(--ds-radius-md);
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: background var(--ds-duration-1) var(--ds-ease);
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--ds-agent) 80%, black);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+/* ─── Floating Action Button ─────────────────────────────────────────────── */
+
+.fab {
+  position: fixed;
+  bottom: 80px; /* above FloatingDock */
+  inset-inline-end: 20px;
+  width: 40px;
+  height: 40px;
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border: none;
+  border-radius: var(--ds-radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--ds-shadow-2);
+  z-index: 199;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition:
+      background var(--ds-duration-1) var(--ds-ease),
+      box-shadow var(--ds-duration-1) var(--ds-ease),
+      transform var(--ds-duration-1) var(--ds-ease);
+  }
+
+  &:hover {
+    background: var(--ds-action-hover);
+    box-shadow: var(--ds-shadow-3);
+    transform: scale(1.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 3px;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}

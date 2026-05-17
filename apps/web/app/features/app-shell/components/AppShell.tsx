@@ -10,6 +10,9 @@ import type {
   DropdownMenuItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
+import { CesareFab, CesareSheet } from "~/features/predictions";
+import { askCesare } from "~/features/predictions";
+import type { CesarePage } from "~/features/predictions";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import styles from "./AppShell.module.css";
@@ -27,6 +30,10 @@ interface AppShellProps {
   currentProjectId?: string;
   onProjectSelect?: (id: string) => void;
   userMenuItems?: DropdownMenuItem[];
+  projectId?: string;
+  cesarePage?: CesarePage;
+  cesareSceneId?: string | null;
+  cesareSceneNumber?: number | null;
   children: ReactNode;
 }
 
@@ -59,6 +66,10 @@ function AppShellInner({
   currentProjectId,
   onProjectSelect,
   userMenuItems,
+  projectId,
+  cesarePage,
+  cesareSceneId,
+  cesareSceneNumber,
   children,
 }: AppShellProps) {
   const ctxSave = useSaveStateValue();
@@ -67,6 +78,7 @@ function AppShellInner({
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
+  const [cesareOpen, setCesareOpen] = useState(false);
 
   useEffect(() => {
     const main = document.getElementById("main-content");
@@ -164,6 +176,24 @@ function AppShellInner({
           onClose={closePalette}
           items={paletteItems}
         />
+        {projectId && (
+          <CesareFab onClick={() => setCesareOpen(true)} />
+        )}
+        {projectId && (
+          <CesareSheet
+            projectId={projectId}
+            page={cesarePage ?? "screenplay"}
+            sceneId={cesareSceneId}
+            sceneNumber={cesareSceneNumber}
+            isOpen={cesareOpen}
+            onClose={() => setCesareOpen(false)}
+            onOpenFullPage={() => {
+              setCesareOpen(false);
+              // TODO: navigate to full Cesare page (future)
+            }}
+            askCesare={askCesare}
+          />
+        )}
       </div>
     </VersionsDrawerProvider>
   );

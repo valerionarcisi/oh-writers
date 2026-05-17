@@ -3,12 +3,14 @@ import {
   Outlet,
   redirect,
   useMatches,
+  useLocation,
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
+import type { CesarePage } from "~/features/predictions";
 import {
   useProject,
   personalProjectsQueryOptions,
@@ -128,9 +130,25 @@ function activeSegmentFromRouteId(routeId: string): string {
   return "";
 }
 
+const CESARE_PAGE_SEGMENTS: Array<{ segment: string; page: CesarePage }> = [
+  { segment: "/screenplay", page: "screenplay" },
+  { segment: "/breakdown", page: "breakdown" },
+  { segment: "/budget", page: "budget" },
+  { segment: "/schedule", page: "schedule" },
+  { segment: "/shooting-plan", page: "shooting-plan" },
+];
+
+function deriveCesarePage(pathname: string): CesarePage {
+  for (const { segment, page } of CESARE_PAGE_SEGMENTS) {
+    if (pathname.includes(segment)) return page;
+  }
+  return "screenplay";
+}
+
 function AppLayout() {
   const { user } = Route.useLoaderData();
   const matches = useMatches();
+  const { pathname } = useLocation();
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
@@ -151,6 +169,7 @@ function AppLayout() {
       : "Oh Writers";
 
   const sectionGroups = buildSectionGroups(projectId, activeSegment);
+  const cesarePage = deriveCesarePage(pathname);
 
   const { data: personalProjects } = useQuery(personalProjectsQueryOptions());
   const projectsList = personalProjects?.map((p) => ({
@@ -181,6 +200,10 @@ function AppLayout() {
       projects={projectsList}
       currentProjectId={projectId}
       userMenuItems={userMenuItems}
+      projectId={projectId}
+      cesarePage={cesarePage}
+      cesareSceneId={null}
+      cesareSceneNumber={null}
     >
       <Outlet />
     </AppShell>
