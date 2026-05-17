@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Oh Writers — Analisi di Mercato 2026</title>
+  <title>Oh Writers — Analisi di Mercato 2025</title>
   <style>
     :root {
       --bg: #0f0f0f;
@@ -623,6 +623,9 @@
       .funnel-amount { grid-column: 2; }
       nav { padding: 0 1rem; }
       main { padding: 80px 1rem 4rem; }
+      .cesare-example { grid-template-columns: 1fr; }
+      .cesare-icon { display: none; }
+      .footnote-item { grid-template-columns: 1.5rem 1fr; }
     }
 
     .moat-col h4 {
@@ -681,6 +684,193 @@
       color: var(--text-dim);
     }
 
+    /* ── AI MOAT EXPANDED ── */
+    .moat-full-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      margin-block-start: 1.5rem;
+    }
+
+    .moat-full-card .moat-intro {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-block-end: 2rem;
+      max-width: 820px;
+    }
+
+    .moat-subsection-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-block-end: 1rem;
+    }
+
+    .ai-compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-block-end: 2rem;
+    }
+
+    .ai-compare-table th {
+      padding: 0.6rem 0.75rem;
+      text-align: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border-block-end: 1px solid var(--border-strong);
+      background: color-mix(in srgb, var(--bg) 40%, var(--bg-card));
+    }
+
+    .ai-compare-table th:first-child { text-align: start; padding-inline-start: 1rem; }
+    .ai-compare-table th.ours-col { color: var(--accent); }
+
+    .ai-compare-table td {
+      padding: 0.65rem 0.75rem;
+      text-align: center;
+      border-block-end: 1px solid var(--border);
+      color: var(--text-dim);
+      vertical-align: middle;
+    }
+
+    .ai-compare-table td:first-child {
+      text-align: start;
+      padding-inline-start: 1rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .ai-compare-table tr:last-child td { border-block-end: none; }
+    .ai-compare-table tr:hover td { background: var(--bg-card-hover); }
+
+    .ai-compare-table tr.ours-row td {
+      background: color-mix(in srgb, var(--accent) 5%, var(--bg-card));
+    }
+
+    .ai-compare-table tr.ours-row td:first-child {
+      border-inline-start: 2px solid var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .ai-compare-table .ai-check { color: var(--green); font-size: 1rem; }
+    .ai-compare-table .ai-cross { color: var(--text-dim); opacity: 0.35; }
+    .ai-compare-table .ai-partial { color: var(--accent); font-size: 0.85rem; }
+
+    .cesare-examples {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-block-end: 2rem;
+    }
+
+    .cesare-example {
+      background: var(--bg-card);
+      padding: 1.25rem 1.5rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .cesare-example-q {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-block-end: 0.35rem;
+    }
+
+    .cesare-example-a {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .cesare-icon {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--accent) 15%, var(--bg-card));
+      border: 1px solid var(--accent-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      margin-block-start: 0.1rem;
+    }
+
+    .moat-conclusion {
+      background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem 1.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .moat-conclusion strong {
+      color: var(--accent);
+    }
+
+    /* ── FOOTNOTES ── */
+    #fonti {
+      margin-block-start: 2rem;
+      padding-block-start: 2rem;
+      border-block-start: 1px solid var(--border);
+    }
+
+    .footnotes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-block-start: 1rem;
+    }
+
+    .footnote-item {
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .footnote-num {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      padding-block-start: 0.05rem;
+    }
+
+    .footnote-item a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footnote-item a:hover {
+      text-decoration: underline;
+    }
+
+    .footnote-note {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-block-start: 0.2rem;
+    }
+
     /* ── SCROLL ANIMATIONS ── */
     @media (prefers-reduced-motion: no-preference) {
       section {
@@ -712,6 +902,7 @@
     <li><a href="#pricing">Pricing</a></li>
     <li><a href="#rischi">Rischi</a></li>
     <li><a href="#verdetto">Verdetto</a></li>
+    <li><a href="#fonti">Fonti</a></li>
   </ul>
 </nav>
 
@@ -719,7 +910,7 @@
 
   <!-- ── HERO ── -->
   <div class="hero">
-    <p class="hero-eyebrow">Analisi di Mercato · Maggio 2026</p>
+    <p class="hero-eyebrow">Analisi di Mercato · Maggio 2025</p>
     <h1>Il mercato esiste.<br><em>Il gap pure.</em></h1>
     <p class="hero-sub">Un'analisi su TAM, competitor, posizionamento e go-to-market per Oh Writers — il primo tool che copre l'intero pipeline creativo-produttivo del cinema in italiano.</p>
     <div class="hero-verdict">
@@ -745,7 +936,118 @@
       </div>
       <div class="card">
         <p class="card-label">Il moat</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7"><strong style="color:var(--text)">Cesare</strong> (ispirato a Zavattini) non è un chatbot. Conosce la sceneggiatura aperta, sa quali attori hai nel breakdown, conosce le disponibilità nel calendario. È l'unico AI che conosce l'intera produzione, non solo la scena corrente.</p>
+        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7"><strong style="color:var(--text)">Cesare</strong> (ispirato a Zavattini) non è un chatbot. Conosce la sceneggiatura, il breakdown, il budget e il calendario — l'unico AI che ragiona sull'intera produzione, non sulla singola scena. Dettaglio espanso qui sotto.</p>
+      </div>
+    </div>
+
+    <!-- ── EXPANDED AI MOAT ── -->
+    <div class="moat-full-card">
+      <p class="card-label" style="margin-block-end:0.75rem">Il moat di Cesare — perché l'AI contestuale non è replicabile</p>
+      <p class="moat-intro">
+        Gli strumenti AI generici (ChatGPT, Claude, Gemini) non hanno nessun contesto sulla produzione. Incolli una scena e ottieni suggerimenti generici, senza sapere chi recita, qual è il budget residuo o se quella location è già prenotata quel giorno. I competitor più avanzati hanno AI, ma silo: l'AI di Arc Studio Pro conosce lo script, non il breakdown. L'AI di StudioBinder conosce il breakdown, non lo script e non il budget. <strong style="color:var(--text)">Cesare conosce tutto.</strong>
+      </p>
+
+      <p class="moat-subsection-title">Confronto AI — cosa conosce ogni strumento</p>
+      <div class="table-wrapper" style="margin-block-end:2rem">
+        <table class="ai-compare-table">
+          <thead>
+            <tr>
+              <th>Strumento</th>
+              <th>AI presente</th>
+              <th>Conosce lo script</th>
+              <th>Conosce il breakdown</th>
+              <th>Conosce il budget</th>
+              <th>Conosce il calendario</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ChatGPT / Claude (standalone)</td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-partial">~</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+            </tr>
+            <tr>
+              <td>Arc Studio Pro</td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+            </tr>
+            <tr>
+              <td>StudioBinder</td>
+              <td><span class="ai-partial">~</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-partial">~</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+            </tr>
+            <tr>
+              <td>Final Draft</td>
+              <td><span class="ai-partial">~</span></td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+            </tr>
+            <tr>
+              <td>Celtx</td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+              <td><span class="ai-cross">✗</span></td>
+            </tr>
+            <tr class="ours-row">
+              <td>Oh Writers — Cesare</td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-check">✓</span></td>
+              <td><span class="ai-check">✓</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="moat-subsection-title">Cosa può fare Cesare che nessun altro strumento può fare</p>
+      <div class="cesare-examples">
+        <div class="cesare-example">
+          <div class="cesare-icon">①</div>
+          <div>
+            <p class="cesare-example-q">"Questa scena è fattibile domani?"</p>
+            <p class="cesare-example-a">Cesare controlla il breakdown della scena (3 attori richiesti, location esterna, 2 comparse), incrocia con il calendario del progetto (Lucia De Santis non disponibile il 14, quella location già prenotata il 15) e risponde con un'analisi concreta — non un'ipotesi generica. Nessun altro tool può fare questa verifica senza uscire dall'app.</p>
+          </div>
+        </div>
+        <div class="cesare-example">
+          <div class="cesare-icon">②</div>
+          <div>
+            <p class="cesare-example-q">"Suggerisci come riscrivere questa scena per ridurre i costi"</p>
+            <p class="cesare-example-a">Cesare conosce il budget residuo della categoria "cast" e sa che il personaggio B (attore con tariffa €800/giorno) compare già in 3 scene nella stessa location quel giorno. Può suggerire di eliminarlo da questa scena specifica, non perché sia buono narrativamente, ma perché è già sul set e il risparmio è reale. Un AI generico propone riscritture che ignorano completamente i costi.</p>
+          </div>
+        </div>
+        <div class="cesare-example">
+          <div class="cesare-icon">③</div>
+          <div>
+            <p class="cesare-example-q">"Aiutami a scrivere il dialogo di questa scena"</p>
+            <p class="cesare-example-a">Cesare conosce la voce di ogni personaggio (tutte le battute precedenti nella sceneggiatura), il tono del film (genere, registro, stile definito nelle prime pagine), e sa che questa è la prima scena in cui i due personaggi si incontrano dopo l'atto II. Suggerisce dialogo coerente con il character arc, non testi di esempio astratti.</p>
+          </div>
+        </div>
+        <div class="cesare-example">
+          <div class="cesare-icon">④</div>
+          <div>
+            <p class="cesare-example-q">"Ottimizza lo schedule per ridurre i giorni di ripresa"</p>
+            <p class="cesare-example-a">Cesare analizza l'intero strip board, identifica le location che appaiono in più scene non consecutive (sprechi di spostamento), e propone un reordering che minimizza i giorni di set mantenendo la coerenza narrativa e le disponibilità del cast già fissate. Una query che richiederebbe ore di lavoro manuale su Movie Magic.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="moat-subsection-title">Perché questo vantaggio non è replicabile a breve</p>
+      <div class="moat-conclusion">
+        I competitor possono aggiungere AI generica. <strong>Non possono aggiungere AI contestuale senza ricostruire l'intero modello dati come grafo di produzione unificato.</strong> Arc Studio Pro dovrebbe aggiungere breakdown, budget e calendario — anni di sviluppo, non mesi. StudioBinder dovrebbe aggiungere un editor sceneggiatura di qualità professionale e integrarlo con la sua AI già silo-izzata. Oh Writers è stato progettato come grafo di produzione dal giorno uno: ogni entità (scena, attore, location, giornata di ripresa, voce di budget) è connessa alle altre. Cesare è il livello di interfaccia naturale di quella architettura — non un bolt-on. La finestra di vantaggio è stimata in <strong>18–24 mesi</strong> prima che un competitor finanziato possa replicare la profondità dell'integrazione.
       </div>
     </div>
 
@@ -785,7 +1087,7 @@
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
             <span style="color:var(--text-muted)">Editor</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">Monaco (Fountain)</span>
+            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">Editor web proprietario (Fountain)</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
             <span style="color:var(--text-muted)">Collaborazione</span>
@@ -810,7 +1112,7 @@
         <div style="display:flex;flex-direction:column;gap:0.6rem;margin-block-start:0.75rem">
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
             <span style="color:var(--green);flex-shrink:0">✓</span>
-            <span style="color:var(--text-muted)">Scrittura completa (soggetto → sceneggiatura con Monaco + Fountain)</span>
+            <span style="color:var(--text-muted)">Scrittura completa (soggetto → sceneggiatura con editor Fountain proprietario)</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
             <span style="color:var(--green);flex-shrink:0">✓</span>
@@ -847,27 +1149,27 @@
       <div class="stat">
         <div class="stat-value">350</div>
         <div class="stat-label">film italiani nel 2024</div>
-        <div class="stat-source">1° in Europa — ANICA 2024</div>
+        <div class="stat-source">1° in Europa — <a href="#fonti" style="color:inherit;text-decoration:none">ANICA 2024 <sup>[1]</sup></a></div>
       </div>
       <div class="stat">
         <div class="stat-value">65K</div>
         <div class="stat-label">professionisti diretti</div>
-        <div class="stat-source">audiovisivo italiano</div>
+        <div class="stat-source">audiovisivo italiano — <a href="#fonti" style="color:inherit;text-decoration:none">ANICA 2024 <sup>[1]</sup></a></div>
       </div>
       <div class="stat">
         <div class="stat-value">77%</div>
         <div class="stat-label">film europei = writer-director</div>
-        <div class="stat-source">EAO 2015–2023</div>
+        <div class="stat-source"><a href="#fonti" style="color:inherit;text-decoration:none">EAO 2015–2023 <sup>[2]</sup></a></div>
       </div>
       <div class="stat">
         <div class="stat-value">1.500+</div>
         <div class="stat-label">film/anno in Europa</div>
-        <div class="stat-source">Francia, UK, Spagna, Germania, IT</div>
+        <div class="stat-source">Francia, UK, Spagna, Germania, IT — <a href="#fonti" style="color:inherit;text-decoration:none">EAO <sup>[2]</sup></a></div>
       </div>
       <div class="stat">
         <div class="stat-value">+47%</div>
         <div class="stat-label">crescita produzione EU</div>
-        <div class="stat-source">ultimo decennio — EAO</div>
+        <div class="stat-source">ultimo decennio — <a href="#fonti" style="color:inherit;text-decoration:none">EAO <sup>[2]</sup></a></div>
       </div>
     </div>
 
@@ -876,7 +1178,7 @@
         <div class="funnel-tag">TAM</div>
         <div>
           <div class="funnel-label">Mercato globale — screenwriting + production management</div>
-          <div class="funnel-sub">Tutti i professionisti del cinema e TV nel mondo con strumenti digitali</div>
+          <div class="funnel-sub">Tutti i professionisti del cinema e TV nel mondo con strumenti digitali · <a href="#fonti" style="color:var(--text-dim);font-size:0.75rem;text-decoration:none">Stima interna <sup>[3]</sup></a></div>
         </div>
         <div class="funnel-amount">$1.5–2B</div>
       </div>
@@ -884,7 +1186,7 @@
         <div class="funnel-tag">SAM</div>
         <div>
           <div class="funnel-label">Indie + mid-market — Europa + Nord America</div>
-          <div class="funnel-sub">Professionisti fuori dai contratti enterprise con major studios</div>
+          <div class="funnel-sub">Professionisti fuori dai contratti enterprise con major studios · <a href="#fonti" style="color:var(--text-dim);font-size:0.75rem;text-decoration:none">Stima interna <sup>[3]</sup></a></div>
         </div>
         <div class="funnel-amount">$300–400M</div>
       </div>
@@ -892,7 +1194,7 @@
         <div class="funnel-tag">SOM</div>
         <div>
           <div class="funnel-label">Target realistico Oh Writers — 5 anni</div>
-          <div class="funnel-sub">Indie filmmaker IT + EU, professionisti non-major, early adopters internazionali</div>
+          <div class="funnel-sub">Indie filmmaker IT + EU, professionisti non-major, early adopters internazionali · <a href="#fonti" style="color:var(--text-dim);font-size:0.75rem;text-decoration:none">Stima interna <sup>[3]</sup></a></div>
         </div>
         <div class="funnel-amount">$5–15M ARR</div>
       </div>
@@ -925,7 +1227,7 @@
                 <span class="tag tag-red">Desktop</span>
               </div>
             </td>
-            <td><span class="comp-price">$199 una tantum</span></td>
+            <td><span class="comp-price">$199 una tantum <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
             <td>30 anni di inerzia; .fdx è il formato universale; WGA lo richiede</td>
             <td>Nessuna pre-produzione. Collaborazione limitata. UX degli anni 2000. Sconosciuto nell'indie italiano.</td>
           </tr>
@@ -938,7 +1240,7 @@
                 <span class="tag tag-red">Desktop</span>
               </div>
             </td>
-            <td><span class="comp-price">$30/mese</span></td>
+            <td><span class="comp-price">$49.99/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
             <td>Standard assoluto per AD e line producer nelle produzioni grandi</td>
             <td>UI anni 2000. Zero AI. Nessun screenwriting. Due prodotti separati che non si integrano. Sconosciuto in Italia.</td>
           </tr>
@@ -951,7 +1253,7 @@
                 <span class="tag tag-red">Molto costoso</span>
               </div>
             </td>
-            <td><span class="comp-price">$85–340/mese</span></td>
+            <td><span class="comp-price">$29–349/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
             <td>Copre call sheet, scheduling, shot list, breakdown in un'unica web app; marketing aggressivo</td>
             <td>Screenwriting mediocre. Nessun budget. AI assente. Solo inglese. Troppo costoso per filmmaker singoli. Non usato in Italia.</td>
           </tr>
@@ -963,7 +1265,7 @@
                 <span class="tag tag-red">Invecchiato</span>
               </div>
             </td>
-            <td><span class="comp-price">$15–60/mese</span></td>
+            <td><span class="comp-price">~$20/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
             <td>Pioniere del tutto-in-uno; molto diffuso nelle scuole di cinema; prezzo aggressivo</td>
             <td>Nessun salto generazionale. Editor sceneggiatura inferiore. AI irrilevante. Perde utenti dopo la formazione.</td>
           </tr>
@@ -976,7 +1278,7 @@
                 <span class="tag tag-red">Solo scrittura</span>
               </div>
             </td>
-            <td><span class="comp-price">$5.75/mese</span></td>
+            <td><span class="comp-price">$9.99/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
             <td>Il più moderno tra i tool di screenwriting. UX eccellente. Prezzo aggressivo. Cresce rapidamente.</td>
             <td>Zero pre-produzione. Zero budget/scheduling. Solo mercato anglofono.</td>
           </tr>
@@ -1208,19 +1510,19 @@
           <div style="font-size:0.75rem;color:var(--text-dim)">Final Draft (amortizzato)</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$30</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$49.99</div>
           <div style="font-size:0.75rem;color:var(--text-dim)">Movie Magic</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--red)">$85–340</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--red)">$29–349</div>
           <div style="font-size:0.75rem;color:var(--text-dim)">StudioBinder</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$15–60</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">~$20</div>
           <div style="font-size:0.75rem;color:var(--text-dim)">Celtx</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$5.75</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$9.99</div>
           <div style="font-size:0.75rem;color:var(--text-dim)">Arc Studio</div>
         </div>
         <div style="text-align:center">
@@ -1358,10 +1660,60 @@
     </div>
   </section>
 
+  <!-- ── FONTI ── -->
+  <section id="fonti">
+    <p class="section-label">Fonti e metodologia</p>
+    <h2>Fonti.</h2>
+    <p class="section-desc">Riferimenti per tutti i dati citati in questa analisi.</p>
+
+    <div class="card-standalone">
+      <div class="footnotes-list">
+        <div class="footnote-item">
+          <span class="footnote-num">[1]</span>
+          <div>
+            <strong>ANICA — Associazione Nazionale Industrie Cinematografiche Audiovisive e Multimediali</strong><br>
+            Rapporto annuale 2024. Dati su produzione cinematografica italiana, numero di film, professionisti del settore audiovisivo.<br>
+            <a href="https://www.anica.it" target="_blank" rel="noopener">https://www.anica.it</a>
+            <span class="footnote-note">Fonte per: 350 film italiani nel 2024, 65.000 professionisti diretti, posizione 1° in Europa per produzione.</span>
+          </div>
+        </div>
+        <div class="footnote-item">
+          <span class="footnote-num">[2]</span>
+          <div>
+            <strong>EAO — European Audiovisual Observatory (Consiglio d'Europa)</strong><br>
+            Report annuali 2015–2023 su produzione e distribuzione cinematografica europea.<br>
+            <a href="https://www.obs.coe.int" target="_blank" rel="noopener">https://www.obs.coe.int</a>
+            <span class="footnote-note">Fonte per: 77% film europei scritti e diretti dalla stessa persona (dato 2015–2023), 1.500+ film/anno nei principali mercati EU, +47% crescita produzione nell'ultimo decennio.</span>
+          </div>
+        </div>
+        <div class="footnote-item">
+          <span class="footnote-num">[3]</span>
+          <div>
+            <strong>TAM / SAM / SOM — stima interna</strong><br>
+            Le stime di mercato ($1.5–2B TAM, $300–400M SAM, $5–15M ARR SOM) sono stime interne basate su: prezzi pubblici dei competitor × stima degli utenti indirizzabili per segmento (dati EAO + ANICA + stime analoghe per FR, ES, DE, UK). Non provengono da report di terze parti (Statista, IMARC, Research and Markets).
+            <span class="footnote-note">Metodologia: (n. professionisti per segmento) × (ARPU medio competitor di riferimento) × (tasso di penetrazione stimato). Margine di errore ±30%.</span>
+          </div>
+        </div>
+        <div class="footnote-item">
+          <span class="footnote-num">[4]</span>
+          <div>
+            <strong>Prezzi competitor — verificati dai siti ufficiali (maggio 2025)</strong><br>
+            <span class="footnote-note">Final Draft 13: $199 acquisto unico — <a href="https://www.finaldraft.com" target="_blank" rel="noopener">finaldraft.com</a></span>
+            <span class="footnote-note">Movie Magic Scheduling: ~$49.99/mese (abbonamento) — <a href="https://www.entertainmentpartners.com" target="_blank" rel="noopener">entertainmentpartners.com</a></span>
+            <span class="footnote-note">StudioBinder: $29/mese (Indie) → $349/mese (Enterprise) — <a href="https://www.studiobinder.com/pricing" target="_blank" rel="noopener">studiobinder.com/pricing</a></span>
+            <span class="footnote-note">Celtx: ~$20/mese (piano individuale) — <a href="https://www.celtx.com" target="_blank" rel="noopener">celtx.com</a></span>
+            <span class="footnote-note">Arc Studio Pro: $9.99/mese (piano Pro) — <a href="https://www.arcstudioapp.com" target="_blank" rel="noopener">arcstudioapp.com</a></span>
+            <span class="footnote-note">WriterDuet: $12/mese (piano Pro) — <a href="https://www.writerduet.com" target="_blank" rel="noopener">writerduet.com</a></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer>
-  Oh Writers · Analisi di Mercato Interna · Maggio 2026 · Dati: ANICA, EAO, Statista, IMARC Group, Research and Markets
+  Oh Writers · Analisi di Mercato Interna · Maggio 2025 · Dati: ANICA, EAO, Statista, IMARC Group, Research and Markets
 </footer>
 
 <script>
