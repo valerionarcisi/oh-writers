@@ -29,6 +29,8 @@ import { ToolbarMenu } from "./ToolbarMenu";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
 import { EXPORT_FORMATS, type ExportFormat } from "@oh-writers/domain";
+import { buildFountainFilename } from "../lib/export-pipeline";
+import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
@@ -558,6 +560,11 @@ export const ScreenplayEditor = forwardRef<
 
   const exportPdf = useExportScreenplayPdf();
   const [exportFormat, setExportFormat] = useState<ExportFormat | null>(null);
+
+  const handleExportFountain = useCallback(() => {
+    const filename = buildFountainFilename(screenplay.title, screenplay.title);
+    downloadTextFile(content, filename);
+  }, [content, screenplay.title]);
   const handleGenerateExport = ({
     includeCoverPage,
     sceneNumbers,
@@ -746,6 +753,7 @@ export const ScreenplayEditor = forwardRef<
               onResequenceAll={canEdit ? onResequenceAll : undefined}
               isOwner={isOwner}
               onTitlePageDetected={handleTitlePageDetected}
+              onExportFountain={hasContent ? handleExportFountain : undefined}
             />
           }
           cesareNoteCount={0}

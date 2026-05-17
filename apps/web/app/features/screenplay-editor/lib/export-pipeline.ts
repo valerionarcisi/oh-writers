@@ -125,6 +125,27 @@ const SIDES_INVOCATION: AwcInvocation = {
   profileOverrides: {},
 };
 
+const slugify = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "untitled";
+
+const todayIso = (): string => new Date().toISOString().slice(0, 10);
+
+/**
+ * Builds the filename for a plain-text Fountain export.
+ * Follows the `{project-slug}-{screenplay-slug}.fountain` convention used
+ * across all Oh Writers exports.
+ */
+export const buildFountainFilename = (
+  projectTitle: string,
+  screenplayTitle: string,
+): string =>
+  `${slugify(projectTitle)}-${slugify(screenplayTitle)}-${todayIso()}.fountain`;
+
 export const buildExportPipeline = (
   format: ExportFormat,
   input: PipelineInput,

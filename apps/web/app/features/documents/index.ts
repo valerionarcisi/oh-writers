@@ -45,7 +45,7 @@ export {
   useDeleteDocumentVersion,
   useSaveVersionContent,
 } from "./hooks/useVersions";
-export { base64ToBlob, downloadBlob } from "./lib/download";
+export { base64ToBlob, downloadBlob, downloadTextFile } from "./lib/download";
 export { openPdfPreview } from "./lib/pdf-preview";
 export { DOCUMENT_LABELS } from "./lib/document-display";
 export {

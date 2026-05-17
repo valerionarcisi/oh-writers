@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildExportPipeline } from "./export-pipeline.js";
+import { buildExportPipeline, buildFountainFilename } from "./export-pipeline.js";
 
 const FOUNTAIN = `Title: Test\n\nINT. UNO - GIORNO\n\nx\n\nEXT. DUE - SERA\n\ny\n\nINT. TRE - NOTTE\n\nz\n`;
 
@@ -54,5 +54,22 @@ describe("buildExportPipeline", () => {
     const r = buildExportPipeline("one_scene_per_page", { fountain: FOUNTAIN });
     expect(r.invocation.cliSettings).toContain("each_scene_on_new_page=true");
     expect(r.invocation.profileOverrides).toEqual({});
+  });
+});
+
+describe("buildFountainFilename", () => {
+  it("slugifies project and screenplay titles into a .fountain filename", () => {
+    const name = buildFountainFilename("Il Grande Film", "Versione Definitiva");
+    expect(name).toMatch(/^il-grande-film-versione-definitiva-\d{4}-\d{2}-\d{2}\.fountain$/);
+  });
+
+  it("handles special characters and spaces safely", () => {
+    const name = buildFountainFilename("Progetto: Test!", "Bozza #1");
+    expect(name).toMatch(/^progetto-test-bozza-1-\d{4}-\d{2}-\d{2}\.fountain$/);
+  });
+
+  it("falls back to 'untitled' for empty strings", () => {
+    const name = buildFountainFilename("", "");
+    expect(name).toMatch(/^untitled-untitled-\d{4}-\d{2}-\d{2}\.fountain$/);
   });
 });

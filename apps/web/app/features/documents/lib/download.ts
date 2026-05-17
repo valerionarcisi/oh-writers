@@ -19,3 +19,14 @@ export const downloadBlob = (blob: Blob, filename: string): void => {
   link.remove();
   URL.revokeObjectURL(url);
 };
+
+/**
+ * Triggers a plain-text file download in the browser.
+ * Isolated from call sites so a future Expo companion can swap in
+ * expo-file-system without touching the export pipeline.
+ */
+export const downloadTextFile = (text: string, filename: string, mime = "text/plain;charset=utf-8"): void => {
+  if (typeof document === "undefined") return;
+  const blob = new Blob([text], { type: mime });
+  downloadBlob(blob, filename);
+};

@@ -25,6 +25,12 @@ interface ToolbarMenuProps {
   /** Fires when Pass 0 of the PDF import detected a title page. The parent
    *  decides whether to apply it (potentially showing a replace-confirm). */
   onTitlePageDetected?: (doc: TitlePageDocJSON) => void;
+  /**
+   * When provided, adds an "Esporta Fountain" item to the menu that triggers a
+   * client-side `.fountain` file download. The callback is responsible for
+   * initiating the download so the toolbar stays pure UI.
+   */
+  onExportFountain?: () => void;
 }
 
 /**
@@ -48,6 +54,7 @@ export function ToolbarMenu({
   onResequenceAll,
   isOwner,
   onTitlePageDetected,
+  onExportFountain,
 }: ToolbarMenuProps) {
   const navigate = useNavigate();
   const openTitlePage = () =>
@@ -111,6 +118,21 @@ export function ToolbarMenu({
             </span>
             <span className={styles.itemLabel}>Import PDF</span>
           </button>
+
+          {onExportFountain && hasContent && (
+            <button
+              type="button"
+              role="menuitem"
+              className={styles.item}
+              onClick={runAndClose(onExportFountain)}
+              data-testid="menu-item-export-fountain"
+            >
+              <span className={styles.itemIcon} aria-hidden="true">
+                ↧
+              </span>
+              <span className={styles.itemLabel}>Esporta Fountain</span>
+            </button>
+          )}
 
           {onResequenceAll && (
             <button
