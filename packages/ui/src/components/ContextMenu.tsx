@@ -1,5 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useMenu, useMenuItem, FocusScope, useOverlay } from "react-aria";
+import { useTreeState, Item } from "react-stately";
+import type { TreeState, Node } from "react-stately";
 import styles from "./ContextMenu.module.css";
 
 export interface ContextMenuItem {
@@ -17,14 +20,76 @@ export interface ContextMenuProps {
   "data-testid"?: string;
 }
 
-export function ContextMenu({
-  open,
-  anchor,
-  items,
+// ─── ContextMenuItemInternal ─────────────────────────────────────────────────
+
+interface ContextMenuItemInternalProps {
+  item: Node<ContextMenuItem>;
+  state: TreeState<ContextMenuItem>;
+  onClose: () => void;
+  onAction: (label: string) => void;
+}
+
+function ContextMenuItemInternal({
+  item,
+  state,
   onClose,
-  ...rest
-}: ContextMenuProps) {
-  const ref = useRef<HTMLUListElement>(null);
+  onAction,
+}: ContextMenuItemInternalProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const { menuItemProps, isDisabled } = useMenuItem(
+    {
+      key: item.key,
+      onAction: () => onAction(String(item.key)),
+      onClose,
+    },
+    state,
+    ref,
+  );
+
+  const raw = item.value as ContextMenuItem;
+
+  return (
+    <li role="none">
+      <button
+        {...menuItemProps}
+        ref={ref}
+        type="button"
+        className={styles.item}
+        disabled={isDisabled}
+      >
+        {raw.icon && (
+          <span className={styles.icon} aria-hidden>
+            {raw.icon}
+          </span>
+        )}
+        <span>{raw.label}</span>
+      </button>
+    </li>
+  );
+}
+
+// ─── ContextMenuList ──────────────────────────────────────────────────────────
+
+interface ContextMenuListProps {
+  items: ContextMenuItem[];
+  anchor: { x: number; y: number };
+  onClose: () => void;
+  "data-testid"?: string;
+}
+
+/**
+ * Portalled menu list for ContextMenu. Viewport-clamped positioning is
+ * preserved from the original implementation. The list portion is now
+ * driven by react-aria useMenu + useMenuItem for full keyboard nav,
+ * type-ahead, arrow-key focus, and proper ARIA roles.
+ */
+function ContextMenuList({
+  items,
+  anchor,
+  onClose,
+  "data-testid": testId,
+}: ContextMenuListProps) {
+  const menuRef = useRef<HTMLUListElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number }>({
     top: anchor.y,
     left: anchor.x,
@@ -34,8 +99,8 @@ export function ContextMenu({
   // when the natural anchor would push the menu off-screen. Run as a layout
   // effect so the corrected coordinates land before the browser paints.
   useLayoutEffect(() => {
-    if (!open || !ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
+    if (!menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const margin = 8;
@@ -46,58 +111,92 @@ export function ContextMenu({
     if (left + rect.width > vw - margin)
       left = Math.max(margin, vw - rect.width - margin);
     setPos({ top, left });
-  }, [open, anchor.x, anchor.y]);
+  }, [anchor.x, anchor.y]);
 
-  useEffect(() => {
-    if (!open) return;
+  // Build a lookup so we can fire the original onClick by label-key.
+  const itemMap = new Map(items.map((it) => [it.label, it]));
 
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    const onMouseDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
+  // useOverlay handles Escape dismiss and click-outside dismiss.
+  const { overlayProps } = useOverlay(
+    { isOpen: true, onClose, isDismissable: true, isKeyboardDismissDisabled: false },
+    menuRef as RefObject<Element>,
+  );
 
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onMouseDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onMouseDown);
-    };
-  }, [open, onClose]);
+  const treeState = useTreeState<ContextMenuItem>({
+    selectionMode: "none",
+    children: items.map((item) => (
+      <Item key={item.label} textValue={item.label}>
+        {item.label}
+      </Item>
+    )),
+    disabledKeys: items.filter((it) => it.disabled).map((it) => it.label),
+    items,
+  });
 
-  if (!open || typeof document === "undefined") return null;
+  const { menuProps } = useMenu<ContextMenuItem>(
+    {
+      onClose,
+      autoFocus: true,
+      shouldFocusWrap: true,
+    },
+    treeState,
+    menuRef as RefObject<HTMLElement>,
+  );
+
+  const handleAction = (label: string) => {
+    itemMap.get(label)?.onClick();
+    onClose();
+  };
+
+  if (typeof document === "undefined") return null;
 
   return createPortal(
-    <ul
-      ref={ref}
-      role="menu"
-      className={styles.menu}
-      style={{ top: pos.top, left: pos.left }}
-      data-testid={rest["data-testid"]}
-    >
-      {items.map((item) => (
-        <li key={item.label} role="none">
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.item}
-            disabled={item.disabled}
-            onClick={() => {
-              item.onClick();
-              onClose();
-            }}
-          >
-            {item.icon && (
-              <span className={styles.icon} aria-hidden>
-                {item.icon}
-              </span>
-            )}
-            <span>{item.label}</span>
-          </button>
-        </li>
-      ))}
-    </ul>,
+    <FocusScope restoreFocus>
+      <ul
+        {...overlayProps}
+        {...menuProps}
+        ref={menuRef}
+        className={styles.menu}
+        style={{ top: pos.top, left: pos.left }}
+        data-testid={testId}
+      >
+        {[...treeState.collection].map((node) => (
+          <ContextMenuItemInternal
+            key={node.key}
+            item={node}
+            state={treeState}
+            onClose={onClose}
+            onAction={handleAction}
+          />
+        ))}
+      </ul>
+    </FocusScope>,
     document.body,
+  );
+}
+
+// ─── ContextMenu ─────────────────────────────────────────────────────────────
+
+/**
+ * Right-click context menu. The trigger mechanism (contextmenu event,
+ * anchor position) is managed by the caller — only the menu list uses
+ * react-aria for keyboard nav, type-ahead, and ARIA semantics.
+ */
+export function ContextMenu({
+  open,
+  anchor,
+  items,
+  onClose,
+  ...rest
+}: ContextMenuProps) {
+  if (!open || typeof document === "undefined") return null;
+
+  return (
+    <ContextMenuList
+      items={items}
+      anchor={anchor}
+      onClose={onClose}
+      data-testid={rest["data-testid"]}
+    />
   );
 }
