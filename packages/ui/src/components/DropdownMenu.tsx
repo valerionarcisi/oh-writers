@@ -35,6 +35,8 @@ export interface DropdownMenuProps {
   items: DropdownMenuItem[];
   align?: DropdownMenuAlign;
   "data-testid"?: string;
+  /** Extra className applied to the wrapper <button> — use to override width/layout. */
+  triggerClassName?: string;
 }
 
 // ─── MenuItemInternal ────────────────────────────────────────────────────────
@@ -237,6 +239,7 @@ export function DropdownMenu({
   trigger,
   items,
   align = "start",
+  triggerClassName,
   ...rest
 }: DropdownMenuProps) {
   const menuId = useId();
@@ -262,7 +265,7 @@ export function DropdownMenu({
         {...buttonProps}
         ref={triggerRef}
         type="button"
-        className={styles.triggerWrap}
+        className={[styles.triggerWrap, triggerClassName].filter(Boolean).join(" ")}
       >
         {trigger}
       </button>

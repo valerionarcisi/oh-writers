@@ -1,5 +1,7 @@
 .triggerWrap {
+  all: unset;
   display: inline-flex;
+  cursor: pointer;
 }
 
 .menu {

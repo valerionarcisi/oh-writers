@@ -289,6 +289,7 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
         }
         items={userMenuItems}
         align="end"
+        triggerClassName={styles.userMenuTrigger}
       />
     </aside>
   );
