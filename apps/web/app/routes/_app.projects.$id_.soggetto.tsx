@@ -19,6 +19,7 @@ import {
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
 import { useVersionsDrawer } from "~/features/versions";
+import { useCesareOpen } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -97,6 +98,7 @@ function SoggettoPageReady({
   loglineDoc,
 }: SoggettoPageReadyProps) {
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
+  const openCesare = useCesareOpen();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSiaeOpen, setIsSiaeOpen] = useState(false);
@@ -215,6 +217,7 @@ function SoggettoPageReady({
             },
           },
         ]}
+        onCesareClick={openCesare}
       />
     </div>
   );

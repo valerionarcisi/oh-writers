@@ -10,11 +10,12 @@ import type {
   DropdownMenuItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
-import { CesareFab, CesareSheet } from "~/features/predictions";
+import { CesareSheet } from "~/features/predictions";
 import { askCesare } from "~/features/predictions";
 import type { CesarePage } from "~/features/predictions";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
+import { CesareProvider } from "../cesare-context";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -91,6 +92,7 @@ function AppShellInner({
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
+  const openCesare = useCallback(() => setCesareOpen(true), []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -140,61 +142,60 @@ function AppShellInner({
 
   return (
     <VersionsDrawerProvider>
-      <div className={styles.shell}>
-        <SkipLink targetId="main-content" />
-        <TopBar
-          projectName={projectName}
-          sectionName={sectionName}
-          saveState={saveState}
-          saveSecondsAgo={saveSecondsAgo}
-          cesareNoteCount={cesareNoteCount}
-          userInitials={deriveInitials(user.name)}
-          presenceUsers={[]}
-          isScrolled={isScrolled}
-          sections={sections}
-          sectionGroups={sectionGroups}
-          projects={projects}
-          currentProjectId={currentProjectId}
-          onProjectSelect={handleProjectSelect}
-          onAllProjects={handleAllProjects}
-          onNavigate={handleNavigate}
-          onBrandClick={handleBrandClick}
-          onProjectClick={handleBrandClick}
-          onSectionClick={undefined}
-          onSearch={openPalette}
-          onBell={undefined}
-          onAskCesare={undefined}
-          onAvatarClick={undefined}
-          userMenuItems={userMenuItems}
-        />
-        <main id="main-content" className={styles.main}>
-          {children}
-        </main>
-        <VersionsDrawer />
-        <CommandPalette
-          isOpen={isPaletteOpen}
-          onClose={closePalette}
-          items={paletteItems}
-        />
-        {projectId && (
-          <CesareFab onClick={() => setCesareOpen(true)} />
-        )}
-        {projectId && (
-          <CesareSheet
-            projectId={projectId}
-            page={cesarePage ?? "screenplay"}
-            sceneId={cesareSceneId}
-            sceneNumber={cesareSceneNumber}
-            isOpen={cesareOpen}
-            onClose={() => setCesareOpen(false)}
-            onOpenFullPage={() => {
-              setCesareOpen(false);
-              // TODO: navigate to full Cesare page (future)
-            }}
-            askCesare={askCesare}
+      <CesareProvider openCesare={openCesare}>
+        <div className={styles.shell}>
+          <SkipLink targetId="main-content" />
+          <TopBar
+            projectName={projectName}
+            sectionName={sectionName}
+            saveState={saveState}
+            saveSecondsAgo={saveSecondsAgo}
+            cesareNoteCount={cesareNoteCount}
+            userInitials={deriveInitials(user.name)}
+            presenceUsers={[]}
+            isScrolled={isScrolled}
+            sections={sections}
+            sectionGroups={sectionGroups}
+            projects={projects}
+            currentProjectId={currentProjectId}
+            onProjectSelect={handleProjectSelect}
+            onAllProjects={handleAllProjects}
+            onNavigate={handleNavigate}
+            onBrandClick={handleBrandClick}
+            onProjectClick={handleBrandClick}
+            onSectionClick={undefined}
+            onSearch={openPalette}
+            onBell={undefined}
+            onAskCesare={undefined}
+            onAvatarClick={undefined}
+            userMenuItems={userMenuItems}
           />
-        )}
-      </div>
+          <main id="main-content" className={styles.main}>
+            {children}
+          </main>
+          <VersionsDrawer />
+          <CommandPalette
+            isOpen={isPaletteOpen}
+            onClose={closePalette}
+            items={paletteItems}
+          />
+          {projectId && (
+            <CesareSheet
+              projectId={projectId}
+              page={cesarePage ?? "screenplay"}
+              sceneId={cesareSceneId}
+              sceneNumber={cesareSceneNumber}
+              isOpen={cesareOpen}
+              onClose={() => setCesareOpen(false)}
+              onOpenFullPage={() => {
+                setCesareOpen(false);
+                // TODO: navigate to full Cesare page (future)
+              }}
+              askCesare={askCesare}
+            />
+          )}
+        </div>
+      </CesareProvider>
     </VersionsDrawerProvider>
   );
 }

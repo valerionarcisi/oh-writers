@@ -7,6 +7,7 @@ import {
   queryOptions,
 } from "@tanstack/react-query";
 import { Viewbar, FloatingDock, SegmentedControl, DropdownMenu } from "@oh-writers/ui";
+import { useCesareOpen } from "~/features/app-shell";
 import { resourceTotal } from "@oh-writers/domain";
 import type { Budget, FiscalRegime } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
@@ -89,6 +90,7 @@ interface BudgetPageProps {
 
 export function BudgetPage({ projectId }: BudgetPageProps) {
   const qc = useQueryClient();
+  const openCesare = useCesareOpen();
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
   const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
@@ -388,7 +390,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
         ]}
         cesareNoteCount={0}
-        onCesareClick={() => undefined}
+        onCesareClick={openCesare}
       />
 
       {view === "category" && categoryTotal !== null && (

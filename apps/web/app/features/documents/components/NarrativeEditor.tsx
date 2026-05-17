@@ -30,7 +30,7 @@ import {
   toggleHeading,
 } from "../lib/narrative-plugins";
 import { useVersionsDrawer } from "~/features/versions";
-import { useSaveStatePublisher } from "~/features/app-shell";
+import { useSaveStatePublisher, useCesareOpen } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
 
@@ -71,6 +71,7 @@ const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
   const editorViewRef = useRef<EditorView | null>(null);
+  const openCesare = useCesareOpen();
   const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
   const { isDirty, flush } = useAutoSave(
@@ -392,6 +393,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onClick: handleExport,
           }}
           secondaryActions={[]}
+          onCesareClick={openCesare}
         />
       </div>
     );

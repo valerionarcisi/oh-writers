@@ -385,17 +385,3 @@ export function CesareSheet({
   );
 }
 
-// ─── FAB ──────────────────────────────────────────────────────────────────────
-
-export function CesareFab({ onClick }: { onClick: () => void }) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const { buttonProps } = useButton(
-    { onPress: onClick, "aria-label": "Apri Cesare" },
-    ref,
-  );
-  return (
-    <button ref={ref} {...buttonProps} className={styles.fab} type="button">
-      ✦
-    </button>
-  );
-}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useCesareOpen } from "~/features/app-shell";
 import { useDragAutoScroll } from "../hooks/useDragAutoScroll";
 import {
   useSuspenseQuery,
@@ -51,6 +52,7 @@ interface SchedulePageProps {
 
 export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
+  const openCesare = useCesareOpen();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const schedule = data?.isOk ? data.value : null;
   const versionsDrawer = useVersionsDrawer();
@@ -390,6 +392,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           { label: "Stampa", hotkey: "⌘P", onClick: () => undefined },
         ]}
         cesareNoteCount={0}
+        onCesareClick={openCesare}
       />
     </div>
   );
