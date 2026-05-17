@@ -403,7 +403,6 @@
 
 .catItemSuggested {
   background: transparent;
-  border-style: dashed;
   color: var(--cat-color);
 }
 

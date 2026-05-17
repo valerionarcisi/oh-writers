@@ -6,11 +6,13 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import { Viewbar, FloatingDock, SegmentedControl, DropdownMenu } from "@oh-writers/ui";
+import { Viewbar, FloatingDock, SegmentedControl, VersionTrigger } from "@oh-writers/ui";
 import { useCesareOpen } from "~/features/app-shell";
 import { resourceTotal } from "@oh-writers/domain";
 import type { Budget, FiscalRegime } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
+import { useVersionsDrawer } from "~/features/versions";
+import { useScreenplay, useVersions } from "~/features/screenplay-editor";
 import {
   getBudget,
   generateBudget,
@@ -91,12 +93,27 @@ interface BudgetPageProps {
 export function BudgetPage({ projectId }: BudgetPageProps) {
   const qc = useQueryClient();
   const openCesare = useCesareOpen();
+  const { open: openVersionsDrawer } = useVersionsDrawer();
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
   const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
   const { data: rateCard } = useSuspenseQuery(rateCardQueryOptions(projectId));
   const { data: dayCosts } = useQuery(dayCostsQueryOptions(projectId));
   const { data: overview } = useQuery(overviewQueryOptions(projectId));
+
+  const { data: screenplayResult } = useScreenplay(projectId);
+  const screenplay = screenplayResult?.isOk ? screenplayResult.value : null;
+  const screenplayId = screenplay?.id ?? "";
+  const { data: versionsResult } = useVersions(screenplayId);
+  const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
+  const currentVersionId = screenplay?.currentVersionId ?? null;
+  const currentVersion = screenplayVersions.find((v) => v.id === currentVersionId);
+  const versionLabel = currentVersion?.label ?? undefined;
+
+  const handleOpenVersionsDrawer = () => {
+    if (!screenplayId) return;
+    openVersionsDrawer({ kind: "screenplay", screenplayId });
+  };
 
   const [view, setView] = useState<ViewMode>("overview");
   const [drillCategory, setDrillCategory] =
@@ -221,8 +238,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const shootingDays = budget?.shootingDays ?? null;
   const contingencyPercent = budget?.contingencyPercent ?? 10;
 
-  const versionLabel = "v3 · 14 mag 2026";
-
   const handleDrillDown = (categoryId: BudgetCategoryKey) => {
     setView("category");
     setDrillCategory(categoryId);
@@ -271,19 +286,26 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               testId="contingency-percent"
             />
           )}
-        <DropdownMenu
-          trigger={
-            <button type="button" className={styles.filter}>
-              {versionLabel} ▾
-            </button>
-          }
-          items={[
+        <VersionTrigger
+          variant="pill"
+          versionLabel={versionLabel}
+          menuItems={[
+            ...screenplayVersions.map((v, idx) => ({
+              id: `version-${v.id}`,
+              label: v.id === currentVersionId
+                ? `● ${v.label ?? `Versione ${idx + 1}`}`
+                : (v.label ?? `Versione ${idx + 1}`),
+              onSelect: handleOpenVersionsDrawer,
+              tone: v.id === currentVersionId
+                ? ("default" as const)
+                : ("muted" as const),
+            })),
             {
-              label: "Analisi di mercato",
-              onClick: () => window.open("/market-analysis.html", "_blank"),
+              id: "open-drawer",
+              label: "Apri Versioni →",
+              onSelect: handleOpenVersionsDrawer,
             },
           ]}
-          align="end"
         />
       </Viewbar>
 

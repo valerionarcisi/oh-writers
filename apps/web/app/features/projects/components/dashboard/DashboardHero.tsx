@@ -27,7 +27,7 @@ export function DashboardHero({ stats }: Props) {
         </div>
       </div>
       <div className={styles.actions}>
-        <Button variant="secondary" type="button">
+        <Button variant="secondary" type="button" disabled>
           Importa Fountain
         </Button>
         <Button

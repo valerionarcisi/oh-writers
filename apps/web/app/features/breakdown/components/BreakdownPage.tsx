@@ -810,7 +810,7 @@ function BreakdownPageContent({ projectId }: Props) {
             top: ctxMenu.y,
             // @ts-expect-error CSS custom property
             "--cat-color": ctxMenu.category
-              ? `var(${CATEGORY_META[ctxMenu.category].colorToken.replace("--cat-", "--ds-cat-")})`
+              ? `var(${CATEGORY_META[ctxMenu.category].colorToken})`
               : "var(--ds-text-3)",
           }}
           role="menu"
@@ -888,7 +888,7 @@ function BreakdownPageContent({ projectId }: Props) {
             >
               {BREAKDOWN_CATEGORIES.map((cat) => {
                 const meta = CATEGORY_META[cat];
-                const colorVar = `var(${meta.colorToken.replace("--cat-", "--ds-cat-")})`;
+                const colorVar = `var(${meta.colorToken})`;
                 const isCurrent = cat === ctxMenu.category;
                 return (
                   <button
@@ -992,7 +992,7 @@ function CategoriesPanel({ grouped, canEdit, onAdd }: CategoriesPanelProps) {
       {visibleCats.map((cat) => {
         const meta = CATEGORY_META[cat];
         const items = grouped.get(cat) ?? [];
-        const colorVar = `var(${meta.colorToken.replace("--cat-", "--ds-cat-")})`;
+        const colorVar = `var(${meta.colorToken})`;
         return (
           <div
             key={cat}

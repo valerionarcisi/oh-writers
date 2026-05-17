@@ -65,10 +65,10 @@ export function DashboardEmptyState() {
         >
           Crea il primo progetto
         </Button>
-        <Button variant="secondary" type="button">
+        <Button variant="secondary" type="button" disabled>
           Importa Fountain
         </Button>
-        <Button variant="ghost" type="button">
+        <Button variant="ghost" type="button" disabled>
           Parti da template
         </Button>
       </div>

@@ -236,9 +236,12 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                     {selectedScene.intExt}. {selectedScene.location}
                   </span>
                   <span className={styles.rulerMeta}>
-                    {selectedScene.shotCount > 0 && `${selectedScene.shotCount} shot`}
-                    {selectedScene.totalMinutes != null && selectedScene.shotCount > 0 && " · "}
-                    {selectedScene.totalMinutes != null && formatMinutes(selectedScene.totalMinutes)}
+                    {selectedScene.shotCount > 0 && (
+                      <span>{selectedScene.shotCount} shot</span>
+                    )}
+                    {selectedScene.totalMinutes != null && (
+                      <span>{formatMinutes(selectedScene.totalMinutes)}</span>
+                    )}
                   </span>
                 </div>
                 {activePlanId && (
