@@ -5,7 +5,6 @@ export { ScreenplayEditorShell } from "./components/ScreenplayEditorShell";
 export type { ScreenplayEditorShellProps } from "./components/ScreenplayEditorShell";
 export { ScreenplayToolbar } from "./components/ScreenplayToolbar";
 export { ScreenplayElementChips } from "./components/ScreenplayElementChips";
-export { ScreenplayCesarePanel } from "./components/ScreenplayCesarePanel";
 export { MonacoWrapper } from "./components/MonacoWrapper";
 export { ToolbarMenu } from "./components/ToolbarMenu";
 export { SaveIndicator } from "./components/SaveIndicator";

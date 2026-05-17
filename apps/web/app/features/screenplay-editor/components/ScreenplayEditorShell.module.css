@@ -43,12 +43,6 @@
   margin-inline: auto;
 }
 
-/* When the right Cesare margin is present (data-has-margin), reserve the
-   same 280px slot the .layout grid does — so the chip group sits in the
-   same column as the editor and reads centered above the page content. */
-.viewbarGrid[data-has-margin="true"] {
-  grid-template-columns: minmax(0, 1fr) 280px;
-}
 
 .viewbarCenter {
   display: flex;
@@ -150,19 +144,6 @@
   margin-inline-end: 4px;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: var(--ds-space-6);
-  max-inline-size: 1340px;
-  inline-size: 100%;
-  margin-inline: auto;
-  /* Tight top spacing under the sticky viewbar — the chip row + version pill
-     already provides visual breathing room. Bigger padding was passive space. */
-  padding: var(--ds-space-2) var(--ds-space-6) var(--ds-space-10);
-  align-items: start;
-}
-
 .layoutNoMargin {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -173,15 +154,6 @@
   align-items: start;
 }
 
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .margin {
-    display: none;
-  }
-}
 
 /* ─── Indice button + popover (in Viewbar) ─────────────── */
 
