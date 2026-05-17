@@ -48,6 +48,7 @@ export interface StripView {
   intExt: string;
   timeOfDay: string | null;
   pageCount: number;
+  sceneEffort: number;
 }
 
 export interface ShootingDayView {
@@ -116,6 +117,7 @@ const loadScheduleView = async (
       timeOfDay: scenes.timeOfDay,
       pageStart: scenes.pageStart,
       pageEnd: scenes.pageEnd,
+      sceneEffort: scenes.effort,
     })
     .from(strips)
     .innerJoin(scenes, eq(strips.sceneId, scenes.id))
@@ -142,6 +144,7 @@ const loadScheduleView = async (
       intExt: s.intExt,
       timeOfDay: s.timeOfDay,
       pageCount,
+      sceneEffort: s.sceneEffort ?? 2,
     };
   };
 

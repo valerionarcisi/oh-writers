@@ -26,6 +26,7 @@ const makeScene = (
   shotCount,
   totalMinutes,
   notes: null,
+  effort: 2,
 });
 
 const makeDay = (
@@ -56,6 +57,7 @@ const makeDay = (
     intExt: "INT",
     timeOfDay: null,
     pageCount: 1,
+    sceneEffort: 2,
   })),
   totalPageCount: sceneIds.length,
   totalHours: 0,

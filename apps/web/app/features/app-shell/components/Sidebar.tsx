@@ -224,18 +224,20 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
                   <span className={styles.navLabel}>Budget</span>
                 )}
               </Link>
-              <span
-                className={`${styles.navLink} ${styles.disabled}`}
-                title="Locations (coming soon)"
+              <Link
+                to="/projects/$id/locations"
+                params={{ id: projectId }}
+                className={styles.navLink}
+                activeProps={{
+                  className: `${styles.navLink} ${styles.active}`,
+                }}
+                title="Locations"
               >
                 <MapPin size={ICON_SIZE} strokeWidth={ICON_STROKE} />
                 {!isCollapsed && (
-                  <>
-                    <span className={styles.navLabel}>Locations</span>
-                    <span className={styles.soon}>soon</span>
-                  </>
+                  <span className={styles.navLabel}>Locations</span>
                 )}
-              </span>
+              </Link>
             </div>
 
             {/* Settings */}

@@ -68,6 +68,10 @@ export function StripCard({
         {strip.pageCount} <small>p</small>
       </span>
 
+      <span className={styles.effort} title={`Effort: ${strip.sceneEffort}/5`} aria-label={`Effort ${strip.sceneEffort}`}>
+        E{strip.sceneEffort}
+      </span>
+
       <span className={styles.hours}>{formatHours(hours)}</span>
 
       <button

@@ -176,6 +176,20 @@
       "when": 1747612800000,
       "tag": "0022_blocking",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1747699200000,
+      "tag": "0024_locations",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1747785600000,
+      "tag": "0025_scene_effort",
+      "breakpoints": true
     }
   ]
 }

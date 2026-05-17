@@ -123,6 +123,18 @@
   margin-inline-start: 2px;
 }
 
+.effort {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ds-text-mute);
+  background: var(--ds-surface-alt);
+  border-radius: var(--ds-radius-sm);
+  padding: 1px 4px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
 .hours {
   font-family: var(--ds-font-mono);
   font-size: 11px;

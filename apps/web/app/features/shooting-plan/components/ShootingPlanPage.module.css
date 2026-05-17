@@ -9,42 +9,6 @@
   font-family: var(--ds-font-sans);
 }
 
-/* ── View tab bar ── */
-.viewBar {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-1);
-  padding: var(--ds-space-2) var(--ds-space-6);
-  border-block-end: 1px solid var(--ds-line-soft);
-  background: var(--ds-bg);
-}
-
-.viewTab {
-  height: 28px;
-  padding: 0 var(--ds-space-3);
-  border-radius: var(--ds-radius-sm);
-  background: transparent;
-  border: none;
-  font-family: var(--ds-font-sans);
-  font-size: 12px;
-  color: var(--ds-text-3);
-  cursor: pointer;
-  transition:
-    background var(--ds-duration-1) var(--ds-ease),
-    color var(--ds-duration-1) var(--ds-ease);
-
-  &:hover {
-    background: var(--ds-surface-alt);
-    color: var(--ds-text);
-  }
-
-  &[data-active] {
-    background: var(--ds-surface-deep);
-    color: var(--ds-text);
-    font-weight: 500;
-  }
-}
-
 /* ── KPI header bar ── */
 .header {
   padding-block: var(--ds-space-3) var(--ds-space-2);
@@ -204,6 +168,42 @@
 
   &[data-planned] {
     color: var(--ds-agent);
+  }
+}
+
+.effortRow {
+  display: flex;
+  gap: var(--ds-space-1);
+  padding-block-start: var(--ds-space-1);
+}
+
+.effortPill {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--ds-radius-sm);
+  border: 1px solid var(--ds-line);
+  background: transparent;
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+    border-color: var(--ds-text-3);
+  }
+
+  &[data-active] {
+    background: var(--ds-action);
+    border-color: var(--ds-action);
+    color: var(--ds-bg);
+    font-weight: 700;
   }
 }
 

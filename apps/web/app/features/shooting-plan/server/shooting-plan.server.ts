@@ -31,6 +31,8 @@ import {
   recommendPattern,
   extractScenesFromFountain,
   listScenesInFountain,
+  EFFORT_LEVELS,
+  type EffortLevel,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -96,6 +98,7 @@ export interface SceneWithPlanSummary {
   shotCount: number;
   totalMinutes: number | null;
   notes: string | null;
+  effort: EffortLevel;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -928,6 +931,7 @@ export const listScenesWithPlanSummary = createServerFn({ method: "GET" })
               shotCount: summary?.count ?? 0,
               totalMinutes: summary ? summary.minutes : null,
               notes: sc.notes ?? null,
+              effort: (sc.effort ?? 2) as EffortLevel,
             };
           });
         })(),
@@ -955,6 +959,42 @@ export const updateSceneNotes = createServerFn({ method: "POST" })
     ).map(() => null);
     return toShape(result);
   });
+
+export const updateSceneEffort = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      sceneId: z.string().uuid(),
+      projectId: z.string().uuid(),
+      effort: z.union([
+        z.literal(1),
+        z.literal(2),
+        z.literal(3),
+        z.literal(4),
+        z.literal(5),
+      ]),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<{ sceneId: string; effort: EffortLevel }, ForbiddenError | DbError>> => {
+      await requireUser();
+      const db = await getDb();
+      const result = await ResultAsync.fromPromise(
+        db
+          .update(scenes)
+          .set({ effort: data.effort })
+          .where(eq(scenes.id, data.sceneId))
+          .returning({ sceneId: scenes.id, effort: scenes.effort }),
+        (e) => new DbError("updateSceneEffort", e),
+      ).andThen((rows) => {
+        const row = rows[0];
+        if (!row) return err(new DbError("updateSceneEffort", "no row returned"));
+        return ok({ sceneId: row.sceneId, effort: row.effort as EffortLevel });
+      });
+      return toShape(result);
+    },
+  );
 
 export const getBreakdownSummary = createServerFn({ method: "GET" })
   .validator(z.object({ sceneId: z.string().uuid() }))

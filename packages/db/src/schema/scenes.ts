@@ -28,6 +28,7 @@ export const scenes = pgTable(
     hasVehicle: boolean("has_vehicle").notNull().default(false),
     hasSpecialEffect: boolean("has_special_effect").notNull().default(false),
     notes: text("notes"),
+    effort: integer("effort").notNull().default(2),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [unique().on(t.screenplayId, t.number)],
