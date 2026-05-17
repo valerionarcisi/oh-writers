@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Oh Writers — Analisi di Mercato 2025</title>
+  <title>Oh Writers — Analisi di Mercato 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -864,6 +864,76 @@
       flex-shrink: 0;
     }
 
+    /* ── Slide 4 — Bandi & Finanziamenti ── */
+    .bandi-intro {
+      font-size: 1.05rem;
+      color: var(--text-3);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    .bandi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .bandi-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 18px 16px;
+    }
+    .bandi-card-type {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 6px;
+    }
+    .bandi-card-name {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .bandi-card-amount {
+      font-size: 0.82rem;
+      color: var(--action);
+      font-weight: 600;
+    }
+    .bandi-moat {
+      padding: 14px 20px;
+      background: var(--agent-soft);
+      border-left: 3px solid var(--agent);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      font-size: 0.88rem;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    /* ── Fullscreen button ── */
+    .btn-fullscreen {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 150ms ease, border-color 150ms ease;
+      flex-shrink: 0;
+    }
+    .btn-fullscreen:hover {
+      background: var(--surface-alt);
+      border-color: var(--text-mute);
+    }
+
     /* ── Slide 15 — Fonti ── */
     .sources-list {
       list-style: none;
@@ -922,7 +992,7 @@
   <!-- ── Slide 1 — Hero ── -->
   <div class="slide active" id="slide-1">
     <div class="slide-content" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
-      <p class="eyebrow">Oh Writers · Maggio 2025</p>
+      <p class="eyebrow">Oh Writers · Maggio 2026</p>
       <h1 class="display" style="text-align: center;">Il mercato esiste.<br>Il vuoto anche.</h1>
       <div class="verdict-pill">
         <span class="dot"></span>
@@ -980,8 +1050,52 @@
     </div>
   </div>
 
-  <!-- ── Slide 4 — Cesare ── -->
+  <!-- ── Slide 4 — Bandi & Finanziamenti ── -->
   <div class="slide" id="slide-4">
+    <div class="slide-content">
+      <p class="eyebrow">La soluzione — in più</p>
+      <h2 class="slide-title" style="margin-bottom: 20px;">Bandi & Finanziamenti.<br>Zero ricerca manuale.</h2>
+      <p class="bandi-intro">Il filmmaker italiano non conosce tutti i canali disponibili. Oh Writers li aggrega, li classifica, e fa il match con il suo progetto — usando i dati già presenti nell'app.</p>
+      <div class="bandi-grid">
+        <div class="bandi-card">
+          <div class="bandi-card-type">Nazionale</div>
+          <div class="bandi-card-name">MiC — Cinema di Qualità</div>
+          <div class="bandi-card-amount">€50k–€500k</div>
+        </div>
+        <div class="bandi-card">
+          <div class="bandi-card-type">Europeo</div>
+          <div class="bandi-card-name">Creative Europe MEDIA</div>
+          <div class="bandi-card-amount">€10k–€60k</div>
+        </div>
+        <div class="bandi-card">
+          <div class="bandi-card-type">Europeo</div>
+          <div class="bandi-card-name">Eurimages Dev. Grant</div>
+          <div class="bandi-card-amount">fino a €200k</div>
+        </div>
+        <div class="bandi-card">
+          <div class="bandi-card-type">Nazionale · Rolling</div>
+          <div class="bandi-card-name">Tax Credit Produzione</div>
+          <div class="bandi-card-amount">40% spese ammissibili</div>
+        </div>
+        <div class="bandi-card">
+          <div class="bandi-card-type">Regionale</div>
+          <div class="bandi-card-name">Apulia Film Fund</div>
+          <div class="bandi-card-amount">€50k–€300k</div>
+        </div>
+        <div class="bandi-card">
+          <div class="bandi-card-type">Residenza</div>
+          <div class="bandi-card-name">Torino Film Lab</div>
+          <div class="bandi-card-amount">sviluppo progetto</div>
+        </div>
+      </div>
+      <div class="bandi-moat">
+        <strong>Il vero vantaggio:</strong> Oh Writers conosce già genere, formato, budget, fase e regione del progetto. Il match è zero-friction — l'utente non inserisce nulla di nuovo. Nessun competitor fa questo.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Slide 5 — Cesare ── -->
+  <div class="slide" id="slide-5">
     <div class="slide-content">
       <p class="eyebrow">Il vantaggio competitivo</p>
       <h2 class="slide-title" style="margin-bottom: 28px;">Cesare non è un chatbot.<br>È l'unico AI che conosce<br>l'intera produzione.</h2>
@@ -1024,8 +1138,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 5 — Cesare in azione ── -->
-  <div class="slide" id="slide-5">
+  <!-- ── Slide 6 — Cesare in azione ── -->
+  <div class="slide" id="slide-6">
     <div class="slide-content">
       <p class="eyebrow">Cesare in azione</p>
       <h2 class="slide-title" style="margin-bottom: 36px;">Quattro cose che nessun altro può fare.</h2>
@@ -1062,8 +1176,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 6 — KPI numeri ── -->
-  <div class="slide" id="slide-6">
+  <!-- ── Slide 7 — KPI numeri ── -->
+  <div class="slide" id="slide-7">
     <div class="slide-content">
       <p class="eyebrow">01 / Dimensione del mercato</p>
       <h2 class="slide-title" style="margin-bottom: 8px;">L'Italia è prima in Europa.<br>Nessuno lo sa.</h2>
@@ -1087,8 +1201,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 7 — Market funnel ── -->
-  <div class="slide" id="slide-7">
+  <!-- ── Slide 8 — Market funnel ── -->
+  <div class="slide" id="slide-8">
     <div class="slide-content">
       <p class="eyebrow">01 / Dimensione del mercato</p>
       <h2 class="slide-title" style="margin-bottom: 28px;">Quanto vale il mercato.</h2>
@@ -1119,8 +1233,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 8 — Competitor ── -->
-  <div class="slide" id="slide-8">
+  <!-- ── Slide 9 — Competitor ── -->
+  <div class="slide" id="slide-9">
     <div class="slide-content">
       <p class="eyebrow">02 / Competitor</p>
       <h2 class="slide-title" style="margin-bottom: 28px;">Tutti forti su un pezzo.<br>Nessuno copre tutto.</h2>
@@ -1157,8 +1271,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 9 — Feature gap ── -->
-  <div class="slide" id="slide-9">
+  <!-- ── Slide 10 — Feature gap ── -->
+  <div class="slide" id="slide-10">
     <div class="slide-content">
       <p class="eyebrow">03 / Dove ci posizioniamo</p>
       <h2 class="slide-title" style="margin-bottom: 24px;">Il gap è documentabile.</h2>
@@ -1202,6 +1316,11 @@
             <td><span class="check-agent">✓</span></td>
           </tr>
           <tr class="differentiator">
+            <td>Bandi & Finanziamenti</td>
+            <td><span class="check-danger">✗ Nessuno</span></td>
+            <td><span class="check-agent">✓</span></td>
+          </tr>
+          <tr class="differentiator">
             <td>In italiano</td>
             <td><span class="check-danger">✗ Nessuno</span></td>
             <td><span class="check-agent">✓</span></td>
@@ -1216,8 +1335,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 10 — Target ── -->
-  <div class="slide" id="slide-10">
+  <!-- ── Slide 11 — Target ── -->
+  <div class="slide" id="slide-11">
     <div class="slide-content">
       <p class="eyebrow">03 / Target primario</p>
       <h2 class="slide-title" style="margin-bottom: 24px;">Il writer-director indie italiano.</h2>
@@ -1234,8 +1353,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 11 — Go to market ── -->
-  <div class="slide" id="slide-11">
+  <!-- ── Slide 12 — Go to market ── -->
+  <div class="slide" id="slide-12">
     <div class="slide-content">
       <p class="eyebrow">04 / Come arriviamo ai clienti</p>
       <h2 class="slide-title" style="margin-bottom: 28px;">Italia come laboratorio.<br>Europa come mercato.</h2>
@@ -1262,8 +1381,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 12 — Prezzi ── -->
-  <div class="slide" id="slide-12">
+  <!-- ── Slide 13 — Prezzi ── -->
+  <div class="slide" id="slide-13">
     <div class="slide-content">
       <p class="eyebrow">05 / Prezzi</p>
       <h2 class="slide-title" style="margin-bottom: 28px;">I ricavi veri vengono dai team.</h2>
@@ -1304,8 +1423,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 13 — Rischi ── -->
-  <div class="slide" id="slide-13">
+  <!-- ── Slide 14 — Rischi ── -->
+  <div class="slide" id="slide-14">
     <div class="slide-content">
       <p class="eyebrow">06 / Rischi principali</p>
       <h2 class="slide-title" style="margin-bottom: 28px;">Tre rischi reali.<br>Tre risposte concrete.</h2>
@@ -1328,8 +1447,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 14 — Verdetto ── -->
-  <div class="slide" id="slide-14">
+  <!-- ── Slide 15 — Verdetto ── -->
+  <div class="slide" id="slide-15">
     <div class="slide-content">
       <p class="eyebrow">07 / Verdetto</p>
       <h2 class="slide-title" style="margin-bottom: 0;">Può avere successo.</h2>
@@ -1357,8 +1476,8 @@
     </div>
   </div>
 
-  <!-- ── Slide 15 — Fonti ── -->
-  <div class="slide" id="slide-15">
+  <!-- ── Slide 16 — Fonti ── -->
+  <div class="slide" id="slide-16">
     <div class="slide-content">
       <p class="eyebrow">Fonti</p>
       <h2 class="slide-title" style="margin-bottom: 32px;">Riferimenti.</h2>
@@ -1401,11 +1520,21 @@
   <nav class="nav-bar">
     <button class="btn-nav btn-prev" aria-label="Slide precedente">&#8249;</button>
     <div class="nav-center">
-      <span class="counter">1 / 15</span>
+      <span class="counter">1 / 16</span>
       <span class="nav-dot"></span>
       <span class="brand">oh writers</span>
     </div>
-    <button class="btn-nav btn-next" aria-label="Slide successiva">&#8250;</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn-fullscreen" id="btn-fullscreen" aria-label="Schermo intero" title="Schermo intero (F)">
+        <svg id="icon-enter" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 6V1H6M10 1H15V6M15 10V15H10M6 15H1V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg id="icon-exit" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
+          <path d="M6 1V6H1M15 6H10V1M10 15V10H15M1 10H6V15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="btn-nav btn-next" aria-label="Slide successiva">&#8250;</button>
+    </div>
   </nav>
 
   <script>
@@ -1425,10 +1554,40 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
       if (e.key === 'ArrowLeft') goTo(current - 1);
+      if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+      if (e.key === 'Escape') exitFullscreen();
     });
 
     document.querySelector('.btn-prev').addEventListener('click', () => goTo(current - 1));
     document.querySelector('.btn-next').addEventListener('click', () => goTo(current + 1));
+
+    // Fullscreen
+    const btnFs = document.getElementById('btn-fullscreen');
+    const iconEnter = document.getElementById('icon-enter');
+    const iconExit = document.getElementById('icon-exit');
+
+    function updateFsIcons() {
+      const isFs = !!document.fullscreenElement;
+      iconEnter.style.display = isFs ? 'none' : '';
+      iconExit.style.display = isFs ? '' : 'none';
+      btnFs.title = isFs ? 'Esci da schermo intero (F)' : 'Schermo intero (F)';
+      btnFs.setAttribute('aria-label', isFs ? 'Esci da schermo intero' : 'Schermo intero');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    function exitFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    }
+
+    btnFs.addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', updateFsIcons);
 
     goTo(0);
   </script>

@@ -19,11 +19,11 @@ The key insight: a screenplay is structured data disguised as text. Fountain for
 - **Final Draft / Highland** = writing only, no production intelligence
 - **Movie Magic / EP** = production only, no writing environment
 - **StudioBinder** = closest competitor, but no AI automation and weaker editor
-- **Oh Writers** = writing + AI-powered production planning in one place, real-time collaboration, modern web stack
+- **Oh Writers** = writing + AI-powered production planning + funding intelligence in one place, real-time collaboration, modern web stack
 
 ### The Bet
 
-Screenwriters and small production teams will value having writing and production planning unified, with AI reducing the manual work between them.
+Screenwriters and small production teams will value having writing, production planning, and funding discovery unified, with AI reducing the manual work between them.
 
 ---
 
@@ -142,6 +142,24 @@ No reaching across feature boundaries except through the public `index.ts`.
 - Visual diff (green/red)
 - Restore
 
+### Spec 30 + 30b: Bandi & Finanziamenti + Centro Notifiche
+
+The Italian audiovisual funding landscape is deeply fragmented: 19 regional Film Commissions, MiC national calls, Creative Europe MEDIA, Eurimages, tax credit, broadcaster pre-sales, co-production funds, crowdfunding, private investment, and festival residencies. No filmmaker knows all the channels available to their project.
+
+Oh Writers solves this with a structured funding catalog and AI-powered matching:
+
+- **Funding profile**: user fills 5–6 fields (production phase, estimated budget, region, production company, co-production) — Oh Writers computes compatibility scores against all opportunities
+- **Match score (0–100)**: deterministic formula — no LLM in the scoring loop. Hard gates (format mismatch, budget out of range, missing production company) exclude incompatible opportunities. Soft score rewards regional match, genre compatibility, budget fit, urgency
+- **Catalog (seed: ~30 opportunities)**: MiC Sviluppo/Produzione/Distribuzione, Creative Europe MEDIA Development/Production/Distribution, Tax Credit (rolling, 40% of production costs), Eurimages, Apulia Film Fund, Sardegna Film Commission, Torino Film Lab, Biennale College Cinema, and more
+- **Content management**: admin-curated entries + selective semi-automation from stable RSS feeds (MiC, Creative Europe) — no fragile scraping of 19 regional HTML portals
+- **Notification center**: bell icon in TopBar with badge. Proactive alerts: new compatible opportunity (score ≥ 70), deadline in 7 days (warning), deadline tomorrow (urgent). Deduplication prevents flood. Configurable preferences per user
+
+Tax credit has special logic: `deadlineType = rolling`, always visible, shown as "not yet available" if the user lacks a production company rather than hidden.
+
+The real moat: Oh Writers already holds the project data (logline, genre, format, budget, phase, regions) from the screenplay and breakdown features. The funding match is a zero-friction output of data the user already provided.
+
+**Future**: Cesare pre-fills funding application forms using project data already in Oh Writers. No filmmaker has this today.
+
 ### Spec 07b: Design System
 
 - Dark modern SaaS palette
@@ -172,11 +190,18 @@ The remaining features are ordered by dependency and strategic value. AI-first, 
 | 7   | **13 — Locations**              | Scouting workflow, candidates, photos, map                                                                 | Medium     | Low    |
 | 8   | **15 — Calendar & OdG**         | Daily call sheet — the operational document for each shooting day                                          | Medium     | Low    |
 
-### Phase 3 — Multiplayer
+### Phase 3 — Funding Intelligence
+
+| #   | Spec                              | What It Unlocks                                                    | Complexity | Risk |
+| --- | --------------------------------- | ------------------------------------------------------------------ | ---------- | ---- |
+| 9   | **30 — Bandi & Finanziamenti**    | AI match between project and Italian/EU funding opportunities      | Medium     | Low  |
+| 10  | **30b — Centro Notifiche**        | Proactive deadline alerts and new match notifications in-app       | Medium     | Low  |
+
+### Phase 4 — Multiplayer
 
 | #   | Spec                     | What It Unlocks                             | Complexity | Risk   |
 | --- | ------------------------ | ------------------------------------------- | ---------- | ------ |
-| 9   | **09 — WebSocket / Yjs** | Real-time collaboration on everything above | High       | Medium |
+| 11  | **09 — WebSocket / Yjs** | Real-time collaboration on everything above | High       | Medium |
 
 ### Why This Order
 
@@ -189,6 +214,8 @@ The remaining features are ordered by dependency and strategic value. AI-first, 
 **Storyboard after Breakdown** — needs scene data (characters, location, props) to generate meaningful sketches. Placed before budget/schedule because number of shots per scene influences shooting time estimates.
 
 **Calendar & OdG last in the AI pipeline** — it's the output document that consumes data from all previous specs (breakdown elements + schedule days + location addresses = complete call sheet).
+
+**Funding Intelligence before Multiplayer** — Bandi & Finanziamenti (Spec 30/30b) is low-complexity but high strategic value. It makes Oh Writers useful outside active production — a filmmaker checks funding options before committing to a project. This expands the addressable moment in the user's workflow from "writing" to "development and financing." It also deepens the moat: the more production data Oh Writers holds, the more accurate the funding match becomes.
 
 **WebSocket/Yjs at the end** — real-time collaboration is a multiplier, not a differentiator. When it ships, users collaborate on a full production platform, not just a text editor.
 
@@ -278,7 +305,11 @@ Database tables for unbuilt features exist in the schema but have never been exe
 
 Storyboard (Spec 14) requires an external image generation service — a new infrastructure dependency with its own costs, rate limits, and quality variance.
 
-### 5. No Deployment Story
+### 5. Funding Catalog Freshness
+
+The funding catalog is admin-curated. Stale entries (expired deadlines not updated) erode trust. Mitigation: `lastVerifiedAt` field + UI banner after 60 days without verification + `sourceUrl` always visible. A weekly cron auto-expires records with passed deadlines. Semi-automation from MiC RSS reduces the manual burden for national calls.
+
+### 6. No Deployment Story
 
 Docker Compose for dev exists. No CI/CD, hosting, or production config. Becomes urgent before any real users.
 
@@ -286,4 +317,4 @@ Docker Compose for dev exists. No CI/CD, hosting, or production config. Becomes 
 
 ## Guiding Principle
 
-**AI-first, collaboration-after.** Build the production intelligence that makes Oh Writers unique, then let people collaborate on it. The AI is the moat.
+**AI-first, funding-second, collaboration-after.** Build the production intelligence that makes Oh Writers unique, surface the funding opportunities that the production data unlocks, then let people collaborate on it. The data moat deepens at every step.
