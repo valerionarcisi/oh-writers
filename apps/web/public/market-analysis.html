@@ -9,2055 +9,1409 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* ── Backgrounds (linen palette) ── */
-      --ds-bg:           #f5f3ee;
-      --ds-surface:      #ffffff;
-      --ds-surface-alt:  #ebe9e3;
-      --ds-surface-deep: #e2dfd6;
-      --ds-overlay:      rgba(28, 26, 23, 0.5);
+      --bg:           #f5f3ee;
+      --surface:      #ffffff;
+      --surface-alt:  #ebe9e3;
+      --line:         #d8d6cd;
+      --line-soft:    rgba(227,225,215,0.50);
 
-      /* ── Text (linen scale) ── */
-      --ds-text:       #1c1a17;
-      --ds-text-2:     #44413c;
-      --ds-text-3:     #6e6c66;
-      --ds-text-mute:  #6e6c66;
-      --ds-text-faint: #88867e;
-      --ds-text-on-dark: #f5f3ee;
+      --text:         #1c1a17;
+      --text-2:       #44413c;
+      --text-3:       #6e6c66;
+      --text-mute:    #88867e;
 
-      /* ── Lines / borders ── */
-      --ds-line:      #d8d6cd;
-      --ds-line-soft: rgba(227, 225, 215, 0.50);
+      --action:       #8b3a1a;
+      --action-soft:  #f4dccb;
+      --action-hover: #75301a;
 
-      /* ── Brand — Clay (terracotta/brown — primary action) ── */
-      --ds-action:      #8b3a1a;
-      --ds-action-hover:#75301a;
-      --ds-action-soft: #f4dccb;
+      --agent:        #5a6b3c;
+      --agent-soft:   #e5e9d8;
 
-      /* ── Brand — Leaf (sage green — Cesare / AI) ── */
-      --ds-agent:      #5a6b3c;
-      --ds-agent-soft: #e5e9d8;
+      --danger:       #b33a28;
+      --danger-soft:  rgba(179,58,40,0.10);
+      --info:         #34487a;
+      --info-soft:    rgba(52,72,122,0.10);
 
-      /* ── Status ── */
-      --ds-danger:      #b33a28;
-      --ds-danger-soft: rgba(179, 58, 40, 0.08);
-      --ds-success:     #5a6b3c;
-      --ds-success-soft:#e5e9d8;
-      --ds-info:        #34487a;
-      --ds-info-soft:   rgba(52, 72, 122, 0.10);
-      --ds-warning:     #8b3a1a;
-      --ds-warning-soft:#f4dccb;
+      --font-sans:    "Inter", -apple-system, system-ui, sans-serif;
+      --font-display: "Fraunces", Georgia, serif;
 
-      /* ── Typography ── */
-      --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
-      --ds-font-display: "Fraunces", Georgia, serif;
-      --ds-font-mono:    "Courier Prime", "Courier New", monospace;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 16px;
+      --radius-pill: 100px;
 
-      /* ── Spacing ── */
-      --ds-space-1:  4px;
-      --ds-space-2:  8px;
-      --ds-space-3:  12px;
-      --ds-space-4:  16px;
-      --ds-space-5:  20px;
-      --ds-space-6:  24px;
-      --ds-space-8:  32px;
-      --ds-space-10: 48px;
-      --ds-space-12: 64px;
-
-      /* ── Radius ── */
-      --ds-radius-sm:  4px;
-      --ds-radius-md:  8px;
-      --ds-radius-lg:  12px;
-      --ds-radius-pill:100px;
-
-      /* ── Shadows (warm-tinted) ── */
-      --ds-shadow-0: 0 1px 2px rgba(28,26,23,0.04);
-      --ds-shadow-1: 0 2px 4px rgba(28,26,23,0.06);
-      --ds-shadow-2: 0 8px 24px -8px rgba(28,26,23,0.12);
-      --ds-shadow-3: 0 12px 32px -8px rgba(28,26,23,0.18);
-
-      /* ── Motion ── */
-      --ds-ease:       cubic-bezier(0.2,0.7,0.2,1);
-      --ds-duration-1: 150ms;
-      --ds-duration-2: 200ms;
+      --shadow-1: 0 2px 4px rgba(28,26,23,0.06);
+      --shadow-2: 0 8px 24px -8px rgba(28,26,23,0.12);
+      --shadow-3: 0 16px 48px -12px rgba(28,26,23,0.18);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       height: 100%;
       overflow: hidden;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
     }
 
-    body {
-      font-family: var(--ds-font-sans);
-      background: var(--ds-bg);
-      color: var(--ds-text);
-      line-height: 1.6;
-    }
-
-    /* ── PROGRESS BAR ── */
-    .progress-bar-track {
-      position: fixed;
-      top: 0;
-      inset-inline: 0;
-      height: 3px;
-      background: var(--ds-line-soft);
-      z-index: 300;
-    }
-
+    /* ── Progress bar ── */
     .progress-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--line);
+      z-index: 100;
+    }
+    .progress-fill {
       height: 100%;
-      background: #8b3a1a;
-      transition: width 200ms ease;
-      width: 10%;
+      background: var(--action);
+      transition: width 300ms ease;
     }
 
-    /* ── SLIDES ── */
+    /* ── Slides ── */
     .slide {
-      display: none;
       position: fixed;
       inset: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      padding: 0;
-      box-sizing: border-box;
-      background: var(--ds-bg);
-      font-size: clamp(0.7rem, 1.4vh, 0.9rem);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg);
+      padding-bottom: 52px;
     }
-
     .slide.active {
       display: flex;
-      flex-direction: column;
-    }
-
-    .slide-inner {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      max-width: 960px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 48px 8vw 56px;
-      min-height: 0;
-      overflow: hidden;
-    }
-
-    .slide-heading {
-      flex-shrink: 0;
-      margin-block-end: 1.5em;
     }
 
     .slide-content {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
+      max-width: 860px;
+      width: 100%;
+      padding: 0 48px;
     }
 
-    /* Hero slide: centered title card */
-    .slide-hero {
-      display: none;
+    /* ── Typography ── */
+    .eyebrow {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 20px;
+    }
+
+    h1.display {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 32px;
+    }
+
+    h2.slide-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 40px;
+    }
+
+    /* ── Nav bar ── */
+    .nav-bar {
       position: fixed;
-      inset: 0;
-      overflow: hidden;
-      background: var(--ds-bg);
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      text-align: center;
-    }
-
-    .slide-hero.active { display: flex; }
-
-    .slide-hero .hero-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 64px 8vw 72px;
-    }
-
-    /* ── SLIDE NAV ── */
-    .slide-nav {
-      position: fixed;
-      bottom: 0;
-      inset-inline: 0;
-      height: 56px;
+      bottom: 0; left: 0; right: 0;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 2rem;
-      background: rgba(245, 243, 238, 0.92);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid var(--ds-line);
-      z-index: 200;
+      padding: 0 24px;
+      background: rgba(245,243,238,0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--line);
+      z-index: 100;
     }
 
-    .nav-brand {
-      font-family: var(--ds-font-display);
-      font-size: 0.85rem;
-      color: #8b3a1a;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-
-    .nav-prev,
-    .nav-next {
-      background: none;
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      color: var(--ds-text-2);
+    .btn-nav {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 1.1rem;
       cursor: pointer;
-      font-size: 1.25rem;
-      line-height: 1;
-      padding: 0.35rem 0.75rem;
-      transition: background 120ms, color 120ms, border-color 120ms, font-weight 120ms;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 150ms ease, border-color 150ms ease;
     }
-
-    .nav-prev:hover,
-    .nav-next:hover {
-      background: var(--ds-surface-alt);
-      border-color: var(--ds-line);
-      color: #8b3a1a;
-      font-weight: 600;
+    .btn-nav:hover:not(:disabled) {
+      background: var(--surface-alt);
+      border-color: var(--text-mute);
     }
-
-    .nav-prev:disabled,
-    .nav-next:disabled {
+    .btn-nav:disabled {
       opacity: 0.3;
       cursor: not-allowed;
     }
 
-    .slide-counter {
-      font-size: 0.78rem;
-      color: var(--ds-text-mute);
-      letter-spacing: 0.05em;
-      font-variant-numeric: tabular-nums;
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .counter {
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-mute);
+      min-width: 48px;
+      text-align: center;
+    }
+    .brand {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--text-3);
+      letter-spacing: 0.02em;
+    }
+    .nav-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--line);
     }
 
-    /* ── SLIDE HEADER ── */
-    .slide-label {
-      font-family: var(--ds-font-sans);
-      font-size: 0.68rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--ds-text-faint);
-      margin-block-end: 0.75rem;
-    }
-
-    /* ── HERO ── */
-    .hero-eyebrow {
-      font-family: var(--ds-font-sans);
-      font-size: 0.75rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--ds-text-mute);
-      margin-block-end: 1.5rem;
-    }
-
-    .hero h1 {
-      font-family: var(--ds-font-display);
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 300;
-      letter-spacing: -0.02em;
-      line-height: 1;
-      margin-block-end: 1.5rem;
-    }
-
-    .hero h1 em {
-      color: var(--ds-action);
-      font-style: normal;
-    }
-
-    .hero-sub {
-      font-size: 1.1rem;
-      color: var(--ds-text-mute);
-      max-width: 560px;
-      margin: 0 auto 3rem;
-    }
-
-    .hero-verdict {
+    /* ── Slide 1 — Hero ── */
+    .verdict-pill {
       display: inline-flex;
       align-items: center;
-      gap: 0.75rem;
-      background: #f4dccb;
-      border: 2px solid rgba(139,58,26,0.40);
-      border-radius: var(--ds-radius-pill);
-      padding: 0.6rem 1.5rem;
+      gap: 8px;
+      background: var(--action-soft);
+      border: 1px solid rgba(139,58,26,0.3);
+      color: var(--action);
+      border-radius: var(--radius-pill);
+      padding: 8px 20px;
       font-size: 0.9rem;
-      color: #8b3a1a;
-      font-weight: 600;
+      font-weight: 500;
+    }
+    .verdict-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--action);
+      flex-shrink: 0;
     }
 
-    .hero-verdict .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: var(--ds-radius-pill);
-      background: var(--ds-success);
-    }
-
-    /* ── SECTION HEADERS ── */
-    .section-label {
-      font-family: var(--ds-font-sans);
-      font-size: 0.75em;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #8b3a1a;
-      margin-block-end: 0.5em;
-    }
-
-    h2 {
-      font-family: var(--ds-font-display);
-      font-size: clamp(1.4em, 3vw, 2.25em);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-      margin-block-end: 0.35em;
-    }
-
-    .section-desc {
-      font-size: 0.95em;
-      color: var(--ds-text-mute);
-      max-width: 640px;
-    }
-
-    /* ── GRID ── */
-    .grid-3 {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      align-content: stretch;
-      gap: 1px;
-      background: var(--ds-line-soft);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      overflow: hidden;
-    }
-
-    .grid-2 {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      align-content: stretch;
-      gap: 1.5rem;
-    }
-
-    /* ── CARDS ── */
-    .card {
-      background: var(--ds-surface);
-      padding: 1.5em;
+    /* ── Slide 2 — Il problema ── */
+    .split-layout {
       display: flex;
-      flex-direction: column;
+      gap: 4rem;
+      align-items: flex-start;
     }
-
-    .card-standalone {
-      background: var(--ds-surface);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      padding: 1.25em;
-      box-shadow: var(--ds-shadow-1);
+    .split-left {
+      flex: 0 0 40%;
     }
-
-    .card-standalone:hover {
-      box-shadow: var(--ds-shadow-2);
+    .split-right {
+      flex: 1;
     }
-
-    .card-label {
-      font-family: var(--ds-font-sans);
-      font-size: 0.7rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--ds-text-mute);
-      margin-block-end: 0.5rem;
-    }
-
-    .card-value {
-      font-size: 2em;
+    .big-number {
+      font-family: var(--font-display);
+      font-size: 8rem;
       font-weight: 700;
-      letter-spacing: -0.04em;
-      color: var(--ds-action);
+      color: var(--action);
       line-height: 1;
-      margin-block-end: 0.5em;
+      margin-bottom: 0;
+    }
+    .big-number-label {
+      font-family: var(--font-sans);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 4px;
+    }
+    .big-number-sub {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      color: var(--text-mute);
+      margin-top: 4px;
+    }
+    .problem-intro {
+      font-size: 1.1rem;
+      color: var(--text-2);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .tool-list {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+    .tool-list li {
+      font-size: 1.05rem;
+      color: var(--text-2);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .tool-list li::before {
+      content: "·";
+      color: var(--action);
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .tool-list li .tool-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .problem-conclusion {
+      font-size: 1.05rem;
+      color: var(--text-3);
+      line-height: 1.6;
+      font-style: italic;
     }
 
-    .card-desc {
-      font-size: 0.9em;
-      color: var(--ds-text-mute);
+    /* ── Slide 3 — La soluzione ── */
+    .solution-cards {
+      display: flex;
+      gap: 20px;
+    }
+    .solution-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+    }
+    .solution-card .card-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .solution-card .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .solution-card .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-3);
       line-height: 1.5;
     }
 
-    /* ── TAM/SAM/SOM ── */
-    .market-funnel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      background: var(--ds-line-soft);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      overflow: hidden;
-    }
-
-    .funnel-row {
-      flex: 1;
-      background: var(--ds-surface);
-      padding: 1em 1.5em;
-      display: grid;
-      grid-template-columns: 80px 1fr auto;
-      align-items: center;
-      gap: 1.5em;
-    }
-
-    .funnel-tag {
-      font-family: var(--ds-font-mono);
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      color: #8b3a1a;
-      background: #f4dccb;
-      border: 1px solid rgba(139,58,26,0.35);
-      border-radius: var(--ds-radius-pill);
-      padding: 0.2rem 0.6rem;
-    }
-
-    .funnel-label { font-size: 0.95rem; color: var(--ds-text-mute); }
-    .funnel-sub { font-size: 0.8rem; color: var(--ds-text-faint); margin-block-start: 0.2rem; }
-
-    .funnel-amount {
-      font-size: 1.5em;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      text-align: end;
-    }
-
-    .funnel-row:first-child .funnel-amount { color: var(--ds-text-mute); }
-    .funnel-row:nth-child(2) .funnel-amount { color: var(--ds-text-2); }
-    .funnel-row:last-child .funnel-amount { color: var(--ds-action); }
-
-    /* ── COMPETITOR TABLE ── */
-    .competitor-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85em;
-    }
-
-    .competitor-table th {
-      text-align: start;
-      padding: 0.5em 0.75em;
-      font-size: 0.7em;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--ds-text-2);
-      border-block-end: 1px solid var(--ds-line);
-      background: var(--ds-surface-alt);
-    }
-
-    .competitor-table td {
-      padding: 0.5em 0.75em;
-      border-block-end: 1px solid var(--ds-line-soft);
-      vertical-align: top;
-    }
-
-    .competitor-table tr:last-child td { border-block-end: none; }
-
-    .competitor-table tr:hover td { background: var(--ds-surface-alt); }
-
-    .competitor-table tr.highlight td { background: var(--ds-action-soft); }
-    .competitor-table tr.highlight td:first-child {
-      border-inline-start: 2px solid var(--ds-action);
-    }
-
-    .comp-name { font-weight: 600; color: var(--ds-text); }
-    .comp-price { font-family: var(--ds-font-mono); font-size: 0.8rem; color: #8b3a1a; font-weight: 600; }
-    .comp-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-block-start: 0.5rem; }
-
-    .tag {
-      font-size: 0.68rem;
-      padding: 0.15rem 0.5rem;
-      border-radius: var(--ds-radius-pill);
-      font-weight: 500;
-    }
-
-    .tag-green { background: #e5e9d8; color: #5a6b3c; border: 1px solid rgba(90,107,60,0.35); }
-    .tag-red { background: rgba(179,58,40,0.10); color: #b33a28; border: 1px solid rgba(179,58,40,0.30); }
-    .tag-blue { background: rgba(52,72,122,0.10); color: #34487a; border: 1px solid rgba(52,72,122,0.25); }
-    .tag-amber { background: #f4dccb; color: #8b3a1a; border: 1px solid rgba(139,58,26,0.30); }
-
-    /* ── FEATURE MATRIX ── */
-    .matrix {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8em;
-    }
-
-    .matrix th {
-      padding: 0.5em 0.4em;
-      text-align: center;
-      font-size: 0.7em;
-      font-weight: 600;
-      color: var(--ds-text-2);
-      letter-spacing: 0.05em;
-      border-block-end: 1px solid var(--ds-line);
-      background: var(--ds-surface-alt);
-    }
-
-    .matrix th:first-child { text-align: start; padding-inline-start: 0.75em; }
-    .matrix th.ours { color: var(--ds-action); }
-
-    .matrix td {
-      padding: 0.5em 0.4em;
-      text-align: center;
-      border-block-end: 1px solid var(--ds-line-soft);
-      color: var(--ds-text-faint);
-    }
-
-    .matrix td:first-child {
-      text-align: start;
-      padding-inline-start: 0.75em;
-      color: var(--ds-text-mute);
-      font-weight: 500;
-    }
-
-    .matrix tr:last-child td { border-block-end: none; }
-    .matrix tr:hover td { background: var(--ds-surface-alt); }
-    .matrix tr.ours-row td { background: var(--ds-action-soft); }
-    .matrix tr.ours-row td:first-child { border-inline-start: 2px solid var(--ds-action); color: var(--ds-action); font-weight: 700; }
-
-    .check { color: #5a6b3c; font-size: 1rem; }
-    .cross { color: #b33a28; }
-    .partial { color: var(--ds-action); font-size: 0.85rem; }
-
-    /* ── RISK CARDS ── */
-    .risk-list {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      background: var(--ds-line-soft);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      overflow: hidden;
-    }
-
-    .risk-row {
-      flex: 1;
-      background: var(--ds-surface);
-      padding: 0.85em 1.5em;
-      display: grid;
-      grid-template-columns: 120px 1fr auto;
-      align-items: center;
-      gap: 1.5em;
-    }
-
-    .risk-level {
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 0.3rem 0.75rem;
-      border-radius: var(--ds-radius-pill);
-      text-align: center;
-      align-self: flex-start;
-    }
-
-    .risk-high { background: var(--ds-danger-soft); color: var(--ds-danger); }
-    .risk-medium { background: var(--ds-action-soft); color: var(--ds-action); }
-
-    .risk-body h4 { font-size: 0.95em; font-weight: 600; margin-block-end: 0.3em; }
-    .risk-body p { font-size: 0.85em; color: var(--ds-text-mute); }
-
-    .risk-mitigation {
-      font-size: 0.9em;
-      font-style: italic;
-      color: var(--ds-text-2);
-      text-align: start;
-    }
-
-    /* ── GTM STEPS ── */
-    .gtm-steps {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      background: var(--ds-line-soft);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      overflow: hidden;
-      counter-reset: gtm-counter;
-    }
-
-    .gtm-step {
-      flex: 1;
-      background: var(--ds-surface);
-      padding: 1em 1.5em 1em 4em;
-      position: relative;
-      counter-increment: gtm-counter;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .gtm-step::before {
-      content: counter(gtm-counter);
-      position: absolute;
-      inset-inline-start: 1.25em;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 2rem;
-      height: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--ds-font-mono);
-      font-size: 0.75rem;
-      font-weight: 700;
-      background: var(--ds-line-soft);
-      border-radius: var(--ds-radius-pill);
-      color: var(--ds-text-faint);
-    }
-
-    .gtm-step h4 {
-      font-size: 1em;
-      font-weight: 600;
-      margin-block-end: 0.3em;
-    }
-
-    .gtm-step p { font-size: 0.875em; color: var(--ds-text-mute); }
-
-    .gtm-step .phase-badge {
-      display: inline-block;
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 0.15rem 0.6rem;
-      border-radius: var(--ds-radius-pill);
-      margin-block-start: 0.6rem;
-    }
-
-    /* ── PRICING ── */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-
-    .pricing-card {
-      background: var(--ds-surface);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      padding: 1.25em;
-      box-shadow: var(--ds-shadow-1);
-    }
-
-    .pricing-card.featured {
-      border-color: var(--ds-action);
-      background: var(--ds-action-soft);
-    }
-
-    .pricing-card .plan-name {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--ds-text-faint);
-      margin-block-end: 0.75rem;
-    }
-
-    .pricing-card.featured .plan-name { color: var(--ds-action); }
-
-    .pricing-card .price {
-      font-size: 2em;
-      font-weight: 700;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      margin-block-end: 0.25em;
-    }
-
-    .pricing-card .price-note {
-      font-size: 0.78rem;
-      color: var(--ds-text-faint);
-      margin-block-end: 1.25rem;
-    }
-
-    .pricing-card ul {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .pricing-card li {
-      font-size: 0.83rem;
-      color: var(--ds-text-mute);
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-    }
-
-    .pricing-card li::before {
-      content: '→';
-      color: var(--ds-text-faint);
-      flex-shrink: 0;
-    }
-
-    /* ── VERDICT ── */
-    .verdict-box {
-      background: var(--ds-surface);
-      border: 1px solid var(--ds-line);
-      border-radius: var(--ds-radius-md);
-      padding: 1.5em 2em;
-      text-align: center;
-    }
-
-    .verdict-box .verdict-label {
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--ds-action);
-      margin-block-end: 1rem;
-    }
-
-    .verdict-box h3 {
-      font-family: var(--ds-font-display);
-      font-size: clamp(1.4em, 3vw, 2.25em);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-block-end: 0.75em;
-    }
-
-    .verdict-box p {
-      color: var(--ds-text-mute);
-      max-width: 680px;
-      margin: 0 auto 1em;
-      line-height: 1.7;
-    }
-
-    .verdict-condition {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--ds-success-soft);
-      border: 1px solid rgba(90, 107, 60, 0.20);
-      border-radius: var(--ds-radius-sm);
-      padding: 0.75rem 1.5rem;
-      font-size: 0.85rem;
-      color: var(--ds-success);
-      font-weight: 500;
-    }
-
-    /* ── STATS ROW ── */
-    .stats-row {
-      display: flex;
-      gap: 1px;
-      background: var(--ds-line-soft);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      overflow: hidden;
-      margin-block-end: 1.25rem;
-      flex-shrink: 0;
-    }
-
-    .stat {
-      flex: 1;
-      background: var(--ds-surface);
-      padding: 1em 1.25em;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .stat-value {
-      font-size: 1.6em;
-      font-weight: 700;
-      letter-spacing: -0.04em;
-      color: var(--ds-action);
-      line-height: 1;
-    }
-
-    .stat-label {
-      font-size: 0.78em;
-      color: var(--ds-text-mute);
-      margin-block-start: 0.35em;
-    }
-
-    .stat-source {
-      font-size: 0.68em;
-      color: var(--ds-text-faint);
-      margin-block-start: 0.15em;
-    }
-
-    /* ── MOAT BOX ── */
-    .moat-box {
-      flex: 1;
-      background: var(--ds-surface);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      padding: 1.5em;
+    /* ── Slide 4 — Cesare ── */
+    .cesare-cols {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2em;
-      align-items: start;
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
     }
-
-    .moat-col h4 {
+    .cesare-col {
+      padding: 32px;
+    }
+    .cesare-col:first-child {
+      background: var(--surface-alt);
+      border-right: 2px solid var(--line);
+    }
+    .cesare-col:last-child {
+      background: var(--agent-soft);
+    }
+    .cesare-col-title {
       font-size: 0.75rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      margin-block-end: 1rem;
+      color: var(--text-mute);
+      margin-bottom: 20px;
     }
-
-    .moat-col.bad h4 { color: var(--ds-danger); }
-    .moat-col.good h4 { color: var(--ds-success); }
-
-    .moat-col ul {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .moat-col li {
-      font-size: 0.85rem;
-      color: var(--ds-text-mute);
-      padding-inline-start: 1.25rem;
-      position: relative;
-    }
-
-    .moat-col.bad li::before {
-      content: '✗';
-      position: absolute;
-      inset-inline-start: 0;
-      color: var(--ds-danger);
-    }
-
-    .moat-col.good li::before {
-      content: '✓';
-      position: absolute;
-      inset-inline-start: 0;
-      color: var(--ds-success);
-    }
-
-    /* ── TABLE WRAPPER ── */
-    .table-wrapper {
-      flex: 1;
-      background: var(--ds-surface);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-md);
-      overflow: hidden;
-      box-shadow: var(--ds-shadow-1);
-    }
-
-    /* ── AI MOAT EXPANDED ── */
-    .moat-full-card {
-      background: var(--ds-surface);
-      border: 1px solid var(--ds-line-soft);
-      border-inline-start: 3px solid #8b3a1a;
-      border-radius: var(--ds-radius-md);
-      padding: 1.25em;
-      box-shadow: var(--ds-shadow-1);
-      overflow: hidden;
-    }
-
-    .moat-full-card .moat-intro {
-      font-size: 0.9em;
-      color: var(--ds-text-mute);
-      line-height: 1.7;
-      margin-block-end: 1em;
-      max-width: 820px;
-    }
-
-    .moat-subsection-title {
-      font-size: 0.7em;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--ds-text-faint);
-      margin-block-end: 0.5em;
-    }
-
-    .ai-compare-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82em;
-      margin-block-end: 0;
-    }
-
-    .ai-compare-table th {
-      padding: 0.45em 0.6em;
-      text-align: center;
-      font-size: 0.68em;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--ds-text-faint);
-      border-block-end: 1px solid var(--ds-line);
-      background: var(--ds-surface-alt);
-    }
-
-    .ai-compare-table th:first-child { text-align: start; padding-inline-start: 0.75em; }
-    .ai-compare-table th.ours-col { color: var(--ds-action); }
-
-    .ai-compare-table td {
-      padding: 0.45em 0.6em;
-      text-align: center;
-      border-block-end: 1px solid var(--ds-line-soft);
-      color: var(--ds-text-faint);
-      vertical-align: middle;
-    }
-
-    .ai-compare-table td:first-child {
-      text-align: start;
-      padding-inline-start: 0.75em;
-      color: var(--ds-text-mute);
-      font-weight: 500;
-    }
-
-    .ai-compare-table tr:last-child td { border-block-end: none; }
-    .ai-compare-table tr:hover td { background: var(--ds-surface-alt); }
-
-    .ai-compare-table tr.ours-row td {
-      background: var(--ds-action-soft);
-    }
-
-    .ai-compare-table tr.ours-row td:first-child {
-      border-inline-start: 2px solid var(--ds-action);
-      color: var(--ds-action);
-      font-weight: 700;
-    }
-
-    .ai-compare-table .ai-check { color: #5a6b3c; font-size: 1rem; }
-    .ai-compare-table .ai-cross { color: #b33a28; }
-    .ai-compare-table .ai-partial { color: var(--ds-action); font-size: 0.85rem; }
-
-    .cesare-examples {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      background: var(--ds-line-soft);
-      border: 1px solid var(--ds-line-soft);
-      border-radius: var(--ds-radius-sm);
-      overflow: hidden;
-    }
-
-    .cesare-example {
-      flex: 1;
-      background: var(--ds-surface);
-      padding: 0.75em 1em;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 1rem;
-      align-items: start;
-    }
-
-    .cesare-example-q {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--ds-text);
-      margin-block-end: 0.25rem;
-    }
-
-    .cesare-example-a {
-      font-size: 0.8rem;
-      color: var(--ds-text-mute);
+    .cesare-item {
+      font-size: 1rem;
       line-height: 1.5;
-    }
-
-    .cesare-icon {
-      width: 2rem;
-      height: 2rem;
-      border-radius: var(--ds-radius-pill);
-      background: var(--ds-action-soft);
-      border: 1px solid rgba(139,58,26,0.25);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line-soft);
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .cesare-item:last-child {
+      border-bottom: none;
+    }
+    .cesare-item .icon-x {
+      color: var(--danger);
+      font-weight: 700;
       flex-shrink: 0;
-      margin-block-start: 0.1rem;
+      margin-top: 1px;
+    }
+    .cesare-item .icon-check {
+      color: var(--agent);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .cesare-item-label {
+      color: var(--text-2);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .cesare-item-label strong {
+      display: block;
+      color: var(--text);
+      font-size: 0.85rem;
+      margin-bottom: 2px;
     }
 
-    .moat-conclusion {
-      background: var(--ds-action-soft);
-      border: 1px solid rgba(139,58,26,0.25);
-      border-radius: var(--ds-radius-sm);
-      padding: 0.75em 1em;
-      font-size: 0.85em;
-      color: var(--ds-text-mute);
+    /* ── Slide 5 — Cesare in azione ── */
+    .examples-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem 3rem;
+    }
+    .example-item {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .example-number {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--action);
+      opacity: 0.35;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 40px;
+    }
+    .example-body {
+      padding-top: 4px;
+    }
+    .example-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    .example-desc {
+      font-size: 0.9rem;
+      color: var(--text-3);
       line-height: 1.6;
     }
 
-    .moat-conclusion strong {
-      color: var(--ds-action);
+    /* ── Slide 6 — KPI stats ── */
+    .stats-row {
+      display: flex;
+      gap: 0;
+      justify-content: space-between;
+      margin: 8px 0 40px;
+    }
+    .stat-item {
+      text-align: center;
+      flex: 1;
+      padding: 32px 24px;
+      border-right: 1px solid var(--line);
+    }
+    .stat-item:last-child {
+      border-right: none;
+    }
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      font-weight: 700;
+      color: var(--action);
+      line-height: 1;
+      display: block;
+    }
+    .stat-label {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 8px;
+      display: block;
+    }
+    .stat-sub {
+      font-size: 0.8rem;
+      color: var(--text-mute);
+      margin-top: 4px;
+      display: block;
+    }
+    .source-line {
+      font-size: 0.78rem;
+      color: var(--text-mute);
+      font-style: italic;
+      text-align: center;
     }
 
-    /* ── FOOTNOTES ── */
-    .footnotes-list {
+    /* ── Slide 7 — Market funnel ── */
+    .funnel-rows {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
-      margin-block-start: 1rem;
+      gap: 0;
+      margin-bottom: 24px;
     }
-
-    .footnote-item {
-      display: grid;
-      grid-template-columns: 2rem 1fr;
-      gap: 0.5rem;
-      font-size: 0.82em;
-      color: var(--ds-text-mute);
+    .funnel-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 22px 28px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 0;
+      margin-top: -1px;
+    }
+    .funnel-row:first-child {
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+    .funnel-row:last-child {
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      border-left: 3px solid var(--action);
+    }
+    .funnel-row:last-child .funnel-amount {
+      color: var(--action);
+    }
+    .funnel-label {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .funnel-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+    }
+    .funnel-desc {
+      font-size: 0.95rem;
+      color: var(--text-3);
+    }
+    .funnel-amount {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+    .funnel-star {
+      color: var(--action);
+      margin-left: 6px;
+    }
+    .footnote {
+      font-size: 0.78rem;
+      color: var(--text-mute);
+      font-style: italic;
       line-height: 1.5;
     }
 
-    .footnote-num {
-      font-family: var(--ds-font-mono);
-      font-size: 0.78em;
-      color: #8b3a1a;
-      padding-block-start: 0.05rem;
+    /* ── Slide 8 — Competitor ── */
+    .competitor-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .competitor-card {
+      flex: 1;
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+      box-shadow: var(--shadow-1);
+    }
+    .competitor-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .competitor-price {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--action);
+      margin-top: 2px;
+    }
+    .competitor-desc {
+      font-size: 0.85rem;
+      color: var(--text-3);
+      margin-top: 8px;
+      line-height: 1.5;
     }
 
-    .footnote-item a {
-      color: #8b3a1a;
-      text-decoration: none;
+    /* ── Slide 9 — Feature gap ── */
+    .gap-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 1rem;
+    }
+    .gap-table th {
+      background: var(--surface-alt);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-mute);
+      padding: 12px 20px;
+      text-align: left;
+    }
+    .gap-table td {
+      background: var(--surface);
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 1rem;
+      color: var(--text-2);
+    }
+    .gap-table tr.differentiator td {
+      background: var(--agent-soft);
+    }
+    .gap-table .check-danger {
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .gap-table .check-agent {
+      color: var(--agent);
+      font-weight: 700;
+    }
+    .gap-table .check-ok {
+      color: var(--text-3);
     }
 
-    .footnote-item a:hover {
-      text-decoration: underline;
+    /* ── Slide 10 — Target ── */
+    .quote-block {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--text-2);
+      border-left: 3px solid var(--action);
+      padding: 20px 24px;
+      line-height: 1.55;
+      margin-bottom: 28px;
     }
-
-    .footnote-note {
+    .quote-attr {
       display: block;
-      font-size: 0.75rem;
-      color: var(--ds-text-faint);
-      margin-block-start: 0.2rem;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-mute);
+      font-style: normal;
+      margin-top: 10px;
+      letter-spacing: 0.04em;
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .tag {
+      background: var(--action-soft);
+      color: var(--action);
+      border: 1px solid rgba(139,58,26,0.25);
+      border-radius: var(--radius-pill);
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .target-body {
+      font-size: 1.05rem;
+      color: var(--text-3);
+      line-height: 1.7;
     }
 
-    sup {
-      color: #8b3a1a;
-      font-size: 0.7em;
+    /* ── Slide 11 — Go to market ── */
+    .gtm-steps {
+      display: flex;
+      gap: 20px;
+    }
+    .gtm-step {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+    }
+    .phase-badge {
+      display: inline-block;
+      background: var(--action-soft);
+      color: var(--action);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border-radius: var(--radius-pill);
+      padding: 4px 12px;
+      margin-bottom: 14px;
+    }
+    .gtm-step-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .gtm-step-sub {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--action);
+      margin-bottom: 8px;
+    }
+    .gtm-step-desc {
+      font-size: 0.875rem;
+      color: var(--text-3);
+      line-height: 1.6;
+    }
+
+    /* ── Slide 12 — Prezzi ── */
+    .pricing-cards {
+      display: flex;
+      gap: 20px;
+      align-items: stretch;
+    }
+    .pricing-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border: 2px solid var(--action);
+      box-shadow: var(--shadow-2);
+    }
+    .pricing-plan {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 16px;
+    }
+    .pricing-price {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .pricing-period {
+      font-size: 0.8rem;
+      color: var(--text-mute);
+      margin-bottom: 24px;
+      display: block;
+    }
+    .pricing-features {
+      list-style: none;
+      flex: 1;
+    }
+    .pricing-features li {
+      font-size: 0.9rem;
+      color: var(--text-3);
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .pricing-features li::before {
+      content: "✓";
+      color: var(--agent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .recommended-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--action);
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: var(--radius-pill);
+      padding: 4px 14px;
+      white-space: nowrap;
+    }
+    .pricing-footnote {
+      font-size: 0.78rem;
+      color: var(--text-mute);
+      font-style: italic;
+      margin-top: 24px;
+    }
+
+    /* ── Slide 13 — Rischi ── */
+    .risk-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      padding: 10px 0 14px;
+      border-bottom: 2px solid var(--line);
+      margin-bottom: 0;
+    }
+    .risk-col-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+    }
+    .risk-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      padding: 22px 0;
+      border-bottom: 1px solid var(--line-soft);
+      align-items: flex-start;
+    }
+    .risk-row:last-child {
+      border-bottom: none;
+    }
+    .risk-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .risk-response {
+      font-size: 0.95rem;
+      color: var(--text-3);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    /* ── Slide 14 — Verdetto ── */
+    .verdict-callout {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--text-2);
+      line-height: 1.55;
+      border-left: 4px solid var(--action);
+      padding: 20px 28px;
+      background: var(--action-soft);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      margin: 32px 0;
+    }
+    .verdict-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .verdict-col {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 24px 28px;
+    }
+    .verdict-col-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 16px;
+    }
+    .verdict-list {
+      list-style: none;
+    }
+    .verdict-list li {
+      font-size: 0.95rem;
+      color: var(--text-3);
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .verdict-list li:last-child {
+      border-bottom: none;
+    }
+    .verdict-list li .v-x {
+      color: var(--danger);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .verdict-list li .v-check {
+      color: var(--agent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Slide 15 — Fonti ── */
+    .sources-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .source-item {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .source-item:last-child {
+      border-bottom: none;
+    }
+    .source-num {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--action);
+      flex-shrink: 0;
+      width: 28px;
+      padding-top: 2px;
+    }
+    .source-body {
+      flex: 1;
+    }
+    .source-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .source-detail {
+      font-size: 0.875rem;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+    .source-url {
+      font-size: 0.82rem;
+      color: var(--text-mute);
+      margin-top: 4px;
+      display: block;
     }
   </style>
 </head>
 <body>
 
-<!-- ── PROGRESS BAR ── -->
-<div class="progress-bar-track">
-  <div class="progress-bar"></div>
-</div>
+  <!-- Progress bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" style="width: 6.67%"></div>
+  </div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 0 — HERO
-══════════════════════════════════════ -->
-<div class="slide-hero active hero">
-  <div class="hero-content">
-    <p class="hero-eyebrow">Analisi di Mercato · Maggio 2025</p>
-    <h1>Il mercato esiste.<br><em>Il vuoto anche.</em></h1>
-    <p class="hero-sub">Un'analisi su mercato, competitor e posizionamento per Oh Writers — il primo tool che copre l'intero flusso di lavoro creativo-produttivo del cinema in italiano.</p>
-    <div class="hero-verdict">
-      <span class="dot"></span>
-      Può avere successo — se rimane focalizzato
+  <!-- ── Slide 1 — Hero ── -->
+  <div class="slide active" id="slide-1">
+    <div class="slide-content" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+      <p class="eyebrow">Oh Writers · Maggio 2025</p>
+      <h1 class="display" style="text-align: center;">Il mercato esiste.<br>Il vuoto anche.</h1>
+      <div class="verdict-pill">
+        <span class="dot"></span>
+        Può avere successo — se rimane focalizzato
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 1A — IL PROGETTO (problema / soluzione / vantaggio)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">00 / Il progetto</p>
-      <h2>Oh Writers.</h2>
-      <p class="section-desc">Un tool web per filmmaker e sceneggiatori italiani che copre l'intero pipeline creativo-produttivo — dalla prima idea al piano di ripresa.</p>
-    </div>
+  <!-- ── Slide 2 — Il problema ── -->
+  <div class="slide" id="slide-2">
     <div class="slide-content">
-    <div class="grid-3" style="margin-block-end:1rem">
-      <div class="card">
-        <p class="card-label">Il problema</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7">Un regista-sceneggiatore italiano usa oggi <strong style="color:var(--ds-text)">Final Draft</strong> per scrivere, <strong style="color:var(--ds-text)">Excel</strong> per il breakdown, <strong style="color:var(--ds-text)">Movie Magic</strong> (se può permetterselo) per lo schedule, <strong style="color:var(--ds-text)">Notion</strong> per le note. Quattro tool, quattro contesti, zero integrazione.</p>
-      </div>
-      <div class="card">
-        <p class="card-label">La soluzione</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7">Un'unica superficie web che copre <strong style="color:var(--ds-text)">scrittura</strong> (soggetto → sinossi → scaletta → sceneggiatura), <strong style="color:var(--ds-text)">pre-produzione</strong> (breakdown, budget, piano di ripresa, schedule) e <strong style="color:var(--ds-text)">AI contestuale</strong> che conosce l'intera produzione.</p>
-      </div>
-      <div class="card">
-        <p class="card-label">Il vantaggio competitivo</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7"><strong style="color:var(--ds-text)">Cesare</strong> (ispirato a Zavattini) non è un chatbot. Conosce la sceneggiatura, il breakdown, il budget e il calendario — l'unico AI che ragiona sull'intera produzione, non sulla singola scena.</p>
-      </div>
-    </div>
-
-    <div class="card-standalone">
-      <p class="card-label">Pipeline completo in un'unica app</p>
-      <div style="display:flex;gap:0;margin-block-start:1rem;overflow:hidden;border-radius:var(--ds-radius-sm);border:1px solid var(--ds-line-soft)">
-        <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-action-soft);border-inline-end:1px solid var(--ds-line-soft)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-action);margin-block-end:0.4rem">Scrittura</div>
-          <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Soggetto<br>Sinossi<br>Scaletta<br>Trattamento<br>Sceneggiatura</div>
+      <p class="eyebrow">Il problema</p>
+      <div class="split-layout">
+        <div class="split-left">
+          <div class="big-number">4</div>
+          <div class="big-number-label">tool diversi</div>
+          <div class="big-number-sub">per fare un film</div>
         </div>
-        <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Breakdown</div>
-          <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Cast · Comparse<br>Location · Props<br>VFX · Costumi<br>Suono · Trucco<br>Veicoli</div>
-        </div>
-        <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Budget</div>
-          <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Stime AI per ruolo<br>Tariffa giornaliera<br>Contingency<br>Vista per giornata<br>Export PDF</div>
-        </div>
-        <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Piano Riprese</div>
-          <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Shot planning<br>Timeline visuale<br>Blocking editor<br>Calendario set<br>Multi-scenario</div>
-        </div>
-        <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-surface)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Schedule</div>
-          <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Strip board<br>Giorni di ripresa<br>Ordine scene<br>Collaborazione<br>Generazione AI</div>
+        <div class="split-right">
+          <p class="problem-intro">Un regista-sceneggiatore italiano usa oggi:</p>
+          <ul class="tool-list">
+            <li><span class="tool-name">Final Draft</span> — sceneggiatura</li>
+            <li><span class="tool-name">Excel</span> — breakdown</li>
+            <li><span class="tool-name">Movie Magic</span> — schedule</li>
+            <li><span class="tool-name">Notion</span> — note e produzione</li>
+          </ul>
+          <p class="problem-conclusion">Quattro contesti. Zero integrazione. Ogni cambio di tool è frizione. Ogni frizione è tempo perso sul progetto che conta.</p>
         </div>
       </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 1B — IL PROGETTO — Vantaggio Cesare AI
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">00 / Il progetto — continua</p>
-      <h2>Perché Cesare non è un chatbot.</h2>
-      <p class="section-desc">Gli strumenti AI generici non hanno contesto sulla produzione. Cesare conosce tutto — script, breakdown, budget e calendario insieme.</p>
-    </div>
+  <!-- ── Slide 3 — La soluzione ── -->
+  <div class="slide" id="slide-3">
     <div class="slide-content">
-    <div class="moat-full-card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-      <p class="card-label" style="margin-block-end:0.75rem">Il vantaggio competitivo di Cesare — perché l'AI contestuale non è replicabile</p>
-      <p class="moat-intro">
-        Gli strumenti AI generici (ChatGPT, Claude, Gemini) non hanno nessun contesto sulla produzione. Incolli una scena e ottieni suggerimenti generici, senza sapere chi recita, qual è il budget residuo o se quella location è già prenotata quel giorno. I competitor più avanzati hanno AI, ma silo: l'AI di Arc Studio Pro conosce lo script, non il breakdown. L'AI di StudioBinder conosce il breakdown, non lo script e non il budget. <strong style="color:var(--ds-text)">Cesare conosce tutto.</strong>
-      </p>
-
-      <p class="moat-subsection-title">Confronto AI — cosa conosce ogni strumento</p>
-      <div class="table-wrapper" style="flex:1;margin-block-end:1.5rem">
-        <table class="ai-compare-table">
-          <thead>
-            <tr>
-              <th>Strumento</th>
-              <th>AI presente</th>
-              <th>Conosce lo script</th>
-              <th>Conosce il breakdown</th>
-              <th>Conosce il budget</th>
-              <th>Conosce il calendario</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>ChatGPT / Claude (standalone)</td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-partial">~</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-            </tr>
-            <tr>
-              <td>Arc Studio Pro</td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-            </tr>
-            <tr>
-              <td>StudioBinder</td>
-              <td><span class="ai-partial">~</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-partial">~</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-            </tr>
-            <tr>
-              <td>Final Draft</td>
-              <td><span class="ai-partial">~</span></td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-            </tr>
-            <tr>
-              <td>Celtx</td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-              <td><span class="ai-cross">✗</span></td>
-            </tr>
-            <tr class="ours-row">
-              <td>Oh Writers — Cesare</td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-check">✓</span></td>
-              <td><span class="ai-check">✓</span></td>
-            </tr>
-          </tbody>
-        </table>
+      <p class="eyebrow">La soluzione</p>
+      <h2 class="slide-title">Un'unica superficie.<br>Dal soggetto al piano di ripresa.</h2>
+      <div class="solution-cards">
+        <div class="solution-card">
+          <span class="card-icon">✍</span>
+          <div class="card-title">Scrittura</div>
+          <div class="card-desc">Soggetto → Sceneggiatura</div>
+        </div>
+        <div class="solution-card">
+          <span class="card-icon">🎬</span>
+          <div class="card-title">Pre-produzione</div>
+          <div class="card-desc">Breakdown → Budget → Schedule</div>
+        </div>
+        <div class="solution-card">
+          <span class="card-icon">✦</span>
+          <div class="card-title">AI contestuale</div>
+          <div class="card-desc">Cesare conosce tutto</div>
+        </div>
       </div>
-
-      <p class="moat-subsection-title" style="margin-block-start:auto">Perché questo vantaggio è difficile da replicare a breve</p>
-      <div class="moat-conclusion">
-        I competitor possono aggiungere AI generica. <strong>Non possono aggiungere AI contestuale senza ricostruire l'intero modello dati come grafo di produzione unificato.</strong> Arc Studio Pro dovrebbe aggiungere breakdown, budget e calendario — anni di sviluppo, non mesi. Oh Writers è stato progettato come grafo di produzione dal giorno uno. La finestra di vantaggio è stimata in <strong>18–24 mesi</strong> prima che un competitor con finanziamenti adeguati possa replicare la profondità dell'integrazione.
-      </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 1C — IL PROGETTO — Esempi Cesare (Fix 2: split, only 3 examples)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">00 / Il progetto — continua</p>
-      <h2>Cosa può fare Cesare<br>che nessun altro può fare.</h2>
-      <p class="section-desc">Quattro esempi concreti di query che richiedono la conoscenza integrata di script, breakdown, budget e calendario.</p>
-    </div>
+  <!-- ── Slide 4 — Cesare ── -->
+  <div class="slide" id="slide-4">
     <div class="slide-content">
-    <div class="cesare-examples">
-      <div class="cesare-example">
-        <div class="cesare-icon">①</div>
-        <div>
-          <p class="cesare-example-q">"Questa scena è fattibile domani?"</p>
-          <p class="cesare-example-a">Cesare controlla il breakdown (3 attori richiesti, location esterna, 2 comparse), incrocia con il calendario (Lucia De Santis non disponibile il 14, quella location già prenotata il 15) e risponde con un'analisi concreta. Nessun altro tool può fare questa verifica senza uscire dall'app.</p>
+      <p class="eyebrow">Il vantaggio competitivo</p>
+      <h2 class="slide-title" style="margin-bottom: 28px;">Cesare non è un chatbot.<br>È l'unico AI che conosce<br>l'intera produzione.</h2>
+      <div class="cesare-cols">
+        <div class="cesare-col">
+          <div class="cesare-col-title">Cosa sanno gli altri</div>
+          <div class="cesare-item">
+            <span class="icon-x">✗</span>
+            <div class="cesare-item-label"><strong>ChatGPT / Claude generico</strong>Conosce solo quello che incolli</div>
+          </div>
+          <div class="cesare-item">
+            <span class="icon-x">✗</span>
+            <div class="cesare-item-label"><strong>Arc Studio AI</strong>Conosce solo lo script</div>
+          </div>
+          <div class="cesare-item">
+            <span class="icon-x">✗</span>
+            <div class="cesare-item-label"><strong>StudioBinder AI</strong>Conosce solo il breakdown</div>
+          </div>
+        </div>
+        <div class="cesare-col">
+          <div class="cesare-col-title">Cosa sa Cesare</div>
+          <div class="cesare-item">
+            <span class="icon-check">✓</span>
+            <div class="cesare-item-label">La sceneggiatura completa</div>
+          </div>
+          <div class="cesare-item">
+            <span class="icon-check">✓</span>
+            <div class="cesare-item-label">Il breakdown di ogni scena</div>
+          </div>
+          <div class="cesare-item">
+            <span class="icon-check">✓</span>
+            <div class="cesare-item-label">Il budget residuo per categoria</div>
+          </div>
+          <div class="cesare-item">
+            <span class="icon-check">✓</span>
+            <div class="cesare-item-label">Il calendario e le disponibilità attori</div>
+          </div>
         </div>
       </div>
-      <div class="cesare-example">
-        <div class="cesare-icon">②</div>
-        <div>
-          <p class="cesare-example-q">"Suggerisci come riscrivere questa scena per ridurre i costi"</p>
-          <p class="cesare-example-a">Cesare conosce il budget residuo della categoria "cast" e sa che il personaggio B (attore con tariffa €800/giorno) compare già in 3 scene nella stessa location quel giorno. Può suggerire di eliminarlo da questa scena specifica — il risparmio è reale, non ipotetico.</p>
-        </div>
-      </div>
-      <div class="cesare-example">
-        <div class="cesare-icon">③</div>
-        <div>
-          <p class="cesare-example-q">"Ottimizza lo schedule per ridurre i giorni di ripresa"</p>
-          <p class="cesare-example-a">Cesare analizza l'intero strip board, identifica le location che appaiono in più scene non consecutive (sprechi di spostamento), e propone un reordering che minimizza i giorni di set mantenendo le disponibilità del cast già fissate.</p>
-        </div>
-      </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 1D — IL PROGETTO — Tecnologia e stato attuale (Fix 2: split)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">00 / Il progetto — tecnologia</p>
-      <h2>Stack e stato attuale.</h2>
-      <p class="section-desc">La tecnologia che alimenta Oh Writers e ciò che è già costruito oggi.</p>
-    </div>
+  <!-- ── Slide 5 — Cesare in azione ── -->
+  <div class="slide" id="slide-5">
     <div class="slide-content">
-    <div class="grid-2">
-      <div class="card-standalone">
-        <p class="card-label">Stack tecnologico</p>
-        <div style="display:flex;flex-direction:column;gap:0.5rem;margin-block-start:0.75rem">
-          <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--ds-text-mute)">Framework</span>
-            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">TanStack Start (SSR)</span>
+      <p class="eyebrow">Cesare in azione</p>
+      <h2 class="slide-title" style="margin-bottom: 36px;">Quattro cose che nessun altro può fare.</h2>
+      <div class="examples-grid">
+        <div class="example-item">
+          <div class="example-number">1</div>
+          <div class="example-body">
+            <div class="example-title">"Questa scena è fattibile domani?"</div>
+            <div class="example-desc">Controlla cast, location e budget in un secondo.</div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--ds-text-mute)">Editor</span>
-            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Editor web proprietario (Fountain)</span>
+        </div>
+        <div class="example-item">
+          <div class="example-number">2</div>
+          <div class="example-body">
+            <div class="example-title">"Riscrivila per ridurre i costi"</div>
+            <div class="example-desc">Sa quali props costano di più e suggerisce alternative narrative che mantengono la scena funzionante.</div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--ds-text-mute)">Collaborazione</span>
-            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Yjs real-time</span>
+        </div>
+        <div class="example-item">
+          <div class="example-number">3</div>
+          <div class="example-body">
+            <div class="example-title">"Aiutami col dialogo"</div>
+            <div class="example-desc">Conosce la voce di ogni personaggio da tutte le scene precedenti.</div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--ds-text-mute)">AI</span>
-            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Claude (Anthropic)</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--ds-text-mute)">Database</span>
-            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">PostgreSQL + Drizzle</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--ds-text-mute)">Mobile (roadmap)</span>
-            <span style="color:var(--ds-font-mono);font-size:0.78rem">Expo companion</span>
+        </div>
+        <div class="example-item">
+          <div class="example-number">4</div>
+          <div class="example-body">
+            <div class="example-title">"Ottimizza lo schedule"</div>
+            <div class="example-desc">Analizza l'intero strip board e raggruppa le scene per minimizzare i giorni di set.</div>
           </div>
         </div>
       </div>
-      <div class="card-standalone">
-        <p class="card-label">Stato attuale</p>
-        <div style="display:flex;flex-direction:column;gap:0.5rem;margin-block-start:0.75rem">
-          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
-            <span style="color:var(--ds-text-mute)">Scrittura completa (soggetto → sceneggiatura con editor Fountain proprietario)</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
-            <span style="color:var(--ds-text-mute)">Breakdown con estrazione AI per 10+ categorie</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
-            <span style="color:var(--ds-text-mute)">Budget con stime AI, tariffe, viste per categoria e per giornata</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
-            <span style="color:var(--ds-text-mute)">Piano di ripresa con shot planning, blocking editor, calendario</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
-            <span style="color:var(--ds-text-mute)">Schedule (strip board) con generazione AI e collaborazione team</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--ds-action);flex-shrink:0">→</span>
-            <span style="color:var(--ds-text-mute)">Cesare AI (in sviluppo attivo): assistente contestuale universale</span>
-          </div>
-        </div>
-      </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 2 — DIMENSIONE DEL MERCATO
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">01 / Dimensione del mercato</p>
-      <h2>L'Italia è prima in Europa.<br>Nessuno lo sa.</h2>
-      <p class="section-desc">Nel 2024, l'Italia ha prodotto 350 film — più di Francia, UK e Spagna. Il settore audiovisivo conta 65.000 professionisti diretti.</p>
-    </div>
+  <!-- ── Slide 6 — KPI numeri ── -->
+  <div class="slide" id="slide-6">
     <div class="slide-content">
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-value">350</div>
-        <div class="stat-label">film italiani nel 2024</div>
-        <div class="stat-source">1° in Europa — ANICA 2024 <sup>[1]</sup></div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">65K</div>
-        <div class="stat-label">professionisti diretti</div>
-        <div class="stat-source">audiovisivo italiano — ANICA 2024 <sup>[1]</sup></div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">77%</div>
-        <div class="stat-label">film europei = writer-director</div>
-        <div class="stat-source">EAO 2015–2023 <sup>[2]</sup></div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">1.500+</div>
-        <div class="stat-label">film/anno in Europa</div>
-        <div class="stat-source">Francia, UK, Spagna, Germania, IT — EAO <sup>[2]</sup></div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">+47%</div>
-        <div class="stat-label">crescita produzione EU</div>
-        <div class="stat-source">ultimo decennio — EAO <sup>[2]</sup></div>
-      </div>
-    </div>
-
-    <div class="market-funnel">
-      <div class="funnel-row">
-        <div class="funnel-tag">Mercato globale</div>
-        <div>
-          <div class="funnel-label">Tutti i filmmaker e sceneggiatori nel mondo — scrittura + pre-produzione</div>
-          <div class="funnel-sub">Tutti i professionisti del cinema e TV nel mondo con strumenti digitali · Stima interna <sup>[3]</sup></div>
+      <p class="eyebrow">01 / Dimensione del mercato</p>
+      <h2 class="slide-title" style="margin-bottom: 8px;">L'Italia è prima in Europa.<br>Nessuno lo sa.</h2>
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-number">350</span>
+          <span class="stat-label">film/anno in Italia</span>
         </div>
-        <div class="funnel-amount">$1.5–2B</div>
-      </div>
-      <div class="funnel-row">
-        <div class="funnel-tag">Nostro segmento</div>
-        <div>
-          <div class="funnel-label">Indie filmmaker in Europa e Nord America</div>
-          <div class="funnel-sub">Professionisti indipendenti, fuori dalle grandi major — il segmento raggiungibile realisticamente · Stima interna <sup>[3]</sup></div>
+        <div class="stat-item">
+          <span class="stat-number">65.000</span>
+          <span class="stat-label">professionisti</span>
+          <span class="stat-sub">audiovisivo italiano</span>
         </div>
-        <div class="funnel-amount">$300–400M</div>
-      </div>
-      <div class="funnel-row">
-        <div class="funnel-tag">Obiettivo 5 anni</div>
-        <div>
-          <div class="funnel-label">Obiettivo realistico Oh Writers — 5 anni</div>
-          <div class="funnel-sub">Indie filmmaker IT + EU, professionisti non-major, primi utenti internazionali · Stima interna <sup>[3]</sup></div>
+        <div class="stat-item">
+          <span class="stat-number">77%</span>
+          <span class="stat-label">writer-director</span>
+          <span class="stat-sub">in Europa</span>
         </div>
-        <div class="funnel-amount">$5–15M/anno</div>
       </div>
-    </div>
+      <p class="source-line">ANICA 2024 · EAO 2015–2023</p>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 3A — COMPETITOR (tabella prodotti, righe 1-4) — Fix 1: 6A
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">02 / Panorama competitor</p>
-      <h2>Tutti forti su un pezzo.<br>Nessuno copre tutto.</h2>
-      <p class="section-desc">Il mercato è frammentato: chi fa screenwriting non fa scheduling, chi fa scheduling non fa AI, nessuno è localizzato in italiano.</p>
-    </div>
+  <!-- ── Slide 7 — Market funnel ── -->
+  <div class="slide" id="slide-7">
     <div class="slide-content">
-    <div class="table-wrapper">
-      <table class="competitor-table">
-        <thead>
-          <tr>
-            <th>Tool</th>
-            <th>Prezzo</th>
-            <th>Punti di forza</th>
-            <th>Limiti critici</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <div class="comp-name">Final Draft</div>
-              <div class="comp-tags">
-                <span class="tag tag-green">Standard Hollywood</span>
-                <span class="tag tag-red">Solo scrittura</span>
-                <span class="tag tag-red">Desktop</span>
-              </div>
-            </td>
-            <td><span class="comp-price">$199 una tantum <sup>[4]</sup></span></td>
-            <td>30 anni di inerzia; .fdx è il formato universale; WGA lo richiede</td>
-            <td>Nessuna pre-produzione. Collaborazione limitata. UX degli anni 2000. Sconosciuto nell'indie italiano.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="comp-name">Movie Magic</div>
-              <div class="comp-tags">
-                <span class="tag tag-green">Standard scheduling</span>
-                <span class="tag tag-red">Solo pre-prod</span>
-                <span class="tag tag-red">Desktop</span>
-              </div>
-            </td>
-            <td><span class="comp-price">$49.99/mese <sup>[4]</sup></span></td>
-            <td>Standard assoluto per AD e line producer nelle produzioni grandi</td>
-            <td>UI anni 2000. Zero AI. Nessun screenwriting. Due prodotti separati che non si integrano. Sconosciuto in Italia.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="comp-name">StudioBinder</div>
-              <div class="comp-tags">
-                <span class="tag tag-blue">Web-first</span>
-                <span class="tag tag-green">Più simile a noi</span>
-                <span class="tag tag-red">Molto costoso</span>
-              </div>
-            </td>
-            <td><span class="comp-price">$29–349/mese <sup>[4]</sup></span></td>
-            <td>Copre call sheet, scheduling, shot list, breakdown in un'unica web app; marketing aggressivo</td>
-            <td>Screenwriting mediocre. Nessun budget. AI assente. Solo inglese. Troppo costoso per filmmaker singoli. Non usato in Italia.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="comp-name">Celtx</div>
-              <div class="comp-tags">
-                <span class="tag tag-amber">Mercato educational</span>
-                <span class="tag tag-red">Invecchiato</span>
-              </div>
-            </td>
-            <td><span class="comp-price">~$20/mese <sup>[4]</sup></span></td>
-            <td>Pioniere del tutto-in-uno; molto diffuso nelle scuole di cinema; prezzo aggressivo</td>
-            <td>Nessun salto generazionale. Editor sceneggiatura inferiore. AI irrilevante. Perde utenti dopo la formazione.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <p class="eyebrow">01 / Dimensione del mercato</p>
+      <h2 class="slide-title" style="margin-bottom: 28px;">Quanto vale il mercato.</h2>
+      <div class="funnel-rows">
+        <div class="funnel-row">
+          <div class="funnel-label">
+            <span class="funnel-name">Mercato globale</span>
+            <span class="funnel-desc">Tutti i filmmaker nel mondo</span>
+          </div>
+          <div class="funnel-amount">$1.5–2B</div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-label">
+            <span class="funnel-name">Nostro segmento</span>
+            <span class="funnel-desc">Indie filmmaker EU + Nord America</span>
+          </div>
+          <div class="funnel-amount">$300–400M</div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-label">
+            <span class="funnel-name">Obiettivo 5 anni</span>
+            <span class="funnel-desc">Target realistico Oh Writers</span>
+          </div>
+          <div class="funnel-amount">$5–15M/anno<span class="funnel-star">★</span></div>
+        </div>
+      </div>
+      <p class="footnote">³ Stima interna basata su pricing competitor × utenti raggiungibili. Non derivata da report di terze parti.</p>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 3B — COMPETITOR — continua (righe 5-7) — Fix 1: 6B
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">02 / Competitor — continua</p>
-      <h2>Tutti forti su un pezzo.<br>Nessuno copre tutto.</h2>
-      <p class="section-desc">Segue la panoramica dei competitor principali.</p>
-    </div>
+  <!-- ── Slide 8 — Competitor ── -->
+  <div class="slide" id="slide-8">
     <div class="slide-content">
-    <div class="table-wrapper">
-      <table class="competitor-table">
-        <thead>
-          <tr>
-            <th>Tool</th>
-            <th>Prezzo</th>
-            <th>Punti di forza</th>
-            <th>Limiti critici</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <div class="comp-name">Arc Studio Pro</div>
-              <div class="comp-tags">
-                <span class="tag tag-blue">UX moderna</span>
-                <span class="tag tag-green">AI integrata</span>
-                <span class="tag tag-red">Solo scrittura</span>
-              </div>
-            </td>
-            <td><span class="comp-price">$9.99/mese <sup>[4]</sup></span></td>
-            <td>Il più moderno tra i tool di screenwriting. UX eccellente. Prezzo aggressivo. Cresce rapidamente.</td>
-            <td>Zero pre-produzione. Zero budget/scheduling. Solo mercato anglofono.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="comp-name">WriterDuet</div>
-              <div class="comp-tags">
-                <span class="tag tag-green">Co-scrittura real-time</span>
-                <span class="tag tag-red">Solo scrittura</span>
-              </div>
-            </td>
-            <td><span class="comp-price">$12/mese</span></td>
-            <td>Collaborazione real-time eccellente. Interfaccia pulita.</td>
-            <td>Solo screenwriting. Zero pre-produzione. Nicchia molto specifica.</td>
-          </tr>
-          <tr>
-            <td>
-              <div class="comp-name">Notion / Google Docs</div>
-              <div class="comp-tags">
-                <span class="tag tag-red">Competitor indiretto</span>
-              </div>
-            </td>
-            <td><span class="comp-price">Gratis</span></td>
-            <td>Flessibilità totale. Zero costo. Molti indie italiani già dentro Google Workspace.</td>
-            <td>Nessuna formattazione Fountain. Zero automazione. Zero AI specializzata. Nessuna timeline.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <p class="eyebrow">02 / Competitor</p>
+      <h2 class="slide-title" style="margin-bottom: 28px;">Tutti forti su un pezzo.<br>Nessuno copre tutto.</h2>
+      <div class="competitor-grid">
+        <div class="competitor-card">
+          <div class="competitor-name">Final Draft</div>
+          <div class="competitor-price">$199 una tantum</div>
+          <div class="competitor-desc">Standard Hollywood. Solo scrittura. Desktop.</div>
+        </div>
+        <div class="competitor-card">
+          <div class="competitor-name">Movie Magic</div>
+          <div class="competitor-price">$49.99/mese</div>
+          <div class="competitor-desc">Standard scheduling. Solo pre-produzione. Desktop.</div>
+        </div>
+        <div class="competitor-card">
+          <div class="competitor-name">StudioBinder</div>
+          <div class="competitor-price">$29–349/mese</div>
+          <div class="competitor-desc">Il più completo. Ma senza AI e senza italiano.</div>
+        </div>
+        <div class="competitor-card">
+          <div class="competitor-name">Celtx</div>
+          <div class="competitor-price">~$20/mese</div>
+          <div class="competitor-desc">Web-based. Screenwriting mediocre. Nessun budget.</div>
+        </div>
+        <div class="competitor-card">
+          <div class="competitor-name">Arc Studio Pro</div>
+          <div class="competitor-price">$9.99/mese</div>
+          <div class="competitor-desc">UX moderna. Solo screenwriting. AI di base.</div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 4A — POSIZIONAMENTO (feature matrix)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">03 / Dove ci posizioniamo</p>
-      <h2>Il gap esiste.<br>È documentabile.</h2>
-      <p class="section-desc">Oh Writers è l'unico tool che copre l'intero pipeline in un'unica web app moderna, con AI contestuale, in italiano.</p>
-    </div>
-    <div class="slide-content" style="align-items:flex-start">
-    <div class="table-wrapper" style="height:auto;flex:0 0 auto;width:100%">
-      <table class="matrix">
+  <!-- ── Slide 9 — Feature gap ── -->
+  <div class="slide" id="slide-9">
+    <div class="slide-content">
+      <p class="eyebrow">03 / Dove ci posizioniamo</p>
+      <h2 class="slide-title" style="margin-bottom: 24px;">Il gap è documentabile.</h2>
+      <table class="gap-table">
         <thead>
           <tr>
             <th>Feature</th>
-            <th>Final Draft</th>
-            <th>Movie Magic</th>
-            <th>StudioBinder</th>
-            <th>Celtx</th>
-            <th>Arc Studio</th>
-            <th class="ours">Oh Writers</th>
+            <th>Migliore alternativa</th>
+            <th>Oh Writers</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>Scrittura sceneggiatura</td>
-            <td><span class="check">✓</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="partial">~</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="check">✓</span></td>
+            <td><span class="check-ok">✓ Final Draft</span></td>
+            <td><span class="check-agent">✓</span></td>
           </tr>
           <tr>
             <td>Breakdown automatico</td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="partial">~</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-          </tr>
-          <tr>
-            <td>Scheduling / strip board</td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
+            <td><span class="check-ok">✓ StudioBinder</span></td>
+            <td><span class="check-agent">✓</span></td>
           </tr>
           <tr>
             <td>Budget</td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
+            <td><span class="check-ok">✓ Movie Magic</span></td>
+            <td><span class="check-agent">✓</span></td>
           </tr>
           <tr>
+            <td>Scheduling</td>
+            <td><span class="check-ok">✓ Movie Magic</span></td>
+            <td><span class="check-agent">✓</span></td>
+          </tr>
+          <tr class="differentiator">
             <td>AI contestuale</td>
-            <td><span class="partial">~</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="partial">~</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="partial">~</span></td>
-            <td><span class="check">✓</span></td>
+            <td><span class="check-danger">✗ Nessuno</span></td>
+            <td><span class="check-agent">✓</span></td>
           </tr>
-          <tr>
-            <td>Web-first</td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="check">✓</span></td>
-            <td><span class="check">✓</span></td>
+          <tr class="differentiator">
+            <td>In italiano</td>
+            <td><span class="check-danger">✗ Nessuno</span></td>
+            <td><span class="check-agent">✓</span></td>
           </tr>
-          <tr>
-            <td>Localizzazione italiana</td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="cross">✗</span></td>
-            <td><span class="check">✓</span></td>
-          </tr>
-          <tr class="ours-row">
-            <td>Oh Writers</td>
-            <td colspan="6" style="text-align:start;color:var(--ds-action);font-size:0.8rem;padding-inline-start:1rem">
-              Unico a coprire tutti e 7 i punti in un'unica superficie
-            </td>
+          <tr class="differentiator">
+            <td>Un'unica app</td>
+            <td><span class="check-danger">✗ Nessuno</span></td>
+            <td><span class="check-agent">✓</span></td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-block-start: 1.5em; font-size: 0.85em; color: var(--ds-text-mute); text-align: center; font-style: italic;">
-      Oh Writers è l'unico tool che copre tutti e 7 i punti in un'unica superficie web, in italiano.
-    </p>
+  </div>
+
+  <!-- ── Slide 10 — Target ── -->
+  <div class="slide" id="slide-10">
+    <div class="slide-content">
+      <p class="eyebrow">03 / Target primario</p>
+      <h2 class="slide-title" style="margin-bottom: 24px;">Il writer-director indie italiano.</h2>
+      <blockquote class="quote-block">
+        "Il 77% dei film europei è scritto e diretto dalla stessa persona."
+        <span class="quote-attr">— European Audiovisual Observatory, 2015–2023</span>
+      </blockquote>
+      <div class="tag-row">
+        <span class="tag">Registi-sceneggiatori</span>
+        <span class="tag">Budget €200K–2M</span>
+        <span class="tag">Scuole di cinema</span>
+      </div>
+      <p class="target-body">Questo filmmaker usa Final Draft per scrivere e Notion/Excel per il resto. Soffre il cambio di contesto più di chiunque altro. Oh Writers è costruito per lui.</p>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 4B — POSIZIONAMENTO (target)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">03 / Dove ci posizioniamo — continua</p>
-      <h2>Il target primario.</h2>
-      <p class="section-desc">Il writer-director indie italiano non è servito da nessuno. E rappresenta il 77% di chi fa cinema in Europa.</p>
-    </div>
+  <!-- ── Slide 11 — Go to market ── -->
+  <div class="slide" id="slide-11">
     <div class="slide-content">
-    <div class="card-standalone" style="margin-block-end:1rem">
-      <p class="card-label">Target primario</p>
-      <p style="font-size:1rem;font-weight:600;margin-block-end:0.75rem">Il writer-director indie italiano</p>
-      <p style="font-size:0.875rem;color:var(--ds-text-mute);line-height:1.7">
-        Il 77% dei film europei è scritto e diretto dalla stessa persona (EAO 2015–2023). Questo filmmaker usa Final Draft per la sceneggiatura e Notion/Excel per il breakdown — soffre il cambio di contesto tra tool più di chiunque altro. Oh Writers è costruito per lui: un'unica superficie dal soggetto al piano di ripresa, senza uscire mai dall'app.
-      </p>
-      <div style="margin-block-start:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
-        <span class="tag tag-blue">Registi-sceneggiatori</span>
-        <span class="tag tag-blue">AD indie (budget €200K–2M)</span>
-        <span class="tag tag-blue">Scuole di cinema</span>
-        <span class="tag tag-amber">Line producer mid-market</span>
+      <p class="eyebrow">04 / Come arriviamo ai clienti</p>
+      <h2 class="slide-title" style="margin-bottom: 28px;">Italia come laboratorio.<br>Europa come mercato.</h2>
+      <div class="gtm-steps">
+        <div class="gtm-step">
+          <span class="phase-badge">Fase 1</span>
+          <div class="gtm-step-title">Scuole di cinema</div>
+          <div class="gtm-step-sub">CSC, NABA, IED, Accademia del Cinema</div>
+          <div class="gtm-step-desc">Chi impara su Oh Writers è cliente per 20 anni.</div>
+        </div>
+        <div class="gtm-step">
+          <span class="phase-badge">Fase 2</span>
+          <div class="gtm-step-title">Indie filmmaker italiani</div>
+          <div class="gtm-step-sub">Community, festival (TFF, Venezia), word of mouth</div>
+          <div class="gtm-step-desc">Target: 500 abbonamenti paganti entro 12 mesi.</div>
+        </div>
+        <div class="gtm-step">
+          <span class="phase-badge">Fase 3</span>
+          <div class="gtm-step-title">Europa</div>
+          <div class="gtm-step-sub">Localizzazione FR, ES, DE</div>
+          <div class="gtm-step-desc">Indie market internazionale.</div>
+        </div>
       </div>
-    </div>
-
-    <div class="moat-box">
-      <div class="moat-col bad">
-        <h4>Cesare come chatbot</h4>
-        <ul>
-          <li>Suggerisce dialogo generico</li>
-          <li>Non conosce la struttura aperta</li>
-          <li>Non sa in quale scena sei</li>
-          <li>Replicabile da ChatGPT domani</li>
-          <li>Nessun vantaggio reale</li>
-        </ul>
-      </div>
-      <div class="moat-col good">
-        <h4>Cesare come sistema contestuale</h4>
-        <ul>
-          <li>Conosce tutta la sceneggiatura aperta</li>
-          <li>Sa quali attori hai nel breakdown</li>
-          <li>Conosce le disponibilità nel calendario</li>
-          <li>Segnala: "3 personaggi in questa scena, 2 attori disponibili quel giorno"</li>
-          <li>Vantaggio reale — finestra 18–24 mesi</li>
-        </ul>
-      </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 5A — GO-TO-MARKET (fasi 1–3)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">04 / Come arriviamo ai clienti</p>
-      <h2>Italia come laboratorio.<br>Non come destinazione.</h2>
-      <p class="section-desc">Il mercato italiano è sufficiente per validare il prodotto. Non è sufficiente per scalare. La sequenza conta.</p>
-    </div>
+  <!-- ── Slide 12 — Prezzi ── -->
+  <div class="slide" id="slide-12">
     <div class="slide-content">
-    <div class="gtm-steps">
-      <div class="gtm-step">
-        <h4>Scuole di cinema — acquisizione captive</h4>
-        <p>CSC (Centro Sperimentale di Cinematografia), Accademia del Cinema Italiano, NABA, IED. I filmmaker cambiano tool nella fase di formazione. Chi impara su Oh Writers è un cliente potenziale per 20 anni.</p>
-        <span class="phase-badge" style="background:var(--ds-success-soft);color:var(--ds-success)">Fase 1 — Italia</span>
+      <p class="eyebrow">05 / Prezzi</p>
+      <h2 class="slide-title" style="margin-bottom: 28px;">I ricavi veri vengono dai team.</h2>
+      <div class="pricing-cards">
+        <div class="pricing-card">
+          <div class="pricing-plan">Gratuito</div>
+          <div class="pricing-price">€0</div>
+          <span class="pricing-period">&nbsp;</span>
+          <ul class="pricing-features">
+            <li>1 progetto</li>
+            <li>Scrittura completa</li>
+            <li>Breakdown base</li>
+          </ul>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-plan">Individuale</div>
+          <div class="pricing-price">€12</div>
+          <span class="pricing-period">al mese</span>
+          <ul class="pricing-features">
+            <li>Progetti illimitati</li>
+            <li>Budget e schedule</li>
+            <li>Cesare AI (100 msg/mese)</li>
+          </ul>
+        </div>
+        <div class="pricing-card featured">
+          <div class="recommended-badge">★ Consigliato</div>
+          <div class="pricing-plan">Team</div>
+          <div class="pricing-price">€29</div>
+          <span class="pricing-period">al mese per utente</span>
+          <ul class="pricing-features">
+            <li>Collaborazione real-time</li>
+            <li>Cesare AI illimitato</li>
+            <li>Export e integrazioni</li>
+          </ul>
+        </div>
       </div>
-      <div class="gtm-step">
-        <h4>Festival e community</h4>
-        <p>Sponsorizzazione di festival selezionati: Torino Film Festival, Trieste Science+Fiction, SIC alla Mostra di Venezia. Accesso gratuito per i selezionati — credibilità al costo di zero marketing.</p>
-        <span class="phase-badge" style="background:var(--ds-success-soft);color:var(--ds-success)">Fase 1 — Italia</span>
-      </div>
-      <div class="gtm-step">
-        <h4>Freemium aggressivo — la scrittura è free</h4>
-        <p>Chi completa una sceneggiatura ha già investito settimane. La conversione al piano paid avviene naturalmente nel momento del breakdown. Nessun cold start: import da Fountain e .fdx.</p>
-        <span class="phase-badge" style="background:var(--ds-info-soft);color:var(--ds-info)">Sempre attivo</span>
-      </div>
-    </div>
+      <p class="pricing-footnote">Prezzi indicativi. Validazione in corso con early adopters.</p>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 5B — GO-TO-MARKET (fasi 4–6)
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">04 / Come arriviamo ai clienti — continua</p>
-      <h2>Europa, poi internazionale.</h2>
-      <p class="section-desc">Dopo la trazione italiana, Francia e Spagna prima del mercato anglofono. Gli incumbent US sono troppo radicati per un attacco frontale senza credenziali europee.</p>
-    </div>
+  <!-- ── Slide 13 — Rischi ── -->
+  <div class="slide" id="slide-13">
     <div class="slide-content">
-    <div class="gtm-steps">
-      <div class="gtm-step">
-        <h4>Francia e Spagna come step due</h4>
-        <p>Stessa struttura di mercato, stessa cultura del writer-director, stesse frustrazioni. Localizzazione FR e ES prima dell'inglese — il mercato anglofono ha Final Draft e StudioBinder radicati; quello europeo no.</p>
-        <span class="phase-badge" style="background:var(--ds-action-soft);color:var(--ds-action)">Fase 2 — Europa</span>
-      </div>
-      <div class="gtm-step">
-        <h4>Team plan come obiettivo di monetizzazione</h4>
-        <p>Un produttore che porta 3 AD e 2 sceneggiatori nello stesso workspace vale 10× un utente singolo. Ogni feature di collaborazione (breakdown condiviso, schedule multi-utente) avvicina il team plan.</p>
-        <span class="phase-badge" style="background:var(--ds-action-soft);color:var(--ds-action)">Obiettivo economico</span>
-      </div>
-      <div class="gtm-step">
-        <h4>Mercato anglofono — ultimo</h4>
-        <p>US e UK hanno incumbent fortissimi. Entrarci prima di avere trazione europea è bruciare risorse. La credibilità europea diventa il proof point per l'internazionalizzazione.</p>
-        <span class="phase-badge" style="background:var(--ds-line-soft);color:var(--ds-text-faint)">Fase 3 — Internazionale</span>
-      </div>
-    </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════
-     SLIDE 6 — PRICING
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">05 / Prezzi</p>
-      <h2>I ricavi veri vengono dai team,<br>non dai singoli.</h2>
-      <p class="section-desc">Un singolo filmmaker a €25/mese, se smette di pagare dopo 6 mesi, genera €150. Un team di 3–5 persone a €80/mese, che rinnova per un anno intero, genera €960. I team sono il modello su cui si regge il progetto.</p>
-    </div>
-    <div class="slide-content">
-    <div class="pricing-grid" style="margin-block-end:1rem">
-      <div class="pricing-card">
-        <div class="plan-name">Free</div>
-        <div class="price">€0</div>
-        <div class="price-note">Sempre gratuito</div>
-        <ul>
-          <li>Soggetto, sinossi, scaletta</li>
-          <li>Sceneggiatura completa</li>
-          <li>Export Fountain e PDF base</li>
-          <li>1 progetto attivo</li>
-        </ul>
-      </div>
-      <div class="pricing-card featured">
-        <div class="plan-name">Individuale</div>
-        <div class="price">€20<span style="font-size:1rem;font-weight:400">/mese</span></div>
-        <div class="price-note">€180/anno · sotto StudioBinder, sopra Arc Studio</div>
-        <ul>
-          <li>Breakdown automatico AI</li>
-          <li>Piano di ripresa + scheduling</li>
-          <li>Budget e stime AI</li>
-          <li>Cesare (AI contestuale)</li>
-          <li>Progetti illimitati</li>
-        </ul>
-      </div>
-      <div class="pricing-card">
-        <div class="plan-name">Team</div>
-        <div class="price">€80<span style="font-size:1rem;font-weight:400">/mese</span></div>
-        <div class="price-note">3–5 seat · €720/anno</div>
-        <ul>
-          <li>Tutto il piano Individuale</li>
-          <li>Breakdown condiviso</li>
-          <li>Schedule multi-utente</li>
-          <li>Ruoli: owner, editor, viewer</li>
-          <li>Collaborazione real-time</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="card-standalone">
-      <p class="card-label">Benchmark competitor (mensile)</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-block-start:0.75rem">
-        <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">~$17</div>
-          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Final Draft (amortizzato)</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">$49.99</div>
-          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Movie Magic</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-danger)">$29–349</div>
-          <div style="font-size:0.75rem;color:var(--ds-text-faint)">StudioBinder</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">~$20</div>
-          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Celtx</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">$9.99</div>
-          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Arc Studio</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-action)">€20–80</div>
-          <div style="font-size:0.75rem;color:var(--ds-action)">Oh Writers</div>
-        </div>
-      </div>
-    </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════
-     SLIDE 7 — RISCHI
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">06 / Rischi</p>
-      <h2>Il rischio vero non è<br>Final Draft. È l'AI.</h2>
-      <p class="section-desc">Il vantaggio competitivo di Cesare non è il modello linguistico. È l'integrazione contestuale con tutti i dati della produzione.</p>
-    </div>
-    <div class="slide-content">
-    <div class="risk-list">
-      <div class="risk-row">
-        <span class="risk-level risk-high">Alto</span>
-        <div class="risk-body">
-          <h4>Commoditizzazione AI</h4>
-          <p>Claude, GPT-4o, Gemini possono già fare parte del lavoro di Cesare. La finestra per costruire il vantaggio contestuale è 18–24 mesi.</p>
-        </div>
-        <div class="risk-mitigation">Integrare i dati di produzione (breakdown, cast, schedule) nella pipeline AI prima che i competitor lo facciano</div>
+      <p class="eyebrow">06 / Rischi principali</p>
+      <h2 class="slide-title" style="margin-bottom: 28px;">Tre rischi reali.<br>Tre risposte concrete.</h2>
+      <div class="risk-header">
+        <div class="risk-col-header">Rischio</div>
+        <div class="risk-col-header">Risposta</div>
       </div>
       <div class="risk-row">
-        <span class="risk-level risk-high">Alto</span>
-        <div class="risk-body">
-          <h4>Resistenza all'adozione</h4>
-          <p>AD cinquantenni con Movie Magic 2008 su Windows XP. Il costo di switching percepito è alto anche quando quello effettivo è basso.</p>
-        </div>
-        <div class="risk-mitigation">Import Fountain/.fdx senza cold start. Onboarding guidato. Versione free senza carta di credito.</div>
+        <div class="risk-label">I competitor aggiungono AI</div>
+        <div class="risk-response">L'AI generica non basta. Il vantaggio è il grafo produzione, non il modello AI.</div>
       </div>
       <div class="risk-row">
-        <span class="risk-level risk-medium">Medio</span>
-        <div class="risk-body">
-          <h4>StudioBinder copia le feature</h4>
-          <p>Ha le risorse per replicare qualsiasi singola feature in 12–18 mesi. Non può replicare la localizzazione italiana e la verticalizzazione europea.</p>
-        </div>
-        <div class="risk-mitigation">Muoversi più veloci sulla verticalizzazione italiana. Costruire network effect (community, template condivisi).</div>
+        <div class="risk-label">Il mercato italiano è piccolo</div>
+        <div class="risk-response">È il laboratorio, non la destinazione. La sequenza è: valida in IT, scala in EU.</div>
       </div>
       <div class="risk-row">
-        <span class="risk-level risk-medium">Medio</span>
-        <div class="risk-body">
-          <h4>Mercato italiano troppo piccolo</h4>
-          <p>2.000–5.000 primi clienti paganti in Italia = €480K–€1.8M di ricavi annui. Sufficiente per validare il prodotto, non per sostenere una crescita rapida su scala.</p>
-        </div>
-        <div class="risk-mitigation">Italia è un laboratorio, non il mercato finale. Francia e Spagna sono il passo due.</div>
+        <div class="risk-label">StudioBinder copia le feature</div>
+        <div class="risk-response">Nessun competitor ha l'italiano e nessuno ricostruisce il grafo produzione in meno di 2 anni.</div>
       </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 8 — VERDETTO
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">07 / Verdetto</p>
-      <h2>La risposta.</h2>
-      <p class="section-desc">Oh Writers può avere successo. La condizione è restare focalizzato sul target giusto.</p>
-    </div>
-    <div class="slide-content" style="justify-content:space-between">
-    <div class="verdict-box" style="margin-block-end:1rem">
-      <p class="verdict-label">Può avere successo?</p>
-      <h3>Sì — sul segmento giusto.</h3>
-      <p>
-        Il mercato esiste, il gap è documentabile, la tecnologia è matura. Il problema non è "se" ma "dove concentrarsi". Oh Writers non compete con Final Draft nella writer's room di Hollywood — compete con il caos di Final Draft + Excel + Notion + WhatsApp nell'indie italiano ed europeo. Quel target non è servito da nessuno. E quel target è il 77% di chi fa cinema in Europa.
-      </p>
-      <div class="verdict-condition">
-        ✓ &nbsp; A patto di non disperdere la roadmap prima dei primi 200 clienti paganti che rinnovano
+  <!-- ── Slide 14 — Verdetto ── -->
+  <div class="slide" id="slide-14">
+    <div class="slide-content">
+      <p class="eyebrow">07 / Verdetto</p>
+      <h2 class="slide-title" style="margin-bottom: 0;">Può avere successo.</h2>
+      <div class="verdict-callout">
+        La condizione è restare focalizzati: writer-director indie italiano, pipeline completo, AI contestuale.
       </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card-standalone">
-        <p class="card-label" style="color:var(--ds-danger)">Non funziona se</p>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:0.6rem;margin-block-start:0.5rem">
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
-            Proviamo a competere con Final Draft su screenwriting puro
-          </li>
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
-            Cesare è un chatbot senza integrazione dati
-          </li>
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
-            Entriamo nel mercato anglofono prima di avere trazione europea
-          </li>
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
-            Aggiungiamo feature senza 200 clienti che rinnovano
-          </li>
-        </ul>
+      <div class="verdict-cols">
+        <div class="verdict-col">
+          <div class="verdict-col-title">Non funziona se</div>
+          <ul class="verdict-list">
+            <li><span class="v-x">✗</span> Punta al mercato US subito</li>
+            <li><span class="v-x">✗</span> Compete su feature singole</li>
+            <li><span class="v-x">✗</span> L'AI è un'aggiunta</li>
+          </ul>
+        </div>
+        <div class="verdict-col">
+          <div class="verdict-col-title">Funziona se</div>
+          <ul class="verdict-list">
+            <li><span class="v-check">✓</span> Italia prima, EU dopo</li>
+            <li><span class="v-check">✓</span> Vende il pipeline completo</li>
+            <li><span class="v-check">✓</span> L'AI è il centro</li>
+          </ul>
+        </div>
       </div>
-      <div class="card-standalone">
-        <p class="card-label" style="color:var(--ds-success)">Funziona se</p>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:0.6rem;margin-block-start:0.5rem">
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
-            Restiamo il tool del writer-director indie europeo
-          </li>
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
-            Cesare conosce l'intera produzione, non solo la scena aperta
-          </li>
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
-            Il freemium converte nel momento naturale (breakdown dopo lo script)
-          </li>
-          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
-            Il team plan è l'obiettivo di monetizzazione, not the afterthought
-          </li>
-        </ul>
-      </div>
-    </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════
-     SLIDE 9 — FONTI
-══════════════════════════════════════ -->
-<div class="slide">
-  <div class="slide-inner">
-    <div class="slide-heading">
-      <p class="section-label">Fonti e metodologia</p>
-      <h2>Fonti.</h2>
-      <p class="section-desc">Riferimenti per tutti i dati citati in questa analisi.</p>
-    </div>
-    <div class="slide-content" style="justify-content:center">
-    <div class="card-standalone">
-      <div class="footnotes-list" style="gap:1.5em">
-        <div class="footnote-item">
-          <span class="footnote-num">[1]</span>
-          <div>
-            <strong>ANICA — Associazione Nazionale Industrie Cinematografiche Audiovisive e Multimediali</strong><br>
-            Rapporto annuale 2024. Dati su produzione cinematografica italiana, numero di film, professionisti del settore audiovisivo.<br>
-            <a href="https://www.anica.it" target="_blank" rel="noopener">https://www.anica.it</a>
-            <span class="footnote-note">Fonte per: 350 film italiani nel 2024, 65.000 professionisti diretti, posizione 1° in Europa per produzione.</span>
+  <!-- ── Slide 15 — Fonti ── -->
+  <div class="slide" id="slide-15">
+    <div class="slide-content">
+      <p class="eyebrow">Fonti</p>
+      <h2 class="slide-title" style="margin-bottom: 32px;">Riferimenti.</h2>
+      <ul class="sources-list">
+        <li class="source-item">
+          <div class="source-num">[1]</div>
+          <div class="source-body">
+            <div class="source-name">ANICA — Associazione Nazionale Industrie Cinematografiche</div>
+            <div class="source-detail">Rapporto annuale 2024</div>
+            <span class="source-url">anica.it</span>
           </div>
-        </div>
-        <div class="footnote-item">
-          <span class="footnote-num">[2]</span>
-          <div>
-            <strong>EAO — European Audiovisual Observatory (Consiglio d'Europa)</strong><br>
-            Report annuali 2015–2023 su produzione e distribuzione cinematografica europea.<br>
-            <a href="https://www.obs.coe.int" target="_blank" rel="noopener">https://www.obs.coe.int</a>
-            <span class="footnote-note">Fonte per: 77% film europei scritti e diretti dalla stessa persona (dato 2015–2023), 1.500+ film/anno nei principali mercati EU, +47% crescita produzione nell'ultimo decennio.</span>
+        </li>
+        <li class="source-item">
+          <div class="source-num">[2]</div>
+          <div class="source-body">
+            <div class="source-name">EAO — European Audiovisual Observatory</div>
+            <div class="source-detail">Statistical Yearbook 2023</div>
+            <span class="source-url">obs.coe.int</span>
           </div>
-        </div>
-        <div class="footnote-item">
-          <span class="footnote-num">[3]</span>
-          <div>
-            <strong>Stime di mercato — stima interna</strong><br>
-            Le stime di mercato (mercato globale $1.5–2B, segmento raggiungibile $300–400M, obiettivo a 5 anni $5–15M/anno) sono stime interne basate su: prezzi pubblici dei competitor × stima degli utenti indirizzabili per segmento (dati EAO + ANICA + stime analoghe per FR, ES, DE, UK). Non provengono da report di terze parti (Statista, IMARC, Research and Markets).
-            <span class="footnote-note">Metodologia: (numero di professionisti per segmento) × (ricavo medio per utente dei competitor di riferimento) × (tasso di penetrazione stimato). Margine di errore ±30%.</span>
+        </li>
+        <li class="source-item">
+          <div class="source-num">[3]</div>
+          <div class="source-body">
+            <div class="source-name">Stime di mercato — metodologia interna</div>
+            <div class="source-detail">Pricing competitor × utenti indirizzabili stimati. Non derivate da report di terze parti.</div>
           </div>
-        </div>
-        <div class="footnote-item">
-          <span class="footnote-num">[4]</span>
-          <div>
-            <strong>Prezzi competitor — verificati dai siti ufficiali (maggio 2025)</strong><br>
-            <span class="footnote-note">Final Draft 13: $199 acquisto unico — <a href="https://www.finaldraft.com" target="_blank" rel="noopener">finaldraft.com</a></span>
-            <span class="footnote-note">Movie Magic Scheduling: ~$49.99/mese (abbonamento) — <a href="https://www.entertainmentpartners.com" target="_blank" rel="noopener">entertainmentpartners.com</a></span>
-            <span class="footnote-note">StudioBinder: $29/mese (Indie) → $349/mese (Enterprise) — <a href="https://www.studiobinder.com/pricing" target="_blank" rel="noopener">studiobinder.com/pricing</a></span>
-            <span class="footnote-note">Celtx: ~$20/mese (piano individuale) — <a href="https://www.celtx.com" target="_blank" rel="noopener">celtx.com</a></span>
-            <span class="footnote-note">Arc Studio Pro: $9.99/mese (piano Pro) — <a href="https://www.arcstudioapp.com" target="_blank" rel="noopener">arcstudioapp.com</a></span>
-            <span class="footnote-note">WriterDuet: $12/mese (piano Pro) — <a href="https://www.writerduet.com" target="_blank" rel="noopener">writerduet.com</a></span>
+        </li>
+        <li class="source-item">
+          <div class="source-num">[4]</div>
+          <div class="source-body">
+            <div class="source-name">Prezzi competitor verificati dai siti ufficiali</div>
+            <div class="source-detail">Final Draft, Movie Magic, StudioBinder, Celtx, Arc Studio Pro. Verificati maggio 2025.</div>
           </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
     </div>
   </div>
-</div>
 
-<!-- ── SLIDE NAV ── -->
-<nav class="slide-nav">
-  <button class="nav-prev" aria-label="Slide precedente">&#8249;</button>
-  <span class="nav-brand">oh writers</span>
-  <span class="slide-counter">1 / 13</span>
-  <button class="nav-next" aria-label="Slide successiva">&#8250;</button>
-</nav>
+  <!-- ── Navigation bar ── -->
+  <nav class="nav-bar">
+    <button class="btn-nav btn-prev" aria-label="Slide precedente">&#8249;</button>
+    <div class="nav-center">
+      <span class="counter">1 / 15</span>
+      <span class="nav-dot"></span>
+      <span class="brand">oh writers</span>
+    </div>
+    <button class="btn-nav btn-next" aria-label="Slide successiva">&#8250;</button>
+  </nav>
 
-<script>
-  const allSlides = document.querySelectorAll('.slide, .slide-hero');
-  let current = 0;
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let current = 0;
 
-  function goTo(n) {
-    allSlides[current].classList.remove('active');
-    current = Math.max(0, Math.min(n, allSlides.length - 1));
-    allSlides[current].classList.add('active');
-
-    document.querySelector('.slide-counter').textContent =
-      `${current + 1} / ${allSlides.length}`;
-
-    const pct = ((current + 1) / allSlides.length) * 100;
-    document.querySelector('.progress-bar').style.width = pct + '%';
-
-    const prevBtn = document.querySelector('.nav-prev');
-    const nextBtn = document.querySelector('.nav-next');
-    prevBtn.disabled = current === 0;
-    nextBtn.disabled = current === allSlides.length - 1;
-  }
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' || e.key === ' ') {
-      e.preventDefault();
-      goTo(current + 1);
+    function goTo(n) {
+      slides[current].classList.remove('active');
+      current = Math.max(0, Math.min(n, slides.length - 1));
+      slides[current].classList.add('active');
+      document.querySelector('.counter').textContent = `${current + 1} / ${slides.length}`;
+      document.querySelector('.progress-fill').style.width = `${((current + 1) / slides.length) * 100}%`;
+      document.querySelector('.btn-prev').disabled = current === 0;
+      document.querySelector('.btn-next').disabled = current === slides.length - 1;
     }
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      goTo(current - 1);
-    }
-  });
 
-  document.querySelector('.nav-prev').addEventListener('click', () => goTo(current - 1));
-  document.querySelector('.nav-next').addEventListener('click', () => goTo(current + 1));
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+      if (e.key === 'ArrowLeft') goTo(current - 1);
+    });
 
-  goTo(0);
-</script>
+    document.querySelector('.btn-prev').addEventListener('click', () => goTo(current - 1));
+    document.querySelector('.btn-next').addEventListener('click', () => goTo(current + 1));
+
+    goTo(0);
+  </script>
 
 </body>
 </html>
