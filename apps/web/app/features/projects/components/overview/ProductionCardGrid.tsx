@@ -115,34 +115,56 @@ export function ProductionCardGrid({
         <span className={styles.meta}>Dati dalla bozza corrente</span>
       </div>
       <div className={styles.grid}>
-        {cards.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            className={styles.card}
-            onClick={() => void navigate({ to: c.href } as never)}
-          >
-            <div className={styles.eyebrow}>{c.eyebrow}</div>
-            <div className={styles.value}>
-              {c.value}
-              {c.unit && <span className={styles.unit}>{c.unit}</span>}
-            </div>
-            <div className={styles.sub}>{c.sub}</div>
-            <div
-              className={styles.bar}
-              role="progressbar"
-              aria-valuenow={c.progressPct}
-              aria-valuemin={0}
-              aria-valuemax={100}
+        {cards.map((c) => {
+          const isBudget = c.key === "budget";
+          const showAiBadge =
+            isBudget && budget.hasAny && budget.status === "estimated";
+          return (
+            <button
+              key={c.key}
+              type="button"
+              className={
+                isBudget
+                  ? `${styles.card} ${styles.budgetCard}`
+                  : styles.card
+              }
+              onClick={() => void navigate({ to: c.href } as never)}
             >
+              <div className={styles.eyebrow}>{c.eyebrow}</div>
+              <div className={styles.valueRow}>
+                <div
+                  className={
+                    isBudget
+                      ? `${styles.value} ${styles.budgetValue}`
+                      : styles.value
+                  }
+                >
+                  {c.value}
+                  {c.unit && <span className={styles.unit}>{c.unit}</span>}
+                </div>
+                {showAiBadge && (
+                  <span className={styles.aiBadge} aria-label="Stima AI">
+                    AI
+                  </span>
+                )}
+              </div>
+              <div className={styles.sub}>{c.sub}</div>
               <div
-                className={styles.barFill}
-                style={{ inlineSize: `${c.progressPct}%` }}
-              />
-            </div>
-            <div className={styles.progress}>{c.progressLabel}</div>
-          </button>
-        ))}
+                className={styles.bar}
+                role="progressbar"
+                aria-valuenow={c.progressPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className={styles.barFill}
+                  style={{ inlineSize: `${c.progressPct}%` }}
+                />
+              </div>
+              <div className={styles.progress}>{c.progressLabel}</div>
+            </button>
+          );
+        })}
       </div>
     </section>
   );

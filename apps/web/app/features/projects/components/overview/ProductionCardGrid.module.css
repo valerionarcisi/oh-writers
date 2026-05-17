@@ -59,6 +59,48 @@
   }
 }
 
+/* Budget card — subtle AI-prediction visual treatment */
+.budgetCard {
+  border-inline-start: 3px solid var(--ds-agent);
+  background: color-mix(in oklch, var(--ds-agent-soft) 40%, var(--ds-surface));
+
+  &:hover {
+    background: color-mix(in oklch, var(--ds-agent-soft) 60%, var(--ds-surface-alt));
+  }
+}
+
+/* Value row — aligns the number and AI badge in one flex baseline row */
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+}
+
+/* Budget value — slightly larger to make the euro amount prominent */
+.budgetValue {
+  font-size: 32px;
+}
+
+/* AI badge — small pill indicating AI cost prediction */
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  border: 1px solid color-mix(in oklch, var(--ds-agent) 30%, transparent);
+  flex-shrink: 0;
+  /* Nudge down slightly so it aligns with the bottom of the numeral cap height */
+  translate: 0 -2px;
+}
+
 .eyebrow {
   font-family: var(--ds-font-mono);
   font-size: 10px;
