@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import type {
   BreakdownSummary,
   BudgetSummary,
@@ -13,6 +13,11 @@ interface ProductionCardGridProps {
   readonly schedule: ScheduleSummary;
 }
 
+type ProdRoute =
+  | "/projects/$id/breakdown"
+  | "/projects/$id/budget"
+  | "/projects/$id/schedule";
+
 interface ProdCardData {
   readonly key: string;
   readonly eyebrow: string;
@@ -21,7 +26,7 @@ interface ProdCardData {
   readonly sub: string;
   readonly progressPct: number;
   readonly progressLabel: string;
-  readonly href: string;
+  readonly route: ProdRoute;
 }
 
 const formatEUR = (n: number): string =>
@@ -32,7 +37,6 @@ const formatEUR = (n: number): string =>
   }).format(n);
 
 const buildCards = (
-  projectId: string,
   breakdown: BreakdownSummary,
   budget: BudgetSummary,
   schedule: ScheduleSummary,
@@ -56,7 +60,7 @@ const buildCards = (
         breakdown.scenesBrokenDown === 0
           ? "0% — Avvia spoglio"
           : `${breakdownPct}% — Continua spoglio`,
-      href: `/projects/${projectId}/breakdown`,
+      route: "/projects/$id/breakdown",
     },
     {
       key: "budget",
@@ -72,7 +76,7 @@ const buildCards = (
           ? "Bloccato"
           : "In bozza"
         : "In attesa",
-      href: `/projects/${projectId}/budget`,
+      route: "/projects/$id/budget",
     },
     {
       key: "schedule",
@@ -89,7 +93,7 @@ const buildCards = (
             )
           : 0,
       progressLabel: schedule.hasAny ? "In bozza" : "In attesa",
-      href: `/projects/${projectId}/schedule`,
+      route: "/projects/$id/schedule",
     },
   ];
 };
@@ -100,8 +104,7 @@ export function ProductionCardGrid({
   budget,
   schedule,
 }: ProductionCardGridProps) {
-  const navigate = useNavigate();
-  const cards = buildCards(projectId, breakdown, budget, schedule);
+  const cards = buildCards(breakdown, budget, schedule);
 
   return (
     <section
@@ -120,15 +123,15 @@ export function ProductionCardGrid({
           const showAiBadge =
             isBudget && budget.hasAny && budget.status === "estimated";
           return (
-            <button
+            <Link
               key={c.key}
-              type="button"
+              to={c.route}
+              params={{ id: projectId }}
               className={
                 isBudget
                   ? `${styles.card} ${styles.budgetCard}`
                   : styles.card
               }
-              onClick={() => void navigate({ to: c.href } as never)}
             >
               <div className={styles.eyebrow}>{c.eyebrow}</div>
               <div className={styles.valueRow}>
@@ -162,7 +165,7 @@ export function ProductionCardGrid({
                 />
               </div>
               <div className={styles.progress}>{c.progressLabel}</div>
-            </button>
+            </Link>
           );
         })}
       </div>

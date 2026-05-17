@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import type {
   DocumentSummary,
   ScreenplaySummary,
@@ -11,11 +11,21 @@ import styles from "./ProjectPipeline.module.css";
 
 type NodeStatus = "done" | "current" | "todo";
 
+type PipelineRoute =
+  | "/projects/$id/soggetto"
+  | "/projects/$id/synopsis"
+  | "/projects/$id/outline"
+  | "/projects/$id/treatment"
+  | "/projects/$id/screenplay"
+  | "/projects/$id/breakdown"
+  | "/projects/$id/budget"
+  | "/projects/$id/schedule";
+
 interface PipelineNode {
   readonly key: string;
   readonly label: string;
   readonly status: NodeStatus;
-  readonly href: string;
+  readonly route: PipelineRoute;
 }
 
 interface ProjectPipelineProps {
@@ -33,6 +43,13 @@ const DOC_LABELS: Record<DocumentType, string> = {
   synopsis: "Sinossi",
   outline: "Scaletta",
   treatment: "Trattamento",
+};
+
+const DOC_ROUTES: Record<Exclude<DocumentType, "logline">, PipelineRoute> = {
+  soggetto: "/projects/$id/soggetto",
+  synopsis: "/projects/$id/synopsis",
+  outline: "/projects/$id/outline",
+  treatment: "/projects/$id/treatment",
 };
 
 const docStatus = (
@@ -107,35 +124,33 @@ export function ProjectPipeline({
       key: t,
       label: DOC_LABELS[t],
       status: docStatus(documents, t, firstIncomplete),
-      href: `/projects/${projectId}/${t}`,
+      route: DOC_ROUTES[t as Exclude<DocumentType, "logline">],
     })),
     {
       key: "screenplay",
       label: "Screenplay",
       status: screenplayStatus,
-      href: `/projects/${projectId}/screenplay`,
+      route: "/projects/$id/screenplay" as const,
     },
     {
       key: "breakdown",
       label: "Breakdown",
       status: breakdownStatus,
-      href: `/projects/${projectId}/breakdown`,
+      route: "/projects/$id/breakdown" as const,
     },
     {
       key: "budget",
       label: "Budget",
       status: budgetStatus,
-      href: `/projects/${projectId}/budget`,
+      route: "/projects/$id/budget" as const,
     },
     {
       key: "schedule",
       label: "Piano",
       status: scheduleStatus,
-      href: `/projects/${projectId}/schedule`,
+      route: "/projects/$id/schedule" as const,
     },
   ];
-
-  const navigate = useNavigate();
 
   const markFor = (s: NodeStatus): string =>
     s === "done" ? "●" : s === "current" ? "◐" : "○";
@@ -150,16 +165,16 @@ export function ProjectPipeline({
       <div className={styles.track}>
         {nodes.map((n, idx) => (
           <div key={n.key} className={styles.cell}>
-            <button
-              type="button"
+            <Link
+              to={n.route}
+              params={{ id: projectId }}
               className={`${styles.node} ${styles[n.status]}`}
-              onClick={() => void navigate({ to: n.href } as never)}
             >
               <span className={styles.mark} aria-hidden>
                 {markFor(n.status)}
               </span>
               {n.label}
-            </button>
+            </Link>
             {idx < nodes.length - 1 && (
               <span
                 className={`${styles.line} ${

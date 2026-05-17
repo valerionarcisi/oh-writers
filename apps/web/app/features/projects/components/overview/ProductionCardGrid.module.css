@@ -41,6 +41,8 @@
   border: 1px solid var(--ds-line-soft);
   border-radius: var(--ds-radius-md);
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   transition:
     background var(--ds-duration-1) var(--ds-ease),
     border-color var(--ds-duration-1) var(--ds-ease);

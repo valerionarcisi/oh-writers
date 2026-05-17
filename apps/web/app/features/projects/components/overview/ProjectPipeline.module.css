@@ -41,6 +41,7 @@
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
+  text-decoration: none;
   color: var(--ds-text-mute);
   transition:
     background var(--ds-duration-1) var(--ds-ease),

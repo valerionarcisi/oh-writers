@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import type { DocumentSummary } from "../../server/project-overview.server";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import styles from "./NarrativeCardGrid.module.css";
@@ -16,6 +16,16 @@ const TYPE_LABEL: Record<DocumentType, string> = {
   treatment: "Trattamento",
 };
 
+const DOC_ROUTE: Record<
+  Exclude<DocumentType, "logline">,
+  "/projects/$id/soggetto" | "/projects/$id/synopsis" | "/projects/$id/outline" | "/projects/$id/treatment"
+> = {
+  soggetto: "/projects/$id/soggetto",
+  synopsis: "/projects/$id/synopsis",
+  outline: "/projects/$id/outline",
+  treatment: "/projects/$id/treatment",
+};
+
 const formatDate = (iso: string): string =>
   new Intl.DateTimeFormat("it-IT", {
     day: "numeric",
@@ -29,8 +39,6 @@ export function NarrativeCardGrid({
   projectId,
   documents,
 }: NarrativeCardGridProps) {
-  const navigate = useNavigate();
-
   const orderedTypes: DocumentType[] = [
     DocumentTypes.SOGGETTO,
     DocumentTypes.SYNOPSIS,
@@ -55,15 +63,11 @@ export function NarrativeCardGrid({
       </div>
       <div className={styles.grid}>
         {visible.map((doc) => (
-          <button
+          <Link
             key={doc.id}
-            type="button"
+            to={DOC_ROUTE[doc.type as Exclude<DocumentType, "logline">]}
+            params={{ id: projectId }}
             className={styles.card}
-            onClick={() =>
-              void navigate({
-                to: `/projects/${projectId}/${doc.type}` as never,
-              })
-            }
           >
             <div className={styles.cardHead}>
               <span className={styles.eyebrow}>{TYPE_LABEL[doc.type]}</span>
@@ -83,7 +87,7 @@ export function NarrativeCardGrid({
             <div className={styles.foot}>
               {formatWords(doc.wordCount)} · {formatDate(doc.updatedAt)}
             </div>
-          </button>
+          </Link>
         ))}
       </div>
     </section>
