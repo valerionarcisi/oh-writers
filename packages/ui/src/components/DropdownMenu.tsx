@@ -43,13 +43,15 @@ export interface DropdownMenuProps {
 
 interface MenuItemInternalProps {
   item: Node<DropdownMenuItem>;
+  /** The resolved DropdownMenuItem data for this node (node.value is null with static JSX children). */
+  itemData: DropdownMenuItem;
   state: TreeState<DropdownMenuItem>;
   onClose: () => void;
   /** Called with the item label (its key) when selected. */
   onAction: (label: string) => void;
 }
 
-function MenuItemInternal({ item, state, onClose, onAction }: MenuItemInternalProps) {
+function MenuItemInternal({ item, itemData, state, onClose, onAction }: MenuItemInternalProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const { menuItemProps, isDisabled } = useMenuItem(
     {
@@ -61,7 +63,7 @@ function MenuItemInternal({ item, state, onClose, onAction }: MenuItemInternalPr
     ref,
   );
 
-  const raw = item.value as DropdownMenuItem;
+  const raw = itemData;
 
   return (
     <li role="none">
@@ -215,6 +217,7 @@ function MenuList({
           <MenuItemInternal
             key={node.key}
             item={node}
+            itemData={itemMapRef.current.get(String(node.key))!}
             state={treeState}
             onClose={onClose}
             onAction={handleAction}

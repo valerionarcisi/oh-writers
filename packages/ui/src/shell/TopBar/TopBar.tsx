@@ -8,6 +8,8 @@ import { Presence } from "../../primitives/Presence/Presence";
 import type { PresenceUser } from "../../primitives/Presence/Presence";
 import { ProjectSwitcherPopover } from "./ProjectSwitcherPopover";
 import type { ProjectSwitcherItem } from "./ProjectSwitcherPopover";
+import { DropdownMenu } from "../../components/DropdownMenu";
+import type { DropdownMenuItem } from "../../components/DropdownMenu";
 import styles from "./TopBar.module.css";
 
 function SectionMenuItem({
@@ -89,6 +91,9 @@ export type TopBarProps = {
   onBell?: () => void;
   onAskCesare?: () => void;
   onAvatarClick?: () => void;
+  /** When provided, clicking the avatar opens a DropdownMenu with these items
+   *  (sign out, settings, etc.). Takes precedence over onAvatarClick. */
+  userMenuItems?: DropdownMenuItem[];
 };
 
 export function TopBar({
@@ -115,6 +120,7 @@ export function TopBar({
   onBell,
   onAskCesare,
   onAvatarClick,
+  userMenuItems,
 }: TopBarProps) {
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
@@ -372,7 +378,21 @@ export function TopBar({
           <Presence users={presenceUsers} maxVisible={3} />
         )}
 
-        {onAvatarClick !== undefined ? (
+        {userMenuItems !== undefined ? (
+          <DropdownMenu
+            trigger={
+              <span
+                className={styles.avatarBtn}
+                aria-label={`Account utente (${userInitials})`}
+                title="Account"
+              >
+                {userInitials}
+              </span>
+            }
+            items={userMenuItems}
+            align="end"
+          />
+        ) : onAvatarClick !== undefined ? (
           <button
             type="button"
             className={styles.avatarBtn}

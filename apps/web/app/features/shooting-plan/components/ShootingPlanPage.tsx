@@ -131,7 +131,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
           <h1 className={styles.title}>
             {selectedScene
               ? `SC.${selectedScene.sceneNumber} · ${selectedScene.intExt}. ${selectedScene.location}`
-              : "Inquadrature"}
+              : "Riprese"}
           </h1>
         </div>
         <div className={styles.headerMeta}>

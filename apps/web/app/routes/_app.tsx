@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
-import type { TopBarSectionGroup } from "@oh-writers/ui";
+import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
 import {
@@ -14,6 +14,7 @@ import {
   personalProjectsQueryOptions,
 } from "~/features/projects";
 import type { AppUser } from "~/server/context";
+import { signOut } from "~/lib/auth-client";
 
 type SerializableUser = { id: string; name: string; email: string };
 
@@ -157,6 +158,20 @@ function AppLayout() {
     title: p.title,
   }));
 
+  const userMenuItems: DropdownMenuItem[] = [
+    {
+      label: "Presentazione",
+      onClick: () => window.open("/market-analysis.html", "_blank"),
+    },
+    {
+      label: "Sign out",
+      onClick: async () => {
+        await signOut();
+        window.location.href = "/login";
+      },
+    },
+  ];
+
   return (
     <AppShell
       user={user}
@@ -165,6 +180,7 @@ function AppLayout() {
       sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
       projects={projectsList}
       currentProjectId={projectId}
+      userMenuItems={userMenuItems}
     >
       <Outlet />
     </AppShell>

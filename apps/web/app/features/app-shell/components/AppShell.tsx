@@ -7,6 +7,7 @@ import type {
   TopBarSectionGroup,
   CommandPaletteItem,
   ProjectSwitcherItem,
+  DropdownMenuItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import type { AppUser } from "~/server/context";
@@ -25,6 +26,7 @@ interface AppShellProps {
   projects?: ReadonlyArray<ProjectSwitcherItem>;
   currentProjectId?: string;
   onProjectSelect?: (id: string) => void;
+  userMenuItems?: DropdownMenuItem[];
   children: ReactNode;
 }
 
@@ -56,6 +58,7 @@ function AppShellInner({
   projects,
   currentProjectId,
   onProjectSelect,
+  userMenuItems,
   children,
 }: AppShellProps) {
   const ctxSave = useSaveStateValue();
@@ -214,6 +217,7 @@ function AppShellInner({
           onBell={undefined}
           onAskCesare={undefined}
           onAvatarClick={undefined}
+          userMenuItems={userMenuItems}
         />
         <main id="main-content" className={styles.main}>
           {children}
