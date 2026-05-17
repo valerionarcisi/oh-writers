@@ -15,6 +15,19 @@ export const ShotSizes = {
 } as const;
 export type ShotSize = (typeof ShotSizes)[keyof typeof ShotSizes];
 
+export const SHOT_SIZE_LABELS: Record<ShotSize, string> = {
+  EWS: "Extreme Wide Shot — soggetto piccolo, ambiente dominante",
+  WS: "Wide Shot — figura intera con ambiente",
+  MS: "Medium Shot — dalla vita in su",
+  MCU: "Medium Close-Up — dal petto al mento",
+  CU: "Close-Up — primo piano (volto)",
+  ECU: "Extreme Close-Up — dettaglio (occhi, labbra)",
+  INSERT: "Insert — dettaglio di un oggetto o azione",
+  OTS: "Over The Shoulder — da dietro le spalle di un personaggio",
+  TWO_SHOT: "Two Shot — due personaggi in campo",
+  POV: "Point of View — soggettiva del personaggio",
+};
+
 // Shot size order for distance calculations (INSERT/OTS/TWO_SHOT/POV are excluded from jump check)
 export const SHOT_SIZE_ORDER: Record<string, number> = {
   EWS: 0,

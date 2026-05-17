@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PatternId, ShotSize } from "@oh-writers/domain";
+import { SHOT_SIZE_LABELS } from "@oh-writers/domain";
 import { PatternMenu } from "./PatternMenu";
 import styles from "./QuickAddToolbar.module.css";
 
@@ -10,14 +11,14 @@ interface QuickAddToolbarProps {
   disabled?: boolean;
 }
 
-const SHOT_BUTTONS: { size: ShotSize; tooltip: string; tone: string }[] = [
-  { size: "WS", tooltip: "Wide Shot — figura intera con ambiente", tone: "green" },
-  { size: "EWS", tooltip: "Extreme Wide Shot — soggetto piccolo, ambiente dominante", tone: "green" },
-  { size: "MS", tooltip: "Medium Shot — dalla vita in su", tone: "blue" },
-  { size: "OTS", tooltip: "Over The Shoulder — da dietro le spalle di un personaggio", tone: "blue" },
-  { size: "CU", tooltip: "Close-Up — primo piano (volto)", tone: "red" },
-  { size: "ECU", tooltip: "Extreme Close-Up — dettaglio (occhi, labbra)", tone: "red" },
-  { size: "INSERT", tooltip: "Insert — dettaglio di un oggetto o azione", tone: "orange" },
+const SHOT_BUTTONS: { size: ShotSize; tone: string }[] = [
+  { size: "WS", tone: "green" },
+  { size: "EWS", tone: "green" },
+  { size: "MS", tone: "blue" },
+  { size: "OTS", tone: "blue" },
+  { size: "CU", tone: "red" },
+  { size: "ECU", tone: "red" },
+  { size: "INSERT", tone: "orange" },
 ];
 
 export function QuickAddToolbar({
@@ -37,7 +38,7 @@ export function QuickAddToolbar({
           type="button"
           className={styles.shotBtn}
           data-tone={b.tone}
-          title={b.tooltip}
+          title={SHOT_SIZE_LABELS[b.size]}
           disabled={disabled}
           onClick={() => onAddShot(b.size)}
         >

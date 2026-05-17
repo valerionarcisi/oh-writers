@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { SHOOTING_DAY_MINUTES } from "@oh-writers/domain";
+import { SHOOTING_DAY_MINUTES, SHOT_SIZE_LABELS } from "@oh-writers/domain";
 import type { ShotView } from "../server/shooting-plan.server";
 import styles from "./ShotBlock.module.css";
 
@@ -115,9 +115,9 @@ export function ShotBlock({
       data-selected={isSelected || undefined}
       onClick={onSelect}
       onContextMenu={onContextMenu}
-      title={`${shot.shotSize} ${shot.cameraMovement} — ${displayMinutes}m`}
+      title={`${SHOT_SIZE_LABELS[shot.shotSize] ?? shot.shotSize} · ${shot.cameraMovement} · ${displayMinutes}m`}
     >
-      <span className={styles.size}>{shot.shotSize}</span>
+      <span className={styles.size} title={SHOT_SIZE_LABELS[shot.shotSize]}>{shot.shotSize}</span>
       <span className={styles.movement}>{shot.cameraMovement}</span>
       <span className={styles.duration}>{displayMinutes}m</span>
       <div
