@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { useMenuTrigger, useMenu, useMenuItem, useButton, FocusScope } from "react-aria";
+import { useMenuTrigger, useMenu, useMenuItem, useButton, FocusScope, useInteractOutside } from "react-aria";
 import { useMenuTriggerState, useTreeState, Item } from "react-stately";
 import type { TreeState, Node } from "react-stately";
 import styles from "./DropdownMenu.module.css";
@@ -188,6 +188,13 @@ function MenuList({
     treeState,
     menuRef as RefObject<HTMLElement>,
   );
+
+  // Close when the user clicks or taps outside the menu (and outside the
+  // trigger, which is handled separately by useMenuTrigger).
+  useInteractOutside({
+    ref: menuRef,
+    onInteractOutside: onClose,
+  });
 
   const handleAction = useCallback(
     (label: string) => {
