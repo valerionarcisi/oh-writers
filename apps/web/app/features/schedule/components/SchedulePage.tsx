@@ -378,6 +378,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                         }
                         onRemoveDay={(dayId) => removeDayMutation.mutate(dayId)}
                         onAddDay={() => addDayMutation.mutate()}
+                        onAddWeek={() => addDayMutation.mutate()}
                         onStripClick={handleStripClick}
                         onDayClick={handleDayClick}
                       />

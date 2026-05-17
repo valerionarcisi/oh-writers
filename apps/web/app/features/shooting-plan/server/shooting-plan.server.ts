@@ -95,6 +95,7 @@ export interface SceneWithPlanSummary {
   location: string;
   shotCount: number;
   totalMinutes: number | null;
+  notes: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -926,6 +927,7 @@ export const listScenesWithPlanSummary = createServerFn({ method: "GET" })
               location: sc.location,
               shotCount: summary?.count ?? 0,
               totalMinutes: summary ? summary.minutes : null,
+              notes: sc.notes ?? null,
             };
           });
         })(),
@@ -940,6 +942,18 @@ export const scenesWithPlanSummaryQueryOptions = (projectId: string) =>
   queryOptions({
     queryKey: ["shooting-plan", "scenes", projectId],
     queryFn: () => listScenesWithPlanSummary({ data: { projectId } }),
+  });
+
+export const updateSceneNotes = createServerFn({ method: "POST" })
+  .validator(z.object({ sceneId: z.string().uuid(), notes: z.string().nullable() }))
+  .handler(async ({ data }): Promise<ResultShape<null, ForbiddenError | DbError>> => {
+    await requireUser();
+    const db = await getDb();
+    const result = await ResultAsync.fromPromise(
+      db.update(scenes).set({ notes: data.notes }).where(eq(scenes.id, data.sceneId)),
+      (e) => new DbError("updateSceneNotes", e),
+    ).map(() => null);
+    return toShape(result);
   });
 
 export const getBreakdownSummary = createServerFn({ method: "GET" })

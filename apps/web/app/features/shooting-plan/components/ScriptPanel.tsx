@@ -1,7 +1,12 @@
+import { useState, useRef, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { updateSceneNotes } from "../server/shooting-plan.server";
 import styles from "./ScriptPanel.module.css";
 
 interface ScriptPanelProps {
+  sceneId: string;
+  projectId: string;
   sceneNumber: number;
   sceneHeading: string;
   sceneNotes: string | null;
@@ -10,6 +15,8 @@ interface ScriptPanelProps {
 }
 
 export function ScriptPanel({
+  sceneId,
+  projectId,
   sceneNumber,
   sceneHeading,
   sceneNotes,
@@ -17,6 +24,26 @@ export function ScriptPanel({
   onJumpToScreenplay,
 }: ScriptPanelProps) {
   const [isOpen, setIsOpen] = useLocalStorage<boolean>(storageKey, false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qc = useQueryClient();
+
+  const saveMut = useMutation({
+    mutationFn: (notes: string | null) =>
+      updateSceneNotes({ data: { sceneId, notes } }),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["shooting-plan", "scenes", projectId] }),
+  });
+
+  const handleChange = useCallback((value: string) => {
+    setDraft(value);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveMut.mutate(value.trim().length > 0 ? value : null);
+    }, 800);
+  }, [saveMut]);
+
+  const currentNotes = draft ?? sceneNotes ?? "";
 
   if (!isOpen) {
     return (
@@ -62,17 +89,17 @@ export function ScriptPanel({
 
       <div className={styles.body}>
         <div className={styles.sceneHeading}>{sceneHeading}</div>
-        {sceneNotes ? (
-          <div className={styles.notes}>{sceneNotes}</div>
-        ) : (
-          <p className={styles.empty}>
-            Nessuna nota di scena. Apri lo Screenplay editor per il testo completo.
-          </p>
-        )}
+        <textarea
+          className={styles.notesTextarea}
+          value={currentNotes}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Aggiungi note di scena…"
+          rows={6}
+        />
       </div>
 
       <footer className={styles.footer}>
-        <span>read-only</span>
+        {saveMut.isPending ? "salvataggio…" : "note di scena"}
       </footer>
     </aside>
   );

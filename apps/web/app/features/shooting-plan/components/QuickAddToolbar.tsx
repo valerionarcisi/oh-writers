@@ -38,7 +38,7 @@ export function QuickAddToolbar({
           type="button"
           className={styles.shotBtn}
           data-tone={b.tone}
-          title={SHOT_SIZE_LABELS[b.size]}
+          data-tooltip={SHOT_SIZE_LABELS[b.size]}
           disabled={disabled}
           onClick={() => onAddShot(b.size)}
         >

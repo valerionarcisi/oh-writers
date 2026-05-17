@@ -21,6 +21,7 @@
 }
 
 .shotBtn {
+  position: relative;
   padding: 3px 9px;
   border-radius: var(--ds-radius-sm);
   font-weight: 600;
@@ -33,6 +34,30 @@
   transition:
     background var(--ds-duration-1) var(--ds-ease),
     color var(--ds-duration-1) var(--ds-ease);
+
+  &::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    inset-block-end: calc(100% + 6px);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    background: var(--ds-text);
+    color: var(--ds-surface);
+    font-family: var(--ds-font-sans);
+    font-size: 11px;
+    font-weight: 400;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: var(--ds-radius-sm);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--ds-duration-1) var(--ds-ease);
+    z-index: 100;
+  }
+
+  &:hover:not(:disabled)::after {
+    opacity: 1;
+  }
 
   &:hover:not(:disabled) {
     background: var(--ds-surface-alt);

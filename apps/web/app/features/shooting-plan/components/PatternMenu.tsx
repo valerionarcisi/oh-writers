@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   COVERAGE_PATTERNS,
   PATTERN_IDS,
@@ -15,8 +16,25 @@ const formatMin = (m: number): string =>
   m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
 
 export function PatternMenu({ recommendedId, onSelect, onClose }: PatternMenuProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [onClose]);
+
   return (
-    <div className={styles.menu} role="menu">
+    <div ref={ref} className={styles.menu} role="menu">
       <div className={styles.label}>Pattern copertura</div>
       {PATTERN_IDS.map((id) => {
         const p = COVERAGE_PATTERNS[id];

@@ -25,6 +25,7 @@ const makeScene = (
   location,
   shotCount,
   totalMinutes,
+  notes: null,
 });
 
 const makeDay = (
@@ -37,6 +38,9 @@ const makeDay = (
   date,
   dayType: "shoot",
   notes: null,
+  crewCallTime: null,
+  shootStartTime: null,
+  wrapTime: null,
   strips: sceneIds.map((sceneId, i) => ({
     id: `strip-${dayNumber}-${i}`,
     shootingDayId: `day-${dayNumber}`,

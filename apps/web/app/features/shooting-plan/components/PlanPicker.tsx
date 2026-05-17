@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ScenarioView } from "../server/shooting-plan.server";
 import styles from "./PlanPicker.module.css";
 
@@ -16,6 +16,24 @@ export function PlanPicker({
   onCreatePlan,
 }: PlanPickerProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const addWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!popoverOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPopoverOpen(false);
+    };
+    const handleClick = (e: MouseEvent) => {
+      if (addWrapRef.current && !addWrapRef.current.contains(e.target as Node))
+        setPopoverOpen(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [popoverOpen]);
 
   return (
     <div className={styles.root} role="group" aria-label="Selezione piani visibili">
@@ -36,7 +54,7 @@ export function PlanPicker({
         );
       })}
 
-      <div className={styles.addWrap}>
+      <div ref={addWrapRef} className={styles.addWrap}>
         <button
           type="button"
           className={styles.addBtn}

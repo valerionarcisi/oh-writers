@@ -21,6 +21,9 @@
 }
 
 .weekLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
   color: var(--ds-text-mute);
@@ -29,6 +32,65 @@
   padding-inline-start: var(--space-1);
   padding-block-end: var(--space-1);
   border-block-end: 1px solid var(--ds-line);
+}
+
+.weekActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.weekActionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-sm);
+  color: var(--ds-text-mute);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+
+  &:hover {
+    background: var(--ds-overlay);
+    color: var(--ds-text);
+    border-color: var(--ds-text-3);
+  }
+}
+
+/* ─── Add week button ─── */
+.addWeekBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--radius-md);
+  color: var(--ds-text-mute);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+
+  &:hover {
+    background: var(--ds-overlay);
+    color: var(--ds-text);
+    border-color: var(--ds-text-3);
+  }
 }
 
 .weekDays {

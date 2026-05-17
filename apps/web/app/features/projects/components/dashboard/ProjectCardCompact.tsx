@@ -39,12 +39,13 @@ export function ProjectCardCompact({ project }: Props) {
   const visibleAvatars = project.collaborators.slice(0, MAX_AVATARS);
   const overflow = project.collaborators.length - visibleAvatars.length;
   return (
-    <Link
-      to="/projects/$id"
-      params={{ id: project.id }}
-      className={styles.row}
-      aria-label={`Apri il progetto ${project.title}`}
-    >
+    <div className={styles.row}>
+      <Link
+        to="/projects/$id"
+        params={{ id: project.id }}
+        className={styles.rowLink}
+        aria-label={`Apri il progetto ${project.title}`}
+      />
       <ProjectCoverGradient
         gradient={project.coverGradient}
         title={project.title}
@@ -97,6 +98,15 @@ export function ProjectCardCompact({ project }: Props) {
         <span className={styles.solo}>Solo</span>
       )}
       <span className={styles.roleTag}>{ROLE_LABELS[project.role]}</span>
-    </Link>
+      <Link
+        to="/projects/$id/screenplay"
+        params={{ id: project.id }}
+        className={styles.editorLink}
+        aria-label={`Apri l'editor di ${project.title}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        Editor →
+      </Link>
+    </div>
   );
 }

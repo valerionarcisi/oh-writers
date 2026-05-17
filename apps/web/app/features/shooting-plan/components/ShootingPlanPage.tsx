@@ -12,11 +12,11 @@ import {
   shotPlanQueryOptions,
 } from "../server/shooting-plan.server";
 import { ScriptPanel } from "./ScriptPanel";
+import { SceneFountainPanel } from "./SceneFountainPanel";
 import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
 import { CalendarGridView } from "./CalendarGridView";
-import { SceneFountainPanel } from "./SceneFountainPanel";
 import { useCesareOpen } from "~/features/app-shell";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -224,27 +224,15 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
             <>
               <div className={styles.scriptColumn}>
                 <ScriptPanel
+                  sceneId={selectedScene.sceneId}
+                  projectId={projectId}
                   sceneNumber={selectedScene.sceneNumber}
                   sceneHeading={selectedScene.sceneHeading}
-                  sceneNotes={null}
+                  sceneNotes={selectedScene.notes}
                   storageKey="ohw:shooting-plan:script-panel:open"
                 />
               </div>
               <main className={styles.main}>
-                <div className={styles.sceneRuler}>
-                  <span className={styles.rulerSceneNum}>SC.{selectedScene.sceneNumber}</span>
-                  <span className={styles.rulerHeading}>
-                    {selectedScene.intExt}. {selectedScene.location}
-                  </span>
-                  <span className={styles.rulerMeta}>
-                    {selectedScene.shotCount > 0 && (
-                      <span>{selectedScene.shotCount} shot</span>
-                    )}
-                    {selectedScene.totalMinutes != null && (
-                      <span>{formatMinutes(selectedScene.totalMinutes)}</span>
-                    )}
-                  </span>
-                </div>
                 <SceneFountainPanel
                   sceneId={selectedScene.sceneId}
                   projectId={projectId}

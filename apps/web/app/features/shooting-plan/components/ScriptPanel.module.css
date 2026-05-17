@@ -105,6 +105,31 @@
   color: var(--ds-text-2);
 }
 
+.notesTextarea {
+  inline-size: 100%;
+  min-block-size: 120px;
+  resize: vertical;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-surface);
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ds-text);
+  outline: none;
+  transition: border-color var(--ds-duration-1) var(--ds-ease);
+
+  &::placeholder {
+    color: var(--ds-text-faint);
+    font-style: italic;
+  }
+
+  &:focus {
+    border-color: var(--ds-action);
+  }
+}
+
 .empty {
   color: var(--ds-text-3);
   font-style: italic;

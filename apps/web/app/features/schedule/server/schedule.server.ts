@@ -609,6 +609,56 @@ export const addShootingDay = createServerFn({ method: "POST" })
       ),
   );
 
+export const addShootingWeek = createServerFn({ method: "POST" })
+  .validator(z.object({ scheduleId: z.string().uuid(), daysPerWeek: z.number().int().min(1).max(7).default(6) }))
+  .handler(
+    async ({ data }) =>
+      toShape(
+        await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+          ResultAsync.fromPromise(
+            db.query.schedules
+              .findFirst({ where: eq(schedules.id, data.scheduleId) })
+              .then((r) => r ?? null),
+            (e) => new DbError("addShootingWeek/loadSchedule", e),
+          )
+            .andThen((schedule) => {
+              if (!schedule) return err(new ScheduleNotFoundError(data.scheduleId));
+              return ok(schedule);
+            })
+            .andThen((schedule) =>
+              requireProjectAccess(db, schedule.projectId, "edit").andThen(
+                () => ok(schedule),
+              ),
+            )
+            .andThen((schedule) =>
+              ResultAsync.fromPromise(
+                db.transaction(async (tx) => {
+                  const allDays = await tx
+                    .select()
+                    .from(shootingDays)
+                    .where(eq(shootingDays.scheduleId, schedule.id))
+                    .orderBy(asc(shootingDays.dayNumber));
+                  const startNumber = allDays.length + 1;
+                  for (let i = 0; i < data.daysPerWeek; i++) {
+                    await tx.insert(shootingDays).values({
+                      scheduleId: schedule.id,
+                      dayNumber: startNumber + i,
+                    });
+                  }
+                }),
+                (e) => new DbError("addShootingWeek/transaction", e),
+              ).map(() => schedule.id),
+            )
+            .andThen((scheduleId) =>
+              ResultAsync.fromPromise(
+                loadScheduleView(db, scheduleId).then((v) => v!),
+                (e) => new DbError("addShootingWeek/loadView", e),
+              ),
+            ),
+        ),
+      ),
+  );
+
 export const removeShootingDay = createServerFn({ method: "POST" })
   .validator(z.object({ dayId: z.string().uuid() }))
   .handler(

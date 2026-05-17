@@ -16,6 +16,7 @@ interface StripBoardProps {
   onDateChange: (dayId: string, date: string | null) => void;
   onRemoveDay: (dayId: string) => void;
   onAddDay: () => void;
+  onAddWeek: () => void;
   onStripClick: (sceneId: string) => void;
   onDayClick: (dayId: string) => void;
 }
@@ -31,6 +32,7 @@ export function StripBoard({
   onDateChange,
   onRemoveDay,
   onAddDay,
+  onAddWeek,
   onStripClick,
   onDayClick,
 }: StripBoardProps) {
@@ -54,7 +56,19 @@ export function StripBoard({
       <div className={styles.weeksBoard} data-testid="strip-board">
         {weeks.map((week) => (
           <div key={week.weekNumber} className={styles.weekGroup}>
-            <div className={styles.weekLabel}>Settimana {week.weekNumber}</div>
+            <div className={styles.weekLabel}>
+              Settimana {week.weekNumber}
+              <span className={styles.weekActions}>
+                <button
+                  type="button"
+                  className={styles.weekActionBtn}
+                  title="Aggiungi giorno a questa settimana"
+                  onClick={onAddDay}
+                >
+                  +
+                </button>
+              </span>
+            </div>
             <div className={styles.weekDays}>
               {week.days.map((day) => (
                 <ShootingDayColumn
@@ -76,12 +90,12 @@ export function StripBoard({
         ))}
         <button
           type="button"
-          className={styles.addDayBtn}
-          title="Aggiungi giorno"
-          data-testid="add-day-btn"
-          onClick={onAddDay}
+          className={styles.addWeekBtn}
+          title="Aggiungi settimana"
+          data-testid="add-week-btn"
+          onClick={onAddWeek}
         >
-          +
+          + Aggiungi settimana
         </button>
       </div>
     );

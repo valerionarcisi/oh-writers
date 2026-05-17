@@ -48,12 +48,14 @@ export function ProjectCardGrid({ project }: Props) {
   const overflow = project.collaborators.length - visibleAvatars.length;
 
   return (
-    <Link
-      to="/projects/$id"
-      params={{ id: project.id }}
-      className={styles.card}
-      aria-label={`Apri il progetto ${project.title}`}
-    >
+    <article className={styles.card}>
+      <Link
+        to="/projects/$id"
+        params={{ id: project.id }}
+        className={styles.cardLink}
+        aria-label={`Apri il progetto ${project.title}`}
+      />
+
       <header className={styles.head}>
         <ProjectCoverGradient
           gradient={project.coverGradient}
@@ -134,8 +136,16 @@ export function ProjectCardGrid({ project }: Props) {
         ) : (
           <span className={styles.solo}>Solo</span>
         )}
-        <span className={styles.activity}>{project.lastActivity.label}</span>
+        <Link
+          to="/projects/$id/screenplay"
+          params={{ id: project.id }}
+          className={styles.editorLink}
+          aria-label={`Apri l'editor di ${project.title}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          Editor →
+        </Link>
       </footer>
-    </Link>
+    </article>
   );
 }

@@ -1,23 +1,29 @@
 .row {
+  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(180px, 2fr) auto minmax(120px, 1fr) minmax(110px, 1fr) auto auto;
+  grid-template-columns: auto minmax(180px, 2fr) auto minmax(120px, 1fr) minmax(110px, 1fr) auto auto auto;
   align-items: center;
   gap: var(--ds-space-4);
   padding: var(--ds-space-3) var(--ds-space-4);
   background: var(--ds-card-bg);
   border-block-end: 1px solid var(--ds-line-soft);
-  text-decoration: none;
   color: inherit;
   transition: background var(--ds-duration-1) var(--ds-ease);
 
-  &:hover {
+  &:has(.rowLink:hover) {
     background: var(--ds-surface-alt);
   }
 
-  &:focus-visible {
+  &:has(.rowLink:focus-visible) {
     outline: 2px solid var(--ds-action);
     outline-offset: -2px;
   }
+}
+
+.rowLink {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -138,6 +144,35 @@
   border: 1px solid var(--ds-line);
   padding: 2px var(--ds-space-2);
   border-radius: var(--ds-radius-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.editorLink {
+  position: relative;
+  z-index: 1;
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-mute);
+  text-decoration: none;
+  padding: 3px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  white-space: nowrap;
+  transition:
+    color var(--ds-duration-1) var(--ds-ease),
+    background var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    color: var(--ds-text);
+    background: var(--ds-overlay);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
 }
 
 @container (max-width: 720px) {
@@ -152,7 +187,8 @@
   .pctCell,
   .avatars,
   .solo,
-  .roleTag {
+  .roleTag,
+  .editorLink {
     display: none;
   }
 }

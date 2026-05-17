@@ -213,67 +213,6 @@
   overflow: auto;
   min-block-size: 0;
   background: var(--ds-bg);
-  /* Must be a scroll container for .sceneRuler sticky to work */
-  position: relative;
-}
-
-/* ── Scene ruler (sticky top of main scroll area) ── */
-
-.sceneRuler {
-  position: sticky;
-  inset-block-start: calc(-1 * var(--ds-space-6));
-  inset-inline: calc(-1 * var(--ds-space-6));
-  z-index: 10;
-  background: var(--ds-surface);
-  border-block-end: 1px solid var(--ds-line);
-  padding: var(--ds-space-2) var(--ds-space-6);
-  display: flex;
-  align-items: baseline;
-  gap: var(--ds-space-3);
-  margin-block-end: var(--ds-space-5);
-  margin-inline: calc(-1 * var(--ds-space-6));
-}
-
-.rulerSceneNum {
-  font-family: var(--ds-font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--ds-text-on-dark);
-  background: var(--ds-text);
-  padding: 2px 7px;
-  border-radius: var(--ds-radius-sm);
-  flex-shrink: 0;
-}
-
-.rulerHeading {
-  font-family: var(--ds-font-sans);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ds-text);
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.rulerMeta {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  font-family: var(--ds-font-sans);
-  font-size: 11px;
-  color: var(--ds-text-3);
-  letter-spacing: 0.03em;
-
-  & > span + span::before {
-    content: "·";
-    margin-inline-end: var(--ds-space-2);
-    color: var(--ds-text-faint);
-  }
 }
 
 .mainEmpty {
