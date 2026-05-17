@@ -1,0 +1,445 @@
+/* CalendarGridView — 7-column week grid for the "Tutti i giorni" tab */
+
+/* ── Root layout: sidebar + calendar area ──────────────────────────────────── */
+.root {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  flex: 1;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+/* ── Week sidebar ──────────────────────────────────────────────────────────── */
+.weekSidebar {
+  background: var(--ds-bg);
+  border-inline-end: 1px solid var(--ds-line);
+  overflow-y: auto;
+  padding-block: var(--ds-space-5);
+  display: flex;
+  flex-direction: column;
+}
+
+.weekSidebarTitle {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+  padding: 0 var(--ds-space-4) var(--ds-space-3);
+}
+
+.weekSidebarItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  cursor: pointer;
+  border-inline-start: 2px solid transparent;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
+.weekSidebarLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ds-text);
+}
+
+.weekSidebarDates {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  color: var(--ds-text-faint);
+  margin-block-start: 1px;
+}
+
+.weekSidebarMeta {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  color: var(--ds-text-3);
+  margin-block-start: 3px;
+}
+
+.weekSidebarDivider {
+  block-size: 1px;
+  background: var(--ds-line);
+  margin: var(--ds-space-2) var(--ds-space-4);
+}
+
+.sidebarTotals {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sidebarTotalsTitle {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+  margin-block-end: var(--ds-space-1);
+}
+
+.sidebarTotalsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebarTotalsLabel {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  color: var(--ds-text-faint);
+}
+
+.sidebarTotalsValue {
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ds-text);
+
+  &[data-accent] {
+    color: var(--ds-info);
+  }
+}
+
+/* ── Calendar area ─────────────────────────────────────────────────────────── */
+.calendarArea {
+  overflow-y: auto;
+  padding: var(--ds-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-8);
+}
+
+/* ── Week block ────────────────────────────────────────────────────────────── */
+.weekBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  scroll-margin-block-start: var(--ds-space-6);
+}
+
+.weekHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-3);
+}
+
+.weekTitle {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--ds-text);
+}
+
+.weekDates {
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  color: var(--ds-text-3);
+}
+
+.weekStats {
+  margin-inline-start: auto;
+  display: flex;
+  gap: var(--ds-space-4);
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  color: var(--ds-text-3);
+
+  & strong {
+    color: var(--ds-text);
+    font-weight: 500;
+  }
+}
+
+/* ── 7-column grid ─────────────────────────────────────────────────────────── */
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--ds-space-2);
+}
+
+/* ── Column header row ─────────────────────────────────────────────────────── */
+.colHeader {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+  text-align: center;
+  padding-block-end: var(--ds-space-2);
+  border-block-end: 1px solid var(--ds-line);
+
+  &[data-weekend] {
+    color: var(--ds-text-faint);
+    opacity: 0.6;
+  }
+}
+
+/* ── Day cell (shooting day) ───────────────────────────────────────────────── */
+.dayCell {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
+  min-block-size: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  position: relative;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+  color: inherit;
+  transition:
+    border-color var(--ds-duration-1) var(--ds-ease),
+    box-shadow var(--ds-duration-1) var(--ds-ease),
+    translate var(--ds-duration-1) var(--ds-ease);
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--ds-text-3);
+    box-shadow: var(--ds-shadow-1);
+    translate: 0 -1px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+
+  &[data-overloaded] {
+    border-inline-start: 3px solid var(--ds-action);
+  }
+
+  /* Hover hint visibility */
+  &:hover .dayHoverHint {
+    opacity: 1;
+  }
+}
+
+/* ── Day cell header row ───────────────────────────────────────────────────── */
+.dayCellHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dayCellDate {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dayNum {
+  font-family: var(--ds-font-display);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--ds-text);
+}
+
+.dayAbbr {
+  font-family: var(--ds-font-sans);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+  line-height: 1;
+}
+
+.dayBadge {
+  font-family: var(--ds-font-sans);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: var(--ds-radius-sm);
+  background: color-mix(in oklch, var(--ds-info) 12%, var(--ds-surface));
+  color: var(--ds-info);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* ── Location ──────────────────────────────────────────────────────────────── */
+.dayLocation {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ds-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* ── Pills row ─────────────────────────────────────────────────────────────── */
+.dayPills {
+  display: flex;
+  gap: var(--ds-space-1);
+  flex-wrap: wrap;
+}
+
+.pillScene,
+.pillShot {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: var(--ds-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.pillScene {
+  background: var(--ds-surface-deep);
+  color: var(--ds-text-2);
+}
+
+.pillShot {
+  background: color-mix(in oklch, var(--ds-info) 12%, var(--ds-surface));
+  color: var(--ds-info);
+}
+
+/* ── Duration bar ──────────────────────────────────────────────────────────── */
+.dayDuration {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-block-start: auto;
+}
+
+.dayDurationLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dayDurationText {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  color: var(--ds-text-3);
+}
+
+.dayDurationPct {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  color: var(--ds-text-faint);
+}
+
+.dayProgress {
+  block-size: 3px;
+  background: var(--ds-surface-deep);
+  border-radius: var(--ds-radius-pill);
+  overflow: hidden;
+}
+
+.dayProgressFill {
+  block-size: 100%;
+  background: var(--ds-action);
+  border-radius: var(--ds-radius-pill);
+  transition: width var(--ds-duration-3) var(--ds-ease);
+
+  .dayCell[data-overloaded] & {
+    background: var(--ds-warning);
+  }
+}
+
+/* ── Overload warning dot ──────────────────────────────────────────────────── */
+.dayWarning {
+  position: absolute;
+  inset-block-start: var(--ds-space-2);
+  inset-inline-end: var(--ds-space-2);
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--ds-warning);
+}
+
+/* ── Hover hint ────────────────────────────────────────────────────────────── */
+.dayHoverHint {
+  position: absolute;
+  inset-block-end: var(--ds-space-2);
+  inset-inline-end: var(--ds-space-2);
+  font-family: var(--ds-font-sans);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-faint);
+  opacity: 0;
+  transition: opacity var(--ds-duration-1) var(--ds-ease);
+}
+
+/* ── Empty cell ────────────────────────────────────────────────────────────── */
+.emptyCell {
+  background: var(--ds-surface-alt);
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  min-block-size: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+
+  &[data-weekend] {
+    opacity: 0.35;
+  }
+}
+
+.emptyCellLabel {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-faint);
+}
+
+/* ── Loading / empty states ────────────────────────────────────────────────── */
+.loading,
+.emptyState {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-space-12);
+}
+
+.loadingText,
+.emptyStateText {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ds-text-3);
+  text-align: center;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dayCell,
+  .weekSidebarItem,
+  .dayProgressFill,
+  .dayHoverHint {
+    transition: none;
+  }
+
+  .dayCell:hover {
+    translate: none;
+  }
+}

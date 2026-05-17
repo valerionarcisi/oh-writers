@@ -15,6 +15,7 @@ import { ScriptPanel } from "./ScriptPanel";
 import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
+import { CalendarGridView } from "./CalendarGridView";
 import styles from "./ShootingPlanPage.module.css";
 
 type ViewTab = "per-scena" | "tutti-i-giorni";
@@ -169,9 +170,14 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       </header>
 
       {activeTab === "tutti-i-giorni" ? (
-        <div className={styles.comingSoon}>
-          <p>Vista "Tutti i giorni" — prossimamente.</p>
-        </div>
+        <CalendarGridView
+          projectId={projectId}
+          scenes={scenes}
+          onSwitchToPerScena={(firstSceneId) => {
+            setActiveTab("per-scena");
+            if (firstSceneId) setSelectedSceneId(firstSceneId);
+          }}
+        />
       ) : (
         <div className={styles.body}>
           <aside className={styles.sceneSidebar}>
