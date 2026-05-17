@@ -29,7 +29,7 @@ import {
   toggleBulletList,
   toggleHeading,
 } from "../lib/narrative-plugins";
-import { useVersionsDrawer } from "~/features/versions";
+import { useVersionsDrawer, useDocumentVersions } from "~/features/versions";
 import { useSaveStatePublisher, useCesareOpen } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
@@ -165,6 +165,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     type === DocumentTypes.LOGLINE ||
     type === DocumentTypes.SYNOPSIS ||
     type === DocumentTypes.TREATMENT;
+  const { data: docVersionsResult } = useDocumentVersions(document.id);
   const loglineQuery = useDocument(document.projectId, DocumentTypes.LOGLINE);
   const loglineContent =
     loglineQuery.data && loglineQuery.data.isOk
@@ -187,27 +188,43 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     );
   };
 
-  const toggleVersionsDrawer = () => {
-    if (isVersionsOpen) {
-      closeDrawer();
-    } else {
-      openDrawer(
-        {
-          kind: "document",
-          documentId: document.id,
-          docType: type,
-          canEdit: document.canEdit,
-          currentVersionId: document.currentVersionId ?? null,
+  const openVersionsDrawer = () => {
+    openDrawer(
+      {
+        kind: "document",
+        documentId: document.id,
+        docType: type,
+        canEdit: document.canEdit,
+        currentVersionId: document.currentVersionId ?? null,
+      },
+      {
+        dirtyHook: {
+          isDirty: () => isDirtyRef.current,
+          flush: () => flushRef.current(),
         },
-        {
-          dirtyHook: {
-            isDirty: () => isDirtyRef.current,
-            flush: () => flushRef.current(),
-          },
-        },
-      );
-    }
+      },
+    );
   };
+
+  const docVersions = docVersionsResult?.isOk ? docVersionsResult.value : [];
+  const currentDocVersion = docVersions.find(
+    (v) => v.id === document.currentVersionId,
+  );
+  const currentVersionLabel = currentDocVersion?.label ?? null;
+
+  const versionMenuItems = [
+    ...docVersions.map((v, idx) => ({
+      id: `version-${v.id}`,
+      label: v.id === document.currentVersionId ? `● ${v.label ?? `Versione ${idx + 1}`}` : (v.label ?? `Versione ${idx + 1}`),
+      onSelect: openVersionsDrawer,
+      tone: v.id === document.currentVersionId ? ("default" as const) : ("muted" as const),
+    })),
+    {
+      id: "open-drawer",
+      label: "Apri Versioni →",
+      onSelect: openVersionsDrawer,
+    },
+  ];
 
   // ── Editor body — reused inside the shell ──────────────────────────────────
   const editorBody = isOutline ? (
@@ -412,8 +429,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         layout={layout}
         logline={loglineContent}
         canEditLogline={false}
-        versionLabel={undefined}
-        onOpenVersions={toggleVersionsDrawer}
+        versionLabel={currentVersionLabel ?? undefined}
+        versionMenuItems={versionMenuItems}
+        onOpenVersions={openVersionsDrawer}
         leftAside={leftAside}
         rightAside={rightAside}
       >

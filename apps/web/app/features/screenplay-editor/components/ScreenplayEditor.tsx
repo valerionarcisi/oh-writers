@@ -34,6 +34,7 @@ import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
+import { useCesareOpen } from "~/features/app-shell";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
@@ -158,6 +159,7 @@ export const ScreenplayEditor = forwardRef<
     if (onToggleCesare) onToggleCesare(next);
     else setLocalCesareOn(next);
   };
+  const openCesare = useCesareOpen();
   const viewRef = useRef<EditorView | null>(null);
 
   const isViewing = viewing.kind === "viewing";
@@ -758,7 +760,7 @@ export const ScreenplayEditor = forwardRef<
           }
           cesareNoteCount={0}
           cesareIsOn={isCesareOn}
-          onCesareClick={() => handleToggleCesare(!isCesareOn)}
+          onCesareClick={openCesare}
           toast={toast}
         />
       )}

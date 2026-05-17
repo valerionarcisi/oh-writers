@@ -27,6 +27,7 @@ export interface NarrativeDocsShellProps {
   readonly canEditLogline: boolean;
   readonly onLoglineChange?: (next: string) => void;
   readonly versionLabel?: string;
+  readonly versionMenuItems?: ReadonlyArray<{ id: string; label: string; onSelect: () => void; tone?: "default" | "muted" }>;
   readonly onOpenVersions?: () => void;
   readonly leftAside?: ReactNode;
   readonly rightAside?: ReactNode;
@@ -41,6 +42,7 @@ export function NarrativeDocsShell({
   canEditLogline,
   onLoglineChange,
   versionLabel,
+  versionMenuItems,
   onOpenVersions,
   leftAside,
   rightAside,
@@ -82,13 +84,17 @@ export function NarrativeDocsShell({
                 <VersionTrigger
                   variant="pill"
                   versionLabel={versionLabel}
-                  menuItems={[
-                    {
-                      id: "open-drawer",
-                      label: "Apri Versioni →",
-                      onSelect: onOpenVersions,
-                    },
-                  ]}
+                  menuItems={
+                    versionMenuItems && versionMenuItems.length > 0
+                      ? versionMenuItems
+                      : [
+                          {
+                            id: "open-drawer",
+                            label: "Apri Versioni →",
+                            onSelect: onOpenVersions,
+                          },
+                        ]
+                  }
                 />
               )}
             </div>

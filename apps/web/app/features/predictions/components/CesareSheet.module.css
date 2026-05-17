@@ -27,9 +27,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 42vh;
-  min-height: 320px;
-  max-height: 520px;
+  /* height is overridden by inline style from drag; min/max guard the limits */
+  min-height: 260px;
+  max-height: 85vh;
   background: var(--ds-surface);
   border-block-start: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
@@ -45,6 +45,10 @@
 
   @media (prefers-reduced-motion: no-preference) {
     transition: transform var(--ds-duration-3) var(--ds-ease);
+
+    &[data-dragging="true"] {
+      transition: none;
+    }
   }
 }
 
@@ -55,6 +59,8 @@
   display: flex;
   justify-content: center;
   padding-block: var(--ds-space-2);
+  cursor: ns-resize;
+  touch-action: none;
 
   &::after {
     content: "";
@@ -63,6 +69,14 @@
     height: 4px;
     border-radius: var(--ds-radius-pill);
     background: var(--ds-line);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: background var(--ds-duration-1) var(--ds-ease);
+    }
+  }
+
+  &:hover::after {
+    background: var(--ds-agent);
   }
 }
 

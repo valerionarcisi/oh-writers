@@ -16,7 +16,9 @@ import {
   ViewbarSep,
 } from "@oh-writers/ui";
 import { useVersionsDrawer } from "~/features/versions";
+import { useVersions } from "~/features/screenplay-editor";
 import { DraftMetaBadge } from "~/features/projects";
+import { useCesareOpen } from "~/features/app-shell";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -131,6 +133,12 @@ function BreakdownPageContent({ projectId }: Props) {
   const canEdit = ctx.canEdit;
   const scenes = ctx.scenes;
   const { open: openVersionsDrawer } = useVersionsDrawer();
+  const openCesare = useCesareOpen();
+
+  const { data: versionsResult } = useVersions(ctx.screenplayId ?? "");
+  const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
+  const currentVersion = screenplayVersions.find((v) => v.id === versionId);
+  const screenplayVersionLabel = currentVersion?.label ?? null;
 
   const [activeSceneId, setActiveSceneId] = useState<string | null>(
     scenes[0]?.id ?? null,
@@ -631,15 +639,28 @@ function BreakdownPageContent({ projectId }: Props) {
             <DraftMetaBadge projectId={projectId} />
             <VersionTrigger
               variant="pill"
-              versionLabel="v3 · 14 mag 2026"
-              onClick={() => {
-                if (ctx.screenplayId) {
-                  openVersionsDrawer({
-                    kind: "screenplay",
-                    screenplayId: ctx.screenplayId,
-                  });
-                }
-              }}
+              versionLabel={screenplayVersionLabel ?? undefined}
+              menuItems={[
+                ...screenplayVersions.map((v, idx) => ({
+                  id: `version-${v.id}`,
+                  label: v.id === versionId ? `● ${v.label ?? `Versione ${idx + 1}`}` : (v.label ?? `Versione ${idx + 1}`),
+                  onSelect: () => {
+                    if (ctx.screenplayId) {
+                      openVersionsDrawer({ kind: "screenplay", screenplayId: ctx.screenplayId });
+                    }
+                  },
+                  tone: v.id === versionId ? ("default" as const) : ("muted" as const),
+                })),
+                {
+                  id: "open-drawer",
+                  label: "Apri Versioni →",
+                  onSelect: () => {
+                    if (ctx.screenplayId) {
+                      openVersionsDrawer({ kind: "screenplay", screenplayId: ctx.screenplayId });
+                    }
+                  },
+                },
+              ]}
             />
           </div>
         </Viewbar>
@@ -923,7 +944,7 @@ function BreakdownPageContent({ projectId }: Props) {
           },
         ]}
         cesareNoteCount={adStats.total}
-        onCesareClick={() => setPanelTab("cesare")}
+        onCesareClick={openCesare}
       />
 
       <ExportBreakdownModal

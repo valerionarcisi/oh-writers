@@ -203,6 +203,10 @@ function EmptyState() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+const MIN_HEIGHT = 260;
+const getViewportHeight = () =>
+  typeof window !== "undefined" ? window.innerHeight : 800;
+
 export function CesareSheet({
   projectId,
   page,
@@ -218,6 +222,31 @@ export function CesareSheet({
   const [isLoading, setIsLoading] = useState(false);
   const conversationRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [sheetHeight, setSheetHeight] = useState(() => Math.round(getViewportHeight() * 0.42));
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
+
+  const handleHandlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = sheetHeight;
+    setIsDragging(true);
+
+    const onMove = (ev: PointerEvent) => {
+      const maxH = Math.round(getViewportHeight() * 0.85);
+      const delta = dragStartY.current - ev.clientY;
+      const next = Math.max(MIN_HEIGHT, Math.min(maxH, dragStartHeight.current + delta));
+      setSheetHeight(next);
+    };
+    const onUp = () => {
+      setIsDragging(false);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }, [sheetHeight]);
 
   // Close on Escape
   useEffect(() => {
@@ -308,12 +337,20 @@ export function CesareSheet({
       <div
         className={styles.sheet}
         data-open={isOpen ? "true" : "false"}
+        data-dragging={isDragging ? "true" : undefined}
         role="complementary"
         aria-label="Cesare — assistente AI"
         aria-hidden={!isOpen}
+        style={{ height: sheetHeight }}
       >
-        {/* Drag handle (decorative) */}
-        <div className={styles.handle} aria-hidden="true" />
+        {/* Drag handle */}
+        <div
+          className={styles.handle}
+          onPointerDown={handleHandlePointerDown}
+          role="separator"
+          aria-label="Ridimensiona Cesare"
+          aria-orientation="horizontal"
+        />
 
         {/* Header */}
         <header className={styles.header}>
