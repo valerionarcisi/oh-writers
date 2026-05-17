@@ -394,6 +394,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       {view === "category" && categoryTotal !== null && (
         <div className={styles.totalDock}>
           <span className={styles.totalDockLabel}>Totale stimato</span>
+          <span className={styles.totalDockSep} aria-hidden="true" />
           <span className={styles.totalDockAmount}>
             {new Intl.NumberFormat("it-IT", {
               style: "currency",
