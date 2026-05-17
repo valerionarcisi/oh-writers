@@ -569,10 +569,10 @@
     .risk-body p { font-size: 0.85em; color: var(--ds-text-mute); }
 
     .risk-mitigation {
-      font-size: 0.78em;
-      color: var(--ds-success);
-      max-width: 220px;
-      text-align: end;
+      font-size: 0.9em;
+      font-style: italic;
+      color: var(--ds-text-2);
+      text-align: start;
     }
 
     /* ── GTM STEPS ── */
@@ -1104,7 +1104,7 @@
           <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Stime AI per ruolo<br>Tariffa giornaliera<br>Contingency<br>Vista per giornata<br>Export PDF</div>
         </div>
         <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Piano di ripresa</div>
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Piano Riprese</div>
           <div style="font-size:0.78rem;color:var(--ds-text-mute);line-height:1.6">Shot planning<br>Timeline visuale<br>Blocking editor<br>Calendario set<br>Multi-scenario</div>
         </div>
         <div style="flex:1;padding:0.875rem 1rem;background:var(--ds-surface)">
@@ -1135,7 +1135,7 @@
       </p>
 
       <p class="moat-subsection-title">Confronto AI — cosa conosce ogni strumento</p>
-      <div class="table-wrapper" style="margin-block-end:1.5rem">
+      <div class="table-wrapper" style="flex:1;margin-block-end:1.5rem">
         <table class="ai-compare-table">
           <thead>
             <tr>
@@ -1200,7 +1200,7 @@
         </table>
       </div>
 
-      <p class="moat-subsection-title">Perché questo vantaggio è difficile da replicare a breve</p>
+      <p class="moat-subsection-title" style="margin-block-start:auto">Perché questo vantaggio è difficile da replicare a breve</p>
       <div class="moat-conclusion">
         I competitor possono aggiungere AI generica. <strong>Non possono aggiungere AI contestuale senza ricostruire l'intero modello dati come grafo di produzione unificato.</strong> Arc Studio Pro dovrebbe aggiungere breakdown, budget e calendario — anni di sviluppo, non mesi. Oh Writers è stato progettato come grafo di produzione dal giorno uno. La finestra di vantaggio è stimata in <strong>18–24 mesi</strong> prima che un competitor con finanziamenti adeguati possa replicare la profondità dell'integrazione.
       </div>
@@ -1210,7 +1210,7 @@
 </div>
 
 <!-- ══════════════════════════════════════
-     SLIDE 1C — IL PROGETTO — Esempi Cesare + Stato attuale
+     SLIDE 1C — IL PROGETTO — Esempi Cesare (Fix 2: split, only 3 examples)
 ══════════════════════════════════════ -->
 <div class="slide">
   <div class="slide-inner">
@@ -1220,7 +1220,7 @@
       <p class="section-desc">Quattro esempi concreti di query che richiedono la conoscenza integrata di script, breakdown, budget e calendario.</p>
     </div>
     <div class="slide-content">
-    <div class="cesare-examples" style="margin-block-end:1rem">
+    <div class="cesare-examples">
       <div class="cesare-example">
         <div class="cesare-icon">①</div>
         <div>
@@ -1243,7 +1243,21 @@
         </div>
       </div>
     </div>
+    </div>
+  </div>
+</div>
 
+<!-- ══════════════════════════════════════
+     SLIDE 1D — IL PROGETTO — Tecnologia e stato attuale (Fix 2: split)
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-heading">
+      <p class="section-label">00 / Il progetto — tecnologia</p>
+      <h2>Stack e stato attuale.</h2>
+      <p class="section-desc">La tecnologia che alimenta Oh Writers e ciò che è già costruito oggi.</p>
+    </div>
+    <div class="slide-content">
     <div class="grid-2">
       <div class="card-standalone">
         <p class="card-label">Stack tecnologico</p>
@@ -1270,7 +1284,7 @@
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
             <span style="color:var(--ds-text-mute)">Mobile (roadmap)</span>
-            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Expo companion</span>
+            <span style="color:var(--ds-font-mono);font-size:0.78rem">Expo companion</span>
           </div>
         </div>
       </div>
@@ -1378,7 +1392,7 @@
 </div>
 
 <!-- ══════════════════════════════════════
-     SLIDE 3A — COMPETITOR (tabella prodotti)
+     SLIDE 3A — COMPETITOR (tabella prodotti, righe 1-4) — Fix 1: 6A
 ══════════════════════════════════════ -->
 <div class="slide">
   <div class="slide-inner">
@@ -1450,6 +1464,35 @@
             <td>Pioniere del tutto-in-uno; molto diffuso nelle scuole di cinema; prezzo aggressivo</td>
             <td>Nessun salto generazionale. Editor sceneggiatura inferiore. AI irrilevante. Perde utenti dopo la formazione.</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 3B — COMPETITOR — continua (righe 5-7) — Fix 1: 6B
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-heading">
+      <p class="section-label">02 / Competitor — continua</p>
+      <h2>Tutti forti su un pezzo.<br>Nessuno copre tutto.</h2>
+      <p class="section-desc">Segue la panoramica dei competitor principali.</p>
+    </div>
+    <div class="slide-content">
+    <div class="table-wrapper">
+      <table class="competitor-table">
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Prezzo</th>
+            <th>Punti di forza</th>
+            <th>Limiti critici</th>
+          </tr>
+        </thead>
+        <tbody>
           <tr>
             <td>
               <div class="comp-name">Arc Studio Pro</div>
@@ -1503,8 +1546,8 @@
       <h2>Il gap esiste.<br>È documentabile.</h2>
       <p class="section-desc">Oh Writers è l'unico tool che copre l'intero pipeline in un'unica web app moderna, con AI contestuale, in italiano.</p>
     </div>
-    <div class="slide-content">
-    <div class="table-wrapper">
+    <div class="slide-content" style="align-items:flex-start">
+    <div class="table-wrapper" style="height:auto;flex:0 0 auto;width:100%">
       <table class="matrix">
         <thead>
           <tr>
@@ -1590,6 +1633,9 @@
         </tbody>
       </table>
     </div>
+    <p style="margin-block-start: 1.5em; font-size: 0.85em; color: var(--ds-text-mute); text-align: center; font-style: italic;">
+      Oh Writers è l'unico tool che copre tutti e 7 i punti in un'unica superficie web, in italiano.
+    </p>
     </div>
   </div>
 </div>
@@ -1848,8 +1894,9 @@
     <div class="slide-heading">
       <p class="section-label">07 / Verdetto</p>
       <h2>La risposta.</h2>
+      <p class="section-desc">Oh Writers può avere successo. La condizione è restare focalizzato sul target giusto.</p>
     </div>
-    <div class="slide-content">
+    <div class="slide-content" style="justify-content:space-between">
     <div class="verdict-box" style="margin-block-end:1rem">
       <p class="verdict-label">Può avere successo?</p>
       <h3>Sì — sul segmento giusto.</h3>
@@ -1919,9 +1966,9 @@
       <h2>Fonti.</h2>
       <p class="section-desc">Riferimenti per tutti i dati citati in questa analisi.</p>
     </div>
-    <div class="slide-content" style="justify-content:flex-start">
+    <div class="slide-content" style="justify-content:center">
     <div class="card-standalone">
-      <div class="footnotes-list">
+      <div class="footnotes-list" style="gap:1.5em">
         <div class="footnote-item">
           <span class="footnote-num">[1]</span>
           <div>
