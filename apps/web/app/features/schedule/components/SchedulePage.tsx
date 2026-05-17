@@ -40,11 +40,13 @@ import { ScheduleCesareBanner } from "./ScheduleCesareBanner";
 import { ScheduleDayView } from "./ScheduleDayView";
 import styles from "./SchedulePage.module.css";
 
-type ViewTab = "strip" | "day";
+type ViewTab = "strip" | "day" | "days" | "weeks";
 
 const TABS: ReadonlyArray<{ id: ViewTab; label: string }> = [
   { id: "strip", label: "Strip Board" },
   { id: "day", label: "Giornata" },
+  { id: "days", label: "Giorni" },
+  { id: "weeks", label: "Settimane" },
 ];
 
 interface SchedulePageProps {
@@ -63,7 +65,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const currentVersionId = schedule?.screenplayVersionId ?? null;
 
   const [tab, setTab] = useState<ViewTab>("strip");
-  const [stripViewMode, setStripViewMode] = useState<"days" | "weeks">("days");
   const [isStuck, setIsStuck] = useState(false);
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
   const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
@@ -133,6 +134,26 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     mutationFn: (vars: { dayId: string; notes: string | null }) =>
       updateShootingDay({
         data: { dayId: vars.dayId, patch: { notes: vars.notes } },
+      }).then(unwrapResult),
+    onSuccess: invalidate,
+  });
+
+  const timesMutation = useMutation({
+    mutationFn: (vars: {
+      dayId: string;
+      crewCallTime?: string | null;
+      shootStartTime?: string | null;
+      wrapTime?: string | null;
+    }) =>
+      updateShootingDay({
+        data: {
+          dayId: vars.dayId,
+          patch: {
+            crewCallTime: vars.crewCallTime,
+            shootStartTime: vars.shootStartTime,
+            wrapTime: vars.wrapTime,
+          },
+        },
       }).then(unwrapResult),
     onSuccess: invalidate,
   });
@@ -272,19 +293,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           onSelect={setTab}
           ariaLabel="Vista piano di lavorazione"
         />
-        {tab === "strip" && (
-          <span className={styles.viewbarSubControl}>
-            <SegmentedControl<"days" | "weeks">
-              options={[
-                { id: "days", label: "Giorni" },
-                { id: "weeks", label: "Settimane" },
-              ]}
-              activeId={stripViewMode}
-              onSelect={setStripViewMode}
-              ariaLabel="Raggruppamento strip board"
-            />
-          </span>
-        )}
         <span className={styles.viewbarRight} />
         <VersionTrigger
           variant="pill"
@@ -340,7 +348,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         ) : (
           <>
             {match(tab)
-              .with("strip", () => (
+              .with("strip", "days", "weeks", (t) => (
                 <>
                   <ScheduleCesareBanner
                     suggestions={suggestions}
@@ -351,7 +359,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                       <StripBoard
                         schedule={schedule}
                         draggingStripId={draggingStripId}
-                        viewMode={stripViewMode}
+                        viewMode={t === "weeks" ? "weeks" : "days"}
                         unscheduledStrips={schedule.unscheduledStrips}
                         onMoveStrip={(stripId, targetDayId) =>
                           moveMutation.mutate({
@@ -391,6 +399,9 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                   onSelectDay={handleSelectDayInView}
                   onNotesChange={(dayId, notes) =>
                     notesMutation.mutate({ dayId, notes })
+                  }
+                  onTimesChange={(dayId, patch) =>
+                    timesMutation.mutate({ dayId, ...patch })
                   }
                   notesSaving={notesMutation.isPending}
                 />

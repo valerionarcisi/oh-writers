@@ -33,9 +33,9 @@
 
 .weekDays {
   display: flex;
+  flex-wrap: nowrap;
   align-items: flex-start;
   gap: var(--space-3);
-  flex-wrap: wrap;
 }
 
 /* ─── Add day button ─── */

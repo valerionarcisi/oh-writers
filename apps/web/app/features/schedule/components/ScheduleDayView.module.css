@@ -101,11 +101,36 @@
 
 .metaRow {
   display: inline-flex;
+  align-items: center;
   gap: var(--ds-space-3);
 
   & b {
     color: var(--ds-text);
     font-weight: 700;
+  }
+}
+
+.timeInput {
+  border: none;
+  background: transparent;
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ds-text);
+  padding: 0;
+  outline: none;
+  width: 6ch;
+  cursor: text;
+  border-block-end: 1px solid transparent;
+  transition: border-color var(--ds-duration-1) var(--ds-ease);
+
+  &:hover,
+  &:focus {
+    border-block-end-color: var(--ds-action);
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    display: none;
   }
 }
 

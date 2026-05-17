@@ -39,6 +39,9 @@ export const shootingDays = pgTable("shooting_days", {
     .notNull()
     .default("shoot"),
   notes: text("notes"),
+  crewCallTime: text("crew_call_time"),
+  shootStartTime: text("shoot_start_time"),
+  wrapTime: text("wrap_time"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

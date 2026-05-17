@@ -8,6 +8,7 @@ interface ScheduleDayViewProps {
   dayId: string | null;
   onSelectDay: (dayId: string) => void;
   onNotesChange: (dayId: string, notes: string | null) => void;
+  onTimesChange: (dayId: string, patch: { crewCallTime?: string | null; shootStartTime?: string | null; wrapTime?: string | null }) => void;
   notesSaving: boolean;
 }
 
@@ -58,16 +59,23 @@ export function ScheduleDayView({
   dayId,
   onSelectDay,
   onNotesChange,
+  onTimesChange,
   notesSaving,
 }: ScheduleDayViewProps) {
   const day = resolveActiveDay(schedule, dayId);
   const [notesDraft, setNotesDraft] = useState(day?.notes ?? "");
   const lastFlushRef = useRef<string>(day?.notes ?? "");
+  const [crewCall, setCrewCall] = useState(day?.crewCallTime ?? "");
+  const [shootStart, setShootStart] = useState(day?.shootStartTime ?? "");
+  const [wrap, setWrap] = useState(day?.wrapTime ?? "");
 
   useEffect(() => {
     setNotesDraft(day?.notes ?? "");
     lastFlushRef.current = day?.notes ?? "";
-  }, [day?.id, day?.notes]);
+    setCrewCall(day?.crewCallTime ?? "");
+    setShootStart(day?.shootStartTime ?? "");
+    setWrap(day?.wrapTime ?? "");
+  }, [day?.id, day?.notes, day?.crewCallTime, day?.shootStartTime, day?.wrapTime]);
 
   useEffect(() => {
     if (!day) return;
@@ -135,19 +143,35 @@ export function ScheduleDayView({
           </div>
         </div>
         <div className={styles.heroMeta}>
-          {/* TODO Spec 12: crewCallTime / shootStartTime / wrapTime from
-              shooting_days schema additions. */}
           <span className={styles.metaRow}>
             <span>Crew call</span>
-            <b>—</b>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={crewCall}
+              onChange={(e) => setCrewCall(e.target.value)}
+              onBlur={() => day && onTimesChange(day.id, { crewCallTime: crewCall || null })}
+            />
           </span>
           <span className={styles.metaRow}>
             <span>Shoot</span>
-            <b>—</b>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={shootStart}
+              onChange={(e) => setShootStart(e.target.value)}
+              onBlur={() => day && onTimesChange(day.id, { shootStartTime: shootStart || null })}
+            />
           </span>
           <span className={styles.metaRow}>
             <span>Wrap</span>
-            <b>—</b>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={wrap}
+              onChange={(e) => setWrap(e.target.value)}
+              onBlur={() => day && onTimesChange(day.id, { wrapTime: wrap || null })}
+            />
           </span>
         </div>
       </header>

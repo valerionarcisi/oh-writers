@@ -56,6 +56,9 @@ export interface ShootingDayView {
   date: string | null;
   dayType: "shoot" | "travel" | "rest" | "prep";
   notes: string | null;
+  crewCallTime: string | null;
+  shootStartTime: string | null;
+  wrapTime: string | null;
   strips: StripView[];
   totalPageCount: number;
   totalHours: number;
@@ -164,6 +167,9 @@ const loadScheduleView = async (
       date: d.date,
       dayType: d.dayType as ShootingDayView["dayType"],
       notes: d.notes,
+      crewCallTime: d.crewCallTime ?? null,
+      shootStartTime: d.shootStartTime ?? null,
+      wrapTime: d.wrapTime ?? null,
       strips: dayStrips,
       totalPageCount: dayStrips.reduce((sum, s) => sum + s.pageCount, 0),
       totalHours: dayStrips.reduce((sum, s) => sum + s.resolvedHours, 0),
@@ -474,6 +480,9 @@ export const updateShootingDay = createServerFn({ method: "POST" })
         date: z.string().nullable().optional(),
         dayType: z.enum(["shoot", "travel", "rest", "prep"]).optional(),
         notes: z.string().nullable().optional(),
+        crewCallTime: z.string().nullable().optional(),
+        shootStartTime: z.string().nullable().optional(),
+        wrapTime: z.string().nullable().optional(),
       }),
     }),
   )

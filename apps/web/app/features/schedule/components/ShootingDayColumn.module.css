@@ -1,6 +1,7 @@
 .column {
   flex-shrink: 0;
   width: 480px;
+  max-inline-size: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-2);
