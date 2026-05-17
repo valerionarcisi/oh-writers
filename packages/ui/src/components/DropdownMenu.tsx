@@ -1,13 +1,16 @@
 import {
   useCallback,
-  useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import { useMenuTrigger, useMenu, useMenuItem, useButton, FocusScope } from "react-aria";
+import { useMenuTriggerState, useTreeState, Item } from "react-stately";
+import type { TreeState, Node } from "react-stately";
 import styles from "./DropdownMenu.module.css";
 
 /** Minimum gap kept between the menu and the viewport edge. */
@@ -34,10 +37,201 @@ export interface DropdownMenuProps {
   "data-testid"?: string;
 }
 
+// ─── MenuItemInternal ────────────────────────────────────────────────────────
+
+interface MenuItemInternalProps {
+  item: Node<DropdownMenuItem>;
+  state: TreeState<DropdownMenuItem>;
+  onClose: () => void;
+  /** Called with the item label (its key) when selected. */
+  onAction: (label: string) => void;
+}
+
+function MenuItemInternal({ item, state, onClose, onAction }: MenuItemInternalProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const { menuItemProps, isDisabled } = useMenuItem(
+    {
+      key: item.key,
+      onAction: () => onAction(String(item.key)),
+      onClose,
+    },
+    state,
+    ref,
+  );
+
+  const raw = item.value as DropdownMenuItem;
+
+  return (
+    <li role="none">
+      <button
+        {...menuItemProps}
+        ref={ref}
+        type="button"
+        className={styles.item}
+        disabled={isDisabled}
+      >
+        {raw.icon && (
+          <span className={styles.icon} aria-hidden>
+            {raw.icon}
+          </span>
+        )}
+        <span className={styles.body}>
+          <span className={styles.label}>{raw.label}</span>
+          {raw.description && (
+            <span className={styles.description}>{raw.description}</span>
+          )}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+// ─── MenuList ────────────────────────────────────────────────────────────────
+
+interface MenuListProps {
+  items: DropdownMenuItem[];
+  align: DropdownMenuAlign;
+  menuId: string;
+  "data-testid"?: string;
+  onClose: () => void;
+  /** Props forwarded from useMenuTrigger. */
+  ariaMenuProps: object;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+}
+
+/**
+ * Portalled menu list. Manages its own TreeState (needed by useMenu /
+ * useMenuItem) and viewport-aware positioning (flip up / clamp x).
+ */
+function MenuList({
+  items,
+  align,
+  menuId,
+  "data-testid": testId,
+  onClose,
+  ariaMenuProps,
+  triggerRef,
+}: MenuListProps) {
+  const menuRef = useRef<HTMLUListElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  // Build a lookup so we can fire the original onClick by label-key.
+  const itemMapRef = useRef<Map<string, DropdownMenuItem>>(new Map());
+  itemMapRef.current = new Map(items.map((it) => [it.label, it]));
+
+  /**
+   * Place the menu under the trigger, clamping to the viewport so it never
+   * overflows. Flips to above the trigger if there isn't enough room below.
+   */
+  const reposition = useCallback(() => {
+    if (!triggerRef.current || !menuRef.current) return;
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const menuRect = menuRef.current.getBoundingClientRect();
+
+    const desiredLeft =
+      align === "end" ? triggerRect.right - menuRect.width : triggerRect.left;
+    const left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(desiredLeft, window.innerWidth - menuRect.width - VIEWPORT_MARGIN),
+    );
+
+    let top = triggerRect.bottom + MENU_OFFSET;
+    const overflowsBottom =
+      top + menuRect.height > window.innerHeight - VIEWPORT_MARGIN;
+    if (overflowsBottom) {
+      const flipped = triggerRect.top - menuRect.height - MENU_OFFSET;
+      top = flipped >= VIEWPORT_MARGIN ? flipped : VIEWPORT_MARGIN;
+    }
+
+    setCoords({ top, left });
+  }, [align, triggerRef]);
+
+  /**
+   * The menu is rendered every render while open (initially off-screen so
+   * it can be measured), then reposition runs in a layout effect and on
+   * window resize. Without the off-screen first paint we'd anchor against a
+   * 0-width menu and slide off the right edge with align="end".
+   */
+  useLayoutEffect(() => {
+    reposition();
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [reposition]);
+
+  // react-stately TreeState drives useMenu + useMenuItem.
+  const treeState = useTreeState<DropdownMenuItem>({
+    selectionMode: "none",
+    children: items.map((item) => (
+      <Item key={item.label} textValue={item.label}>
+        {item.label}
+      </Item>
+    )),
+    disabledKeys: items.filter((it) => it.disabled).map((it) => it.label),
+    items,
+  });
+
+  const { menuProps } = useMenu<DropdownMenuItem>(
+    {
+      ...ariaMenuProps,
+      onClose,
+      autoFocus: true,
+      shouldFocusWrap: true,
+    },
+    treeState,
+    menuRef as RefObject<HTMLElement>,
+  );
+
+  const handleAction = useCallback(
+    (label: string) => {
+      itemMapRef.current.get(label)?.onClick();
+      onClose();
+    },
+    [onClose],
+  );
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <FocusScope restoreFocus>
+      <ul
+        {...menuProps}
+        ref={menuRef}
+        id={menuId}
+        className={styles.menu}
+        style={
+          coords
+            ? { top: coords.top, left: coords.left }
+            : { top: -9999, left: -9999, visibility: "hidden" }
+        }
+        data-testid={testId}
+      >
+        {[...treeState.collection].map((node) => (
+          <MenuItemInternal
+            key={node.key}
+            item={node}
+            state={treeState}
+            onClose={onClose}
+            onAction={handleAction}
+          />
+        ))}
+      </ul>
+    </FocusScope>,
+    document.body,
+  );
+}
+
+// ─── DropdownMenu ────────────────────────────────────────────────────────────
+
 /**
  * Triggered dropdown menu. Anchors to its trigger's bounding box and
  * portals into <body> so it escapes ancestor `overflow:hidden` clipping.
- * Outside-click + ESC close, like ContextMenu.
+ *
+ * Arrow-key navigation, type-ahead, Home/End, and Escape are handled
+ * automatically by react-aria (useMenuTrigger + useMenu + useMenuItem).
  */
 export function DropdownMenu({
   trigger,
@@ -45,142 +239,44 @@ export function DropdownMenu({
   align = "start",
   ...rest
 }: DropdownMenuProps) {
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
-    null,
-  );
-  const triggerRef = useRef<HTMLSpanElement | null>(null);
-  const menuRef = useRef<HTMLUListElement | null>(null);
   const menuId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const close = useCallback(() => setOpen(false), []);
+  const triggerState = useMenuTriggerState({});
 
-  /**
-   * Place the menu under the trigger, clamping to the viewport so it never
-   * overflows. Flips to above the trigger if there isn't enough room below.
-   * Reads from `triggerRef` and `menuRef`; returns early if either is unset.
-   */
-  const reposition = useCallback(() => {
-    if (!triggerRef.current || !menuRef.current) return;
-    const trigger = triggerRef.current.getBoundingClientRect();
-    const menu = menuRef.current.getBoundingClientRect();
+  const { menuTriggerProps, menuProps } = useMenuTrigger<DropdownMenuItem>(
+    { type: "menu" },
+    triggerState,
+    triggerRef,
+  );
 
-    const desiredLeft =
-      align === "end" ? trigger.right - menu.width : trigger.left;
-    const left = Math.max(
-      VIEWPORT_MARGIN,
-      Math.min(desiredLeft, window.innerWidth - menu.width - VIEWPORT_MARGIN),
-    );
-
-    let top = trigger.bottom + MENU_OFFSET;
-    const overflowsBottom =
-      top + menu.height > window.innerHeight - VIEWPORT_MARGIN;
-    if (overflowsBottom) {
-      const flipped = trigger.top - menu.height - MENU_OFFSET;
-      top = flipped >= VIEWPORT_MARGIN ? flipped : VIEWPORT_MARGIN;
-    }
-
-    setCoords({ top, left });
-  }, [align]);
-
-  /**
-   * The menu is rendered every render while open (initially off-screen so
-   * it can be measured), then `reposition` runs in a layout effect and on
-   * window resize. Without the off-screen first paint we'd anchor against a
-   * 0-width menu and slide off the right edge with `align="end"`.
-   */
-  useLayoutEffect(() => {
-    if (!open) {
-      setCoords(null);
-      return;
-    }
-    reposition();
-    const onResize = () => reposition();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onResize, true);
-    };
-  }, [open, reposition]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target)) return;
-      if (triggerRef.current?.contains(target)) return;
-      close();
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onMouseDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onMouseDown);
-    };
-  }, [open, close]);
+  // useButton handles cross-browser press, aria-expanded, aria-haspopup.
+  const { buttonProps } = useButton(
+    { ...menuTriggerProps, "aria-controls": menuId },
+    triggerRef,
+  );
 
   return (
     <>
-      <span
+      <button
+        {...buttonProps}
         ref={triggerRef}
+        type="button"
         className={styles.triggerWrap}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClickCapture={() => setOpen((prev) => !prev)}
       >
         {trigger}
-      </span>
-      {open && typeof document !== "undefined"
-        ? createPortal(
-            <ul
-              ref={menuRef}
-              id={menuId}
-              role="menu"
-              className={styles.menu}
-              style={
-                coords
-                  ? { top: coords.top, left: coords.left }
-                  : { top: -9999, left: -9999, visibility: "hidden" }
-              }
-              data-testid={rest["data-testid"]}
-            >
-              {items.map((item) => (
-                <li key={item.label} role="none">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className={styles.item}
-                    disabled={item.disabled}
-                    onClick={() => {
-                      item.onClick();
-                      close();
-                    }}
-                  >
-                    {item.icon && (
-                      <span className={styles.icon} aria-hidden>
-                        {item.icon}
-                      </span>
-                    )}
-                    <span className={styles.body}>
-                      <span className={styles.label}>{item.label}</span>
-                      {item.description && (
-                        <span className={styles.description}>
-                          {item.description}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>,
-            document.body,
-          )
-        : null}
+      </button>
+      {triggerState.isOpen ? (
+        <MenuList
+          items={items}
+          align={align}
+          menuId={menuId}
+          data-testid={rest["data-testid"]}
+          onClose={() => triggerState.close()}
+          ariaMenuProps={menuProps}
+          triggerRef={triggerRef}
+        />
+      ) : null}
     </>
   );
 }
