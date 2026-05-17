@@ -6,6 +6,7 @@ interface ShootingPlanDockProps {
   onPrefill?: () => void;
   onExport?: () => void;
   onPrint?: () => void;
+  onCesareClick?: () => void;
 }
 
 export function ShootingPlanDock({
@@ -13,6 +14,7 @@ export function ShootingPlanDock({
   onPrefill,
   onExport,
   onPrint,
+  onCesareClick,
 }: ShootingPlanDockProps) {
   return (
     <div className={styles.dock} role="toolbar" aria-label="Azioni piano">
@@ -57,7 +59,8 @@ export function ShootingPlanDock({
       <button
         type="button"
         className={styles.cesareBtn}
-        title="Note di Cesare"
+        title="Apri Cesare"
+        onClick={onCesareClick}
       >
         <span className={styles.cesareDot} aria-hidden="true" />
         Cesare

@@ -131,11 +131,15 @@ function activeSegmentFromRouteId(routeId: string): string {
 }
 
 const CESARE_PAGE_SEGMENTS: Array<{ segment: string; page: CesarePage }> = [
+  { segment: "/shooting-plan", page: "shooting-plan" },
   { segment: "/screenplay", page: "screenplay" },
   { segment: "/breakdown", page: "breakdown" },
   { segment: "/budget", page: "budget" },
   { segment: "/schedule", page: "schedule" },
-  { segment: "/shooting-plan", page: "shooting-plan" },
+  { segment: "/treatment", page: "treatment" },
+  { segment: "/outline", page: "outline" },
+  { segment: "/synopsis", page: "synopsis" },
+  { segment: "/soggetto", page: "soggetto" },
 ];
 
 function deriveCesarePage(pathname: string): CesarePage {

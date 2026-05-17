@@ -16,6 +16,7 @@ import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
 import { CalendarGridView } from "./CalendarGridView";
+import { useCesareOpen } from "~/features/app-shell";
 import styles from "./ShootingPlanPage.module.css";
 
 type ViewTab = "per-scena" | "tutti-i-giorni";
@@ -35,6 +36,7 @@ const formatMinutes = (m: number): string => {
 export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const openCesare = useCesareOpen();
   const { data } = useSuspenseQuery(
     scenesWithPlanSummaryQueryOptions(projectId),
   );
@@ -268,6 +270,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       <ShootingPlanDock
         projectId={projectId}
         suggestedShotCount={0}
+        onCesareClick={openCesare}
       />
     </div>
   );

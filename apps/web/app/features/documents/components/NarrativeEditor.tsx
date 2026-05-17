@@ -453,6 +453,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onClick: handleExport,
         }}
         secondaryActions={[]}
+        onCesareClick={openCesare}
       />
     </div>
   );

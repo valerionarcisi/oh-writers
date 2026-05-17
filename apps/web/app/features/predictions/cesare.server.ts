@@ -32,6 +32,10 @@ export class CesareError {
 
 const PageContextSchema = z.object({
   page: z.enum([
+    "soggetto",
+    "synopsis",
+    "outline",
+    "treatment",
     "screenplay",
     "breakdown",
     "budget",
@@ -367,6 +371,14 @@ Quando parli di disponibilità, usa i dati reali dello schedule.`;
 const MOCK_RESPONSES: Record<string, string> = {
   default:
     "Ciao! Sono Cesare. Ho analizzato la produzione e sono pronto ad aiutarti.",
+  soggetto:
+    "Il conflitto centrale è chiaramente delineato. Attenzione all'arco del protagonista: il cambiamento avviene troppo tardi rispetto alla struttura classica in tre atti.",
+  synopsis:
+    "La sinossi è efficace. Il tono è coerente con il genere. Valuta di aggiungere una frase sul tema emotivo centrale — manca il 'perché ci interessa questa storia'.",
+  outline:
+    "La scaletta ha un ottimo primo atto. Il secondo è lungo — valuta di anticipare il punto di svolta alla scena 18 invece che alla 22.",
+  treatment:
+    "Il trattamento ha un buon ritmo. La sequenza alle pagine 8-10 è densa: considera di spezzarla con una scena di respiro.",
   screenplay:
     "Ho letto la scena. Il dialogo funziona ma il personaggio B appare in 3 scene consecutive — valuta se alleggerire qui.",
   breakdown:
@@ -375,6 +387,8 @@ const MOCK_RESPONSES: Record<string, string> = {
     "Il budget categoria Cast è al 78% dell'allocato. Hai ancora €2.400 disponibili per le scene rimanenti con personaggi principali.",
   schedule:
     "Lo schedule ha 3 location che appaiono in scene non consecutive. Raggruppando le scene per location risparmi 2 giorni di set.",
+  "shooting-plan":
+    "Il piano inquadrature prevede 14 setup per questa scena. Raggruppando per angolo di ripresa puoi ridurre a 9 setup e guadagnare circa 90 minuti di set.",
 };
 
 const mockResponse = (pageContext: PageContext): ResultAsync<string, CesareError> =>

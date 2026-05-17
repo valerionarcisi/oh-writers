@@ -11,6 +11,10 @@ import styles from "./CesareSheet.module.css";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CesarePage =
+  | "soggetto"
+  | "synopsis"
+  | "outline"
+  | "treatment"
   | "screenplay"
   | "breakdown"
   | "budget"
@@ -37,6 +41,10 @@ interface Message {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_LABELS: Record<CesarePage, string> = {
+  soggetto: "Soggetto",
+  synopsis: "Sinossi",
+  outline: "Scaletta",
+  treatment: "Trattamento",
   screenplay: "Sceneggiatura",
   breakdown: "Breakdown",
   budget: "Budget",
@@ -45,6 +53,30 @@ const PAGE_LABELS: Record<CesarePage, string> = {
 };
 
 const QUICK_PROMPTS: Record<CesarePage, string[]> = {
+  soggetto: [
+    "Il conflitto centrale è chiaro?",
+    "Suggerisci un arco del personaggio",
+    "Come rendere il finale più forte?",
+    "Analizza la struttura in tre atti",
+  ],
+  synopsis: [
+    "La sinossi è efficace per un produttore?",
+    "Riassumi in tre righe",
+    "Mancano elementi narrativi importanti?",
+    "Rendi il tono più commerciale",
+  ],
+  outline: [
+    "C'è squilibrio tra gli atti?",
+    "Questa scena è necessaria?",
+    "Suggerisci un twist al secondo atto",
+    "Compatta le scene ridondanti",
+  ],
+  treatment: [
+    "Il ritmo narrativo funziona?",
+    "Questa sequenza è troppo lunga?",
+    "Suggerisci come migliorare la transizione",
+    "Identifica i punti deboli",
+  ],
   screenplay: [
     "Questa scena è fattibile domani?",
     "Aiutami a scrivere il dialogo",
