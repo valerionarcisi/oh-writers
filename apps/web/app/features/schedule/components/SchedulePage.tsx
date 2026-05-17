@@ -58,6 +58,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const versionsDrawer = useVersionsDrawer();
 
   const [tab, setTab] = useState<ViewTab>("strip");
+  const [stripViewMode, setStripViewMode] = useState<"days" | "weeks">("days");
   const [isStuck, setIsStuck] = useState(false);
   const [draggingStripId, setDraggingStripId] = useState<string | null>(null);
   const [selectedStrip, setSelectedStrip] = useState<StripView | null>(null);
@@ -263,6 +264,17 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           onSelect={setTab}
           ariaLabel="Vista piano di lavorazione"
         />
+        {tab === "strip" && (
+          <SegmentedControl<"days" | "weeks">
+            options={[
+              { id: "days", label: "Giorni" },
+              { id: "weeks", label: "Settimane" },
+            ]}
+            activeId={stripViewMode}
+            onSelect={setStripViewMode}
+            ariaLabel="Raggruppamento strip board"
+          />
+        )}
         <span className={styles.viewbarRight} />
         <VersionTrigger
           variant="pill"
@@ -313,7 +325,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                       <StripBoard
                         schedule={schedule}
                         draggingStripId={draggingStripId}
-                        viewMode="days"
+                        viewMode={stripViewMode}
                         unscheduledStrips={schedule.unscheduledStrips}
                         onMoveStrip={(stripId, targetDayId) =>
                           moveMutation.mutate({
