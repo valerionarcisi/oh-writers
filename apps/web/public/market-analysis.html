@@ -9,150 +9,219 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Backgrounds */
-      --bg: #0a0a0a;
-      --bg-card: #111111;
-      --bg-elevated: #1a1a1a;
-      --bg-overlay: #222222;
-      --bg-card-hover: #1a1a1a;
+      /* ── Backgrounds (linen palette) ── */
+      --ds-bg:           #f5f3ee;
+      --ds-surface:      #ffffff;
+      --ds-surface-alt:  #ebe9e3;
+      --ds-surface-deep: #e2dfd6;
+      --ds-overlay:      rgba(28, 26, 23, 0.5);
 
-      /* Text */
-      --text: #f0f0ef;
-      --text-secondary: #a0a09b;
-      --text-muted: #a0a09b;
-      --text-dim: #5a5a57;
+      /* ── Text (linen scale) ── */
+      --ds-text:       #1c1a17;
+      --ds-text-2:     #44413c;
+      --ds-text-3:     #6e6c66;
+      --ds-text-mute:  #6e6c66;
+      --ds-text-faint: #88867e;
+      --ds-text-on-dark: #f5f3ee;
 
-      /* Borders */
-      --border: rgba(255, 255, 255, 0.07);
-      --border-strong: rgba(255, 255, 255, 0.14);
+      /* ── Lines / borders ── */
+      --ds-line:      #d8d6cd;
+      --ds-line-soft: rgba(227, 225, 215, 0.50);
 
-      /* Accent — teal (primary) */
-      --accent: #14b8a6;
-      --accent-hover: #0d9488;
-      --accent-subtle: rgba(20, 184, 166, 0.10);
-      --accent-border: rgba(20, 184, 166, 0.25);
-      --accent-dim: rgba(20, 184, 166, 0.10);
+      /* ── Brand — Clay (terracotta/brown — primary action) ── */
+      --ds-action:      #8b3a1a;
+      --ds-action-hover:#75301a;
+      --ds-action-soft: #f4dccb;
 
-      /* Amber — secondary / editorial */
-      --amber: #d4a853;
-      --amber-subtle: rgba(212, 168, 83, 0.10);
+      /* ── Brand — Leaf (sage green — Cesare / AI) ── */
+      --ds-agent:      #5a6b3c;
+      --ds-agent-soft: #e5e9d8;
 
-      /* Semantic */
-      --green: #22c55e;
-      --green-dim: rgba(34, 197, 94, 0.12);
-      --red: #e5534b;
-      --red-dim: rgba(229, 83, 75, 0.12);
-      --blue: #3b82f6;
-      --blue-dim: rgba(59, 130, 246, 0.12);
+      /* ── Status ── */
+      --ds-danger:      #b33a28;
+      --ds-danger-soft: rgba(179, 58, 40, 0.08);
+      --ds-success:     #5a6b3c;
+      --ds-success-soft:#e5e9d8;
+      --ds-info:        #34487a;
+      --ds-info-soft:   rgba(52, 72, 122, 0.10);
+      --ds-warning:     #8b3a1a;
+      --ds-warning-soft:#f4dccb;
 
-      /* Radius */
-      --radius: 6px;
-      --radius-sm: 4px;
-      --radius-lg: 10px;
-      --radius-full: 9999px;
+      /* ── Typography ── */
+      --ds-font-sans:    "Inter", -apple-system, system-ui, sans-serif;
+      --ds-font-display: "Fraunces", Georgia, serif;
+      --ds-font-mono:    "Courier Prime", "Courier New", monospace;
 
-      /* Shadows */
-      --shadow-sm: 0 2px 4px rgba(0,0,0,0.25);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.30);
-      --shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
+      /* ── Spacing ── */
+      --ds-space-1:  4px;
+      --ds-space-2:  8px;
+      --ds-space-3:  12px;
+      --ds-space-4:  16px;
+      --ds-space-5:  20px;
+      --ds-space-6:  24px;
+      --ds-space-8:  32px;
+      --ds-space-10: 48px;
+      --ds-space-12: 64px;
 
-      /* Typography */
-      --font: 'Inter', system-ui, -apple-system, sans-serif;
-      --font-serif: 'Fraunces', Georgia, serif;
-      --font-mono: 'Courier Prime', 'Courier New', monospace;
+      /* ── Radius ── */
+      --ds-radius-sm:  4px;
+      --ds-radius-md:  8px;
+      --ds-radius-lg:  12px;
+      --ds-radius-pill:100px;
 
-      /* Spacing */
-      --space-1: 0.25rem;
-      --space-2: 0.5rem;
-      --space-3: 0.75rem;
-      --space-4: 1rem;
-      --space-6: 1.5rem;
-      --space-8: 2rem;
-      --space-12: 3rem;
+      /* ── Shadows (warm-tinted) ── */
+      --ds-shadow-0: 0 1px 2px rgba(28,26,23,0.04);
+      --ds-shadow-1: 0 2px 4px rgba(28,26,23,0.06);
+      --ds-shadow-2: 0 8px 24px -8px rgba(28,26,23,0.12);
+      --ds-shadow-3: 0 12px 32px -8px rgba(28,26,23,0.18);
+
+      /* ── Motion ── */
+      --ds-ease:       cubic-bezier(0.2,0.7,0.2,1);
+      --ds-duration-1: 150ms;
+      --ds-duration-2: 200ms;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
+    html, body {
+      height: 100%;
+      overflow: hidden;
     }
 
-    /* ── NAV ── */
-    nav {
+    body {
+      font-family: var(--ds-font-sans);
+      background: var(--ds-bg);
+      color: var(--ds-text);
+      line-height: 1.6;
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-bar-track {
       position: fixed;
       top: 0;
       inset-inline: 0;
-      z-index: 100;
-      background: rgba(10,10,10,0.85);
-      backdrop-filter: blur(12px);
-      border-block-end: 1px solid var(--border);
-      padding: 0 2rem;
+      height: 2px;
+      background: var(--ds-line-soft);
+      z-index: 300;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--ds-action);
+      transition: width 200ms ease;
+      width: 10%;
+    }
+
+    /* ── SLIDES ── */
+    .slide {
+      display: none;
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      padding: 72px 10vw 80px;
+      background: var(--ds-bg);
+    }
+
+    .slide.active { display: block; }
+
+    .slide-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Hero slide: centered title card */
+    .slide-hero {
+      display: none;
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      background: var(--ds-bg);
+    }
+
+    .slide-hero.active { display: flex; }
+
+    .slide-hero .hero-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 72px 10vw 80px;
+      min-height: 100vh;
+    }
+
+    /* ── SLIDE NAV ── */
+    .slide-nav {
+      position: fixed;
+      bottom: 0;
+      inset-inline: 0;
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 56px;
+      padding: 0 2rem;
+      background: rgba(245, 243, 238, 0.92);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--ds-line);
+      z-index: 200;
     }
 
-    .nav-brand {
-      font-size: 1rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--accent);
+    .nav-prev,
+    .nav-next {
+      background: none;
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
+      color: var(--ds-text-2);
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0.35rem 0.75rem;
+      transition: background 120ms, color 120ms, border-color 120ms;
     }
 
-    .nav-links {
-      display: flex;
-      gap: 2rem;
-      list-style: none;
+    .nav-prev:hover,
+    .nav-next:hover {
+      background: var(--ds-surface-alt);
+      border-color: var(--ds-line);
+      color: var(--ds-action);
     }
 
-    .nav-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.8rem;
+    .nav-prev:disabled,
+    .nav-next:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .slide-counter {
+      font-size: 0.78rem;
+      color: var(--ds-text-mute);
       letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── SLIDE HEADER ── */
+    .slide-label {
+      font-family: var(--ds-font-sans);
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      transition: color 120ms;
-    }
-
-    .nav-links a:hover { color: var(--text); }
-
-    /* ── LAYOUT ── */
-    main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 100px 2rem 6rem;
-    }
-
-    section {
-      margin-block-end: 5rem;
+      color: var(--ds-text-faint);
+      margin-block-end: 0.75rem;
     }
 
     /* ── HERO ── */
-    .hero {
-      text-align: center;
-      padding-block: 4rem 6rem;
-      border-block-end: 1px solid var(--border);
-      margin-block-end: 5rem;
-    }
-
     .hero-eyebrow {
-      font-family: var(--font);
+      font-family: var(--ds-font-sans);
       font-size: 0.75rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--ds-text-mute);
       margin-block-end: 1.5rem;
     }
 
     .hero h1 {
-      font-family: var(--font-serif);
+      font-family: var(--ds-font-display);
       font-size: clamp(2.5rem, 6vw, 4.5rem);
       font-weight: 300;
       letter-spacing: -0.02em;
@@ -161,13 +230,13 @@
     }
 
     .hero h1 em {
-      color: var(--accent);
+      color: var(--ds-action);
       font-style: normal;
     }
 
     .hero-sub {
       font-size: 1.1rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       max-width: 560px;
       margin: 0 auto 3rem;
     }
@@ -176,34 +245,34 @@
       display: inline-flex;
       align-items: center;
       gap: 0.75rem;
-      background: var(--green-dim);
-      border: 1px solid var(--green);
-      border-radius: var(--radius-full);
+      background: var(--ds-action-soft);
+      border: 1px solid rgba(139,58,26,0.25);
+      border-radius: var(--ds-radius-pill);
       padding: 0.6rem 1.5rem;
       font-size: 0.9rem;
-      color: var(--green);
+      color: var(--ds-action);
       font-weight: 500;
     }
 
     .hero-verdict .dot {
       width: 8px;
       height: 8px;
-      border-radius: var(--radius-full);
-      background: var(--green);
+      border-radius: var(--ds-radius-pill);
+      background: var(--ds-success);
     }
 
     /* ── SECTION HEADERS ── */
     .section-label {
-      font-family: var(--font);
+      font-family: var(--ds-font-sans);
       font-size: 0.7rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--ds-text-mute);
       margin-block-end: 0.75rem;
     }
 
     h2 {
-      font-family: var(--font-serif);
+      font-family: var(--ds-font-display);
       font-size: clamp(1.5rem, 3vw, 2.25rem);
       font-weight: 700;
       letter-spacing: -0.02em;
@@ -212,7 +281,7 @@
     }
 
     .section-desc {
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       margin-block-end: 2.5rem;
       max-width: 640px;
     }
@@ -222,9 +291,9 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-line-soft);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       overflow: hidden;
     }
 
@@ -236,22 +305,28 @@
 
     /* ── CARDS ── */
     .card {
-      background: var(--bg-card);
+      background: var(--ds-surface);
       padding: 2rem;
     }
 
     .card-standalone {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       padding: 2rem;
+      box-shadow: var(--ds-shadow-1);
+    }
+
+    .card-standalone:hover {
+      box-shadow: var(--ds-shadow-2);
     }
 
     .card-label {
+      font-family: var(--ds-font-sans);
       font-size: 0.7rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--ds-text-mute);
       margin-block-end: 0.5rem;
     }
 
@@ -259,14 +334,14 @@
       font-size: 2.25rem;
       font-weight: 700;
       letter-spacing: -0.04em;
-      color: var(--accent);
+      color: var(--ds-action);
       line-height: 1;
       margin-block-end: 0.5rem;
     }
 
     .card-desc {
       font-size: 0.85rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       line-height: 1.5;
     }
 
@@ -275,14 +350,14 @@
       display: flex;
       flex-direction: column;
       gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-line-soft);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       overflow: hidden;
     }
 
     .funnel-row {
-      background: var(--bg-card);
+      background: var(--ds-surface);
       padding: 1.75rem 2rem;
       display: grid;
       grid-template-columns: 80px 1fr auto;
@@ -291,15 +366,19 @@
     }
 
     .funnel-tag {
-      font-family: var(--font-mono);
+      font-family: var(--ds-font-mono);
       font-size: 0.75rem;
       font-weight: 700;
       letter-spacing: 0.1em;
-      color: var(--text-dim);
+      color: var(--ds-action);
+      background: var(--ds-action-soft);
+      border: 1px solid rgba(139,58,26,0.25);
+      border-radius: var(--ds-radius-pill);
+      padding: 0.2rem 0.6rem;
     }
 
-    .funnel-label { font-size: 0.95rem; color: var(--text-muted); }
-    .funnel-sub { font-size: 0.8rem; color: var(--text-dim); margin-block-start: 0.2rem; }
+    .funnel-label { font-size: 0.95rem; color: var(--ds-text-mute); }
+    .funnel-sub { font-size: 0.8rem; color: var(--ds-text-faint); margin-block-start: 0.2rem; }
 
     .funnel-amount {
       font-size: 1.75rem;
@@ -308,9 +387,9 @@
       text-align: end;
     }
 
-    .funnel-row:first-child .funnel-amount { color: var(--text-muted); }
-    .funnel-row:nth-child(2) .funnel-amount { color: var(--accent-dim); filter: brightness(1.6); }
-    .funnel-row:last-child .funnel-amount { color: var(--accent); }
+    .funnel-row:first-child .funnel-amount { color: var(--ds-text-mute); }
+    .funnel-row:nth-child(2) .funnel-amount { color: var(--ds-text-2); }
+    .funnel-row:last-child .funnel-amount { color: var(--ds-action); }
 
     /* ── COMPETITOR TABLE ── */
     .competitor-table {
@@ -325,41 +404,41 @@
       font-size: 0.7rem;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--text-dim);
-      border-block-end: 1px solid var(--border-strong);
-      background: var(--bg-card);
+      color: var(--ds-text-2);
+      border-block-end: 1px solid var(--ds-line);
+      background: var(--ds-surface-alt);
     }
 
     .competitor-table td {
       padding: 1rem;
-      border-block-end: 1px solid var(--border);
+      border-block-end: 1px solid var(--ds-line-soft);
       vertical-align: top;
     }
 
     .competitor-table tr:last-child td { border-block-end: none; }
 
-    .competitor-table tr:hover td { background: var(--bg-card-hover); }
+    .competitor-table tr:hover td { background: var(--ds-surface-alt); }
 
-    .competitor-table tr.highlight td { background: var(--accent-subtle); }
+    .competitor-table tr.highlight td { background: var(--ds-action-soft); }
     .competitor-table tr.highlight td:first-child {
-      border-inline-start: 2px solid var(--accent);
+      border-inline-start: 2px solid var(--ds-action);
     }
 
-    .comp-name { font-weight: 600; color: var(--text); }
-    .comp-price { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); }
+    .comp-name { font-weight: 600; color: var(--ds-text); }
+    .comp-price { font-family: var(--ds-font-mono); font-size: 0.8rem; color: var(--ds-action); }
     .comp-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-block-start: 0.5rem; }
 
     .tag {
       font-size: 0.68rem;
       padding: 0.15rem 0.5rem;
-      border-radius: var(--radius-full);
+      border-radius: var(--ds-radius-pill);
       font-weight: 500;
     }
 
-    .tag-green { background: var(--green-dim); color: var(--green); }
-    .tag-red { background: var(--red-dim); color: var(--red); }
-    .tag-blue { background: var(--blue-dim); color: var(--blue); }
-    .tag-amber { background: var(--amber-subtle); color: var(--amber); }
+    .tag-green { background: var(--ds-success-soft); color: var(--ds-success); border: 1px solid rgba(90,107,60,0.20); }
+    .tag-red { background: var(--ds-danger-soft); color: var(--ds-danger); border: 1px solid rgba(179,58,40,0.20); }
+    .tag-blue { background: var(--ds-info-soft); color: var(--ds-info); border: 1px solid rgba(52,72,122,0.20); }
+    .tag-amber { background: var(--ds-action-soft); color: var(--ds-action); border: 1px solid rgba(139,58,26,0.20); }
 
     /* ── FEATURE MATRIX ── */
     .matrix {
@@ -373,51 +452,51 @@
       text-align: center;
       font-size: 0.7rem;
       font-weight: 600;
-      color: var(--text-dim);
+      color: var(--ds-text-2);
       letter-spacing: 0.05em;
-      border-block-end: 1px solid var(--border-strong);
-      background: var(--bg-card);
+      border-block-end: 1px solid var(--ds-line);
+      background: var(--ds-surface-alt);
     }
 
     .matrix th:first-child { text-align: start; padding-inline-start: 1rem; }
-    .matrix th.ours { color: var(--accent); }
+    .matrix th.ours { color: var(--ds-action); }
 
     .matrix td {
       padding: 0.7rem 0.5rem;
       text-align: center;
-      border-block-end: 1px solid var(--border);
-      color: var(--text-dim);
+      border-block-end: 1px solid var(--ds-line-soft);
+      color: var(--ds-text-faint);
     }
 
     .matrix td:first-child {
       text-align: start;
       padding-inline-start: 1rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       font-weight: 500;
     }
 
     .matrix tr:last-child td { border-block-end: none; }
-    .matrix tr:hover td { background: var(--bg-card-hover); }
-    .matrix tr.ours-row td { background: var(--accent-subtle); }
-    .matrix tr.ours-row td:first-child { border-inline-start: 2px solid var(--accent); color: var(--accent); font-weight: 700; }
+    .matrix tr:hover td { background: var(--ds-surface-alt); }
+    .matrix tr.ours-row td { background: var(--ds-action-soft); }
+    .matrix tr.ours-row td:first-child { border-inline-start: 2px solid var(--ds-action); color: var(--ds-action); font-weight: 700; }
 
-    .check { color: var(--green); font-size: 1rem; }
-    .cross { color: var(--text-dim); opacity: 0.4; }
-    .partial { color: var(--accent); font-size: 0.85rem; }
+    .check { color: var(--ds-success); font-size: 1rem; }
+    .cross { color: var(--ds-danger); }
+    .partial { color: var(--ds-action); font-size: 0.85rem; }
 
     /* ── RISK CARDS ── */
     .risk-list {
       display: flex;
       flex-direction: column;
       gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-line-soft);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       overflow: hidden;
     }
 
     .risk-row {
-      background: var(--bg-card);
+      background: var(--ds-surface);
       padding: 1.5rem 2rem;
       display: grid;
       grid-template-columns: 120px 1fr auto;
@@ -431,20 +510,20 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 0.3rem 0.75rem;
-      border-radius: var(--radius-full);
+      border-radius: var(--ds-radius-pill);
       text-align: center;
       align-self: flex-start;
     }
 
-    .risk-high { background: var(--red-dim); color: var(--red); }
-    .risk-medium { background: var(--accent-subtle); color: var(--accent); }
+    .risk-high { background: var(--ds-danger-soft); color: var(--ds-danger); }
+    .risk-medium { background: var(--ds-action-soft); color: var(--ds-action); }
 
     .risk-body h4 { font-size: 0.95rem; font-weight: 600; margin-block-end: 0.4rem; }
-    .risk-body p { font-size: 0.85rem; color: var(--text-muted); }
+    .risk-body p { font-size: 0.85rem; color: var(--ds-text-mute); }
 
     .risk-mitigation {
       font-size: 0.78rem;
-      color: var(--green);
+      color: var(--ds-success);
       max-width: 220px;
       text-align: end;
     }
@@ -454,15 +533,15 @@
       display: flex;
       flex-direction: column;
       gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-line-soft);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       overflow: hidden;
       counter-reset: gtm-counter;
     }
 
     .gtm-step {
-      background: var(--bg-card);
+      background: var(--ds-surface);
       padding: 1.75rem 2rem 1.75rem 5rem;
       position: relative;
       counter-increment: gtm-counter;
@@ -478,12 +557,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-mono);
+      font-family: var(--ds-font-mono);
       font-size: 0.75rem;
       font-weight: 700;
-      background: var(--border);
-      border-radius: var(--radius-full);
-      color: var(--text-dim);
+      background: var(--ds-line-soft);
+      border-radius: var(--ds-radius-pill);
+      color: var(--ds-text-faint);
     }
 
     .gtm-step h4 {
@@ -492,7 +571,7 @@
       margin-block-end: 0.4rem;
     }
 
-    .gtm-step p { font-size: 0.875rem; color: var(--text-muted); }
+    .gtm-step p { font-size: 0.875rem; color: var(--ds-text-mute); }
 
     .gtm-step .phase-badge {
       display: inline-block;
@@ -501,7 +580,7 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 0.15rem 0.6rem;
-      border-radius: var(--radius-full);
+      border-radius: var(--ds-radius-pill);
       margin-block-start: 0.75rem;
     }
 
@@ -513,15 +592,16 @@
     }
 
     .pricing-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       padding: 2rem;
+      box-shadow: var(--ds-shadow-1);
     }
 
     .pricing-card.featured {
-      border-color: var(--accent);
-      background: var(--accent-subtle);
+      border-color: var(--ds-action);
+      background: var(--ds-action-soft);
     }
 
     .pricing-card .plan-name {
@@ -529,11 +609,11 @@
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       margin-block-end: 0.75rem;
     }
 
-    .pricing-card.featured .plan-name { color: var(--accent); }
+    .pricing-card.featured .plan-name { color: var(--ds-action); }
 
     .pricing-card .price {
       font-size: 2.5rem;
@@ -545,7 +625,7 @@
 
     .pricing-card .price-note {
       font-size: 0.78rem;
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       margin-block-end: 1.5rem;
     }
 
@@ -558,7 +638,7 @@
 
     .pricing-card li {
       font-size: 0.83rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       display: flex;
       align-items: flex-start;
       gap: 0.5rem;
@@ -566,15 +646,15 @@
 
     .pricing-card li::before {
       content: '→';
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       flex-shrink: 0;
     }
 
     /* ── VERDICT ── */
     .verdict-box {
-      background: var(--bg-card);
-      border: 1px solid var(--border-strong);
-      border-radius: var(--radius);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-line);
+      border-radius: var(--ds-radius-md);
       padding: 3rem;
       text-align: center;
     }
@@ -583,12 +663,12 @@
       font-size: 0.7rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      color: var(--accent);
+      color: var(--ds-action);
       margin-block-end: 1rem;
     }
 
     .verdict-box h3 {
-      font-family: var(--font-serif);
+      font-family: var(--ds-font-display);
       font-size: clamp(1.5rem, 3vw, 2.5rem);
       font-weight: 700;
       letter-spacing: -0.02em;
@@ -596,7 +676,7 @@
     }
 
     .verdict-box p {
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       max-width: 680px;
       margin: 0 auto 2rem;
       line-height: 1.7;
@@ -606,12 +686,12 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: var(--green-dim);
-      border: 1px solid var(--green);
-      border-radius: var(--radius-sm);
+      background: var(--ds-success-soft);
+      border: 1px solid rgba(90, 107, 60, 0.20);
+      border-radius: var(--ds-radius-sm);
       padding: 0.75rem 1.5rem;
       font-size: 0.85rem;
-      color: var(--green);
+      color: var(--ds-success);
       font-weight: 500;
     }
 
@@ -620,15 +700,15 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-line-soft);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       overflow: hidden;
       margin-block-end: 2.5rem;
     }
 
     .stat {
-      background: var(--bg-card);
+      background: var(--ds-surface);
       padding: 1.5rem;
     }
 
@@ -636,44 +716,32 @@
       font-size: 2rem;
       font-weight: 700;
       letter-spacing: -0.04em;
-      color: var(--accent);
+      color: var(--ds-action);
       line-height: 1;
     }
 
     .stat-label {
       font-size: 0.78rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       margin-block-start: 0.35rem;
     }
 
     .stat-source {
       font-size: 0.68rem;
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       margin-block-start: 0.15rem;
     }
 
     /* ── MOAT BOX ── */
     .moat-box {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       padding: 2.5rem;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 2.5rem;
       align-items: start;
-    }
-
-    @media (max-width: 640px) {
-      .moat-box { grid-template-columns: 1fr; }
-      .risk-row { grid-template-columns: 1fr; }
-      .funnel-row { grid-template-columns: 60px 1fr; }
-      .funnel-amount { grid-column: 2; }
-      nav { padding: 0 1rem; }
-      main { padding: 80px 1rem 4rem; }
-      .cesare-example { grid-template-columns: 1fr; }
-      .cesare-icon { display: none; }
-      .footnote-item { grid-template-columns: 1.5rem 1fr; }
     }
 
     .moat-col h4 {
@@ -684,8 +752,8 @@
       margin-block-end: 1rem;
     }
 
-    .moat-col.bad h4 { color: var(--red); }
-    .moat-col.good h4 { color: var(--green); }
+    .moat-col.bad h4 { color: var(--ds-danger); }
+    .moat-col.good h4 { color: var(--ds-success); }
 
     .moat-col ul {
       list-style: none;
@@ -696,7 +764,7 @@
 
     .moat-col li {
       font-size: 0.85rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       padding-inline-start: 1.25rem;
       position: relative;
     }
@@ -705,45 +773,39 @@
       content: '✗';
       position: absolute;
       inset-inline-start: 0;
-      color: var(--red);
+      color: var(--ds-danger);
     }
 
     .moat-col.good li::before {
       content: '✓';
       position: absolute;
       inset-inline-start: 0;
-      color: var(--green);
+      color: var(--ds-success);
     }
 
     /* ── TABLE WRAPPER ── */
     .table-wrapper {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-md);
       overflow: hidden;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      border-block-start: 1px solid var(--border);
-      padding: 2rem;
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--text-dim);
+      box-shadow: var(--ds-shadow-1);
     }
 
     /* ── AI MOAT EXPANDED ── */
     .moat-full-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-line-soft);
+      border-inline-start: 3px solid var(--ds-action);
+      border-radius: var(--ds-radius-md);
       padding: 2.5rem;
       margin-block-start: 1.5rem;
+      box-shadow: var(--ds-shadow-1);
     }
 
     .moat-full-card .moat-intro {
       font-size: 0.95rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       line-height: 1.7;
       margin-block-end: 2rem;
       max-width: 820px;
@@ -754,7 +816,7 @@
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       margin-block-end: 1rem;
     }
 
@@ -772,59 +834,59 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--text-dim);
-      border-block-end: 1px solid var(--border-strong);
-      background: var(--bg-elevated);
+      color: var(--ds-text-faint);
+      border-block-end: 1px solid var(--ds-line);
+      background: var(--ds-surface-alt);
     }
 
     .ai-compare-table th:first-child { text-align: start; padding-inline-start: 1rem; }
-    .ai-compare-table th.ours-col { color: var(--accent); }
+    .ai-compare-table th.ours-col { color: var(--ds-action); }
 
     .ai-compare-table td {
       padding: 0.65rem 0.75rem;
       text-align: center;
-      border-block-end: 1px solid var(--border);
-      color: var(--text-dim);
+      border-block-end: 1px solid var(--ds-line-soft);
+      color: var(--ds-text-faint);
       vertical-align: middle;
     }
 
     .ai-compare-table td:first-child {
       text-align: start;
       padding-inline-start: 1rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       font-weight: 500;
     }
 
     .ai-compare-table tr:last-child td { border-block-end: none; }
-    .ai-compare-table tr:hover td { background: var(--bg-card-hover); }
+    .ai-compare-table tr:hover td { background: var(--ds-surface-alt); }
 
     .ai-compare-table tr.ours-row td {
-      background: var(--accent-subtle);
+      background: var(--ds-action-soft);
     }
 
     .ai-compare-table tr.ours-row td:first-child {
-      border-inline-start: 2px solid var(--accent);
-      color: var(--accent);
+      border-inline-start: 2px solid var(--ds-action);
+      color: var(--ds-action);
       font-weight: 700;
     }
 
-    .ai-compare-table .ai-check { color: var(--green); font-size: 1rem; }
-    .ai-compare-table .ai-cross { color: var(--text-dim); opacity: 0.35; }
-    .ai-compare-table .ai-partial { color: var(--accent); font-size: 0.85rem; }
+    .ai-compare-table .ai-check { color: var(--ds-success); font-size: 1rem; }
+    .ai-compare-table .ai-cross { color: var(--ds-danger); }
+    .ai-compare-table .ai-partial { color: var(--ds-action); font-size: 0.85rem; }
 
     .cesare-examples {
       display: flex;
       flex-direction: column;
       gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      background: var(--ds-line-soft);
+      border: 1px solid var(--ds-line-soft);
+      border-radius: var(--ds-radius-sm);
       overflow: hidden;
       margin-block-end: 2rem;
     }
 
     .cesare-example {
-      background: var(--bg-card);
+      background: var(--ds-surface);
       padding: 1.25rem 1.5rem;
       display: grid;
       grid-template-columns: auto 1fr;
@@ -835,22 +897,22 @@
     .cesare-example-q {
       font-size: 0.85rem;
       font-weight: 600;
-      color: var(--text);
+      color: var(--ds-text);
       margin-block-end: 0.35rem;
     }
 
     .cesare-example-a {
       font-size: 0.82rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       line-height: 1.55;
     }
 
     .cesare-icon {
       width: 2rem;
       height: 2rem;
-      border-radius: var(--radius-full);
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-border);
+      border-radius: var(--ds-radius-pill);
+      background: var(--ds-action-soft);
+      border: 1px solid rgba(139,58,26,0.25);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -860,26 +922,20 @@
     }
 
     .moat-conclusion {
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-border);
-      border-radius: var(--radius-sm);
+      background: var(--ds-action-soft);
+      border: 1px solid rgba(139,58,26,0.25);
+      border-radius: var(--ds-radius-sm);
       padding: 1.25rem 1.5rem;
       font-size: 0.875rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       line-height: 1.7;
     }
 
     .moat-conclusion strong {
-      color: var(--accent);
+      color: var(--ds-action);
     }
 
     /* ── FOOTNOTES ── */
-    #fonti {
-      margin-block-start: 2rem;
-      padding-block-start: 2rem;
-      border-block-start: 1px solid var(--border);
-    }
-
     .footnotes-list {
       display: flex;
       flex-direction: column;
@@ -892,19 +948,19 @@
       grid-template-columns: 2rem 1fr;
       gap: 0.5rem;
       font-size: 0.8rem;
-      color: var(--text-muted);
+      color: var(--ds-text-mute);
       line-height: 1.5;
     }
 
     .footnote-num {
-      font-family: var(--font-mono);
+      font-family: var(--ds-font-mono);
       font-size: 0.72rem;
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       padding-block-start: 0.05rem;
     }
 
     .footnote-item a {
-      color: var(--accent);
+      color: var(--ds-action);
       text-decoration: none;
     }
 
@@ -915,49 +971,23 @@
     .footnote-note {
       display: block;
       font-size: 0.75rem;
-      color: var(--text-dim);
+      color: var(--ds-text-faint);
       margin-block-start: 0.2rem;
-    }
-
-    /* ── SCROLL ANIMATIONS ── */
-    @media (prefers-reduced-motion: no-preference) {
-      section {
-        opacity: 0;
-        translate: 0 20px;
-        transition: opacity 400ms ease, translate 400ms ease;
-      }
-      section.visible {
-        opacity: 1;
-        translate: 0 0;
-      }
-      .hero {
-        opacity: 1;
-        translate: 0 0;
-      }
     }
   </style>
 </head>
 <body>
 
-<nav>
-  <span class="nav-brand">Oh Writers</span>
-  <ul class="nav-links">
-    <li><a href="#progetto">Progetto</a></li>
-    <li><a href="#mercato">Mercato</a></li>
-    <li><a href="#competitor">Competitor</a></li>
-    <li><a href="#posizionamento">Posizionamento</a></li>
-    <li><a href="#gtm">Come arriviamo ai clienti</a></li>
-    <li><a href="#pricing">Prezzi</a></li>
-    <li><a href="#rischi">Rischi</a></li>
-    <li><a href="#verdetto">Verdetto</a></li>
-    <li><a href="#fonti">Fonti</a></li>
-  </ul>
-</nav>
+<!-- ── PROGRESS BAR ── -->
+<div class="progress-bar-track">
+  <div class="progress-bar"></div>
+</div>
 
-<main>
-
-  <!-- ── HERO ── -->
-  <div class="hero">
+<!-- ══════════════════════════════════════
+     SLIDE 0 — HERO
+══════════════════════════════════════ -->
+<div class="slide-hero active hero">
+  <div class="hero-content">
     <p class="hero-eyebrow">Analisi di Mercato · Maggio 2025</p>
     <h1>Il mercato esiste.<br><em>Il vuoto anche.</em></h1>
     <p class="hero-sub">Un'analisi su mercato, competitor e posizionamento per Oh Writers — il primo tool che copre l'intero flusso di lavoro creativo-produttivo del cinema in italiano.</p>
@@ -966,9 +996,13 @@
       Può avere successo — se rimane focalizzato
     </div>
   </div>
+</div>
 
-  <!-- ── PROGETTO ── -->
-  <section id="progetto">
+<!-- ══════════════════════════════════════
+     SLIDE 1 — IL PROGETTO
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">00 / Il progetto</p>
     <h2>Oh Writers.</h2>
     <p class="section-desc">Un tool web per filmmaker e sceneggiatori italiani che copre l'intero pipeline creativo-produttivo — dalla prima idea al piano di ripresa.</p>
@@ -976,15 +1010,15 @@
     <div class="grid-3" style="margin-block-end:2rem">
       <div class="card">
         <p class="card-label">Il problema</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7">Un regista-sceneggiatore italiano usa oggi <strong style="color:var(--text)">Final Draft</strong> per scrivere, <strong style="color:var(--text)">Excel</strong> per il breakdown, <strong style="color:var(--text)">Movie Magic</strong> (se può permetterselo) per lo schedule, <strong style="color:var(--text)">Notion</strong> per le note. Quattro tool, quattro contesti, zero integrazione.</p>
+        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7">Un regista-sceneggiatore italiano usa oggi <strong style="color:var(--ds-text)">Final Draft</strong> per scrivere, <strong style="color:var(--ds-text)">Excel</strong> per il breakdown, <strong style="color:var(--ds-text)">Movie Magic</strong> (se può permetterselo) per lo schedule, <strong style="color:var(--ds-text)">Notion</strong> per le note. Quattro tool, quattro contesti, zero integrazione.</p>
       </div>
       <div class="card">
         <p class="card-label">La soluzione</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7">Un'unica superficie web che copre <strong style="color:var(--text)">scrittura</strong> (soggetto → sinossi → scaletta → sceneggiatura), <strong style="color:var(--text)">pre-produzione</strong> (breakdown, budget, piano di ripresa, schedule) e <strong style="color:var(--text)">AI contestuale</strong> che conosce l'intera produzione.</p>
+        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7">Un'unica superficie web che copre <strong style="color:var(--ds-text)">scrittura</strong> (soggetto → sinossi → scaletta → sceneggiatura), <strong style="color:var(--ds-text)">pre-produzione</strong> (breakdown, budget, piano di ripresa, schedule) e <strong style="color:var(--ds-text)">AI contestuale</strong> che conosce l'intera produzione.</p>
       </div>
       <div class="card">
         <p class="card-label">Il vantaggio competitivo</p>
-        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7"><strong style="color:var(--text)">Cesare</strong> (ispirato a Zavattini) non è un chatbot. Conosce la sceneggiatura, il breakdown, il budget e il calendario — l'unico AI che ragiona sull'intera produzione, non sulla singola scena. Dettaglio espanso qui sotto.</p>
+        <p class="card-desc" style="margin-block-start:0.5rem;font-size:0.95rem;line-height:1.7"><strong style="color:var(--ds-text)">Cesare</strong> (ispirato a Zavattini) non è un chatbot. Conosce la sceneggiatura, il breakdown, il budget e il calendario — l'unico AI che ragiona sull'intera produzione, non sulla singola scena. Dettaglio espanso qui sotto.</p>
       </div>
     </div>
 
@@ -992,7 +1026,7 @@
     <div class="moat-full-card">
       <p class="card-label" style="margin-block-end:0.75rem">Il vantaggio competitivo di Cesare — perché l'AI contestuale non è replicabile</p>
       <p class="moat-intro">
-        Gli strumenti AI generici (ChatGPT, Claude, Gemini) non hanno nessun contesto sulla produzione. Incolli una scena e ottieni suggerimenti generici, senza sapere chi recita, qual è il budget residuo o se quella location è già prenotata quel giorno. I competitor più avanzati hanno AI, ma silo: l'AI di Arc Studio Pro conosce lo script, non il breakdown. L'AI di StudioBinder conosce il breakdown, non lo script e non il budget. <strong style="color:var(--text)">Cesare conosce tutto.</strong>
+        Gli strumenti AI generici (ChatGPT, Claude, Gemini) non hanno nessun contesto sulla produzione. Incolli una scena e ottieni suggerimenti generici, senza sapere chi recita, qual è il budget residuo o se quella location è già prenotata quel giorno. I competitor più avanzati hanno AI, ma silo: l'AI di Arc Studio Pro conosce lo script, non il breakdown. L'AI di StudioBinder conosce il breakdown, non lo script e non il budget. <strong style="color:var(--ds-text)">Cesare conosce tutto.</strong>
       </p>
 
       <p class="moat-subsection-title">Confronto AI — cosa conosce ogni strumento</p>
@@ -1099,28 +1133,28 @@
       </div>
     </div>
 
-    <div class="card-standalone" style="margin-block-end:2rem">
+    <div class="card-standalone" style="margin-block-start:1.5rem;margin-block-end:2rem">
       <p class="card-label">Pipeline completo in un'unica app</p>
-      <div style="display:flex;gap:0;margin-block-start:1.25rem;overflow:hidden;border-radius:var(--radius-sm);border:1px solid var(--border)">
-        <div style="flex:1;padding:1rem 1.25rem;background:var(--accent-subtle);border-inline-end:1px solid var(--border)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-block-end:0.4rem">Scrittura</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Soggetto<br>Sinossi<br>Scaletta<br>Trattamento<br>Sceneggiatura</div>
+      <div style="display:flex;gap:0;margin-block-start:1.25rem;overflow:hidden;border-radius:var(--ds-radius-sm);border:1px solid var(--ds-line-soft)">
+        <div style="flex:1;padding:1rem 1.25rem;background:var(--ds-action-soft);border-inline-end:1px solid var(--ds-line-soft)">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-action);margin-block-end:0.4rem">Scrittura</div>
+          <div style="font-size:0.8rem;color:var(--ds-text-mute);line-height:1.6">Soggetto<br>Sinossi<br>Scaletta<br>Trattamento<br>Sceneggiatura</div>
         </div>
-        <div style="flex:1;padding:1rem 1.25rem;background:var(--bg-card);border-inline-end:1px solid var(--border)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-block-end:0.4rem">Breakdown</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Cast · Comparse<br>Location · Props<br>VFX · Costumi<br>Suono · Trucco<br>Veicoli</div>
+        <div style="flex:1;padding:1rem 1.25rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Breakdown</div>
+          <div style="font-size:0.8rem;color:var(--ds-text-mute);line-height:1.6">Cast · Comparse<br>Location · Props<br>VFX · Costumi<br>Suono · Trucco<br>Veicoli</div>
         </div>
-        <div style="flex:1;padding:1rem 1.25rem;background:var(--bg-card);border-inline-end:1px solid var(--border)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-block-end:0.4rem">Budget</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Stime AI per ruolo<br>Tariffa giornaliera<br>Contingency<br>Vista per giornata<br>Export PDF</div>
+        <div style="flex:1;padding:1rem 1.25rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Budget</div>
+          <div style="font-size:0.8rem;color:var(--ds-text-mute);line-height:1.6">Stime AI per ruolo<br>Tariffa giornaliera<br>Contingency<br>Vista per giornata<br>Export PDF</div>
         </div>
-        <div style="flex:1;padding:1rem 1.25rem;background:var(--bg-card);border-inline-end:1px solid var(--border)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-block-end:0.4rem">Piano di ripresa</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Shot planning<br>Timeline visuale<br>Blocking editor<br>Calendario set<br>Multi-scenario</div>
+        <div style="flex:1;padding:1rem 1.25rem;background:var(--ds-surface);border-inline-end:1px solid var(--ds-line-soft)">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Piano di ripresa</div>
+          <div style="font-size:0.8rem;color:var(--ds-text-mute);line-height:1.6">Shot planning<br>Timeline visuale<br>Blocking editor<br>Calendario set<br>Multi-scenario</div>
         </div>
-        <div style="flex:1;padding:1rem 1.25rem;background:var(--bg-card)">
-          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-block-end:0.4rem">Schedule</div>
-          <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Strip board<br>Giorni di ripresa<br>Ordine scene<br>Collaborazione<br>Generazione AI</div>
+        <div style="flex:1;padding:1rem 1.25rem;background:var(--ds-surface)">
+          <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ds-text-faint);margin-block-end:0.4rem">Schedule</div>
+          <div style="font-size:0.8rem;color:var(--ds-text-mute);line-height:1.6">Strip board<br>Giorni di ripresa<br>Ordine scene<br>Collaborazione<br>Generazione AI</div>
         </div>
       </div>
     </div>
@@ -1130,28 +1164,28 @@
         <p class="card-label">Stack tecnologico</p>
         <div style="display:flex;flex-direction:column;gap:0.5rem;margin-block-start:0.75rem">
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--text-muted)">Framework</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">TanStack Start (SSR)</span>
+            <span style="color:var(--ds-text-mute)">Framework</span>
+            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">TanStack Start (SSR)</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--text-muted)">Editor</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">Editor web proprietario (Fountain)</span>
+            <span style="color:var(--ds-text-mute)">Editor</span>
+            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Editor web proprietario (Fountain)</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--text-muted)">Collaborazione</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">Yjs real-time</span>
+            <span style="color:var(--ds-text-mute)">Collaborazione</span>
+            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Yjs real-time</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--text-muted)">AI</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">Claude (Anthropic)</span>
+            <span style="color:var(--ds-text-mute)">AI</span>
+            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Claude (Anthropic)</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--text-muted)">Database</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">PostgreSQL + Drizzle</span>
+            <span style="color:var(--ds-text-mute)">Database</span>
+            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">PostgreSQL + Drizzle</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.83rem">
-            <span style="color:var(--text-muted)">Mobile (roadmap)</span>
-            <span style="color:var(--text);font-family:var(--font-mono);font-size:0.78rem">Expo companion</span>
+            <span style="color:var(--ds-text-mute)">Mobile (roadmap)</span>
+            <span style="color:var(--ds-text);font-family:var(--ds-font-mono);font-size:0.78rem">Expo companion</span>
           </div>
         </div>
       </div>
@@ -1159,36 +1193,40 @@
         <p class="card-label">Stato attuale</p>
         <div style="display:flex;flex-direction:column;gap:0.6rem;margin-block-start:0.75rem">
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--green);flex-shrink:0">✓</span>
-            <span style="color:var(--text-muted)">Scrittura completa (soggetto → sceneggiatura con editor Fountain proprietario)</span>
+            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
+            <span style="color:var(--ds-text-mute)">Scrittura completa (soggetto → sceneggiatura con editor Fountain proprietario)</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--green);flex-shrink:0">✓</span>
-            <span style="color:var(--text-muted)">Breakdown con estrazione AI per 10+ categorie</span>
+            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
+            <span style="color:var(--ds-text-mute)">Breakdown con estrazione AI per 10+ categorie</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--green);flex-shrink:0">✓</span>
-            <span style="color:var(--text-muted)">Budget con stime AI, tariffe, viste per categoria e per giornata</span>
+            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
+            <span style="color:var(--ds-text-mute)">Budget con stime AI, tariffe, viste per categoria e per giornata</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--green);flex-shrink:0">✓</span>
-            <span style="color:var(--text-muted)">Piano di ripresa con shot planning, blocking editor, calendario</span>
+            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
+            <span style="color:var(--ds-text-mute)">Piano di ripresa con shot planning, blocking editor, calendario</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--green);flex-shrink:0">✓</span>
-            <span style="color:var(--text-muted)">Schedule (strip board) con generazione AI e collaborazione team</span>
+            <span style="color:var(--ds-success);flex-shrink:0">✓</span>
+            <span style="color:var(--ds-text-mute)">Schedule (strip board) con generazione AI e collaborazione team</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.83rem">
-            <span style="color:var(--accent);flex-shrink:0">→</span>
-            <span style="color:var(--text-muted)">Cesare AI (in sviluppo attivo): assistente contestuale universale</span>
+            <span style="color:var(--ds-action);flex-shrink:0">→</span>
+            <span style="color:var(--ds-text-mute)">Cesare AI (in sviluppo attivo): assistente contestuale universale</span>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── MERCATO ── -->
-  <section id="mercato">
+<!-- ══════════════════════════════════════
+     SLIDE 2 — DIMENSIONE DEL MERCATO
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">01 / Dimensione del mercato</p>
     <h2>L'Italia è prima in Europa.<br>Nessuno lo sa.</h2>
     <p class="section-desc">Nel 2024, l'Italia ha prodotto 350 film — più di Francia, UK e Spagna. Il settore audiovisivo conta 65.000 professionisti diretti.</p>
@@ -1197,27 +1235,27 @@
       <div class="stat">
         <div class="stat-value">350</div>
         <div class="stat-label">film italiani nel 2024</div>
-        <div class="stat-source">1° in Europa — <a href="#fonti" style="color:inherit;text-decoration:none">ANICA 2024 <sup>[1]</sup></a></div>
+        <div class="stat-source">1° in Europa — ANICA 2024 <sup>[1]</sup></div>
       </div>
       <div class="stat">
         <div class="stat-value">65K</div>
         <div class="stat-label">professionisti diretti</div>
-        <div class="stat-source">audiovisivo italiano — <a href="#fonti" style="color:inherit;text-decoration:none">ANICA 2024 <sup>[1]</sup></a></div>
+        <div class="stat-source">audiovisivo italiano — ANICA 2024 <sup>[1]</sup></div>
       </div>
       <div class="stat">
         <div class="stat-value">77%</div>
         <div class="stat-label">film europei = writer-director</div>
-        <div class="stat-source"><a href="#fonti" style="color:inherit;text-decoration:none">EAO 2015–2023 <sup>[2]</sup></a></div>
+        <div class="stat-source">EAO 2015–2023 <sup>[2]</sup></div>
       </div>
       <div class="stat">
         <div class="stat-value">1.500+</div>
         <div class="stat-label">film/anno in Europa</div>
-        <div class="stat-source">Francia, UK, Spagna, Germania, IT — <a href="#fonti" style="color:inherit;text-decoration:none">EAO <sup>[2]</sup></a></div>
+        <div class="stat-source">Francia, UK, Spagna, Germania, IT — EAO <sup>[2]</sup></div>
       </div>
       <div class="stat">
         <div class="stat-value">+47%</div>
         <div class="stat-label">crescita produzione EU</div>
-        <div class="stat-source">ultimo decennio — <a href="#fonti" style="color:inherit;text-decoration:none">EAO <sup>[2]</sup></a></div>
+        <div class="stat-source">ultimo decennio — EAO <sup>[2]</sup></div>
       </div>
     </div>
 
@@ -1226,7 +1264,7 @@
         <div class="funnel-tag">Mercato globale</div>
         <div>
           <div class="funnel-label">Tutti i filmmaker e sceneggiatori nel mondo — scrittura + pre-produzione</div>
-          <div class="funnel-sub">Tutti i professionisti del cinema e TV nel mondo con strumenti digitali · <a href="#fonti" style="color:var(--text-dim);font-size:0.75rem;text-decoration:none">Stima interna <sup>[3]</sup></a></div>
+          <div class="funnel-sub">Tutti i professionisti del cinema e TV nel mondo con strumenti digitali · Stima interna <sup>[3]</sup></div>
         </div>
         <div class="funnel-amount">$1.5–2B</div>
       </div>
@@ -1234,7 +1272,7 @@
         <div class="funnel-tag">Nostro segmento</div>
         <div>
           <div class="funnel-label">Indie filmmaker in Europa e Nord America</div>
-          <div class="funnel-sub">Professionisti indipendenti, fuori dalle grandi major — il segmento raggiungibile realisticamente · <a href="#fonti" style="color:var(--text-dim);font-size:0.75rem;text-decoration:none">Stima interna <sup>[3]</sup></a></div>
+          <div class="funnel-sub">Professionisti indipendenti, fuori dalle grandi major — il segmento raggiungibile realisticamente · Stima interna <sup>[3]</sup></div>
         </div>
         <div class="funnel-amount">$300–400M</div>
       </div>
@@ -1242,15 +1280,19 @@
         <div class="funnel-tag">Obiettivo 5 anni</div>
         <div>
           <div class="funnel-label">Obiettivo realistico Oh Writers — 5 anni</div>
-          <div class="funnel-sub">Indie filmmaker IT + EU, professionisti non-major, primi utenti internazionali · <a href="#fonti" style="color:var(--text-dim);font-size:0.75rem;text-decoration:none">Stima interna <sup>[3]</sup></a></div>
+          <div class="funnel-sub">Indie filmmaker IT + EU, professionisti non-major, primi utenti internazionali · Stima interna <sup>[3]</sup></div>
         </div>
         <div class="funnel-amount">$5–15M/anno</div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── COMPETITOR ── -->
-  <section id="competitor">
+<!-- ══════════════════════════════════════
+     SLIDE 3 — COMPETITOR
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">02 / Panorama competitor</p>
     <h2>Tutti forti su un pezzo.<br>Nessuno copre tutto.</h2>
     <p class="section-desc">Il mercato è frammentato: chi fa screenwriting non fa scheduling, chi fa scheduling non fa AI, nessuno è localizzato in italiano.</p>
@@ -1275,7 +1317,7 @@
                 <span class="tag tag-red">Desktop</span>
               </div>
             </td>
-            <td><span class="comp-price">$199 una tantum <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
+            <td><span class="comp-price">$199 una tantum <sup>[4]</sup></span></td>
             <td>30 anni di inerzia; .fdx è il formato universale; WGA lo richiede</td>
             <td>Nessuna pre-produzione. Collaborazione limitata. UX degli anni 2000. Sconosciuto nell'indie italiano.</td>
           </tr>
@@ -1288,7 +1330,7 @@
                 <span class="tag tag-red">Desktop</span>
               </div>
             </td>
-            <td><span class="comp-price">$49.99/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
+            <td><span class="comp-price">$49.99/mese <sup>[4]</sup></span></td>
             <td>Standard assoluto per AD e line producer nelle produzioni grandi</td>
             <td>UI anni 2000. Zero AI. Nessun screenwriting. Due prodotti separati che non si integrano. Sconosciuto in Italia.</td>
           </tr>
@@ -1301,7 +1343,7 @@
                 <span class="tag tag-red">Molto costoso</span>
               </div>
             </td>
-            <td><span class="comp-price">$29–349/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
+            <td><span class="comp-price">$29–349/mese <sup>[4]</sup></span></td>
             <td>Copre call sheet, scheduling, shot list, breakdown in un'unica web app; marketing aggressivo</td>
             <td>Screenwriting mediocre. Nessun budget. AI assente. Solo inglese. Troppo costoso per filmmaker singoli. Non usato in Italia.</td>
           </tr>
@@ -1313,7 +1355,7 @@
                 <span class="tag tag-red">Invecchiato</span>
               </div>
             </td>
-            <td><span class="comp-price">~$20/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
+            <td><span class="comp-price">~$20/mese <sup>[4]</sup></span></td>
             <td>Pioniere del tutto-in-uno; molto diffuso nelle scuole di cinema; prezzo aggressivo</td>
             <td>Nessun salto generazionale. Editor sceneggiatura inferiore. AI irrilevante. Perde utenti dopo la formazione.</td>
           </tr>
@@ -1326,7 +1368,7 @@
                 <span class="tag tag-red">Solo scrittura</span>
               </div>
             </td>
-            <td><span class="comp-price">$9.99/mese <a href="#fonti" style="color:var(--text-dim);font-size:0.68rem;text-decoration:none"><sup>[4]</sup></a></span></td>
+            <td><span class="comp-price">$9.99/mese <sup>[4]</sup></span></td>
             <td>Il più moderno tra i tool di screenwriting. UX eccellente. Prezzo aggressivo. Cresce rapidamente.</td>
             <td>Zero pre-produzione. Zero budget/scheduling. Solo mercato anglofono.</td>
           </tr>
@@ -1356,10 +1398,14 @@
         </tbody>
       </table>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── POSIZIONAMENTO ── -->
-  <section id="posizionamento">
+<!-- ══════════════════════════════════════
+     SLIDE 4 — POSIZIONAMENTO
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">03 / Dove ci posizioniamo</p>
     <h2>Il gap esiste.<br>È documentabile.</h2>
     <p class="section-desc">Oh Writers è l'unico tool che copre l'intero pipeline in un'unica web app moderna, con AI contestuale, in italiano.</p>
@@ -1443,7 +1489,7 @@
           </tr>
           <tr class="ours-row">
             <td>Oh Writers</td>
-            <td colspan="6" style="text-align:start;color:var(--accent);font-size:0.8rem;padding-inline-start:1rem">
+            <td colspan="6" style="text-align:start;color:var(--ds-action);font-size:0.8rem;padding-inline-start:1rem">
               Unico a coprire tutti e 7 i punti in un'unica superficie
             </td>
           </tr>
@@ -1454,7 +1500,7 @@
     <div class="card-standalone">
       <p class="card-label">Target primario</p>
       <p style="font-size:1rem;font-weight:600;margin-block-end:0.75rem">Il writer-director indie italiano</p>
-      <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.7">
+      <p style="font-size:0.875rem;color:var(--ds-text-mute);line-height:1.7">
         Il 77% dei film europei è scritto e diretto dalla stessa persona (EAO 2015–2023). Questo filmmaker usa Final Draft per la sceneggiatura e Notion/Excel per il breakdown — soffre il cambio di contesto tra tool più di chiunque altro. Oh Writers è costruito per lui: un'unica superficie dal soggetto al piano di ripresa, senza uscire mai dall'app.
       </p>
       <div style="margin-block-start:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
@@ -1464,10 +1510,14 @@
         <span class="tag tag-amber">Line producer mid-market</span>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── GO-TO-MARKET ── -->
-  <section id="gtm">
+<!-- ══════════════════════════════════════
+     SLIDE 5 — GO-TO-MARKET
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">04 / Come arriviamo ai clienti</p>
     <h2>Italia come laboratorio.<br>Non come destinazione.</h2>
     <p class="section-desc">Il mercato italiano è sufficiente per validare il prodotto. Non è sufficiente per scalare. La sequenza conta.</p>
@@ -1476,38 +1526,42 @@
       <div class="gtm-step">
         <h4>Scuole di cinema — acquisizione captive</h4>
         <p>CSC (Centro Sperimentale di Cinematografia), Accademia del Cinema Italiano, NABA, IED. I filmmaker cambiano tool nella fase di formazione. Chi impara su Oh Writers è un cliente potenziale per 20 anni.</p>
-        <span class="phase-badge" style="background:var(--green-dim);color:var(--green)">Fase 1 — Italia</span>
+        <span class="phase-badge" style="background:var(--ds-success-soft);color:var(--ds-success)">Fase 1 — Italia</span>
       </div>
       <div class="gtm-step">
         <h4>Festival e community</h4>
         <p>Sponsorizzazione di festival selezionati: Torino Film Festival, Trieste Science+Fiction, SIC alla Mostra di Venezia. Accesso gratuito per i selezionati — credibilità al costo di zero marketing.</p>
-        <span class="phase-badge" style="background:var(--green-dim);color:var(--green)">Fase 1 — Italia</span>
+        <span class="phase-badge" style="background:var(--ds-success-soft);color:var(--ds-success)">Fase 1 — Italia</span>
       </div>
       <div class="gtm-step">
         <h4>Freemium aggressivo — la scrittura è free</h4>
         <p>Chi completa una sceneggiatura ha già investito settimane. La conversione al piano paid avviene naturalmente nel momento del breakdown. Nessun cold start: import da Fountain e .fdx.</p>
-        <span class="phase-badge" style="background:var(--blue-dim);color:var(--blue)">Sempre attivo</span>
+        <span class="phase-badge" style="background:var(--ds-info-soft);color:var(--ds-info)">Sempre attivo</span>
       </div>
       <div class="gtm-step">
         <h4>Francia e Spagna come step due</h4>
         <p>Stessa struttura di mercato, stessa cultura del writer-director, stesse frustrazioni. Localizzazione FR e ES prima dell'inglese — il mercato anglofono ha Final Draft e StudioBinder radicati; quello europeo no.</p>
-        <span class="phase-badge" style="background:var(--accent-subtle);color:var(--accent)">Fase 2 — Europa</span>
+        <span class="phase-badge" style="background:var(--ds-action-soft);color:var(--ds-action)">Fase 2 — Europa</span>
       </div>
       <div class="gtm-step">
         <h4>Team plan come obiettivo di monetizzazione</h4>
         <p>Un produttore che porta 3 AD e 2 sceneggiatori nello stesso workspace vale 10× un utente singolo. Ogni feature di collaborazione (breakdown condiviso, schedule multi-utente) avvicina il team plan.</p>
-        <span class="phase-badge" style="background:var(--accent-subtle);color:var(--accent)">Obiettivo economico</span>
+        <span class="phase-badge" style="background:var(--ds-action-soft);color:var(--ds-action)">Obiettivo economico</span>
       </div>
       <div class="gtm-step">
         <h4>Mercato anglofono — ultimo</h4>
         <p>US e UK hanno incumbent fortissimi. Entrarci prima di avere trazione europea è bruciare risorse. La credibilità europea diventa il proof point per l'internazionalizzazione.</p>
-        <span class="phase-badge" style="background:var(--border);color:var(--text-dim)">Fase 3 — Internazionale</span>
+        <span class="phase-badge" style="background:var(--ds-line-soft);color:var(--ds-text-faint)">Fase 3 — Internazionale</span>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── PRICING ── -->
-  <section id="pricing">
+<!-- ══════════════════════════════════════
+     SLIDE 6 — PRICING
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">05 / Prezzi</p>
     <h2>I ricavi veri vengono dai team,<br>non dai singoli.</h2>
     <p class="section-desc">Un singolo filmmaker a €25/mese, se smette di pagare dopo 6 mesi, genera €150. Un team di 3–5 persone a €80/mese, che rinnova per un anno intero, genera €960. I team sono il modello su cui si regge il progetto.</p>
@@ -1554,35 +1608,39 @@
       <p class="card-label">Benchmark competitor (mensile)</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-block-start:0.75rem">
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">~$17</div>
-          <div style="font-size:0.75rem;color:var(--text-dim)">Final Draft (amortizzato)</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">~$17</div>
+          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Final Draft (amortizzato)</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$49.99</div>
-          <div style="font-size:0.75rem;color:var(--text-dim)">Movie Magic</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">$49.99</div>
+          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Movie Magic</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--red)">$29–349</div>
-          <div style="font-size:0.75rem;color:var(--text-dim)">StudioBinder</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-danger)">$29–349</div>
+          <div style="font-size:0.75rem;color:var(--ds-text-faint)">StudioBinder</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">~$20</div>
-          <div style="font-size:0.75rem;color:var(--text-dim)">Celtx</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">~$20</div>
+          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Celtx</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">$9.99</div>
-          <div style="font-size:0.75rem;color:var(--text-dim)">Arc Studio</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-text-mute)">$9.99</div>
+          <div style="font-size:0.75rem;color:var(--ds-text-faint)">Arc Studio</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.25rem;font-weight:700;color:var(--accent)">€20–80</div>
-          <div style="font-size:0.75rem;color:var(--accent)">Oh Writers</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--ds-action)">€20–80</div>
+          <div style="font-size:0.75rem;color:var(--ds-action)">Oh Writers</div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── RISCHI ── -->
-  <section id="rischi">
+<!-- ══════════════════════════════════════
+     SLIDE 7 — RISCHI
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">06 / Rischi</p>
     <h2>Il rischio vero non è<br>Final Draft. È l'AI.</h2>
     <p class="section-desc">Il vantaggio competitivo di Cesare non è il modello linguistico. È l'integrazione contestuale con tutti i dati della produzione.</p>
@@ -1644,10 +1702,14 @@
         <div class="risk-mitigation">Italia è un laboratorio, non il mercato finale. Francia e Spagna sono il passo due.</div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── VERDETTO ── -->
-  <section id="verdetto">
+<!-- ══════════════════════════════════════
+     SLIDE 8 — VERDETTO
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">07 / Verdetto</p>
     <h2>La risposta.</h2>
 
@@ -1664,52 +1726,56 @@
 
     <div style="margin-block-start:1.5rem" class="grid-2">
       <div class="card-standalone">
-        <p class="card-label" style="color:var(--red)">Non funziona se</p>
+        <p class="card-label" style="color:var(--ds-danger)">Non funziona se</p>
         <ul style="list-style:none;display:flex;flex-direction:column;gap:0.6rem;margin-block-start:0.5rem">
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--red)">✗</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
             Proviamo a competere con Final Draft su screenwriting puro
           </li>
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--red)">✗</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
             Cesare è un chatbot senza integrazione dati
           </li>
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--red)">✗</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
             Entriamo nel mercato anglofono prima di avere trazione europea
           </li>
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--red)">✗</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-danger)">✗</span>
             Aggiungiamo feature senza 200 clienti che rinnovano
           </li>
         </ul>
       </div>
       <div class="card-standalone">
-        <p class="card-label" style="color:var(--green)">Funziona se</p>
+        <p class="card-label" style="color:var(--ds-success)">Funziona se</p>
         <ul style="list-style:none;display:flex;flex-direction:column;gap:0.6rem;margin-block-start:0.5rem">
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--green)">✓</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
             Restiamo il tool del writer-director indie europeo
           </li>
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--green)">✓</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
             Cesare conosce l'intera produzione, non solo la scena aperta
           </li>
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--green)">✓</span>
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
             Il freemium converte nel momento naturale (breakdown dopo lo script)
           </li>
-          <li style="font-size:0.85rem;color:var(--text-muted);padding-inline-start:1.25rem;position:relative">
-            <span style="position:absolute;inset-inline-start:0;color:var(--green)">✓</span>
-            Il team plan è l'obiettivo di monetizzazione, non l'afterthought
+          <li style="font-size:0.85rem;color:var(--ds-text-mute);padding-inline-start:1.25rem;position:relative">
+            <span style="position:absolute;inset-inline-start:0;color:var(--ds-success)">✓</span>
+            Il team plan è l'obiettivo di monetizzazione, not the afterthought
           </li>
         </ul>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- ── FONTI ── -->
-  <section id="fonti">
+<!-- ══════════════════════════════════════
+     SLIDE 9 — FONTI
+══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-inner">
     <p class="section-label">Fonti e metodologia</p>
     <h2>Fonti.</h2>
     <p class="section-desc">Riferimenti per tutti i dati citati in questa analisi.</p>
@@ -1756,27 +1822,52 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</div>
 
-</main>
-
-<footer>
-  Oh Writers · Analisi di Mercato Interna · Maggio 2025 · Dati: ANICA, EAO, Statista, IMARC Group, Research and Markets
-</footer>
+<!-- ── SLIDE NAV ── -->
+<nav class="slide-nav">
+  <button class="nav-prev" aria-label="Slide precedente">&#8249;</button>
+  <span class="slide-counter">1 / 10</span>
+  <button class="nav-next" aria-label="Slide successiva">&#8250;</button>
+</nav>
 
 <script>
-  // Scroll-triggered section reveal
-  const sections = document.querySelectorAll('section');
-  const observer = new IntersectionObserver(
-    (entries) => entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        observer.unobserve(e.target);
-      }
-    }),
-    { threshold: 0.08 }
-  );
-  sections.forEach(s => observer.observe(s));
+  const allSlides = document.querySelectorAll('.slide, .slide-hero');
+  let current = 0;
+
+  function goTo(n) {
+    allSlides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, allSlides.length - 1));
+    allSlides[current].classList.add('active');
+
+    document.querySelector('.slide-counter').textContent =
+      `${current + 1} / ${allSlides.length}`;
+
+    const pct = ((current + 1) / allSlides.length) * 100;
+    document.querySelector('.progress-bar').style.width = pct + '%';
+
+    const prevBtn = document.querySelector('.nav-prev');
+    const nextBtn = document.querySelector('.nav-next');
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === allSlides.length - 1;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      goTo(current + 1);
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goTo(current - 1);
+    }
+  });
+
+  document.querySelector('.nav-prev').addEventListener('click', () => goTo(current - 1));
+  document.querySelector('.nav-next').addEventListener('click', () => goTo(current + 1));
+
+  goTo(0);
 </script>
 
 </body>
