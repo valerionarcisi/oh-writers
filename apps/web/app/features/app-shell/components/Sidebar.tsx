@@ -16,7 +16,6 @@ import {
   MapPin,
   PanelLeftClose,
   PanelLeftOpen,
-  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -25,6 +24,7 @@ import {
   type DocumentType,
 } from "@oh-writers/domain";
 import { DOCUMENT_LABELS } from "~/features/documents";
+import { DropdownMenu } from "@oh-writers/ui";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
 import styles from "./Sidebar.module.css";
@@ -59,6 +59,19 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
     await signOut();
     window.location.href = "/login";
   };
+
+  const userMenuItems = [
+    {
+      label: "Analisi di mercato",
+      icon: "bar-chart",
+      onClick: () => window.open("/market-analysis.html", "_blank"),
+    },
+    {
+      label: "Sign out",
+      icon: "log-out",
+      onClick: handleSignOut,
+    },
+  ];
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
@@ -264,27 +277,21 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* User */}
-      <div className={styles.user}>
-        <div className={styles.userAvatar} title={user.name}>
-          {initials}
-        </div>
-        {!isCollapsed && (
-          <>
-            <div className={styles.userInfo}>
-              <div className={styles.userName}>{user.name}</div>
-              <div className={styles.userEmail}>{user.email}</div>
-            </div>
-            <button
-              type="button"
-              className={styles.signOutBtn}
-              onClick={handleSignOut}
-              title="Sign out"
-            >
-              <LogOut size={16} strokeWidth={ICON_STROKE} />
-            </button>
-          </>
-        )}
-      </div>
+      <DropdownMenu
+        trigger={
+          <div className={styles.user} title={isCollapsed ? user.name : undefined}>
+            <div className={styles.userAvatar}>{initials}</div>
+            {!isCollapsed && (
+              <div className={styles.userInfo}>
+                <div className={styles.userName}>{user.name}</div>
+                <div className={styles.userEmail}>{user.email}</div>
+              </div>
+            )}
+          </div>
+        }
+        items={userMenuItems}
+        align="end"
+      />
     </aside>
   );
 }
