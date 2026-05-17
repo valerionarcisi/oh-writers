@@ -230,6 +230,17 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                 />
               </div>
               <main className={styles.main}>
+                <div className={styles.sceneRuler}>
+                  <span className={styles.rulerSceneNum}>SC.{selectedScene.sceneNumber}</span>
+                  <span className={styles.rulerHeading}>
+                    {selectedScene.intExt}. {selectedScene.location}
+                  </span>
+                  <span className={styles.rulerMeta}>
+                    {selectedScene.shotCount > 0 && `${selectedScene.shotCount} shot`}
+                    {selectedScene.totalMinutes != null && selectedScene.shotCount > 0 && " · "}
+                    {selectedScene.totalMinutes != null && formatMinutes(selectedScene.totalMinutes)}
+                  </span>
+                </div>
                 {activePlanId && (
                   <BlockingCard
                     sceneId={selectedScene.sceneId}
