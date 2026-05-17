@@ -162,7 +162,7 @@
 }
 
 .bulkBtnDestructive {
-  color: var(--ds-danger, #d93025);
+  color: var(--ds-danger);
   border-color: currentColor;
 
   &:hover {
@@ -255,17 +255,17 @@
 /* ─── Status indicators ──────────────────────────────────────────────────── */
 
 .staleIndicator {
-  color: var(--ds-warning, #f5a623);
+  color: var(--ds-warning);
   font-size: 1rem;
 }
 
 .okIndicator {
-  color: var(--ds-success, #34a853);
+  color: var(--ds-success);
   font-size: 1rem;
 }
 
 .pendingIndicator {
-  color: var(--ds-warning, #f5a623);
+  color: var(--ds-warning);
   font-size: 1.2rem;
   line-height: 1;
 }

@@ -123,7 +123,7 @@ export const ScreenplayEditor = forwardRef<
 ) {
   const [content, setContent] = useState(screenplay.content);
   const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
-    (screenplay.pmDoc as Record<string, unknown> | null) ?? null,
+    screenplay.pmDoc ?? null,
   );
   const [isFocusMode, setFocusMode] = useState(false);
   const {
@@ -461,7 +461,7 @@ export const ScreenplayEditor = forwardRef<
       {
         onSuccess: (sp) => {
           setContent(sp.content);
-          setPmDoc((sp.pmDoc as Record<string, unknown> | null) ?? null);
+          setPmDoc(sp.pmDoc ?? null);
           setViewing({ kind: "live" });
           setAwaitingRestoreConfirm(false);
         },

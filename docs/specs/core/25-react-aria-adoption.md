@@ -1,7 +1,8 @@
 # Spec 25 — React Aria adoption
 
-> Status: draft · Date: 2026-05-15 · Owner: Valerio
+> Status: active · Date: 2026-05-16 · Owner: Valerio
 > Triggered by: user proposal during the 15 May UX polish round — "aggiungere react-aria e i suoi hook come base componenti full accessible".
+> Updated: 2026-05-16 — promoted to active, ALWAYS rule added, implementation started.
 
 ---
 
@@ -137,7 +138,23 @@ Total: **~3.5 dev-days**, sequenced to avoid disturbing other work.
 - CSS Modules untouched.
 - VoiceOver pass-through audit on the main flows: login, dashboard, screenplay editor, breakdown, budget, schedule.
 - No new dependencies beyond `react-aria` + `react-stately`.
-- CLAUDE.md updated: "for primitives that have ARIA semantics, use react-aria hooks; never re-implement focus management or keyboard nav by hand."
+- CLAUDE.md updated: **"Always use react-aria hooks for any primitive that has interactive ARIA semantics. Never re-implement focus management, keyboard navigation, or overlay dismiss by hand."**
+
+## 10. The ALWAYS rule
+
+This decision is permanent and non-negotiable going forward:
+
+> **Any new interactive primitive in `packages/ui/` — button, toggle, menu, dialog, popover, tooltip, tabs, combobox, listbox, datepicker — MUST use the appropriate `react-aria` hook for its semantics layer.** Writing custom ARIA attributes, custom focus traps, custom keyboard handlers, or custom overlay dismiss logic by hand is a hard NO. If a `react-aria` hook exists for the interaction pattern, use it.
+
+This applies to:
+- New components added to `packages/ui/src/components/`
+- Feature-level components in `apps/web/app/features/` that implement their own overlay/menu/dialog behavior
+- Any refactor of existing components (migrate to react-aria as part of the refactor)
+
+Exceptions (document in a comment if you skip):
+- ProseMirror / Monaco editor internals — those have their own a11y model
+- The `<html>` drag-and-drop timeline in shooting plan — custom pointer events for resize gestures are acceptable; reorder drag should use react-aria DnD when migrated
+- Simple `<button>` elements that are already correct HTML (`<button type="button">`) and don't need `aria-pressed`, `aria-haspopup`, or similar — `useButton` is recommended but not mandatory for trivially correct cases
 
 ## 8. Open questions
 

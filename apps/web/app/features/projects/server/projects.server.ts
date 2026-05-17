@@ -14,7 +14,7 @@ import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "~/features/screenplay-editor";
 import { canEdit, isOwner, getMembership } from "~/server/permissions";
-import { requireProjectAccess } from "~/server/access";
+import { withProjectAccess } from "~/server/pipeline";
 import { CreateProjectInput, UpdateProjectInput } from "../projects.schema";
 import {
   ProjectNotFoundError,
@@ -97,11 +97,7 @@ export const teamProjectsQueryOptions = (teamId: string) =>
 export const getProjectById = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
   .handler(
-    async ({
-      data,
-    }): Promise<
-      ResultShape<ProjectWithDocuments, ProjectNotFoundError | DbError>
-    > => {
+    async ({ data }) => {
       const user = await requireUser();
       const db = await getDb();
 
@@ -255,26 +251,24 @@ export const updateProject = createServerFn({ method: "POST" })
       data,
     }): Promise<
       ResultShape<Project, ProjectNotFoundError | ForbiddenError | DbError>
-    > => {
-      const db = await getDb();
-
-      const access = await requireProjectAccess(db, data.projectId, "edit");
-      if (access.isErr()) return toShape(err(access.error));
-
-      return toShape(
-        await ResultAsync.fromPromise(
-          db
-            .update(projects)
-            .set({ ...data.data, updatedAt: new Date() })
-            .where(eq(projects.id, data.projectId))
-            .returning()
-            .then((rows) => rows[0] ?? null),
-          (e) => new DbError("updateProject", e),
-        ).andThen((updated) =>
-          updated ? ok(updated) : err(new ProjectNotFoundError(data.projectId)),
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db }) =>
+          ResultAsync.fromPromise(
+            db
+              .update(projects)
+              .set({ ...data.data, updatedAt: new Date() })
+              .where(eq(projects.id, data.projectId))
+              .returning()
+              .then((rows) => rows[0] ?? null),
+            (e) => new DbError("updateProject", e),
+          ).andThen((updated) =>
+            updated
+              ? ok(updated)
+              : err(new ProjectNotFoundError(data.projectId)),
+          ),
         ),
-      );
-    },
+      ),
   );
 
 // ─── Archive project ──────────────────────────────────────────────────────────
@@ -442,20 +436,17 @@ export const setProjectLocale = createServerFn({ method: "POST" })
       data,
     }): Promise<
       ResultShape<void, ProjectNotFoundError | ForbiddenError | DbError>
-    > => {
-      const db = await getDb();
-      const access = await requireProjectAccess(db, data.projectId, "edit");
-      if (access.isErr()) return toShape(err(access.error));
-
-      return toShape(
-        await ResultAsync.fromPromise(
-          db
-            .update(projects)
-            .set({ locale: data.locale, updatedAt: new Date() })
-            .where(eq(projects.id, data.projectId))
-            .then(() => undefined),
-          (e) => new DbError("setProjectLocale", e),
-        ).map(() => undefined),
-      );
-    },
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "edit", ({ db }) =>
+          ResultAsync.fromPromise(
+            db
+              .update(projects)
+              .set({ locale: data.locale, updatedAt: new Date() })
+              .where(eq(projects.id, data.projectId))
+              .then(() => undefined),
+            (e) => new DbError("setProjectLocale", e),
+          ).map(() => undefined),
+        ),
+      ),
   );

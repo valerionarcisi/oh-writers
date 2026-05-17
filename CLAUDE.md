@@ -270,6 +270,7 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never write TypeScript types by hand** when they can be inferred from Zod or Drizzle
 - **Never use Tailwind**, utility classes, or CSS-in-JS of any kind
 - **Never hardcode** hex colors, arbitrary `px` values, or magic numbers in CSS
+- **Never re-implement focus management, keyboard nav, or overlay dismiss by hand** — use `react-aria` hooks (`useButton`, `useDialog`, `useOverlay`, `useMenu`, `useTabList`, etc.) for every interactive primitive. If a `react-aria` hook exists for the pattern, it is mandatory. See spec 25.
 - **Never use hardcoded border-radius** — use `--radius-*` tokens (`--radius-md` default, `--radius-none` for screenplay page only)
 - **Never mix `null` and `undefined`** in the same type — use `null` for intentional absence
 - **Never expose the Anthropic API key** to the client

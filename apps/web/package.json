@@ -41,7 +41,9 @@
     "prosemirror-transform": "1.8.0",
     "prosemirror-view": "1.33.1",
     "react": "19.2.4",
+    "react-aria": "3.48.0",
     "react-dom": "19.2.4",
+    "react-stately": "3.46.0",
     "ts-pattern": "5.5.0",
     "y-prosemirror": "1.2.6",
     "zod": "3.24.4"

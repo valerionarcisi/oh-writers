@@ -173,8 +173,8 @@
   inline-size: 100%;
   max-inline-size: 720px;
   /* "Paper" — always white regardless of theme, like the screenplay page. */
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--ds-white);
+  color: var(--ds-linen-800);
   box-shadow: var(--shadow-md);
   border-radius: var(--radius-md);
   padding: var(--space-8) var(--space-10);
@@ -200,7 +200,7 @@
   border: 1px solid var(--ds-line-soft, rgba(0, 0, 0, 0.12));
   border-radius: var(--radius-sm);
   background: transparent;
-  color: #1a1a1a;
+  color: var(--ds-linen-800);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   cursor: pointer;

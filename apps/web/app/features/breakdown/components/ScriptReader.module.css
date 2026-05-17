@@ -6,8 +6,8 @@
 .reader {
   inline-size: 100%;
   max-inline-size: 816px;
-  background: #ffffff;
-  color: #111;
+  background: var(--ds-white);
+  color: var(--ds-linen-800);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
   /* Top padding tight — content starts close to top edge, killing the
    * passive whitespace previously left between card top and first scene. */

@@ -123,19 +123,6 @@ const resolveVersionId = async (
   return screenplay?.currentVersionId ?? null;
 };
 
-// loadBudgetWithLines kept as a Promise-returning helper for callers inside
-// the same handler that already manage their own ResultAsync envelope (e.g.
-// generateBudget's transactional body). New callers should use
-// `findBudgetWithLines`.
-const loadBudgetWithLines = async (
-  db: Db,
-  projectId: string,
-): Promise<Budget | null> => {
-  const result = await findBudgetWithLines(db, projectId);
-  if (result.isErr()) throw result.error;
-  return result.value;
-};
-
 // ─── Lookup helpers (Phase 2b) ──────────────────────────────────────────────
 //
 // Each `findXById` returns `ResultAsync<X, NotFoundError | DbError>`. They are
@@ -545,13 +532,14 @@ export const generateBudget = createServerFn({ method: "POST" })
             );
           }
 
-              const reloaded = await loadBudgetWithLines(db, projectId);
-              if (!reloaded)
+              const reloadResult = await findBudgetWithLines(db, projectId);
+              if (reloadResult.isErr()) throw reloadResult.error;
+              if (!reloadResult.value)
                 throw new DbError(
                   "generateBudget",
                   "budget missing after insert",
                 );
-              return reloaded;
+              return reloadResult.value;
             })(),
             (e: unknown) =>
               (e instanceof NoBreakdownError
@@ -670,10 +658,10 @@ export const updateBudgetSettings = createServerFn({ method: "POST" })
                 db
                   .update(budgets)
                   .set(set)
-                  .where(eq(budgets.id, data.budgetId))
-                  .then(() => loadBudgetWithLines(db, budget.projectId)),
+                  .where(eq(budgets.id, data.budgetId)),
                 (e) => new DbError("updateBudgetSettings", e),
-              ).andThen((updated) =>
+              ).andThen(() => findBudgetWithLines(db, budget.projectId))
+               .andThen((updated) =>
                 updated
                   ? ok(updated)
                   : err(new DbError("updateBudgetSettings", "reload failed")),
