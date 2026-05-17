@@ -4,28 +4,71 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Oh Writers — Analisi di Mercato 2025</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f0f0f;
-      --bg-card: #181818;
-      --bg-card-hover: #202020;
-      --border: #2a2a2a;
-      --border-strong: #3a3a3a;
-      --text: #e8e2d9;
-      --text-muted: #8a8480;
-      --text-dim: #5a5450;
-      --accent: #c9a96e;
-      --accent-dim: #7a5f35;
-      --green: #4caf82;
-      --green-dim: #1e3d2e;
-      --red: #e06c75;
-      --red-dim: #3d1e22;
-      --blue: #61afef;
-      --blue-dim: #1e2e3d;
-      --radius: 12px;
-      --radius-sm: 8px;
-      --font: 'Inter', 'Helvetica Neue', sans-serif;
-      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      /* Backgrounds */
+      --bg: #0a0a0a;
+      --bg-card: #111111;
+      --bg-elevated: #1a1a1a;
+      --bg-overlay: #222222;
+      --bg-card-hover: #1a1a1a;
+
+      /* Text */
+      --text: #f0f0ef;
+      --text-secondary: #a0a09b;
+      --text-muted: #a0a09b;
+      --text-dim: #5a5a57;
+
+      /* Borders */
+      --border: rgba(255, 255, 255, 0.07);
+      --border-strong: rgba(255, 255, 255, 0.14);
+
+      /* Accent — teal (primary) */
+      --accent: #14b8a6;
+      --accent-hover: #0d9488;
+      --accent-subtle: rgba(20, 184, 166, 0.10);
+      --accent-border: rgba(20, 184, 166, 0.25);
+      --accent-dim: rgba(20, 184, 166, 0.10);
+
+      /* Amber — secondary / editorial */
+      --amber: #d4a853;
+      --amber-subtle: rgba(212, 168, 83, 0.10);
+
+      /* Semantic */
+      --green: #22c55e;
+      --green-dim: rgba(34, 197, 94, 0.12);
+      --red: #e5534b;
+      --red-dim: rgba(229, 83, 75, 0.12);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59, 130, 246, 0.12);
+
+      /* Radius */
+      --radius: 6px;
+      --radius-sm: 4px;
+      --radius-lg: 10px;
+      --radius-full: 9999px;
+
+      /* Shadows */
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.25);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.30);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
+
+      /* Typography */
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Fraunces', Georgia, serif;
+      --font-mono: 'Courier Prime', 'Courier New', monospace;
+
+      /* Spacing */
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-12: 3rem;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,7 +89,7 @@
       top: 0;
       inset-inline: 0;
       z-index: 100;
-      background: rgba(15,15,15,0.85);
+      background: rgba(10,10,10,0.85);
       backdrop-filter: blur(12px);
       border-block-end: 1px solid var(--border);
       padding: 0 2rem;
@@ -100,17 +143,19 @@
     }
 
     .hero-eyebrow {
+      font-family: var(--font);
       font-size: 0.75rem;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--accent);
+      color: var(--text-dim);
       margin-block-end: 1.5rem;
     }
 
     .hero h1 {
+      font-family: var(--font-serif);
       font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 700;
-      letter-spacing: -0.04em;
+      font-weight: 300;
+      letter-spacing: -0.02em;
       line-height: 1;
       margin-block-end: 1.5rem;
     }
@@ -133,7 +178,7 @@
       gap: 0.75rem;
       background: var(--green-dim);
       border: 1px solid var(--green);
-      border-radius: 100px;
+      border-radius: var(--radius-full);
       padding: 0.6rem 1.5rem;
       font-size: 0.9rem;
       color: var(--green);
@@ -143,23 +188,25 @@
     .hero-verdict .dot {
       width: 8px;
       height: 8px;
-      border-radius: 50%;
+      border-radius: var(--radius-full);
       background: var(--green);
     }
 
     /* ── SECTION HEADERS ── */
     .section-label {
+      font-family: var(--font);
       font-size: 0.7rem;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--accent);
+      color: var(--text-dim);
       margin-block-end: 0.75rem;
     }
 
     h2 {
+      font-family: var(--font-serif);
       font-size: clamp(1.5rem, 3vw, 2.25rem);
       font-weight: 700;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.02em;
       line-height: 1.1;
       margin-block-end: 0.5rem;
     }
@@ -293,7 +340,7 @@
 
     .competitor-table tr:hover td { background: var(--bg-card-hover); }
 
-    .competitor-table tr.highlight td { background: color-mix(in srgb, var(--accent) 6%, var(--bg-card)); }
+    .competitor-table tr.highlight td { background: var(--accent-subtle); }
     .competitor-table tr.highlight td:first-child {
       border-inline-start: 2px solid var(--accent);
     }
@@ -305,14 +352,14 @@
     .tag {
       font-size: 0.68rem;
       padding: 0.15rem 0.5rem;
-      border-radius: 100px;
+      border-radius: var(--radius-full);
       font-weight: 500;
     }
 
     .tag-green { background: var(--green-dim); color: var(--green); }
     .tag-red { background: var(--red-dim); color: var(--red); }
     .tag-blue { background: var(--blue-dim); color: var(--blue); }
-    .tag-amber { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+    .tag-amber { background: var(--amber-subtle); color: var(--amber); }
 
     /* ── FEATURE MATRIX ── */
     .matrix {
@@ -351,7 +398,7 @@
 
     .matrix tr:last-child td { border-block-end: none; }
     .matrix tr:hover td { background: var(--bg-card-hover); }
-    .matrix tr.ours-row td { background: color-mix(in srgb, var(--accent) 5%, var(--bg-card)); }
+    .matrix tr.ours-row td { background: var(--accent-subtle); }
     .matrix tr.ours-row td:first-child { border-inline-start: 2px solid var(--accent); color: var(--accent); font-weight: 700; }
 
     .check { color: var(--green); font-size: 1rem; }
@@ -384,13 +431,13 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 0.3rem 0.75rem;
-      border-radius: 100px;
+      border-radius: var(--radius-full);
       text-align: center;
       align-self: flex-start;
     }
 
     .risk-high { background: var(--red-dim); color: var(--red); }
-    .risk-medium { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+    .risk-medium { background: var(--accent-subtle); color: var(--accent); }
 
     .risk-body h4 { font-size: 0.95rem; font-weight: 600; margin-block-end: 0.4rem; }
     .risk-body p { font-size: 0.85rem; color: var(--text-muted); }
@@ -435,7 +482,7 @@
       font-size: 0.75rem;
       font-weight: 700;
       background: var(--border);
-      border-radius: 50%;
+      border-radius: var(--radius-full);
       color: var(--text-dim);
     }
 
@@ -454,7 +501,7 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 0.15rem 0.6rem;
-      border-radius: 100px;
+      border-radius: var(--radius-full);
       margin-block-start: 0.75rem;
     }
 
@@ -474,7 +521,7 @@
 
     .pricing-card.featured {
       border-color: var(--accent);
-      background: color-mix(in srgb, var(--accent) 5%, var(--bg-card));
+      background: var(--accent-subtle);
     }
 
     .pricing-card .plan-name {
@@ -541,9 +588,10 @@
     }
 
     .verdict-box h3 {
+      font-family: var(--font-serif);
       font-size: clamp(1.5rem, 3vw, 2.5rem);
       font-weight: 700;
-      letter-spacing: -0.04em;
+      letter-spacing: -0.02em;
       margin-block-end: 1rem;
     }
 
@@ -726,7 +774,7 @@
       text-transform: uppercase;
       color: var(--text-dim);
       border-block-end: 1px solid var(--border-strong);
-      background: color-mix(in srgb, var(--bg) 40%, var(--bg-card));
+      background: var(--bg-elevated);
     }
 
     .ai-compare-table th:first-child { text-align: start; padding-inline-start: 1rem; }
@@ -751,7 +799,7 @@
     .ai-compare-table tr:hover td { background: var(--bg-card-hover); }
 
     .ai-compare-table tr.ours-row td {
-      background: color-mix(in srgb, var(--accent) 5%, var(--bg-card));
+      background: var(--accent-subtle);
     }
 
     .ai-compare-table tr.ours-row td:first-child {
@@ -800,9 +848,9 @@
     .cesare-icon {
       width: 2rem;
       height: 2rem;
-      border-radius: 50%;
-      background: color-mix(in srgb, var(--accent) 15%, var(--bg-card));
-      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-full);
+      background: var(--accent-subtle);
+      border: 1px solid var(--accent-border);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -812,8 +860,8 @@
     }
 
     .moat-conclusion {
-      background: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
-      border: 1px solid var(--accent-dim);
+      background: var(--accent-subtle);
+      border: 1px solid var(--accent-border);
       border-radius: var(--radius-sm);
       padding: 1.25rem 1.5rem;
       font-size: 0.875rem;
@@ -1054,7 +1102,7 @@
     <div class="card-standalone" style="margin-block-end:2rem">
       <p class="card-label">Pipeline completo in un'unica app</p>
       <div style="display:flex;gap:0;margin-block-start:1.25rem;overflow:hidden;border-radius:var(--radius-sm);border:1px solid var(--border)">
-        <div style="flex:1;padding:1rem 1.25rem;background:color-mix(in srgb,var(--accent) 6%,var(--bg-card));border-inline-end:1px solid var(--border)">
+        <div style="flex:1;padding:1rem 1.25rem;background:var(--accent-subtle);border-inline-end:1px solid var(--border)">
           <div style="font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-block-end:0.4rem">Scrittura</div>
           <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Soggetto<br>Sinossi<br>Scaletta<br>Trattamento<br>Sceneggiatura</div>
         </div>
@@ -1443,12 +1491,12 @@
       <div class="gtm-step">
         <h4>Francia e Spagna come step due</h4>
         <p>Stessa struttura di mercato, stessa cultura del writer-director, stesse frustrazioni. Localizzazione FR e ES prima dell'inglese — il mercato anglofono ha Final Draft e StudioBinder radicati; quello europeo no.</p>
-        <span class="phase-badge" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent)">Fase 2 — Europa</span>
+        <span class="phase-badge" style="background:var(--accent-subtle);color:var(--accent)">Fase 2 — Europa</span>
       </div>
       <div class="gtm-step">
         <h4>Team plan come obiettivo di monetizzazione</h4>
         <p>Un produttore che porta 3 AD e 2 sceneggiatori nello stesso workspace vale 10× un utente singolo. Ogni feature di collaborazione (breakdown condiviso, schedule multi-utente) avvicina il team plan.</p>
-        <span class="phase-badge" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent)">Obiettivo economico</span>
+        <span class="phase-badge" style="background:var(--accent-subtle);color:var(--accent)">Obiettivo economico</span>
       </div>
       <div class="gtm-step">
         <h4>Mercato anglofono — ultimo</h4>
