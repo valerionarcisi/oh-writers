@@ -19,6 +19,16 @@
   inline-size: 100%;
 }
 
+.docTypeLabel {
+  font-size: var(--ds-text-xs, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-secondary, var(--ds-text-muted));
+  white-space: nowrap;
+  user-select: none;
+}
+
 .viewbarRight {
   margin-inline-start: auto;
   display: flex;

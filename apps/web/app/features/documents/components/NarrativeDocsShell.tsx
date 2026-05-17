@@ -14,6 +14,7 @@ import {
   routePathFromTabId,
   tabIdFromDocType,
 } from "../lib/narrative-shell";
+import { DOCUMENT_LABELS } from "../lib/document-display";
 import { LoglinePill } from "./LoglinePill";
 import styles from "./NarrativeDocsShell.module.css";
 
@@ -72,6 +73,10 @@ export function NarrativeDocsShell({
               onSelect={handleSelectTab}
               ariaLabel="Documenti narrativi"
             />
+            <ViewbarSep />
+            <span className={styles.docTypeLabel} aria-current="page">
+              {DOCUMENT_LABELS[docType]}
+            </span>
             <ViewbarSep />
             <LoglinePill
               projectId={projectId}
