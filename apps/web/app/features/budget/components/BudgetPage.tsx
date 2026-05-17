@@ -6,7 +6,7 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import { Viewbar, FloatingDock, SegmentedControl } from "@oh-writers/ui";
+import { Viewbar, FloatingDock, SegmentedControl, DropdownMenu } from "@oh-writers/ui";
 import { resourceTotal } from "@oh-writers/domain";
 import type { Budget, FiscalRegime } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
@@ -103,6 +103,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const [focusSection, setFocusSection] = useState<SectionId | null>(null);
   const [detailSection, setDetailSection] = useState<SectionId | null>(null);
+  const [categoryTotal, setCategoryTotal] = useState<number | null>(null);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 48);
@@ -268,9 +269,20 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               testId="contingency-percent"
             />
           )}
-        <button type="button" className={styles.filter} aria-haspopup="menu">
-          {versionLabel} ▾
-        </button>
+        <DropdownMenu
+          trigger={
+            <button type="button" className={styles.filter}>
+              {versionLabel} ▾
+            </button>
+          }
+          items={[
+            {
+              label: "Analisi di mercato",
+              onClick: () => window.open("/market-analysis.html", "_blank"),
+            },
+          ]}
+          align="end"
+        />
       </Viewbar>
 
       <main className={styles.main} id="main">
@@ -303,6 +315,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
                     crew={crew}
                     onOpenDetail={(id) => setDetailSection(id)}
                     initialFocusSection={focusSection}
+                    onGrandTotal={setCategoryTotal}
                   />
                 </section>
               )}
@@ -377,6 +390,19 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
         cesareNoteCount={0}
         onCesareClick={() => undefined}
       />
+
+      {view === "category" && categoryTotal !== null && (
+        <div className={styles.totalDock}>
+          <span className={styles.totalDockLabel}>Totale stimato</span>
+          <span className={styles.totalDockAmount}>
+            {new Intl.NumberFormat("it-IT", {
+              style: "currency",
+              currency: "EUR",
+              maximumFractionDigits: 0,
+            }).format(categoryTotal)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -149,6 +149,7 @@ interface CategoryFlatTableProps {
   crew: BudgetCrew[];
   onOpenDetail?: (sectionId: SectionId) => void;
   initialFocusSection?: SectionId | null;
+  onGrandTotal?: (total: number) => void;
 }
 
 export function CategoryFlatTable({
@@ -158,6 +159,7 @@ export function CategoryFlatTable({
   crew,
   onOpenDetail,
   initialFocusSection,
+  onGrandTotal,
 }: CategoryFlatTableProps) {
   const qc = useQueryClient();
 
@@ -217,6 +219,10 @@ export function CategoryFlatTable({
     [budget.lines, cast, crew],
   );
   const grandTotal = useMemo(() => grandTotalOf(sections), [sections]);
+
+  useEffect(() => {
+    onGrandTotal?.(grandTotal);
+  }, [grandTotal, onGrandTotal]);
 
   const [collapsed, setCollapsed] = useState<Set<SectionId>>(new Set());
   const toggle = (id: SectionId) =>
@@ -608,14 +614,6 @@ export function CategoryFlatTable({
         );
       })}
 
-      <div className={styles.gridFoot}>
-        <span className={styles.gridFootLabel}>Totale stimato</span>
-        <span />
-        <span />
-        <span>{eurAmount(grandTotal)}</span>
-        <span />
-        <span />
-      </div>
 
       {searchOpen && (
         <div

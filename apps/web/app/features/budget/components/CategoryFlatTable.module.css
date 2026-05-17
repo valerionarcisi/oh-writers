@@ -299,27 +299,6 @@
   outline: none;
 }
 
-.gridFoot {
-  position: sticky;
-  inset-block-end: 0;
-  z-index: 2;
-  background: var(--ds-surface);
-  block-size: 44px;
-  border-block-start: 2px solid var(--ds-border);
-  font-family: var(--ds-font-mono, "Courier Prime", monospace);
-  font-variant-numeric: tabular-nums;
-  font-size: 14px;
-  color: var(--ds-text);
-}
-
-.gridFootLabel {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  color: var(--ds-text-faint);
-  font-family: var(--ds-font-sans);
-  font-variant-numeric: normal;
-}
 
 .searchPopover {
   position: fixed;
