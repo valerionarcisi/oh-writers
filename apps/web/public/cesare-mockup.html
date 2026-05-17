@@ -32,6 +32,8 @@
       --danger:      #b33a28;
       --danger-soft: rgba(179,58,40,0.10);
 
+      --info:        #34487a;
+
       --font-sans:    "Inter", -apple-system, system-ui, sans-serif;
       --font-display: "Fraunces", Georgia, serif;
       --font-mono:    "Courier Prime", monospace;
@@ -63,7 +65,7 @@
     /* ─── Page Header ─── */
     .page-header {
       max-width: 1100px;
-      margin: 0 auto 48px;
+      margin: 0 auto 24px;
     }
 
     .page-header h1 {
@@ -81,7 +83,39 @@
       line-height: 1.5;
     }
 
+    /* ─── Info Banner ─── */
+    .info-banner {
+      max-width: 1100px;
+      margin: 0 auto 32px;
+      padding: 14px 20px;
+      background: var(--agent-soft);
+      border: 1px solid rgba(90,107,60,0.25);
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+
+    .fab-mini {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      background: var(--action);
+      color: white;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+
     /* ─── Scenario wrapper ─── */
+    .scenario-block {
+      max-width: 1100px;
+      margin: 0 auto 64px;
+    }
+
     .scenario-label {
       font-size: 0.75rem;
       font-weight: 600;
@@ -89,13 +123,6 @@
       letter-spacing: 0.08em;
       color: var(--text-mute);
       margin-bottom: 12px;
-      max-width: 1100px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .scenario-label + .scenario-label {
-      margin-top: 64px;
     }
 
     .scenario {
@@ -105,8 +132,6 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      max-width: 1100px;
-      margin: 0 auto 16px;
     }
 
     /* ─── Top bar ─── */
@@ -168,13 +193,14 @@
     .app-body {
       display: flex;
       flex: 1;
-      height: 580px;
+      height: 560px;
       overflow: hidden;
+      position: relative;
     }
 
     /* ─── Sidebar ─── */
     .sidebar {
-      width: 200px;
+      width: 192px;
       border-right: 1px solid var(--line);
       background: var(--surface);
       padding: 12px 8px;
@@ -191,6 +217,7 @@
       letter-spacing: 0.08em;
       color: var(--text-mute);
       padding: 4px 8px;
+      margin-top: 4px;
     }
 
     .nav-item {
@@ -215,6 +242,12 @@
       font-weight: 500;
     }
 
+    .nav-item.active-agent {
+      background: var(--agent-soft);
+      color: var(--agent);
+      font-weight: 500;
+    }
+
     /* ─── Main content area ─── */
     .main-content {
       flex: 1;
@@ -223,7 +256,7 @@
       position: relative;
     }
 
-    /* ─── Screenplay editor (Scenario A) ─── */
+    /* ─── Screenplay editor ─── */
     .editor-area {
       height: 100%;
       overflow-y: auto;
@@ -235,8 +268,13 @@
       background: var(--bg);
     }
 
-    .fountain-line {
-      white-space: pre;
+    .fountain-scene-number {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-mute);
+      text-align: center;
+      margin-bottom: 16px;
+      letter-spacing: 0.1em;
     }
 
     .fountain-scene-heading {
@@ -271,16 +309,6 @@
       font-style: italic;
     }
 
-    .fountain-scene-number {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-mute);
-      text-align: center;
-      margin-bottom: 16px;
-      letter-spacing: 0.1em;
-    }
-
-    /* Editor cursor blink effect */
     .cursor-line {
       position: relative;
     }
@@ -301,7 +329,7 @@
       50% { opacity: 0; }
     }
 
-    /* ─── Breakdown area (Scenario B) ─── */
+    /* ─── Breakdown area ─── */
     .breakdown-area {
       height: 100%;
       overflow-y: auto;
@@ -335,12 +363,6 @@
       flex-shrink: 0;
     }
 
-    .breakdown-categories {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
     .cat-card {
       background: var(--surface);
       border: 1px solid var(--line);
@@ -368,271 +390,196 @@
       border-bottom: none;
     }
 
-    .cat-item-warning {
-      color: var(--danger);
+    .cat-item-warning { color: var(--danger); }
+    .cat-item-muted { color: var(--text-mute); font-style: italic; }
+
+    /* ─── Scrim (above bottom sheet) ─── */
+    .scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(28,26,23,0.15);
+      z-index: 5;
+      pointer-events: none;
     }
 
-    .cat-item-muted {
-      color: var(--text-mute);
-      font-style: italic;
+    /* ─── Floating action button ─── */
+    .cesare-fab {
+      position: absolute;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      background: var(--action);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-2);
+      z-index: 10;
+      cursor: pointer;
+      user-select: none;
     }
 
-    /* ─── Cesare panel ─── */
-    .cesare-panel {
-      width: 320px;
-      border-left: 1px solid var(--line);
+    /* ─────────────────────────────────────────────────────── */
+    /* BOTTOM SHEET                                            */
+    /* ─────────────────────────────────────────────────────── */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 42%;
       background: var(--surface);
+      border-top: 1px solid var(--line);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      box-shadow: 0 -8px 32px rgba(28,26,23,0.12);
+      z-index: 20;
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
-      height: 100%;
     }
 
-    /* Panel header */
-    .cesare-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--line);
+    /* Drag handle */
+    .sheet-drag-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--line);
+      border-radius: 2px;
+      margin: 8px auto 0;
+      flex-shrink: 0;
+    }
+
+    /* Sheet header row */
+    .sheet-header {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-shrink: 0;
+      gap: 8px;
+    }
+
+    .sheet-chips {
+      display: flex;
+      gap: 5px;
       flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sheet-chip {
+      font-size: 0.68rem;
+      padding: 3px 9px;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+
+    .sheet-chip-active {
+      background: var(--agent-soft);
+      border-color: rgba(90,107,60,0.3);
+      color: var(--agent);
+    }
+
+    .sheet-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       flex-shrink: 0;
     }
 
-    .cesare-title {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
+    .sheet-expand-btn {
+      background: none;
+      border: none;
+      color: var(--action);
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 2px 4px;
+      white-space: nowrap;
     }
 
-    .cesare-icon {
-      color: var(--agent);
-      font-size: 1rem;
-      line-height: 1;
-    }
-
-    .cesare-name {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--text);
-    }
-
-    .cesare-context {
-      font-size: 0.7rem;
-      color: var(--text-mute);
-      width: 100%;
-    }
-
-    .cesare-close {
+    .sheet-close-btn {
       background: none;
       border: none;
       color: var(--text-mute);
-      cursor: pointer;
       font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
       padding: 2px 6px;
       border-radius: 4px;
       line-height: 1;
       transition: background 100ms ease, color 100ms ease;
     }
 
-    .cesare-close:hover {
+    .sheet-close-btn:hover {
       background: var(--surface-alt);
       color: var(--text-2);
     }
 
-    /* Context chips */
-    .context-chips {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .chip {
-      font-size: 0.68rem;
-      padding: 3px 8px;
-      background: var(--surface-alt);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-pill);
-      color: var(--text-3);
-      cursor: pointer;
-      transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
-    }
-
-    .chip:hover {
-      background: var(--surface);
-      color: var(--text-2);
-    }
-
-    .chip-active {
-      background: var(--agent-soft);
-      border-color: rgba(90,107,60,0.3);
-      color: var(--agent);
-    }
-
-    /* Conversation */
-    .conversation {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 12px;
+    /* Sheet conversation */
+    .sheet-conversation {
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
+      overflow: hidden;
+      flex: 1;
+      min-height: 0;
     }
 
-    /* Scrollbar styling */
-    .conversation::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .conversation::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .conversation::-webkit-scrollbar-thumb {
-      background: var(--line);
-      border-radius: 2px;
-    }
-
-    .msg {
-      max-width: 95%;
-    }
-
-    .msg-user {
+    .sheet-msg-user {
       align-self: flex-end;
       background: var(--action-soft);
       color: var(--action);
       border-radius: 12px 12px 2px 12px;
-      padding: 10px 14px;
-      font-size: 0.82rem;
-      max-width: 85%;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      max-width: 70%;
       font-weight: 500;
       line-height: 1.5;
     }
 
-    .msg-cesare {
+    .sheet-msg-cesare {
       align-self: flex-start;
-      max-width: 95%;
+      max-width: 92%;
     }
 
-    .msg-author {
-      font-size: 0.68rem;
+    .sheet-msg-author {
+      font-size: 0.65rem;
       font-weight: 600;
       color: var(--agent);
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      margin-bottom: 4px;
     }
 
-    .msg-body {
+    .sheet-msg-body {
       background: var(--surface-alt);
       border: 1px solid var(--line);
       border-radius: 2px 12px 12px 12px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       font-size: 0.8rem;
       color: var(--text-2);
       line-height: 1.6;
     }
 
-    .msg-body p {
-      margin-bottom: 6px;
-    }
-
-    .msg-body p:last-child {
-      margin-bottom: 0;
-    }
-
-    .msg-section {
-      margin: 8px 0;
-      padding: 8px;
-      background: var(--surface);
-      border-radius: 6px;
-      border: 1px solid var(--line-soft);
-    }
-
-    .msg-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-mute);
-      margin-bottom: 4px;
-    }
-
-    .msg-row {
-      font-size: 0.78rem;
-      padding: 2px 0;
-    }
-
-    .msg-row.ok {
-      color: var(--agent);
-    }
-
-    .msg-row.warn {
-      color: var(--danger);
-    }
-
-    .msg-cost-item {
-      margin: 8px 0;
-      padding: 8px;
-      background: var(--surface);
-      border-radius: 6px;
-      border-left: 2px solid var(--action);
-    }
-
-    .msg-cost-item::after {
-      content: '';
-      display: table;
-      clear: both;
-    }
-
-    .cost-name {
-      font-weight: 600;
-      font-size: 0.8rem;
-      color: var(--text);
-    }
-
-    .cost-value {
-      float: right;
-      color: var(--danger);
-      font-weight: 600;
-      font-size: 0.8rem;
-    }
-
-    .cost-suggestion {
-      font-size: 0.75rem;
-      color: var(--text-3);
-      margin-top: 4px;
-      font-style: italic;
-      clear: both;
-    }
-
-    .msg-total {
-      margin-top: 10px;
-      padding: 8px 12px;
-      background: var(--agent-soft);
-      border-radius: 6px;
-      font-size: 0.82rem;
-      color: var(--agent);
-      text-align: center;
-    }
-
-    /* Quick prompts */
-    .quick-prompts {
-      padding: 8px 12px;
-      border-top: 1px solid var(--line);
+    /* Sheet quick prompts */
+    .sheet-quick-prompts {
+      padding: 6px 16px;
+      border-top: 1px solid var(--line-soft);
       display: flex;
+      gap: 6px;
       flex-wrap: wrap;
-      gap: 4px;
       flex-shrink: 0;
     }
 
-    .qp {
-      font-size: 0.7rem;
+    .sheet-qp {
+      font-size: 0.72rem;
       padding: 4px 10px;
       background: var(--surface);
       border: 1px solid var(--line);
@@ -641,50 +588,45 @@
       cursor: pointer;
       font-family: inherit;
       transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+      white-space: nowrap;
     }
 
-    .qp:hover {
+    .sheet-qp:hover {
       background: var(--action-soft);
       border-color: rgba(139,58,26,0.3);
       color: var(--action);
     }
 
-    /* Input area */
-    .cesare-input-area {
-      padding: 10px 12px;
+    /* Sheet input row */
+    .sheet-input-row {
+      padding: 8px 12px;
       border-top: 1px solid var(--line);
       display: flex;
       gap: 8px;
-      align-items: flex-end;
+      align-items: center;
       flex-shrink: 0;
     }
 
-    .cesare-input {
+    .sheet-input {
       flex: 1;
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
       padding: 8px 10px;
       font-size: 0.82rem;
       font-family: inherit;
-      resize: none;
       background: var(--surface);
       color: var(--text);
       outline: none;
-      line-height: 1.4;
-      transition: border-color 150ms ease;
+      resize: none;
     }
 
-    .cesare-input:focus {
-      border-color: rgba(90,107,60,0.5);
-    }
-
-    .cesare-input::placeholder {
+    .sheet-input::placeholder {
       color: var(--text-mute);
     }
 
-    .cesare-send {
-      width: 32px;
-      height: 32px;
+    .sheet-send {
+      width: 34px;
+      height: 34px;
       background: var(--action);
       color: white;
       border: none;
@@ -698,46 +640,313 @@
       transition: background 150ms ease;
     }
 
-    .cesare-send:hover {
+    .sheet-send:hover {
       background: var(--action-hover);
     }
 
-    /* ─── Trigger note ─── */
-    .trigger-note {
-      max-width: 1100px;
-      margin: 0 auto;
-      font-size: 0.75rem;
+    /* ─────────────────────────────────────────────────────── */
+    /* SCENARIO B — FULL PAGE                                  */
+    /* ─────────────────────────────────────────────────────── */
+
+    /* Full Cesare page takes all main-content space */
+    .cesare-full-page {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Page header inside the Cesare full page */
+    .cesare-page-header {
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      background: var(--surface);
+      flex-shrink: 0;
+      gap: 16px;
+    }
+
+    .cesare-page-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .cesare-page-title .star {
+      color: var(--agent);
+    }
+
+    .cesare-page-sub {
+      font-size: 0.8rem;
       color: var(--text-mute);
-      padding: 10px 0;
+      margin-top: 5px;
+    }
+
+    .context-summary {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+
+    .ctx-pill {
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+
+    /* Full conversation area */
+    .cesare-full-conversation {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      /* Cap width and center */
+    }
+
+    .cesare-full-conversation-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Scrollbar */
+    .cesare-full-conversation::-webkit-scrollbar { width: 4px; }
+    .cesare-full-conversation::-webkit-scrollbar-track { background: transparent; }
+    .cesare-full-conversation::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+    .full-msg-user {
+      align-self: flex-end;
+      background: var(--action-soft);
+      color: var(--action);
+      border-radius: 14px 14px 3px 14px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      max-width: 60%;
+      font-weight: 500;
+      line-height: 1.55;
+    }
+
+    .full-msg-cesare {
+      align-self: flex-start;
+      width: 100%;
+    }
+
+    .full-msg-author {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--agent);
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
-    .trigger-note kbd {
-      display: inline-block;
-      padding: 2px 6px;
+    .full-msg-author .author-meta {
+      color: var(--text-mute);
+      font-weight: 400;
+    }
+
+    .full-msg-bubble {
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-family: var(--font-sans);
+      border-radius: 3px 14px 14px 14px;
+      padding: 16px 18px;
+      font-size: 0.85rem;
       color: var(--text-2);
-      box-shadow: var(--shadow-1);
+      line-height: 1.65;
     }
 
-    .trigger-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      background: var(--agent-soft);
-      border: 1px solid rgba(90,107,60,0.3);
-      border-radius: var(--radius-pill);
-      font-size: 0.7rem;
-      color: var(--agent);
-      font-weight: 600;
+    .full-msg-bubble p {
+      margin-bottom: 10px;
     }
+
+    .full-msg-bubble p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Fountain block inside Cesare full message */
+    .fountain-block {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin: 10px 0;
+      line-height: 1.9;
+      color: var(--text-2);
+    }
+
+    .fountain-block .fb-char {
+      text-align: center;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text);
+      display: block;
+    }
+
+    .fountain-block .fb-parent {
+      padding: 0 60px;
+      color: var(--text-3);
+      font-style: italic;
+      display: block;
+    }
+
+    .fountain-block .fb-dial {
+      padding: 0 40px;
+      display: block;
+    }
+
+    /* Cesare's annotation below fountain block */
+    .full-msg-note {
+      font-size: 0.82rem;
+      color: var(--text-3);
+      font-style: italic;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    /* Action chips below cesare bubble */
+    .full-msg-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .action-chip {
+      font-size: 0.75rem;
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      font-family: inherit;
+      border: 1px solid transparent;
+      transition: opacity 150ms ease;
+    }
+
+    .action-chip:hover { opacity: 0.8; }
+
+    .action-chip-primary {
+      background: var(--agent-soft);
+      border-color: rgba(90,107,60,0.35);
+      color: var(--agent);
+      font-weight: 500;
+    }
+
+    .action-chip-secondary {
+      background: var(--surface-alt);
+      border-color: var(--line);
+      color: var(--text-2);
+    }
+
+    /* Full page input area */
+    .cesare-full-input-wrap {
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+      padding: 14px 32px 16px;
+      flex-shrink: 0;
+    }
+
+    .cesare-full-input-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .quick-prompts-full {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .qp-full {
+      font-size: 0.75rem;
+      padding: 5px 12px;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--text-2);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+      white-space: nowrap;
+    }
+
+    .qp-full:hover {
+      background: var(--action-soft);
+      border-color: rgba(139,58,26,0.3);
+      color: var(--action);
+    }
+
+    .qp-back {
+      margin-left: auto;
+      color: var(--text-mute);
+      font-size: 0.75rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 5px 0;
+    }
+
+    .qp-back:hover { color: var(--text-2); }
+
+    .full-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .full-textarea {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      resize: none;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 150ms ease;
+    }
+
+    .full-textarea::placeholder { color: var(--text-mute); }
+    .full-textarea:focus { border-color: rgba(90,107,60,0.4); }
+
+    .full-send {
+      background: var(--action);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0 16px;
+      height: 40px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 150ms ease;
+      flex-shrink: 0;
+    }
+
+    .full-send:hover { background: var(--action-hover); }
   </style>
 </head>
 <body>
@@ -745,211 +954,340 @@
   <!-- ─── Page header ─── -->
   <div class="page-header">
     <h1>Cesare — Mockup UI</h1>
-    <p>Pannello AI contestuale per Oh Writers. Due scenari: editor sceneggiatura e pagina breakdown.</p>
+    <p>Pannello AI contestuale per Oh Writers. Due modalità: bottom sheet per domande veloci, pagina intera per sessioni lunghe.</p>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- SCENARIO A — Screenplay editor                              -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <div class="scenario-label" style="margin-bottom:12px">Scenario A — Editor sceneggiatura</div>
+  <!-- ─── Info banner ─── -->
+  <div class="info-banner">
+    <strong>Bottom sheet</strong> — si apre dal pulsante <span class="fab-mini">✦C</span> in basso a destra.
+    Domande veloci, sempre visibile il contesto della pagina corrente.
+    Quick prompts cambiano in base alla pagina aperta.<br>
+    <strong>Pagina intera</strong> — dal pulsante "Pagina intera →" nel bottom sheet, o da voce nav "Cesare".
+    Per sessioni lunghe: scrivi dialogo, ottimizza schedule, analisi complessa.
+  </div>
 
-  <div class="scenario">
 
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="topbar-left">
-        <span class="brand">oh<span class="brand-accent">writers</span></span>
-        <span class="project-name">Il Vuoto Dentro</span>
-      </div>
-      <div class="topbar-right">
-        <div class="avatar">V</div>
-      </div>
-    </div>
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- SCENARIO A — Bottom sheet · Sceneggiatura                        -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="scenario-block">
+    <div class="scenario-label">Modalità 1 — Bottom sheet · Sceneggiatura</div>
 
-    <!-- App body -->
-    <div class="app-body">
+    <div class="scenario">
 
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <div class="nav-section-label">Scrittura</div>
-        <a class="nav-item">Soggetto</a>
-        <a class="nav-item">Sinossi</a>
-        <a class="nav-item">Scaletta</a>
-        <a class="nav-item active">Sceneggiatura</a>
-        <div class="nav-section-label" style="margin-top:8px">Produzione</div>
-        <a class="nav-item">Breakdown</a>
-        <a class="nav-item">Budget</a>
-        <a class="nav-item">Inquadrature</a>
-        <a class="nav-item">Schedule</a>
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <span class="brand">oh<span class="brand-accent">writers</span></span>
+          <span class="project-name">Il Vuoto Dentro</span>
+        </div>
+        <div class="topbar-right">
+          <div class="avatar">V</div>
+        </div>
       </div>
 
-      <!-- Main content: screenplay editor -->
-      <div class="main-content">
-        <div class="editor-area">
-          <div class="fountain-scene-number">SCENA 12</div>
+      <!-- App body -->
+      <div class="app-body">
 
-          <div class="fountain-scene-heading">INT. UFFICIO DEL DIRETTORE — GIORNO</div>
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="nav-section-label">Scrittura</div>
+          <a class="nav-item">Soggetto</a>
+          <a class="nav-item">Sinossi</a>
+          <a class="nav-item">Scaletta</a>
+          <a class="nav-item active">Sceneggiatura</a>
+          <div class="nav-section-label">Produzione</div>
+          <a class="nav-item">Breakdown</a>
+          <a class="nav-item">Budget</a>
+          <a class="nav-item">Inquadrature</a>
+          <a class="nav-item">Schedule</a>
+        </div>
 
-          <div class="fountain-action">Marco entra nell'ufficio vuoto. Si guarda intorno,
+        <!-- Main content: screenplay editor (dimmed) -->
+        <div class="main-content">
+
+          <!-- Scrim over content -->
+          <div class="scrim"></div>
+
+          <!-- FAB — visible above the sheet -->
+          <div class="cesare-fab" style="bottom: calc(42% + 16px)">✦ C</div>
+
+          <div class="editor-area">
+            <div class="fountain-scene-number">SCENA 12</div>
+
+            <div class="fountain-scene-heading">INT. UFFICIO DEL DIRETTORE — GIORNO</div>
+
+            <div class="fountain-action">Marco entra nell'ufficio vuoto. Si guarda intorno,
 afferra il telefono sulla scrivania.</div>
 
-          <div class="fountain-character">MARCO</div>
-          <div class="fountain-dialogue">Non ci sei mai quando ho bisogno
+            <div class="fountain-character">MARCO</div>
+            <div class="fountain-dialogue">Non ci sei mai quando ho bisogno
 di te.</div>
 
-          <div class="fountain-action" style="margin-top: 12px">Squilla il cellulare. Marco risponde, aggrotta
+            <div class="fountain-action" style="margin-top: 12px">Squilla il cellulare. Marco risponde, aggrotta
 le sopracciglia.</div>
 
-          <div class="fountain-character">MARCO (CONT'D)</div>
-          <div class="fountain-dialogue cursor-line">Sì. Sì, ho capito. Torno subito.</div>
+            <div class="fountain-character">MARCO (CONT'D)</div>
+            <div class="fountain-dialogue cursor-line">Sì. Sì, ho capito. Torno subito.</div>
 
-          <div class="fountain-action" style="margin-top: 16px; color: var(--text-mute)">Abbassa il telefono. Guarda la sedia dietro
+            <div class="fountain-action" style="margin-top: 16px; color: var(--text-mute)">Abbassa il telefono. Guarda la sedia dietro
 la scrivania — vuota, come sempre.</div>
+          </div>
+
+          <!-- ── Bottom sheet ── -->
+          <div class="bottom-sheet">
+
+            <!-- Drag handle -->
+            <div class="sheet-drag-handle"></div>
+
+            <!-- Header: chips + expand + close -->
+            <div class="sheet-header">
+              <div class="sheet-chips">
+                <span class="sheet-chip sheet-chip-active">📄 Scen. 12</span>
+                <span class="sheet-chip">🎬 Breakdown sc.12</span>
+                <span class="sheet-chip">💰 Budget</span>
+                <span class="sheet-chip">📅 Schedule</span>
+              </div>
+              <div class="sheet-header-actions">
+                <button class="sheet-expand-btn">Pagina intera →</button>
+                <button class="sheet-close-btn">✕</button>
+              </div>
+            </div>
+
+            <!-- Conversation -->
+            <div class="sheet-conversation">
+              <div class="sheet-msg-user">
+                Questa scena è fattibile domani?
+              </div>
+
+              <div class="sheet-msg-cesare">
+                <div class="sheet-msg-author">✦ Cesare</div>
+                <div class="sheet-msg-body">
+                  Sì, con una riserva. Cast OK, location prenotata, budget residuo €2.400 (stima scena €1.800). Riserva: costumista impegnato sc.11 fino alle 14:00 — gira nel pomeriggio.
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick prompts -->
+            <div class="sheet-quick-prompts">
+              <button class="sheet-qp">Fattibile domani?</button>
+              <button class="sheet-qp">Riduci costi</button>
+              <button class="sheet-qp">Dialogo</button>
+              <button class="sheet-qp">Schedule</button>
+            </div>
+
+            <!-- Input row -->
+            <div class="sheet-input-row">
+              <input class="sheet-input" type="text" placeholder="Scrivi a Cesare…" style="flex:1; border:1px solid var(--line); border-radius:var(--radius-md); padding:8px 10px; font-size:0.82rem; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+              <button class="sheet-send">▶</button>
+            </div>
+
+          </div>
+          <!-- /bottom-sheet -->
+
+        </div>
+        <!-- /main-content -->
+
+      </div>
+      <!-- /app-body -->
+
+    </div>
+    <!-- /scenario -->
+  </div>
+  <!-- /scenario block A -->
+
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- SCENARIO B — Pagina intera · Sceneggiatura                       -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="scenario-block">
+    <div class="scenario-label">Modalità 2 — Pagina intera · Sceneggiatura</div>
+
+    <div class="scenario">
+
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <span class="brand">oh<span class="brand-accent">writers</span></span>
+          <span class="project-name">Il Vuoto Dentro</span>
+        </div>
+        <div class="topbar-right">
+          <div class="avatar">V</div>
         </div>
       </div>
 
-      <!-- Cesare panel -->
-      <div class="cesare-panel">
+      <!-- App body -->
+      <div class="app-body">
 
-        <!-- Header -->
-        <div class="cesare-header">
-          <div class="cesare-title">
-            <span class="cesare-icon">✦</span>
-            <span class="cesare-name">Cesare</span>
-          </div>
-          <button class="cesare-close">✕</button>
-          <div class="cesare-context">Scena 12 · INT. UFFICIO — GIORNO</div>
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="nav-section-label">Scrittura</div>
+          <a class="nav-item">Soggetto</a>
+          <a class="nav-item">Sinossi</a>
+          <a class="nav-item">Scaletta</a>
+          <a class="nav-item">Sceneggiatura</a>
+          <div class="nav-section-label">Produzione</div>
+          <a class="nav-item">Breakdown</a>
+          <a class="nav-item">Budget</a>
+          <a class="nav-item">Inquadrature</a>
+          <a class="nav-item">Schedule</a>
+          <div class="nav-section-label">Assistente</div>
+          <a class="nav-item active-agent">✦ Cesare</a>
         </div>
 
-        <!-- Context chips -->
-        <div class="context-chips">
-          <span class="chip">📄 Sceneggiatura</span>
-          <span class="chip chip-active">🎬 Sc. 12</span>
-          <span class="chip">💰 Budget</span>
-          <span class="chip">📅 Schedule</span>
-        </div>
+        <!-- Cesare full page -->
+        <div class="cesare-full-page">
 
-        <!-- Conversation -->
-        <div class="conversation">
-
-          <!-- User message -->
-          <div class="msg msg-user">
-            Questa scena è fattibile domani?
+          <!-- Page header -->
+          <div class="cesare-page-header">
+            <div>
+              <h2 class="cesare-page-title"><span class="star">✦</span> Cesare</h2>
+              <p class="cesare-page-sub">Assistente AI contestuale · Il Vuoto Dentro</p>
+            </div>
+            <div class="context-summary">
+              <span class="ctx-pill">📄 87 scene</span>
+              <span class="ctx-pill">🎬 Breakdown completo</span>
+              <span class="ctx-pill">💰 Budget €180K</span>
+              <span class="ctx-pill">📅 22 giorni di set</span>
+            </div>
           </div>
 
-          <!-- Cesare response -->
-          <div class="msg msg-cesare">
-            <div class="msg-author">✦ Cesare</div>
-            <div class="msg-body">
-              <p>Sì, con una riserva.</p>
+          <!-- Full conversation -->
+          <div class="cesare-full-conversation">
+            <div class="cesare-full-conversation-inner">
 
-              <div class="msg-section">
-                <div class="msg-label">Cast</div>
-                <div class="msg-row ok">✓ Marco Rossi — disponibile</div>
-                <div class="msg-row ok">✓ Silvia Moretti — disponibile</div>
-                <div class="msg-row warn">⚠ Costumista impegnato sc.11 fino alle 14:00</div>
+              <!-- User message -->
+              <div class="full-msg-user">
+                Aiutami a scrivere il dialogo della scena 12. Marco deve capire che il direttore lo ha tradito senza che venga detto esplicitamente.
               </div>
 
-              <div class="msg-section">
-                <div class="msg-label">Location</div>
-                <div class="msg-row ok">✓ Ufficio Direttore — prenotato</div>
+              <!-- Cesare response -->
+              <div class="full-msg-cesare">
+                <div class="full-msg-author">
+                  ✦ Cesare
+                  <span class="author-meta">· conosce 87 scene, 12 personaggi</span>
+                </div>
+                <div class="full-msg-bubble">
+                  <p>Ho scritto una versione che sfrutta il silenzio e gli oggetti della stanza — il modo in cui Marco elabora il tradimento attraverso gesti minimi, senza verbalizzarlo.</p>
+
+                  <!-- Fountain block -->
+                  <div class="fountain-block">
+                    <span class="fb-char">MARCO</span>
+                    <span class="fb-dial">L'ufficio è vuoto.</span>
+                    <br>
+                    <span class="fb-parent">(pausa, guarda la scrivania)</span>
+                    <br>
+                    <span class="fb-dial">Certo che è vuoto.</span>
+                    <br><br>
+                    <span class="fb-parent">(raccoglie il cappotto lentamente,<br>senza guardare la porta)</span>
+                    <br><br>
+                    <span class="fb-dial">Non importa.</span>
+                  </div>
+
+                  <p class="full-msg-note">
+                    Ho mantenuto il tono laconico che Marco usa nelle scene 3, 7 e 19 — evita le spiegazioni dirette come nel suo pattern. Il silenzio sulla scrivania rispecchia la scena 4 con Silvia.
+                  </p>
+
+                  <div class="full-msg-actions">
+                    <button class="action-chip action-chip-primary">Accetta e inserisci in sceneggiatura</button>
+                    <button class="action-chip action-chip-secondary">Rigenera</button>
+                    <button class="action-chip action-chip-secondary">Modifica tono</button>
+                  </div>
+                </div>
               </div>
 
-              <div class="msg-section">
-                <div class="msg-label">Budget residuo</div>
-                <div class="msg-row ok">✓ €2.400 disponibili · stima scena €1.800</div>
-              </div>
+            </div>
+          </div>
 
-              <p style="margin-top:8px; color: var(--text-3); font-size: 0.8rem">Gira nel pomeriggio per evitare il conflitto col costumista.</p>
+          <!-- Full input area -->
+          <div class="cesare-full-input-wrap">
+            <div class="cesare-full-input-inner">
+              <div class="quick-prompts-full">
+                <button class="qp-full">Fattibile domani?</button>
+                <button class="qp-full">Riduci i costi</button>
+                <button class="qp-full">Scrivi il dialogo</button>
+                <button class="qp-full">Ottimizza schedule</button>
+                <button class="qp-back">← Torna alla scena</button>
+              </div>
+              <div class="full-input-row">
+                <textarea class="full-textarea" placeholder="Chiedi a Cesare sulla produzione…" rows="2"></textarea>
+                <button class="full-send">▶</button>
+              </div>
             </div>
           </div>
 
         </div>
-
-        <!-- Quick prompts -->
-        <div class="quick-prompts">
-          <button class="qp">Fattibile domani?</button>
-          <button class="qp">Riduci i costi</button>
-          <button class="qp">Scrivi il dialogo</button>
-          <button class="qp">Ottimizza schedule</button>
-        </div>
-
-        <!-- Input area -->
-        <div class="cesare-input-area">
-          <textarea class="cesare-input" placeholder="Scrivi a Cesare…" rows="2"></textarea>
-          <button class="cesare-send">▶</button>
-        </div>
+        <!-- /cesare-full-page -->
 
       </div>
-      <!-- /cesare-panel -->
+      <!-- /app-body -->
 
     </div>
-    <!-- /app-body -->
-
+    <!-- /scenario -->
   </div>
-  <!-- /scenario A -->
-
-  <!-- Trigger note -->
-  <div class="trigger-note">
-    Aperto con <kbd>⌘⇧A</kbd> o dal pulsante <span class="trigger-pill">✦ C</span> in basso a destra nell'editor
-  </div>
+  <!-- /scenario block B -->
 
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- SCENARIO B — Breakdown page                                 -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <div class="scenario-label" style="margin-top:48px; margin-bottom:12px">Scenario B — Pagina Breakdown</div>
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- SCENARIO C — Bottom sheet · Breakdown                            -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="scenario-block">
+    <div class="scenario-label">Modalità 1 — Bottom sheet · Breakdown</div>
 
-  <div class="scenario">
+    <div class="scenario">
 
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="topbar-left">
-        <span class="brand">oh<span class="brand-accent">writers</span></span>
-        <span class="project-name">Il Vuoto Dentro</span>
-      </div>
-      <div class="topbar-right">
-        <div class="avatar">V</div>
-      </div>
-    </div>
-
-    <!-- App body -->
-    <div class="app-body">
-
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <div class="nav-section-label">Scrittura</div>
-        <a class="nav-item">Soggetto</a>
-        <a class="nav-item">Sinossi</a>
-        <a class="nav-item">Scaletta</a>
-        <a class="nav-item">Sceneggiatura</a>
-        <div class="nav-section-label" style="margin-top:8px">Produzione</div>
-        <a class="nav-item active">Breakdown</a>
-        <a class="nav-item">Budget</a>
-        <a class="nav-item">Inquadrature</a>
-        <a class="nav-item">Schedule</a>
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <span class="brand">oh<span class="brand-accent">writers</span></span>
+          <span class="project-name">Il Vuoto Dentro</span>
+        </div>
+        <div class="topbar-right">
+          <div class="avatar">V</div>
+        </div>
       </div>
 
-      <!-- Main content: breakdown -->
-      <div class="main-content">
-        <div class="breakdown-area">
+      <!-- App body -->
+      <div class="app-body">
 
-          <div class="breakdown-header">
-            <h3>Scena 12 · INT. UFFICIO DEL DIRETTORE · GIORNO</h3>
-            <span class="scene-badge">Sc. 12 di 87</span>
-          </div>
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="nav-section-label">Scrittura</div>
+          <a class="nav-item">Soggetto</a>
+          <a class="nav-item">Sinossi</a>
+          <a class="nav-item">Scaletta</a>
+          <a class="nav-item">Sceneggiatura</a>
+          <div class="nav-section-label">Produzione</div>
+          <a class="nav-item active">Breakdown</a>
+          <a class="nav-item">Budget</a>
+          <a class="nav-item">Inquadrature</a>
+          <a class="nav-item">Schedule</a>
+        </div>
 
-          <div class="breakdown-categories">
+        <!-- Main content: breakdown page (dimmed) -->
+        <div class="main-content">
+
+          <!-- Scrim -->
+          <div class="scrim"></div>
+
+          <!-- FAB -->
+          <div class="cesare-fab" style="bottom: calc(42% + 16px)">✦ C</div>
+
+          <div class="breakdown-area">
+            <div class="breakdown-header">
+              <h3>Scena 12 · INT. UFFICIO DEL DIRETTORE · GIORNO</h3>
+              <span class="scene-badge">Sc. 12 di 87</span>
+            </div>
 
             <div class="cat-card">
-              <div class="cat-header" style="color: #6b3e7a">● CAST (3)</div>
+              <div class="cat-header" style="color:#6b3e7a">● CAST (3)</div>
               <div class="cat-item">Marco Rossi · Protagonista</div>
               <div class="cat-item">Silvia Moretti · Direttore</div>
               <div class="cat-item cat-item-warning">Costumista · Giornaliero ⚠</div>
             </div>
 
             <div class="cat-card">
-              <div class="cat-header" style="color: #9a5128">● PROPS (7)</div>
+              <div class="cat-header" style="color:#9a5128">● PROPS (7)</div>
               <div class="cat-item">Scrivania ministeriale · affitto €480/g</div>
               <div class="cat-item">Telefono fisso anni '80 · acquisto</div>
               <div class="cat-item">Tappeto orientale XL · affitto €220/g</div>
@@ -957,103 +1295,71 @@ la scrivania — vuota, come sempre.</div>
             </div>
 
             <div class="cat-card">
-              <div class="cat-header" style="color: #2e6b7a">● LOCATION (1)</div>
+              <div class="cat-header" style="color:#2e6b7a">● LOCATION (1)</div>
               <div class="cat-item">Ufficio del Direttore · palazzo storico Via Roma · prenotato ✓</div>
             </div>
-
           </div>
 
-        </div>
-      </div>
+          <!-- ── Bottom sheet ── -->
+          <div class="bottom-sheet">
 
-      <!-- Cesare panel -->
-      <div class="cesare-panel">
+            <!-- Drag handle -->
+            <div class="sheet-drag-handle"></div>
 
-        <!-- Header -->
-        <div class="cesare-header">
-          <div class="cesare-title">
-            <span class="cesare-icon">✦</span>
-            <span class="cesare-name">Cesare</span>
-          </div>
-          <button class="cesare-close">✕</button>
-          <div class="cesare-context">Scena 12 · INT. UFFICIO — GIORNO</div>
-        </div>
-
-        <!-- Context chips -->
-        <div class="context-chips">
-          <span class="chip">📄 Sceneggiatura</span>
-          <span class="chip chip-active">🎬 Sc. 12</span>
-          <span class="chip chip-active">💰 Budget</span>
-          <span class="chip">📅 Schedule</span>
-        </div>
-
-        <!-- Conversation -->
-        <div class="conversation">
-
-          <!-- User message -->
-          <div class="msg msg-user">
-            Suggerisci come riscrivere questa scena per ridurre i costi
-          </div>
-
-          <!-- Cesare response -->
-          <div class="msg msg-cesare">
-            <div class="msg-author">✦ Cesare</div>
-            <div class="msg-body">
-              <p>Tre voci di costo eliminabili:</p>
-
-              <div class="msg-cost-item">
-                <span class="cost-name">Scrivania ministeriale</span>
-                <span class="cost-value">€480/g</span>
-                <p class="cost-suggestion">→ Sostituire con scrivania neutra: risparmio €360</p>
+            <!-- Header -->
+            <div class="sheet-header">
+              <div class="sheet-chips">
+                <span class="sheet-chip sheet-chip-active">🎬 Sc. 12 attiva</span>
+                <span class="sheet-chip">💰 Budget cat.</span>
+                <span class="sheet-chip">📅 Giorno 3</span>
               </div>
-
-              <div class="msg-cost-item">
-                <span class="cost-name">Tappeto orientale XL</span>
-                <span class="cost-value">€220/g</span>
-                <p class="cost-suggestion">→ Rimuovere: ufficio asettico rafforza il personaggio</p>
-              </div>
-
-              <div class="msg-cost-item">
-                <span class="cost-name">Telefono anni '80</span>
-                <span class="cost-value">€180</span>
-                <p class="cost-suggestion">→ Telefono generico se non è in campo</p>
-              </div>
-
-              <div class="msg-total">
-                Risparmio potenziale: <strong>€880 (−51%)</strong>
+              <div class="sheet-header-actions">
+                <button class="sheet-expand-btn">Pagina intera →</button>
+                <button class="sheet-close-btn">✕</button>
               </div>
             </div>
+
+            <!-- Conversation -->
+            <div class="sheet-conversation">
+              <div class="sheet-msg-user">
+                Cosa costa di più in questa scena?
+              </div>
+
+              <div class="sheet-msg-cesare">
+                <div class="sheet-msg-author">✦ Cesare</div>
+                <div class="sheet-msg-body">
+                  Props dominano: scrivania €480, tappeto €220. Il costumista giornaliero aggiunge ~€350. Totale stimato scena €1.820 — il 68% è su props rinunciabili senza impatto narrativo.
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick prompts — cambiano rispetto a Scenario A -->
+            <div class="sheet-quick-prompts">
+              <button class="sheet-qp">Cosa costa di più?</button>
+              <button class="sheet-qp">Suggerisci tagli</button>
+              <button class="sheet-qp">Fattibile domani?</button>
+              <button class="sheet-qp">Cast disponibile?</button>
+            </div>
+
+            <!-- Input row -->
+            <div class="sheet-input-row">
+              <input class="sheet-input" type="text" placeholder="Scrivi a Cesare…" style="flex:1; border:1px solid var(--line); border-radius:var(--radius-md); padding:8px 10px; font-size:0.82rem; font-family:inherit; background:var(--surface); color:var(--text); outline:none;">
+              <button class="sheet-send">▶</button>
+            </div>
+
           </div>
+          <!-- /bottom-sheet -->
 
         </div>
-
-        <!-- Quick prompts -->
-        <div class="quick-prompts">
-          <button class="qp">Fattibile domani?</button>
-          <button class="qp">Riduci i costi</button>
-          <button class="qp">Scrivi il dialogo</button>
-          <button class="qp">Ottimizza schedule</button>
-        </div>
-
-        <!-- Input area -->
-        <div class="cesare-input-area">
-          <textarea class="cesare-input" placeholder="Scrivi a Cesare…" rows="2"></textarea>
-          <button class="cesare-send">▶</button>
-        </div>
+        <!-- /main-content -->
 
       </div>
-      <!-- /cesare-panel -->
+      <!-- /app-body -->
 
     </div>
-    <!-- /app-body -->
-
+    <!-- /scenario -->
   </div>
-  <!-- /scenario B -->
-
-  <!-- Trigger note -->
-  <div class="trigger-note">
-    Aperto con <kbd>⌘⇧A</kbd> o dal pulsante <span class="trigger-pill">✦ C</span> in basso a destra nella pagina
-  </div>
+  <!-- /scenario block C -->
 
 </body>
 </html>
