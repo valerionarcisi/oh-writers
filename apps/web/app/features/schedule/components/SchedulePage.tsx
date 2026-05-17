@@ -20,6 +20,7 @@ import {
   type Suggestion,
 } from "@oh-writers/domain";
 import { useVersionsDrawer } from "~/features/versions";
+import { useVersions } from "~/features/screenplay-editor";
 import {
   scheduleQueryOptions,
   generateSchedule,
@@ -56,6 +57,10 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const schedule = data?.isOk ? data.value : null;
   const versionsDrawer = useVersionsDrawer();
+
+  const { data: versionsResult } = useVersions(schedule?.screenplayId ?? "");
+  const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
+  const currentVersionId = schedule?.screenplayVersionId ?? null;
 
   const [tab, setTab] = useState<ViewTab>("strip");
   const [stripViewMode, setStripViewMode] = useState<"days" | "weeks">("days");
@@ -250,7 +255,10 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
       )
     : 0;
 
-  const versionLabel = "v3 · 14 mag 2026";
+  const currentVersion = screenplayVersions.find(
+    (v) => v.id === currentVersionId,
+  );
+  const versionLabel = currentVersion?.label ?? undefined;
 
   return (
     <div className={styles.page} data-testid="schedule-page-v2">
@@ -265,21 +273,39 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           ariaLabel="Vista piano di lavorazione"
         />
         {tab === "strip" && (
-          <SegmentedControl<"days" | "weeks">
-            options={[
-              { id: "days", label: "Giorni" },
-              { id: "weeks", label: "Settimane" },
-            ]}
-            activeId={stripViewMode}
-            onSelect={setStripViewMode}
-            ariaLabel="Raggruppamento strip board"
-          />
+          <span className={styles.viewbarSubControl}>
+            <SegmentedControl<"days" | "weeks">
+              options={[
+                { id: "days", label: "Giorni" },
+                { id: "weeks", label: "Settimane" },
+              ]}
+              activeId={stripViewMode}
+              onSelect={setStripViewMode}
+              ariaLabel="Raggruppamento strip board"
+            />
+          </span>
         )}
         <span className={styles.viewbarRight} />
         <VersionTrigger
           variant="pill"
           versionLabel={versionLabel}
-          onClick={handleOpenVersions}
+          menuItems={[
+            ...screenplayVersions.map((v, idx) => ({
+              id: `version-${v.id}`,
+              label: v.id === currentVersionId
+                ? `● ${v.label ?? `Versione ${idx + 1}`}`
+                : (v.label ?? `Versione ${idx + 1}`),
+              onSelect: handleOpenVersions,
+              tone: v.id === currentVersionId
+                ? ("default" as const)
+                : ("muted" as const),
+            })),
+            {
+              id: "open-drawer",
+              label: "Apri Versioni →",
+              onSelect: handleOpenVersions,
+            },
+          ]}
         />
       </Viewbar>
 

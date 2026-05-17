@@ -27,6 +27,17 @@
   margin-inline-start: auto;
 }
 
+/* Secondary sub-control for strip board grouping (Giorni / Settimane).
+ * Visual separator + reduced opacity signal it is subordinate to the main
+ * Strip Board / Giornata control, not a peer tab group. */
+.viewbarSubControl {
+  display: inline-flex;
+  align-items: center;
+  padding-inline-start: var(--ds-space-4);
+  border-inline-start: 1px solid var(--ds-line);
+  opacity: 0.72;
+}
+
 .filter {
   height: 28px;
   padding-inline: 10px;
