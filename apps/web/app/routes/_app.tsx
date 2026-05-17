@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_app")({
 const SECTION_LABELS: Record<string, string> = {
   breakdown: "Breakdown",
   budget: "Budget",
-  schedule: "Piano",
+  schedule: "Calendarizzazione",
   "shooting-plan": "Inquadrature",
   screenplay: "Sceneggiatura",
   soggetto: "Soggetto",
@@ -94,7 +94,7 @@ const SECTION_GROUPS: ReadonlyArray<{
       { segment: "breakdown", label: "Breakdown", icon: "clipboard" },
       { segment: "budget", label: "Budget", icon: "file-text" },
       { segment: "shooting-plan", label: "Inquadrature", icon: "camera" },
-      { segment: "schedule", label: "Piano", icon: "clock" },
+      { segment: "schedule", label: "Calendarizzazione", icon: "clock" },
     ],
   },
 ];

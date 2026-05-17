@@ -1,6 +1,6 @@
 # Spec 10g — LLM-at-import full breakdown (Sonnet full-script + Haiku per-scene)
 
-> **Status:** open
+> **Status:** ✅ done
 > **Depends on:** Spec 10 (Breakdown), Spec 10c (Inline tagging), Spec 10e (Auto-spoglio regex), Spec 10f (Table view)
 > **Date:** 2026-04-23
 

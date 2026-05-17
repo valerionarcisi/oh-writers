@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Location Manager — 3 Opzioni UX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #f5f3ee;
+      --surface:      #ffffff;
+      --surface-alt:  #ebe9e3;
+      --surface-deep: #e0ddd6;
+      --line:         #d8d6cd;
+      --line-soft:    rgba(227,225,215,0.50);
+      --text:         #1c1a17;
+      --text-2:       #44413c;
+      --text-3:       #6e6c66;
+      --text-mute:    #88867e;
+      --action:       #8b3a1a;
+      --action-soft:  #f4dccb;
+      --green:        #2d6a4f;
+      --green-soft:   #d8f3dc;
+      --amber:        #92400e;
+      --amber-soft:   #fde68a;
+      --agent:        #5a3e8a;
+      --agent-soft:   #ede9f8;
+      --font-sans:    "Inter", -apple-system, system-ui, sans-serif;
+      --font-display: "Fraunces", Georgia, serif;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --radius-pill: 100px;
+      --shadow-1: 0 1px 3px rgba(28,26,23,0.07);
+      --shadow-2: 0 4px 16px rgba(28,26,23,0.10);
+    }
+
+    body { font-family: var(--font-sans); background: #1a1816; color: var(--text); font-size: 13px; line-height: 1.5; height: 100vh; overflow: hidden; }
+
+    /* ── Selector bar ── */
+    .selector {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: #111009;
+      border-bottom: 1px solid #2a2724;
+      display: flex; align-items: center; gap: 0;
+      padding: 0 24px;
+      height: 52px;
+    }
+    .selector-brand {
+      font-family: var(--font-display);
+      font-size: 1rem; font-weight: 400;
+      color: #8a8680;
+      margin-right: 32px;
+      letter-spacing: 0.02em;
+    }
+    .selector-label {
+      font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: #5a5752;
+      margin-right: 16px;
+    }
+    .tab-btn {
+      height: 52px; padding: 0 20px;
+      border: none; background: none;
+      font-family: var(--font-sans); font-size: 0.82rem; font-weight: 500;
+      color: #7a7772;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 150ms ease, border-color 150ms ease;
+      position: relative;
+    }
+    .tab-btn:hover { color: #c8c5c0; }
+    .tab-btn.active { color: #f5f3ee; border-bottom-color: #c8722a; }
+    .tab-btn .badge {
+      position: absolute; top: 12px; right: 8px;
+      background: #8b3a1a; color: #fff;
+      font-size: 0.6rem; font-weight: 700;
+      border-radius: var(--radius-pill);
+      padding: 1px 5px;
+    }
+
+    /* ── Frames ── */
+    .frame {
+      display: none;
+      position: fixed; inset: 52px 0 0 0;
+      overflow: auto;
+    }
+    .frame.active { display: block; }
+
+    /* ═══════════════════════════════════════════════════
+       OPZIONE A — Master-Detail (current)
+       Lista sinistra · Dettaglio requirement destra
+    ═══════════════════════════════════════════════════ */
+    .opt-a {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: 100%;
+      background: var(--bg);
+    }
+
+    /* Sidebar */
+    .a-sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .a-sidebar-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .a-sidebar-title {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 10px;
+    }
+    .a-filter-row {
+      display: flex; gap: 6px;
+    }
+    .a-filter-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      background: var(--surface-alt);
+      font-size: 0.75rem; font-weight: 500;
+      color: var(--text-3);
+      cursor: pointer;
+    }
+    .a-filter-btn.active {
+      background: var(--action); color: #fff; border-color: var(--action);
+    }
+    .a-list { flex: 1; overflow-y: auto; }
+    .a-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      cursor: pointer;
+      transition: background 100ms;
+    }
+    .a-item:hover { background: var(--surface-alt); }
+    .a-item.active { background: var(--action-soft); }
+    .a-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .a-dot.green { background: var(--green); }
+    .a-dot.amber { background: #d97706; }
+    .a-dot.gray { background: var(--line); border: 1.5px solid var(--text-mute); }
+    .a-item-body { flex: 1; min-width: 0; }
+    .a-item-name {
+      font-size: 0.82rem; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .a-item-meta { font-size: 0.72rem; color: var(--text-mute); }
+    .a-count {
+      font-size: 0.72rem; font-weight: 600; color: var(--text-mute);
+      background: var(--surface-deep);
+      border-radius: var(--radius-pill);
+      padding: 1px 7px;
+    }
+    .a-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--line);
+      font-size: 0.75rem; color: var(--text-mute);
+      display: flex; justify-content: space-between;
+    }
+    .a-footer strong { color: var(--green); }
+
+    /* Main panel */
+    .a-main {
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .a-main-head {
+      padding: 20px 28px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .a-main-eyebrow {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 4px;
+    }
+    .a-main-title {
+      font-size: 1.4rem; font-weight: 700; color: var(--text);
+      letter-spacing: -0.02em; margin-bottom: 6px;
+    }
+    .a-main-tags {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .a-tag {
+      font-size: 0.72rem; font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--surface-deep);
+      color: var(--text-3);
+    }
+    .a-tag.confirmed { background: var(--green-soft); color: var(--green); }
+    .a-scene-list { font-size: 0.72rem; color: var(--text-mute); margin-top: 4px; }
+    .a-main-body { flex: 1; overflow-y: auto; padding: 20px 28px; display: flex; flex-direction: column; gap: 12px; }
+
+    .a-candidate {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .a-candidate.confirmed { border-color: var(--green); border-width: 2px; }
+    .a-candidate-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+    }
+    .a-candidate-star { color: #d97706; font-size: 1rem; }
+    .a-candidate-name { font-size: 0.92rem; font-weight: 600; color: var(--text); flex: 1; }
+    .a-cand-status {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: var(--radius-pill);
+    }
+    .a-cand-status.visited { background: #dbeafe; color: #1d4ed8; }
+    .a-cand-status.candidate { background: var(--surface-deep); color: var(--text-mute); }
+    .a-cand-status.confirmed { background: var(--green-soft); color: var(--green); }
+    .a-candidate-body {
+      padding: 0 16px 14px;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .a-cand-row { display: flex; gap: 6px; align-items: baseline; font-size: 0.8rem; color: var(--text-3); }
+    .a-cand-row span:first-child { font-size: 1rem; }
+    .a-cand-photos {
+      padding: 0 16px 14px;
+      display: flex; gap: 8px;
+    }
+    .a-photo {
+      width: 72px; height: 52px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-deep);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .a-photo.add {
+      border: 1.5px dashed var(--line);
+      font-size: 1.2rem; color: var(--text-mute);
+      cursor: pointer;
+    }
+    .a-candidate-foot {
+      padding: 12px 16px;
+      border-top: 1px solid var(--line-soft);
+      display: flex; justify-content: flex-end; gap: 8px;
+    }
+    .btn-sm {
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: none;
+    }
+    .btn-ghost { background: var(--surface-alt); color: var(--text-2); border: 1px solid var(--line); }
+    .btn-primary { background: var(--action); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-agent { background: var(--agent); color: #fff; }
+
+    .a-add-row {
+      display: flex; gap: 10px;
+    }
+    .a-add-btn {
+      flex: 1; padding: 12px;
+      border: 1.5px dashed var(--line);
+      border-radius: var(--radius-lg);
+      background: none;
+      font-size: 0.82rem; font-weight: 500; color: var(--text-mute);
+      cursor: pointer;
+      transition: border-color 150ms, color 150ms;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .a-add-btn:hover { border-color: var(--action); color: var(--action); }
+    .a-add-btn.ai { border-color: var(--agent-soft); color: var(--agent); background: var(--agent-soft); }
+
+    /* ═══════════════════════════════════════════════════
+       OPZIONE B — Kanban orizzontale
+       Colonne: Pending · Scouting · Confermato
+    ═══════════════════════════════════════════════════ */
+    .opt-b {
+      height: 100%;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+    }
+    .b-viewbar {
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .b-viewbar-title {
+      font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-mute); flex: 1;
+    }
+    .b-board {
+      flex: 1; display: flex; gap: 0; overflow: hidden;
+    }
+    .b-col {
+      flex: 1;
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .b-col:last-child { border-right: none; }
+    .b-col-head {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .b-col-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .b-col-label {
+      font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-mute); flex: 1;
+    }
+    .b-col-count {
+      font-size: 0.72rem; font-weight: 600;
+      color: var(--text-mute);
+      background: var(--surface-deep);
+      padding: 1px 7px; border-radius: var(--radius-pill);
+    }
+    .b-col-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .b-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: box-shadow 150ms;
+    }
+    .b-card:hover { box-shadow: var(--shadow-2); }
+    .b-card.confirmed { border-left: 3px solid var(--green); }
+    .b-card-name {
+      font-size: 0.85rem; font-weight: 600; color: var(--text);
+      margin-bottom: 4px;
+    }
+    .b-card-meta { font-size: 0.72rem; color: var(--text-mute); margin-bottom: 8px; }
+    .b-card-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .b-chip {
+      font-size: 0.68rem; font-weight: 600;
+      padding: 2px 6px; border-radius: var(--radius-pill);
+      background: var(--surface-deep); color: var(--text-3);
+    }
+    .b-chip.night { background: #1e1b4b; color: #a5b4fc; }
+    .b-chip.ext { background: #d1fae5; color: #065f46; }
+    .b-chip.int { background: #e0e7ff; color: #3730a3; }
+    .b-card-cand {
+      font-size: 0.75rem; color: var(--text-mute);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .b-cand-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+    .b-cand-dot.visited { background: #3b82f6; }
+    .b-cand-dot.confirmed { background: var(--green); }
+    .b-card-add {
+      border: 1.5px dashed var(--line); background: none;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 0.8rem; color: var(--text-mute);
+      cursor: pointer; text-align: center; width: 100%;
+    }
+    .b-card-add:hover { border-color: var(--action); color: var(--action); }
+
+    /* ═══════════════════════════════════════════════════
+       OPZIONE C — Map-first
+       Mappa a sx · lista/dettaglio a dx
+    ═══════════════════════════════════════════════════ */
+    .opt-c {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      height: 100%;
+      background: var(--bg);
+    }
+    .c-map {
+      position: relative;
+      overflow: hidden;
+      background: #e8e4dd;
+    }
+    .c-map-bg {
+      width: 100%; height: 100%;
+      background: linear-gradient(160deg, #d6d0c4 0%, #c8c3b6 40%, #bfbaa9 100%);
+      position: relative;
+    }
+    /* Fake map grid */
+    .c-map-bg::before {
+      content: "";
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(100,90,75,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100,90,75,0.08) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    /* Fake roads */
+    .c-road {
+      position: absolute;
+      background: rgba(255,255,255,0.55);
+    }
+    .c-road.h { height: 4px; left: 0; right: 0; }
+    .c-road.v { width: 4px; top: 0; bottom: 0; }
+    .c-road.thick { background: rgba(255,255,255,0.75); }
+    .c-road.h.thick { height: 7px; }
+    .c-road.v.thick { width: 7px; }
+
+    .c-map-label {
+      position: absolute;
+      top: 16px; left: 16px;
+      background: rgba(28,26,23,0.72);
+      backdrop-filter: blur(8px);
+      color: #f5f3ee;
+      font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+    }
+    .c-map-controls {
+      position: absolute; bottom: 16px; left: 16px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .c-map-btn {
+      width: 32px; height: 32px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; cursor: pointer; color: var(--text-2);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Map pins */
+    .c-pin {
+      position: absolute;
+      display: flex; flex-direction: column; align-items: center;
+      cursor: pointer;
+      transform: translate(-50%, -100%);
+    }
+    .c-pin-bubble {
+      background: var(--surface);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 4px 8px;
+      font-size: 0.72rem; font-weight: 600; color: var(--text-2);
+      box-shadow: var(--shadow-2);
+      white-space: nowrap;
+      transition: transform 150ms;
+    }
+    .c-pin-bubble.confirmed { border-color: var(--green); color: var(--green); }
+    .c-pin-bubble.active { background: var(--action); color: #fff; border-color: var(--action); transform: scale(1.05); }
+    .c-pin-tail {
+      width: 2px; height: 10px; background: var(--line);
+    }
+    .c-pin-tail.confirmed { background: var(--green); }
+    .c-pin-tail.active { background: var(--action); }
+    .c-pin-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--line);
+      border: 2px solid white;
+    }
+    .c-pin-dot.confirmed { background: var(--green); }
+    .c-pin-dot.active { background: var(--action); }
+
+    /* Side panel */
+    .c-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--line);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .c-panel-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .c-panel-eyebrow {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-mute); margin-bottom: 8px;
+    }
+    .c-panel-list { flex: 1; overflow-y: auto; }
+    .c-req-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      cursor: pointer;
+    }
+    .c-req-row:hover { background: var(--surface-alt); }
+    .c-req-row.active { background: var(--action-soft); }
+    .c-req-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .c-req-body { flex: 1; min-width: 0; }
+    .c-req-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+    .c-req-meta { font-size: 0.7rem; color: var(--text-mute); }
+    .c-req-location { font-size: 0.75rem; color: var(--text-3); }
+    .c-no-loc {
+      font-size: 0.75rem; color: var(--text-mute);
+      font-style: italic;
+    }
+
+    .c-detail {
+      border-top: 1px solid var(--line);
+      padding: 16px;
+      background: var(--surface-alt);
+    }
+    .c-detail-head {
+      font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-mute); margin-bottom: 10px;
+    }
+    .c-detail-name { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .c-detail-addr { font-size: 0.8rem; color: var(--text-3); margin-bottom: 10px; }
+    .c-detail-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; color: var(--text-3); align-items: center; }
+    .c-detail-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* ── Shared label ── */
+    .option-label {
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .option-label .num {
+      font-family: var(--font-display);
+      font-size: 0.9rem; font-weight: 700;
+      color: var(--action);
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Selector bar -->
+<nav class="selector">
+  <span class="selector-brand">oh writers</span>
+  <span class="selector-label">Location Manager ·</span>
+  <button class="tab-btn active" onclick="show('a',this)">
+    <span class="option-label"><span class="num">A</span> Master-Detail</span>
+  </button>
+  <button class="tab-btn" onclick="show('b',this)">
+    <span class="option-label"><span class="num">B</span> Kanban</span>
+  </button>
+  <button class="tab-btn" onclick="show('c',this)">
+    <span class="option-label"><span class="num">C</span> Map-first</span>
+    <span class="badge">new</span>
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     OPZIONE A — Master-Detail (raffinamento del mockup attuale)
+     Differenza chiave: sidebar filtrata, pannello destro full con foto+candidati,
+     AI suggestion inline col reasoning, no modal
+═══════════════════════════════════════════ -->
+<div class="frame active" id="frame-a">
+  <div class="opt-a" style="height:100%">
+    <aside class="a-sidebar">
+      <div class="a-sidebar-head">
+        <div class="a-sidebar-title">Location (12)</div>
+        <div class="a-filter-row">
+          <button class="a-filter-btn active">Tutte</button>
+          <button class="a-filter-btn">Da fare</button>
+          <button class="a-filter-btn">Sopralluogo</button>
+          <button class="a-filter-btn">✓</button>
+        </div>
+      </div>
+      <div class="a-list">
+        <div class="a-item active">
+          <div class="a-dot green"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">APP. DI MARCO</div>
+            <div class="a-item-meta">INT · GIORNO, SERA</div>
+          </div>
+          <div class="a-count">6</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot green"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">CORRIDOIO COND.</div>
+            <div class="a-item-meta">INT · NOTTE</div>
+          </div>
+          <div class="a-count">1</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot amber"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">TETTO DI NOTTE</div>
+            <div class="a-item-meta">EXT · NOTTE</div>
+          </div>
+          <div class="a-count">2</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot amber"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">STRADA EXTRAURBANA</div>
+            <div class="a-item-meta">EXT · GIORNO</div>
+          </div>
+          <div class="a-count">4</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot gray"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">FABBRICA ABBANDONATA</div>
+            <div class="a-item-meta">INT/EXT · GIORNO</div>
+          </div>
+          <div class="a-count">2</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot gray"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">EXT. BOSCO</div>
+            <div class="a-item-meta">EXT · ALBA, TRAMONTO</div>
+          </div>
+          <div class="a-count">5</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot gray"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">OSPEDALE INT.</div>
+            <div class="a-item-meta">INT · GIORNO</div>
+          </div>
+          <div class="a-count">3</div>
+        </div>
+        <div class="a-item">
+          <div class="a-dot gray"></div>
+          <div class="a-item-body">
+            <div class="a-item-name">AUTO IN MOVIMENTO</div>
+            <div class="a-item-meta">INT · GIORNO</div>
+          </div>
+          <div class="a-count">2</div>
+        </div>
+      </div>
+      <div class="a-footer">
+        <span>Confermate <strong>2 / 12</strong></span>
+        <span>16%</span>
+      </div>
+    </aside>
+
+    <main class="a-main">
+      <div class="a-main-head">
+        <div class="a-main-eyebrow">Location requirement · confermata</div>
+        <div class="a-main-title">Appartamento di Marco</div>
+        <div class="a-main-tags">
+          <span class="a-tag">INT</span>
+          <span class="a-tag">GIORNO</span>
+          <span class="a-tag">SERA</span>
+          <span class="a-tag confirmed">✓ Confermata</span>
+        </div>
+        <div class="a-scene-list">6 scene · SC.1, SC.3, SC.7, SC.12, SC.18, SC.24 · <a href="#" style="color:var(--action)">vedi nel breakdown →</a></div>
+      </div>
+      <div class="a-main-body">
+
+        <!-- Candidato confermato -->
+        <div class="a-candidate confirmed">
+          <div class="a-candidate-head">
+            <span class="a-candidate-star">★</span>
+            <span class="a-candidate-name">Via Tortona 18, Milano</span>
+            <span class="a-cand-status confirmed">✓ Confermata</span>
+            <button class="btn-sm btn-ghost">···</button>
+          </div>
+          <div class="a-candidate-body">
+            <div class="a-cand-row"><span>📍</span> Via Tortona 18, 20144 Milano</div>
+            <div class="a-cand-row"><span>👤</span> Lucia Ferrara · lucia@studio.it</div>
+            <div class="a-cand-row"><span>💶</span> € 350 / giorno</div>
+            <div class="a-cand-row"><span>📋</span> Permesso: SIAE + Comune</div>
+            <div class="a-cand-row"><span>📅</span> Disp. 15 giu – 30 lug 2026</div>
+            <div class="a-cand-row"><span>🗒</span> Luce naturale ottima. Piano –1.</div>
+          </div>
+          <div class="a-cand-photos">
+            <div class="a-photo">🛋</div>
+            <div class="a-photo">🪟</div>
+            <div class="a-photo">🚪</div>
+            <div class="a-photo add">+</div>
+          </div>
+        </div>
+
+        <!-- Candidato secondario con form foto+contatti espansa -->
+        <div class="a-candidate">
+          <div class="a-candidate-head">
+            <span style="color:var(--text-mute);font-size:.9rem">○</span>
+            <span class="a-candidate-name">Largo Argentina 8, Roma</span>
+            <span class="a-cand-status candidate">Candidata</span>
+            <button class="btn-sm btn-ghost">···</button>
+          </div>
+          <!-- Foto -->
+          <div style="padding:0 16px 6px">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px">Foto (0)</div>
+            <div class="a-cand-photos">
+              <div class="a-photo add" title="Aggiungi foto">📷</div>
+              <div class="a-photo add" title="Aggiungi foto">+</div>
+            </div>
+          </div>
+          <!-- Contatti e info -->
+          <div style="padding:0 16px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">Contatto</div>
+              <div style="font-size:0.8rem;color:var(--text-mute);padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius-md);cursor:text">Nome, email, telefono…</div>
+            </div>
+            <div>
+              <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">Costo / giorno</div>
+              <div style="font-size:0.8rem;color:var(--text-mute);padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius-md);cursor:text">€ —</div>
+            </div>
+            <div>
+              <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">Disponibilità</div>
+              <div style="font-size:0.8rem;color:var(--text-mute);padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius-md);cursor:text">Dal — Al —</div>
+            </div>
+            <div>
+              <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">Permessi</div>
+              <div style="font-size:0.8rem;color:var(--text-mute);padding:8px 10px;border:1px dashed var(--line);border-radius:var(--radius-md);cursor:text">Note permessi…</div>
+            </div>
+          </div>
+          <div style="padding:0 16px 14px">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px">Note sopralluogo</div>
+            <div style="font-size:0.8rem;color:var(--text-mute);padding:10px;border:1px dashed var(--line);border-radius:var(--radius-md);min-height:52px;cursor:text">Impressioni, problemi tecnici, luce, rumore…</div>
+          </div>
+          <div class="a-candidate-foot">
+            <button class="btn-sm btn-ghost">Scarta</button>
+            <button class="btn-sm btn-ghost">Segna visitata</button>
+            <button class="btn-sm btn-primary">✓ Conferma</button>
+          </div>
+        </div>
+
+        <!-- Suggerimento AI -->
+        <div class="a-candidate" style="border-style:dashed;border-color:var(--agent-soft);background:var(--agent-soft)">
+          <div class="a-candidate-head">
+            <span style="color:var(--agent);font-size:.9rem">✦</span>
+            <span class="a-candidate-name" style="color:var(--agent)">Suggerito da Cesare</span>
+            <span class="a-cand-status" style="background:var(--agent-soft);color:var(--agent)">AI</span>
+          </div>
+          <div style="padding:0 16px 8px;font-size:0.8rem;color:var(--agent);font-weight:600">Palazzo dei Giureconsulti, Milano</div>
+          <div style="padding:0 16px 14px;font-size:0.78rem;color:var(--text-3);line-height:1.5">
+            Soffitti alti, luce laterale naturale, zona Duomo. Coerente con il profilo "appartamento borghese anni '70" indicato nella scena. Richiede permesso comunale.
+          </div>
+          <div class="a-candidate-foot" style="border-top:1px solid rgba(90,62,138,0.15)">
+            <button class="btn-sm btn-ghost">Ignora</button>
+            <button class="btn-sm btn-agent">+ Aggiungi candidato</button>
+          </div>
+        </div>
+
+        <!-- Add row -->
+        <div class="a-add-row">
+          <button class="a-add-btn">+ Aggiungi manualmente</button>
+          <button class="a-add-btn ai">✦ Chiedi a Cesare altri suggerimenti</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     OPZIONE B — Kanban per stato
+     Colonne: Pending · Sopralluogo · Confermato
+     Pro: visione d'insieme dell'avanzamento della produzione
+     Contro: non vedi i dettagli candidati
+═══════════════════════════════════════════ -->
+<div class="frame" id="frame-b">
+  <div class="opt-b">
+    <div class="b-viewbar">
+      <span class="b-viewbar-title">Location Manager · Piano di lavorazione</span>
+      <button class="btn-sm btn-agent">✦ Suggerisci location mancanti</button>
+    </div>
+    <div class="b-board">
+      <div class="b-col">
+        <div class="b-col-head">
+          <div class="b-col-dot" style="background:var(--line);border:1.5px solid var(--text-mute)"></div>
+          <span class="b-col-label">Da fare</span>
+          <span class="b-col-count">7</span>
+        </div>
+        <div class="b-col-body">
+          <div class="b-card">
+            <div class="b-card-name">FABBRICA ABBANDONATA</div>
+            <div class="b-card-meta">2 scene · INT/EXT</div>
+            <div class="b-card-chips">
+              <span class="b-chip int">INT/EXT</span>
+              <span class="b-chip">GIORNO</span>
+            </div>
+            <div class="b-card-cand">0 candidati</div>
+          </div>
+          <div class="b-card">
+            <div class="b-card-name">EXT. BOSCO</div>
+            <div class="b-card-meta">5 scene · EXT</div>
+            <div class="b-card-chips">
+              <span class="b-chip ext">EXT</span>
+              <span class="b-chip">ALBA</span>
+              <span class="b-chip">TRAMONTO</span>
+            </div>
+            <div class="b-card-cand">0 candidati</div>
+          </div>
+          <div class="b-card">
+            <div class="b-card-name">OSPEDALE INT.</div>
+            <div class="b-card-meta">3 scene · INT</div>
+            <div class="b-card-chips">
+              <span class="b-chip int">INT</span>
+              <span class="b-chip">GIORNO</span>
+            </div>
+            <div class="b-card-cand">0 candidati</div>
+          </div>
+          <div class="b-card">
+            <div class="b-card-name">AUTO IN MOVIMENTO</div>
+            <div class="b-card-meta">2 scene · INT</div>
+            <div class="b-card-chips">
+              <span class="b-chip int">INT</span>
+              <span class="b-chip">GIORNO</span>
+            </div>
+            <div class="b-card-cand">0 candidati</div>
+          </div>
+          <div class="b-card">
+            <div class="b-card-name">STAZIONE METRO</div>
+            <div class="b-card-meta">1 scena · EXT</div>
+            <div class="b-card-chips">
+              <span class="b-chip ext">EXT</span>
+              <span class="b-chip night">NOTTE</span>
+            </div>
+            <div class="b-card-cand">0 candidati</div>
+          </div>
+          <button class="b-card-add">+ Aggiungi location</button>
+        </div>
+      </div>
+
+      <div class="b-col">
+        <div class="b-col-head">
+          <div class="b-col-dot" style="background:#d97706"></div>
+          <span class="b-col-label">Sopralluogo</span>
+          <span class="b-col-count">3</span>
+        </div>
+        <div class="b-col-body">
+          <div class="b-card">
+            <div class="b-card-name">TETTO DI NOTTE</div>
+            <div class="b-card-meta">2 scene · EXT</div>
+            <div class="b-card-chips">
+              <span class="b-chip ext">EXT</span>
+              <span class="b-chip night">NOTTE</span>
+            </div>
+            <div class="b-card-cand">
+              <div class="b-cand-dot visited"></div> Terrazza Brera — visitata
+            </div>
+            <div class="b-card-cand" style="margin-top:3px">
+              <div class="b-cand-dot"></div> Ex-industriale Navigli — candidata
+            </div>
+          </div>
+          <div class="b-card">
+            <div class="b-card-name">STRADA EXTRAURBANA</div>
+            <div class="b-card-meta">4 scene · EXT</div>
+            <div class="b-card-chips">
+              <span class="b-chip ext">EXT</span>
+              <span class="b-chip">GIORNO</span>
+            </div>
+            <div class="b-card-cand">
+              <div class="b-cand-dot visited"></div> SS35 dir. Lodi — visitata
+            </div>
+          </div>
+          <div class="b-card">
+            <div class="b-card-name">CORRIDOIO COND.</div>
+            <div class="b-card-meta">1 scena · INT</div>
+            <div class="b-card-chips">
+              <span class="b-chip int">INT</span>
+              <span class="b-chip night">NOTTE</span>
+            </div>
+            <div class="b-card-cand">
+              <div class="b-cand-dot visited"></div> Via Tortona 18 (stesso edificio)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="b-col">
+        <div class="b-col-head">
+          <div class="b-col-dot" style="background:var(--green)"></div>
+          <span class="b-col-label">Confermata</span>
+          <span class="b-col-count">2</span>
+        </div>
+        <div class="b-col-body">
+          <div class="b-card confirmed">
+            <div class="b-card-name">APP. DI MARCO</div>
+            <div class="b-card-meta">6 scene · INT</div>
+            <div class="b-card-chips">
+              <span class="b-chip int">INT</span>
+              <span class="b-chip">GIORNO</span>
+              <span class="b-chip">SERA</span>
+            </div>
+            <div class="b-card-cand">
+              <div class="b-cand-dot confirmed"></div> Via Tortona 18, Milano
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-mute);margin-top:6px">€ 350/g · Lucia Ferrara</div>
+          </div>
+          <div class="b-card confirmed">
+            <div class="b-card-name">UFFICIO OPEN SPACE</div>
+            <div class="b-card-meta">4 scene · INT</div>
+            <div class="b-card-chips">
+              <span class="b-chip int">INT</span>
+              <span class="b-chip">GIORNO</span>
+            </div>
+            <div class="b-card-cand">
+              <div class="b-cand-dot confirmed"></div> Spazio Copernico, Milano
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-mute);margin-top:6px">€ 200/g · no permesso</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     OPZIONE C — Map-first
+     Mappa grande sx · lista requirement destra con candidato confermato
+     Pro: cluster geografico per schedule, distanze tra location
+     Contro: non aiuta chi non ha ancora location fisiche
+═══════════════════════════════════════════ -->
+<div class="frame" id="frame-c">
+  <div class="opt-c" style="height:100%">
+    <div class="c-map">
+      <div class="c-map-bg">
+        <!-- Fake roads -->
+        <div class="c-road h thick" style="top:35%"></div>
+        <div class="c-road h" style="top:55%"></div>
+        <div class="c-road h" style="top:72%"></div>
+        <div class="c-road v thick" style="left:30%"></div>
+        <div class="c-road v" style="left:55%"></div>
+        <div class="c-road v" style="left:75%"></div>
+        <div class="c-road h" style="top:20%"></div>
+
+        <!-- Pins confirmed -->
+        <div class="c-pin" style="left:42%;top:45%">
+          <div class="c-pin-bubble confirmed active">Via Tortona 18</div>
+          <div class="c-pin-tail confirmed"></div>
+          <div class="c-pin-dot confirmed"></div>
+        </div>
+        <div class="c-pin" style="left:58%;top:52%">
+          <div class="c-pin-bubble confirmed">Spazio Copernico</div>
+          <div class="c-pin-tail confirmed"></div>
+          <div class="c-pin-dot confirmed"></div>
+        </div>
+
+        <!-- Pins visited -->
+        <div class="c-pin" style="left:38%;top:28%">
+          <div class="c-pin-bubble" style="border-color:#3b82f6;color:#1d4ed8">Terrazza Brera</div>
+          <div class="c-pin-tail" style="background:#3b82f6"></div>
+          <div class="c-pin-dot" style="background:#3b82f6"></div>
+        </div>
+        <div class="c-pin" style="left:68%;top:60%">
+          <div class="c-pin-bubble" style="border-color:#3b82f6;color:#1d4ed8">SS35 dir. Lodi</div>
+          <div class="c-pin-tail" style="background:#3b82f6"></div>
+          <div class="c-pin-dot" style="background:#3b82f6"></div>
+        </div>
+
+        <!-- Legend -->
+        <div style="position:absolute;bottom:56px;right:16px;background:rgba(255,255,255,0.9);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px;font-size:0.72rem;backdrop-filter:blur(8px)">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid white"></div>
+            <span style="color:var(--green);font-weight:600">Confermata</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#3b82f6;border:2px solid white"></div>
+            <span style="color:#1d4ed8;font-weight:600">Visitata</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--line);border:2px solid white"></div>
+            <span style="color:var(--text-mute);font-weight:600">Candidata</span>
+          </div>
+        </div>
+      </div>
+      <div class="c-map-label">📍 Milano e dintorni</div>
+      <div class="c-map-controls">
+        <button class="c-map-btn">+</button>
+        <button class="c-map-btn">−</button>
+      </div>
+    </div>
+
+    <div class="c-panel">
+      <div class="c-panel-head">
+        <div class="c-panel-eyebrow">Location (12) · 2 confermate</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm btn-ghost" style="flex:1">Lista</button>
+          <button class="btn-sm btn-agent" style="flex:1">✦ Suggerisci</button>
+        </div>
+      </div>
+      <div class="c-panel-list">
+        <div class="c-req-row active">
+          <div class="c-req-dot" style="background:var(--green)"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">APP. DI MARCO</div>
+            <div class="c-req-meta">INT · 6 scene</div>
+            <div class="c-req-location">Via Tortona 18, Milano</div>
+          </div>
+        </div>
+        <div class="c-req-row">
+          <div class="c-req-dot" style="background:var(--green)"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">UFFICIO OPEN SPACE</div>
+            <div class="c-req-meta">INT · 4 scene</div>
+            <div class="c-req-location">Spazio Copernico, Milano</div>
+          </div>
+        </div>
+        <div class="c-req-row">
+          <div class="c-req-dot" style="background:#3b82f6"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">TETTO DI NOTTE</div>
+            <div class="c-req-meta">EXT · 2 scene</div>
+            <div class="c-req-location">Terrazza Brera — visitata</div>
+          </div>
+        </div>
+        <div class="c-req-row">
+          <div class="c-req-dot" style="background:#3b82f6"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">STRADA EXTRAURBANA</div>
+            <div class="c-req-meta">EXT · 4 scene</div>
+            <div class="c-req-location">SS35 dir. Lodi — visitata</div>
+          </div>
+        </div>
+        <div class="c-req-row">
+          <div class="c-req-dot" style="background:var(--line);border:1.5px solid var(--text-mute)"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">FABBRICA ABBANDONATA</div>
+            <div class="c-req-meta">INT/EXT · 2 scene</div>
+            <div class="c-no-loc">Nessun candidato ancora</div>
+          </div>
+        </div>
+        <div class="c-req-row">
+          <div class="c-req-dot" style="background:var(--line);border:1.5px solid var(--text-mute)"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">EXT. BOSCO</div>
+            <div class="c-req-meta">EXT · 5 scene · ALBA</div>
+            <div class="c-no-loc">Nessun candidato ancora</div>
+          </div>
+        </div>
+        <div class="c-req-row">
+          <div class="c-req-dot" style="background:var(--line);border:1.5px solid var(--text-mute)"></div>
+          <div class="c-req-body">
+            <div class="c-req-name">OSPEDALE INT.</div>
+            <div class="c-req-meta">INT · 3 scene</div>
+            <div class="c-no-loc">Nessun candidato ancora</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail of selected -->
+      <div class="c-detail">
+        <div class="c-detail-head">✓ Location confermata</div>
+        <div class="c-detail-name">Via Tortona 18, Milano</div>
+        <div class="c-detail-addr">📍 Via Tortona 18, 20144 Milano</div>
+        <div class="c-detail-row">💶 € 350/giorno</div>
+        <div class="c-detail-row">👤 Lucia Ferrara · +39 02 1234567</div>
+        <div class="c-detail-row">📋 Permesso: SIAE + Comune</div>
+        <div class="c-detail-actions">
+          <button class="btn-sm btn-ghost" style="flex:1">Vedi dettaglio</button>
+          <button class="btn-sm btn-ghost">🗺</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id, btn) {
+    document.querySelectorAll('.frame').forEach(f => f.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('frame-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

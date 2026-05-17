@@ -32,6 +32,8 @@ import {
   extractScenesFromFountain,
   listScenesInFountain,
   EFFORT_LEVELS,
+  EFFORT_MINUTES,
+  SHOOTING_DAY_MINUTES,
   type EffortLevel,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
@@ -57,6 +59,8 @@ export interface ShotView {
   cameraLabel: string;
   estimatedMinutes: number | null;
   resolvedMinutes: number;
+  /** Minutes from the shooting day start. null = packed (no explicit anchor). */
+  timeOffset: number | null;
   notes: string | null;
 }
 
@@ -148,6 +152,7 @@ const buildScenarioView = (
       },
       weights,
     ),
+    timeOffset: s.timeOffset ?? null,
     notes: s.notes ?? null,
   }));
 
@@ -669,6 +674,84 @@ export const updateShot = createServerFn({ method: "POST" })
             (e) => new DbError("updateShot/update", e),
           ).map(() => undefined),
         );
+
+      return toShape(result);
+    },
+  );
+
+export const updateShotTimeOffset = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      shotId: z.string().uuid(),
+      shotPlanId: z.string().uuid(),
+      projectId: z.string().uuid(),
+      timeOffset: z.number().min(0).nullable(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<void, ForbiddenError | ShotNotFoundError | DbError>
+    > => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        db.query.shots
+          .findFirst({ where: eq(shots.id, data.shotId) })
+          .then((r) => r ?? null),
+        (e) => new DbError("updateShotTimeOffset/load", e),
+      )
+        .andThen((shot) => {
+          if (!shot) return err(new ShotNotFoundError(data.shotId));
+          return ok(shot);
+        })
+        .andThen(() =>
+          ResultAsync.fromPromise(
+            db
+              .update(shots)
+              .set({ timeOffset: data.timeOffset, updatedAt: new Date() })
+              .where(eq(shots.id, data.shotId)),
+            (e) => new DbError("updateShotTimeOffset/update", e),
+          ).map(() => undefined),
+        );
+
+      return toShape(result);
+    },
+  );
+
+export const compactScenario = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      scenarioId: z.string().uuid(),
+      shotPlanId: z.string().uuid(),
+      projectId: z.string().uuid(),
+    }),
+  )
+  .handler(
+    async ({ data }): Promise<ResultShape<void, ForbiddenError | ScenarioNotFoundError | DbError>> => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          const scenario = await db.query.shotPlanScenarios.findFirst({
+            where: eq(shotPlanScenarios.id, data.scenarioId),
+          });
+          if (!scenario) throw new ScenarioNotFoundError(data.scenarioId);
+
+          // Clear all time offsets so shots pack left from zero
+          await db
+            .update(shots)
+            .set({ timeOffset: null, updatedAt: new Date() })
+            .where(eq(shots.scenarioId, data.scenarioId));
+        })(),
+        (e) => {
+          if (e instanceof ScenarioNotFoundError) return e;
+          return new DbError("compactScenario", e);
+        },
+      );
 
       return toShape(result);
     },
@@ -1548,7 +1631,21 @@ export const getSceneFountainText = createServerFn({ method: "GET" })
         const match = allScenes.find((s) => parseInt(s.number) === scene.number);
         if (!match) return "";
 
-        return extractScenesFromFountain(content, [match.number]);
+        const extracted = extractScenesFromFountain(content, [match.number]);
+
+        // If the heading has no explicit #N# marker, the extracted text will
+        // be re-numbered as scene 1 by fountainToDoc (since it's the only
+        // scene in the slice). Inject the scene number so the read-only view
+        // shows the correct number regardless of whether the screenplay uses
+        // explicit scene number markers.
+        const hasExplicitMarker = /\s*#[^#\n]+#\s*$/.test(
+          extracted.split("\n")[0] ?? "",
+        );
+        if (hasExplicitMarker) return extracted;
+
+        const lines = extracted.split("\n");
+        lines[0] = `${lines[0]} #${scene.number}#`;
+        return lines.join("\n");
       })(),
       (e) => new DbError("getSceneFountainText", e),
     );
@@ -1563,6 +1660,199 @@ export const sceneFountainQueryOptions = (sceneId: string, projectId: string) =>
     enabled: !!sceneId,
     staleTime: 5 * 60_000,
   });
+
+// ─── Bulk plan generation ─────────────────────────────────────────────────────
+
+export interface GeneratePlanResult {
+  /** Number of scenes processed */
+  sceneCount: number;
+  /** Number of shot plans created (skipped scenes that already had a plan) */
+  createdCount: number;
+  /** Number of scenes that already had a plan (left untouched) */
+  skippedCount: number;
+  /** Estimated shooting days needed based on effort */
+  estimatedDays: number;
+}
+
+/**
+ * Creates initial shot plans for every scene in the project's screenplay that
+ * does not yet have one, using the scene's effort level to drive the coverage
+ * pattern selection.  Scenes that already have a shot plan are left untouched.
+ */
+export const generateShotPlansFromEffort = createServerFn({ method: "POST" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<GeneratePlanResult, ForbiddenError | DbError>> => {
+      await requireUser();
+      const db = await getDb();
+
+      const result = await ResultAsync.fromPromise(
+        (async () => {
+          // Find the project's screenplay
+          const screenplay = await db.query.screenplays.findFirst({
+            where: (s, { eq: e }) => e(s.projectId, data.projectId),
+            orderBy: (s, { desc }) => [desc(s.updatedAt)],
+          });
+          if (!screenplay) {
+            return {
+              sceneCount: 0,
+              createdCount: 0,
+              skippedCount: 0,
+              estimatedDays: 0,
+            } satisfies GeneratePlanResult;
+          }
+
+          const sceneRows = await db.query.scenes.findMany({
+            where: (sc, { eq: e }) => e(sc.screenplayId, screenplay.id),
+            orderBy: (sc, { asc: a }) => [a(sc.number)],
+          });
+          if (sceneRows.length === 0) {
+            return {
+              sceneCount: 0,
+              createdCount: 0,
+              skippedCount: 0,
+              estimatedDays: 0,
+            } satisfies GeneratePlanResult;
+          }
+
+          // Find scenes that already have a shot plan
+          const sceneIds = sceneRows.map((s) => s.id);
+          const existingPlans = await db.query.shotPlans.findMany({
+            where: (p, { inArray: ia }) => ia(p.sceneId, sceneIds),
+          });
+          const existingPlanSceneIds = new Set(
+            existingPlans.map((p) => p.sceneId),
+          );
+
+          const weights = (
+            await resolveWeights(db, data.projectId)
+          )._unsafeUnwrap();
+
+          let createdCount = 0;
+          const skippedCount = existingPlanSceneIds.size;
+          let totalMinutes = 0;
+
+          for (const scene of sceneRows) {
+            const effortLevel = (scene.effort ?? 2) as EffortLevel;
+            totalMinutes += EFFORT_MINUTES[effortLevel];
+
+            if (existingPlanSceneIds.has(scene.id)) {
+              // Scene already has a plan — skip, do not overwrite
+              continue;
+            }
+
+            // Load breakdown to pick the right coverage pattern
+            const breakdownRows = await db
+              .select({
+                category: breakdownElements.category,
+                name: breakdownElements.name,
+              })
+              .from(breakdownOccurrences)
+              .innerJoin(
+                breakdownElements,
+                eq(breakdownOccurrences.elementId, breakdownElements.id),
+              )
+              .where(eq(breakdownOccurrences.sceneId, scene.id));
+
+            const breakdownSummary: BreakdownSummary | null =
+              breakdownRows.length > 0
+                ? {
+                    castWithDialogue: Array.from(
+                      new Set(
+                        breakdownRows
+                          .filter((r) => r.category === "cast")
+                          .map((r) => r.name),
+                      ),
+                    ),
+                    actionNoteCount: breakdownRows.filter(
+                      (r) =>
+                        r.category === "stunts" ||
+                        r.category === "sfx" ||
+                        r.category === "vfx",
+                    ).length,
+                  }
+                : null;
+
+            const patternId = recommendPattern(breakdownSummary, {
+              pageStart: scene.pageStart,
+              pageEnd: scene.pageEnd,
+              hasSpecialEffect: scene.hasSpecialEffect,
+            });
+
+            const pattern = COVERAGE_PATTERNS[patternId];
+
+            await db.transaction(async (tx) => {
+              const planRows = await tx
+                .insert(shotPlans)
+                .values({
+                  projectId: data.projectId,
+                  sceneId: scene.id,
+                  activeScenarioId: null,
+                })
+                .returning();
+              const plan = planRows[0]!;
+
+              const scenarioRows = await tx
+                .insert(shotPlanScenarios)
+                .values({
+                  shotPlanId: plan.id,
+                  name: "Piano A",
+                  position: 0,
+                  isSuggested: true,
+                })
+                .returning();
+              const scenario = scenarioRows[0]!;
+
+              await tx
+                .update(shotPlans)
+                .set({ activeScenarioId: scenario.id, updatedAt: new Date() })
+                .where(eq(shotPlans.id, plan.id));
+
+              if (pattern.shots.length > 0) {
+                await tx.insert(shots).values(
+                  pattern.shots.map((s, i) => ({
+                    scenarioId: scenario.id,
+                    position: i,
+                    shotSize: s.shotSize,
+                    cameraMovement: s.cameraMovement,
+                    estimatedMinutes: null,
+                    notes: s.notesHint,
+                    cameraLabel: "A" as const,
+                  })),
+                );
+
+                await rebuildAutoTransitions(
+                  tx as unknown as Db,
+                  scenario.id,
+                  data.projectId,
+                );
+              }
+            });
+
+            createdCount++;
+          }
+
+          // Estimate shooting days: sum of effort minutes grouped by 480-min capacity
+          const estimatedDays = totalMinutes > 0
+            ? Math.ceil(totalMinutes / SHOOTING_DAY_MINUTES)
+            : 0;
+
+          return {
+            sceneCount: sceneRows.length,
+            createdCount,
+            skippedCount,
+            estimatedDays,
+          } satisfies GeneratePlanResult;
+        })(),
+        (e) =>
+          e instanceof DbError ? e : new DbError("generateShotPlansFromEffort", e),
+      );
+
+      return toShape(result);
+    },
+  );
 
 // ─── Test-only exports ─────────────────────────────────────────────────────────
 // Exported for unit tests only. Not part of the public API.

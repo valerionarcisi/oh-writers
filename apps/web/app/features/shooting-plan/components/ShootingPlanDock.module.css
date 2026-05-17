@@ -87,6 +87,15 @@
   color: var(--ds-text-faint);
 }
 
+.spinIcon {
+  animation: spinOnce 1s linear infinite;
+}
+
+@keyframes spinOnce {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 .sep {
   inline-size: 1px;
   block-size: 22px;
@@ -147,7 +156,8 @@
     transition: none;
   }
 
-  .cesareDot {
+  .cesareDot,
+  .spinIcon {
     animation: none;
   }
 }

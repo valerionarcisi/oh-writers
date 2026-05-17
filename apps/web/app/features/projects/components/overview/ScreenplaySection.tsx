@@ -77,7 +77,7 @@ export function ScreenplaySection({
                 automatico attivo
               </div>
             </div>
-            <Button variant="primary" size="md" onClick={open}>
+            <Button variant="primary" size="md" onPress={open}>
               Apri editor →
             </Button>
           </>
@@ -89,7 +89,7 @@ export function ScreenplaySection({
                 Apri l'editor per creare la prima bozza.
               </div>
             </div>
-            <Button variant="primary" size="md" onClick={open}>
+            <Button variant="primary" size="md" onPress={open}>
               Apri editor →
             </Button>
           </>

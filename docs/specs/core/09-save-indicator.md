@@ -1,5 +1,7 @@
 # Spec 09 — Save Indicator + Manual Save
 
+> **Status:** ✅ done
+
 ## Context
 
 The editor today persists the ProseMirror doc (`pm_doc`) and the Yjs state on a debounce timer. The save is invisible — writers have no feedback that their work is safe. Yjs + debounce is correct behaviour but needs a UI affordance.

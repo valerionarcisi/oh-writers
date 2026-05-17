@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -59,32 +60,34 @@ export function ToastProvider({ children }: { readonly children: ReactNode }) {
     [],
   );
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const api = useMemo<UseToast>(
     () => ({ showToast, dismiss }),
     [showToast, dismiss],
   );
 
-  const portal =
-    typeof document === "undefined"
-      ? null
-      : createPortal(
-          <div
-            className={styles.viewport}
-            aria-live="polite"
-            aria-atomic="false"
-          >
-            {toasts.map((t) => (
-              <Toast
-                key={t.id}
-                message={t.message}
-                variant={variantToInternal(t.variant)}
-                duration={t.durationMs}
-                onDismiss={() => dismiss(t.id)}
-              />
-            ))}
-          </div>,
-          document.body,
-        );
+  const portal = mounted
+    ? createPortal(
+        <div
+          className={styles.viewport}
+          aria-live="polite"
+          aria-atomic="false"
+        >
+          {toasts.map((t) => (
+            <Toast
+              key={t.id}
+              message={t.message}
+              variant={variantToInternal(t.variant)}
+              duration={t.durationMs}
+              onDismiss={() => dismiss(t.id)}
+            />
+          ))}
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <ToastContext.Provider value={api}>

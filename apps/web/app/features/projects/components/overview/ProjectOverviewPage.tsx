@@ -143,6 +143,7 @@ function ProjectOverviewContent({
             breakdown={overview.breakdown}
             budget={overview.budget}
             schedule={overview.schedule}
+            locations={overview.locations}
           />
         </main>
         <aside className={styles.side}>

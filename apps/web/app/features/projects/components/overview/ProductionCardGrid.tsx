@@ -3,6 +3,7 @@ import type {
   BreakdownSummary,
   BudgetSummary,
   ScheduleSummary,
+  LocationsSummary,
 } from "../../server/project-overview.server";
 import styles from "./ProductionCardGrid.module.css";
 
@@ -11,12 +12,14 @@ interface ProductionCardGridProps {
   readonly breakdown: BreakdownSummary;
   readonly budget: BudgetSummary;
   readonly schedule: ScheduleSummary;
+  readonly locations: LocationsSummary;
 }
 
 type ProdRoute =
   | "/projects/$id/breakdown"
   | "/projects/$id/budget"
-  | "/projects/$id/schedule";
+  | "/projects/$id/schedule"
+  | "/projects/$id/locations";
 
 interface ProdCardData {
   readonly key: string;
@@ -40,6 +43,7 @@ const buildCards = (
   breakdown: BreakdownSummary,
   budget: BudgetSummary,
   schedule: ScheduleSummary,
+  locations: LocationsSummary,
 ): ProdCardData[] => {
   const breakdownPct =
     breakdown.totalScenes > 0
@@ -80,7 +84,7 @@ const buildCards = (
     },
     {
       key: "schedule",
-      eyebrow: "Piano di ripresa",
+      eyebrow: "Calendarizzazione",
       value: schedule.hasAny ? String(schedule.shootingDayCount) : "—",
       unit: schedule.hasAny ? "giornate" : null,
       sub: schedule.hasAny
@@ -95,6 +99,25 @@ const buildCards = (
       progressLabel: schedule.hasAny ? "In bozza" : "In attesa",
       route: "/projects/$id/schedule",
     },
+    {
+      key: "locations",
+      eyebrow: "Location",
+      value: locations.hasAny ? String(locations.confirmedCount) : "—",
+      unit: locations.hasAny ? `/ ${locations.totalRequirements}` : null,
+      sub: locations.hasAny
+        ? `${locations.confirmedCount} confermate su ${locations.totalRequirements}`
+        : "Sincronizza da breakdown",
+      progressPct:
+        locations.totalRequirements > 0
+          ? Math.round(
+              (locations.confirmedCount / locations.totalRequirements) * 100,
+            )
+          : 0,
+      progressLabel: locations.hasAny
+        ? `${locations.confirmedCount} / ${locations.totalRequirements} confermate`
+        : "In attesa",
+      route: "/projects/$id/locations",
+    },
   ];
 };
 
@@ -103,8 +126,9 @@ export function ProductionCardGrid({
   breakdown,
   budget,
   schedule,
+  locations,
 }: ProductionCardGridProps) {
-  const cards = buildCards(breakdown, budget, schedule);
+  const cards = buildCards(breakdown, budget, schedule, locations);
 
   return (
     <section

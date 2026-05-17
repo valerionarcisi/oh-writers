@@ -1,5 +1,7 @@
 # Spec 05g — Structured Scene Heading + Numbering with Letters
 
+> **Status:** ✅ done
+
 > Scene heading is **structured data**, not free text. Two editable slots —
 > prefix and title — with per-slot autocomplete fed by whatever the user has
 > already typed elsewhere in the doc. Persistent numbering with letter suffixes

@@ -1,5 +1,7 @@
 # Spec 05i — Inline Scene Number Edit + Resequence
 
+> **Status:** ✅ done
+
 ## Goal
 
 Nell'editor di sceneggiatura, il numero di scena è oggi **derivato** (auto-assegnato al parse + aggiornato a runtime). Gli sceneggiatori professionisti hanno bisogno di:

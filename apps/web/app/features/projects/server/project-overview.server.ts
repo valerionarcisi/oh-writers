@@ -25,6 +25,7 @@ import {
   breakdownSceneState,
   teamMembers,
   users,
+  locationRequirements,
   type Project,
 } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
@@ -85,6 +86,12 @@ export interface ScheduleSummary {
   readonly hasAny: boolean;
 }
 
+export interface LocationsSummary {
+  readonly totalRequirements: number;
+  readonly confirmedCount: number;
+  readonly hasAny: boolean;
+}
+
 export interface KpiSummary {
   readonly pageCount: number;
   readonly sceneCount: number;
@@ -133,6 +140,7 @@ export interface ProjectOverview {
   readonly breakdown: BreakdownSummary;
   readonly budget: BudgetSummary;
   readonly schedule: ScheduleSummary;
+  readonly locations: LocationsSummary;
   readonly activity: ActivityItem[];
   readonly collaborators: CollaboratorEntry[];
   readonly nextStep: NextStep | null;
@@ -449,6 +457,22 @@ const loadSchedule = (
     );
   });
 
+const loadLocations = (
+  db: Db,
+  projectId: string,
+): ResultAsync<LocationsSummary, DbError> =>
+  ResultAsync.fromPromise(
+    db
+      .select({ id: locationRequirements.id, status: locationRequirements.status })
+      .from(locationRequirements)
+      .where(eq(locationRequirements.projectId, projectId)),
+    (e) => new DbError("projectOverview.locations", e),
+  ).map((rows): LocationsSummary => ({
+    totalRequirements: rows.length,
+    confirmedCount: rows.filter((r) => r.status === "confirmed").length,
+    hasAny: rows.length > 0,
+  }));
+
 const loadCollaborators = (
   db: Db,
   project: Project,
@@ -565,7 +589,8 @@ const buildOverview = (
         loadBreakdown(db, screenplayId, sceneAgg.sceneCount),
         loadBudget(db, project.id),
         loadSchedule(db, project.id, sceneAgg.sceneCount),
-      ]).map(([breakdown, budget, schedule]): ProjectOverview => {
+        loadLocations(db, project.id),
+      ]).map(([breakdown, budget, schedule, locations]): ProjectOverview => {
         const ownerCollab =
           collaborators.find((c) => c.role === "owner") ??
           collaborators.find(
@@ -624,6 +649,7 @@ const buildOverview = (
           breakdown,
           budget,
           schedule,
+          locations,
           activity,
           collaborators,
           nextStep,

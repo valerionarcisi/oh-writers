@@ -190,6 +190,13 @@
       "when": 1747785600000,
       "tag": "0025_scene_effort",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1747872000000,
+      "tag": "0026_shot_time_offset",
+      "breakpoints": true
     }
   ]
 }

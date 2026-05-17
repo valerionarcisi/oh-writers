@@ -19,6 +19,8 @@ import {
   addReverseShot,
   createShotPlanAndScenario,
   updateShot,
+  updateShotTimeOffset,
+  compactScenario,
   type ShotPlanView,
   type ScenarioView,
   type ShotView,
@@ -29,6 +31,7 @@ import { PlanTrack } from "./PlanTrack";
 import { QuickAddToolbar } from "./QuickAddToolbar";
 import { CesarePlanBanner } from "./CesarePlanBanner";
 import { ShotContextMenu } from "./ShotContextMenu";
+import { TrackContextMenu } from "./TrackContextMenu";
 import { ShotDetailPanel } from "./ShotDetailPanel";
 import styles from "./ParallelPlansEditor.module.css";
 
@@ -99,6 +102,11 @@ export function ParallelPlansEditor({
 
   const [contextMenu, setContextMenu] = useState<{
     shotId: string;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  const [trackContextMenu, setTrackContextMenu] = useState<{
+    scenarioId: string;
     position: { x: number; y: number };
   } | null>(null);
 
@@ -205,6 +213,31 @@ export function ParallelPlansEditor({
     onSuccess: invalidate,
   });
 
+  const timeOffsetMut = useMutation({
+    mutationFn: (vars: { shotId: string; timeOffset: number | null }) => {
+      if (!plan) throw new Error("No plan");
+      return updateShotTimeOffset({
+        data: {
+          shotId: vars.shotId,
+          shotPlanId: plan.id,
+          projectId,
+          timeOffset: vars.timeOffset,
+        },
+      }).then(unwrapResult);
+    },
+    onSuccess: invalidate,
+  });
+
+  const compactMut = useMutation({
+    mutationFn: (scenarioId: string) => {
+      if (!plan) throw new Error("No plan");
+      return compactScenario({
+        data: { scenarioId, shotPlanId: plan.id, projectId },
+      }).then(unwrapResult);
+    },
+    onSuccess: invalidate,
+  });
+
   if (!plan) {
     return (
       <div className={styles.empty} aria-busy="true">
@@ -277,21 +310,50 @@ export function ParallelPlansEditor({
       });
     };
 
+  // When the scenario uses absolute (time-anchored) layout we persist the drop
+  // position as a timeOffset instead of a reorder position.
   const handleDropOnTrack =
-    (scenarioId: string) => (e: React.DragEvent) => {
+    (scenarioId: string) => (e: React.DragEvent, trackEl: HTMLElement) => {
       e.preventDefault();
-      if (!dragState || !dropTarget) return;
-      moveShotMut.mutate({
-        shotId: dragState.shotId,
-        targetScenarioId: scenarioId,
-        position: dropTarget.position,
-      });
+      if (!dragState) return;
+
+      const scenario = plan.scenarios.find((s) => s.id === scenarioId);
+      const hasAnchoredShots =
+        !!scenario && scenario.shots.some((sh) => sh.timeOffset !== null);
+
+      if (hasAnchoredShots) {
+        // Compute time offset from drop position relative to track width
+        const rect = trackEl.getBoundingClientRect();
+        const relX = Math.max(0, e.clientX - rect.left);
+        const rawMinutes = (relX / rect.width) * SHOOTING_DAY_MINUTES;
+        const snappedMinutes = Math.round(rawMinutes / 5) * 5; // snap to 5-min grid
+        timeOffsetMut.mutate({
+          shotId: dragState.shotId,
+          timeOffset: Math.max(0, snappedMinutes),
+        });
+      } else if (dropTarget) {
+        moveShotMut.mutate({
+          shotId: dragState.shotId,
+          targetScenarioId: scenarioId,
+          position: dropTarget.position,
+        });
+      }
+
       setDragState(null);
       setDropTarget(null);
     };
 
   const handleContextMenuShot = (shotId: string, e: React.MouseEvent) => {
+    setTrackContextMenu(null);
     setContextMenu({ shotId, position: { x: e.clientX, y: e.clientY } });
+  };
+
+  const handleContextMenuTrack = (scenarioId: string, e: React.MouseEvent) => {
+    setContextMenu(null);
+    setTrackContextMenu({
+      scenarioId,
+      position: { x: e.clientX, y: e.clientY },
+    });
   };
 
   const contextShot: ShotView | null = contextMenu
@@ -388,6 +450,7 @@ export function ParallelPlansEditor({
             selectedShotId={selectedShotId}
             onSelectShot={setSelectedShotId}
             onContextMenuShot={handleContextMenuShot}
+            onContextMenuTrack={handleContextMenuTrack}
             onMakeActive={() => setActiveMut.mutate(s.id)}
             onDragStart={handleDragStart}
             onDragOverTrack={handleDragOverTrack(s.id)}
@@ -442,6 +505,14 @@ export function ParallelPlansEditor({
           }
           onDelete={() => deleteShotMut.mutate(contextShot.id)}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {trackContextMenu && (
+        <TrackContextMenu
+          position={trackContextMenu.position}
+          onCompact={() => compactMut.mutate(trackContextMenu.scenarioId)}
+          onClose={() => setTrackContextMenu(null)}
         />
       )}
     </div>

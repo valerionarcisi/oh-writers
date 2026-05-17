@@ -29,7 +29,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--ds-space-3);
 }
 
@@ -155,7 +155,13 @@
   margin-block-start: var(--ds-space-1);
 }
 
-@container (max-width: 700px) {
+@container (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container (max-width: 500px) {
   .grid {
     grid-template-columns: 1fr;
   }

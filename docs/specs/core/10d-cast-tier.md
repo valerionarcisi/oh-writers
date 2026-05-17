@@ -1,6 +1,6 @@
 # Spec 10d — Cast tier on breakdown elements
 
-> **Status:** in progress
+> **Status:** ✅ done
 > **Depends on:** Spec 10 (Breakdown), Spec 10c (Inline scene tagging)
 > **Date:** 2026-04-22
 

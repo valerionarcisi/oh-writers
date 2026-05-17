@@ -41,6 +41,11 @@
     z-index: 10;
   }
 
+  &[data-anchored] {
+    /* Absolute-layout blocks must not clip against block-size: 100% parent */
+    overflow: hidden;
+  }
+
   &:hover {
     background: color-mix(
       in oklch,

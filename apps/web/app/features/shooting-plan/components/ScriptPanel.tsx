@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { updateSceneNotes } from "../server/shooting-plan.server";
@@ -27,6 +27,13 @@ export function ScriptPanel({
   const [draft, setDraft] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qc = useQueryClient();
+
+  // Reset draft when the selected scene changes so the textarea shows the new
+  // scene's persisted notes rather than the previous scene's unsaved text.
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setDraft(null);
+  }, [sceneId]);
 
   const saveMut = useMutation({
     mutationFn: (notes: string | null) =>

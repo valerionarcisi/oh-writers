@@ -84,6 +84,8 @@ export const shots = pgTable(
       ] as [string, ...string[]],
     }).notNull(),
     estimatedMinutes: real("estimated_minutes"),
+    // Minutes from the start of the shooting day. null = packed (no explicit offset).
+    timeOffset: real("time_offset"),
     notes: text("notes"),
     cameraLabel: text("camera_label", {
       enum: ["A", "B", "C", "D"] as [string, ...string[]],

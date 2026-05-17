@@ -22,26 +22,25 @@ const MAX_MINUTES = 120;
 interface ShotBlockProps {
   shot: ShotView;
   widthPct: number;
+  /** Left offset percent for absolute positioning. null = flow layout. */
+  leftPct: number | null;
   getTrackWidth: () => number;
   isSelected: boolean;
   onSelect: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent) => void;
   onResizeCommit: (shotId: string, minutes: number) => void;
 }
 
 export function ShotBlock({
   shot,
   widthPct,
+  leftPct,
   getTrackWidth,
   isSelected,
   onSelect,
   onContextMenu,
   onDragStart,
-  onDragOver,
-  onDrop,
   onResizeCommit,
 }: ShotBlockProps) {
   const color = SHOT_SIZE_COLORS[shot.shotSize] ?? "var(--color-accent)";
@@ -97,21 +96,31 @@ export function ShotBlock({
     [resizeMinutes, shot.id, onResizeCommit],
   );
 
+  const positionStyle: React.CSSProperties =
+    leftPct !== null
+      ? {
+          position: "absolute",
+          insetInlineStart: `${leftPct}%`,
+          insetBlockStart: 0,
+          blockSize: "100%",
+        }
+      : {};
+
   return (
     <div
       className={styles.block}
       data-testid="shot-block"
       data-resizing={resizeMinutes !== null || undefined}
+      data-anchored={leftPct !== null || undefined}
       style={
         {
           inlineSize: `${Math.max(displayWidthPct, 1)}%`,
           "--shot-color": color,
+          ...positionStyle,
         } as React.CSSProperties
       }
       draggable={resizeMinutes === null}
       onDragStart={resizeMinutes === null ? onDragStart : undefined}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
       data-selected={isSelected || undefined}
       onClick={onSelect}
       onContextMenu={onContextMenu}

@@ -1,0 +1,126 @@
+# Oh Writers — Stato delle Spec
+Aggiornato: 2026-05-17
+
+Legenda della classificazione:
+- **DONE** — implementazione completa, spec dichiarata done o verifica positiva nel codice
+- **PARTIAL** — feature folder + route esistono, ma la spec indica gap o la spec stessa elenca cose mancanti
+- **SPEC ONLY** — spec scritta, nessun codice corrispondente
+- **NO SPEC** — implementazione presente senza una spec numerata dedicata
+
+---
+
+## Implementato e funzionante
+
+| Spec | Titolo | Note |
+|------|--------|------|
+| 01 + 01b | Auth (registrazione, login, sessioni) | Better Auth wired con email+password e social (Google/GitHub opzionali). Route `/login`, `/register`, `api/auth/`. |
+| 03 | Projects (CRUD) | Dashboard, creazione, settings, archivio, delete. Route `_app.projects.*` presenti. |
+| 04 | Narrative Editor (Logline, Synopsis, Treatment, Outline) | `NarrativeEditor`, `TextEditor`, `OutlineEditor`, auto-save, permessi OWNER/EDITOR/VIEWER, blocchi 1-3 marcati done nella spec. Outline con drag-and-drop, act collapse, character picker implementati (gap 04b chiusi). |
+| 04c | Narrative Export PDF | `ExportPdfModal` presente, `pdf-narrative.ts` implementato, server fn wired in `documents.server.ts`. |
+| 04f | Soggetto (free editor) | `FreeNarrativeEditor` presente, SIAE export, cartelle counter implementati. Sezione-based rimossa come da spec 21. |
+| 05 + 05f | Screenplay Editor (ProseMirror) | Monaco sostituito da ProseMirror custom (spec 05f). Schema strutturato `heading(prefix+title)/body`, `paginator`, `keymap`, `autocomplete`. |
+| 05b | Writing Features (autocomplete, keybindings) | Character autocomplete, location autocomplete, Tab cycling. Spec 05d (UX style) parzialmente inclusa (dropdown, tab-accept). |
+| 05c | PDF Import | `fountain-from-pdf.ts`, `pdf-import.server.ts`, `useImportPdf` hook. Wired nell'editor. |
+| 05g | Scene heading strutturata + numerazione con lettere | Due slot `prefix`/`title` nel PM schema, `scene-slot-picker` plugin, `scene-numbers.ts` con letter suffix (`resequenceAll`). |
+| 05h | Heading Slot Refactor | Slot `prefix`/`title` renderizzati come `<p>` separati (block-level) — il fix del trailing-BR bug è in produzione. |
+| 05i | Inline Scene Number Edit + Resequence | `heading-nodeview.ts` con editing inline, `scene-number-commands.ts` con `resequenceFromHere`, `setSceneNumberLocked`, `unlockSceneNumber`. |
+| 05j | Screenplay PDF Export | `exportScreenplayPdf` server fn, `pdf-screenplay.ts` (afterwriting wrapper), `export-pipeline.ts`, hook `useExportScreenplayPdf`, UI nel ToolbarMenu. |
+| 06 + 06b | Versioning universale | `document_versions` table, `screenplay_versions` con snapshot, VersionsDrawer unificato, version viewing marker (`VersionViewer`). |
+| 06c | Versions Panel (inline drawer) | `VersionsDrawer` in `features/versions/`, `VersionsDrawerContext`, `VersionTrigger` pill nel toolbar. Integrato in screenplay, breakdown, schedule, soggetto. |
+| 06d | Toolbar Popover Menu | `ToolbarMenu` nel screenplay editor con popover per azioni (export PDF, import PDF, ecc.). |
+| 06e + 06f | Revision Coloring + draft color cross-document | `DraftColorEnum`, `draftColor` su `screenplays` e `title_page_draft_color` su `projects`. `DraftMetaBadge` nel toolbar. `revision-color.ts` in domain. |
+| 07b | Screenplay Front Page (standalone PM editor) | `TitlePageEditor` con PM doc, route `_app.projects.$id_.title-page`. |
+| 07c | PDF Import Pass 0 (title-page extraction) | Spec marcata done. `title-page-from-pdf.ts`, test Vitest + Playwright verdi (OHW-FP30/31/32). |
+| 09 | Save Indicator | `save-status.ts` state machine, `SavePill` primitivo in `packages/ui`. |
+| 09b | WebSocket Server | `apps/ws-server/` presente con Hono + health endpoint. Nota: Yjs sync non è ancora wired sul client (y-prosemirror è dependency ma non usato). |
+| 10 | Scene Breakdown | `BreakdownPage`, `BreakdownMatrix`, `ScriptReader`, server fn in `breakdown.server.ts`, `breakdown.errors.ts`, `breakdown-access.ts`. |
+| 10b | Version Viewing Marker | `VersionViewer` component, route versione dedicated, editor in read-only quando si guarda uno snapshot. |
+| 10c | Inline Scene Tagging | Spec marcata done (2026-04-21). Plugin `ghost-decoration`, `highlight-decoration`, `selection-toolbar-plugin`, `GhostPopover`. |
+| 10d | Cast Tier | Server fn con `castTier` field, `AddElementModal` con picker, `ProjectBreakdownTable` con colonna tier. Marcata "in progress" nella spec ma codice presente e funzionale. |
+| 10e | Auto-spoglio regex | `auto-spoglio.server.ts`, `re-match.ts`, `extractElements` in domain. Marcata "in progress" ma implementata. |
+| 10f | Breakdown Table View | Spec marcata done. `ProjectBreakdownView`, `ProjectBreakdownTable`, `BreakdownMatrix`. |
+| 10g | LLM at import (Sonnet+Haiku) | `llm-spoglio.server.ts` con streaming, `llm-spoglio-prompt.ts`, `parse-scene-stream.ts`, cache su `breakdownVersionState`. |
+| 10h | Breakdown Read-only UX | `canEdit` propagato da `breakdown-access.ts` a tutti i componenti; azioni di scrittura condizionali. |
+| 11 + 11b | Budget (rule-based, no AI) | Spec 11b marcata done. `BudgetPage`, `budget.server.ts`, `budget-generator.ts` in domain, `budget_lines` table, widgets (donut, gauge, sparkline, ecc.). |
+| 11b (versions row popover) | Versions row: rename, view, popover | `VersionsDrawer` con rename inline, `VersionTrigger` pill. |
+| 11c | Rate Card | `getRateCard` server fn, `RateCardSection` component. Spec "in progress" ma componente presente. |
+| 11d | Budget Production Categories + Day Cost | `ProductionDrillDown`, `DayView`, `budget-day-costs.server` implementati. |
+| 12 + 12b | Shooting Schedule (rule-based) | Spec 12b marcata done. `SchedulePage`, `StripBoard`, `ShootingDayColumn`, `UnscheduledTray`, `ScheduleCalendarView`, `schedule.server.ts`, `schedule-generator.ts` in domain. |
+| 12c | Scene Effort & Shooting Day Drawer | Spec marcata done. `ShootingDayDrawer`, `SceneDrawer` presenti. |
+| 22c | 2D Scene Blocking Render | `BlockingEditorCanvas`, `BlockingEditorPage`, `BlockingEditorToolbar`, `BlockingCanvas`, `BlockingCard`, `BlockingPin`. Route `blocking-editor` presente. Funzionalità deferred note nella spec (arrow draw, layer toggle, door/window switch). |
+| 25 | React Aria adoption | `useButton` in `Button.tsx` (components), `useTabList`/`useTab` in `Tabs`, `useDialog`/`useOverlay` in `Dialog`, `useMenu` in `ContextMenu`/`DropdownMenu`. Spec "active". Primitivi (`packages/ui/src/primitives/`) non ancora migrati a react-aria. |
+| 26 | Scalability Patterns | Breakdown matrix virtualizzata (26a shipped). Act collapse/expand in outline implementato. |
+| 29 | Cesare: Production-Aware Chat Panel | `CesareSheet` in `features/predictions/`, `askCesare` server fn wired, integrato in `AppShell`. |
+| infra/07b | Design System Dialog Migration | Spec marcata done (2026-04-22). `packages/ui` con Dialog, DropdownMenu, ContextMenu, Tabs, Button react-aria based. |
+| infra/08 | Infrastructure (Docker + DB) | `docker/` con Dockerfile, docker-compose, postgres-init, redis. Drizzle config, migration scripts. |
+
+---
+
+## Parzialmente implementato
+
+| Spec | Titolo | Cosa manca |
+|------|--------|------------|
+| 02 | Teams | DB schema (`teams`, `team_members`, `team_invitations`) presente e usato nel controllo permessi. Nessuna UI di gestione team (creazione team, invita membro, gestione ruoli). No feature folder `features/teams/`. |
+| 04b | Outline Drag-and-Drop | Drag-and-drop implementato (`outline-drag.ts`, `OutlineEditor` con DragEvent). Act management (collapse, rename, add, delete) implementato. `scene.heading` e `scene.pageEstimate` mancano dall'editor (in schema ma non esposti). Character picker presente ma senza autocomplete da screenplay. |
+| 05d | Autocomplete UX | Character/location autocomplete presenti (spec 05b/05d). Mancano: extension autocomplete (V.O., O.S., CONT'D), transition autocomplete, parenthetical auto-wrap. |
+| 05e | Screenplay Editor UX (StudioBinder parity) | Implementati: autocomplete, element indicator, save status. Mancano: inline element picker su empty line, ⌘1-7 shortcuts, Alt+letter shortcuts, icon toolbar con indicatore attivo, bold/italic/underline, lock mode, scene numbers in margine. |
+| 05k | Production Export Formats | `export-pipeline.ts` e `ExportSidesModal` presenti. Spec marcata "to do". Mancano: Sides export, FDX export, Markdown export, Highland export (alcuni stub presenti). |
+| 06e | Screenplay Revision Coloring | `draftColor` su versione e su title page implementato. `revision-color.ts` in domain. Il colore non è ancora applicato come decoration visuale nel testo dell'editor (revisione riga-per-riga stile Hollywood). |
+| 09b | WebSocket Server (Yjs real-time) | Server Hono presente (`apps/ws-server/`). Yjs + y-websocket non è wired: `y-prosemirror` è dependency ma non viene importato nei componenti client. Il salvataggio è un semplice debounce HTTP, non sync real-time. |
+| 10g2 | Per-scene Haiku incremental + Sheet view | Spec "draft awaiting approval". Haiku streaming per-scena presente in `llm-spoglio.server.ts` ma la sheet view Movie Magic-style non è ancora implementata. |
+| 10i | Breakdown Dictionary Pass (WordNet) | Spec open. `extractElements` in domain usa regex/categorie, non un dizionario NLP. Nessuna dipendenza `wink-nlp` nel repo. |
+| 12 | Schedule — DS-v2 token cleanup | Alcune occorrenze di `--ds-leaf-500` ancora presenti in `ScheduleTimelineView.module.css`, `ScheduleDayView.module.css`, `StripCard.module.css`. Il criterio "done globale" di spec 12-design-system-v2-ambient non è soddisfatto (5 occorrenze legacy rimaste). |
+| 12b (versions drawer) | Unified Versions Drawer | `VersionsDrawer` presente e funzionante. Mancano le interazioni avanzate descritte nella spec: filtro per tipo, drag-and-drop per riordinare versioni. |
+| 12d | DS Primitives Unification | Spec "draft". Primitivi in `packages/ui/src/primitives/` (Button, Popover, Drawer, Modal, ecc.) non usano react-aria. `packages/ui/src/components/` (Button, Dialog, Tabs, ecc.) sì. Due livelli di primitivi coesistono. |
+| 17 | Cesare — Assistente AI universale | `ScreenplayCesarePanel` con polish suggestions implementato. `NarrativeCesarePanel` presente ma TODO commentato ("replace these static memos with real polish"). `CesareAdPanel`, `CesareGhostTag`, `CesareSuggestionBanner` nel breakdown presenti. Status bar, marker mode e popover contestuali della spec 17 non implementati (solo panel laterale). |
+| 20 | Shooting-script import (preserve scene numbers) | `fountain-from-pdf.ts` esiste ma non preserva i numeri originali. Spec indica che il parsing delle sceneggiature di produzione perde `1F`, `3-3B`, ecc. |
+| 21 | Soggetto Free Editor | `FreeNarrativeEditor` presente. Spec "Draft" — integrazione con SIAE export e cartelle counter implementata (da spec 04f). La migrazione completa dalla sezione-based all'editor libero è done; la spec come documento è ancora Draft. |
+| 23 | Server Pipeline Refactor | `withProjectAccess` e `requireProjectAccess` in `~/server/pipeline.ts` e `~/server/access.ts` implementati. Non tutti i server fn nel codebase usano `withProjectAccess` — la migrazione è parziale. |
+| 24 | Cascading Pre-fill | Spec "draft". `DraftMetaBadge` e `loadProjectDraftMeta` propagano il colore della bozza. I pre-fill C.1–C.6 tracciati nella spec non risultano implementati. |
+| 27 | Shooting Plan UX Review | Spec "review" (documento di analisi). Alcune correzioni già presenti (grouped by day, planning status). I gap identificati (unplanned scene count, overview of all scenes, ◑ stato intermedio) non ancora implementati. |
+| 28 | Export Audit | `SchedulePage`, `BudgetPage`, `ShootingPlanPage` hanno bottoni "Esporta" che puntano a `() => undefined`. Solo screenplay PDF e Fountain export sono funzionanti. |
+
+---
+
+## Solo spec, nessuna implementazione
+
+| Spec | Titolo | Note |
+|------|--------|------|
+| 04d | Rich Text Editor (Synopsis & Treatment) | Spec obsoleta — sostituita da 04e (ProseMirror). |
+| 04e | Narrative Editor on vanilla ProseMirror | I documenti narrativi usano già ProseMirror ma la spec era scritta prima della migrazione. Stato intermedio: implementato di fatto ma spec non aggiornata. |
+| 08 (scene renumber) | Scene Renumber (lock for production + OMITTED) | Spec 08 descrive il workflow di lock produzione, scene OMITTED, asterischi a margine. `scene-number-commands.ts` implementa solo il resequence developer-mode (spec 05i). Il workflow produzione (lock totale, OMITTED, revision marks) non è implementato. |
+| 13 | Locations | Sidebar mostra "Locations (coming soon)". Nessun feature folder, nessuna route, nessuna tabella DB dedicata (solo `locations` in `blocking.ts` che è per il blocking editor). |
+| 14 (ai) | Auto-generate Logline e Synopsis da Screenplay | Esiste solo `generateLoglineFromSubject` (da soggetto). Nessun server fn che genera logline/synopsis a partire dal testo della sceneggiatura importata. |
+| 14b (ai) | Auto-generate Outline da Screenplay | Nessuna implementazione. |
+| 15 | Timeline Scaletta (drag-and-drop verticale) | Spec sostituisce 04b ma la scaletta usa ancora il layout card-grid con `OutlineEditor`. Nessuna timeline verticale stile DaVinci Resolve. |
+| 16 (ai) | Logline → Scaletta automatica | Nessuna implementazione. |
+| 16 (core) | Multi-Tenancy, Billing & Feature Gating | Nessuna implementazione (nessuno Stripe, nessun piano/subscription, nessun feature flag). |
+| 17b (ai) | Story Doctor | Spec originale di Cesare in modalità analisi con status bar + marker. Non implementato nel senso descritto (la spec 17 attiva ne è l'evoluzione, anch'essa parziale). |
+| 18 | i18n | Nessuna dipendenza i18n nel codebase (`react-i18next`, `next-intl`, ecc. assenti). |
+| 19 | Moodboard / Storyboard | Spec marcata PLACEHOLDER esplicitamente. |
+| 25 (primitivi) | React Aria — primitivi `packages/ui/src/primitives/` | `Button`, `Popover`, `Drawer`, `Modal`, `SegmentedControl`, ecc. non usano react-aria. La spec è active ma questa fase non è ancora iniziata. |
+| infra/07 | Core Refactor | Spec di refactoring architetturale. Non traccia un'implementazione specifica — è un documento di intenzione. |
+| infra/07b (design system) | Design System Refresh (Spec 07b-design-system.md) | Distinta dalla spec `07b-design-system-dialog-migration.md` (quella è done). Questa spec di direzione visiva è un documento di riferimento, non un task codificato. |
+| infra/07c | Docker + E2E Test Infrastructure | Dockerfile e docker-compose presenti. Playwright configurato. Nessuna infra CI/CD (nessun `.github/`, `.gitlab-ci.yml` o equivalente). |
+| infra/08b | Cloud Deploy & Environments | Nessuna configurazione cloud (GCP, Netlify, Railway, ecc.) nel repo. |
+
+---
+
+## Implementato senza spec
+
+| Feature | Note |
+|---------|------|
+| Project Overview Page | `ProjectOverviewPage` con `ProjectHero`, `NarrativeCardGrid`, `ProductionCardGrid`, `ProjectKpiStrip`, `ActivityFeed`, `NextStepBanner`, `TeamPresence`. Nessuna spec numerata. |
+| Dashboard (lista progetti) | `DashboardPage` con grid/compact view, filtri, ordinamento. `dashboard.server.ts` con aggregation. Nessuna spec. |
+| App Shell + Sidebar | `AppShell`, `Sidebar` con navigazione per feature. `cesare-context.tsx`, `save-state-context.tsx`. Nessuna spec. |
+| Predictions / Cesare Server | `cesare.server.ts` (aggregazione dati produzione per il chat). Logica di produzione-graph query. Nessuna spec separata (fa parte di spec 29 non ancora completa). |
+| Rate Limit | `rate-limit.ts` con `checkAndStampRateLimit`. Usato nelle server fn AI. Nessuna spec. |
+| Server Access/Permissions | `~/server/access.ts`, `~/server/permissions.ts` — `requireProjectAccess`, `canEdit`, `canView`, `isOwner`. Nessuna spec (da spec 23 come refactor). |
+| Subject SIAE Export (DOCX) | `subject-export-docx.server.ts`, `useExportSubjectDocx`. Nessuna spec dedicata. |
+| Subject SIAE Export (SIAE format) | `subject-export-siae.server.ts`, `ExportSiaeModal`. Nessuna spec dedicata. |
+| Fountain Export (download) | `download-fountain` in `screenplay-editor`. Nessuna spec dedicata (la spec 28 la documenta come funzionante). |
+| Shooting Plan (shot-level planning) | `ShootingPlanPage`, `PlanTrack`, `ShotBlock`, `ParallelPlansEditor`, `CalendarGridView`, `BlockingCanvas`. Spec 22c copre il blocking render; il piano giornaliero multitraccia non ha una spec propria (spec 27 è solo la review). |
+| Versions Diff View | Route `_app.projects.$id_.screenplay.diff.$v1.$v2.tsx`. `diff.ts` in screenplay-editor. Nessuna spec. |
+| NarrativeCesarePanel (stub) | Panel laterale nei documenti narrativi con memo statici. Nessuna spec. |
+| AI Logline from Soggetto | `generateLoglineFromSubject` server fn + `useExtractLoglineFromSubject`. Nessuna spec (spec 14 ai è gen da screenplay, non da soggetto). |
+| DS v2 Ambient | Token system `packages/ui/src/styles/`, `packages/ui/src/tokens/`, `packages/ui/src/themes/`. Spec 12-design-system-v2-ambient esiste ma i criterio "done globale" non è soddisfatto. |

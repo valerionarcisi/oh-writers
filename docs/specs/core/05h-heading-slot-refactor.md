@@ -1,5 +1,7 @@
 # 05h — Heading Slot Refactor
 
+> **Status:** ✅ done
+
 Sub-spec of `05g-scene-autocomplete-and-numbering.md`. Fixes a structural bug in
 the current two-slot scene heading that breaks text input when either slot is
 empty.

@@ -17,6 +17,18 @@ export const DAILY_CAPACITY_HOURS = 8;
 
 export const SHOOTING_DAY_MINUTES = DAILY_CAPACITY_HOURS * 60;
 
+/**
+ * Minutes required to shoot a scene at each effort level.
+ * Used by the "Genera piano" bulk planner to group scenes into shooting days.
+ */
+export const EFFORT_MINUTES: Record<EffortLevel, number> = {
+  1: 20,
+  2: 45,
+  3: 90,
+  4: 180,
+  5: 360,
+};
+
 export const resolveEffortHours = (
   pageCount: number,
   override: number | null,

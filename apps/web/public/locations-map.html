@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Location Manager — Oh Writers</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet.draw -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f3ee;
+      --surface: #ffffff;
+      --surface-alt: #ebe9e3;
+      --surface-deep: #e0ddd6;
+      --line: #d8d6cd;
+      --text: #1c1a17;
+      --text-2: #44413c;
+      --text-3: #6e6c66;
+      --text-mute: #88867e;
+      --action: #8b3a1a;
+      --action-soft: #f4dccb;
+      --green: #2d6a4f;
+      --green-soft: #d8f3dc;
+      --amber: #d97706;
+      --amber-soft: #fef3c7;
+      --agent: #5a3e8a;
+      --agent-soft: #ede9f8;
+      --blue: #2563eb;
+      --blue-soft: #dbeafe;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-display: 'Fraunces', Georgia, serif;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-pill: 999px;
+      --shadow-sm: 0 1px 3px rgba(28,26,23,.08), 0 1px 2px rgba(28,26,23,.04);
+      --shadow-md: 0 4px 16px rgba(28,26,23,.10), 0 2px 6px rgba(28,26,23,.06);
+      --shadow-lg: 0 12px 40px rgba(28,26,23,.14), 0 4px 12px rgba(28,26,23,.08);
+      --panel-width: 380px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Root layout ── */
+    .app {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Map area ── */
+    .map-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Leaflet controls: push them so they don't overlap the panel */
+    .leaflet-top.leaflet-right {
+      right: 8px;
+    }
+
+    /* Override Leaflet draw toolbar icons color */
+    .leaflet-draw-toolbar a {
+      background-color: var(--surface) !important;
+      color: var(--text) !important;
+    }
+    .leaflet-draw-toolbar a:hover {
+      background-color: var(--surface-alt) !important;
+    }
+
+    /* ── Map overlay: status bar ── */
+    .map-status-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      padding-block-end: 16px;
+    }
+
+    .area-notice {
+      display: none;
+      pointer-events: all;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 10px 16px;
+      gap: 12px;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .area-notice.visible {
+      display: flex;
+    }
+
+    .area-notice-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .area-count-badge {
+      background: var(--action-soft);
+      color: var(--action);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+    }
+
+    .btn-area-search {
+      background: var(--action);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-area-search:hover {
+      opacity: 0.9;
+    }
+
+    .btn-clear-area {
+      background: none;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      color: var(--text-3);
+      cursor: pointer;
+    }
+
+    .btn-clear-area:hover {
+      background: var(--surface-alt);
+    }
+
+    /* ── Map legend ── */
+    .map-legend {
+      position: absolute;
+      bottom: 24px;
+      left: 16px;
+      z-index: 1000;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .legend-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-mute);
+      margin-block-end: 2px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      color: var(--text-2);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.7);
+      flex-shrink: 0;
+    }
+
+    .legend-dot.confirmed { background: #2d6a4f; }
+    .legend-dot.visited   { background: #2563eb; }
+    .legend-dot.candidate { background: #88867e; }
+
+    /* ── Pulsing search ring ── */
+    @keyframes pulse-ring {
+      0%   { transform: translate(-50%,-50%) scale(.6); opacity: .7; }
+      70%  { transform: translate(-50%,-50%) scale(1);  opacity: .2; }
+      100% { transform: translate(-50%,-50%) scale(1);  opacity: 0;  }
+    }
+
+    /* ── Right panel ── */
+    .panel {
+      width: var(--panel-width);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-inline-start: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Panel header ── */
+    .panel-header {
+      padding: 16px 16px 12px;
+      border-block-end: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-block-end: 10px;
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: .01em;
+    }
+
+    .panel-subtitle {
+      font-size: 11px;
+      color: var(--text-mute);
+      font-weight: 400;
+    }
+
+    .btn-cesare {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--agent-soft);
+      color: var(--agent);
+      border: 1px solid rgba(90,62,138,.2);
+      border-radius: var(--radius-pill);
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 120ms ease;
+    }
+
+    .btn-cesare:hover {
+      background: rgba(90,62,138,.15);
+    }
+
+    .btn-cesare-spark {
+      font-size: 12px;
+    }
+
+    /* ── Progress bar ── */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 5px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      background: var(--green);
+      transition: width 400ms ease;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-mute);
+      white-space: nowrap;
+    }
+
+    /* ── Preconditions accordion ── */
+    .preconditions {
+      border-block-end: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+
+    .preconditions-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      cursor: pointer;
+      user-select: none;
+      background: none;
+      border: none;
+      width: 100%;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--amber);
+      text-align: start;
+    }
+
+    .preconditions-toggle:hover {
+      background: var(--surface-alt);
+    }
+
+    .preconditions-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preconditions-chevron {
+      font-size: 9px;
+      color: var(--amber);
+      transition: transform 200ms ease;
+    }
+
+    .preconditions-body {
+      display: none;
+      padding: 0 16px 12px;
+    }
+
+    .preconditions-body.open {
+      display: block;
+    }
+
+    .preconditions-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .preconditions-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 11px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    .pre-checkbox {
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-block-start: 1px;
+    }
+
+    .pre-done .pre-checkbox {
+      color: var(--green);
+    }
+
+    /* ── Requirements list ── */
+    .req-list-area {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .req-list-area::-webkit-scrollbar {
+      width: 4px;
+    }
+    .req-list-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .req-list-area::-webkit-scrollbar-thumb {
+      background: var(--line);
+      border-radius: 2px;
+    }
+
+    .req-section-label {
+      padding: 10px 16px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-mute);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+
+    /* ── Req row ── */
+    .req-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      border-block-end: 1px solid var(--line);
+      transition: background 100ms ease;
+      position: relative;
+    }
+
+    .req-row:hover {
+      background: var(--surface-alt);
+    }
+
+    .req-row.selected {
+      background: var(--action-soft);
+    }
+
+    .req-row.dimmed {
+      opacity: .45;
+    }
+
+    .req-row.highlight-area {
+      background: var(--action-soft);
+      border-inline-start: 3px solid var(--action);
+    }
+
+    .req-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-block-start: 4px;
+    }
+
+    .req-dot.confirmed { background: var(--green); }
+    .req-dot.scouting  { background: var(--amber); }
+    .req-dot.pending   { background: var(--line); border: 1.5px solid var(--text-mute); }
+
+    .req-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .req-name {
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .req-meta {
+      font-size: 11px;
+      color: var(--text-mute);
+      margin-block-start: 1px;
+    }
+
+    .req-candidate {
+      font-size: 11px;
+      margin-block-start: 4px;
+    }
+
+    .req-candidate.confirmed {
+      color: var(--green);
+      font-weight: 500;
+    }
+
+    .req-candidate.visited {
+      color: var(--blue);
+      font-weight: 500;
+    }
+
+    .req-candidate.none {
+      color: var(--text-mute);
+      font-style: italic;
+    }
+
+    .req-scenes-badge {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-mute);
+      background: var(--surface-alt);
+      border-radius: var(--radius-pill);
+      padding: 2px 7px;
+      margin-block-start: 2px;
+    }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      flex-shrink: 0;
+      border-block-start: 1px solid var(--line);
+      background: var(--surface);
+      overflow: hidden;
+      transition: max-height 300ms ease;
+      max-height: 0;
+    }
+
+    .detail-panel.open {
+      max-height: 320px;
+    }
+
+    .detail-inner {
+      padding: 14px 16px;
+      overflow-y: auto;
+      max-height: 320px;
+    }
+
+    .detail-inner::-webkit-scrollbar { width: 4px; }
+    .detail-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+    .detail-location-name {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-block-end: 2px;
+    }
+
+    .detail-address {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-block-end: 10px;
+    }
+
+    .detail-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-block-end: 12px;
+    }
+
+    .detail-meta-item {
+      background: var(--surface-alt);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+    }
+
+    .detail-meta-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-mute);
+      margin-block-end: 2px;
+    }
+
+    .detail-meta-value {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .detail-meta-value.muted {
+      color: var(--text-mute);
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    /* ── Photo thumbnails ── */
+    .photos-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-block-end: 12px;
+    }
+
+    .photo-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      transition: border-color 120ms;
+    }
+
+    .photo-thumb:hover {
+      border-color: var(--text-3);
+    }
+
+    .btn-add-photo {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      background: none;
+      border: 1.5px dashed var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-mute);
+      cursor: pointer;
+      transition: border-color 120ms, color 120ms;
+      font-family: var(--font-sans);
+    }
+
+    .btn-add-photo:hover {
+      border-color: var(--action);
+      color: var(--action);
+    }
+
+    /* ── Notes ── */
+    .notes-textarea {
+      width: 100%;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: var(--font-sans);
+      color: var(--text);
+      resize: none;
+      outline: none;
+      margin-block-end: 12px;
+      line-height: 1.5;
+    }
+
+    .notes-textarea::placeholder {
+      color: var(--text-mute);
+    }
+
+    .notes-textarea:focus {
+      border-color: var(--action);
+    }
+
+    /* ── Action buttons ── */
+    .detail-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      flex: 1;
+      min-width: 90px;
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: opacity 120ms, background 120ms;
+      text-align: center;
+      border: 1px solid transparent;
+    }
+
+    .btn-action.primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-action.primary:hover {
+      opacity: .85;
+    }
+
+    .btn-action.secondary {
+      background: var(--surface-alt);
+      color: var(--text-2);
+      border-color: var(--line);
+    }
+
+    .btn-action.secondary:hover {
+      background: var(--surface-deep);
+    }
+
+    .btn-action.danger {
+      background: none;
+      color: #c0392b;
+      border-color: rgba(192,57,43,.3);
+    }
+
+    .btn-action.danger:hover {
+      background: #fff0ee;
+    }
+
+    /* ── No selection state ── */
+    .no-selection {
+      padding: 16px;
+      font-size: 12px;
+      color: var(--text-mute);
+      font-style: italic;
+      text-align: center;
+      border-block-start: 1px solid var(--line);
+    }
+
+    /* ── Pending search ring (CSS pulsing) ── */
+    .search-ring-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 160px;
+      height: 160px;
+      pointer-events: none;
+      z-index: 999;
+      display: none;
+    }
+
+    .search-ring-overlay.visible {
+      display: block;
+    }
+
+    .search-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 2px solid var(--action);
+      animation: pulse-ring 2s ease-out infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%   { transform: translate(-50%, -50%) scale(.3); opacity: .8; }
+      70%  { transform: translate(-50%, -50%) scale(1);  opacity: .15; }
+      100% { transform: translate(-50%, -50%) scale(1);  opacity: 0; }
+    }
+
+    .search-ring:nth-child(2) { animation-delay: .6s; }
+    .search-ring:nth-child(3) { animation-delay: 1.2s; }
+
+    /* ── Leaflet custom popup ── */
+    .leaflet-popup-content-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-md);
+      border-radius: var(--radius-md);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text);
+      padding: 0;
+    }
+
+    .leaflet-popup-content {
+      margin: 10px 14px;
+      line-height: 1.5;
+    }
+
+    .leaflet-popup-tip-container {
+      display: none;
+    }
+
+    .popup-name {
+      font-weight: 600;
+      font-size: 12px;
+      margin-block-end: 2px;
+    }
+
+    .popup-address {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    /* Ensure Leaflet draw toolbar is visible and styled */
+    .leaflet-draw-toolbar.leaflet-bar {
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--line) !important;
+      border-radius: var(--radius-md) !important;
+      overflow: hidden;
+    }
+
+    .leaflet-draw-toolbar.leaflet-bar a {
+      background-color: var(--surface) !important;
+      border-bottom: 1px solid var(--line) !important;
+    }
+
+    .leaflet-draw-toolbar.leaflet-bar a:last-child {
+      border-bottom: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- ── MAP AREA ── -->
+    <div class="map-area">
+      <div id="map"></div>
+
+      <!-- Pulsing ring for pending locations -->
+      <div class="search-ring-overlay" id="searchRingOverlay">
+        <div class="search-ring"></div>
+        <div class="search-ring"></div>
+        <div class="search-ring"></div>
+      </div>
+
+      <!-- Area notice bar -->
+      <div class="map-status-bar">
+        <div class="area-notice" id="areaNotice">
+          <div class="area-notice-text">
+            <span class="area-count-badge" id="areaCountBadge">0</span>
+            <span id="areaNoticeText">location nell'area — vedi nel pannello →</span>
+          </div>
+          <button class="btn-area-search">Cerca location reali qui</button>
+          <button class="btn-clear-area" id="btnClearArea">Cancella area</button>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="map-legend">
+        <div class="legend-title">Stato location</div>
+        <div class="legend-row"><span class="legend-dot confirmed"></span>Confermata</div>
+        <div class="legend-row"><span class="legend-dot visited"></span>Visitata</div>
+        <div class="legend-row"><span class="legend-dot candidate"></span>Candidata</div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT PANEL ── -->
+    <div class="panel">
+
+      <!-- Panel header -->
+      <div class="panel-header">
+        <div class="panel-title-row">
+          <div>
+            <div class="panel-title">LOCATION <span style="color:var(--text-mute); font-weight:400;">(8)</span></div>
+            <div class="panel-subtitle">2 confermate · 2 in scouting</div>
+          </div>
+          <button class="btn-cesare">
+            <span class="btn-cesare-spark">✦</span>
+            Suggerisci con Cesare
+          </button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-row">
+          <div class="progress-track">
+            <div class="progress-fill" style="width: 25%"></div>
+          </div>
+          <span class="progress-label">2 / 8</span>
+        </div>
+      </div>
+
+      <!-- Preconditions accordion -->
+      <div class="preconditions">
+        <button class="preconditions-toggle" id="precToggle" onclick="togglePreconditions()">
+          <span class="preconditions-toggle-label">
+            <span>⚠</span>
+            Richiede prima di implementare
+          </span>
+          <span class="preconditions-chevron" id="precChevron">▶</span>
+        </button>
+        <div class="preconditions-body" id="precBody">
+          <ul class="preconditions-list">
+            <li><span class="pre-checkbox">☐</span> Geocoding service (Nominatim free / Google Maps API key)</li>
+            <li class="pre-done"><span class="pre-checkbox">✓</span> <span><code style="font-size:10px;background:var(--surface-alt);padding:1px 4px;border-radius:3px;">location_candidates.coordinates</code> già nello schema Zod</span></li>
+            <li><span class="pre-checkbox">☐</span> Overpass API o Google Places per ricerca POI nell'area</li>
+            <li><span class="pre-checkbox">☐</span> Leaflet.draw come npm package (ora da CDN)</li>
+            <li><span class="pre-checkbox">☐</span> Tile provider scelto (OSM free / Mapbox con token)</li>
+            <li><span class="pre-checkbox">☐</span> Upload foto → storage S3 / Cloudflare R2</li>
+            <li><span class="pre-checkbox">☐</span> Permessi geolocalizzazione browser per "cerca vicino a me"</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Requirements list -->
+      <div class="req-list-area" id="reqListArea">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Detail panel (bottom) -->
+      <div class="detail-panel" id="detailPanel">
+        <div class="detail-inner" id="detailInner">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ── Data ──────────────────────────────────────────────────────────────────
+    const requirements = [
+      {
+        id: 'r1', name: 'APP. DI MARCO', intExt: 'INT', timeOfDay: ['GIORNO','SERA'],
+        sceneCount: 6, status: 'confirmed',
+        confirmedCandidate: {
+          name: 'Via Tortona 18', address: 'Via Tortona 18, 20144 Milano',
+          lat: 45.4628, lng: 9.1731, fee: 350, contact: 'Lucia Ferrara · lucia@studio.it',
+          status: 'confirmed'
+        }
+      },
+      {
+        id: 'r2', name: 'UFFICIO OPEN SPACE', intExt: 'INT', timeOfDay: ['GIORNO'],
+        sceneCount: 4, status: 'confirmed',
+        confirmedCandidate: {
+          name: 'Spazio Copernico', address: 'Via Copernico 38, Milano',
+          lat: 45.4841, lng: 9.2011, fee: 200, contact: 'Marco Bianchi · info@copernico.it',
+          status: 'confirmed'
+        }
+      },
+      {
+        id: 'r3', name: 'TETTO DI NOTTE', intExt: 'EXT', timeOfDay: ['NOTTE'],
+        sceneCount: 2, status: 'scouting',
+        confirmedCandidate: {
+          name: 'Terrazza Brera', address: 'Via Brera 12, Milano',
+          lat: 45.4717, lng: 9.1876, fee: null, contact: null,
+          status: 'visited'
+        }
+      },
+      {
+        id: 'r4', name: 'STRADA EXTRAURBANA', intExt: 'EXT', timeOfDay: ['GIORNO'],
+        sceneCount: 4, status: 'scouting',
+        confirmedCandidate: {
+          name: 'SS35 dir. Lodi', address: 'Tangenziale Est, Lodi',
+          lat: 45.3112, lng: 9.5031, fee: null, contact: null,
+          status: 'visited'
+        }
+      },
+      {
+        id: 'r5', name: 'FABBRICA ABBANDONATA', intExt: 'INT/EXT', timeOfDay: ['GIORNO'],
+        sceneCount: 2, status: 'pending', confirmedCandidate: null
+      },
+      {
+        id: 'r6', name: 'EXT. BOSCO', intExt: 'EXT', timeOfDay: ['ALBA','TRAMONTO'],
+        sceneCount: 5, status: 'pending', confirmedCandidate: null
+      },
+      {
+        id: 'r7', name: 'OSPEDALE INT.', intExt: 'INT', timeOfDay: ['GIORNO'],
+        sceneCount: 3, status: 'pending', confirmedCandidate: null
+      },
+      {
+        id: 'r8', name: 'STAZIONE METRO', intExt: 'EXT', timeOfDay: ['NOTTE'],
+        sceneCount: 1, status: 'pending', confirmedCandidate: null
+      },
+    ];
+
+    // Photos data (fake, per requirement)
+    const photos = {
+      r1: ['🏠', '🪟', '🛋️'],
+      r2: ['🏢', '💻'],
+      r3: ['🌃'],
+    };
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let selectedId = null;
+    let drawnLayer = null;
+    let areaFilterIds = null; // null = no filter, array = filtered IDs
+    let searchRingCircle = null; // Leaflet circle for pending ring
+
+    // ── Map setup ─────────────────────────────────────────────────────────────
+    const MILAN = [45.4654, 9.1859];
+    const map = L.map('map', {
+      center: MILAN,
+      zoom: 13,
+      zoomControl: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // ── Pin color mapping ──────────────────────────────────────────────────────
+    function pinColorForStatus(status) {
+      switch (status) {
+        case 'confirmed': return { color: '#2d6a4f', fillColor: '#2d6a4f' };
+        case 'visited':   return { color: '#2563eb', fillColor: '#2563eb' };
+        default:          return { color: '#88867e', fillColor: '#88867e' };
+      }
+    }
+
+    // ── Place markers ─────────────────────────────────────────────────────────
+    const markersByReqId = {};
+
+    requirements.forEach(req => {
+      if (!req.confirmedCandidate) return;
+      const c = req.confirmedCandidate;
+      const { color, fillColor } = pinColorForStatus(c.status);
+
+      const marker = L.circleMarker([c.lat, c.lng], {
+        radius: 9,
+        color: '#ffffff',
+        weight: 2.5,
+        fillColor,
+        fillOpacity: 1,
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div class="popup-name">${c.name}</div>
+        <div class="popup-address">${c.address}</div>
+      `);
+
+      marker.on('click', () => selectRequirement(req.id, false));
+      markersByReqId[req.id] = marker;
+    });
+
+    // ── Leaflet.draw setup ────────────────────────────────────────────────────
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    let drawControl = null;
+
+    try {
+      drawControl = new L.Control.Draw({
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            showArea: true,
+            shapeOptions: {
+              color: '#8b3a1a',
+              fillColor: '#f4dccb',
+              fillOpacity: 0.3,
+              weight: 2,
+            }
+          },
+          circle: {
+            shapeOptions: {
+              color: '#8b3a1a',
+              fillColor: '#f4dccb',
+              fillOpacity: 0.3,
+              weight: 2,
+            }
+          },
+          polyline: false,
+          rectangle: false,
+          marker: false,
+          circlemarker: false,
+        },
+        edit: {
+          featureGroup: drawnItems,
+          remove: false,
+        }
+      });
+      map.addControl(drawControl);
+
+      map.on(L.Draw.Event.CREATED, function (event) {
+        clearDrawnArea(false);
+        drawnLayer = event.layer;
+        drawnItems.addLayer(drawnLayer);
+        analyzeDrawnArea(drawnLayer);
+      });
+
+    } catch (e) {
+      console.warn('Leaflet.draw non disponibile:', e.message);
+    }
+
+    // ── Analyze what falls inside drawn area ──────────────────────────────────
+    function pointInLayer(lat, lng, layer) {
+      const point = L.latLng(lat, lng);
+      if (layer instanceof L.Circle) {
+        return layer.getLatLng().distanceTo(point) <= layer.getRadius();
+      }
+      if (layer instanceof L.Polygon) {
+        return isPointInPolygon(point, layer.getLatLngs()[0]);
+      }
+      return false;
+    }
+
+    // Simple ray-casting for polygon
+    function isPointInPolygon(point, polygon) {
+      const x = point.lat, y = point.lng;
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].lat, yi = polygon[i].lng;
+        const xj = polygon[j].lat, yj = polygon[j].lng;
+        const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    function analyzeDrawnArea(layer) {
+      const inArea = [];
+      requirements.forEach(req => {
+        if (!req.confirmedCandidate) return;
+        const c = req.confirmedCandidate;
+        if (pointInLayer(c.lat, c.lng, layer)) {
+          inArea.push(req.id);
+        }
+      });
+
+      const notice = document.getElementById('areaNotice');
+      const badge = document.getElementById('areaCountBadge');
+      const noticeText = document.getElementById('areaNoticeText');
+
+      badge.textContent = inArea.length;
+      noticeText.textContent = `location nell'area${inArea.length !== 1 ? '' : ''} — vedi nel pannello →`;
+      notice.classList.add('visible');
+
+      // Filter: show pending first, then those in area
+      // For the panel, highlight requirements that are pending (no confirmed location)
+      // and are therefore candidates for the area search
+      const pendingIds = requirements.filter(r => r.status === 'pending').map(r => r.id);
+      areaFilterIds = pendingIds; // highlight pending ones as relevant
+      renderReqList();
+    }
+
+    // ── Clear drawn area ──────────────────────────────────────────────────────
+    function clearDrawnArea(resetFilter = true) {
+      if (drawnLayer) {
+        drawnItems.removeLayer(drawnLayer);
+        drawnLayer = null;
+      }
+      document.getElementById('areaNotice').classList.remove('visible');
+      if (resetFilter) {
+        areaFilterIds = null;
+        renderReqList();
+      }
+    }
+
+    document.getElementById('btnClearArea').addEventListener('click', () => {
+      clearDrawnArea(true);
+    });
+
+    // ── Search ring for pending requirements ──────────────────────────────────
+    function showSearchRing(lat, lng) {
+      if (searchRingCircle) {
+        map.removeLayer(searchRingCircle);
+        searchRingCircle = null;
+      }
+      searchRingCircle = L.circle([lat, lng], {
+        radius: 3000,
+        color: '#8b3a1a',
+        fillColor: '#f4dccb',
+        fillOpacity: 0.08,
+        weight: 1.5,
+        dashArray: '6 4',
+        className: 'search-ring-leaflet',
+      }).addTo(map);
+    }
+
+    function hideSearchRing() {
+      if (searchRingCircle) {
+        map.removeLayer(searchRingCircle);
+        searchRingCircle = null;
+      }
+    }
+
+    // ── Select requirement ────────────────────────────────────────────────────
+    function selectRequirement(id, panToMap = true) {
+      selectedId = id;
+      renderReqList();
+      renderDetail();
+
+      const req = requirements.find(r => r.id === id);
+      if (!req) return;
+
+      if (req.confirmedCandidate && panToMap) {
+        const c = req.confirmedCandidate;
+        map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 15), { duration: 0.8 });
+        const marker = markersByReqId[id];
+        if (marker) {
+          setTimeout(() => marker.openPopup(), 600);
+        }
+        hideSearchRing();
+      } else if (!req.confirmedCandidate) {
+        // Show pulsing search ring around Milan center
+        showSearchRing(MILAN[0], MILAN[1]);
+        if (panToMap) {
+          map.flyTo(MILAN, 12, { duration: 0.8 });
+        }
+      }
+    }
+
+    // ── Render requirement list ───────────────────────────────────────────────
+    function renderReqList() {
+      const area = document.getElementById('reqListArea');
+      area.innerHTML = '';
+
+      const sorted = [...requirements];
+
+      // If area filter active: sort pending first
+      if (areaFilterIds) {
+        sorted.sort((a, b) => {
+          const aP = a.status === 'pending' ? 0 : 1;
+          const bP = b.status === 'pending' ? 0 : 1;
+          return aP - bP;
+        });
+      }
+
+      sorted.forEach(req => {
+        const row = document.createElement('div');
+        row.className = 'req-row';
+        row.dataset.id = req.id;
+
+        if (req.id === selectedId) row.classList.add('selected');
+        if (areaFilterIds && !areaFilterIds.includes(req.id) && req.status !== 'pending') {
+          row.classList.add('dimmed');
+        }
+        if (areaFilterIds && areaFilterIds.includes(req.id) && req.status === 'pending') {
+          row.classList.add('highlight-area');
+        }
+
+        const dotClass = req.status === 'confirmed' ? 'confirmed'
+                       : req.status === 'scouting'  ? 'scouting'
+                       : 'pending';
+
+        const candidateHtml = req.confirmedCandidate
+          ? `<div class="req-candidate ${req.confirmedCandidate.status}">
+               ${req.confirmedCandidate.status === 'confirmed' ? '✓' : '○'} ${req.confirmedCandidate.name}
+             </div>`
+          : `<div class="req-candidate none">Nessun candidato</div>`;
+
+        const times = req.timeOfDay.join(' · ');
+
+        row.innerHTML = `
+          <span class="req-dot ${dotClass}"></span>
+          <div class="req-info">
+            <div class="req-name">${req.name}</div>
+            <div class="req-meta">${req.intExt} · ${times}</div>
+            ${candidateHtml}
+          </div>
+          <span class="req-scenes-badge">${req.sceneCount} sc.</span>
+        `;
+
+        row.addEventListener('click', () => selectRequirement(req.id, true));
+        area.appendChild(row);
+      });
+    }
+
+    // ── Render detail panel ───────────────────────────────────────────────────
+    function renderDetail() {
+      const panel = document.getElementById('detailPanel');
+      const inner = document.getElementById('detailInner');
+
+      if (!selectedId) {
+        panel.classList.remove('open');
+        inner.innerHTML = '';
+        return;
+      }
+
+      const req = requirements.find(r => r.id === selectedId);
+      panel.classList.add('open');
+
+      if (!req.confirmedCandidate) {
+        // Pending — no candidate yet
+        inner.innerHTML = `
+          <div class="detail-location-name" style="color:var(--text-mute); font-style:italic;">Da trovare</div>
+          <div class="detail-address">${req.name} — ${req.intExt} · ${req.timeOfDay.join(', ')}</div>
+          <div style="background:var(--action-soft); border:1px dashed var(--action); border-radius:var(--radius-md); padding:10px 12px; margin-block-end:12px; font-size:12px; color:var(--action);">
+            Nessun candidato ancora. Disegna un'area sulla mappa o chiedi a Cesare di suggerire location.
+          </div>
+          <textarea class="notes-textarea" rows="2" placeholder="Note per questa location..."></textarea>
+          <div class="detail-actions">
+            <button class="btn-action primary" style="background:var(--agent); min-width:auto; flex:none; padding: 7px 14px;">✦ Cesare suggerisce</button>
+          </div>
+        `;
+        return;
+      }
+
+      const c = req.confirmedCandidate;
+      const isConfirmed = c.status === 'confirmed';
+      const isVisited = c.status === 'visited';
+
+      const statusLabel = isConfirmed ? 'Confermata' : isVisited ? 'Visitata' : 'Candidata';
+      const statusColor = isConfirmed ? 'var(--green)' : isVisited ? 'var(--blue)' : 'var(--text-mute)';
+
+      const feeHtml = c.fee
+        ? `<div class="detail-meta-item"><div class="detail-meta-label">Fee giornaliera</div><div class="detail-meta-value">€${c.fee}</div></div>`
+        : `<div class="detail-meta-item"><div class="detail-meta-label">Fee giornaliera</div><div class="detail-meta-value muted">Da definire</div></div>`;
+
+      const contactHtml = c.contact
+        ? `<div class="detail-meta-item" style="grid-column:1/-1;"><div class="detail-meta-label">Referente</div><div class="detail-meta-value" style="font-size:11px;">${c.contact}</div></div>`
+        : `<div class="detail-meta-item" style="grid-column:1/-1;"><div class="detail-meta-label">Referente</div><div class="detail-meta-value muted">Non disponibile</div></div>`;
+
+      const reqPhotos = photos[req.id] || [];
+      const thumbsHtml = reqPhotos.map(emoji => `
+        <div class="photo-thumb">${emoji}</div>
+      `).join('');
+
+      // Action buttons by status
+      let actionsHtml = '';
+      if (isConfirmed) {
+        actionsHtml = `
+          <button class="btn-action secondary">Modifica</button>
+          <button class="btn-action danger">Scarta</button>
+        `;
+      } else if (isVisited) {
+        actionsHtml = `
+          <button class="btn-action primary">✓ Conferma</button>
+          <button class="btn-action secondary">Segna visitata</button>
+          <button class="btn-action danger">Scarta</button>
+        `;
+      } else {
+        actionsHtml = `
+          <button class="btn-action primary">✓ Conferma</button>
+          <button class="btn-action secondary">Segna visitata</button>
+          <button class="btn-action danger">Scarta</button>
+        `;
+      }
+
+      inner.innerHTML = `
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-block-end:4px;">
+          <div class="detail-location-name">${c.name}</div>
+          <span style="font-size:10px; font-weight:600; color:${statusColor}; background:var(--surface-alt); padding:2px 8px; border-radius:var(--radius-pill); white-space:nowrap; margin-block-start:3px;">${statusLabel}</span>
+        </div>
+        <div class="detail-address">${c.address}</div>
+        <div class="detail-meta-grid">
+          <div class="detail-meta-item">
+            <div class="detail-meta-label">Tipo</div>
+            <div class="detail-meta-value">${req.intExt}</div>
+          </div>
+          ${feeHtml}
+          ${contactHtml}
+        </div>
+        <div class="photos-row">
+          ${thumbsHtml}
+          <button class="btn-add-photo" title="Aggiungi foto">+</button>
+        </div>
+        <textarea class="notes-textarea" rows="2" placeholder="Note scout, accesso, orari, permessi..."></textarea>
+        <div class="detail-actions">
+          ${actionsHtml}
+        </div>
+      `;
+    }
+
+    // ── Preconditions accordion ───────────────────────────────────────────────
+    function togglePreconditions() {
+      const body = document.getElementById('precBody');
+      const chevron = document.getElementById('precChevron');
+      const isOpen = body.classList.contains('open');
+      body.classList.toggle('open', !isOpen);
+      chevron.textContent = isOpen ? '▶' : '▼';
+    }
+
+    // ── Initial render ────────────────────────────────────────────────────────
+    renderReqList();
+    renderDetail();
+
+    // Auto-select first requirement to show the panel in action
+    setTimeout(() => selectRequirement('r1', false), 300);
+  </script>
+</body>
+</html>

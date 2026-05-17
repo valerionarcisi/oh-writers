@@ -1,5 +1,7 @@
 # 10h — Breakdown read-only UX
 
+> **Status:** ✅ done
+
 Sub-spec of `10-breakdown`.
 
 ## Problem

@@ -1,5 +1,7 @@
 # Spec 05j — Screenplay PDF Export (Fountain → industry-standard PDF)
 
+> **Status:** ✅ done
+
 ## Goal
 
 Lo sceneggiatore esporta la sceneggiatura corrente in un PDF **industry-standard** (cover page opzionale, MORE/CONT'D, scene numbers, page numbers, formattazione US Letter 12pt Courier) condivisibile con produttori, agenti, festival, concorsi.

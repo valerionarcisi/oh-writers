@@ -97,21 +97,14 @@ export function ProjectHero({
         <Button
           variant="primary"
           size="md"
-          onClick={onContinueScreenplay}
+          onPress={onContinueScreenplay}
           data-testid="overview-continue-screenplay"
         >
           Continua sceneggiatura →
         </Button>
         <DropdownMenu
-          trigger={
-            <button
-              type="button"
-              className={styles.kebab}
-              aria-label="Altre azioni"
-            >
-              ⋯
-            </button>
-          }
+          trigger={<span aria-hidden>⋯</span>}
+          triggerClassName={styles.kebab}
           align="end"
           items={menuItems}
           data-testid="overview-actions-menu"

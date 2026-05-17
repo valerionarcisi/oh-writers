@@ -11,6 +11,7 @@ import {
   getOrCreateInitialPlan,
   shotPlanQueryOptions,
   updateSceneEffort,
+  generateShotPlansFromEffort,
 } from "../server/shooting-plan.server";
 import { EFFORT_LEVELS, EFFORT_LABELS, type EffortLevel } from "@oh-writers/domain";
 import { ScriptPanel } from "./ScriptPanel";
@@ -70,6 +71,17 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     },
   });
 
+  const generatePlanMut = useMutation({
+    mutationFn: async () =>
+      generateShotPlansFromEffort({ data: { projectId } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["shot-plan"] });
+      void qc.invalidateQueries({
+        queryKey: ["shooting-plan", "scenes", projectId],
+      });
+    },
+  });
+
   useEffect(() => {
     if (selectedSceneId && selectedScene && selectedScene.shotCount === 0) {
       initialPlanMut.mutate(selectedSceneId);
@@ -100,12 +112,35 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         activePlanId
       ) {
         e.preventDefault();
-        void navigate({ to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}` });
+        void navigate({
+          to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`,
+        });
+      }
+
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "g" &&
+        !generatePlanMut.isPending
+      ) {
+        e.preventDefault();
+        generatePlanMut.mutate();
+      }
+
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "p" &&
+        selectedSceneId &&
+        !initialPlanMut.isPending
+      ) {
+        e.preventDefault();
+        initialPlanMut.mutate(selectedSceneId);
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [projectId, selectedScene, activePlanId]);
+  }, [projectId, selectedScene, selectedSceneId, activePlanId, navigate, generatePlanMut, initialPlanMut]);
 
   const totalShots = scenes.reduce((sum, s) => sum + s.shotCount, 0);
   const totalMinutesAll = scenes.reduce(
@@ -118,7 +153,6 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
 
   return (
     <div className={styles.page}>
-      {/* KPI bar */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.headerEyebrow}>Piano di ripresa</span>
@@ -148,7 +182,8 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
             <>
               <span className={styles.headerMetaSep}>·</span>
               <span className={styles.headerMetaChip}>
-                {plannedCount} {plannedCount === 1 ? "scena pianificata" : "scene pianificate"}
+                {plannedCount}{" "}
+                {plannedCount === 1 ? "scena pianificata" : "scene pianificate"}
               </span>
             </>
           )}
@@ -174,29 +209,31 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
           {scenes.map((scene) => {
             const isPlanned =
               scene.totalMinutes !== null && scene.shotCount > 0;
+            const isSelected = scene.sceneId === selectedSceneId;
             return (
-              <button
-                key={scene.sceneId}
-                type="button"
-                className={styles.sceneItem}
-                data-active={scene.sceneId === selectedSceneId || undefined}
-                onClick={() => setSelectedSceneId(scene.sceneId)}
-              >
-                <span className={styles.sceneNumber}>
-                  SC.{scene.sceneNumber}
-                </span>
-                <span className={styles.sceneHeading}>
-                  {scene.intExt}. {scene.location}
-                </span>
-                <span
-                  className={styles.sceneStatus}
-                  data-planned={isPlanned || undefined}
+              <div key={scene.sceneId} className={styles.sceneEntry}>
+                <button
+                  type="button"
+                  className={styles.sceneItem}
+                  data-active={isSelected || undefined}
+                  onClick={() => setSelectedSceneId(scene.sceneId)}
                 >
-                  {isPlanned
-                    ? `● ${scene.shotCount} shot · ${formatMinutes(scene.totalMinutes ?? 0)}`
-                    : "○ non pianificata"}
-                </span>
-                {scene.sceneId === selectedSceneId && (
+                  <span className={styles.sceneNumber}>
+                    SC.{scene.sceneNumber}
+                  </span>
+                  <span className={styles.sceneHeading}>
+                    {scene.intExt}. {scene.location}
+                  </span>
+                  <span
+                    className={styles.sceneStatus}
+                    data-planned={isPlanned || undefined}
+                  >
+                    {isPlanned
+                      ? `● ${scene.shotCount} shot · ${formatMinutes(scene.totalMinutes ?? 0)}`
+                      : "○ non pianificata"}
+                  </span>
+                </button>
+                {isSelected && (
                   <div className={styles.effortRow}>
                     {EFFORT_LEVELS.map((level) => (
                       <button
@@ -205,17 +242,19 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                         className={styles.effortPill}
                         data-active={scene.effort === level || undefined}
                         title={EFFORT_LABELS[level]}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          effortMut.mutate({ sceneId: scene.sceneId, effort: level });
-                        }}
+                        onClick={() =>
+                          effortMut.mutate({
+                            sceneId: scene.sceneId,
+                            effort: level,
+                          })
+                        }
                       >
                         {level}
                       </button>
                     ))}
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </aside>
@@ -243,7 +282,9 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                   planId={activePlanId}
                   sceneNumber={selectedScene.sceneNumber}
                   onOpenEditor={() => {
-                    void navigate({ to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}` });
+                    void navigate({
+                      to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`,
+                    });
                   }}
                 />
               )}
@@ -257,7 +298,11 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                 onShotListChanged={() => {
                   if (activePlanId) {
                     void qc.invalidateQueries({
-                      queryKey: ["blocking", selectedScene.sceneId, activePlanId],
+                      queryKey: [
+                        "blocking",
+                        selectedScene.sceneId,
+                        activePlanId,
+                      ],
                     });
                   }
                 }}
@@ -267,7 +312,10 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         ) : (
           <main className={styles.main}>
             <div className={styles.mainEmpty}>
-              <p>Seleziona una scena dalla lista per iniziare a pianificare gli shot.</p>
+              <p>
+                Seleziona una scena dalla lista per iniziare a pianificare gli
+                shot.
+              </p>
             </div>
           </main>
         )}
@@ -276,6 +324,13 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       <ShootingPlanDock
         projectId={projectId}
         suggestedShotCount={0}
+        isGenerating={generatePlanMut.isPending}
+        onGeneratePlan={() => generatePlanMut.mutate()}
+        onPrefill={
+          selectedSceneId
+            ? () => initialPlanMut.mutate(selectedSceneId)
+            : undefined
+        }
         onCesareClick={openCesare}
       />
     </div>

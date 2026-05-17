@@ -146,7 +146,7 @@ export function ProjectPipeline({
     },
     {
       key: "schedule",
-      label: "Piano",
+      label: "Calendarizzazione",
       status: scheduleStatus,
       route: "/projects/$id/schedule" as const,
     },

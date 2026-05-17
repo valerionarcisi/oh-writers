@@ -1,5 +1,7 @@
 # Spec 04c — Narrative Export (Logline + Synopsis + Treatment → PDF)
 
+> **Status:** ✅ done
+
 ## Goal
 
 Lo sceneggiatore esporta i tre documenti narrativi (**logline**, **sinossi**, **trattamento**) in un **singolo PDF** condivisibile con produttori, agenti, concorsi. Export è on-demand: un click in toolbar, il PDF viene generato server-side e **aperto in una nuova tab del browser** (preview), da cui l'utente decide se scaricare o stampare.

@@ -1,6 +1,6 @@
 # Spec 10e — Auto-spoglio via RegEx (zero-click breakdown)
 
-> **Status:** in progress
+> **Status:** ✅ done
 > **Depends on:** Spec 10 (Breakdown), Spec 10c (Inline scene tagging), Spec 10d (Cast tier)
 > **Date:** 2026-04-22
 

@@ -48,7 +48,7 @@ const PAGE_LABELS: Record<CesarePage, string> = {
   screenplay: "Sceneggiatura",
   breakdown: "Breakdown",
   budget: "Budget",
-  schedule: "Piano",
+  schedule: "Calendarizzazione",
   "shooting-plan": "Inquadrature",
 };
 

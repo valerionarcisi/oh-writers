@@ -1,5 +1,7 @@
 # Spec 06 — Toolbar Popover Menu
 
+> **Status:** ✅ done
+
 ## Context
 
 The screenplay editor toolbar currently exposes individual buttons (Import PDF already landed in Spec 05c; Export PDF, Versions, etc. are growing). As Spec 07 (Title Page) and Spec 08 (Scene Renumber + PDF Export) add more actions, the toolbar will become crowded. We consolidate screenplay-level actions behind a single popover menu anchored to the top-right of the editor.

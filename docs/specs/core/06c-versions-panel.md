@@ -1,5 +1,7 @@
 # Spec 06b — Versions Panel (inline)
 
+> **Status:** ✅ done
+
 Sub-spec of `06-toolbar-popover.md`. The "Versioni" menu entry no longer
 navigates to `/screenplay/versions`: it toggles an inline panel that slides in
 between the toolbar and the editor surface.

@@ -14,6 +14,8 @@ import {
   breakdownElements,
   breakdownOccurrences,
   projectRateCard,
+  locationRequirements,
+  locationCandidates,
 } from "../schema/index";
 import { and, eq } from "drizzle-orm";
 import {
@@ -94,6 +96,18 @@ const VALERIO_NAME = "Valerio";
 const VALERIO_VIEWER_EMAIL = "collab@ohwriters.dev";
 const VALERIO_VIEWER_PASSWORD = "collab123";
 const VALERIO_VIEWER_NAME = "Collaboratore";
+
+// ─── Locations seed IDs ────────────────────────────────────────────────────
+export const SEEDED_LOCATION_REQ_1_ID = "00000000-0000-4000-a000-000000000040";
+export const SEEDED_LOCATION_REQ_2_ID = "00000000-0000-4000-a000-000000000041";
+export const SEEDED_LOCATION_CANDIDATE_1_ID =
+  "00000000-0000-4000-a000-000000000050";
+export const SEEDED_LOCATION_CANDIDATE_2_ID =
+  "00000000-0000-4000-a000-000000000051";
+// Breakdown element for the "sync from breakdown" test scenario
+export const SEEDED_LOCATION_BREAKDOWN_ELEMENT_ID =
+  "00000000-0000-4000-a000-000000000060";
+export const SEEDED_LOCATION_BREAKDOWN_ELEMENT_NAME = "Libreria del padre";
 
 // ─── Scene heading parser (seed-only) ─────────────────────────────────────
 // Mirrors the live editor's heading detection just enough to materialise the
@@ -466,6 +480,8 @@ export async function seed() {
   await seedFirstDocumentVersions(TEST_TEAM_PROJECT_ID, TEST_USER_ID);
 
   await seedTeamProjectBreakdownFixtures();
+
+  await seedLocations();
 
   // Rate card defaults for the seeded project so Cast/Troupe in Per-categoria
   // show populated values right after a fresh seed. Real rates come from the
@@ -927,6 +943,68 @@ async function seedTeamProjectBreakdownFixtures() {
   }
 
   console.log("  -> Team project breakdown fixtures seeded");
+}
+
+async function seedLocations() {
+  // Breakdown element with category "locations" — the sync-from-breakdown
+  // test will call syncRequirementsFromBreakdown and expect this to appear
+  // as a new requirement (its name doesn't match any seeded requirement).
+  await db
+    .insert(breakdownElements)
+    .values({
+      id: SEEDED_LOCATION_BREAKDOWN_ELEMENT_ID,
+      projectId: TEST_TEAM_PROJECT_ID,
+      category: "locations",
+      name: SEEDED_LOCATION_BREAKDOWN_ELEMENT_NAME,
+      description: null,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(locationRequirements)
+    .values([
+      {
+        id: SEEDED_LOCATION_REQ_1_ID,
+        projectId: TEST_TEAM_PROJECT_ID,
+        name: "Appartamento Marta",
+        intExt: "INT",
+        timeOfDay: ["GIORNO"],
+        status: "scouting",
+      },
+      {
+        id: SEEDED_LOCATION_REQ_2_ID,
+        projectId: TEST_TEAM_PROJECT_ID,
+        name: "Strada del paese",
+        intExt: "EXT",
+        timeOfDay: ["NOTTE"],
+        status: "pending",
+      },
+    ])
+    .onConflictDoNothing();
+
+  await db
+    .insert(locationCandidates)
+    .values([
+      {
+        id: SEEDED_LOCATION_CANDIDATE_1_ID,
+        requirementId: SEEDED_LOCATION_REQ_1_ID,
+        name: "Via Tortona 18",
+        address: "Via Tortona 18, Milano",
+        status: "candidate",
+        aiSuggested: false,
+      },
+      {
+        id: SEEDED_LOCATION_CANDIDATE_2_ID,
+        requirementId: SEEDED_LOCATION_REQ_1_ID,
+        name: "Piazza Wagner 5",
+        address: "Piazza Wagner 5, Milano",
+        status: "visited",
+        aiSuggested: false,
+      },
+    ])
+    .onConflictDoNothing();
+
+  console.log("  -> Location requirements and candidates seeded");
 }
 
 /**

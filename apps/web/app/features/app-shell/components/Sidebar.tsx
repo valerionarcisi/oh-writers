@@ -203,11 +203,11 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
                 activeProps={{
                   className: `${styles.navLink} ${styles.active}`,
                 }}
-                title="Schedule"
+                title="Calendarizzazione"
               >
                 <Calendar size={ICON_SIZE} strokeWidth={ICON_STROKE} />
                 {!isCollapsed && (
-                  <span className={styles.navLabel}>Schedule</span>
+                  <span className={styles.navLabel}>Calendarizzazione</span>
                 )}
               </Link>
               <Link

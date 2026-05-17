@@ -118,11 +118,18 @@
   font-style: italic;
 }
 
+.sceneEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .sceneItem {
   display: flex;
   flex-direction: column;
   gap: 2px;
   text-align: start;
+  width: 100%;
   padding: var(--ds-space-2) var(--ds-space-3);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-md);
@@ -142,6 +149,8 @@
     background: color-mix(in oklch, var(--ds-plan-1, var(--ds-action)) 8%, var(--ds-surface));
     border-color: var(--ds-plan-1, var(--ds-action));
     border-inline-start-width: 3px;
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
   }
 }
 
@@ -174,7 +183,12 @@
 .effortRow {
   display: flex;
   gap: var(--ds-space-1);
-  padding-block-start: var(--ds-space-1);
+  padding: var(--ds-space-1) var(--ds-space-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-block-start: none;
+  border-end-start-radius: var(--ds-radius-md);
+  border-end-end-radius: var(--ds-radius-md);
 }
 
 .effortPill {

@@ -122,6 +122,10 @@
   min-block-size: 64px;
   overflow: visible;
 
+  &[data-absolute-layout] {
+    min-block-size: 72px;
+  }
+
   &::before {
     content: "";
     position: absolute;
@@ -146,6 +150,11 @@
   align-items: stretch;
   position: relative;
   z-index: 1;
+
+  &[data-absolute-layout] {
+    display: block;
+    position: relative;
+  }
 }
 
 .dropIndicator {
