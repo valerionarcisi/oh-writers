@@ -12,6 +12,8 @@ import {
   breakdownElements,
   breakdownOccurrences,
   scenes,
+  screenplays,
+  screenplayVersions,
 } from "@oh-writers/db/schema";
 import {
   ShotEffortWeightsSchema,
@@ -27,6 +29,8 @@ import {
   COVERAGE_PATTERNS,
   PATTERN_IDS,
   recommendPattern,
+  extractScenesFromFountain,
+  listScenesInFountain,
 } from "@oh-writers/domain";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -1454,6 +1458,57 @@ export const addReverseShot = createServerFn({ method: "POST" })
       return toShape(result);
     },
   );
+
+// ─── Scene fountain text ──────────────────────────────────────────────────────
+
+export const getSceneFountainText = createServerFn({ method: "GET" })
+  .validator(
+    z.object({ sceneId: z.string().uuid(), projectId: z.string().uuid() }),
+  )
+  .handler(async ({ data }): Promise<ResultShape<string, ForbiddenError | DbError>> => {
+    await requireUser();
+    const db = await getDb();
+
+    const result = await ResultAsync.fromPromise(
+      (async () => {
+        const scene = await db.query.scenes.findFirst({
+          where: eq(scenes.id, data.sceneId),
+        });
+        if (!scene) return "";
+
+        const screenplay = await db.query.screenplays.findFirst({
+          where: eq(screenplays.id, scene.screenplayId),
+        });
+        if (!screenplay) return "";
+
+        // Use current version content if set, otherwise fall back to screenplay body
+        let content = screenplay.content;
+        if (screenplay.currentVersionId) {
+          const version = await db.query.screenplayVersions.findFirst({
+            where: eq(screenplayVersions.id, screenplay.currentVersionId),
+          });
+          if (version) content = version.content;
+        }
+
+        const allScenes = listScenesInFountain(content);
+        const match = allScenes.find((s) => parseInt(s.number) === scene.number);
+        if (!match) return "";
+
+        return extractScenesFromFountain(content, [match.number]);
+      })(),
+      (e) => new DbError("getSceneFountainText", e),
+    );
+
+    return toShape(result);
+  });
+
+export const sceneFountainQueryOptions = (sceneId: string, projectId: string) =>
+  queryOptions({
+    queryKey: ["scene-fountain", sceneId],
+    queryFn: () => getSceneFountainText({ data: { sceneId, projectId } }),
+    enabled: !!sceneId,
+    staleTime: 5 * 60_000,
+  });
 
 // ─── Test-only exports ─────────────────────────────────────────────────────────
 // Exported for unit tests only. Not part of the public API.

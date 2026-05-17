@@ -1,0 +1,41 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  overflow: hidden;
+  margin-block-end: var(--ds-space-5);
+}
+
+.label {
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-line-soft);
+  background: var(--ds-surface-alt);
+}
+
+.scrollArea {
+  block-size: 220px;
+  overflow-y: auto;
+  padding: var(--ds-space-4);
+}
+
+.editor {
+  font-family: var(--ds-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.loading,
+.empty {
+  font-family: var(--ds-font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ds-text-3);
+}

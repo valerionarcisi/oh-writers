@@ -16,6 +16,7 @@ import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
 import { CalendarGridView } from "./CalendarGridView";
+import { SceneFountainPanel } from "./SceneFountainPanel";
 import { useCesareOpen } from "~/features/app-shell";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -244,6 +245,10 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                     )}
                   </span>
                 </div>
+                <SceneFountainPanel
+                  sceneId={selectedScene.sceneId}
+                  projectId={projectId}
+                />
                 {activePlanId && (
                   <BlockingCard
                     sceneId={selectedScene.sceneId}
