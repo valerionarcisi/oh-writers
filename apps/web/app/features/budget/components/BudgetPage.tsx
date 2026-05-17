@@ -392,17 +392,20 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       />
 
       {view === "category" && categoryTotal !== null && (
-        <div className={styles.totalDock}>
-          <span className={styles.totalDockLabel}>Totale stimato</span>
-          <span className={styles.totalDockSep} aria-hidden="true" />
-          <span className={styles.totalDockAmount}>
-            {new Intl.NumberFormat("it-IT", {
-              style: "currency",
-              currency: "EUR",
-              maximumFractionDigits: 0,
-            }).format(categoryTotal)}
-          </span>
-        </div>
+        <FloatingDock
+          position="bottom-left"
+          label="Totale stimato"
+          infoChips={[
+            {
+              label: "totale",
+              value: new Intl.NumberFormat("it-IT", {
+                style: "currency",
+                currency: "EUR",
+                maximumFractionDigits: 0,
+              }).format(categoryTotal),
+            },
+          ]}
+        />
       )}
     </div>
   );

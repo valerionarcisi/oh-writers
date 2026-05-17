@@ -62,13 +62,11 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
 
   const userMenuItems = [
     {
-      label: "Analisi di mercato",
-      icon: "bar-chart",
+      label: "Presentazione",
       onClick: () => window.open("/market-analysis.html", "_blank"),
     },
     {
       label: "Sign out",
-      icon: "log-out",
       onClick: handleSignOut,
     },
   ];

@@ -15,8 +15,8 @@ export type FloatingDockProps = {
    *  When omitted, the dock collapses to actions only — saves horizontal
    *  space on narrow viewports. Still used as the aria-label fallback. */
   label?: string;
-  /** Primary action (clay filled button) */
-  primaryAction: DockAction;
+  /** Primary action (clay filled button). Optional — omit for info-only docks. */
+  primaryAction?: DockAction;
   /** Secondary ghost actions */
   secondaryActions?: DockAction[];
   /** Optional slot rendered between the secondary actions and the Cesare pill.
@@ -32,6 +32,11 @@ export type FloatingDockProps = {
   onCesareClick?: () => void;
   /** Inline toast shown to the left of the actions. Auto-collapses when null. */
   toast?: string | null;
+  /** Dock position. Defaults to bottom-right (standard FloatingDock).
+   *  Use bottom-left for secondary info docks that must not overlap the primary. */
+  position?: "bottom-right" | "bottom-left";
+  /** Read-only info chips rendered after the label (for info-only docks). */
+  infoChips?: { label: string; value: string }[];
 };
 
 export function FloatingDock({
@@ -43,12 +48,15 @@ export function FloatingDock({
   cesareIsOn = true,
   onCesareClick,
   toast,
+  position = "bottom-right",
+  infoChips,
 }: FloatingDockProps) {
   return (
     <div
       role="toolbar"
       aria-label={label ? `Azioni pagina ${label}` : "Azioni pagina"}
       className={styles.dock}
+      data-position={position}
     >
       {toast && (
         <span
@@ -61,24 +69,46 @@ export function FloatingDock({
         </span>
       )}
 
-      <button
-        type="button"
-        className={[styles.actionBtn, styles.primary].join(" ")}
-        onClick={primaryAction.onClick}
-        aria-label={primaryAction.ariaLabel ?? primaryAction.label}
-        title={
-          primaryAction.hotkey
-            ? `${primaryAction.label} (${primaryAction.hotkey})`
-            : primaryAction.label
-        }
-      >
-        {primaryAction.label}
-        {primaryAction.hotkey && (
-          <span className={styles.hotkey} aria-hidden="true">
-            {primaryAction.hotkey}
-          </span>
-        )}
-      </button>
+      {label && (
+        <span className={styles.label} aria-hidden="true">
+          {label}
+        </span>
+      )}
+
+      {infoChips?.map((chip, i) => (
+        <span key={i} className={styles.infoChipGroup}>
+          {i === 0 && label && (
+            <span className={styles.sep} aria-hidden="true" />
+          )}
+          <span className={styles.infoChipValue}>{chip.value}</span>
+        </span>
+      ))}
+
+      {primaryAction && (
+        <>
+          {(label || (infoChips && infoChips.length > 0)) && (
+            <span className={styles.sep} aria-hidden="true" />
+          )}
+          <button
+            type="button"
+            className={[styles.actionBtn, styles.primary].join(" ")}
+            onClick={primaryAction.onClick}
+            aria-label={primaryAction.ariaLabel ?? primaryAction.label}
+            title={
+              primaryAction.hotkey
+                ? `${primaryAction.label} (${primaryAction.hotkey})`
+                : primaryAction.label
+            }
+          >
+            {primaryAction.label}
+            {primaryAction.hotkey && (
+              <span className={styles.hotkey} aria-hidden="true">
+                {primaryAction.hotkey}
+              </span>
+            )}
+          </button>
+        </>
+      )}
 
       {secondaryActions.map((action) => (
         <button

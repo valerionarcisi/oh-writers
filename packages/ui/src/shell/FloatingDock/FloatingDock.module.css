@@ -12,6 +12,27 @@
   background: var(--ds-surface);
   box-shadow: var(--ds-shadow-3);
   z-index: 30;
+
+  &[data-position="bottom-left"] {
+    inset-inline-end: unset;
+    inset-inline-start: 20px;
+  }
+}
+
+.infoChipGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.infoChipValue {
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text);
+  padding: 0 var(--ds-space-2);
+  white-space: nowrap;
 }
 
 .overflowSlot {
