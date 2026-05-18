@@ -73,6 +73,11 @@ interface ScreenplayEditorProps {
     sceneCurrent: number | null;
     sceneTotal: number;
   }) => void;
+  /** Emits the list of scene headings extracted from the PM doc whenever the
+   *  doc changes. Used by the shell to populate the Indice popover TOC. */
+  onScenesChange?: (
+    scenes: Array<{ number: string; title: string }>,
+  ) => void;
 }
 
 /** Imperative handle exposed by the editor so the parent route can drive
@@ -112,6 +117,50 @@ const countHeadings = (doc: Record<string, unknown> | null): number => {
   return count;
 };
 
+type PmJsonNode = {
+  type?: string;
+  text?: string;
+  attrs?: Record<string, unknown>;
+  content?: PmJsonNode[];
+};
+
+// Collect all text leaves under a node recursively.
+const collectText = (nodes: PmJsonNode[] | undefined): string =>
+  (nodes ?? [])
+    .map((n) => (n.type === "text" ? (n.text ?? "") : collectText(n.content)))
+    .join("");
+
+// Extract one entry per heading node from the PM doc JSON. Each entry holds
+// the display number (scene_number attr, falling back to 1-based position) and
+// the combined prefix + title text (e.g. "INT. RISTORANTE - NOTTE").
+export const extractSceneTitles = (
+  doc: Record<string, unknown> | null,
+): Array<{ number: string; title: string }> => {
+  if (!doc) return [];
+  const results: Array<{ number: string; title: string }> = [];
+  let autoIndex = 0;
+
+  const walk = (n: PmJsonNode): void => {
+    if (n.type === "heading") {
+      autoIndex += 1;
+      const sceneNumber =
+        (n.attrs?.["scene_number"] as string | undefined) ?? "";
+      const displayNumber =
+        sceneNumber.length > 0 ? sceneNumber : String(autoIndex);
+      const parts = (n.content ?? []).map((child) =>
+        collectText(child.content),
+      );
+      const title = parts.filter(Boolean).join(" ").trim() || "—";
+      results.push({ number: displayNumber, title });
+      return;
+    }
+    if (Array.isArray(n.content)) n.content.forEach(walk);
+  };
+
+  walk(doc as PmJsonNode);
+  return results;
+};
+
 export const ScreenplayEditor = forwardRef<
   ScreenplayEditorHandle,
   ScreenplayEditorProps
@@ -122,6 +171,7 @@ export const ScreenplayEditor = forwardRef<
     onToggleCesare,
     onCurrentElementChange,
     onMetricsChange,
+    onScenesChange,
   },
   ref,
 ) {
@@ -274,54 +324,48 @@ export const ScreenplayEditor = forwardRef<
     [onCurrentElementChange],
   );
 
-  // TODO(audit-2026-05-15): re-enable Cesare Applica once the find/replace
-  // mapping reliably lands on the correct PM range (currently flagged in audit
-  // as still broken after the latest patch). The button is disabled in
-  // ScreenplayCesarePanel but the handler is left intact for testing.
   const handleApplyEdit = useCallback(
     (find: string, replace: string): boolean => {
       const view = viewRef.current;
       if (!view || !find) return false;
-      const docText = view.state.doc.textBetween(
-        0,
-        view.state.doc.content.size,
-        "\n",
-      );
-      const idx = docText.indexOf(find);
+
+      // Walk only leaf text nodes, collecting their exact PM positions.
+      // This avoids the synthetic separators that textBetween inserts at block
+      // boundaries, which made the flat-index → PM-position mapping unreliable.
+      type TextSegment = { text: string; from: number; to: number };
+      const segments: TextSegment[] = [];
+      view.state.doc.descendants((node, pos) => {
+        if (node.isText && node.text) {
+          segments.push({ text: node.text, from: pos, to: pos + node.text.length });
+        }
+        return true;
+      });
+
+      const fullText = segments.map((s) => s.text).join("");
+      const idx = fullText.indexOf(find);
       if (idx < 0) return false;
-      // textBetween inserts the block separator at EVERY block boundary,
-      // including nested ones (scene → heading-slots → prefix/title in
-      // screenplays). Map flat indices back to PM positions by walking
-      // descendants in order: each non-first sibling block contributes one
-      // separator character to the flat text.
+
       const findEnd = idx + find.length;
       let posStart = -1;
       let posEnd = -1;
-      let textCursor = 0;
-      view.state.doc.descendants((n, pos, _parent, index) => {
-        if (posEnd >= 0) return false;
-        if (n.isBlock && index > 0) {
-          textCursor += 1; // sibling-block separator from textBetween
+      let cursor = 0;
+
+      for (const seg of segments) {
+        const segEnd = cursor + seg.text.length;
+
+        if (posStart < 0 && cursor <= idx && idx < segEnd) {
+          posStart = seg.from + (idx - cursor);
         }
-        if (!n.isText) return true;
-        const txt = n.text ?? "";
-        if (
-          posStart < 0 &&
-          textCursor + txt.length > idx &&
-          textCursor <= idx
-        ) {
-          posStart = pos + (idx - textCursor);
+        if (posEnd < 0 && cursor < findEnd && findEnd <= segEnd) {
+          posEnd = seg.from + (findEnd - cursor);
         }
-        if (
-          textCursor + txt.length >= findEnd &&
-          textCursor <= findEnd
-        ) {
-          posEnd = pos + (findEnd - textCursor);
-        }
-        textCursor += txt.length;
-        return true;
-      });
+        if (posStart >= 0 && posEnd >= 0) break;
+
+        cursor = segEnd;
+      }
+
       if (posStart < 0 || posEnd < 0) return false;
+
       const tr = view.state.tr.replaceWith(
         posStart,
         posEnd,
@@ -374,6 +418,12 @@ export const ScreenplayEditor = forwardRef<
       sceneTotal: countHeadings(pmDoc),
     });
   }, [pageInfo, currentSceneIndex, pmDoc, onMetricsChange]);
+
+  // Bubble up scene heading titles so the Indice popover in the shell can
+  // display a live TOC. Re-runs only when the doc structure changes.
+  useEffect(() => {
+    onScenesChange?.(extractSceneTitles(pmDoc));
+  }, [pmDoc, onScenesChange]);
 
   // Scroll-based scene tracking: the cursor-based tracker fires only on
   // selection changes, so a user who scrolls without clicking sees stale
