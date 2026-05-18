@@ -511,14 +511,55 @@ const assembleContext = (
                   ? (screenplay.scenes.find((s) => s.number === pageContext.sceneNumber) ?? null)
                   : null;
 
-              const currentRequirement =
+              let currentRequirement =
                 pageContext.requirementId
                   ? (locations.find((r) => r.id === pageContext.requirementId) ?? null)
                   : null;
 
               // For locations: use linked scene IDs; for other pages: use number window
-              const linkedSceneIds =
+              let linkedSceneIds =
                 currentRequirement?.linkedScenes.map((s) => s.id) ?? [];
+
+              // Fallback: when a requirement is selected but no scenes are
+              // explicitly linked in location_requirement_scenes, match its name
+              // against scene headings so Cesare still gets narrative context
+              // (e.g. "Ristorante - Forno" matches "INT. RISTORANTE - FORNO/CUCINA - NOTTE").
+              if (currentRequirement && linkedSceneIds.length === 0) {
+                const norm = (s: string): string =>
+                  s
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[̀-ͯ]/g, "")
+                    .replace(/[^a-z0-9]+/g, " ")
+                    .trim();
+                const reqTokens = norm(currentRequirement.name)
+                  .split(" ")
+                  .filter((t) => t.length >= 3);
+                if (reqTokens.length > 0) {
+                  const matched = screenplay.scenes.filter((sc) => {
+                    const h = norm(sc.heading);
+                    return reqTokens.every((t) => h.includes(t));
+                  });
+                  linkedSceneIds = matched.map((sc) => sc.id);
+                  // Inject matched scenes into currentRequirement so the
+                  // system-prompt formatter shows them under "Scene del copione".
+                  if (matched.length > 0) {
+                    currentRequirement = {
+                      ...currentRequirement,
+                      linkedScenes: matched.map((sc) => ({
+                        id: sc.id,
+                        number: sc.number,
+                        heading: sc.heading,
+                        intExt: "",
+                        timeOfDay: null,
+                        characterNames: [],
+                        notes: null,
+                        breakdownElements: [],
+                      })),
+                    };
+                  }
+                }
+              }
 
               return loadSceneWindow(
                 db,
@@ -614,7 +655,15 @@ const formatLocationsContext = (ctx: CesareContext): string => {
     if (selected) {
       return `\n${header}\n  Candidati:\n${candidateLines}\n  Scene del copione:\n${sceneLines}\nQuando aggiungi candidati usa sempre requirement_id: ${req.id}`;
     }
-    return header;
+    // Even when not selected, surface a short scene list per location so
+    // Cesare always knows the narrative context of each requirement.
+    const shortScenes = req.linkedScenes.length > 0
+      ? req.linkedScenes
+          .slice(0, 4)
+          .map((s) => `Sc.${s.number} ${s.heading}`)
+          .join("; ")
+      : "nessuna scena";
+    return `${header}\n    scene: ${shortScenes}`;
   };
 
   if (ctx.currentRequirement) {

@@ -32,6 +32,7 @@ import {
   useSetOccurrenceStatus,
   useArchiveBreakdownElement,
   useUpdateBreakdownElement,
+  useRemoveBreakdownOccurrence,
 } from "../hooks/useBreakdown";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
@@ -226,6 +227,7 @@ function BreakdownPageContent({ projectId }: Props) {
     scenes,
     allRows,
     ctx.versionContent ?? "",
+    activeScene?.id ?? null,
   );
 
   // Group occurrences by category for the panel.
@@ -257,6 +259,50 @@ function BreakdownPageContent({ projectId }: Props) {
     setIndiceOpen(false);
     const idx = scenes.findIndex((s) => s.id === sceneId);
     if (idx >= 0) scriptReaderRef.current?.scrollToScene(idx + 1);
+  };
+
+  // ─── Hover tooltip on underlined elements ───────────────────────────────
+  type HoverTooltip = {
+    x: number;
+    y: number;
+    name: string;
+    category: BreakdownCategory;
+    occurrenceId: string | null;
+  };
+  const [hoverTooltip, setHoverTooltip] = useState<HoverTooltip | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleScreenplayMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    const elNode = target?.closest<HTMLElement>("[data-element-id]");
+    if (!elNode) {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      setHoverTooltip(null);
+      return;
+    }
+    const elementId = elNode.getAttribute("data-element-id") ?? "";
+    const category = (elNode.getAttribute("data-cat") ?? null) as BreakdownCategory | null;
+    if (!category) return;
+    const occ = sceneOccurrences.find((o) => o.element.id === elementId);
+    const name = occ?.element.name ?? elNode.textContent?.trim() ?? "";
+    const rect = elNode.getBoundingClientRect();
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHoverTooltip({ x: rect.left, y: rect.bottom + 6, name, category, occurrenceId: occ?.occurrence.id ?? null });
+    }, 180);
+  };
+
+  const handleScreenplayMouseLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHoverTooltip(null);
+  };
+
+  const removeOcc = useRemoveBreakdownOccurrence();
+
+  const handleHoverRemove = () => {
+    if (!hoverTooltip?.occurrenceId) return;
+    removeOcc.mutate({ projectId, occurrenceId: hoverTooltip.occurrenceId });
+    setHoverTooltip(null);
   };
 
   // ─── Context menu (right-click on highlighted element) ──────────────────
@@ -720,6 +766,8 @@ function BreakdownPageContent({ projectId }: Props) {
           ref={screenplayContainerRef}
           className={styles.screenplay}
           onContextMenu={handleScreenplayContextMenu}
+          onMouseOver={handleScreenplayMouseOver}
+          onMouseLeave={handleScreenplayMouseLeave}
           data-show-cast={underline.cast}
           data-show-locations={underline.locations}
           data-show-props={underline.props}
@@ -794,6 +842,7 @@ function BreakdownPageContent({ projectId }: Props) {
             {panelTab === "categories" && (
               <CategoriesPanel
                 grouped={groupedByCategory}
+                allRows={allRows}
                 canEdit={canEdit}
                 onAdd={() => {
                   /* TODO: wire to AddElementModal in a follow-up */
@@ -987,12 +1036,22 @@ function BreakdownPageContent({ projectId }: Props) {
 
 interface CategoriesPanelProps {
   grouped: Map<BreakdownCategory, SceneOccurrenceWithElement[]>;
+  allRows: ProjectBreakdownRow[];
   canEdit: boolean;
   onAdd: (category: BreakdownCategory) => void;
 }
 
-function CategoriesPanel({ grouped, canEdit, onAdd }: CategoriesPanelProps) {
+function CategoriesPanel({ grouped, allRows, canEdit, onAdd }: CategoriesPanelProps) {
   const visibleCats = PANEL_CATEGORY_ORDER.filter((cat) => grouped.has(cat));
+
+  const scenesByElement = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (const row of allRows) {
+      const nums = row.scenesPresent.map((s) => s.sceneNumber).sort((a, b) => a - b);
+      map.set(row.element.id, nums);
+    }
+    return map;
+  }, [allRows]);
 
   if (visibleCats.length === 0) {
     return (
@@ -1035,15 +1094,21 @@ function CategoriesPanel({ grouped, canEdit, onAdd }: CategoriesPanelProps) {
             <div className={styles.catList}>
               {items.map((it) => {
                 const isSuggested = it.occurrence.cesareStatus === "pending";
+                const sceneNums = scenesByElement.get(it.element.id) ?? [];
+                const tooltip = sceneNums.length > 0
+                  ? `SC ${sceneNums.join(", ")}`
+                  : undefined;
                 return (
                   <span
                     key={it.occurrence.id}
                     className={[
                       styles.catItem,
                       isSuggested ? styles.catItemSuggested : "",
+                      tooltip ? styles.catItemWithScenes : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
+                    data-scenes={tooltip}
                   >
                     {it.element.name}
                     {it.occurrence.quantity > 1 && (

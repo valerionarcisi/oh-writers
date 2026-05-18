@@ -240,6 +240,7 @@ export function useAdAlertStats(
   scenes: BreakdownSceneSummary[],
   rows: ProjectBreakdownRow[],
   screenplayText: string,
+  activeSceneId?: string | null,
 ): { total: number; critical: number } {
   const [dismissed, setDismissed] = useState<Set<string>>(() =>
     loadDismissed(projectId),
@@ -261,10 +262,17 @@ export function useAdAlertStats(
 
   return useMemo(() => {
     const all = adAnalyze(buildAnalyzeInput(scenes, rows, screenplayText));
-    const visible = all.filter((s) => !dismissed.has(s.id));
+    let visible = all.filter((s) => !dismissed.has(s.id));
+    // Mirror the panel's scene filter: when a scene is active, count only
+    // alerts attached to that scene (plus global ones with no sceneId).
+    if (activeSceneId) {
+      visible = visible.filter(
+        (s) => s.sceneId === activeSceneId || s.sceneId === null,
+      );
+    }
     return {
       total: visible.length,
       critical: visible.filter((s) => s.severity === "critical").length,
     };
-  }, [scenes, rows, screenplayText, dismissed]);
+  }, [scenes, rows, screenplayText, dismissed, activeSceneId]);
 }

@@ -8,6 +8,7 @@ import {
   locationRequirementScenes,
   locationPhotos,
   breakdownElements,
+  breakdownOccurrences,
 } from "@oh-writers/db/schema";
 import {
   LocationRequirementSchema,
@@ -396,17 +397,73 @@ export const syncRequirementsFromBreakdown = createServerFn({ method: "POST" })
               }
 
               return ResultAsync.fromPromise(
-                db.insert(locationRequirements).values(
-                  newElements.map((el) => ({
-                    projectId: access.project.id,
-                    breakdownElementId: el.id,
-                    name: el.name,
-                  })),
-                ),
+                db
+                  .insert(locationRequirements)
+                  .values(
+                    newElements.map((el) => ({
+                      projectId: access.project.id,
+                      breakdownElementId: el.id,
+                      name: el.name,
+                    })),
+                  )
+                  .returning({
+                    id: locationRequirements.id,
+                    breakdownElementId: locationRequirements.breakdownElementId,
+                  }),
                 (e) => new DbError("syncRequirements/insert", e),
-              ).andThen(() =>
-                loadRequirementsForProject(db, access.project.id),
-              );
+              )
+                .andThen((insertedReqs) => {
+                  // Populate location_requirement_scenes from breakdown occurrences:
+                  // every scene where the breakdown element appears is a candidate
+                  // scene for that requirement. Without this Cesare can't tell
+                  // which scenes a location belongs to.
+                  const elementIds = insertedReqs
+                    .map((r) => r.breakdownElementId)
+                    .filter((id): id is string => id !== null);
+                  if (elementIds.length === 0) {
+                    return ResultAsync.fromSafePromise(Promise.resolve());
+                  }
+                  return ResultAsync.fromPromise(
+                    db
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(inArray(breakdownOccurrences.elementId, elementIds)),
+                    (e) => new DbError("syncRequirements/loadOccurrences", e),
+                  ).andThen((occs) => {
+                    const reqByElementId = new Map(
+                      insertedReqs
+                        .filter((r) => r.breakdownElementId)
+                        .map((r) => [r.breakdownElementId as string, r.id]),
+                    );
+                    const links = occs
+                      .filter((o) => o.sceneId !== null)
+                      .map((o) => ({
+                        requirementId: reqByElementId.get(o.elementId),
+                        sceneId: o.sceneId as string,
+                      }))
+                      .filter(
+                        (l): l is { requirementId: string; sceneId: string } =>
+                          l.requirementId !== undefined,
+                      );
+                    if (links.length === 0) {
+                      return ResultAsync.fromSafePromise(Promise.resolve());
+                    }
+                    return ResultAsync.fromPromise(
+                      db
+                        .insert(locationRequirementScenes)
+                        .values(links)
+                        .onConflictDoNothing(),
+                      (e) =>
+                        new DbError("syncRequirements/insertScenes", e),
+                    ).map(() => undefined);
+                  });
+                })
+                .andThen(() =>
+                  loadRequirementsForProject(db, access.project.id),
+                );
             });
           }),
         ),

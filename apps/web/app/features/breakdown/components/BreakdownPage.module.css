@@ -445,6 +445,41 @@
   margin-inline-start: 2px;
 }
 
+.catItemWithScenes {
+  position: relative;
+  cursor: default;
+
+  &::after {
+    content: attr(data-scenes);
+    position: absolute;
+    inset-block-end: calc(100% + 6px);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    white-space: nowrap;
+    font-family: var(--ds-font-sans);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--ds-surface);
+    background: var(--ds-text);
+    padding: 3px 7px;
+    border-radius: var(--radius-sm, 4px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    z-index: 10;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition: none;
+    }
+  }
+}
+
 /* Indice popover content */
 .popSearch {
   display: flex;
@@ -1126,4 +1161,55 @@
   color: var(--ds-text-3);
   padding-block-end: var(--ds-space-1);
   border-block-end: 1px solid var(--ds-line-soft);
+}
+
+/* ── Hover tooltip on underlined elements ───────────────────────────── */
+
+.hoverTooltip {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--ds-surface-deep);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  pointer-events: auto;
+}
+
+.hoverTooltipCat {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.hoverTooltipName {
+  font-weight: 500;
+  color: var(--ds-text);
+}
+
+.hoverTooltipRemove {
+  margin-inline-start: var(--space-2);
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--ds-danger);
+  background: none;
+  border: 1px solid var(--ds-danger);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--ds-danger-soft);
+  }
 }
