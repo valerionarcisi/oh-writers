@@ -45,6 +45,14 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     setSelectedCandidateId(null);
   };
 
+  const handleMapCandidateSelect = (candidateId: string) => {
+    const owningReq = requirements.find((r) =>
+      r.candidates.some((c) => c.id === candidateId),
+    );
+    if (owningReq) setSelectedId(owningReq.id);
+    setSelectedCandidateId(candidateId);
+  };
+
   const invalidate = () => qc.refetchQueries({ queryKey: ["locations", projectId] });
 
   const syncMutation = useMutation({
@@ -102,6 +110,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           selectedId={selectedId}
           selectedCandidateId={selectedCandidateId}
           onSelect={handleSelectRequirement}
+          onCandidateSelect={handleMapCandidateSelect}
         />
         <LocationPanel
           requirements={requirements}

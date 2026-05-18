@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
-import type { LocationRequirement, LocationPhoto } from "@oh-writers/domain";
+import type {
+  LocationRequirement,
+  LocationCandidate,
+  LocationPhoto,
+} from "@oh-writers/domain";
 import { useLeaflet } from "../hooks/useLeaflet";
 import styles from "./LocationMap.module.css";
 
@@ -8,15 +12,76 @@ interface LocationMapProps {
   selectedId: string | null;
   selectedCandidateId: string | null;
   onSelect: (id: string) => void;
+  onCandidateSelect?: (candidateId: string) => void;
 }
 
 const PIN_COLORS: Record<string, string> = {
   confirmed: "#2d6a4f",
   visited: "#1d4ed8",
   candidate: "#88867e",
+  rejected: "#b91c1c",
 };
 
-export function LocationMap({ requirements, selectedId, selectedCandidateId, onSelect }: LocationMapProps) {
+const STATUS_LABELS: Record<string, string> = {
+  confirmed: "Confermata",
+  visited: "Visitata",
+  candidate: "Candidata",
+  rejected: "Scartata",
+};
+
+const escapeHtml = (raw: string): string =>
+  raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const buildPopupHtml = (
+  candidate: LocationCandidate,
+  requirementName: string,
+): string => {
+  const color = PIN_COLORS[candidate.status] ?? PIN_COLORS.candidate;
+  const statusLabel = STATUS_LABELS[candidate.status] ?? candidate.status;
+  const photos: LocationPhoto[] = candidate.photos.slice(0, 3);
+
+  const photoStrip = photos.length
+    ? `<div style="display:flex;gap:6px;margin-top:8px">${photos
+        .map(
+          (p) =>
+            `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" style="display:block;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #d8d6cd"><img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption ?? candidate.name)}" style="width:100%;height:100%;object-fit:cover;display:block" /></a>`,
+        )
+        .join("")}</div>`
+    : "";
+
+  const addressLine =
+    candidate.address && candidate.lat != null && candidate.lng != null
+      ? `<div style="font-size:11px;color:#6e6c66;margin-top:4px">📍 <a href="https://www.google.com/maps?q=${candidate.lat},${candidate.lng}" target="_blank" rel="noopener noreferrer" style="color:#6e6c66;text-decoration:underline">${escapeHtml(candidate.address)}</a></div>`
+      : candidate.address
+        ? `<div style="font-size:11px;color:#6e6c66;margin-top:4px">📍 ${escapeHtml(candidate.address)}</div>`
+        : "";
+
+  return `
+    <div style="font-family:system-ui,sans-serif;min-width:200px;max-width:280px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <strong style="font-size:13px;color:#1c1a17">${escapeHtml(candidate.name)}</strong>
+        <span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:${color};color:white">${statusLabel}</span>
+      </div>
+      <div style="font-size:11px;color:#88867e">Per: ${escapeHtml(requirementName)}</div>
+      ${addressLine}
+      ${photoStrip}
+      <button type="button" data-candidate-details="${candidate.id}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #d8d6cd;border-radius:6px;background:#fff;color:#1c1a17;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Vedi dettagli</button>
+    </div>
+  `;
+};
+
+export function LocationMap({
+  requirements,
+  selectedId,
+  selectedCandidateId,
+  onSelect,
+  onCandidateSelect,
+}: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
@@ -24,11 +89,22 @@ export function LocationMap({ requirements, selectedId, selectedCandidateId, onS
   const searchRingRef = useRef<any>(null);
   const leafletReady = useLeaflet();
 
-  const allCandidates = requirements.flatMap((r) => r.candidates);
-  const selectedCandidate = selectedCandidateId
-    ? allCandidates.find((c) => c.id === selectedCandidateId) ?? null
+  // Stable refs for handlers so the popup button callback always sees fresh
+  // values without re-binding markers on every render.
+  const onSelectRef = useRef(onSelect);
+  const onCandidateSelectRef = useRef(onCandidateSelect);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    onCandidateSelectRef.current = onCandidateSelect;
+  }, [onSelect, onCandidateSelect]);
+
+  const allCandidates = requirements.flatMap((r) =>
+    r.candidates.map((c) => ({ candidate: c, req: r })),
+  );
+  const selectedCandidatePair = selectedCandidateId
+    ? allCandidates.find((p) => p.candidate.id === selectedCandidateId) ?? null
     : null;
-  const shownPhotos: LocationPhoto[] = selectedCandidate?.photos ?? [];
+  const selectedCandidate = selectedCandidatePair?.candidate ?? null;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !leafletReady) return;
@@ -96,6 +172,25 @@ export function LocationMap({ requirements, selectedId, selectedCandidateId, onS
       // Leaflet.draw not loaded — skip draw controls gracefully
     }
 
+    // Delegate clicks on popup "Vedi dettagli" buttons (markup is plain HTML
+    // inside Leaflet popups, so we can't bind React handlers directly).
+    map.on("popupopen", (e: any) => {
+      const popupNode: HTMLElement | null = e.popup?.getElement?.() ?? null;
+      const btn = popupNode?.querySelector<HTMLButtonElement>(
+        "[data-candidate-details]",
+      );
+      if (!btn) return;
+      btn.addEventListener(
+        "click",
+        () => {
+          const id = btn.getAttribute("data-candidate-details");
+          if (!id) return;
+          onCandidateSelectRef.current?.(id);
+        },
+        { once: true },
+      );
+    });
+
     mapRef.current = map;
 
     return () => {
@@ -104,90 +199,116 @@ export function LocationMap({ requirements, selectedId, selectedCandidateId, onS
     };
   }, [leafletReady]);
 
-  // Sync markers whenever requirements change
+  // Sync markers — one per candidate
   useEffect(() => {
     const L = (window as any).L;
     const map = mapRef.current;
     if (!L || !map || !leafletReady) return;
 
+    const liveIds = new Set<string>();
+    for (const { candidate } of allCandidates) {
+      if (candidate.lat != null && candidate.lng != null) {
+        liveIds.add(candidate.id);
+      }
+    }
+
     // Remove stale markers
     markersRef.current.forEach((marker, id) => {
-      if (!requirements.find((r) => r.id === id)) {
+      if (!liveIds.has(id)) {
         map.removeLayer(marker);
         markersRef.current.delete(id);
       }
     });
 
-    for (const req of requirements) {
-      const candidate = req.candidates.find(
-        (c) =>
-          c.status === "confirmed" ||
-          c.status === "visited" ||
-          c.status === "candidate",
-      );
-      if (!candidate?.lat || !candidate?.lng) continue;
+    for (const { candidate, req } of allCandidates) {
+      if (candidate.lat == null || candidate.lng == null) continue;
 
-      const isSelected = req.id === selectedId;
-      const color =
-        candidate.status === "confirmed"
-          ? PIN_COLORS.confirmed
-          : candidate.status === "visited"
-            ? PIN_COLORS.visited
-            : PIN_COLORS.candidate;
+      const isCandidateSelected = candidate.id === selectedCandidateId;
+      const isReqSelected = req.id === selectedId;
+      const color = PIN_COLORS[candidate.status] ?? PIN_COLORS.candidate;
 
-      const existing = markersRef.current.get(req.id);
+      // Selected candidate gets the strongest emphasis; otherwise the marker
+      // belongs to the active requirement → mild emphasis; otherwise default.
+      const radius = isCandidateSelected ? 11 : isReqSelected ? 8 : 6;
+      const strokeColor = isCandidateSelected
+        ? "#8b3a1a"
+        : isReqSelected
+          ? "#8b3a1a"
+          : "white";
+      const weight = isCandidateSelected ? 3 : isReqSelected ? 2 : 2;
+
+      const existing = markersRef.current.get(candidate.id);
       if (existing) {
         existing.setStyle({
-          color: isSelected ? "#8b3a1a" : color,
+          color: strokeColor,
           fillColor: color,
-          radius: isSelected ? 10 : 7,
-          weight: isSelected ? 3 : 2,
+          radius,
+          weight,
         });
+        existing.setPopupContent(buildPopupHtml(candidate, req.name));
+        existing.setTooltipContent(
+          `<strong style="font-size:11px">${escapeHtml(candidate.name)}</strong><br><span style="font-size:10px;color:#6e6c66">${escapeHtml(req.name)}</span>`,
+        );
         continue;
       }
 
       const marker = L.circleMarker([candidate.lat, candidate.lng], {
-        radius: isSelected ? 10 : 7,
-        color: isSelected ? "#8b3a1a" : color,
+        radius,
+        color: strokeColor,
         fillColor: color,
         fillOpacity: 1,
-        weight: 2,
+        weight,
       });
 
       marker.bindTooltip(
-        `<strong style="font-size:11px">${req.name}</strong><br><span style="font-size:10px;color:#6e6c66">${candidate.name}</span>`,
+        `<strong style="font-size:11px">${escapeHtml(candidate.name)}</strong><br><span style="font-size:10px;color:#6e6c66">${escapeHtml(req.name)}</span>`,
         { direction: "top", offset: [0, -6] },
       );
 
-      marker.on("click", () => onSelect(req.id));
-      marker.addTo(map);
-      markersRef.current.set(req.id, marker);
-    }
-  }, [requirements, selectedId, onSelect, leafletReady]);
+      marker.bindPopup(buildPopupHtml(candidate, req.name), {
+        maxWidth: 300,
+        closeButton: true,
+        autoPan: true,
+      });
 
-  // Fly to selected requirement
+      marker.on("click", () => {
+        // Prefer the candidate-aware callback (it also moves the requirement
+        // selection). Fall back to onSelect so older parents still work.
+        if (onCandidateSelectRef.current) {
+          onCandidateSelectRef.current(candidate.id);
+        } else {
+          onSelectRef.current(req.id);
+        }
+      });
+
+      marker.addTo(map);
+      markersRef.current.set(candidate.id, marker);
+    }
+  }, [allCandidates, selectedId, selectedCandidateId, leafletReady]);
+
+  // Fly to selected requirement (when no specific candidate is selected)
   useEffect(() => {
     const L = (window as any).L;
     const map = mapRef.current;
-    // When a specific candidate is selected, that effect handles the fly — skip here.
     if (!L || !map || !selectedId || !leafletReady || selectedCandidateId) return;
 
     const req = requirements.find((r) => r.id === selectedId);
     if (!req) return;
 
     const candidate = req.candidates.find(
-      (c) => c.status === "confirmed" || c.status === "visited",
-    );
+      (c) =>
+        (c.status === "confirmed" || c.status === "visited") &&
+        c.lat != null &&
+        c.lng != null,
+    ) ?? req.candidates.find((c) => c.lat != null && c.lng != null);
 
-    if (candidate?.lat && candidate?.lng) {
-      // Remove pending ring if exists
+    if (candidate?.lat != null && candidate?.lng != null) {
       if (searchRingRef.current) {
         map.removeLayer(searchRingRef.current);
         searchRingRef.current = null;
       }
       map.flyTo([candidate.lat, candidate.lng], 15, { duration: 0.8 });
     } else {
-      // Show search ring for requirements without a location
       if (searchRingRef.current) {
         map.removeLayer(searchRingRef.current);
       }
@@ -204,46 +325,29 @@ export function LocationMap({ requirements, selectedId, selectedCandidateId, onS
     }
   }, [selectedId, selectedCandidateId, requirements, leafletReady]);
 
-  // Fly to selected candidate's coordinates
+  // Fly to + open popup for the selected candidate
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !leafletReady || !selectedCandidate) return;
 
-    if (selectedCandidate.lat && selectedCandidate.lng) {
+    if (selectedCandidate.lat != null && selectedCandidate.lng != null) {
       if (searchRingRef.current) {
         map.removeLayer(searchRingRef.current);
         searchRingRef.current = null;
       }
-      map.flyTo([selectedCandidate.lat, selectedCandidate.lng], 16, { duration: 0.8 });
+      map.flyTo([selectedCandidate.lat, selectedCandidate.lng], 16, {
+        duration: 0.8,
+      });
+      const marker = markersRef.current.get(selectedCandidate.id);
+      if (marker && !marker.isPopupOpen?.()) {
+        marker.openPopup();
+      }
     }
   }, [selectedCandidate, leafletReady]);
 
   return (
     <div className={styles.mapWrap}>
       <div ref={containerRef} className={styles.map} />
-      {shownPhotos.length > 0 && (
-        <div className={styles.photoStrip} aria-label="Foto location">
-          {shownPhotos.map((photo) => (
-            <a
-              key={photo.id}
-              href={photo.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.photoThumb}
-              title={photo.caption ?? undefined}
-            >
-              <img
-                src={photo.url}
-                alt={photo.caption ?? selectedCandidate?.name ?? "Foto location"}
-                className={styles.photoImg}
-              />
-              {photo.caption && (
-                <span className={styles.photoCaption}>{photo.caption}</span>
-              )}
-            </a>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
