@@ -16,6 +16,7 @@ import { Route as LoginImport } from './routes/login'
 import { Route as AppImport } from './routes/_app'
 import { Route as IndexImport } from './routes/index'
 import { Route as DevTokensImport } from './routes/dev/tokens'
+import { Route as AppSettingsImport } from './routes/_app.settings'
 import { Route as AppDashboardImport } from './routes/_app.dashboard'
 import { Route as AppProjectsNewImport } from './routes/_app.projects.new'
 import { Route as AppProjectsIdImport } from './routes/_app.projects.$id'
@@ -66,6 +67,12 @@ const DevTokensRoute = DevTokensImport.update({
   id: '/dev/tokens',
   path: '/dev/tokens',
   getParentRoute: () => rootRoute,
+} as any)
+
+const AppSettingsRoute = AppSettingsImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
 } as any)
 
 const AppDashboardRoute = AppDashboardImport.update({
@@ -230,6 +237,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardImport
+      parentRoute: typeof AppImport
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsImport
       parentRoute: typeof AppImport
     }
     '/dev/tokens': {
@@ -413,6 +427,7 @@ const AppProjectsIdScreenplayRouteWithChildren =
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppProjectsIdRoute: typeof AppProjectsIdRoute
   AppProjectsNewRoute: typeof AppProjectsNewRoute
   AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute
@@ -432,6 +447,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppProjectsIdRoute: AppProjectsIdRoute,
   AppProjectsNewRoute: AppProjectsNewRoute,
   AppProjectsIdBreakdownRoute: AppProjectsIdBreakdownRoute,
@@ -458,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard': typeof AppDashboardRoute
+  '/settings': typeof AppSettingsRoute
   '/dev/tokens': typeof DevTokensRoute
   '/projects/$id': typeof AppProjectsIdRoute
   '/projects/new': typeof AppProjectsNewRoute
@@ -486,6 +503,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/dashboard': typeof AppDashboardRoute
+  '/settings': typeof AppSettingsRoute
   '/dev/tokens': typeof DevTokensRoute
   '/projects/$id': typeof AppProjectsIdRoute
   '/projects/new': typeof AppProjectsNewRoute
@@ -514,6 +532,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/dev/tokens': typeof DevTokensRoute
   '/_app/projects/$id': typeof AppProjectsIdRoute
   '/_app/projects/new': typeof AppProjectsNewRoute
@@ -544,6 +563,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard'
+    | '/settings'
     | '/dev/tokens'
     | '/projects/$id'
     | '/projects/new'
@@ -571,6 +591,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/dashboard'
+    | '/settings'
     | '/dev/tokens'
     | '/projects/$id'
     | '/projects/new'
@@ -597,6 +618,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_app/dashboard'
+    | '/_app/settings'
     | '/dev/tokens'
     | '/_app/projects/$id'
     | '/_app/projects/new'
@@ -660,6 +682,7 @@ export const routeTree = rootRoute
       "filePath": "_app.tsx",
       "children": [
         "/_app/dashboard",
+        "/_app/settings",
         "/_app/projects/$id",
         "/_app/projects/new",
         "/_app/projects/$id_/breakdown",
@@ -685,6 +708,10 @@ export const routeTree = rootRoute
     },
     "/_app/dashboard": {
       "filePath": "_app.dashboard.tsx",
+      "parent": "/_app"
+    },
+    "/_app/settings": {
+      "filePath": "_app.settings.tsx",
       "parent": "/_app"
     },
     "/dev/tokens": {

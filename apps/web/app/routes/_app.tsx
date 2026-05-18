@@ -186,6 +186,10 @@ function AppLayout() {
 
   const userMenuItems: DropdownMenuItem[] = [
     {
+      label: "Impostazioni account",
+      onClick: () => { window.location.href = "/settings"; },
+    },
+    {
       label: "Presentazione",
       onClick: () => window.open("/market-analysis.html", "_blank"),
     },
