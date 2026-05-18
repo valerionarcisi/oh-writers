@@ -892,9 +892,6 @@ function BreakdownPageContent({ projectId }: Props) {
                 grouped={groupedByCategory}
                 allRows={allRows}
                 canEdit={canEdit}
-                onAdd={() => {
-                  /* TODO: wire to AddElementModal in a follow-up */
-                }}
                 onAccept={(occurrenceId) =>
                   setStatus.mutate({ occurrenceIds: [occurrenceId], status: "accepted" })
                 }
@@ -1147,12 +1144,11 @@ interface CategoriesPanelProps {
   grouped: Map<BreakdownCategory, SceneOccurrenceWithElement[]>;
   allRows: ProjectBreakdownRow[];
   canEdit: boolean;
-  onAdd: (category: BreakdownCategory) => void;
   onAccept: (occurrenceId: string) => void;
   onIgnore: (occurrenceId: string) => void;
 }
 
-function CategoriesPanel({ grouped, allRows, canEdit, onAdd, onAccept, onIgnore }: CategoriesPanelProps) {
+function CategoriesPanel({ grouped, allRows, canEdit, onAccept, onIgnore }: CategoriesPanelProps) {
   const visibleCats = PANEL_CATEGORY_ORDER.filter((cat) => grouped.has(cat));
   const [suggestedPopover, setSuggestedPopover] = useState<SuggestedPopover | null>(null);
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1211,16 +1207,6 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAdd, onAccept, onIgnore 
               <span className={styles.catCt} data-num>
                 {items.length}
               </span>
-              {canEdit && (
-                <button
-                  type="button"
-                  className={styles.catAdd}
-                  onClick={() => onAdd(cat)}
-                  aria-label={`Aggiungi ${meta.labelIt}`}
-                >
-                  +
-                </button>
-              )}
             </div>
             <div className={styles.catList}>
               {items.map((it) => {
@@ -1249,6 +1235,11 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAdd, onAccept, onIgnore 
                     {it.occurrence.quantity > 1 && (
                       <span className={styles.catItemX} data-num>
                         ×{it.occurrence.quantity}
+                      </span>
+                    )}
+                    {!isSuggested && sceneNums.length > 1 && (
+                      <span className={styles.catItemScenes}>
+                        sc.{sceneNums.join(",")}
                       </span>
                     )}
                   </span>

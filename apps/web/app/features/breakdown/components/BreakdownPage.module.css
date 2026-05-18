@@ -386,23 +386,6 @@
   color: var(--ds-text-3);
 }
 
-.catAdd {
-  inline-size: 20px;
-  block-size: 20px;
-  border-radius: 4px;
-  display: grid;
-  place-items: center;
-  color: var(--ds-text-3);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.catAdd:hover {
-  background: var(--ds-surface-alt);
-  color: var(--ds-text);
-}
 
 .catList {
   padding: 0 var(--ds-space-3) var(--ds-space-3);
@@ -417,8 +400,9 @@
   gap: 4px;
   padding: 2px var(--ds-space-3);
   font-size: 12px;
-  background: color-mix(in oklch, var(--cat-color) 8%, transparent);
-  border: 1px solid color-mix(in oklch, var(--cat-color) 18%, transparent);
+  font-weight: 500;
+  background: color-mix(in oklch, var(--cat-color) 14%, transparent);
+  border: 1px solid color-mix(in oklch, var(--cat-color) 35%, transparent);
   border-radius: 100px;
   color: var(--ds-text);
 }
@@ -426,7 +410,16 @@
 .catItemX {
   font-family: var(--ds-font-sans);
   font-size: 9px;
+  font-weight: 600;
+  color: var(--ds-text-2);
+}
+
+.catItemScenes {
+  font-family: var(--ds-font-sans);
+  font-size: 9px;
+  font-weight: 500;
   color: var(--ds-text-3);
+  opacity: 0.8;
 }
 
 .catItemSuggested {
