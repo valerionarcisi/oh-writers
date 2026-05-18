@@ -273,6 +273,7 @@ function BreakdownPageContent({ projectId }: Props) {
   };
   const [hoverTooltip, setHoverTooltip] = useState<HoverTooltip | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleScreenplayMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null;
@@ -301,7 +302,15 @@ function BreakdownPageContent({ projectId }: Props) {
 
   const handleScreenplayMouseLeave = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    setHoverTooltip(null);
+    hoverCloseTimerRef.current = setTimeout(() => setHoverTooltip(null), 120);
+  };
+
+  const handleTooltipMouseEnter = () => {
+    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+  };
+
+  const handleTooltipMouseLeave = () => {
+    hoverCloseTimerRef.current = setTimeout(() => setHoverTooltip(null), 120);
   };
 
   const removeOcc = useRemoveBreakdownOccurrence();
@@ -896,10 +905,8 @@ function BreakdownPageContent({ projectId }: Props) {
         <div
           className={styles.hoverTooltip}
           style={{ left: hoverTooltip.x, top: hoverTooltip.y }}
-          onMouseEnter={() => {
-            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-          }}
-          onMouseLeave={() => setHoverTooltip(null)}
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
         >
           <span
             className={styles.hoverTooltipCat}
