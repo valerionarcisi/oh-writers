@@ -666,7 +666,6 @@ export async function seed() {
   await seedValerioBudget(VALERIO_PERSONAL_PROJECT_ID);
   await seedValerioSchedule(VALERIO_SCREENPLAY_ID, VALERIO_PERSONAL_PROJECT_ID);
   await seedDefaultProductionRates(VALERIO_PERSONAL_PROJECT_ID);
-  await seedDefaultProductionRates(VALERIO_TEAM_PROJECT_ID);
 
   console.log(
     `  -> Valerio personal project + screenplay + version + ${valerioScenesCount} scenes created`,
@@ -759,6 +758,7 @@ export async function seed() {
     .onConflictDoNothing();
 
   await seedFirstDocumentVersions(VALERIO_TEAM_PROJECT_ID, VALERIO_USER_ID);
+  await seedDefaultProductionRates(VALERIO_TEAM_PROJECT_ID);
 
   console.log("  -> Valerio team project created");
 
