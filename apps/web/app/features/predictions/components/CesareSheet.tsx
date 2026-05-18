@@ -335,31 +335,59 @@ function renderInline(text: string): React.ReactNode[] {
   return parts;
 }
 
+type ListState =
+  | { kind: "ul"; items: string[] }
+  | { kind: "ol"; items: string[] }
+  | null;
+
 function renderMarkdown(content: string): React.ReactNode {
   const lines = content.split("\n");
   const nodes: React.ReactNode[] = [];
-  let listItems: string[] = [];
+  let list: ListState = null;
   let key = 0;
 
   const flushList = () => {
-    if (listItems.length === 0) return;
-    nodes.push(
-      <ul key={key++} className={styles.mdList}>
-        {listItems.map((item, i) => (
-          <li key={i} className={styles.mdListItem}>{renderInline(item)}</li>
-        ))}
-      </ul>,
-    );
-    listItems = [];
+    if (!list || list.items.length === 0) {
+      list = null;
+      return;
+    }
+    const items = list.items;
+    if (list.kind === "ol") {
+      nodes.push(
+        <ol key={key++} className={styles.mdOrderedList}>
+          {items.map((item, i) => (
+            <li key={i} className={styles.mdListItem}>{renderInline(item)}</li>
+          ))}
+        </ol>,
+      );
+    } else {
+      nodes.push(
+        <ul key={key++} className={styles.mdList}>
+          {items.map((item, i) => (
+            <li key={i} className={styles.mdListItem}>{renderInline(item)}</li>
+          ))}
+        </ul>,
+      );
+    }
+    list = null;
   };
 
   for (const line of lines) {
+    const h4 = line.match(/^#### (.+)/);
+    const h3 = line.match(/^### (.+)/);
     const h2 = line.match(/^## (.+)/);
     const h1 = line.match(/^# (.+)/);
-    const bullet = line.match(/^- (.+)/);
+    const bullet = line.match(/^[-*] (.+)/);
+    const ordered = line.match(/^\d+\.\s+(.+)/);
     const hr = line.match(/^---+$/);
 
-    if (h2) {
+    if (h4) {
+      flushList();
+      nodes.push(<h5 key={key++} className={styles.mdH3}>{renderInline(h4[1]!)}</h5>);
+    } else if (h3) {
+      flushList();
+      nodes.push(<h4 key={key++} className={styles.mdH3}>{renderInline(h3[1]!)}</h4>);
+    } else if (h2) {
       flushList();
       nodes.push(<h3 key={key++} className={styles.mdH2}>{renderInline(h2[1]!)}</h3>);
     } else if (h1) {
@@ -369,7 +397,17 @@ function renderMarkdown(content: string): React.ReactNode {
       flushList();
       nodes.push(<hr key={key++} className={styles.mdHr} />);
     } else if (bullet) {
-      listItems.push(bullet[1]!);
+      if (!list || list.kind !== "ul") {
+        flushList();
+        list = { kind: "ul", items: [] };
+      }
+      list.items.push(bullet[1]!);
+    } else if (ordered) {
+      if (!list || list.kind !== "ol") {
+        flushList();
+        list = { kind: "ol", items: [] };
+      }
+      list.items.push(ordered[1]!);
     } else if (line.trim() === "") {
       flushList();
       nodes.push(<div key={key++} className={styles.mdSpacer} />);
@@ -406,9 +444,13 @@ function MessageBubble({ message }: { message: Message }) {
 
 function LoadingIndicator() {
   return (
-    <div className={[styles.bubble, styles.bubbleAssistant, styles.bubbleLoading].join(" ")}>
+    <div className={[styles.bubble, styles.bubbleAssistant, styles.bubbleLoading].join(" ")} aria-busy="true" aria-label="Cesare sta rispondendo">
       <span className={styles.bubbleIcon} aria-hidden>✦</span>
-      <span className={styles.loadingDots} aria-label="Cesare sta rispondendo">···</span>
+      <div className={styles.skeletonBody}>
+        <span className={[styles.skeletonLine, styles.skeletonLong].join(" ")} />
+        <span className={[styles.skeletonLine, styles.skeletonMedium].join(" ")} />
+        <span className={[styles.skeletonLine, styles.skeletonShort].join(" ")} />
+      </div>
     </div>
   );
 }
