@@ -103,27 +103,47 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 
 ### Done — already shipped
 
+**Auth & teams**
 - **core/01 + 01b — Auth**: email/password, OAuth Google + GitHub, sessions
 - **core/02 — Teams & roles**: Owner / Editor / Viewer
 - **core/03 — Projects**
-- **core/04 foundations + 04e — Narrative editor** on vanilla ProseMirror (logline, synopsis, treatment) — closes BUG-001..003
-- **core/05 + 05b–05i — Screenplay editor**: custom editor, autocomplete, scene numbering, heading slots, inline scene number edit
-- **core/06 + 06b/c/d — Universal versioning**: panel, row popover, toolbar popover, drawer (all UI sub-specs absorbed)
-- **core/08 — Scene renumber** (shipped with 05h heading slot refactor)
-- **core/09 — Save indicator** (Cmd/Ctrl+S shipped)
-- **core/14 — Title page**
-- **core/20 — Shooting script PDF import**
+
+**Narrative & screenplay editor**
+- **core/04 + 04e + 04f — Narrative editor** on ProseMirror (logline, synopsis, outline, treatment, soggetto)
 - **core/04c — Narrative export** (logline + synopsis + treatment → PDF, opt-in cover page, preview tab)
-- **core/05j — Screenplay export** (Fountain → industry-standard PDF via afterwriting, opt-in cover page, preview tab)
-- **core/05k — Production export formats** (5 industry formats — Standard, Sides, AD copy, Reading copy, One scene per page — via single Export dropdown; per-format pre-processing pipeline + custom `awc-runner.cjs` for nested print-profile overrides; Sides modal with scene multi-select; filename slug per format)
-- **core/10 — Scene Breakdown** (cast/props/locations/VFX/vehicles/extras/sound/wardrobe/SPFX/stunts/animals/makeup/set-dressing/notes per scene + per project, Cesare ghost suggestions with rate-limit, PDF/CSV export, version-aware with 3-tier stale awareness, auto-clone on new screenplay version)
-- **core/10c — Inline scene tagging in middle column** (read-only ProseMirror reader of the full screenplay in the breakdown center column, inline highlight per category, ghost dashed underline for pending Cesare suggestions, floating selection toolbar with 14 categories, TOC scroll-to-scene)
-- **core/10e — Auto-spoglio via RegEx** (zero-click breakdown population on first open: pure-function extractors over 9 categories — cast, locations, vehicles, animals, sound, atmosphere, makeup, stunts, extras — confidence-based default status, idempotent via `text_hash`, fan-out from the breakdown page)
-- **core/07c — PDF import Pass 0 (title-page extraction)** (closes the residual MVP work on 07b: imported PDFs now feed both the screenplay body AND the front page; silent apply when front page is empty, "replace?" confirm via DS `<Dialog>` otherwise; OHW-FP30/31/32 verdi)
-- **infra/07b sub — Design-system Dialog migration** (DS `Dialog` esteso con `size`/`showCloseButton`; 7 modali bespoke + 4 inline confirm migrati al componente unico; -721/+407 LOC, 102/102 Playwright verdi)
-- **core/10h — Breakdown read-only UX** (scene headings in breakdown have no menu trigger; TOC auto-scrolls to active scene; regression guard for editable screenplay editor)
-- **core/10i — Breakdown dictionary pass** (WordNet artifact whitelist for EN+IT replaces noisy regex props extractor; `projects.locale` column; locale select in Settings; ghost suggestions filtered to physical artifacts only)
-- **core/10f — Breakdown table view** (EditableCell + MatrixGrid DS components; Per-progetto tab rewritten with in-place name/category editing, bulk select/archive/recategorize, category chip + status + search filters; Matrice tab = scene×element crossplot with quantity popover, heatmap toggle, sticky headers; server: bulkUpdateBreakdownElements, addBreakdownOccurrence (upsert), removeBreakdownOccurrence with IDOR guards)
+- **core/05 + 05b–05k — Screenplay editor**: custom ProseMirror editor, heading slots, scene numbering, inline scene-number edit, autocomplete (character, transition, extension), Tab/Enter flow matrix, `⌘+Number` shortcuts, element toolbar, revision coloring, draft color cross-document
+- **core/05j — Screenplay PDF export** (Fountain → industry-standard PDF via afterwriting)
+- **core/05k — Production export formats** (5 formats — Standard, Sides, AD copy, Reading copy, One scene per page — single Export dropdown; Sides modal with scene multi-select)
+- **core/06 + 06b/c/d — Universal versioning**: panel, row popover, toolbar popover, drawer
+- **core/08 — Scene renumber** (shipped with 05h heading slot refactor)
+- **core/09 — Save indicator** (Cmd/Ctrl+S)
+- **core/14 / 07b — Title page + front-page import** (PDF import Pass 0: screenplay body + front page extracted; silent apply or "replace?" confirm)
+- **core/20 — Shooting script PDF import**
+
+**Breakdown**
+- **core/10 — Scene Breakdown** (14 categories, Cesare ghost suggestions, PDF/CSV export, version-aware 3-tier stale awareness, auto-clone on new screenplay version)
+- **core/10c — Inline scene tagging** (read-only ProseMirror reader in center column, inline highlight, ghost dashed underline, floating toolbar, TOC scroll-to-scene)
+- **core/10e — Auto-spoglio via RegEx** (zero-click population on first open: 9 categories, confidence-based status, idempotent via `text_hash`)
+- **core/10f — Breakdown table view** (EditableCell + MatrixGrid DS components; Per-progetto tab with in-place editing, bulk select/archive/recategorize; Matrice tab = scene×element crossplot with heatmap toggle)
+- **core/10h — Breakdown read-only UX** (scene headings without menu trigger; TOC auto-scroll)
+- **core/10i — Breakdown dictionary pass** (WordNet artifact whitelist EN+IT; `projects.locale`; locale select in Settings)
+
+**Budget, schedule, shooting plan**
+- **core/11 — Budget** (Cast/Crew/Equipment/Misc widgets, scene chip filter, editable settings, AI-estimated line items, CSV/PDF export, E2E tests OHW-390–393)
+- **core/12 — Shooting schedule** (strip board, Italy calendar, greedy generator, drag-and-drop, scene drawer, week/day toggle, day drawer with capacity bar, scene effort per day, CSV/PDF export, E2E tests OHW-380–386)
+- **core/27 + 27b — Shooting plan** (per-scene shot list editor, parallel scenarios, blocking canvas, blocking editor, scene effort 1–5, shot list CSV/PDF export, E2E tests OHW-395–398)
+- **core/28 — Export audit** (unified export UX across budget, schedule, shooting plan; CSV + PDF for all three)
+
+**Locations**
+- **core/13 — Locations & scouting** (location candidates, notes, scouting map, Cesare agentic search via Google Places)
+
+**Cesare AI assistant**
+- **ai/17 + 29 — Cesare v1** (universal in-page assistant; breakdown drafting; narrative structure review; schedule drafting; contextual popover with DOM highlight; agentic location scouting)
+
+**Design system & infra**
+- **infra/07b — Design system v2** (DS Dialog migration, primitives unification, ambient dark theme, react-aria adoption for all interactive primitives)
+- **infra/23 — Server pipeline refactor** (`withProjectAccess` canonical pattern; `toShape`/`unwrapResult` at all server/client boundaries)
+- **infra/12d — DS primitives unification** (FloatingDock, SheetPanel, unified tokens)
 
 ### MVP — the minimum viable pilot product
 
@@ -131,19 +151,16 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 
 **Core platform**
 
-- **core/09b — Realtime WebSocket server** (moved here from infra, Yjs co-writing needs it)
-- **core/11 — Budget** ✅ Cast/Crew/Equipment/Misc widgets, scene chip filter, editable settings, E2E tests
-- **core/12 — Shooting schedule** ✅ strip board, Italy calendar, greedy generator, drag-and-drop, scene drawer, week/day toggle, card redesign, sidebar link, scene effort per day, day drawer with capacity bar, E2E tests
-- **core/12 — Call sheet generation** from schedule + breakdown (absorbed from "Ideas" list)
+- **core/09b — Realtime WebSocket server** (Yjs co-writing needs it; ws-server scaffold exists, full implementation pending)
+- **core/12 — Call sheet generation** from schedule + breakdown
 - **core/16 — Multi-tenancy & billing** — Teams tier only, Enterprise handled manually in pre-demo phase
 
-**AI — Cesare MVP**
+**AI — Cesare**
 
-- **ai/17 — Cesare assistant v1** — structure review on narrative docs, breakdown drafting, schedule drafting (human approves)
+- **ai/17b — Story doctor** — deeper narrative critique, beat analysis, scene-level suggestions
 
 **Infra**
 
-- **infra/07b — Design system** — prerequisite for demo without shame
 - **infra/08 — Infrastructure** + **08b — Cloud deploy** (staging + prod)
 - **infra/07c — Docker E2E** (needed to keep CI green during the push)
 
@@ -151,22 +168,22 @@ Goal: one film school and one indie production using Oh Writers on a real projec
 
 Once the pilot loop is working, in priority order:
 
-- **core/13 — Locations & scouting** (notes, photos, attachments)
-- **ai/17b — Story doctor** — deeper narrative critique, beat analysis
-- **ai/19a — Moodboard only** (upload + organize visual references, no AI generation yet)
+- **ai/19a — Moodboard** (upload + organize visual references, no AI generation yet)
 - **agents/NLE round-trip (DaVinci first)** — minimal export of scene + beat markers, re-import FCPXML, scene status `written → shot → assembled → locked`
-- **ai/07 — Predictions engine** — cost & risk prediction (sells the Enterprise tier — not needed to close the first schools/indies)
-- **ai/14 — Narrative generation (unified)** — auto-logline, auto-synopsis, auto-outline, logline→scaletta (old ai/14 + 14b + 16 merged into one spec)
-- **ai/19b — Storyboard generation** (AI frame generation from screenplay + moodboard — depends on image model quality being good enough)
+- **ai/07 — Predictions engine** — cost & risk prediction (sells the Enterprise tier)
+- **ai/14 — Narrative generation (unified)** — auto-logline, auto-synopsis, auto-outline, logline→scaletta
+- **ai/32 — Cesare RAG context** — project-scoped retrieval over all documents for richer Cesare answers
+- **ai/30 — Finanziamenti** — Cesare-assisted search and drafting of Italian/EU film funding applications
+- **ai/19b — Storyboard generation** (AI frame generation from screenplay + moodboard)
 - **agents/Premiere** — parity with DaVinci round-trip
-- **agents/Industry interchange** — FDX, FCPXML, EDL, `.mms` import/export (for migration & pro workflows)
+- **agents/Industry interchange** — FDX, FCPXML, EDL, `.mms` import/export
 - **agents/MCP server** — expose Oh Writers to Claude Desktop, Cursor, ChatGPT
 - **core/18 — i18n** — Italian + English, triggered by the first non-IT customer
 - **infra/07 — Core refactor** (triggered only if scaling hurts)
 
 ### Archived / absorbed / won't do
 
-- **core/04b — Outline drag & drop** — absorbed into core/04 narrative editor, nice-to-have
+- **core/04b — Outline drag & drop** — absorbed into core/04 narrative editor
 - **core/04d — Tiptap rich-text editor** — superseded by 04e ProseMirror, spec retired
 - **core/10b — Version viewing marker** — absorbed into core/06 versioning
 - **core/11b — Versions row popover** — absorbed into core/06 versioning
@@ -489,77 +506,67 @@ All scripts are run from the workspace root.
 
 ## 9. Testing
 
-All tests use **Playwright exclusively**. No Vitest, no Jest, no Cypress.
+Two test runners, each for its purpose:
+
+- **Vitest** — fast unit tests for pure functions, parsers, reducers, schema validation. Co-located with the source file (e.g. `keymap.test.ts` next to `keymap.ts`). Run with `pnpm test:unit`.
+- **Playwright** — browser and E2E tests for auth flows, page navigation, editor interactions, mutations. Lives in `tests/`. Run with `pnpm test`.
 
 ### Test location
 
 ```
 tests/
-├── smoke.spec.ts           # Health checks for web + ws-server
-├── auth/                   # Login, registration, OAuth flows
-├── teams/                  # Team creation, invitations, roles
-├── projects/               # Project CRUD, archive
-├── screenplay-editor/      # Editor interactions, save, export
-└── collaboration/          # Real-time co-editing with multiple browser contexts
+├── fixtures.ts                    # authenticatedPage fixture (pre-logged-in browser context)
+├── helpers.ts                     # shared: BASE_URL, waitForEditor, goToNewLine
+├── auth/                          # Login, registration, OAuth flows
+├── projects/                      # Project CRUD
+├── screenplay-editor/             # Editor UX — keyboard flow, toolbar, autocomplete
+├── breakdown/                     # Breakdown tagging and export
+├── budget/                        # Budget generation and CSV/PDF export
+├── schedule/                      # Schedule generation, drag-and-drop, export
+├── shooting-plan/                 # Shot list editor and export
+└── locations/                     # Location scouting
 ```
 
 ### Running tests
 
 ```bash
-# All tests (headless)
+# All Playwright tests (headless, against test DB on :3002)
 pnpm test
 
-# Interactive UI — recommended during development
+# Interactive Playwright UI — time-travel debugger
 pnpm test:ui
 
-# A single file
-pnpm exec playwright test tests/smoke.spec.ts
+# Vitest unit tests (watch mode)
+pnpm test:unit
 
-# A specific test by name
-pnpm exec playwright test --grep "\[OHW-001\]"
+# A single Playwright file
+pnpm exec playwright test tests/schedule/schedule-export.spec.ts
+
+# A specific test by tag
+pnpm exec playwright test --grep "\[OHW-380\]"
 ```
 
 ### Test naming convention
 
-Every test name starts with a tag referencing the feature spec:
+Every Playwright test name starts with a tag referencing the feature spec:
 
 ```ts
-test("[OHW-001] user can register with email and password", async ({
-  page,
-}) => {
+test("[OHW-380] exports schedule as CSV", async ({ authenticatedPage: page }) => {
   // ...
 });
 ```
 
-Tags match spec numbers: `OHW-001` = `docs/specs/01-auth.md`.
-
-### What Playwright tests replace
-
-| Purpose                  | How we test it                                                  |
-| ------------------------ | --------------------------------------------------------------- |
-| Pure functions / parsers | Playwright Node context (no browser needed)                     |
-| UI components            | Playwright component test with `page.goto` to a dedicated route |
-| Full flows               | Playwright E2E with real browser                                |
-| tRPC procedures          | Playwright `request` context (HTTP calls, no browser)           |
+Tags are globally unique integers. `OHW-380` maps to spec `core/28-export-audit.md`, schedule section.
 
 ### Test infrastructure
 
-`playwright.config.ts` at the root starts both servers automatically before tests run:
+`playwright.config.ts` starts a dedicated test server on port 3002 against the `oh_writers_test` database before the suite runs. The `authenticatedPage` fixture in `tests/fixtures.ts` provides a pre-authenticated browser context (logged in as `test@ohwriters.dev`), so individual tests don't need to handle login.
 
-```ts
-webServer: [
-  {
-    command: "pnpm --filter @oh-writers/web dev",
-    url: "http://localhost:3000",
-  },
-  {
-    command: "pnpm --filter @oh-writers/ws-server dev",
-    url: "http://localhost:1234/health",
-  },
-];
+Tests require a seeded test database. Run once before the first test run:
+
+```bash
+pnpm db:seed:test   # seeds oh_writers_test DB
 ```
-
-Tests require a live database. Run `pnpm db:seed` before the first test run.
 
 ---
 
@@ -664,10 +671,10 @@ apps/web/app/features/<feature-name>/
 
 ### 3. Add the Zod schema
 
-In `packages/shared/src/schemas/`, add or extend a schema file:
+In `packages/domain/src/`, add or extend a schema file:
 
 ```ts
-// packages/shared/src/schemas/myFeature.schema.ts
+// packages/domain/src/myFeature.schema.ts
 import { z } from "zod";
 
 export const MyFeatureSchema = z.object({
@@ -683,41 +690,49 @@ export type MyFeature = z.infer<typeof MyFeatureSchema>;
 Add or edit a file in `packages/db/src/schema/`, then:
 
 ```bash
-pnpm db:migrate:create   # generates SQL
+pnpm db:migrate:create   # generates SQL migration
 pnpm db:migrate          # applies it
 ```
 
-### 5. Build the tRPC router
+### 5. Write the server function
+
+All client→server calls go through `createServerFn`. No tRPC, no raw fetch.
 
 ```ts
-// features/myFeature/server/myFeature.router.ts
-import { router, protectedProcedure } from "~/server/trpc";
-import { MyFeatureSchema } from "@oh-writers/shared";
+// features/myFeature/server/myFeature.server.ts
+import { createServerFn } from "@tanstack/start";
+import { z } from "zod";
+import { toShape } from "@oh-writers/utils";
+import { withProjectAccess } from "~/server/pipeline";
 
-export const myFeatureRouter = router({
-  create: protectedProcedure
-    .input(MyFeatureSchema.pick({ name: true }))
-    .mutation(async ({ ctx, input }) => {
-      // ctx.user is always available in protectedProcedure
-      return ctx.db
-        .insert(myFeatureTable)
-        .values({ ...input, userId: ctx.user.id });
-    }),
-});
+export const getMyFeature = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+        findMyFeature(db, access.project.id),
+      ),
+    ),
+  );
 ```
 
-Register it in the root tRPC router at `apps/web/app/server/trpc.ts`.
-
-### 6. Write Playwright tests
+### 6. Write tests
 
 ```ts
 // tests/myFeature/myFeature.spec.ts
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures";
 
-test("[OHW-0XX] can create a my feature", async ({ page }) => {
-  await page.goto("/");
+test("[OHW-0XX] can create a my feature", async ({ authenticatedPage: page }) => {
+  await page.goto(`${BASE_URL}/projects/${PROJECT_ID}/my-feature`);
   // ...
 });
+```
+
+Unit tests for pure functions go next to the source file:
+
+```ts
+// features/myFeature/server/myFeature.server.test.ts
+import { describe, it, expect } from "vitest";
 ```
 
 ---
