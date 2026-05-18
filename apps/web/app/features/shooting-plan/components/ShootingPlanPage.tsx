@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   useSuspenseQuery,
@@ -21,6 +21,7 @@ import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
 import { useCesareOpen } from "~/features/app-shell";
+import { useExportShotList } from "../hooks/useExportShotList";
 import styles from "./ShootingPlanPage.module.css";
 
 interface ShootingPlanPageProps {
@@ -40,6 +41,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const navigate = useNavigate();
   const openCesare = useCesareOpen();
   const { showToast } = useToast();
+  const { exportCsv, exportPdf } = useExportShotList(projectId);
   const { data } = useSuspenseQuery(
     scenesWithPlanSummaryQueryOptions(projectId),
   );
@@ -53,10 +55,9 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     mutationFn: async (sceneId: string) =>
       await getOrCreateInitialPlan({ data: { sceneId, projectId } }),
     onSuccess: () => {
+      // Only invalidate the shot-plan query (not the scenes list) so the
+      // SuspenseQuery for scenes doesn't re-suspend and flash the page blank.
       qc.invalidateQueries({ queryKey: ["shot-plan"] });
-      qc.invalidateQueries({
-        queryKey: ["shooting-plan", "scenes", projectId],
-      });
     },
   });
 
@@ -298,16 +299,18 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                 projectId={projectId}
               />
               {activePlanId && (
-                <BlockingCard
-                  sceneId={selectedScene.sceneId}
-                  planId={activePlanId}
-                  sceneNumber={selectedScene.sceneNumber}
-                  onOpenEditor={() => {
-                    void navigate({
-                      to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`,
-                    });
-                  }}
-                />
+                <Suspense fallback={null}>
+                  <BlockingCard
+                    sceneId={selectedScene.sceneId}
+                    planId={activePlanId}
+                    sceneNumber={selectedScene.sceneNumber}
+                    onOpenEditor={() => {
+                      void navigate({
+                        to: `/projects/${projectId}/shooting-plan/blocking-editor?scene=${selectedScene.sceneId}&plan=${activePlanId}`,
+                      });
+                    }}
+                  />
+                </Suspense>
               )}
               <ParallelPlansEditor
                 sceneId={selectedScene.sceneId}
@@ -352,6 +355,8 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
             ? () => initialPlanMut.mutate(selectedSceneId)
             : undefined
         }
+        onExport={exportCsv}
+        onPrint={exportPdf}
         onCesareClick={openCesare}
       />
     </div>

@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { EditorState, TextSelection } from "prosemirror-state";
 import type { Node as PMNode } from "prosemirror-model";
 import { schema } from "../schema";
-import { tabCommand, enterCommand } from "./keymap";
+import { tabCommand, enterCommand, fountainKeymap } from "./keymap";
+import { setElement } from "../schema-commands";
 
 const t = (text: string) => schema.text(text);
 
@@ -185,5 +186,67 @@ describe("enterCommand", () => {
     // title child preserves the original text
     expect(scene.child(0).lastChild!.textContent).toBe("INT. ROOM - DAY");
     expect(scene.child(1).type.name).toBe("action");
+  });
+});
+
+// ─── Cmd+1-7 / Alt+letter element shortcuts ─────────────────────────────────
+
+describe("setElement — Cmd+N / Alt+letter shortcuts (matrix verification)", () => {
+  const elementOrder = [
+    "scene",
+    "action",
+    "character",
+    "dialogue",
+    "parenthetical",
+    "transition",
+  ] as const;
+
+  it.each([
+    ["action", "character"] as const,
+    ["action", "dialogue"] as const,
+    ["action", "parenthetical"] as const,
+    ["action", "transition"] as const,
+    ["character", "action"] as const,
+    ["dialogue", "action"] as const,
+    ["parenthetical", "action"] as const,
+    ["transition", "action"] as const,
+  ])("setElement converts %s → %s", (from, to) => {
+    const doc = buildDoc([node("scene", [heading("INT. X - DAY"), node(from)])]);
+    const state = stateAtBlock(doc, [0, 1], 0);
+    const { ok, state: next } = runCommand(state, setElement(to));
+    expect(ok).toBe(true);
+    expect(next.doc.firstChild!.child(1).type.name).toBe(to);
+  });
+
+  // Verify all 6 element types covered by Cmd+1..6 / Alt+letter are addressable
+  it("all 6 element types in ELEMENT_ORDER are valid ElementType values", () => {
+    expect(elementOrder).toHaveLength(6);
+    for (const el of elementOrder) {
+      // setElement must return a truthy Command for each type
+      expect(typeof setElement(el)).toBe("function");
+    }
+  });
+});
+
+// ─── Inline marks (⌘B / ⌘I / ⌘U) ───────────────────────────────────────────
+
+describe("inline marks — bold, italic, underline", () => {
+  // Verify marks are defined in the schema (pre-condition for the keymap handlers)
+  it("schema has strong mark", () => {
+    expect(schema.marks.strong).toBeDefined();
+  });
+
+  it("schema has em mark", () => {
+    expect(schema.marks.em).toBeDefined();
+  });
+
+  it("schema has underline mark", () => {
+    expect(schema.marks.underline).toBeDefined();
+  });
+
+  it("fountainKeymap is a Plugin (sanity check for export)", () => {
+    // fountainKeymap is created by prosemirror-keymap — it has a `props` shape.
+    expect(fountainKeymap).toBeDefined();
+    expect(typeof fountainKeymap).toBe("object");
   });
 });

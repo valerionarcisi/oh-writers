@@ -68,41 +68,73 @@
 }
 
 .elementPill {
+  /* Per-element accent color — overridden by [data-element] selectors below */
   --chip-accent: var(--ds-text-3);
+
+  all: unset;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 999px;
+  gap: var(--ds-space-1, 4px);
+  padding: 5px 10px 4px;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
   font-family: var(--ds-font-sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--ds-text-2);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-line);
   white-space: nowrap;
   user-select: none;
   cursor: pointer;
+  position: relative;
 }
 
 .elementPill:hover {
   color: var(--ds-text);
-  border-color: var(--chip-accent);
 }
 
 .elementPill:focus-visible {
   outline: 2px solid var(--ds-action);
   outline-offset: 2px;
+  border-radius: 2px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .elementPill {
     transition:
-      color 150ms ease,
-      background 150ms ease,
-      border-color 150ms ease;
+      color 120ms ease,
+      border-color 120ms ease;
   }
+}
+
+/* The active element gets a colored bottom border as the active indicator */
+.elementPillActive {
+  color: var(--ds-text);
+  font-weight: 600;
+  border-block-end-color: var(--chip-accent);
+}
+
+/* Per-element accent colors — teal for structural elements, coral for dialogue */
+.elementPill[data-element="scene"]         { --chip-accent: var(--ds-action, #2ec4b6); }
+.elementPill[data-element="action"]        { --chip-accent: var(--ds-text-2, #8a8580); }
+.elementPill[data-element="character"]     { --chip-accent: var(--ds-coral, #e76f51); }
+.elementPill[data-element="dialogue"]      { --chip-accent: var(--ds-coral, #e76f51); }
+.elementPill[data-element="parenthetical"] { --chip-accent: var(--ds-coral, #e76f51); }
+.elementPill[data-element="transition"]    { --chip-accent: var(--ds-action, #2ec4b6); }
+
+.elementIcon {
+  font-size: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.elementPillActive .elementIcon {
+  opacity: 1;
+}
+
+.elementLabel {
+  /* Label text — stays visible at all widths */
 }
 
 .chipDot {
@@ -112,13 +144,6 @@
   background: var(--chip-accent);
   flex-shrink: 0;
   display: inline-block;
-}
-
-.elementPillActive {
-  color: var(--ds-text);
-  background: color-mix(in srgb, var(--chip-accent) 12%, transparent);
-  border-color: var(--chip-accent);
-  font-weight: 600;
 }
 
 /* ─── Element chips — Proposta F (mono tabline) ───────────────────────────

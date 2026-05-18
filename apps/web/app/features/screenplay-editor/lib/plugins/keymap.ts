@@ -1,5 +1,5 @@
 import { keymap } from "prosemirror-keymap";
-import { splitBlock } from "prosemirror-commands";
+import { splitBlock, toggleMark } from "prosemirror-commands";
 import type { Command, EditorState, Transaction } from "prosemirror-state";
 import { TextSelection } from "prosemirror-state";
 import { schema } from "../schema";
@@ -98,22 +98,6 @@ export const tabCommand: Command = (state, dispatch, view) => {
 
   const current = elementForNode(blockType.type.name);
 
-  if (current === "dialogue" && blockType.textContent.length === 0) {
-    const parenType = schema.nodes["parenthetical"];
-    if (!parenType) return false;
-    if (!dispatch) return true;
-
-    const blockStart = $from.before($from.depth);
-    const blockEnd = $from.after($from.depth);
-    const newNode = parenType.create(null, [schema.text("()")]);
-    const tr = state.tr.replaceRangeWith(blockStart, blockEnd, newNode);
-    // Cursor goes between "(" and ")" — offset 1 inside the new node's text.
-    const cursorPos = blockStart + 1 + 1;
-    tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos)));
-    dispatch(tr);
-    return true;
-  }
-
   const next = nextElementOnTab(current);
   return setElement(next)(state, dispatch, view);
 };
@@ -147,11 +131,11 @@ export const enterCommand: Command = (state, dispatch, view) => {
   // converts the block in-place to Action instead of stepping forward in
   // the matrix. "Double-Enter to break out" is standard screenplay-editor
   // muscle memory: Character → Enter (empty dialogue) → Enter → Action.
+  // "Double-Enter to break out" — only for dialogue/character, not parenthetical.
+  // Parenthetical + Enter → dialogue is the normal flow (nextElementOnEnter).
   const isEmptyBreakoutBlock =
     parentNode.textContent.length === 0 &&
-    (parentType === "dialogue" ||
-      parentType === "character" ||
-      parentType === "parenthetical");
+    (parentType === "dialogue" || parentType === "character");
   if (isEmptyBreakoutBlock) {
     const actionType = schema.nodes["action"];
     if (!actionType) return false;
@@ -186,13 +170,28 @@ export const enterCommand: Command = (state, dispatch, view) => {
     return true;
   }
 
+  // Strategy B-scene: transition → Enter → new scene heading.
+  // `heading` lives inside a `scene` wrapper — setNodeMarkup cannot change a
+  // flat body block to `heading` directly. Delegate to setElement("scene")
+  // which handles the proper scene/heading insertion.
+  if (next === "scene") {
+    let splitTr: Transaction | null = null;
+    splitBlock(state, (tr) => {
+      splitTr = tr;
+    });
+    if (!splitTr) return false;
+    // Dispatch the split first, then apply the scene conversion on the new state.
+    dispatch(splitTr as Transaction);
+    return setElement("scene")(view!.state, dispatch, view);
+  }
+
   // Strategy B: body nodes — split then retype.
   //
   // splitBlock produces a transaction based on `state`. We extend that same
   // transaction with a setNodeMarkup step so we dispatch only once to the view.
   // Dispatching a second transaction built on an intermediate state causes
   // "Applying a mismatched transaction" — hence the single-tr approach.
-  const nextNodeType = schema.nodes[next === "scene" ? "heading" : next];
+  const nextNodeType = schema.nodes[next];
   if (!nextNodeType) return false;
 
   let splitTr: Transaction | null = null;
@@ -292,11 +291,24 @@ export const fountainKeymap = keymap({
   Escape: escapeHeadingCommand,
   "Mod-Shift-f": focusModeCommand,
 
-  // Force element — Alt + letter (same as Spec 05e)
+  // Force element — Cmd/Ctrl + 1-7 (Spec 05e direct switch)
+  "Mod-1": setElement("scene"),
+  "Mod-2": setElement("action"),
+  "Mod-3": setElement("character"),
+  "Mod-4": setElement("dialogue"),
+  "Mod-5": setElement("parenthetical"),
+  "Mod-6": setElement("transition"),
+
+  // Force element — Alt + letter (Spec 05e)
   "Alt-s": setElement("scene"),
   "Alt-a": setElement("action"),
   "Alt-c": setElement("character"),
   "Alt-d": setElement("dialogue"),
   "Alt-p": setElement("parenthetical"),
   "Alt-t": setElement("transition"),
+
+  // Inline marks — bold, italic, underline
+  "Mod-b": toggleMark(schema.marks.strong),
+  "Mod-i": toggleMark(schema.marks.em),
+  "Mod-u": toggleMark(schema.marks.underline),
 });
