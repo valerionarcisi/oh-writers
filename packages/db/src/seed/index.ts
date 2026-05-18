@@ -44,6 +44,7 @@ import {
   NON_FA_RIDERE_TITLE_PAGE_DOC,
 } from "./fixtures/non-fa-ridere.fountain";
 import { buildPmDocFromFountain } from "./build-pm-doc";
+import { seedFundraisingSources } from "./fundraising-sources";
 
 // Mirror of `SOGGETTO_INITIAL_TEMPLATE` from `@oh-writers/domain`
 // (packages/domain/src/subject/template.ts). Inlined here to keep the db
@@ -761,6 +762,8 @@ export async function seed() {
   await seedDefaultProductionRates(VALERIO_TEAM_PROJECT_ID);
 
   console.log("  -> Valerio team project created");
+
+  await seedFundraisingSources();
 
   console.log("Seed complete.");
   console.log("");
