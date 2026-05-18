@@ -1,39 +1,88 @@
-.wrapper {
+/* ── Card ─────────────────────────────────────────────────── */
+
+.card {
+  width: 100%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  inline-size: 100%;
-  max-inline-size: 400px;
 }
 
-.header {
+/* ── Brand ───────────────────────────────────────────────── */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+}
+
+.brandMark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ds-clay-500);
+  color: var(--ds-white);
+  font-family: var(--ds-font-serif, "Fraunces", serif);
+  font-size: var(--text-base);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandName {
+  font-family: var(--ds-font-serif, "Fraunces", serif);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--ds-text);
+  letter-spacing: -0.01em;
+}
+
+/* ── Heading ─────────────────────────────────────────────── */
+
+.headingBlock {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.logo {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--ds-text-mute);
-}
-
 .heading {
-  font-family: var(--font-sans);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
+  font-family: var(--ds-font-serif, "Fraunces", serif);
+  font-size: clamp(var(--text-2xl), 5vw, var(--text-3xl));
+  font-weight: 500;
   color: var(--ds-text);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
   margin: 0;
 }
 
-.form {
+.emailPill {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ds-text-mute);
+  margin: 0;
 }
+
+.changeEmail {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--ds-clay-500);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: var(--ds-clay-600);
+  }
+}
+
+/* ── Error banner ────────────────────────────────────────── */
 
 .apiError {
   padding: var(--space-3) var(--space-4);
@@ -45,6 +94,14 @@
   margin: 0;
 }
 
+/* ── Form ────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -53,28 +110,23 @@
 
 .label {
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--ds-text);
-}
-
-.required {
-  color: var(--ds-danger);
-  margin-inline-start: var(--space-1);
+  font-weight: 500;
+  color: var(--ds-text-2);
 }
 
 .input {
   inline-size: 100%;
   padding: var(--space-3) var(--space-4);
-  font-family: var(--font-sans);
+  font-family: var(--ds-font-sans, "Inter", sans-serif);
   font-size: var(--text-base);
   color: var(--ds-text);
   background: var(--ds-bg);
-  border: var(--border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   outline: none;
 
   &:focus {
-    border-color: var(--ds-action);
+    border-color: var(--ds-clay-500);
     box-shadow: var(--ring-focus);
   }
 
@@ -98,18 +150,44 @@
   color: var(--ds-danger);
 }
 
-/* ─── OAuth section ──────────────────────────────────────── */
+/* ── Primary button ──────────────────────────────────────── */
 
-.oauth {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.primaryBtn {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--ds-font-sans, "Inter", sans-serif);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--ds-white);
+  background: var(--ds-clay-500);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-clay-600);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
+
+/* ── Divider ─────────────────────────────────────────────── */
 
 .divider {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  color: var(--ds-text-mute);
+  font-size: var(--text-xs);
 
   &::before,
   &::after {
@@ -120,32 +198,32 @@
   }
 }
 
-.dividerLabel {
-  font-size: var(--text-xs);
-  color: var(--ds-text-mute);
-  white-space: nowrap;
-}
+/* ── OAuth ───────────────────────────────────────────────── */
 
-.oauthButtons {
+.oauthGroup {
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .oauthBtn {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
   padding: var(--space-3) var(--space-4);
-  font-family: var(--font-sans);
+  font-family: var(--ds-font-sans, "Inter", sans-serif);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-weight: 500;
   color: var(--ds-text);
   background: var(--ds-surface);
-  border: var(--border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
   cursor: pointer;
 
   &:hover {
     background: var(--ds-surface-deep);
-    border-color: var(--ds-line);
   }
 
   &:focus-visible {
@@ -156,22 +234,25 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .oauthBtn {
-    transition:
-      background var(--duration-fast) var(--ease-default),
-      border-color var(--duration-fast) var(--ease-default);
+    transition: background var(--duration-fast) var(--ease-default);
   }
 }
 
-/* ─── Footer ─────────────────────────────────────────────── */
+/* ── Footer ──────────────────────────────────────────────── */
 
 .footer {
   font-size: var(--text-sm);
-  color: var(--ds-text-2);
+  color: var(--ds-text-mute);
   margin: 0;
 }
 
-.link {
-  color: var(--ds-action);
+.footerLink {
+  color: var(--ds-clay-500);
   text-decoration: underline;
   text-underline-offset: 2px;
+  font-weight: 500;
+
+  &:hover {
+    color: var(--ds-clay-600);
+  }
 }

@@ -39,8 +39,12 @@
 
 .avatarRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-4);
+}
+
+.avatarField {
+  flex: 1;
 }
 
 .avatarPreview {
@@ -50,6 +54,7 @@
   object-fit: cover;
   background: var(--color-surface-raised);
   flex-shrink: 0;
+  margin-block-start: var(--space-6);
 }
 
 .avatarFallback {
@@ -64,6 +69,7 @@
   font-weight: 600;
   color: var(--color-text-muted);
   flex-shrink: 0;
+  margin-block-start: var(--space-6);
 }
 
 .fieldGroup {
@@ -72,13 +78,13 @@
   gap: var(--space-4);
 }
 
-.field {
+.emailField {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.label {
+.fieldLabel {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -90,35 +96,11 @@
   padding: var(--space-2) 0;
 }
 
-.input {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  font-size: var(--text-sm);
-  outline: none;
-  transition: border-color 120ms ease;
-
-  &:focus {
-    border-color: var(--color-accent);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.fieldError {
-  font-size: var(--text-xs);
-  color: var(--color-error, #e53e3e);
-}
-
 .formActions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-3);
 }
 
 .successMsg {

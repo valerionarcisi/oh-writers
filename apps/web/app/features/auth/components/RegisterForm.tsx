@@ -3,6 +3,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { Button } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
+import { PasswordInput } from "./PasswordInput";
 import styles from "./RegisterForm.module.css";
 
 const RegisterSchema = z.object({
@@ -111,11 +112,10 @@ export function RegisterForm() {
           <label className={styles.label} htmlFor="password">
             Password <span className={styles.required}>*</span>
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
-            className={`${styles.input} ${errors.password ? styles.inputError : ""}`}
+            hasError={!!errors.password}
             value={values.password}
             onChange={(e) => setField("password", e.target.value)}
             placeholder="Min. 8 characters"

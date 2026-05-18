@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { Button } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
+import { PasswordInput } from "./PasswordInput";
 import styles from "./LoginForm.module.css";
 
-const LoginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+const EmailSchema = z.object({
+  email: z.string().email("Inserisci un indirizzo email valido"),
 });
 
-type FormValues = z.infer<typeof LoginSchema>;
-type FormErrors = Partial<Record<keyof FormValues, string>>;
+const PasswordSchema = z.object({
+  password: z.string().min(1, "La password è obbligatoria"),
+});
 
 interface LoginFormProps {
   availableProviders: string[];
@@ -19,39 +19,42 @@ interface LoginFormProps {
 
 export function LoginForm({ availableProviders }: LoginFormProps) {
   const router = useRouter();
-  const [values, setValues] = useState<FormValues>({ email: "", password: "" });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [step, setStep] = useState<"email" | "password">("email");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const setField = <K extends keyof FormValues>(key: K, value: string) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
-    setApiError(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    const result = LoginSchema.safeParse(values);
+    const result = EmailSchema.safeParse({ email });
     if (!result.success) {
-      const fieldErrors: FormErrors = {};
-      for (const issue of result.error.issues) {
-        const field = issue.path[0] as keyof FormValues;
-        fieldErrors[field] = issue.message;
-      }
-      setErrors(fieldErrors);
+      setEmailError(result.error.issues[0]?.message ?? "Email non valida");
       return;
     }
+    setEmailError(null);
+    setApiError(null);
+    setStep("password");
+  };
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = PasswordSchema.safeParse({ password });
+    if (!result.success) {
+      setPasswordError(result.error.issues[0]?.message ?? "Password obbligatoria");
+      return;
+    }
+    setPasswordError(null);
+    setApiError(null);
     setIsSubmitting(true);
-    const { error } = await authClient.signIn.email({
-      email: result.data.email,
-      password: result.data.password,
-    });
+
+    const { error } = await authClient.signIn.email({ email, password });
     setIsSubmitting(false);
 
     if (error) {
-      setApiError("Invalid email or password");
+      setApiError("Email o password non corretti");
       return;
     }
 
@@ -66,91 +69,110 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
   };
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.header}>
-        <span className={styles.logo}>Oh Writers</span>
-        <h1 className={styles.heading}>Sign in</h1>
+    <div className={styles.card}>
+      {/* Logo / wordmark */}
+      <div className={styles.brand}>
+        <span className={styles.brandMark}>O</span>
+        <span className={styles.brandName}>Oh Writers</span>
       </div>
 
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
-        {apiError && <p className={styles.apiError}>{apiError}</p>}
+      <div className={styles.headingBlock}>
+        <h1 className={styles.heading}>
+          {step === "email" ? "Accedi" : "Bentornato"}
+        </h1>
+        {step === "password" && (
+          <p className={styles.emailPill}>
+            {email}
+            <button
+              type="button"
+              className={styles.changeEmail}
+              onClick={() => { setStep("email"); setApiError(null); setPasswordError(null); }}
+            >
+              Cambia
+            </button>
+          </p>
+        )}
+      </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="email">
-            Email <span className={styles.required}>*</span>
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
-            value={values.email}
-            onChange={(e) => setField("email", e.target.value)}
-            placeholder="you@example.com"
-            autoFocus
-          />
-          {errors.email && (
-            <span className={styles.fieldError}>{errors.email}</span>
-          )}
-        </div>
+      {apiError && <p className={styles.apiError}>{apiError}</p>}
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="password">
-            Password <span className={styles.required}>*</span>
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            className={`${styles.input} ${errors.password ? styles.inputError : ""}`}
-            value={values.password}
-            onChange={(e) => setField("password", e.target.value)}
-            placeholder="••••••••"
-          />
-          {errors.password && (
-            <span className={styles.fieldError}>{errors.password}</span>
-          )}
-        </div>
-
-        <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in…" : "Sign in"}
-        </Button>
-      </form>
-
-      {availableProviders.length > 0 && (
-        <div className={styles.oauth}>
-          <div className={styles.divider}>
-            <span className={styles.dividerLabel}>or continue with</span>
+      {step === "email" ? (
+        <form onSubmit={handleEmailContinue} className={styles.form} noValidate>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              autoFocus
+              className={`${styles.input} ${emailError ? styles.inputError : ""}`}
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
+              placeholder="tu@esempio.com"
+            />
+            {emailError && <span className={styles.fieldError}>{emailError}</span>}
           </div>
-          <div className={styles.oauthButtons}>
-            {availableProviders.includes("google") && (
-              <button
-                type="button"
-                className={styles.oauthBtn}
-                onClick={() => handleOAuth("google")}
-              >
-                Google
-              </button>
-            )}
-            {availableProviders.includes("github") && (
-              <button
-                type="button"
-                className={styles.oauthBtn}
-                onClick={() => handleOAuth("github")}
-              >
-                GitHub
-              </button>
-            )}
+
+          <button type="submit" className={styles.primaryBtn}>
+            Continua
+          </button>
+
+          {availableProviders.length > 0 && (
+            <>
+              <div className={styles.divider}><span>oppure</span></div>
+              <div className={styles.oauthGroup}>
+                {availableProviders.includes("google") && (
+                  <button type="button" className={styles.oauthBtn} onClick={() => handleOAuth("google")}>
+                    <GoogleIcon />
+                    Continua con Google
+                  </button>
+                )}
+                {availableProviders.includes("github") && (
+                  <button type="button" className={styles.oauthBtn} onClick={() => handleOAuth("github")}>
+                    Continua con GitHub
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </form>
+      ) : (
+        <form onSubmit={handlePasswordSubmit} className={styles.form} noValidate>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="password">Password</label>
+            <PasswordInput
+              id="password"
+              autoComplete="current-password"
+              autoFocus
+              hasError={!!passwordError}
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(null); }}
+              placeholder="••••••••"
+            />
+            {passwordError && <span className={styles.fieldError}>{passwordError}</span>}
           </div>
-        </div>
+
+          <button type="submit" className={styles.primaryBtn} disabled={isSubmitting}>
+            {isSubmitting ? "Accesso in corso…" : "Accedi"}
+          </button>
+        </form>
       )}
 
       <p className={styles.footer}>
-        No account?{" "}
-        <Link to="/register" className={styles.link}>
-          Create one
-        </Link>
+        Non hai un account?{" "}
+        <Link to="/register" className={styles.footerLink}>Registrati</Link>
       </p>
     </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
   );
 }

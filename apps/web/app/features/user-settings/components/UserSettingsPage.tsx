@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Button } from "@oh-writers/ui";
+import { Button, Input, FormField } from "@oh-writers/ui";
+import { PasswordInput } from "~/features/auth/components/PasswordInput";
 import { unwrapResult } from "@oh-writers/utils";
 import { authClient } from "~/lib/auth-client";
 import {
@@ -114,44 +115,34 @@ function ProfileSection({
         ) : (
           <div className={styles.avatarFallback}>{name.charAt(0).toUpperCase()}</div>
         )}
-        <div className={styles.field} style={{ flex: 1 }}>
-          <label className={styles.label} htmlFor="avatar-url">
-            URL avatar
-          </label>
-          <input
+        <FormField label="URL avatar" htmlFor="avatar-url" error={fieldErrors.avatarUrl} className={styles.avatarField}>
+          <Input
             id="avatar-url"
-            className={styles.input}
             type="url"
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
             placeholder="https://…"
             disabled={mut.isPending}
+            hasError={!!fieldErrors.avatarUrl}
           />
-          {fieldErrors.avatarUrl && (
-            <span className={styles.fieldError}>{fieldErrors.avatarUrl}</span>
-          )}
-        </div>
+        </FormField>
       </div>
 
       <div className={styles.fieldGroup}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="profile-name">
-            Nome
-          </label>
-          <input
+        <FormField label="Nome" htmlFor="profile-name" error={fieldErrors.name}>
+          <Input
             id="profile-name"
-            className={styles.input}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={mut.isPending}
+            hasError={!!fieldErrors.name}
             data-testid="profile-name-input"
           />
-          {fieldErrors.name && <span className={styles.fieldError}>{fieldErrors.name}</span>}
-        </div>
+        </FormField>
 
-        <div className={styles.field}>
-          <span className={styles.label}>Email</span>
+        <div className={styles.emailField}>
+          <span className={styles.fieldLabel}>Email</span>
           <span className={styles.readOnly}>{email}</span>
         </div>
       </div>
@@ -243,55 +234,41 @@ function PasswordSection() {
       <h2 className={styles.sectionTitle}>Cambia password</h2>
 
       <div className={styles.fieldGroup}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="current-pwd">
-            Password attuale
-          </label>
-          <input
+        <FormField label="Password attuale" htmlFor="current-pwd" error={fieldErrors.current}>
+          <PasswordInput
             id="current-pwd"
-            className={styles.input}
-            type="password"
+            autoComplete="current-password"
             value={fields.current}
             onChange={setField("current")}
             disabled={isPending}
+            hasError={!!fieldErrors.current}
             data-testid="current-password-input"
           />
-          {fieldErrors.current && <span className={styles.fieldError}>{fieldErrors.current}</span>}
-        </div>
+        </FormField>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="new-pwd">
-            Nuova password
-          </label>
-          <input
+        <FormField label="Nuova password" htmlFor="new-pwd" error={fieldErrors.next}>
+          <PasswordInput
             id="new-pwd"
-            className={styles.input}
-            type="password"
+            autoComplete="new-password"
             value={fields.next}
             onChange={setField("next")}
             disabled={isPending}
+            hasError={!!fieldErrors.next}
             data-testid="new-password-input"
           />
-          {fieldErrors.next && <span className={styles.fieldError}>{fieldErrors.next}</span>}
-        </div>
+        </FormField>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="confirm-pwd">
-            Conferma nuova password
-          </label>
-          <input
+        <FormField label="Conferma nuova password" htmlFor="confirm-pwd" error={fieldErrors.confirm}>
+          <PasswordInput
             id="confirm-pwd"
-            className={styles.input}
-            type="password"
+            autoComplete="new-password"
             value={fields.confirm}
             onChange={setField("confirm")}
             disabled={isPending}
+            hasError={!!fieldErrors.confirm}
             data-testid="confirm-password-input"
           />
-          {fieldErrors.confirm && (
-            <span className={styles.fieldError}>{fieldErrors.confirm}</span>
-          )}
-        </div>
+        </FormField>
       </div>
 
       <div className={styles.formActions}>
