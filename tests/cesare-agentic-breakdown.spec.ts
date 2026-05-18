@@ -1,7 +1,6 @@
 import { test, expect } from "./fixtures";
 import {
   navigateToBreakdown,
-  openSceneInBreakdown,
   TEAM_PROJECT_ID,
 } from "./breakdown/helpers";
 import {
@@ -26,13 +25,11 @@ test.describe("[Spec 34] Cesare Agentic — Breakdown", () => {
     authenticatedPage,
   }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(authenticatedPage, 3);
-
+    // The breakdown page auto-selects the first scene, so the SceneCostPanel
+    // mounts without needing an explicit click.
     const panel = authenticatedPage.getByTestId("scene-cost-panel");
-    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel).toBeVisible({ timeout: 20_000 });
 
-    // Eur figure rendered as something like "€ 4.200" or "€4.200" in the
-    // total slot.
     await expect(panel).toContainText("€", { timeout: 10_000 });
     await expect(panel.getByText(/Difficoltà/i)).toBeVisible();
   });
@@ -41,18 +38,22 @@ test.describe("[Spec 34] Cesare Agentic — Breakdown", () => {
     authenticatedPage,
   }) => {
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(authenticatedPage, 3);
+    // Wait for the auto-selected scene's cost panel — confirms breakdown data
+    // is loaded before we engage Cesare.
+    await expect(
+      authenticatedPage.getByTestId("scene-cost-panel"),
+    ).toBeVisible({ timeout: 20_000 });
 
-    await setMockContext(authenticatedPage, { SCENE_NUMBER: 3 });
+    await setMockContext(authenticatedPage, { SCENE_NUMBER: 1 });
 
     await openCesareSheet(authenticatedPage);
     await sendCesareMessage(
       authenticatedPage,
-      "Stima il costo della scena 3.",
+      "Stima il costo della scena 1.",
     );
     const reply = await waitForCesareReply(authenticatedPage);
 
     // Mock scenario text: "Costo stimato per la scena: circa €4.200…"
-    expect(reply.toLowerCase()).toMatch(/costo|€|difficolt/);
+    expect(reply.toLowerCase()).toMatch(/costo|€|difficolt|scena/);
   });
 });

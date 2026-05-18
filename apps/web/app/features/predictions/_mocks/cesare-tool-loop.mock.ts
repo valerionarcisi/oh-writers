@@ -41,18 +41,41 @@ interface MockToolUseBlock {
 type MockContentBlock = MockTextBlock | MockToolUseBlock;
 
 // ─── Public mock context API ──────────────────────────────────────────────────
+//
+// We persist the context in `process.env` (keys are namespaced with the
+// `OHW_MOCK_CTX_` prefix). TanStack Start splits the codebase across separate
+// Vinxi routers (api, ssr, client) — each router instantiates its own module
+// graph, so module-level state set from the api router would not be visible
+// to the ssr router where the Cesare tool loop runs. `process.env` is the
+// only Node-global both routers share.
 
-let MOCK_CONTEXT: Record<string, string> = {};
+const ENV_PREFIX = "OHW_MOCK_CTX_";
 
 export const setMockContext = (ctx: Record<string, string>): void => {
-  MOCK_CONTEXT = { ...ctx };
+  // Clear previous entries first so two consecutive tests cannot pollute each
+  // other.
+  clearMockContext();
+  for (const [k, v] of Object.entries(ctx)) {
+    process.env[`${ENV_PREFIX}${k}`] = v;
+  }
 };
 
-export const getMockContext = (): Readonly<Record<string, string>> =>
-  MOCK_CONTEXT;
+export const getMockContext = (): Readonly<Record<string, string>> => {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (k.startsWith(ENV_PREFIX) && typeof v === "string") {
+      out[k.slice(ENV_PREFIX.length)] = v;
+    }
+  }
+  return out;
+};
 
 export const clearMockContext = (): void => {
-  MOCK_CONTEXT = {};
+  for (const k of Object.keys(process.env)) {
+    if (k.startsWith(ENV_PREFIX)) {
+      delete process.env[k];
+    }
+  }
 };
 
 // ─── Scenario shape ───────────────────────────────────────────────────────────
@@ -222,7 +245,7 @@ const substituteValue = (value: unknown): unknown => {
   if (!match) return value;
   const key = match[1]!;
   const coerceTo = match[2];
-  const resolved = MOCK_CONTEXT[key];
+  const resolved = process.env[`${ENV_PREFIX}${key}`];
   if (resolved === undefined) {
     // Leave the placeholder visible so the tool surface fails loudly
     // rather than silently passing a literal "{{REQ_ID}}" to the DB.
