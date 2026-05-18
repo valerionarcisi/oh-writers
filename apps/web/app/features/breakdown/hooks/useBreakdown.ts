@@ -31,6 +31,7 @@ import {
   exportBreakdownPdf,
   exportBreakdownCsv,
 } from "../server/export.server";
+import { getSceneCostEstimate } from "../server/breakdown-cost.server";
 
 export const breakdownContextOptions = (projectId: string) =>
   queryOptions({
@@ -71,6 +72,21 @@ export const staleScenesOptions = (versionId: string) =>
         await getStaleScenes({ data: { screenplayVersionId: versionId } }),
       ),
     enabled: versionId.length > 0,
+  });
+
+export const sceneCostEstimateOptions = (
+  projectId: string,
+  sceneNumber: number | null,
+) =>
+  queryOptions({
+    queryKey: ["breakdown", "scene-cost", projectId, sceneNumber] as const,
+    queryFn: async () =>
+      unwrapResult(
+        await getSceneCostEstimate({
+          data: { projectId, sceneNumber: sceneNumber ?? 1 },
+        }),
+      ),
+    enabled: projectId.length > 0 && sceneNumber !== null && sceneNumber > 0,
   });
 
 export const useAddBreakdownElement = (

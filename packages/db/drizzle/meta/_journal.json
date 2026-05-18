@@ -197,6 +197,13 @@
       "when": 1747872000000,
       "tag": "0026_shot_time_offset",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1747958400000,
+      "tag": "0027_production_rates",
+      "breakpoints": true
     }
   ]
 }

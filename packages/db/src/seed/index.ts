@@ -23,6 +23,7 @@ import {
   schedules,
   shootingDays,
   strips,
+  productionRates,
 } from "../schema/index";
 import { and, eq } from "drizzle-orm";
 import {
@@ -494,6 +495,8 @@ export async function seed() {
   // show populated values right after a fresh seed. Real rates come from the
   // future spec 24 cascading pre-fill (auto-derive from format×genre×country).
   await seedDefaultRateCard(TEST_PROJECT_ID);
+  await seedDefaultProductionRates(TEST_PROJECT_ID);
+  await seedDefaultProductionRates(TEST_TEAM_PROJECT_ID);
 
   console.log("  -> Team project + documents created");
 
@@ -662,6 +665,8 @@ export async function seed() {
   await seedFirstDocumentVersions(VALERIO_PERSONAL_PROJECT_ID, VALERIO_USER_ID);
   await seedValerioBudget(VALERIO_PERSONAL_PROJECT_ID);
   await seedValerioSchedule(VALERIO_SCREENPLAY_ID, VALERIO_PERSONAL_PROJECT_ID);
+  await seedDefaultProductionRates(VALERIO_PERSONAL_PROJECT_ID);
+  await seedDefaultProductionRates(VALERIO_TEAM_PROJECT_ID);
 
   console.log(
     `  -> Valerio personal project + screenplay + version + ${valerioScenesCount} scenes created`,
@@ -1061,6 +1066,28 @@ async function seedDefaultRateCard(projectId: string) {
         sortOrder: idx,
       })),
     )
+    .onConflictDoNothing();
+}
+
+// Default production rates per project, used by estimateSceneCost. Mirrors
+// DEFAULT_PRODUCTION_RATES in packages/domain so devs see populated numbers
+// after a fresh seed. Editable later via Settings.
+async function seedDefaultProductionRates(projectId: string): Promise<void> {
+  const entries: Array<{ key: string; value: string; unit: string }> = [
+    { key: "castLeadDay",       value: "800",  unit: "day" },
+    { key: "castSupportingDay", value: "400",  unit: "day" },
+    { key: "crewDopDay",        value: "600",  unit: "day" },
+    { key: "crewBaseDay",       value: "200",  unit: "day" },
+    { key: "catering",          value: "20",   unit: "meal" },
+    { key: "locationSetupExt",  value: "800",  unit: "day" },
+    { key: "locationSetupInt",  value: "300",  unit: "day" },
+    { key: "equipmentBaseDay",  value: "400",  unit: "day" },
+    { key: "sfxBaseDay",        value: "1500", unit: "day" },
+    { key: "vfxBasePerShot",    value: "800",  unit: "shot" },
+  ];
+  await db
+    .insert(productionRates)
+    .values(entries.map((e) => ({ projectId, ...e })))
     .onConflictDoNothing();
 }
 

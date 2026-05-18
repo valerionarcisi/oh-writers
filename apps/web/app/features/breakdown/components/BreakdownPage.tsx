@@ -41,6 +41,7 @@ import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import { ProjectBreakdownView } from "./ProjectBreakdownView";
 import { BreakdownMatrix } from "./BreakdownMatrix";
 import { CesareAdPanel, useAdAlertStats } from "./CesareAdPanel";
+import { SceneCostPanel } from "./SceneCostPanel";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import type {
@@ -934,6 +935,13 @@ function BreakdownPageContent({ projectId }: Props) {
                     Progetto
                   </button>
                 </div>
+                {panelScope === "scene" && activeScene && (
+                  <SceneCostPanel
+                    projectId={projectId}
+                    sceneNumber={activeSceneIdx}
+                    sceneLabel={formatHeading(activeScene)}
+                  />
+                )}
                 <CategoriesPanel
                 grouped={groupedByCategory}
                 allRows={allRows}

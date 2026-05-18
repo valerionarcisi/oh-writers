@@ -12,3 +12,4 @@ export * from "./schedule";
 export * from "./shot-plan";
 export * from "./blocking";
 export * from "./locations";
+export * from "./production-rates";

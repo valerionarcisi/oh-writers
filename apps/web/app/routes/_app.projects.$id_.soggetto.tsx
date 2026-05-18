@@ -1,6 +1,6 @@
 // IT is the default runtime language (Spec 04f). Hook up the shared i18n
 // layer later to surface English copy for non-IT users.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
@@ -19,7 +19,7 @@ import {
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
 import { useVersionsDrawer } from "~/features/versions";
-import { useCesareOpen } from "~/features/app-shell";
+import { useCesareOpen, useSetActiveDocument } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -99,7 +99,15 @@ function SoggettoPageReady({
 }: SoggettoPageReadyProps) {
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
   const openCesare = useCesareOpen();
+  const setActiveDocument = useSetActiveDocument();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
+
+  // Publish the soggetto as the active document so Cesare's tool router can
+  // operate on its content when this page is open.
+  useEffect(() => {
+    setActiveDocument({ id: soggettoDoc.id, type: DocumentTypes.SOGGETTO });
+    return () => setActiveDocument(null);
+  }, [soggettoDoc.id, setActiveDocument]);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSiaeOpen, setIsSiaeOpen] = useState(false);
   const projectQuery = useProject(projectId);

@@ -30,7 +30,11 @@ import {
   toggleHeading,
 } from "../lib/narrative-plugins";
 import { useVersionsDrawer, useDocumentVersions } from "~/features/versions";
-import { useSaveStatePublisher, useCesareOpen } from "~/features/app-shell";
+import {
+  useSaveStatePublisher,
+  useCesareOpen,
+  useSetActiveDocument,
+} from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
 
@@ -72,6 +76,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
   const editorViewRef = useRef<EditorView | null>(null);
   const openCesare = useCesareOpen();
+  const setActiveDocument = useSetActiveDocument();
+
+  // Publish the active document so Cesare's tool router knows which doc to
+  // operate on when the user is on a document page.
+  useEffect(() => {
+    setActiveDocument({ id: document.id, type });
+    return () => setActiveDocument(null);
+  }, [document.id, type, setActiveDocument]);
+
   const [, forceToolbarUpdate] = useState(0);
   const save = useSaveDocument();
   const { isDirty, flush } = useAutoSave(
