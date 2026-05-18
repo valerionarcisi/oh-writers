@@ -970,19 +970,40 @@ ${sections.join("\n")}${truncated}`;
 
 const buildLocationsToolsGuidance = (page: PageContext["page"]): string => {
   if (page !== "locations") return "";
-  return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.
+  return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare o aggiungere candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.
 
-WORKFLOW OBBLIGATORIO quando l'utente chiede candidati:
-1. Chiama search_places(query, location_bias) — fai una o più ricerche mirate basate sul contesto narrativo della scena
-2. Per OGNI risultato rilevante, chiama add_candidate(requirement_id, name, address, lat, lng, notes, photo_names) — questo SALVA il candidato nel DB
-3. Solo DOPO aver chiamato i tool, scrivi il messaggio finale che riassume cosa hai salvato
+STOP. Prima di scrivere QUALSIASI testo di risposta, devi prima chiamare i tools. Il testo arriva DOPO le chiamate tool, non al posto loro.
+
+WORKFLOW OBBLIGATORIO:
+- L'utente chiede "trova candidati" o "cerca [posto]" → chiama search_places PRIMA, poi add_candidate per ogni risultato rilevante, poi scrivi il messaggio di riepilogo.
+- L'utente chiede "aggiungi [nome specifico]" → chiama search_places con quel nome specifico, prendi il primo risultato, chiama add_candidate, poi scrivi "Ho aggiunto [nome]".
+- L'utente chiede informazioni o opinioni (es. "quale visitare per primo?") → solo testo, niente tools.
+
+ESEMPI DI COMPORTAMENTO:
+
+❌ SBAGLIATO:
+"Cerco subito l'Oasi del Gusto per trovare i dettagli precisi da salvare."
+(Solo testo, nessun tool chiamato. NON FARE COSÌ.)
+
+✅ CORRETTO:
+[chiama search_places({ query: "Oasi del Gusto", location_bias: "Falerone FM" })]
+[chiama add_candidate({ requirement_id: "...", name: "Oasi del Gusto", lat: 43.x, lng: 13.y, notes: "...", photo_names: [...] })]
+"Ho aggiunto Oasi del Gusto ai candidati di Ristorante - Forno."
+
+❌ SBAGLIATO:
+"Ora salvo i 3 candidati più rilevanti."
+(Promette senza fare. NON FARE COSÌ.)
+
+✅ CORRETTO:
+[chiama add_candidate per il candidato 1]
+[chiama add_candidate per il candidato 2]
+[chiama add_candidate per il candidato 3]
+"Ho aggiunto 3 candidati: Nome 1, Nome 2, Nome 3."
 
 REGOLE FERREE:
-- Non dire mai "Ora salvo i candidati" senza chiamare add_candidate subito dopo. Il messaggio finale arriva DOPO i tool, non al posto loro.
-- Per ogni add_candidate inoltra il 'requirement_id' della LOCATION SELEZIONATA (vedilo nel system context).
-- Inoltra SEMPRE 'photo_names' (i 'name' da photos[] del risultato search_places, max 3) così le foto vengono salvate.
-- Aggiungi almeno 2-3 candidati per ricerca, non uno solo.
-- Conferma nell'ultimo messaggio: "Ho aggiunto N candidati: [nome1], [nome2]..."`;
+- Per ogni add_candidate inoltra il 'requirement_id' della LOCATION SELEZIONATA (vedilo nel system context come "requirement_id: ...").
+- Inoltra SEMPRE 'photo_names' (i 'name' da photos[] del risultato search_places, max 3).
+- Aggiungi 2-3 candidati per ricerca quando l'utente chiede "trova candidati"; aggiungi SOLO quello richiesto quando l'utente specifica un nome.`;
 };
 
 const buildBudgetToolsGuidance = (page: PageContext["page"]): string => {

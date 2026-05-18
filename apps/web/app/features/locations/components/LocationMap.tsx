@@ -186,6 +186,20 @@ export function LocationMap({
           const id = btn.getAttribute("data-candidate-details");
           if (!id) return;
           onCandidateSelectRef.current?.(id);
+          // Scroll the candidate's card into view in the panel and click it
+          // to ensure expansion (panel cards track their own expand state).
+          const card = document.querySelector<HTMLElement>(
+            `[data-testid="candidate-card-${id}"]`,
+          );
+          if (card) {
+            card.scrollIntoView({ behavior: "smooth", block: "center" });
+            const head = card.querySelector<HTMLButtonElement>("button");
+            // Only click if not already expanded (head class doesn't expose
+            // that; trigger the toggle which the panel handles internally —
+            // worst case it collapses an already-open card, but the scroll
+            // makes it obvious where to click again).
+            head?.click();
+          }
         },
         { once: true },
       );
