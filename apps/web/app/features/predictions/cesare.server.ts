@@ -968,6 +968,23 @@ const formatBudgetContext = (
 ${sections.join("\n")}${truncated}`;
 };
 
+const buildLocationsToolsGuidance = (page: PageContext["page"]): string => {
+  if (page !== "locations") return "";
+  return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.
+
+WORKFLOW OBBLIGATORIO quando l'utente chiede candidati:
+1. Chiama search_places(query, location_bias) — fai una o più ricerche mirate basate sul contesto narrativo della scena
+2. Per OGNI risultato rilevante, chiama add_candidate(requirement_id, name, address, lat, lng, notes, photo_names) — questo SALVA il candidato nel DB
+3. Solo DOPO aver chiamato i tool, scrivi il messaggio finale che riassume cosa hai salvato
+
+REGOLE FERREE:
+- Non dire mai "Ora salvo i candidati" senza chiamare add_candidate subito dopo. Il messaggio finale arriva DOPO i tool, non al posto loro.
+- Per ogni add_candidate inoltra il 'requirement_id' della LOCATION SELEZIONATA (vedilo nel system context).
+- Inoltra SEMPRE 'photo_names' (i 'name' da photos[] del risultato search_places, max 3) così le foto vengono salvate.
+- Aggiungi almeno 2-3 candidati per ricerca, non uno solo.
+- Conferma nell'ultimo messaggio: "Ho aggiunto N candidati: [nome1], [nome2]..."`;
+};
+
 const buildBudgetToolsGuidance = (page: PageContext["page"]): string => {
   if (page !== "budget") return "";
   return `\n\nRUOLO: in questa pagina sei un LINE PRODUCER esperto del cinema italiano. Quando l'utente ti chiede di aggiustare il budget, USA I TOOLS per farlo direttamente — non limitarti a descrivere come si potrebbe fare. Conferma SEMPRE in italiano l'azione eseguita nel messaggio finale ('Ho aggiornato…', 'Ho aggiunto…', 'Ho ridistribuito…').
@@ -1030,7 +1047,7 @@ Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
 Quando parli di costi, usa i numeri reali dal budget.
 Quando parli di disponibilità, usa i dati reali dello schedule.
 Quando parli di location, aiuta il regista a valutare i candidati in base al contesto narrativo della scena.
-Quando usi search_places e poi add_candidate per salvare un risultato, inoltra SEMPRE il campo 'photo_names' (prendi i 'name' da 'photos[]' del risultato, max 3) così le foto vengono salvate insieme al candidato.
+${buildLocationsToolsGuidance(page)}
 Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.${documentToolsGuidance}${buildBreakdownToolsGuidance(page)}${buildScheduleToolsGuidance(page, activeShootingDayNumber)}${buildBudgetToolsGuidance(page)}`;
 };
 

@@ -88,10 +88,27 @@ function CandidateRow({
 
       {expanded && (
         <div className={styles.candidateBody}>
-          {candidate.address && (
+          {(candidate.address || (candidate.lat && candidate.lng)) && (
             <div className={styles.candidateRow}>
               <span>📍</span>
-              <span>{candidate.address}</span>
+              <span className={styles.candidateAddressText}>
+                {candidate.address ?? `${candidate.lat}, ${candidate.lng}`}
+              </span>
+              <a
+                href={
+                  candidate.lat && candidate.lng
+                    ? `https://www.google.com/maps?q=${candidate.lat},${candidate.lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(candidate.address ?? "")}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.openInMaps}
+                title="Apri in Google Maps"
+                aria-label={`Apri ${candidate.name} in Google Maps`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                ↗
+              </a>
             </div>
           )}
           {candidate.aiSuggested && candidate.aiReasoning && (

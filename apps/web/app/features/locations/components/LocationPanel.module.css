@@ -254,9 +254,49 @@
 .candidateRow {
   display: flex;
   gap: var(--space-2);
-  align-items: baseline;
+  align-items: center;
   font-size: var(--text-xs);
   color: var(--ds-text-3);
+}
+
+.candidateAddressText {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  word-break: break-word;
+}
+
+.openInMaps {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--ds-surface-alt);
+  color: var(--ds-action);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  border: 1px solid transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .openInMaps {
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+  }
+}
+
+.openInMaps:hover {
+  background: var(--ds-action-soft);
+  border-color: var(--ds-action);
+}
+
+.openInMaps:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
 }
 
 .aiReasoning {
