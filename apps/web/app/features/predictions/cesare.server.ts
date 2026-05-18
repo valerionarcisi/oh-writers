@@ -590,8 +590,26 @@ const loadSceneWindow = (
         return rows.map((r) => ({ ...r, isCurrent: true }));
       }
 
-      // For all other pages: window around the current scene number
-      if (centerSceneNumber === null) return [];
+      // For all other pages: window around the current scene number.
+      // Fallback: when no scene is selected, return the first 5 scenes so
+      // Cesare always has SOME narrative context even on pages where the
+      // user hasn't selected anything yet (or pages that don't track scene
+      // selection at all).
+      if (centerSceneNumber === null) {
+        const rows = await db
+          .select({
+            id: scenes.id,
+            number: scenes.number,
+            heading: scenes.heading,
+            body: scenes.notes,
+            characterNames: scenes.characterNames,
+          })
+          .from(scenes)
+          .where(eq(scenes.screenplayId, screenplayId))
+          .orderBy(scenes.number)
+          .limit(5);
+        return rows.map((r) => ({ ...r, isCurrent: false }));
+      }
 
       const minNum = Math.max(1, centerSceneNumber - windowSize);
       const maxNum = centerSceneNumber + windowSize;

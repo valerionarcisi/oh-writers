@@ -352,11 +352,71 @@ type ListState =
   | { kind: "ol"; items: string[] }
   | null;
 
+// Strip raw <tool_call>{...}</tool_call> blocks that occasionally leak into
+// the assistant text when the model emits a malformed tool invocation. They
+// are intended for the server, never the user.
+function stripToolCalls(content: string): string {
+  return content
+    .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
+    .replace(/<tool_call>[\s\S]*$/g, "")
+    .trim();
+}
+
+interface TableState {
+  header: string[];
+  rows: string[][];
+}
+
+function parseTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return null;
+  return trimmed
+    .slice(1, -1)
+    .split("|")
+    .map((c) => c.trim());
+}
+
+function isTableSeparator(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|")) return false;
+  return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(trimmed);
+}
+
 function renderMarkdown(content: string): React.ReactNode {
-  const lines = content.split("\n");
+  const clean = stripToolCalls(content);
+  const lines = clean.split("\n");
   const nodes: React.ReactNode[] = [];
   let list: ListState = null;
+  let table: TableState | null = null;
   let key = 0;
+
+  const flushTable = () => {
+    if (!table) return;
+    const t = table;
+    nodes.push(
+      <div key={key++} className={styles.mdTableWrap}>
+        <table className={styles.mdTable}>
+          <thead>
+            <tr>
+              {t.header.map((h, i) => (
+                <th key={i}>{renderInline(h)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {t.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci}>{renderInline(cell)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>,
+    );
+    table = null;
+  };
 
   const flushList = () => {
     if (!list || list.items.length === 0) {
@@ -384,7 +444,8 @@ function renderMarkdown(content: string): React.ReactNode {
     list = null;
   };
 
-  for (const line of lines) {
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li]!;
     const h4 = line.match(/^#### (.+)/);
     const h3 = line.match(/^### (.+)/);
     const h2 = line.match(/^## (.+)/);
@@ -392,6 +453,22 @@ function renderMarkdown(content: string): React.ReactNode {
     const bullet = line.match(/^[-*] (.+)/);
     const ordered = line.match(/^\d+\.\s+(.+)/);
     const hr = line.match(/^---+$/);
+    const tableCells = parseTableRow(line);
+    const nextLine = lines[li + 1] ?? "";
+
+    // Table detection: a header row followed by a separator row.
+    if (table) {
+      if (tableCells) {
+        table.rows.push(tableCells);
+        continue;
+      }
+      flushTable();
+    } else if (tableCells && isTableSeparator(nextLine)) {
+      flushList();
+      table = { header: tableCells, rows: [] };
+      li++; // skip the separator line
+      continue;
+    }
 
     if (h4) {
       flushList();
@@ -429,6 +506,7 @@ function renderMarkdown(content: string): React.ReactNode {
     }
   }
   flushList();
+  flushTable();
   return nodes;
 }
 
