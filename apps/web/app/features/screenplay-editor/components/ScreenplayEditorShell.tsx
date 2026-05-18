@@ -53,6 +53,13 @@ export type ScreenplayEditorShellProps = {
    *  When provided, the menu shows the version history + the "Apri Versioni"
    *  action. When empty, only the "Apri" action is shown. */
   versions?: ReadonlyArray<{ id: string; label: string; isCurrent: boolean }>;
+  /** Optional Cesare panel rendered in the right margin column. When provided
+   *  a ✦ toggle button appears in the Viewbar right. */
+  cesarePanel?: ReactNode;
+  /** Whether the Cesare panel is expanded. Controlled by parent. */
+  isCesarePanelOpen?: boolean;
+  /** Called when the user clicks the ✦ toggle button. */
+  onToggleCesarePanel?: () => void;
 };
 
 export function ScreenplayEditorShell({
@@ -64,6 +71,9 @@ export function ScreenplayEditorShell({
   onOpenVersions,
   versionLabel,
   versions,
+  cesarePanel,
+  isCesarePanelOpen = false,
+  onToggleCesarePanel,
 }: ScreenplayEditorShellProps) {
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
@@ -133,6 +143,24 @@ export function ScreenplayEditorShell({
           <div className={styles.viewbarCenter}>{viewbarCenter}</div>
 
           <div className={styles.viewbarRight}>
+            {cesarePanel && onToggleCesarePanel && (
+              <button
+                type="button"
+                className={[
+                  styles.cesareToggle,
+                  isCesarePanelOpen ? styles.cesareToggleActive : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={onToggleCesarePanel}
+                aria-pressed={isCesarePanelOpen}
+                aria-label={isCesarePanelOpen ? "Chiudi pannello Cesare" : "Apri pannello Cesare"}
+                title={isCesarePanelOpen ? "Chiudi pannello Cesare" : "Apri pannello Cesare"}
+                data-testid="cesare-panel-toggle"
+              >
+                ✦
+              </button>
+            )}
             {/* TODO(audit-2026-05-15): restore Indice popover once scene
                 buttons get a working onClick (scrollIntoView on
                 [data-scene-number="N"]). Hidden for consistency with the
@@ -244,10 +272,19 @@ export function ScreenplayEditorShell({
       </div>
 
 
-      <div className={styles.layoutNoMargin}>
+      <div
+        className={
+          isCesarePanelOpen && cesarePanel
+            ? styles.layoutWithPanel
+            : styles.layoutNoMargin
+        }
+      >
         <div className={styles.editorial}>
           <div className={styles.editorSlot}>{children}</div>
         </div>
+        {isCesarePanelOpen && cesarePanel && (
+          <aside className={styles.cesarePanelColumn}>{cesarePanel}</aside>
+        )}
       </div>
     </div>
   );

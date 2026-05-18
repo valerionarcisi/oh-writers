@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { TopBar, SkipLink, CommandPalette } from "@oh-writers/ui";
+import { TopBar, SkipLink, CommandPalette, useToast } from "@oh-writers/ui";
 import type {
   SaveState,
   TopBarSection,
@@ -15,7 +16,8 @@ import { askCesare } from "~/features/predictions";
 import type { CesarePage } from "~/features/predictions";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
-import { CesareProvider } from "../cesare-context";
+import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
+import { ActiveSceneProvider, useActiveScene } from "../active-scene-context";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -33,8 +35,6 @@ interface AppShellProps {
   userMenuItems?: DropdownMenuItem[];
   projectId?: string;
   cesarePage?: CesarePage;
-  cesareSceneId?: string | null;
-  cesareSceneNumber?: number | null;
   children: ReactNode;
 }
 
@@ -49,7 +49,9 @@ const deriveInitials = (name: string): string =>
 export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
-      <AppShellInner {...props} />
+      <ActiveSceneProvider>
+        <AppShellInner {...props} />
+      </ActiveSceneProvider>
     </SaveStateProvider>
   );
 }
@@ -69,17 +71,33 @@ function AppShellInner({
   userMenuItems,
   projectId,
   cesarePage,
-  cesareSceneId,
-  cesareSceneNumber,
   children,
 }: AppShellProps) {
   const ctxSave = useSaveStateValue();
   const saveState = ctxSave.state ?? saveStateProp;
   const saveSecondsAgo = ctxSave.secondsAgo ?? saveSecondsAgoProp;
+  const activeScene = useActiveScene();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [cesareOpen, setCesareOpen] = useState(false);
+  const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(null);
+
+  const handleCesareAssistantResponse = useCallback((reply: string) => {
+    if (cesarePage === "locations" && projectId) {
+      void queryClient.invalidateQueries({ queryKey: ["locations", projectId] });
+      // Show a toast when Cesare adds candidates or performs a scouting action
+      const lc = reply.toLowerCase();
+      if (lc.includes("aggiunto") || lc.includes("candidato") || lc.includes("trovato")) {
+        showToast({
+          message: "✦ Cesare ha aggiornato le location",
+          variant: "success",
+        });
+      }
+    }
+  }, [cesarePage, projectId, queryClient, showToast]);
 
   useEffect(() => {
     const main = document.getElementById("main-content");
@@ -92,7 +110,10 @@ function AppShellInner({
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
-  const openCesare = useCallback(() => setCesareOpen(true), []);
+  const openCesare = useCallback((opts?: OpenCesareOptions) => {
+    setCesareRequirementId(opts?.requirementId ?? null);
+    setCesareOpen(true);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -183,8 +204,9 @@ function AppShellInner({
             <CesareSheet
               projectId={projectId}
               page={cesarePage ?? "screenplay"}
-              sceneId={cesareSceneId}
-              sceneNumber={cesareSceneNumber}
+              sceneId={activeScene?.sceneId ?? null}
+              sceneNumber={activeScene?.sceneNumber ?? null}
+              requirementId={cesareRequirementId}
               isOpen={cesareOpen}
               onClose={() => setCesareOpen(false)}
               onOpenFullPage={() => {
@@ -192,6 +214,7 @@ function AppShellInner({
                 // TODO: navigate to full Cesare page (future)
               }}
               askCesare={askCesare}
+              onAssistantResponse={handleCesareAssistantResponse}
             />
           )}
         </div>

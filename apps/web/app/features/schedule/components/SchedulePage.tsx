@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useCesareOpen } from "~/features/app-shell";
+import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { useDragAutoScroll } from "../hooks/useDragAutoScroll";
 import {
   useSuspenseQuery,
@@ -21,6 +21,7 @@ import {
 } from "@oh-writers/domain";
 import { useVersionsDrawer } from "~/features/versions";
 import { useVersions } from "~/features/screenplay-editor";
+import { useExportSchedule } from "../hooks/useExportSchedule";
 import {
   scheduleQueryOptions,
   generateSchedule,
@@ -56,6 +57,7 @@ interface SchedulePageProps {
 export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
   const openCesare = useCesareOpen();
+  const setActiveScene = useSetActiveScene();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const schedule = data?.isOk ? data.value : null;
   const versionsDrawer = useVersionsDrawer();
@@ -63,6 +65,9 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const { data: versionsResult } = useVersions(schedule?.screenplayId ?? "");
   const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
   const currentVersionId = schedule?.screenplayVersionId ?? null;
+
+  const { exportCsv, exportPdf, isCsvPending, isPdfPending } =
+    useExportSchedule(projectId);
 
   const [tab, setTab] = useState<ViewTab>("strip");
   const [isStuck, setIsStuck] = useState(false);
@@ -78,6 +83,10 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    return () => setActiveScene(null);
+  }, [setActiveScene]);
 
   const invalidate = () =>
     qc.refetchQueries({ queryKey: ["schedule", projectId] });
@@ -212,6 +221,11 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     ];
     const strip = allStrips.find((s) => s.sceneId === sceneId) ?? null;
     setSelectedStrip(strip);
+    if (strip) {
+      setActiveScene({ sceneId: strip.sceneId, sceneNumber: strip.sceneNumber });
+    } else {
+      setActiveScene(null);
+    }
   };
 
   const handleDayClick = (dayId: string) => {
@@ -450,8 +464,16 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           onClick: () => generateMutation.mutate(),
         }}
         secondaryActions={[
-          { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
-          { label: "Stampa", hotkey: "⌘P", onClick: () => undefined },
+          {
+            label: isCsvPending ? "Esportando…" : "Esporta",
+            hotkey: "⌘E",
+            onClick: exportCsv,
+          },
+          {
+            label: isPdfPending ? "Generando…" : "Stampa",
+            hotkey: "⌘P",
+            onClick: exportPdf,
+          },
         ]}
         cesareNoteCount={0}
         onCesareClick={openCesare}

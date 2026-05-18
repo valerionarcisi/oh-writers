@@ -18,7 +18,7 @@ import {
 import { useVersionsDrawer } from "~/features/versions";
 import { useVersions } from "~/features/screenplay-editor";
 import { DraftMetaBadge } from "~/features/projects";
-import { useCesareOpen } from "~/features/app-shell";
+import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -148,6 +148,15 @@ function BreakdownPageContent({ projectId }: Props) {
   const activeSceneIdx = activeScene
     ? scenes.findIndex((s) => s.id === activeScene.id) + 1
     : 0;
+
+  // Sync active scene to app-level context so Cesare always has the current scene
+  const setActiveScene = useSetActiveScene();
+  useEffect(() => {
+    if (activeScene) {
+      setActiveScene({ sceneId: activeScene.id, sceneNumber: activeSceneIdx });
+    }
+    return () => setActiveScene(null);
+  }, [activeScene?.id, activeSceneIdx, setActiveScene]);
 
   const [underline, setUnderline] = useState(initialUnderlineState);
   const toggleUnderline = (key: UnderlineKey) =>

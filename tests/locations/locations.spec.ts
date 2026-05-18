@@ -214,7 +214,7 @@ test.describe("[Spec 13] Locations Manager", () => {
       "LOCATION (",
     );
 
-    await page.getByTestId("sync-from-breakdown-btn").click();
+    await page.getByRole("button", { name: "Sincronizza" }).click();
 
     // After sync the new element from breakdown should appear
     await expect(

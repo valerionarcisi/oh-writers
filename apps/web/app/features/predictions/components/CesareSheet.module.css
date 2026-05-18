@@ -278,6 +278,63 @@
   }
 }
 
+/* Markdown rendering inside Cesare bubbles */
+.bubbleMarkdown {
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mdH1 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ds-text);
+  margin: 0;
+  padding-block-end: var(--ds-space-1);
+}
+
+.mdH2 {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ds-agent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+  padding-block-start: var(--ds-space-2);
+}
+
+.mdPara {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ds-text);
+}
+
+.mdHr {
+  border: none;
+  border-block-start: 1px solid color-mix(in oklch, var(--ds-agent) 20%, transparent);
+  margin: var(--ds-space-2) 0;
+}
+
+.mdSpacer {
+  block-size: var(--ds-space-2);
+}
+
+.mdList {
+  margin: 0;
+  padding-inline-start: var(--ds-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.mdListItem {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ds-text);
+}
+
 .bubbleLoading {
   opacity: 0.75;
 }

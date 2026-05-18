@@ -80,7 +80,7 @@ export interface ScheduleView {
 
 // ─── Query helper ─────────────────────────────────────────────────────────────
 
-const loadScheduleView = async (
+export const loadScheduleView = async (
   db: Db,
   scheduleId: string,
 ): Promise<ScheduleView | null> => {

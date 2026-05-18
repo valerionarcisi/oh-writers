@@ -13,6 +13,7 @@ interface LocationPanelProps {
   onUpdateCandidate: (candidateId: string, patch: PatchLocationCandidate) => void;
   onConfirm: (requirementId: string, candidateId: string) => void;
   onRemoveCandidate: (candidateId: string) => void;
+  onAskCesare: (requirementId: string) => void;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -243,6 +244,7 @@ export function LocationPanel({
   onUpdateCandidate,
   onConfirm,
   onRemoveCandidate,
+  onAskCesare,
 }: LocationPanelProps) {
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const selectedReq = requirements.find((r) => r.id === selectedId) ?? null;
@@ -343,7 +345,7 @@ export function LocationPanel({
             <button
               type="button"
               className={styles.btnAgent}
-              onClick={() => undefined}
+              onClick={() => onAskCesare(selectedReq.id)}
               title="Chiedi suggerimenti a Cesare"
             >
               ✦ Cesare

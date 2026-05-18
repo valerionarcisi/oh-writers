@@ -47,7 +47,7 @@ import { GhostPopover } from "./GhostPopover";
 import { SearchBar } from "./SearchBar";
 import styles from "./ScriptReader.module.css";
 
-const SCROLL_DEBOUNCE_MS = 150;
+const SCROLL_DEBOUNCE_MS = 80;
 
 export interface ScriptReaderHandle {
   scrollToScene: (index: number) => void;
@@ -280,13 +280,31 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
         const target = e.target as HTMLElement | null;
         const ghost = target?.closest<HTMLElement>("[data-ghost='true']");
         const occurrenceId = ghost?.getAttribute("data-occurrence-id");
-        if (!ghost || !occurrenceId) return;
-        const rect = ghost.getBoundingClientRect();
-        setPopover({
-          occurrenceId,
-          x: rect.left,
-          y: rect.bottom + 4,
-        });
+        if (ghost && occurrenceId) {
+          const rect = ghost.getBoundingClientRect();
+          setPopover({
+            occurrenceId,
+            x: rect.left,
+            y: rect.bottom + 4,
+          });
+          return;
+        }
+        // Any click inside the reader: resolve the scene at the click position
+        // and update activeScene immediately (don't wait for scroll debounce).
+        const v = viewRef.current;
+        if (!v) return;
+        const pos = v.posAtCoords({ left: e.clientX, top: e.clientY });
+        if (!pos) return;
+        const sceneIndex = findSceneIndexAtPos(v.state.doc, pos.pos);
+        if (sceneIndex === null) return;
+        const scenesNow = scenesRef.current;
+        const clamped = Math.min(sceneIndex, scenesNow.length);
+        const scene = scenesNow[clamped - 1];
+        const sid = scene?.id ?? null;
+        if (sid !== lastActiveSceneRef.current) {
+          lastActiveSceneRef.current = sid;
+          onActiveSceneChangeRef.current?.(sid);
+        }
       };
       initial.addEventListener("click", handleClick);
 

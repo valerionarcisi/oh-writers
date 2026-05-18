@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Viewbar, FloatingDock } from "@oh-writers/ui";
+import { FloatingDock } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import { useCesareOpen } from "~/features/app-shell";
-import type { LocationRequirement, LocationCandidate } from "@oh-writers/domain";
+import type { LocationRequirement } from "@oh-writers/domain";
 import {
   locationsQueryOptions,
   addLocationCandidate,
@@ -29,8 +29,6 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const [selectedId, setSelectedId] = useState<string | null>(
     requirements[0]?.id ?? null,
   );
-  const selectedReq = requirements.find((r) => r.id === selectedId) ?? null;
-
   const invalidate = () => qc.refetchQueries({ queryKey: ["locations", projectId] });
 
   const syncMutation = useMutation({
@@ -81,23 +79,6 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
 
   return (
     <div className={styles.page} data-testid="locations-page">
-      <Viewbar isScrolled={false} className={styles.viewbar}>
-        <span className={styles.viewbarTitle}>
-          LOCATION ·{" "}
-          <strong>{confirmedCount}</strong> / {requirements.length} confermate
-        </span>
-        <span className={styles.viewbarRight} />
-        <button
-          type="button"
-          className={styles.syncBtn}
-          data-testid="sync-from-breakdown-btn"
-          onClick={() => syncMutation.mutate()}
-          disabled={syncMutation.isPending}
-        >
-          {syncMutation.isPending ? "Sincronizzazione…" : "↑ Sincronizza da breakdown"}
-        </button>
-      </Viewbar>
-
       <div className={styles.layout}>
         <LocationMap
           requirements={requirements}
@@ -120,21 +101,32 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           onRemoveCandidate={(candidateId) =>
             removeCandidateMutation.mutate(candidateId)
           }
+          onAskCesare={(requirementId) =>
+            openCesare({ requirementId })
+          }
         />
       </div>
 
       <FloatingDock
         label="LOCATION"
-        primaryAction={{
-          label: "Aggiungi location",
-          hotkey: "⌘⇧L",
-          onClick: () => undefined,
-        }}
+        infoChips={[
+          {
+            label: "Confermate",
+            value: `${confirmedCount} / ${requirements.length}`,
+          },
+        ]}
         secondaryActions={[
+          {
+            label: syncMutation.isPending ? "Sincronizzazione…" : "Sincronizza",
+            hotkey: "⌘⇧S",
+            onClick: () => syncMutation.mutate(),
+            ariaLabel: "Sincronizza da breakdown",
+          },
           { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
         ]}
         cesareNoteCount={0}
         onCesareClick={openCesare}
+        data-testid="locations-floating-dock"
       />
     </div>
   );

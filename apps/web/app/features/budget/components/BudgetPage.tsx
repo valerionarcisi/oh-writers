@@ -7,7 +7,8 @@ import {
   queryOptions,
 } from "@tanstack/react-query";
 import { Viewbar, FloatingDock, SegmentedControl, VersionTrigger } from "@oh-writers/ui";
-import { useCesareOpen } from "~/features/app-shell";
+import { ExportBudgetModal } from "./ExportBudgetModal";
+import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { resourceTotal } from "@oh-writers/domain";
 import type { Budget, FiscalRegime } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
@@ -93,6 +94,7 @@ interface BudgetPageProps {
 export function BudgetPage({ projectId }: BudgetPageProps) {
   const qc = useQueryClient();
   const openCesare = useCesareOpen();
+  const setActiveScene = useSetActiveScene();
   const { open: openVersionsDrawer } = useVersionsDrawer();
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
@@ -123,12 +125,25 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const [focusSection, setFocusSection] = useState<SectionId | null>(null);
   const [detailSection, setDetailSection] = useState<SectionId | null>(null);
   const [categoryTotal, setCategoryTotal] = useState<number | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 48);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (selectedScene !== null) {
+      setActiveScene({ sceneId: "", sceneNumber: selectedScene });
+    } else {
+      setActiveScene(null);
+    }
+  }, [selectedScene, setActiveScene]);
+
+  useEffect(() => {
+    return () => setActiveScene(null);
+  }, [setActiveScene]);
 
   const generateMutation = useMutation({
     mutationFn: () =>
@@ -409,7 +424,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
         }}
         secondaryActions={[
           { label: "Salva", onClick: () => undefined },
-          { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
+          { label: "Esporta", hotkey: "⌘E", onClick: () => setIsExportOpen(true) },
         ]}
         cesareNoteCount={0}
         onCesareClick={openCesare}
@@ -431,6 +446,12 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           ]}
         />
       )}
+
+      <ExportBudgetModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        projectId={projectId}
+      />
     </div>
   );
 }

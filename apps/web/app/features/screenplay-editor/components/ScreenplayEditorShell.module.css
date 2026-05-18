@@ -154,6 +154,68 @@
   align-items: start;
 }
 
+.layoutWithPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  max-inline-size: 1340px;
+  inline-size: 100%;
+  margin-inline: auto;
+  padding: var(--ds-space-2) var(--ds-space-6) var(--ds-space-10);
+  align-items: start;
+  gap: var(--ds-space-6);
+}
+
+.cesarePanelColumn {
+  position: sticky;
+  inset-block-start: 96px;
+  max-block-size: calc(100vh - 112px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* ─── Cesare panel toggle ──────────────────────────────── */
+
+.cesareToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text-3);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cesareToggle {
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+  }
+}
+
+.cesareToggle:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+  border-color: var(--ds-text-3);
+}
+
+.cesareToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
+.cesareToggleActive {
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+  border-color: var(--ds-action-soft);
+}
+
 
 /* ─── Indice button + popover (in Viewbar) ─────────────── */
 

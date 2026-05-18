@@ -13,6 +13,17 @@ import {
   type AutocompleteState,
 } from "./autocomplete-reducer";
 
+// Canonical character-cue extensions shown when the writer types "(" on a
+// character line. Industry-standard set — order follows frequency of use.
+const CHARACTER_EXTENSIONS = [
+  "(V.O.)",
+  "(O.S.)",
+  "(O.C.)",
+  "(CONT'D)",
+  "(INTO PHONE)",
+  "(PRE-LAP)",
+] as const;
+
 const pluginKey = new PluginKey<null>("autocomplete");
 
 /**
@@ -25,6 +36,19 @@ const computeSuggestions = (state: EditorState): string[] => {
   const blockText = $from.parent.textContent;
 
   if (blockType === "character") {
+    // When the writer has typed "(" after the character name, show extension
+    // suggestions instead of name completions. The paren signals they want to
+    // add a cue extension (V.O., O.S., etc.) to the existing name.
+    const parenIdx = blockText.indexOf("(");
+    if (parenIdx >= 0) {
+      const afterParen = blockText.slice(parenIdx).toUpperCase();
+      return CHARACTER_EXTENSIONS.filter(
+        (ext) =>
+          ext.toUpperCase().startsWith(afterParen) &&
+          ext.toUpperCase() !== afterParen,
+      );
+    }
+
     const fountain = docToFountain(state.doc);
     const typed = blockText.toUpperCase();
     const names = extractCharacterNames(fountain);
@@ -167,6 +191,27 @@ class AutocompleteDropdown {
 
     const { state, dispatch } = this.view;
     const { $from } = state.selection;
+    const blockText = $from.parent.textContent;
+
+    // For character extensions: insert from the "(" onwards so the name
+    // before the paren is preserved. " " separates name from extension.
+    const blockType = $from.parent.type.name;
+    if (blockType === "character" && suggestion.startsWith("(")) {
+      const parenIdx = blockText.indexOf("(");
+      if (parenIdx >= 0) {
+        // Replace from "(" to end of block. If the name has no trailing space
+        // before "(", prepend one for readability.
+        const nameEnd = $from.start() + parenIdx;
+        const namePart = blockText.slice(0, parenIdx);
+        const needsSpace = namePart.length > 0 && !namePart.endsWith(" ");
+        const replacement = needsSpace ? ` ${suggestion}` : suggestion;
+        const tr = state.tr.insertText(replacement, nameEnd, $from.end());
+        dispatch(tr);
+        this.dismiss();
+        return;
+      }
+    }
+
     const tr = state.tr.insertText(suggestion, $from.start(), $from.end());
     dispatch(tr);
     this.dismiss();

@@ -1,6 +1,10 @@
 .mapWrap {
   position: relative;
   overflow: hidden;
+  /* Contain Leaflet's internal z-index stack (200–700) inside this element.
+     position:fixed overlays outside (TopBar dropdowns, CesareSheet) then use
+     the global stacking context and correctly paint above the map. */
+  isolation: isolate;
 }
 
 .map {

@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
   ScreenplayEditor,
   ScreenplayEditorShell,
   ScreenplayElementChips,
+  ScreenplayCesarePanel,
   useScreenplay,
   useVersions,
   type ScreenplayEditorHandle,
@@ -25,9 +26,22 @@ function ScreenplayEditorPage() {
     result && result.isOk ? result.value.id : "";
   const { data: versionsResult } = useVersions(screenplayId || "");
   const [isCesareOn, setIsCesareOn] = useState(true);
+  const [isCesarePanelOpen, setIsCesarePanelOpen] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
+  const [metrics, setMetrics] = useState({
+    pageCurrent: 1,
+    pageTotal: 1,
+    sceneCurrent: null as number | null,
+    sceneTotal: 0,
+  });
   const editorRef = useRef<ScreenplayEditorHandle>(null);
   const { open: openVersionsDrawer } = useVersionsDrawer();
+
+  const handleApplyEdit = useCallback(
+    (find: string, replace: string): boolean =>
+      editorRef.current?.applyEdit(find, replace) ?? false,
+    [],
+  );
 
   if (isLoading) return <div className={styles.status}>Loading…</div>;
   if (!result) return null;
@@ -56,6 +70,20 @@ function ScreenplayEditorPage() {
               onSetElement={(el) => editorRef.current?.setElement(el)}
             />
           }
+          cesarePanel={
+            <ScreenplayCesarePanel
+              projectId={id}
+              screenplayId={value.id}
+              versionId={value.currentVersionId ?? null}
+              pageCurrent={metrics.pageCurrent}
+              pageTotal={metrics.pageTotal}
+              sceneCurrent={metrics.sceneCurrent}
+              sceneTotal={metrics.sceneTotal}
+              onApplyEdit={handleApplyEdit}
+            />
+          }
+          isCesarePanelOpen={isCesarePanelOpen}
+          onToggleCesarePanel={() => setIsCesarePanelOpen((v) => !v)}
         >
           <ScreenplayEditor
             ref={editorRef}
@@ -63,6 +91,7 @@ function ScreenplayEditorPage() {
             isCesareOn={isCesareOn}
             onToggleCesare={setIsCesareOn}
             onCurrentElementChange={setCurrentElement}
+            onMetricsChange={setMetrics}
           />
         </ScreenplayEditorShell>
       );

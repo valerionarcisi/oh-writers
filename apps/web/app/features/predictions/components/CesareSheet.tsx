@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type React from "react";
 import { useButton } from "react-aria";
 import type { ResultShape } from "@oh-writers/utils";
 import styles from "./CesareSheet.module.css";
@@ -19,18 +20,22 @@ export type CesarePage =
   | "breakdown"
   | "budget"
   | "schedule"
-  | "shooting-plan";
+  | "shooting-plan"
+  | "locations";
 
 export interface CesareSheetProps {
   projectId: string;
   page: CesarePage;
   sceneId?: string | null;
   sceneNumber?: number | null;
+  requirementId?: string | null;
   isOpen: boolean;
   onClose: () => void;
   onOpenFullPage: () => void;
   /** Server function for chat. Pass null until the server fn is implemented. */
   askCesare?: AskCesareFn | null;
+  /** Called after each assistant response — used to invalidate queries (e.g. locations). */
+  onAssistantResponse?: (reply: string) => void;
 }
 
 interface Message {
@@ -50,9 +55,11 @@ const PAGE_LABELS: Record<CesarePage, string> = {
   budget: "Budget",
   schedule: "Calendarizzazione",
   "shooting-plan": "Inquadrature",
+  locations: "Location",
 };
 
-const QUICK_PROMPTS: Record<CesarePage, string[]> = {
+// Initial quick prompts shown before any conversation
+const QUICK_PROMPTS_INITIAL: Record<CesarePage, string[]> = {
   soggetto: [
     "Il conflitto centrale è chiaro?",
     "Suggerisci un arco del personaggio",
@@ -107,6 +114,106 @@ const QUICK_PROMPTS: Record<CesarePage, string[]> = {
     "Ordine ottimale delle riprese",
     "Stima le ore di set",
   ],
+  locations: [
+    "Trova candidati per questa location",
+    "Quale zona geografica esplorare?",
+    "Cosa controllare durante il sopralluogo?",
+    "Suggerisci alternative simili nella zona",
+  ],
+};
+
+// Follow-up prompts shown after Cesare responds — keyed by page
+const QUICK_PROMPTS_FOLLOWUP: Record<CesarePage, string[]> = {
+  soggetto: [
+    "Approfondisci il personaggio principale",
+    "Come risolverei questo problema?",
+    "Analizza un altro aspetto",
+    "Dammi un esempio concreto",
+  ],
+  synopsis: [
+    "Rendi più cinematografico",
+    "Adatta per un pitch di 30 secondi",
+    "Confronta con film simili",
+    "Cosa manca ancora?",
+  ],
+  outline: [
+    "Approfondisci questa scena",
+    "Come riduco il secondo atto?",
+    "Suggerisci una scena di transizione",
+    "Verifica la coerenza dei personaggi",
+  ],
+  treatment: [
+    "Espandi questa sequenza",
+    "Dove posso tagliare?",
+    "Il tono è coerente?",
+    "Suggerisci un'immagine forte",
+  ],
+  screenplay: [
+    "Scrivi una versione alternativa",
+    "Come rendo il dialogo più asciutto?",
+    "Questa azione è chiara?",
+    "Suggerisci una reazione del personaggio",
+  ],
+  breakdown: [
+    "Dove posso risparmiare?",
+    "Questo elemento è essenziale?",
+    "Raggruppa elementi simili",
+    "Stima i costi aggiuntivi",
+  ],
+  budget: [
+    "Come ottimizzare questa voce?",
+    "Dove stiamo rischiando?",
+    "Confronta con budget simili",
+    "Proietta il costo finale",
+  ],
+  schedule: [
+    "Posso spostare questa scena?",
+    "Ottimizza il giorno di ripresa",
+    "Ci sono scene da accorpare?",
+    "Verifica i conflitti",
+  ],
+  "shooting-plan": [
+    "Riduci i setup mantenendo l'idea",
+    "Qual è l'inquadratura chiave?",
+    "Stima il tempo per questo setup",
+    "Suggerisci un'alternativa più economica",
+  ],
+  locations: [
+    "Scrivi una scheda sopralluogo",
+    "Confronta i candidati trovati",
+    "Quale visitare per primo?",
+    "Trova altri candidati nella zona",
+  ],
+};
+
+// After Cesare finds candidates in locations, offer more specific prompts
+const QUICK_PROMPTS_LOCATIONS_AFTER_SEARCH: string[] = [
+  "Scrivi una scheda sopralluogo dettagliata",
+  "Quale candidato si adatta meglio alla scena?",
+  "Trova altri candidati nella stessa area",
+  "Confronta luce naturale e accessibilità",
+];
+
+const deriveQuickPrompts = (
+  page: CesarePage,
+  messages: Message[],
+): string[] => {
+  if (messages.length === 0) return QUICK_PROMPTS_INITIAL[page];
+
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  if (!lastAssistant) return QUICK_PROMPTS_INITIAL[page];
+
+  // Locations: after a search that found candidates, show specific follow-up
+  if (
+    page === "locations" &&
+    (lastAssistant.content.includes("aggiunto") ||
+      lastAssistant.content.includes("Trovato") ||
+      lastAssistant.content.includes("candidat"))
+  ) {
+    return QUICK_PROMPTS_LOCATIONS_AFTER_SEARCH;
+  }
+
+  return QUICK_PROMPTS_FOLLOWUP[page];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -127,6 +234,7 @@ export type AskCesareFn = (params: {
       page: CesarePage;
       sceneId: string | null;
       sceneNumber: number | null;
+      requirementId?: string | null;
     };
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   };
@@ -141,6 +249,7 @@ const callAskCesare = async (
   message: string,
   sceneId: string | null | undefined,
   sceneNumber: number | null | undefined,
+  requirementId: string | null | undefined,
   history: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<string | null> => {
   if (!fn) {
@@ -151,7 +260,12 @@ const callAskCesare = async (
     data: {
       projectId,
       message,
-      pageContext: { page, sceneId: sceneId ?? null, sceneNumber: sceneNumber ?? null },
+      pageContext: {
+        page,
+        sceneId: sceneId ?? null,
+        sceneNumber: sceneNumber ?? null,
+        requirementId: requirementId ?? null,
+      },
       conversationHistory: history,
     },
   });
@@ -198,6 +312,76 @@ function SendButton({ onPress, isDisabled }: { onPress: () => void; isDisabled: 
   );
 }
 
+// ─── Minimal markdown renderer ───────────────────────────────────────────────
+// Covers the patterns Cesare produces: headings, bold, italic, hr, bullet lists.
+// No external dependency — keeps the bundle small and the style fully controlled.
+
+function renderInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  // Bold (**text**) and italic (*text*) — process in one pass
+  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    if (match[0].startsWith("**")) {
+      parts.push(<strong key={match.index}>{match[2]}</strong>);
+    } else {
+      parts.push(<em key={match.index}>{match[3]}</em>);
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+function renderMarkdown(content: string): React.ReactNode {
+  const lines = content.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let key = 0;
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    nodes.push(
+      <ul key={key++} className={styles.mdList}>
+        {listItems.map((item, i) => (
+          <li key={i} className={styles.mdListItem}>{renderInline(item)}</li>
+        ))}
+      </ul>,
+    );
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const h2 = line.match(/^## (.+)/);
+    const h1 = line.match(/^# (.+)/);
+    const bullet = line.match(/^- (.+)/);
+    const hr = line.match(/^---+$/);
+
+    if (h2) {
+      flushList();
+      nodes.push(<h3 key={key++} className={styles.mdH2}>{renderInline(h2[1]!)}</h3>);
+    } else if (h1) {
+      flushList();
+      nodes.push(<h2 key={key++} className={styles.mdH1}>{renderInline(h1[1]!)}</h2>);
+    } else if (hr) {
+      flushList();
+      nodes.push(<hr key={key++} className={styles.mdHr} />);
+    } else if (bullet) {
+      listItems.push(bullet[1]!);
+    } else if (line.trim() === "") {
+      flushList();
+      nodes.push(<div key={key++} className={styles.mdSpacer} />);
+    } else {
+      flushList();
+      nodes.push(<p key={key++} className={styles.mdPara}>{renderInline(line)}</p>);
+    }
+  }
+  flushList();
+  return nodes;
+}
+
 function MessageBubble({ message }: { message: Message }) {
   return (
     <div
@@ -209,7 +393,13 @@ function MessageBubble({ message }: { message: Message }) {
       {message.role === "assistant" && (
         <span className={styles.bubbleIcon} aria-hidden>✦</span>
       )}
-      <p className={styles.bubbleText}>{message.content}</p>
+      {message.role === "assistant" ? (
+        <div className={[styles.bubbleText, styles.bubbleMarkdown].join(" ")}>
+          {renderMarkdown(message.content)}
+        </div>
+      ) : (
+        <p className={styles.bubbleText}>{message.content}</p>
+      )}
     </div>
   );
 }
@@ -244,10 +434,12 @@ export function CesareSheet({
   page,
   sceneId,
   sceneNumber,
+  requirementId,
   isOpen,
   onClose,
   onOpenFullPage,
   askCesare = null,
+  onAssistantResponse,
 }: CesareSheetProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -318,10 +510,12 @@ export function CesareSheet({
           trimmed,
           sceneId,
           sceneNumber,
+          requirementId,
           prev, // history before the new user message
         ).then((reply) => {
           const content = reply ?? "Mi dispiace, si è verificato un errore. Riprova.";
           setMessages((m) => [...m, { role: "assistant", content }]);
+          onAssistantResponse?.(content);
         }).finally(() => {
           setIsLoading(false);
         });
@@ -330,7 +524,7 @@ export function CesareSheet({
       setInput("");
       setIsLoading(true);
     },
-    [askCesare, isLoading, projectId, page, sceneId, sceneNumber],
+    [askCesare, isLoading, onAssistantResponse, projectId, page, sceneId, sceneNumber, requirementId],
   );
 
   const handleSend = useCallback(() => {
@@ -353,7 +547,9 @@ export function CesareSheet({
 
   const pageLabel = PAGE_LABELS[page];
   const contextLabel =
-    sceneNumber != null ? `SC. ${sceneNumber}` : pageLabel;
+    sceneNumber != null
+      ? `SC. ${sceneNumber}`
+      : pageLabel;
 
   return (
     <>
@@ -419,9 +615,9 @@ export function CesareSheet({
           )}
         </div>
 
-        {/* Quick prompts */}
+        {/* Quick prompts — derived from conversation state */}
         <div className={styles.quickPrompts} aria-label="Suggerimenti rapidi">
-          {QUICK_PROMPTS[page].map((prompt) => (
+          {deriveQuickPrompts(page, messages).map((prompt) => (
             <button
               key={prompt}
               type="button"

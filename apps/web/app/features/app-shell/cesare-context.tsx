@@ -1,8 +1,12 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 
+export type OpenCesareOptions = {
+  requirementId?: string;
+};
+
 type CesareContextValue = {
-  openCesare: () => void;
+  openCesare: (opts?: OpenCesareOptions) => void;
 };
 
 const CesareContext = createContext<CesareContextValue | null>(null);
@@ -12,7 +16,7 @@ export function CesareProvider({
   openCesare,
 }: {
   children: ReactNode;
-  openCesare: () => void;
+  openCesare: (opts?: OpenCesareOptions) => void;
 }) {
   const value = useMemo(() => ({ openCesare }), [openCesare]);
   return <CesareContext.Provider value={value}>{children}</CesareContext.Provider>;
@@ -23,7 +27,7 @@ export function CesareProvider({
  * by the nearest AppShell ancestor. Falls back to a no-op when used outside
  * an AppShell (e.g. in Storybook or isolated tests).
  */
-export function useCesareOpen(): () => void {
+export function useCesareOpen(): (opts?: OpenCesareOptions) => void {
   const ctx = useContext(CesareContext);
   const noop = useCallback(() => undefined, []);
   return ctx?.openCesare ?? noop;

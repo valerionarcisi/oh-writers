@@ -23,11 +23,13 @@ export const SCENE_HEADING_RE =
 
 // Canonical list of Fountain transitions. Order matters for UI display.
 export const FOUNTAIN_TRANSITIONS = [
-  "FADE IN:",
-  "FADE OUT:",
   "CUT TO:",
-  "SMASH CUT TO:",
+  "FADE IN:",
+  "FADE OUT.",
+  "FADE OUT:",
+  "FADE TO:",
   "DISSOLVE TO:",
+  "SMASH CUT TO:",
   "MATCH CUT TO:",
   "JUMP CUT TO:",
 ] as const;

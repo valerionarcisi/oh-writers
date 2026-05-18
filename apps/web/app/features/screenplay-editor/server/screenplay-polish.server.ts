@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { ResultAsync, err, ok } from "neverthrow";
 import { match } from "ts-pattern";
-import { screenplays } from "@oh-writers/db/schema";
+import { screenplays, scenes } from "@oh-writers/db/schema";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import { getDb } from "~/server/db";
@@ -279,4 +279,168 @@ export const polishQueryOptions = (
   // headings — otherwise the mock branch fires 5 fake suggestions on a
   // blank document and the panel feels noisy.
   enabled: screenplayId.length > 0 && options.hasContent !== false,
+});
+
+// ─── Scene-aware polish ───────────────────────────────────────────────────────
+// Fetches suggestions for a single scene (identified by number). Uses
+// scenes.notes (Fountain body) as the source — same data as the RAG context.
+// Query key includes sceneNumber so TanStack Query caches per scene
+// automatically: navigating back to a previously-visited scene hits the cache.
+
+const SCENE_POLISH_SYSTEM_PROMPT = `Sei Cesare, dramaturg italiano. Stai leggendo una singola scena in formato Fountain.
+Restituisci da 3 a 5 suggerimenti concreti, in italiano, ognuno ≤ 140 caratteri.
+Riferisci ogni suggerimento al numero di scena fornito.
+Niente complimenti. Indica COSA e PERCHÉ.
+
+REGOLA SUI FIND/REPLACE (importante):
+Per ogni suggerimento dove l'edit è esprimibile come sostituzione testuale puntuale, DEVI compilare entrambi:
+- find: la sostringa ESATTA presente nel testo (verbatim, max 400 char)
+- replace: il testo proposto che la rimpiazza (max 800 char)
+Almeno metà dei suggerimenti deve includere find/replace. Solo note puramente strutturali possono ometterli.
+
+Non inventare elementi che non sono nel testo. Verifica che 'find' compaia letteralmente.`;
+
+export const getScenePolish = createServerFn({ method: "GET" })
+  .validator(
+    z.object({
+      screenplayId: z.string().uuid(),
+      sceneNumber: z.number().int().positive(),
+    }),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        { suggestions: PolishSuggestion[] },
+        ScreenplayNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      await requireUser();
+      const db = await getDb();
+
+      // Verify screenplay exists and user has access
+      const spResult = await ResultAsync.fromPromise(
+        db.query.screenplays
+          .findFirst({ where: eq(screenplays.id, data.screenplayId) })
+          .then((r) => r ?? null),
+        (e) => new DbError("scenePolish/loadScreenplay", e),
+      );
+      if (spResult.isErr()) return toShape(err(spResult.error));
+      if (!spResult.value)
+        return toShape(err(new ScreenplayNotFoundError(data.screenplayId)));
+
+      // Load a ±1 window around the target scene to give Cesare enough context
+      const windowSize = 1;
+      const minNum = Math.max(1, data.sceneNumber - windowSize);
+      const maxNum = data.sceneNumber + windowSize;
+
+      const sceneRows = await ResultAsync.fromPromise(
+        db
+          .select({
+            number: scenes.number,
+            heading: scenes.heading,
+            notes: scenes.notes,
+          })
+          .from(scenes)
+          .where(
+            and(
+              eq(scenes.screenplayId, data.screenplayId),
+              gte(scenes.number, minNum),
+              lte(scenes.number, maxNum),
+            ),
+          )
+          .orderBy(scenes.number),
+        (e) => new DbError("scenePolish/loadScenes", e),
+      );
+
+      if (sceneRows.isErr()) return toShape(err(sceneRows.error));
+
+      // Build a small Fountain excerpt for the window
+      const excerpt = sceneRows.value
+        .map((r) => {
+          const marker = r.number === data.sceneNumber ? " ← SCENA CORRENTE" : "";
+          return `=== SC. ${r.number}${marker} ===\n${r.heading}\n${r.notes ?? ""}`;
+        })
+        .join("\n\n");
+
+      const wantsMock =
+        process.env["MOCK_AI"] === "true" ||
+        !process.env["ANTHROPIC_API_KEY"];
+
+      const suggestions = wantsMock
+        ? mockPolishForSceneNumber(data.sceneNumber, sceneRows.value[0]?.heading ?? "")
+        : await callScenePolish(excerpt, data.sceneNumber);
+
+      return toShape(ok({ suggestions }));
+    },
+  );
+
+const callScenePolish = async (
+  excerpt: string,
+  sceneNumber: number,
+): Promise<PolishSuggestion[]> => {
+  void sceneNumber;
+  const result = await callHaiku(
+    {
+      system: SCENE_POLISH_SYSTEM_PROMPT,
+      fewShot: [],
+      user: excerpt.slice(0, 6000),
+      maxTokens: 1200,
+      tools: [POLISH_TOOL],
+      toolChoice: { type: "tool", name: POLISH_TOOL_NAME },
+    },
+    "cesare/scene-polish",
+  );
+  if (result.isErr()) {
+    console.warn("[cesare/scene-polish] callHaiku error:", result.error.message);
+    return [];
+  }
+  const input = extractToolUse(result.value.content, POLISH_TOOL_NAME);
+  if (input === null) return [];
+  const parsed = PolishResponseSchema.safeParse(input);
+  if (!parsed.success) return [];
+  return parsed.data.suggestions;
+};
+
+const mockPolishForSceneNumber = (
+  sceneNumber: number,
+  heading: string,
+): PolishSuggestion[] => [
+  {
+    id: `scene-mock-${sceneNumber}-1`,
+    kind: "dialogue",
+    severity: "suggestion",
+    scene: sceneNumber,
+    message: `Sc. ${sceneNumber}: controlla il ritmo del dialogo — se ci sono battute troppo simili considera di tagliarle.`,
+    snippet: heading.slice(0, 80),
+  },
+  {
+    id: `scene-mock-${sceneNumber}-2`,
+    kind: "pacing",
+    severity: "info",
+    scene: sceneNumber,
+    message: `Sc. ${sceneNumber}: ${heading.slice(0, 40)} — verifica coerenza luce/ora del giorno con le scene adiacenti.`,
+  },
+];
+
+export const scenePolishQueryOptions = (
+  screenplayId: string,
+  sceneNumber: number | null,
+  options: { hasContent?: boolean } = {},
+) => ({
+  queryKey: ["screenplay-polish", screenplayId, sceneNumber] as const,
+  queryFn: async (): Promise<{ suggestions: PolishSuggestion[] }> => {
+    if (!sceneNumber) return { suggestions: [] };
+    const r = await getScenePolish({ data: { screenplayId, sceneNumber } });
+    if (!r.isOk) return { suggestions: [] };
+    return r.value;
+  },
+  // Per-scene results are stable — cache for 10 minutes. Returning to a scene
+  // within that window costs zero API calls.
+  staleTime: 10 * 60 * 1000,
+  enabled:
+    screenplayId.length > 0 &&
+    sceneNumber !== null &&
+    options.hasContent !== false,
 });

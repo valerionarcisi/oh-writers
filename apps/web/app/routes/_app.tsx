@@ -45,6 +45,7 @@ const SECTION_LABELS: Record<string, string> = {
   budget: "Budget",
   schedule: "Calendarizzazione",
   "shooting-plan": "Inquadrature",
+  locations: "Location",
   screenplay: "Sceneggiatura",
   soggetto: "Soggetto",
   synopsis: "Sinossi",
@@ -95,6 +96,7 @@ const SECTION_GROUPS: ReadonlyArray<{
       { segment: "budget", label: "Budget", icon: "file-text" },
       { segment: "shooting-plan", label: "Inquadrature", icon: "camera" },
       { segment: "schedule", label: "Calendarizzazione", icon: "clock" },
+      { segment: "locations", label: "Location", icon: "map-pin" },
     ],
   },
 ];
@@ -140,6 +142,7 @@ const CESARE_PAGE_SEGMENTS: Array<{ segment: string; page: CesarePage }> = [
   { segment: "/outline", page: "outline" },
   { segment: "/synopsis", page: "synopsis" },
   { segment: "/soggetto", page: "soggetto" },
+  { segment: "/locations", page: "locations" },
 ];
 
 function deriveCesarePage(pathname: string): CesarePage {
@@ -206,8 +209,6 @@ function AppLayout() {
       userMenuItems={userMenuItems}
       projectId={projectId}
       cesarePage={cesarePage}
-      cesareSceneId={null}
-      cesareSceneNumber={null}
     >
       <Outlet />
     </AppShell>

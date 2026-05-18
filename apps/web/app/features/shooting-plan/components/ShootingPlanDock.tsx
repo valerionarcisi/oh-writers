@@ -75,6 +75,7 @@ export function ShootingPlanDock({
         className={styles.btnGhost}
         onClick={onExport}
         title="Esporta il piano confermato (⌘E)"
+        data-testid="export-csv-btn"
       >
         Esporta
         <kbd className={styles.kbd}>⌘E</kbd>
@@ -85,6 +86,7 @@ export function ShootingPlanDock({
         className={styles.btnGhost}
         onClick={onPrint}
         title="Stampa per la troupe (⌘P)"
+        data-testid="export-pdf-btn"
       >
         Stampa
         <kbd className={styles.kbd}>⌘P</kbd>

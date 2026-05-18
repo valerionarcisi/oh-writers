@@ -1,8 +1,8 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  polishQueryOptions,
+  scenePolishQueryOptions,
   type PolishSuggestion,
 } from "../server/screenplay-polish.server";
 import { staleScenesOptions } from "~/features/breakdown";
@@ -54,6 +54,8 @@ const KIND_COLOR: Record<PolishSuggestion["kind"], string> = {
   format: "var(--ds-cat-suono, #5a8a6a)",
 };
 
+const SCENE_DEBOUNCE_MS = 1000;
+
 function PanelBody({
   projectId,
   screenplayId,
@@ -67,7 +69,19 @@ function PanelBody({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const hasContent = sceneTotal > 0;
-  const polishQ = useQuery(polishQueryOptions(screenplayId, { hasContent }));
+
+  // Debounce scene changes — don't fire a new request on every scroll tick.
+  // After 1s of stability, commit the scene number and let TanStack Query
+  // handle cache: if this scene was already fetched, it returns immediately.
+  const [debouncedScene, setDebouncedScene] = useState<number | null>(sceneCurrent);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedScene(sceneCurrent), SCENE_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [sceneCurrent]);
+
+  const polishQ = useQuery(
+    scenePolishQueryOptions(screenplayId, debouncedScene, { hasContent }),
+  );
   const staleQ = useQuery(staleScenesOptions(versionId ?? ""));
   const allSuggestions = polishQ.data?.suggestions ?? [];
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
@@ -103,28 +117,34 @@ function PanelBody({
 
   const handleRefresh = () => {
     void qc.invalidateQueries({
-      queryKey: ["screenplay-polish", screenplayId],
+      queryKey: ["screenplay-polish", screenplayId, debouncedScene],
     });
   };
 
+  const sceneLabel = debouncedScene !== null ? `Sc. ${debouncedScene}` : null;
+  const isWaitingForDebounce = sceneCurrent !== debouncedScene;
+
   return (
     <div className={styles.body}>
-      {/* SCENA + PAGINA entrambi rimossi: la posizione cursore è ambient noise.
-       * Lo stato attivo lo mostra direttamente il cursore nell'editor. */}
       <section className={styles.notes}>
         <div className={styles.notesHeadRow}>
           <p className={styles.notesHead}>
             {!hasContent ? (
               "Scrivi almeno una scena per iniziare."
+            ) : isWaitingForDebounce ? (
+              <span className={styles.loadingInline}>
+                {sceneLabel ? `Cambio scena…` : "In attesa…"}
+                <span className={styles.spinner} aria-hidden="true" />
+              </span>
             ) : polishQ.isFetching ? (
               <span className={styles.loadingInline}>
-                Cesare sta leggendo…
+                {sceneLabel ? `Cesare legge ${sceneLabel}…` : "Cesare sta leggendo…"}
                 <span className={styles.spinner} aria-hidden="true" />
               </span>
             ) : suggestions.length > 0 ? (
-              `${suggestions.length} rifiniture proposte`
+              `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length} rifiniture`
             ) : (
-              "Nessuna rifinitura — buon ritmo."
+              `${sceneLabel ? `${sceneLabel} · ` : ""}Nessuna rifinitura.`
             )}
           </p>
           <button
