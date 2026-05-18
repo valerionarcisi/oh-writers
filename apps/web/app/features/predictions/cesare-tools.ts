@@ -1,8 +1,15 @@
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and } from "drizzle-orm";
-import { locationCandidates, locationRequirements } from "@oh-writers/db/schema";
+import {
+  locationCandidates,
+  locationPhotos,
+  locationRequirements,
+} from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { CesareError } from "./cesare.server";
+
+const MAX_PHOTOS_PER_CANDIDATE = 3;
+const PHOTO_MAX_WIDTH_PX = 800;
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -37,7 +44,9 @@ export const CESARE_LOCATION_TOOLS = [
     name: "add_candidate",
     description:
       "Aggiunge un candidato reale alla location requirement corrente. " +
-      "Usa questo tool dopo search_places per salvare i risultati rilevanti.",
+      "Usa questo tool dopo search_places per salvare i risultati rilevanti. " +
+      "IMPORTANTE: se il candidato viene da un risultato di search_places, passa SEMPRE " +
+      "i `photo_names` ricevuti per quel place (fino a 3) così le foto vengono salvate.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -54,6 +63,13 @@ export const CESARE_LOCATION_TOOLS = [
           description:
             "Note sintetiche su perché questo candidato è rilevante per la scena",
         },
+        photo_names: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Nomi delle foto Google Places nel formato 'places/X/photos/Y' " +
+            "(prendili dal campo `photos[].name` del risultato di search_places, max 3).",
+        },
       },
       required: ["requirement_id", "name"],
     },
@@ -62,6 +78,12 @@ export const CESARE_LOCATION_TOOLS = [
 
 // ─── Google Places types ──────────────────────────────────────────────────────
 
+export interface PlacePhoto {
+  name: string;
+  widthPx: number;
+  heightPx: number;
+}
+
 export interface PlaceResult {
   name: string;
   address: string;
@@ -69,6 +91,7 @@ export interface PlaceResult {
   lng: number;
   placeId: string;
   types: string[];
+  photos: PlacePhoto[];
 }
 
 // ─── Google Places executor ───────────────────────────────────────────────────
@@ -86,6 +109,11 @@ interface GooglePlacesResponse {
     location?: { latitude?: number; longitude?: number };
     id?: string;
     types?: string[];
+    photos?: Array<{
+      name?: string;
+      widthPx?: number;
+      heightPx?: number;
+    }>;
   }>;
 }
 
@@ -116,7 +144,7 @@ export const executeSearchPlaces = (
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
             "X-Goog-FieldMask":
-              "places.displayName,places.formattedAddress,places.location,places.id,places.types",
+              "places.displayName,places.formattedAddress,places.location,places.id,places.types,places.photos",
           },
           body: JSON.stringify({ textQuery, pageSize: maxResults }),
         },
@@ -136,6 +164,14 @@ export const executeSearchPlaces = (
         lng: p.location?.longitude ?? 0,
         placeId: p.id ?? "",
         types: p.types ?? [],
+        photos: (p.photos ?? [])
+          .slice(0, MAX_PHOTOS_PER_CANDIDATE)
+          .map((ph) => ({
+            name: ph.name ?? "",
+            widthPx: ph.widthPx ?? 0,
+            heightPx: ph.heightPx ?? 0,
+          }))
+          .filter((ph) => ph.name.length > 0),
       }));
     })(),
     (e) =>
@@ -154,7 +190,13 @@ interface AddCandidateInput {
   lat?: number;
   lng?: number;
   notes?: string;
+  photo_names?: string[];
 }
+
+const buildPlacePhotoUrl = (photoName: string, apiKey: string): string =>
+  // SECURITY TODO: API key is embedded inline in the stored URL. Move to a server-side
+  // proxy endpoint (e.g. /api/places-photo?name=...) before exposing these URLs publicly.
+  `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${PHOTO_MAX_WIDTH_PX}&key=${apiKey}`;
 
 export const executeAddCandidate = (
   input: AddCandidateInput,
@@ -197,6 +239,24 @@ export const executeAddCandidate = (
         .returning({ id: locationCandidates.id });
 
       if (!inserted) throw new Error("Insert returned no rows");
+
+      const photoNames = (input.photo_names ?? [])
+        .filter((n) => typeof n === "string" && n.startsWith("places/"))
+        .slice(0, MAX_PHOTOS_PER_CANDIDATE);
+
+      if (photoNames.length > 0) {
+        const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
+        if (apiKey) {
+          await db.insert(locationPhotos).values(
+            photoNames.map((photoName) => ({
+              candidateId: inserted.id,
+              url: buildPlacePhotoUrl(photoName, apiKey),
+              caption: null,
+            })),
+          );
+        }
+      }
+
       return { id: inserted.id };
     })(),
     (e) =>

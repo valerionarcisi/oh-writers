@@ -712,6 +712,7 @@ Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
 Quando parli di costi, usa i numeri reali dal budget.
 Quando parli di disponibilità, usa i dati reali dello schedule.
 Quando parli di location, aiuta il regista a valutare i candidati in base al contesto narrativo della scena.
+Quando usi search_places e poi add_candidate per salvare un risultato, inoltra SEMPRE il campo 'photo_names' (prendi i 'name' da 'photos[]' del risultato, max 3) così le foto vengono salvate insieme al candidato.
 Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.`;
 };
 
