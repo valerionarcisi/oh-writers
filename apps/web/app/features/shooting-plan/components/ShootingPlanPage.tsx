@@ -20,7 +20,7 @@ import { SceneFountainPanel } from "./SceneFountainPanel";
 import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
-import { useCesareOpen } from "~/features/app-shell";
+import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { useExportShotList } from "../hooks/useExportShotList";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -40,6 +40,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const openCesare = useCesareOpen();
+  const setActiveScene = useSetActiveScene();
   const { showToast } = useToast();
   const { exportCsv, exportPdf } = useExportShotList(projectId);
   const { data } = useSuspenseQuery(
@@ -50,6 +51,20 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const scenes = data?.isOk ? data.value : [];
   const selectedScene =
     scenes.find((s) => s.sceneId === selectedSceneId) ?? null;
+
+  // Broadcast active scene to Cesare so it has the RAG window (heading +
+  // notes + characters) when answering on this page.
+  useEffect(() => {
+    if (selectedScene) {
+      setActiveScene({
+        sceneId: selectedScene.sceneId,
+        sceneNumber: selectedScene.sceneNumber,
+      });
+    } else {
+      setActiveScene(null);
+    }
+    return () => setActiveScene(null);
+  }, [selectedScene?.sceneId, selectedScene?.sceneNumber, setActiveScene]);
 
   const initialPlanMut = useMutation({
     mutationFn: async (sceneId: string) =>
