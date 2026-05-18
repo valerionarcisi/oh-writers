@@ -9,4 +9,6 @@ export {
   ActiveSceneProvider,
   useActiveScene,
   useSetActiveScene,
+  useActiveRequirementId,
+  useSetActiveRequirementId,
 } from "./active-scene-context";

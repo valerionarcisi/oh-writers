@@ -17,7 +17,11 @@ import type { CesarePage } from "~/features/predictions";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
-import { ActiveSceneProvider, useActiveScene } from "../active-scene-context";
+import {
+  ActiveSceneProvider,
+  useActiveScene,
+  useActiveRequirementId,
+} from "../active-scene-context";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -77,6 +81,7 @@ function AppShellInner({
   const saveState = ctxSave.state ?? saveStateProp;
   const saveSecondsAgo = ctxSave.secondsAgo ?? saveSecondsAgoProp;
   const activeScene = useActiveScene();
+  const activeRequirementId = useActiveRequirementId();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -206,7 +211,7 @@ function AppShellInner({
               page={cesarePage ?? "screenplay"}
               sceneId={activeScene?.sceneId ?? null}
               sceneNumber={activeScene?.sceneNumber ?? null}
-              requirementId={cesareRequirementId}
+              requirementId={cesareRequirementId ?? activeRequirementId}
               isOpen={cesareOpen}
               onClose={() => setCesareOpen(false)}
               onOpenFullPage={() => {

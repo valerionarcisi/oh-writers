@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FloatingDock } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
-import { useCesareOpen } from "~/features/app-shell";
+import { useCesareOpen, useSetActiveRequirementId } from "~/features/app-shell";
 import type { LocationRequirement } from "@oh-writers/domain";
 import {
   locationsQueryOptions,
@@ -31,6 +31,14 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     requirements[0]?.id ?? null,
   );
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const setActiveRequirementId = useSetActiveRequirementId();
+
+  // Broadcast the selected requirement to Cesare so opening the chat from
+  // anywhere on this page carries the location context implicitly.
+  useEffect(() => {
+    setActiveRequirementId(selectedId);
+    return () => setActiveRequirementId(null);
+  }, [selectedId, setActiveRequirementId]);
 
   const handleSelectRequirement = (id: string) => {
     setSelectedId(id);
