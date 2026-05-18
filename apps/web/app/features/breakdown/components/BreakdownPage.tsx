@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import {
   FloatingDock,
   Popover,
@@ -847,6 +848,12 @@ function BreakdownPageContent({ projectId }: Props) {
                 onAdd={() => {
                   /* TODO: wire to AddElementModal in a follow-up */
                 }}
+                onAccept={(occurrenceId) =>
+                  setStatus.mutate({ occurrenceIds: [occurrenceId], status: "accepted" })
+                }
+                onIgnore={(occurrenceId) =>
+                  setStatus.mutate({ occurrenceIds: [occurrenceId], status: "ignored" })
+                }
               />
             )}
             {panelTab === "cesare" && (
@@ -862,6 +869,38 @@ function BreakdownPageContent({ projectId }: Props) {
           </div>
         </aside>
       </div>
+      )}
+
+      {/* ─── HOVER TOOLTIP ─── */}
+      {hoverTooltip && (
+        <div
+          className={styles.hoverTooltip}
+          style={{ left: hoverTooltip.x, top: hoverTooltip.y }}
+          onMouseEnter={() => {
+            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+          }}
+          onMouseLeave={() => setHoverTooltip(null)}
+        >
+          <span
+            className={styles.hoverTooltipCat}
+            style={{ color: `var(${CATEGORY_META[hoverTooltip.category]?.colorToken ?? "--ds-text-mute"})` }}
+          >
+            {CATEGORY_META[hoverTooltip.category]?.labelIt ?? hoverTooltip.category}
+          </span>
+          <span className={styles.hoverTooltipName}>{hoverTooltip.name}</span>
+          {canEdit && (
+            <button
+              type="button"
+              className={styles.hoverTooltipRemove}
+              disabled={!hoverTooltip.occurrenceId || removeOcc.isPending}
+              onClick={handleHoverRemove}
+              title={hoverTooltip.occurrenceId ? "Rimuovi dalla scena" : "Seleziona una scena per rimuovere"}
+              aria-label="Rimuovi dalla scena"
+            >
+              <Trash2 size={12} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       )}
 
       {/* ─── CONTEXT MENU ─── */}
@@ -1034,15 +1073,26 @@ function BreakdownPageContent({ projectId }: Props) {
 
 /* ────────────────────────── Categorie panel ──────────────────────────── */
 
+interface SuggestedPopover {
+  x: number;
+  y: number;
+  occurrenceId: string;
+  name: string;
+}
+
 interface CategoriesPanelProps {
   grouped: Map<BreakdownCategory, SceneOccurrenceWithElement[]>;
   allRows: ProjectBreakdownRow[];
   canEdit: boolean;
   onAdd: (category: BreakdownCategory) => void;
+  onAccept: (occurrenceId: string) => void;
+  onIgnore: (occurrenceId: string) => void;
 }
 
-function CategoriesPanel({ grouped, allRows, canEdit, onAdd }: CategoriesPanelProps) {
+function CategoriesPanel({ grouped, allRows, canEdit, onAdd, onAccept, onIgnore }: CategoriesPanelProps) {
   const visibleCats = PANEL_CATEGORY_ORDER.filter((cat) => grouped.has(cat));
+  const [suggestedPopover, setSuggestedPopover] = useState<SuggestedPopover | null>(null);
+  const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scenesByElement = useMemo(() => {
     const map = new Map<string, number[]>();
@@ -1052,6 +1102,24 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAdd }: CategoriesPanelPr
     }
     return map;
   }, [allRows]);
+
+  const handleSuggestedMouseEnter = (
+    e: React.MouseEvent<HTMLSpanElement>,
+    occurrenceId: string,
+    name: string,
+  ) => {
+    if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
+    const rect = e.currentTarget.getBoundingClientRect();
+    popoverTimerRef.current = setTimeout(() => {
+      setSuggestedPopover({ x: rect.left, y: rect.bottom + 6, occurrenceId, name });
+    }, 160);
+  };
+
+  const handleSuggestedMouseLeave = () => {
+    if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
+    // small delay so the user can move into the popover itself
+    popoverTimerRef.current = setTimeout(() => setSuggestedPopover(null), 120);
+  };
 
   if (visibleCats.length === 0) {
     return (
@@ -1095,8 +1163,8 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAdd }: CategoriesPanelPr
               {items.map((it) => {
                 const isSuggested = it.occurrence.cesareStatus === "pending";
                 const sceneNums = scenesByElement.get(it.element.id) ?? [];
-                const tooltip = sceneNums.length > 0
-                  ? `SC ${sceneNums.join(", ")}`
+                const tooltip = !isSuggested && sceneNums.length > 0
+                  ? sceneNums.join(", ")
                   : undefined;
                 return (
                   <span
@@ -1109,6 +1177,10 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAdd }: CategoriesPanelPr
                       .filter(Boolean)
                       .join(" ")}
                     data-scenes={tooltip}
+                    onMouseEnter={isSuggested
+                      ? (e) => handleSuggestedMouseEnter(e, it.occurrence.id, it.element.name)
+                      : undefined}
+                    onMouseLeave={isSuggested ? handleSuggestedMouseLeave : undefined}
                   >
                     {it.element.name}
                     {it.occurrence.quantity > 1 && (
@@ -1123,6 +1195,46 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAdd }: CategoriesPanelPr
           </div>
         );
       })}
+
+      {/* Accept / ignore popover for Cesare-suggested tags */}
+      {suggestedPopover && (
+        <div
+          className={styles.suggestedPopover}
+          style={{ left: suggestedPopover.x, top: suggestedPopover.y }}
+          onMouseEnter={() => {
+            if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
+          }}
+          onMouseLeave={() => setSuggestedPopover(null)}
+        >
+          <div className={styles.suggestedPopoverHeader}>
+            <span className={styles.suggestedPopoverIcon} aria-hidden>✦</span>
+            <span className={styles.suggestedPopoverName}>{suggestedPopover.name}</span>
+          </div>
+          <p className={styles.suggestedPopoverHint}>Suggerito da Cesare</p>
+          <div className={styles.suggestedPopoverActions}>
+            <button
+              type="button"
+              className={[styles.suggestedPopoverBtn, styles.suggestedPopoverBtnAccept].join(" ")}
+              onClick={() => {
+                onAccept(suggestedPopover.occurrenceId);
+                setSuggestedPopover(null);
+              }}
+            >
+              <span aria-hidden>✓</span> Conferma
+            </button>
+            <button
+              type="button"
+              className={[styles.suggestedPopoverBtn, styles.suggestedPopoverBtnIgnore].join(" ")}
+              onClick={() => {
+                onIgnore(suggestedPopover.occurrenceId);
+                setSuggestedPopover(null);
+              }}
+            >
+              <span aria-hidden>✕</span> Ignora
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
