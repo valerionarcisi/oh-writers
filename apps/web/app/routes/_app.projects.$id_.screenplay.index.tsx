@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
@@ -34,8 +34,30 @@ function ScreenplayEditorPage() {
     sceneCurrent: null as number | null,
     sceneTotal: 0,
   });
+  const [rawScenes, setRawScenes] = useState<
+    Array<{ number: string; title: string }>
+  >([]);
   const editorRef = useRef<ScreenplayEditorHandle>(null);
   const { open: openVersionsDrawer } = useVersionsDrawer();
+
+  // Build the acts array for the Indice popover. Fountain has no explicit act
+  // structure, so all scenes live under a single "Sceneggiatura" act.
+  const acts = useMemo(
+    () =>
+      rawScenes.length === 0
+        ? undefined
+        : [
+            {
+              name: "Sceneggiatura",
+              scenes: rawScenes.map((s, idx) => ({
+                number: s.number,
+                title: s.title,
+                isCurrent: metrics.sceneCurrent === idx + 1,
+              })),
+            },
+          ],
+    [rawScenes, metrics.sceneCurrent],
+  );
 
   const handleApplyEdit = useCallback(
     (find: string, replace: string): boolean =>
@@ -52,6 +74,7 @@ function ScreenplayEditorPage() {
         <ScreenplayEditorShell
           title={value.title}
           projectId={id}
+          acts={acts}
           onOpenVersions={() =>
             openVersionsDrawer({ kind: "screenplay", screenplayId: value.id })
           }
@@ -92,6 +115,7 @@ function ScreenplayEditorPage() {
             onToggleCesare={setIsCesareOn}
             onCurrentElementChange={setCurrentElement}
             onMetricsChange={setMetrics}
+            onScenesChange={setRawScenes}
           />
         </ScreenplayEditorShell>
       );

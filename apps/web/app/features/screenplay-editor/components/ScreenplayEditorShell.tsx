@@ -116,10 +116,24 @@ export function ScreenplayEditorShell({
     return { currentSceneIdx: current, totalScenes: total };
   }, [tocActs]);
 
+  // Assign a 0-based DOM index to every scene (matches `.pm-heading` NodeList
+  // order) so the onClick handler can scroll to the right heading regardless
+  // of act grouping or search filtering.
+  const actsWithDomIndex = useMemo(() => {
+    let globalIdx = 0;
+    return tocActs.map((act) => ({
+      ...act,
+      scenes: act.scenes.map((scene) => ({
+        ...scene,
+        domIndex: globalIdx++,
+      })),
+    }));
+  }, [tocActs]);
+
   const filteredActs = useMemo(() => {
     const q = indiceQuery.trim().toLowerCase();
-    if (!q) return tocActs;
-    return tocActs
+    if (!q) return actsWithDomIndex;
+    return actsWithDomIndex
       .map((act) => ({
         ...act,
         scenes: act.scenes.filter(
@@ -129,7 +143,13 @@ export function ScreenplayEditorShell({
         ),
       }))
       .filter((act) => act.scenes.length > 0);
-  }, [tocActs, indiceQuery]);
+  }, [actsWithDomIndex, indiceQuery]);
+
+  const scrollToScene = (domIndex: number) => {
+    const headings = document.querySelectorAll<HTMLElement>(".pm-heading");
+    headings[domIndex]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setIndiceOpen(false);
+  };
 
   return (
     <div className={styles.shell}>
@@ -161,11 +181,7 @@ export function ScreenplayEditorShell({
                 ✦
               </button>
             )}
-            {/* TODO(audit-2026-05-15): restore Indice popover once scene
-                buttons get a working onClick (scrollIntoView on
-                [data-scene-number="N"]). Hidden for consistency with the
-                Breakdown Indice — same logic, same gap. */}
-            {false && hasRealToc && (
+            {hasRealToc && (
             <div className={styles.indiceWrap}>
               <button
                 type="button"
@@ -225,6 +241,7 @@ export function ScreenplayEditorShell({
                               .filter(Boolean)
                               .join(" ")}
                             aria-current={scene.isCurrent ? "true" : undefined}
+                            onClick={() => scrollToScene(scene.domIndex)}
                           >
                             <span className={styles.popItemNum}>
                               SC.{scene.number.replace(".", "")}
