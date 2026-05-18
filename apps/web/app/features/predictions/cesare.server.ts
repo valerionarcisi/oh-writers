@@ -14,13 +14,23 @@ import {
   locationRequirements,
   locationRequirementScenes,
   locationCandidates,
+  documents,
+  documentVersions,
 } from "@oh-writers/db/schema";
+import type { DocumentType } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
 import { loadAnthropicStreamingClient } from "~/features/ai/anthropic-client";
-import { runToolLoop } from "./cesare-tools";
+import {
+  runToolLoop,
+  runDocumentToolLoop,
+  runBreakdownToolLoop,
+  runScheduleToolLoop,
+  runBudgetToolLoop,
+} from "./cesare-tools";
+import type { DocumentContext, ScheduleToolContext } from "./cesare-tools";
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +60,9 @@ const PageContextSchema = z.object({
   sceneId: z.string().uuid().nullable(),
   sceneNumber: z.number().nullable(),
   requirementId: z.string().uuid().nullable().optional(),
+  documentId: z.string().uuid().nullable().optional(),
+  shootingDayId: z.string().uuid().nullable().optional(),
+  shootingDayNumber: z.number().int().nullable().optional(),
 });
 
 const ConversationMessageSchema = z.object({
@@ -93,6 +106,20 @@ interface BreakdownElementRow {
 interface BudgetSummary {
   totalAllocated: number;
   residualByTopSheet: Record<string, number>;
+  lines: BudgetLineDetail[];
+  status: string | null;
+}
+
+interface BudgetLineDetail {
+  id: string;
+  topSheet: string;
+  name: string;
+  category: string | null;
+  rate: number | null;
+  quantity: number | null;
+  estimated: number;
+  actual: number | null;
+  residual: number;
 }
 
 interface ScheduleSummary {
@@ -128,6 +155,17 @@ interface LocationRequirementRow {
   linkedScenes: LinkedSceneRow[];
 }
 
+interface ProjectDocumentRow {
+  id: string;
+  type: DocumentType;
+  content: string;
+}
+
+interface ActiveDocumentRow extends ProjectDocumentRow {
+  /** True when this is the document the user is currently viewing. */
+  isActive: true;
+}
+
 interface CesareContext {
   projectTitle: string;
   scenes: SceneRow[];
@@ -139,6 +177,10 @@ interface CesareContext {
   schedule: ScheduleSummary | null;
   locations: LocationRequirementRow[];
   currentRequirement: LocationRequirementRow | null;
+  /** Full content of the active document, if the page is a document page. */
+  activeDocument: ActiveDocumentRow | null;
+  /** Short summaries of all other docs in the project (for cross-doc context). */
+  projectDocuments: ProjectDocumentRow[];
 }
 
 const loadScreenplayContext = (
@@ -245,7 +287,7 @@ const loadBudgetSummary = (
   ResultAsync.fromPromise(
     (async () => {
       const [budget] = await db
-        .select({ id: budgets.id })
+        .select({ id: budgets.id, status: budgets.status })
         .from(budgets)
         .where(eq(budgets.projectId, projectId))
         .limit(1);
@@ -254,7 +296,10 @@ const loadBudgetSummary = (
 
       const lines = await db
         .select({
+          id: budgetLines.id,
           topSheet: budgetLines.topSheet,
+          name: budgetLines.name,
+          linkedCategory: budgetLines.linkedCategory,
           rate: budgetLines.rate,
           quantity: budgetLines.quantity,
           actual: budgetLines.actual,
@@ -264,21 +309,40 @@ const loadBudgetSummary = (
 
       const residualByTopSheet: Record<string, number> = {};
       let totalAllocated = 0;
+      const detailedLines: BudgetLineDetail[] = [];
 
       for (const line of lines) {
+        const rateNum = line.rate !== null ? Number(line.rate) : null;
+        const qtyNum = line.quantity !== null ? Number(line.quantity) : null;
         const estimated =
-          line.quantity !== null && line.rate !== null
-            ? Number(line.quantity) * Number(line.rate)
-            : 0;
-        const spent = line.actual !== null ? Number(line.actual) : 0;
+          rateNum !== null && qtyNum !== null ? qtyNum * rateNum : 0;
+        const actualNum = line.actual !== null ? Number(line.actual) : null;
+        const spent = actualNum ?? 0;
         const residual = estimated - spent;
 
         totalAllocated += estimated;
         residualByTopSheet[line.topSheet] =
           (residualByTopSheet[line.topSheet] ?? 0) + residual;
+
+        detailedLines.push({
+          id: line.id,
+          topSheet: line.topSheet,
+          name: line.name,
+          category: line.linkedCategory,
+          rate: rateNum,
+          quantity: qtyNum,
+          estimated,
+          actual: actualNum,
+          residual,
+        });
       }
 
-      return { totalAllocated, residualByTopSheet };
+      return {
+        totalAllocated,
+        residualByTopSheet,
+        lines: detailedLines,
+        status: (budget as { status?: string }).status ?? null,
+      };
     })(),
     (e) =>
       new CesareError(
@@ -428,6 +492,56 @@ const loadLocationsContext = (
       ),
   );
 
+// Loads all project documents and resolves their live content via the
+// active version row. The result is used to (a) inject the active doc full
+// content into Cesare's prompt and (b) surface cross-doc summaries (e.g. a
+// treatment edit can reference the synopsis).
+const loadProjectDocuments = (
+  db: Db,
+  projectId: string,
+): ResultAsync<ProjectDocumentRow[], CesareError> =>
+  ResultAsync.fromPromise(
+    (async (): Promise<ProjectDocumentRow[]> => {
+      const docs = await db
+        .select({
+          id: documents.id,
+          type: documents.type,
+          content: documents.content,
+          currentVersionId: documents.currentVersionId,
+        })
+        .from(documents)
+        .where(eq(documents.projectId, projectId));
+
+      const versionIds = docs
+        .map((d) => d.currentVersionId)
+        .filter((v): v is string => v !== null);
+
+      const versionContentById = new Map<string, string>();
+      if (versionIds.length > 0) {
+        const rows = await db
+          .select({
+            id: documentVersions.id,
+            content: documentVersions.content,
+          })
+          .from(documentVersions)
+          .where(inArray(documentVersions.id, versionIds));
+        for (const r of rows) versionContentById.set(r.id, r.content);
+      }
+
+      return docs.map((d) => ({
+        id: d.id,
+        type: d.type as DocumentType,
+        content: d.currentVersionId
+          ? (versionContentById.get(d.currentVersionId) ?? d.content)
+          : d.content,
+      }));
+    })(),
+    (e) =>
+      new CesareError(
+        `Failed to load project documents: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
 // Loads a window of scenes around the current scene, including their body text.
 // For locations context, loads scenes linked to the current requirement instead.
 const loadSceneWindow = (
@@ -567,18 +681,33 @@ const assembleContext = (
                 screenplay.id,
                 currentScene?.number ?? pageContext.sceneNumber,
                 linkedSceneIds,
-              ).map((sceneWindow) => ({
-                projectTitle: screenplay.title,
-                scenes: screenplay.scenes,
-                currentScene,
-                sceneWindow,
-                characters: screenplay.characters,
-                breakdownElements: elements,
-                budget,
-                schedule,
-                locations,
-                currentRequirement,
-              }));
+              ).andThen((sceneWindow) =>
+                loadProjectDocuments(db, projectId).map((projectDocuments) => {
+                  const activeDocId = pageContext.documentId ?? null;
+                  const activeDocument: ActiveDocumentRow | null = activeDocId
+                    ? (() => {
+                        const found = projectDocuments.find(
+                          (d) => d.id === activeDocId,
+                        );
+                        return found ? { ...found, isActive: true } : null;
+                      })()
+                    : null;
+                  return {
+                    projectTitle: screenplay.title,
+                    scenes: screenplay.scenes,
+                    currentScene,
+                    sceneWindow,
+                    characters: screenplay.characters,
+                    breakdownElements: elements,
+                    budget,
+                    schedule,
+                    locations,
+                    currentRequirement,
+                    activeDocument,
+                    projectDocuments,
+                  };
+                }),
+              );
             }),
           ),
         ),
@@ -674,7 +803,174 @@ const formatLocationsContext = (ctx: CesareContext): string => {
   return `\nLOCATION DEL PROGETTO (${ctx.locations.length} requisiti):\n${summary}`;
 };
 
-const buildSystemPrompt = (ctx: CesareContext): string => {
+const DOCUMENT_LABELS: Record<DocumentType, string> = {
+  logline: "Logline",
+  soggetto: "Soggetto",
+  synopsis: "Sinossi",
+  outline: "Scaletta",
+  treatment: "Trattamento",
+};
+
+const MAX_DOC_PREVIEW_CHARS = 1200;
+const MAX_ACTIVE_DOC_CHARS = 8000;
+
+const truncate = (text: string, max: number): string =>
+  text.length > max ? text.slice(0, max) + "…" : text;
+
+const formatDocumentsContext = (ctx: CesareContext): string => {
+  const others = ctx.projectDocuments.filter(
+    (d) => d.id !== ctx.activeDocument?.id && d.content.trim().length > 0,
+  );
+
+  const sections: string[] = [];
+
+  if (ctx.activeDocument) {
+    sections.push(
+      `\nDOCUMENTO ATTIVO — ${DOCUMENT_LABELS[ctx.activeDocument.type]}:\n---\n${truncate(
+        ctx.activeDocument.content,
+        MAX_ACTIVE_DOC_CHARS,
+      )}\n---`,
+    );
+  }
+
+  if (others.length > 0) {
+    const lines = others.map(
+      (d) =>
+        `\n[${DOCUMENT_LABELS[d.type]}]\n${truncate(d.content, MAX_DOC_PREVIEW_CHARS)}`,
+    );
+    sections.push(`\nALTRI DOCUMENTI DEL PROGETTO:${lines.join("\n")}`);
+  }
+
+  return sections.join("\n");
+};
+
+const isDocumentPage = (page: PageContext["page"]): boolean =>
+  page === "soggetto" ||
+  page === "synopsis" ||
+  page === "outline" ||
+  page === "treatment";
+
+const buildDocumentToolsGuidance = (ctx: CesareContext): string => {
+  if (!ctx.activeDocument) return "";
+  const label = DOCUMENT_LABELS[ctx.activeDocument.type];
+  return `
+
+STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
+- apply_text_edit(find, replace): sostituisce una stringa esatta del documento. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO sopra.
+- expand_section(heading): espande la sezione sotto un heading in 2-3 paragrafi.
+- compress_section(heading, target_words): comprime una sezione mantenendo i beat.
+
+Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.`;
+};
+
+const buildBreakdownToolsGuidance = (page: PageContext["page"]): string => {
+  if (page !== "breakdown") return "";
+  return `\n\nTOOLS DISPONIBILI SUL BREAKDOWN:
+- tag_element(scene_number, category, name, quantity?): aggiunge un elemento allo spoglio di una scena.
+- accept_ghost(occurrence_id): accetta un suggerimento ghost.
+- reject_ghost(occurrence_id): rifiuta un suggerimento ghost.
+- estimate_scene_cost(scene_number): calcola costo e difficoltà di una scena.
+- add_to_budget(scene_number): converte la stima della scena in righe budget reali.
+
+Quando l'utente chiede di taggare un elemento ('spoglia X', 'aggiungi X come prop', 'questa scena ha un'arma'), USA tag_element. Quando chiede una stima di costo per una scena, USA estimate_scene_cost. Quando chiede di portare i costi al budget, USA add_to_budget. Conferma sempre in italiano cosa hai fatto.`;
+};
+
+const buildScheduleToolsGuidance = (
+  page: PageContext["page"],
+  activeDayNumber: number | null,
+): string => {
+  if (page !== "schedule") return "";
+  const activeHint = activeDayNumber
+    ? `\nGiornata attiva (selezionata dall'utente): Giornata ${activeDayNumber}. Quando l'utente dice "questa giornata" si riferisce a questa.`
+    : "";
+  return `\n\nTOOLS DISPONIBILI SUL PIANO DI LAVORAZIONE:
+- move_scene_to_day(scene_number, target_day_number): sposta una scena su un'altra giornata.
+- merge_days(day_a_number, day_b_number): accorpa due giornate (le scene di B vanno in A, B viene rimossa).
+- swap_scenes(scene_a_number, scene_b_number): scambia la posizione di due scene.
+- lock_day(day_number) / unlock_day(day_number): blocca/sblocca tutte le strip di una giornata.
+- get_weather_forecast(lat, lng, date): previsioni Open-Meteo per data + coordinate (entro 16 giorni). Usalo per valutare il rischio meteo sugli esterni — la probabilità di riuscita della giornata cala con pioggia/temporale.
+- suggest_reorder(strategy?): proponi una sequenza ottimizzata (es. 'minimize_location_changes') senza applicarla; l'utente conferma.
+
+Quando l'utente chiede di riorganizzare lo schedule, USA i tools — non limitarti a descrivere il cambio. Per esterni con dubbi sul meteo, chiama get_weather_forecast prima di consigliare lo spostamento. Conferma sempre in italiano cosa hai fatto e l'impatto sulla difficoltà/riuscita della giornata.${activeHint}`;
+};
+
+const TOP_SHEET_LABEL_IT: Record<string, string> = {
+  above_the_line: "Above the line",
+  production: "Production",
+  crew: "Troupe",
+  post_production: "Post-produzione",
+  contingency: "Contingenza",
+};
+
+const MAX_BUDGET_LINES_IN_PROMPT = 60;
+
+const formatBudgetContext = (
+  ctx: CesareContext,
+  page: PageContext["page"],
+): string => {
+  if (page !== "budget") return "";
+  if (!ctx.budget) {
+    return "\n\nBUDGET: nessun budget generato per il progetto. Suggerisci all'utente di generare il budget dalla pagina Budget prima di usare i tools.";
+  }
+  const fmt = (n: number) =>
+    Math.round(n).toLocaleString("it-IT");
+  const linesByTopSheet = ctx.budget.lines.reduce<Record<string, BudgetLineDetail[]>>((acc, l) => {
+    const list = acc[l.topSheet] ?? [];
+    list.push(l);
+    acc[l.topSheet] = list;
+    return acc;
+  }, {});
+
+  const sections: string[] = [];
+  let totalShown = 0;
+  for (const [topSheet, lines] of Object.entries(linesByTopSheet)) {
+    if (totalShown >= MAX_BUDGET_LINES_IN_PROMPT) break;
+    const label = TOP_SHEET_LABEL_IT[topSheet] ?? topSheet;
+    const residual = ctx.budget.residualByTopSheet[topSheet] ?? 0;
+    const header = `  [${label}] residuo €${fmt(residual)}`;
+    const visible = lines.slice(0, MAX_BUDGET_LINES_IN_PROMPT - totalShown);
+    totalShown += visible.length;
+    const lineLines = visible.map((l) => {
+      const rateLabel = l.rate !== null ? `${fmt(l.rate)}€` : "n/d";
+      const qtyLabel = l.quantity !== null ? `x${l.quantity}` : "";
+      const estLabel = `€${fmt(l.estimated)}`;
+      const actualLabel = l.actual !== null ? ` consuntivo €${fmt(l.actual)}` : "";
+      const catLabel = l.category ? ` <${l.category}>` : "";
+      return `    - id:${l.id} "${l.name}"${catLabel} ${rateLabel}${qtyLabel} stima ${estLabel}${actualLabel}`;
+    });
+    sections.push(`${header}\n${lineLines.join("\n")}`);
+  }
+  const truncated = ctx.budget.lines.length > totalShown
+    ? `\n  …e altre ${ctx.budget.lines.length - totalShown} righe (chiedi all'utente per il dettaglio)`
+    : "";
+
+  const statusLabel = ctx.budget.status ? `status=${ctx.budget.status}` : "";
+  return `\n\nBUDGET COMPLETO ${statusLabel} (totale stimato €${fmt(ctx.budget.totalAllocated)}):
+${sections.join("\n")}${truncated}`;
+};
+
+const buildBudgetToolsGuidance = (page: PageContext["page"]): string => {
+  if (page !== "budget") return "";
+  return `\n\nRUOLO: in questa pagina sei un LINE PRODUCER esperto del cinema italiano. Quando l'utente ti chiede di aggiustare il budget, USA I TOOLS per farlo direttamente — non limitarti a descrivere come si potrebbe fare. Conferma SEMPRE in italiano l'azione eseguita nel messaggio finale ('Ho aggiornato…', 'Ho aggiunto…', 'Ho ridistribuito…').
+
+TOOLS DISPONIBILI SUL BUDGET:
+- update_budget_line(line_id, field, value): aggiorna rate, quantity, actual o notes di una riga. Usa gli id "id:..." che vedi nel BUDGET COMPLETO.
+- add_budget_line(top_sheet, description, rate, quantity?, linked_category?): aggiunge una nuova voce di costo a un top sheet esistente.
+- redistribute_topsheet(from_top_sheet, to_top_sheet, amount): sposta fondi tra top sheet riducendo la riga piu grande del primo e creando/incrementando una riga "Contingenza riallocata da X" nel secondo. Se l'amount supera la riga piu grande, il tool ritorna errore e proponi un piano multi-step.
+- analyze_variance(): report deterministico delle righe piu sopra/sotto budget e dei top sheet con residuo negativo. Usalo prima di proporre tagli.
+- mark_line_actual(line_id, actual_amount): registra una spesa effettiva (usalo quando l'utente comunica un consuntivo).
+
+Linee guida:
+- Prima di tagliare/redistribuire grosse cifre, chiama analyze_variance() per capire dove c'e davvero margine.
+- Non toccare cast/troupe a livello di risorsa: opera solo su righe budget_lines.
+- Quando ridistribuisci, spiega in 1-2 frasi il razionale ("Sposto €X dalla post-produzione alla contingenza perche…").`;
+};
+
+const buildSystemPrompt = (
+  ctx: CesareContext,
+  page: PageContext["page"],
+  activeShootingDayNumber: number | null = null,
+): string => {
   const totalBudget = ctx.budget
     ? Math.round(ctx.budget.totalAllocated).toLocaleString("it-IT")
     : "N/D";
@@ -696,6 +992,9 @@ const buildSystemPrompt = (ctx: CesareContext): string => {
 
   const locationsCtx = formatLocationsContext(ctx);
   const sceneWindowCtx = formatSceneWindow(ctx.sceneWindow);
+  const documentsCtx = formatDocumentsContext(ctx);
+  const documentToolsGuidance = buildDocumentToolsGuidance(ctx);
+  const budgetCtx = formatBudgetContext(ctx, page);
 
   return `Sei Cesare, l'assistente AI di Oh Writers, ispirato a Cesare Zavattini.
 Non sei un chatbot generico. Conosci l'intera produzione del film "${ctx.projectTitle}".
@@ -705,7 +1004,7 @@ CONTESTO PRODUZIONE:
 - Scena corrente: ${ctx.currentScene?.heading ?? "nessuna"}
 - Budget: €${totalBudget} totale, €${residualBudget} residuo
 - Schedule: ${shootingDaysLabel} giorni di ripresa
-${breakdownCtx}${locationsCtx}${sceneWindowCtx}
+${breakdownCtx}${locationsCtx}${sceneWindowCtx}${documentsCtx}${budgetCtx}
 
 Rispondi in italiano. Sii concreto e specifico — non generare testo generico.
 Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
@@ -713,7 +1012,7 @@ Quando parli di costi, usa i numeri reali dal budget.
 Quando parli di disponibilità, usa i dati reali dello schedule.
 Quando parli di location, aiuta il regista a valutare i candidati in base al contesto narrativo della scena.
 Quando usi search_places e poi add_candidate per salvare un risultato, inoltra SEMPRE il campo 'photo_names' (prendi i 'name' da 'photos[]' del risultato, max 3) così le foto vengono salvate insieme al candidato.
-Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.`;
+Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.${documentToolsGuidance}${buildBreakdownToolsGuidance(page)}${buildScheduleToolsGuidance(page, activeShootingDayNumber)}${buildBudgetToolsGuidance(page)}`;
 };
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
@@ -849,6 +1148,126 @@ const callCesareWithTools = (
     return runToolLoop(client, systemPrompt, messages, db, projectId, CESARE_MODEL, requirementId ?? null);
   });
 
+const callCesareWithDocumentTools = (
+  systemPrompt: string,
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+  docContext: DocumentContext,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    return runDocumentToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      db,
+      projectId,
+      CESARE_MODEL,
+      docContext,
+    );
+  });
+
+const callCesareWithBreakdownTools = (
+  systemPrompt: string,
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    return runBreakdownToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      db,
+      projectId,
+      CESARE_MODEL,
+    );
+  });
+
+const callCesareWithScheduleTools = (
+  systemPrompt: string,
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+  activeDayNumber: number | null,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    const scheduleContext: ScheduleToolContext = {
+      projectId,
+      activeDayNumber,
+    };
+    return runScheduleToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      db,
+      projectId,
+      CESARE_MODEL,
+      scheduleContext,
+    );
+  });
+
+const callCesareWithBudgetTools = (
+  systemPrompt: string,
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    return runBudgetToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      db,
+      projectId,
+      CESARE_MODEL,
+    );
+  });
+
 // ─── Handler body ─────────────────────────────────────────────────────────────
 
 const handleAskCesare = (
@@ -861,7 +1280,11 @@ const handleAskCesare = (
   }
 
   return assembleContext(db, data.projectId, data.pageContext).andThen((ctx) => {
-    const systemPrompt = buildSystemPrompt(ctx);
+    const systemPrompt = buildSystemPrompt(
+      ctx,
+      data.pageContext.page,
+      data.pageContext.shootingDayNumber ?? null,
+    );
     if (data.pageContext.page === "locations") {
       return callCesareWithTools(
         systemPrompt,
@@ -870,6 +1293,49 @@ const handleAskCesare = (
         db,
         data.projectId,
         data.pageContext.requirementId,
+      );
+    }
+    if (data.pageContext.page === "breakdown") {
+      return callCesareWithBreakdownTools(
+        systemPrompt,
+        data.conversationHistory,
+        data.message,
+        db,
+        data.projectId,
+      );
+    }
+    if (data.pageContext.page === "schedule") {
+      return callCesareWithScheduleTools(
+        systemPrompt,
+        data.conversationHistory,
+        data.message,
+        db,
+        data.projectId,
+        data.pageContext.shootingDayNumber ?? null,
+      );
+    }
+    if (data.pageContext.page === "budget") {
+      return callCesareWithBudgetTools(
+        systemPrompt,
+        data.conversationHistory,
+        data.message,
+        db,
+        data.projectId,
+      );
+    }
+    if (isDocumentPage(data.pageContext.page) && ctx.activeDocument) {
+      const docContext: DocumentContext = {
+        documentId: ctx.activeDocument.id,
+        documentType: ctx.activeDocument.type,
+        content: ctx.activeDocument.content,
+      };
+      return callCesareWithDocumentTools(
+        systemPrompt,
+        data.conversationHistory,
+        data.message,
+        db,
+        data.projectId,
+        docContext,
       );
     }
     return callCesare(systemPrompt, data.conversationHistory, data.message);

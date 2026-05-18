@@ -1,0 +1,117 @@
+.badge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-overlay);
+  border: 1px solid var(--ds-line);
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  color: var(--ds-text-2);
+
+  &[data-tone="low"] {
+    border-color: color-mix(in srgb, var(--ds-success, #2ec27e) 35%, var(--ds-line));
+  }
+  &[data-tone="mid"] {
+    border-color: color-mix(in srgb, var(--ds-warning, #f5c84b) 45%, var(--ds-line));
+  }
+  &[data-tone="high"] {
+    border-color: color-mix(in srgb, var(--ds-warning, #f5a623) 55%, var(--ds-line));
+  }
+  &[data-tone="critical"] {
+    border-color: color-mix(in srgb, var(--ds-danger, #e25555) 55%, var(--ds-line));
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  color: var(--ds-text-2);
+  min-inline-size: 64px;
+}
+
+.dots {
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  color: var(--ds-text);
+
+  &[data-tone="low"] {
+    color: var(--ds-success, #2ec27e);
+  }
+  &[data-tone="mid"] {
+    color: var(--ds-warning, #f5c84b);
+  }
+  &[data-tone="high"] {
+    color: var(--ds-warning, #f5a623);
+  }
+  &[data-tone="critical"] {
+    color: var(--ds-danger, #e25555);
+  }
+}
+
+.score {
+  color: var(--ds-text-2);
+  font-size: 10px;
+}
+
+.probabilityShift {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.probClear {
+  color: var(--ds-text-2);
+}
+
+.arrow {
+  color: var(--ds-text-3, var(--ds-text-2));
+}
+
+.probActual {
+  color: var(--ds-text);
+  font-weight: 600;
+
+  &[data-tone="warn"] {
+    color: var(--ds-warning, #f5a623);
+  }
+  &[data-tone="critical"] {
+    color: var(--ds-danger, #e25555);
+  }
+}
+
+.probSingle {
+  color: var(--ds-text);
+  font-weight: 600;
+}
+
+.loading {
+  color: var(--ds-text-3, var(--ds-text-2));
+  font-size: 10px;
+}
+
+.risks {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-size: 10px;
+  color: var(--ds-text-2);
+}
+
+.warnIcon {
+  color: var(--ds-warning, #f5a623);
+}
+
+.risksText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

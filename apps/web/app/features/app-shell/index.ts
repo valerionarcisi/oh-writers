@@ -11,4 +11,12 @@ export {
   useSetActiveScene,
   useActiveRequirementId,
   useSetActiveRequirementId,
+  useActiveDocument,
+  useSetActiveDocument,
+  useActiveShootingDay,
+  useSetActiveShootingDay,
+} from "./active-scene-context";
+export type {
+  ActiveDocument,
+  ActiveShootingDay,
 } from "./active-scene-context";

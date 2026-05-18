@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCesareOpen,
+  useSetActiveScene,
+  useSetActiveShootingDay,
+} from "~/features/app-shell";
+import {
+  useLocationAnchors,
+  pickPrimaryExteriorLocation,
+} from "../hooks/useLocationAnchors";
+import type { DayWeatherAnchor } from "../hooks/useDayEstimate";
 import { useDragAutoScroll } from "../hooks/useDragAutoScroll";
 import {
   useSuspenseQuery,
@@ -58,9 +67,20 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
   const openCesare = useCesareOpen();
   const setActiveScene = useSetActiveScene();
+  const setActiveShootingDay = useSetActiveShootingDay();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const schedule = data?.isOk ? data.value : null;
   const versionsDrawer = useVersionsDrawer();
+  const locationAnchors = useLocationAnchors(projectId);
+
+  const getWeatherAnchor = useCallback(
+    (day: { strips: ReadonlyArray<{ intExt: string; location: string }> }): DayWeatherAnchor | null => {
+      const extLocation = pickPrimaryExteriorLocation(day.strips);
+      if (!extLocation) return null;
+      return locationAnchors.findByName(extLocation);
+    },
+    [locationAnchors],
+  );
 
   const { data: versionsResult } = useVersions(schedule?.screenplayId ?? "");
   const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
@@ -85,8 +105,11 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   }, []);
 
   useEffect(() => {
-    return () => setActiveScene(null);
-  }, [setActiveScene]);
+    return () => {
+      setActiveScene(null);
+      setActiveShootingDay(null);
+    };
+  }, [setActiveScene, setActiveShootingDay]);
 
   const invalidate = () =>
     qc.refetchQueries({ queryKey: ["schedule", projectId] });
@@ -232,6 +255,11 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     if (!schedule) return;
     const day = schedule.shootingDays.find((d) => d.id === dayId) ?? null;
     setSelectedDay(day);
+    if (day) {
+      setActiveShootingDay({ dayId: day.id, dayNumber: day.dayNumber });
+    } else {
+      setActiveShootingDay(null);
+    }
   };
 
   const handleSelectDayInView = (dayId: string) => {
@@ -387,6 +415,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
                         draggingStripId={draggingStripId}
                         viewMode={t === "weeks" ? "weeks" : "days"}
                         unscheduledStrips={schedule.unscheduledStrips}
+                        getWeatherAnchor={getWeatherAnchor}
                         onMoveStrip={(stripId, targetDayId) =>
                           moveMutation.mutate({
                             stripId,

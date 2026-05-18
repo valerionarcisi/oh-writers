@@ -1,5 +1,6 @@
 import type { ScheduleView, StripView } from "../server/schedule.server";
 import { ShootingDayColumn } from "./ShootingDayColumn";
+import type { DayWeatherAnchor } from "../hooks/useDayEstimate";
 import styles from "./StripBoard.module.css";
 
 const DAYS_PER_WEEK = 6;
@@ -9,6 +10,7 @@ interface StripBoardProps {
   draggingStripId: string | null;
   viewMode: "days" | "weeks";
   unscheduledStrips: ReadonlyArray<StripView>;
+  getWeatherAnchor: (day: ScheduleView["shootingDays"][number]) => DayWeatherAnchor | null;
   onMoveStrip: (stripId: string, targetDayId: string | null) => void;
   onDragStart: (stripId: string) => void;
   onDrop: (dayId: string, position: number) => void;
@@ -25,6 +27,7 @@ export function StripBoard({
   schedule,
   viewMode,
   unscheduledStrips,
+  getWeatherAnchor,
   onMoveStrip,
   onDragStart,
   onDrop,
@@ -75,6 +78,7 @@ export function StripBoard({
                   key={day.id}
                   day={day}
                   unscheduledStrips={unscheduledStrips}
+                  weatherAnchor={getWeatherAnchor(day)}
                   onMoveStrip={onMoveStrip}
                   onDragStart={onDragStart}
                   onDrop={onDrop}
@@ -108,6 +112,7 @@ export function StripBoard({
           key={day.id}
           day={day}
           unscheduledStrips={unscheduledStrips}
+          weatherAnchor={getWeatherAnchor(day)}
           onMoveStrip={onMoveStrip}
           onDragStart={onDragStart}
           onDrop={onDrop}

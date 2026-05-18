@@ -21,6 +21,8 @@ import {
   ActiveSceneProvider,
   useActiveScene,
   useActiveRequirementId,
+  useActiveDocument,
+  useActiveShootingDay,
 } from "../active-scene-context";
 import styles from "./AppShell.module.css";
 
@@ -82,6 +84,8 @@ function AppShellInner({
   const saveSecondsAgo = ctxSave.secondsAgo ?? saveSecondsAgoProp;
   const activeScene = useActiveScene();
   const activeRequirementId = useActiveRequirementId();
+  const activeDocument = useActiveDocument();
+  const activeShootingDay = useActiveShootingDay();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -101,8 +105,64 @@ function AppShellInner({
           variant: "success",
         });
       }
+      return;
     }
-  }, [cesarePage, projectId, queryClient, showToast]);
+
+    // Document pages — Cesare may have applied an edit via tools. Invalidate
+    // the active document query so the editor refetches the new content, and
+    // surface a toast when the reply hints at a successful tool call.
+    const isDocPage =
+      cesarePage === "soggetto" ||
+      cesarePage === "synopsis" ||
+      cesarePage === "outline" ||
+      cesarePage === "treatment";
+    if (isDocPage && projectId && activeDocument) {
+      void queryClient.invalidateQueries({
+        queryKey: ["documents", projectId, activeDocument.type],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["document-versions", activeDocument.id],
+      });
+      const lc = reply.toLowerCase();
+      if (
+        lc.includes("aggiornato") ||
+        lc.includes("espanso") ||
+        lc.includes("compresso") ||
+        lc.includes("riscritto") ||
+        lc.includes("modificato") ||
+        lc.includes("sostituito")
+      ) {
+        const labels: Record<string, string> = {
+          soggetto: "il soggetto",
+          synopsis: "la sinossi",
+          outline: "la scaletta",
+          treatment: "il trattamento",
+        };
+        showToast({
+          message: `✦ Cesare ha aggiornato ${labels[cesarePage] ?? "il documento"}`,
+          variant: "success",
+        });
+      }
+    }
+
+    // Budget page — Cesare acts as a Line Producer via budget tools.
+    if (cesarePage === "budget" && projectId) {
+      void queryClient.invalidateQueries({ queryKey: ["budget", projectId] });
+      const lc = reply.toLowerCase();
+      if (
+        lc.includes("aggiornato") ||
+        lc.includes("aggiunto") ||
+        lc.includes("ridistribuito") ||
+        lc.includes("modificato") ||
+        lc.includes("spostato")
+      ) {
+        showToast({
+          message: "✦ Cesare ha aggiornato il budget",
+          variant: "success",
+        });
+      }
+    }
+  }, [cesarePage, projectId, queryClient, showToast, activeDocument]);
 
   useEffect(() => {
     const main = document.getElementById("main-content");
@@ -212,6 +272,9 @@ function AppShellInner({
               sceneId={activeScene?.sceneId ?? null}
               sceneNumber={activeScene?.sceneNumber ?? null}
               requirementId={cesareRequirementId ?? activeRequirementId}
+              documentId={activeDocument?.id ?? null}
+              shootingDayId={activeShootingDay?.dayId ?? null}
+              shootingDayNumber={activeShootingDay?.dayNumber ?? null}
               isOpen={cesareOpen}
               onClose={() => setCesareOpen(false)}
               onOpenFullPage={() => {

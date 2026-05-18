@@ -4,11 +4,14 @@ import { DropdownMenu } from "@oh-writers/ui";
 import { computeDayKpis, formatDayHours } from "@oh-writers/domain";
 import type { ShootingDayView, StripView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
+import { DayDifficultyBadge } from "./DayDifficultyBadge";
+import { useDayEstimate, type DayWeatherAnchor } from "../hooks/useDayEstimate";
 import styles from "./ShootingDayColumn.module.css";
 
 interface ShootingDayColumnProps {
   day: ShootingDayView;
   unscheduledStrips: ReadonlyArray<StripView>;
+  weatherAnchor: DayWeatherAnchor | null;
   onMoveStrip: (stripId: string, targetDayId: string | null) => void;
   onDragStart: (stripId: string) => void;
   onDrop: (dayId: string, position: number) => void;
@@ -59,6 +62,7 @@ const formatShortDate = (iso: string): string => {
 export function ShootingDayColumn({
   day,
   unscheduledStrips,
+  weatherAnchor,
   onMoveStrip,
   onDragStart,
   onDrop,
@@ -68,6 +72,10 @@ export function ShootingDayColumn({
   onStripClick,
   onDayClick,
 }: ShootingDayColumnProps) {
+  const { estimate, weather, isWeatherLoading } = useDayEstimate({
+    day,
+    weatherAnchor,
+  });
   const [dragOver, setDragOver] = useState(false);
   const [isEditingDate, setIsEditingDate] = useState(false);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
@@ -282,6 +290,13 @@ export function ShootingDayColumn({
         )}
         {isRest && (
           <div className={styles.restLabel}>— giorno di riposo —</div>
+        )}
+        {!isRest && day.strips.length > 0 && (
+          <DayDifficultyBadge
+            estimate={estimate}
+            weather={weather}
+            isWeatherLoading={isWeatherLoading}
+          />
         )}
       </header>
 

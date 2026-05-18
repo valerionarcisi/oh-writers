@@ -29,6 +29,9 @@ export interface CesareSheetProps {
   sceneId?: string | null;
   sceneNumber?: number | null;
   requirementId?: string | null;
+  documentId?: string | null;
+  shootingDayId?: string | null;
+  shootingDayNumber?: number | null;
   isOpen: boolean;
   onClose: () => void;
   onOpenFullPage: () => void;
@@ -235,6 +238,9 @@ export type AskCesareFn = (params: {
       sceneId: string | null;
       sceneNumber: number | null;
       requirementId?: string | null;
+      documentId?: string | null;
+      shootingDayId?: string | null;
+      shootingDayNumber?: number | null;
     };
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>;
   };
@@ -250,6 +256,9 @@ const callAskCesare = async (
   sceneId: string | null | undefined,
   sceneNumber: number | null | undefined,
   requirementId: string | null | undefined,
+  documentId: string | null | undefined,
+  shootingDayId: string | null | undefined,
+  shootingDayNumber: number | null | undefined,
   history: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<string | null> => {
   if (!fn) {
@@ -265,6 +274,9 @@ const callAskCesare = async (
         sceneId: sceneId ?? null,
         sceneNumber: sceneNumber ?? null,
         requirementId: requirementId ?? null,
+        documentId: documentId ?? null,
+        shootingDayId: shootingDayId ?? null,
+        shootingDayNumber: shootingDayNumber ?? null,
       },
       conversationHistory: history,
     },
@@ -477,6 +489,9 @@ export function CesareSheet({
   sceneId,
   sceneNumber,
   requirementId,
+  documentId,
+  shootingDayId,
+  shootingDayNumber,
   isOpen,
   onClose,
   onOpenFullPage,
@@ -553,6 +568,9 @@ export function CesareSheet({
           sceneId,
           sceneNumber,
           requirementId,
+          documentId,
+          shootingDayId,
+          shootingDayNumber,
           prev, // history before the new user message
         ).then((reply) => {
           const content = reply ?? "Mi dispiace, si è verificato un errore. Riprova.";
@@ -566,7 +584,19 @@ export function CesareSheet({
       setInput("");
       setIsLoading(true);
     },
-    [askCesare, isLoading, onAssistantResponse, projectId, page, sceneId, sceneNumber, requirementId],
+    [
+      askCesare,
+      isLoading,
+      onAssistantResponse,
+      projectId,
+      page,
+      sceneId,
+      sceneNumber,
+      requirementId,
+      documentId,
+      shootingDayId,
+      shootingDayNumber,
+    ],
   );
 
   const handleSend = useCallback(() => {
