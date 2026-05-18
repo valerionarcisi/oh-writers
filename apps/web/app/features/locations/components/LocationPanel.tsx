@@ -86,23 +86,21 @@ function CandidateRow({
           </span>
           <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
         </button>
-        {(candidate.address || (candidate.lat && candidate.lng)) && (
-          <a
-            href={
-              candidate.lat && candidate.lng
-                ? `https://www.google.com/maps?q=${candidate.lat},${candidate.lng}`
-                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(candidate.address ?? "")}`
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.openInMapsHeader}
-            title="Apri in Google Maps"
-            aria-label={`Apri ${candidate.name} in Google Maps`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            ↗
-          </a>
-        )}
+        <a
+          href={
+            candidate.lat && candidate.lng
+              ? `https://www.google.com/maps?q=${candidate.lat},${candidate.lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(candidate.address ?? candidate.name)}`
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.openInMapsHeader}
+          title="Cerca in Google Maps"
+          aria-label={`Cerca ${candidate.name} in Google Maps`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          ↗
+        </a>
       </div>
 
       {expanded && (
