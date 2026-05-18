@@ -31,6 +31,7 @@ import {
   runBudgetToolLoop,
 } from "./cesare-tools";
 import type { DocumentContext, ScheduleToolContext } from "./cesare-tools";
+import { createMockAnthropicClient } from "./__mocks__/cesare-tool-loop.mock";
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 
@@ -57,11 +58,29 @@ const PageContextSchema = z.object({
     "shooting-plan",
     "locations",
   ]),
-  sceneId: z.string().uuid().nullable(),
+  // Sentinel: the screenplay editor passes "" when it knows the scene number
+  // (from scroll tracking) but not the UUID. Accept empty string and treat
+  // as null downstream.
+  sceneId: z
+    .union([z.string().uuid(), z.literal("")])
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
   sceneNumber: z.number().nullable(),
-  requirementId: z.string().uuid().nullable().optional(),
-  documentId: z.string().uuid().nullable().optional(),
-  shootingDayId: z.string().uuid().nullable().optional(),
+  requirementId: z
+    .union([z.string().uuid(), z.literal("")])
+    .nullable()
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
+  documentId: z
+    .union([z.string().uuid(), z.literal("")])
+    .nullable()
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
+  shootingDayId: z
+    .union([z.string().uuid(), z.literal("")])
+    .nullable()
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
   shootingDayNumber: z.number().int().nullable().optional(),
 });
 
@@ -1103,6 +1122,18 @@ const callCesare = (
 // ─── Agentic tool loop (locations) ───────────────────────────────────────────
 
 const loadAnthropicNonStreaming = async () => {
+  // MOCK_AI escape hatch: return a scripted client so the tool loop runs end-to-end
+  // (including the real tool executors against the test DB) without any HTTP call.
+  if (process.env["MOCK_AI"] === "true") {
+    return createMockAnthropicClient() as unknown as {
+      messages: {
+        create(args: Record<string, unknown>): Promise<{
+          content: unknown[];
+          stop_reason?: string | null;
+        }>;
+      };
+    };
+  }
   const sdkModule = "@anthropic-ai/sdk";
   const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
     default?: new (cfg: { apiKey: string }) => {
@@ -1270,12 +1301,29 @@ const callCesareWithBudgetTools = (
 
 // ─── Handler body ─────────────────────────────────────────────────────────────
 
+// Pages that have agentic tools — when MOCK_AI=true these still run through
+// the tool loop (against the mock LLM client) so end-to-end side effects on
+// the DB are exercised. Non-agentic pages keep the cheap string fallback.
+const AGENTIC_PAGES = new Set<string>([
+  "locations",
+  "breakdown",
+  "schedule",
+  "budget",
+  "soggetto",
+  "synopsis",
+  "outline",
+  "treatment",
+]);
+
 const handleAskCesare = (
   data: CesareInput,
   db: Db,
   _access: ProjectAccess,
 ): ResultAsync<string, CesareError> => {
-  if (process.env["MOCK_AI"] === "true") {
+  if (
+    process.env["MOCK_AI"] === "true" &&
+    !AGENTIC_PAGES.has(data.pageContext.page)
+  ) {
     return mockResponse(data.pageContext);
   }
 
@@ -1353,3 +1401,8 @@ export const askCesare = createServerFn({ method: "POST" })
       ),
     ),
   );
+
+// Test-only mock-context setter lives in the API route
+// `/api/test/mock-context` so it can be hit from Playwright without going
+// through TanStack's server-fn invoke protocol. See:
+// apps/web/app/routes/api/test/mock-context.ts

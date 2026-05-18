@@ -123,6 +123,9 @@ function PanelBody({
 
   const sceneLabel = debouncedScene !== null ? `Sc. ${debouncedScene}` : null;
   const isWaitingForDebounce = sceneCurrent !== debouncedScene;
+  const isLoading =
+    hasContent && (isWaitingForDebounce || polishQ.isFetching);
+  const hadPreviousSuggestions = suggestions.length > 0;
 
   return (
     <div className={styles.body}>
@@ -131,16 +134,8 @@ function PanelBody({
           <p className={styles.notesHead}>
             {!hasContent ? (
               "Scrivi almeno una scena per iniziare."
-            ) : isWaitingForDebounce ? (
-              <span className={styles.loadingInline}>
-                {sceneLabel ? `Cambio scena…` : "In attesa…"}
-                <span className={styles.spinner} aria-hidden="true" />
-              </span>
-            ) : polishQ.isFetching ? (
-              <span className={styles.loadingInline}>
-                {sceneLabel ? `Cesare legge ${sceneLabel}…` : "Cesare sta leggendo…"}
-                <span className={styles.spinner} aria-hidden="true" />
-              </span>
+            ) : isLoading ? (
+              `${sceneLabel ? `${sceneLabel} · ` : ""}Cesare sta leggendo…`
             ) : suggestions.length > 0 ? (
               `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length} rifiniture`
             ) : (
@@ -158,6 +153,37 @@ function PanelBody({
             ↻
           </button>
         </div>
+
+        {isLoading && !hadPreviousSuggestions && (
+          <ul className={styles.suggestionList} aria-busy="true" aria-live="polite">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className={styles.suggestionRow}>
+                <span
+                  className={`${styles.kindDot} ${styles.skeletonDot}`}
+                  aria-hidden="true"
+                />
+                <div className={styles.suggestionBody}>
+                  <p className={styles.suggestionMeta}>
+                    <span
+                      className={`${styles.skeletonLine} ${styles.skeletonShort}`}
+                      aria-hidden="true"
+                    />
+                  </p>
+                  <p className={styles.suggestionMessage}>
+                    <span
+                      className={`${styles.skeletonLine} ${styles.skeletonLong}`}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className={`${styles.skeletonLine} ${styles.skeletonMedium}`}
+                      aria-hidden="true"
+                    />
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {flash && <p className={styles.flash}>{flash}</p>}
 

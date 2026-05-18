@@ -110,7 +110,60 @@
   }
 }
 
+/* ─── Skeleton shimmer (loading suggestion cards) ─────────────────────── */
+
+.skeletonLine {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--ds-line) 25%,
+    var(--ds-surface-alt, var(--ds-surface)) 50%,
+    var(--ds-line) 75%
+  );
+  background-size: 200% 100%;
+  animation: cesareSkeletonShimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm, 3px);
+  block-size: 10px;
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
+.skeletonShort {
+  inline-size: 35%;
+}
+
+.skeletonMedium {
+  inline-size: 65%;
+  margin-block-start: 4px;
+}
+
+.skeletonLong {
+  inline-size: 92%;
+}
+
+.skeletonDot {
+  background: linear-gradient(
+    90deg,
+    var(--ds-line) 25%,
+    var(--ds-surface-alt, var(--ds-surface)) 50%,
+    var(--ds-line) 75%
+  );
+  background-size: 200% 100%;
+  animation: cesareSkeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes cesareSkeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .skeletonLine,
+  .skeletonDot {
+    animation: none;
+    opacity: 0.5;
+  }
   .spinner::after {
     animation: none;
     inset-inline-start: 0;
