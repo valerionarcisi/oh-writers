@@ -6,6 +6,7 @@ import {
   useQueryClient,
   useQuery,
 } from "@tanstack/react-query";
+import { useToast } from "@oh-writers/ui";
 import {
   scenesWithPlanSummaryQueryOptions,
   getOrCreateInitialPlan,
@@ -38,6 +39,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const openCesare = useCesareOpen();
+  const { showToast } = useToast();
   const { data } = useSuspenseQuery(
     scenesWithPlanSummaryQueryOptions(projectId),
   );
@@ -74,11 +76,30 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
   const generatePlanMut = useMutation({
     mutationFn: async () =>
       generateShotPlansFromEffort({ data: { projectId } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: ["shot-plan"] });
       void qc.invalidateQueries({
         queryKey: ["shooting-plan", "scenes", projectId],
       });
+      if (!result.isOk) {
+        showToast({ message: "Errore durante la generazione del piano.", variant: "error" });
+        return;
+      }
+      const { createdCount, skippedCount, estimatedDays } = result.value;
+      if (createdCount === 0 && skippedCount > 0) {
+        showToast({
+          message: `Tutte le ${skippedCount} scene hanno già un piano.`,
+          variant: "info",
+        });
+      } else {
+        showToast({
+          message: `Piano generato: ${createdCount} scene create${skippedCount > 0 ? `, ${skippedCount} già esistenti` : ""}. Stima: ${estimatedDays} giorn${estimatedDays === 1 ? "o" : "i"} di riprese.`,
+          variant: "success",
+        });
+      }
+    },
+    onError: () => {
+      showToast({ message: "Errore durante la generazione del piano.", variant: "error" });
     },
   });
 

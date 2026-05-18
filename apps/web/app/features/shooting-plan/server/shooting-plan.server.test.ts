@@ -102,6 +102,7 @@ const makeShot = (overrides: Partial<{
   cameraMovement: string;
   cameraLabel: string;
   estimatedMinutes: number | null;
+  timeOffset: number | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -113,6 +114,7 @@ const makeShot = (overrides: Partial<{
   cameraMovement: "STATIC",
   cameraLabel: "A",
   estimatedMinutes: null,
+  timeOffset: null,
   notes: null,
   createdAt: new Date("2026-01-01T00:00:00Z"),
   updatedAt: new Date("2026-01-01T00:00:00Z"),
