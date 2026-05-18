@@ -26,6 +26,7 @@ import {
   highlightAppliedRange,
 } from "../lib/plugins/cesare-applied-highlight";
 import { ToolbarMenu } from "./ToolbarMenu";
+import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
 import { EXPORT_FORMATS, type ExportFormat } from "@oh-writers/domain";
@@ -34,7 +35,7 @@ import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
-import { useCesareOpen } from "~/features/app-shell";
+import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
@@ -160,6 +161,7 @@ export const ScreenplayEditor = forwardRef<
     else setLocalCesareOn(next);
   };
   const openCesare = useCesareOpen();
+  const setActiveScene = useSetActiveScene();
   const viewRef = useRef<EditorView | null>(null);
 
   const isViewing = viewing.kind === "viewing";
@@ -353,6 +355,14 @@ export const ScreenplayEditor = forwardRef<
   useEffect(() => {
     onCurrentElementChange?.(currentElement);
   }, [currentElement, onCurrentElementChange]);
+
+  // Sync current scene to app-level context so Cesare always has the right scene
+  useEffect(() => {
+    if (currentSceneIndex !== null) {
+      setActiveScene({ sceneId: "", sceneNumber: currentSceneIndex });
+    }
+    return () => setActiveScene(null);
+  }, [currentSceneIndex, setActiveScene]);
 
   // Bubble up live page/scene metrics so the right-side Cesare panel can
   // render real numbers instead of placeholders.
