@@ -86,21 +86,18 @@ function CandidateRow({
           </span>
           <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
         </button>
-        <a
-          href={
-            candidate.lat && candidate.lng
-              ? `https://www.google.com/maps?q=${candidate.lat},${candidate.lng}`
-              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(candidate.address ?? candidate.name)}`
-          }
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
           className={styles.openInMapsHeader}
-          title="Cerca in Google Maps"
-          aria-label={`Cerca ${candidate.name} in Google Maps`}
-          onClick={(e) => e.stopPropagation()}
+          title="Centra sulla mappa"
+          aria-label={`Centra ${candidate.name} sulla mappa`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCandidateSelect(candidate.id);
+          }}
         >
-          ↗
-        </a>
+          📍
+        </button>
       </div>
 
       {expanded && (
@@ -111,21 +108,6 @@ function CandidateRow({
               <span className={styles.candidateAddressText}>
                 {candidate.address ?? `${candidate.lat}, ${candidate.lng}`}
               </span>
-              <a
-                href={
-                  candidate.lat && candidate.lng
-                    ? `https://www.google.com/maps?q=${candidate.lat},${candidate.lng}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(candidate.address ?? "")}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.openInMaps}
-                title="Apri in Google Maps"
-                aria-label={`Apri ${candidate.name} in Google Maps`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                ↗
-              </a>
             </div>
           )}
           {candidate.aiSuggested && candidate.aiReasoning && (
