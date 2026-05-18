@@ -417,7 +417,13 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   }
 
   const layout = layoutForType(type);
-  const rightAside = <NarrativeCesarePanel docType={type} />;
+  const rightAside = (
+    <NarrativeCesarePanel
+      projectId={document.projectId}
+      docType={type}
+      content={plainContent}
+    />
+  );
   const leftAside = isTreatment ? <TreatmentToc content={content} /> : undefined;
 
   return (

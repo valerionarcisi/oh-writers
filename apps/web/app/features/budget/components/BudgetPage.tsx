@@ -423,7 +423,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           onClick: () => generateMutation.mutate(),
         }}
         secondaryActions={[
-          { label: "Salva", onClick: () => undefined },
           { label: "Esporta", hotkey: "⌘E", onClick: () => setIsExportOpen(true) },
         ]}
         cesareNoteCount={0}

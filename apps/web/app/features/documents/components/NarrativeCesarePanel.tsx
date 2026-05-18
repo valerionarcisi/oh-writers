@@ -1,178 +1,35 @@
-import type { FC } from "react";
+import { type FC, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
+import {
+  narrativePolishQueryOptions,
+  type NarrativePolishSuggestion,
+  type NarrativePolishSuggestionDoc,
+} from "../server/narrative-polish.server";
 import styles from "./NarrativeCesarePanel.module.css";
 
-// TODO(narrative-cesare-wiring): replace these static memos with real polish
-// suggestions produced by a server function similar to `screenplay-polish.server`.
-// For now we surface 3–5 mock memos per doc-type so the panel layout, copy and
-// interaction model can be validated end-to-end before wiring the AI call.
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
-interface NarrativeMemo {
-  readonly id: string;
-  readonly group: string;
-  readonly category: string;
-  readonly message: string;
+interface NarrativeCesarePanelProps {
+  readonly projectId: string;
+  readonly docType: DocumentType;
+  /** Current document content — suggestions are keyed on the first 200 chars. */
+  readonly content: string;
 }
 
-const MEMOS: Record<NarrativeDocType, readonly NarrativeMemo[]> = {
-  [DocumentTypes.SOGGETTO]: [
-    {
-      id: "sog-clarity-1",
-      group: "Chiarezza",
-      category: "Premessa",
-      message:
-        "La premessa è solida ma il salto dal ritrovamento al pentimento è brusco. Aggiungi un beat sul gesto fisico del solvente.",
-    },
-    {
-      id: "sog-tone-1",
-      group: "Tono",
-      category: "Coerenza",
-      message:
-        "Il registro nel secondo paragrafo vira al lirico; il resto è più asciutto. Decidi se vuoi tenerlo voluto.",
-    },
-    {
-      id: "sog-clarity-2",
-      group: "Chiarezza",
-      category: "Antagonista",
-      message:
-        "L'antagonista è nominato ma non agisce mai sulla pagina. Considera una scena di confronto diretto.",
-    },
-  ],
-  [DocumentTypes.SYNOPSIS]: [
-    {
-      id: "syn-target-1",
-      group: "Target formato",
-      category: "Lunghezza",
-      message:
-        "Sei a 1.4 cartelle, in target 1–2. Non aggiungere altro: gli organismi di finanziamento si fermano alle prime due.",
-    },
-    {
-      id: "syn-structure-1",
-      group: "Struttura",
-      category: "Finale",
-      message:
-        "Il finale è descritto in due frasi: per una sinossi industry serve un beat in più che renda esplicita la decisione del protagonista.",
-    },
-    {
-      id: "syn-clarity-1",
-      group: "Chiarezza",
-      category: "Antefatto",
-      message:
-        "Il primo paragrafo presenta tre informazioni in due frasi. Spezza per dare respiro.",
-    },
-  ],
-  [DocumentTypes.OUTLINE]: [
-    {
-      id: "out-beat-1",
-      group: "Struttura",
-      category: "Beat · catalyst",
-      message:
-        "Il catalyst arriva al beat #4 (≈8%). Per un giallo, idealmente 10–15%. Considera un'anticipazione in scena 3.",
-    },
-    {
-      id: "out-seq-1",
-      group: "Struttura",
-      category: "Sequenza · 2",
-      message:
-        '"La scoperta" è densa di esposizione. Potresti spalmarla su due sequenze più brevi.',
-    },
-    {
-      id: "out-pace-1",
-      group: "Ritmo",
-      category: "Pacing",
-      message:
-        "Tre scene di seguito in interni di sera. Considera un esterno diurno per dare respiro.",
-    },
-    {
-      id: "out-coverage-1",
-      group: "Copertura beat",
-      category: "Atto II",
-      message:
-        "Manca un midpoint riconoscibile: l'atto secondo si chiude senza un punto di non ritorno chiaro.",
-    },
-  ],
-  [DocumentTypes.TREATMENT]: [
-    {
-      id: "trt-density-1",
-      group: "Lettura",
-      category: "Densità",
-      message:
-        'Capitolo "Sotto la vernice" denso (avg frase 24 parole). Spezza per dare respiro al lettore.',
-    },
-    {
-      id: "trt-tone-1",
-      group: "Stile",
-      category: "Tono · coerenza",
-      message:
-        "Il tono di Atto I è freddo e distaccato; Atto II vira al malinconico. Va bene se è voluto.",
-    },
-    {
-      id: "trt-clarity-1",
-      group: "Chiarezza",
-      category: "Voce narrante",
-      message:
-        "Alterni passato remoto e presente storico nello stesso capitolo. Scegli la voce dominante.",
-    },
-  ],
-} as const;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type NarrativeDocType =
-  | typeof DocumentTypes.SOGGETTO
-  | typeof DocumentTypes.SYNOPSIS
-  | typeof DocumentTypes.OUTLINE
-  | typeof DocumentTypes.TREATMENT;
-
-const isNarrativeDocType = (type: DocumentType): type is NarrativeDocType =>
+const isNarrativeDocType = (type: DocumentType): type is NarrativePolishSuggestionDoc =>
   type === DocumentTypes.SOGGETTO ||
   type === DocumentTypes.SYNOPSIS ||
   type === DocumentTypes.OUTLINE ||
   type === DocumentTypes.TREATMENT;
 
-interface NarrativeCesarePanelProps {
-  readonly docType: DocumentType;
-}
-
-export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
-  docType,
-}) => {
-  if (!isNarrativeDocType(docType)) return null;
-  const memos = MEMOS[docType];
-  const grouped = groupByGroup(memos);
-
-  return (
-    <aside className={styles.panel} aria-label="Note di Cesare">
-      <header className={styles.header}>
-        <span className={styles.label}>Cesare</span>
-        <span className={styles.status}>{memos.length} note</span>
-      </header>
-      <div className={styles.body}>
-        {grouped.map(({ group, items }) => (
-          <section key={group} className={styles.group}>
-            <p className={styles.groupLabel}>{group}</p>
-            <ul className={styles.list}>
-              {items.map((memo) => (
-                <li key={memo.id} className={styles.item}>
-                  <p className={styles.itemCat}>{memo.category}</p>
-                  <p className={styles.itemText}>{memo.message}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-      <footer className={styles.footer}>
-        <span>Bozza mock</span>
-        <span>aggiornato ora</span>
-      </footer>
-    </aside>
-  );
-};
-
 const groupByGroup = (
-  memos: readonly NarrativeMemo[],
-): ReadonlyArray<{ group: string; items: readonly NarrativeMemo[] }> => {
+  memos: readonly NarrativePolishSuggestion[],
+): ReadonlyArray<{ group: string; items: readonly NarrativePolishSuggestion[] }> => {
   const order: string[] = [];
-  const buckets = new Map<string, NarrativeMemo[]>();
+  const buckets = new Map<string, NarrativePolishSuggestion[]>();
   for (const memo of memos) {
     const bucket = buckets.get(memo.group);
     if (bucket) {
@@ -183,4 +40,132 @@ const groupByGroup = (
     }
   }
   return order.map((group) => ({ group, items: buckets.get(group) ?? [] }));
+};
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function SkeletonMemo() {
+  return (
+    <li className={styles.item} aria-hidden="true">
+      <p className={[styles.itemCat, styles.skeletonLine, styles.skeletonShort].join(" ")} />
+      <p className={[styles.itemText, styles.skeletonLine, styles.skeletonLong].join(" ")} />
+      <p className={[styles.itemText, styles.skeletonLine, styles.skeletonMedium].join(" ")} />
+    </li>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className={styles.body} aria-busy="true" aria-label="Caricamento suggerimenti">
+      <section className={styles.group}>
+        <p className={[styles.groupLabel, styles.skeletonLine, styles.skeletonShort].join(" ")} aria-hidden="true" />
+        <ul className={styles.list}>
+          <SkeletonMemo />
+          <SkeletonMemo />
+        </ul>
+      </section>
+      <section className={styles.group}>
+        <p className={[styles.groupLabel, styles.skeletonLine, styles.skeletonShort].join(" ")} aria-hidden="true" />
+        <ul className={styles.list}>
+          <SkeletonMemo />
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function EmptyContentState() {
+  return (
+    <div className={styles.emptyState}>
+      <p className={styles.emptyText}>Inizia a scrivere per ricevere suggerimenti da Cesare.</p>
+    </div>
+  );
+}
+
+function ErrorState() {
+  return (
+    <div className={styles.emptyState}>
+      <p className={styles.emptyText}>Impossibile caricare i suggerimenti. Riprova più tardi.</p>
+    </div>
+  );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+
+export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
+  projectId,
+  docType,
+  content,
+}) => {
+  if (!isNarrativeDocType(docType)) return null;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const query = useQuery(narrativePolishQueryOptions(projectId, docType, content));
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const suggestions = useMemo<readonly NarrativePolishSuggestion[]>(() => {
+    if (!query.data || !query.data.isOk) return [];
+    return query.data.value;
+  }, [query.data]);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const grouped = useMemo(() => groupByGroup(suggestions), [suggestions]);
+
+  const hasContent = content.length > 50;
+  const isLoading = query.isFetching;
+  const isError = query.isError || (query.data != null && !query.data.isOk);
+
+  const statusLabel = isLoading
+    ? "Analisi…"
+    : isError
+      ? "Errore"
+      : suggestions.length > 0
+        ? `${suggestions.length} note`
+        : hasContent
+          ? "Nessuna nota"
+          : "–";
+
+  const lastUpdated = query.dataUpdatedAt > 0
+    ? new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(
+        new Date(query.dataUpdatedAt),
+      )
+    : null;
+
+  return (
+    <aside className={styles.panel} aria-label="Note di Cesare">
+      <header className={styles.header}>
+        <span className={styles.label}>Cesare</span>
+        <span className={styles.status}>{statusLabel}</span>
+      </header>
+
+      {!hasContent ? (
+        <EmptyContentState />
+      ) : isLoading && suggestions.length === 0 ? (
+        <LoadingSkeleton />
+      ) : isError ? (
+        <ErrorState />
+      ) : (
+        <div className={styles.body}>
+          {grouped.map(({ group, items }) => (
+            <section key={group} className={styles.group}>
+              <p className={styles.groupLabel}>{group}</p>
+              <ul className={styles.list}>
+                {items.map((memo) => (
+                  <li key={memo.id} className={styles.item}>
+                    <p className={styles.itemCat}>{memo.category}</p>
+                    <p className={styles.itemText}>{memo.message}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+
+      <footer className={styles.footer}>
+        <span>Analisi AI</span>
+        <span>{lastUpdated ?? "–"}</span>
+      </footer>
+    </aside>
+  );
 };

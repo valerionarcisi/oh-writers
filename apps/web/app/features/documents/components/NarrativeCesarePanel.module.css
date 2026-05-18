@@ -118,3 +118,75 @@
   font-size: 10px;
   color: var(--ds-text-3);
 }
+
+/* ─── Empty / error states ────────────────────────────────────────────────── */
+
+.emptyState {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-space-4);
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ds-text-3);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ─── Loading skeleton ────────────────────────────────────────────────────── */
+
+.skeletonLine {
+  background: linear-gradient(
+    90deg,
+    var(--ds-line) 25%,
+    var(--ds-surface-alt, var(--ds-surface)) 50%,
+    var(--ds-line) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm, 3px);
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+
+  & * {
+    visibility: hidden;
+  }
+}
+
+.skeletonShort {
+  inline-size: 40%;
+  block-size: 10px;
+  margin-block-end: var(--ds-space-2);
+}
+
+.skeletonMedium {
+  inline-size: 70%;
+  block-size: 12px;
+  margin-block-start: var(--ds-space-1);
+}
+
+.skeletonLong {
+  inline-size: 90%;
+  block-size: 12px;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLine {
+    animation: none;
+    background: var(--ds-line);
+  }
+}

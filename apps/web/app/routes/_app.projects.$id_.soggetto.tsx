@@ -186,7 +186,13 @@ function SoggettoPageReady({
         canEditLogline={canEdit}
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
-        rightAside={<NarrativeCesarePanel docType={DocumentTypes.SOGGETTO} />}
+        rightAside={
+          <NarrativeCesarePanel
+            projectId={projectId}
+            docType={DocumentTypes.SOGGETTO}
+            content={soggettoContent}
+          />
+        }
       >
         <div className={styles.pageShell}>
           <FreeNarrativeEditor

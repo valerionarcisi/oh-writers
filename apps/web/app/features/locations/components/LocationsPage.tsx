@@ -12,6 +12,7 @@ import {
   removeLocationCandidate,
   syncRequirementsFromBreakdown,
 } from "../server/locations.server";
+import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
 import { LocationPanel } from "./LocationPanel";
 import styles from "./LocationsPage.module.css";
@@ -83,6 +84,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   });
 
   const confirmedCount = requirements.filter((r) => r.status === "confirmed").length;
+  const exportMutation = useExportLocations(projectId);
 
   return (
     <div className={styles.page} data-testid="locations-page">
@@ -132,7 +134,11 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             onClick: () => syncMutation.mutate(),
             ariaLabel: "Sincronizza da breakdown",
           },
-          { label: "Esporta", hotkey: "⌘E", onClick: () => undefined },
+          {
+            label: exportMutation.isPending ? "Esportazione…" : "Esporta",
+            hotkey: "⌘E",
+            onClick: () => exportMutation.mutate(),
+          },
         ]}
         cesareNoteCount={0}
         onCesareClick={openCesare}

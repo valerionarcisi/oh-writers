@@ -311,6 +311,34 @@
   color: var(--ds-action);
 }
 
+.countCritical {
+  color: var(--ds-danger, var(--ds-action)) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-weight: var(--weight-medium);
+}
+
+.criticalDot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--ds-danger, var(--ds-action));
+  display: inline-block;
+  animation: criticalPulse 2s ease-in-out infinite;
+}
+
+@keyframes criticalPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .criticalDot {
+    animation: none;
+  }
+}
+
 .panelBody {
   flex: 1;
   overflow-y: auto;

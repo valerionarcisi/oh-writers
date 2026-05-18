@@ -772,14 +772,20 @@ function BreakdownPageContent({ projectId }: Props) {
               data-testid="breakdown-cesare-tab"
               aria-label={
                 adStats.critical > 0
-                  ? `Cesare: ${adStats.total} alert, di cui ${adStats.critical} critici`
+                  ? `Cesare: ${adStats.critical} critici su ${adStats.total} alert`
                   : `Cesare: ${adStats.total} alert`
               }
             >
               Cesare
-              <span className="count" data-num>
-                {adStats.total}
-                {adStats.critical > 0 && ` (${adStats.critical}!)`}
+              <span
+                className={`count ${adStats.critical > 0 ? styles.countCritical : ""}`}
+                data-num
+              >
+                {adStats.critical > 0 && (
+                  <span className={styles.criticalDot} aria-hidden="true" />
+                )}
+                {adStats.critical > 0 && `${adStats.critical} crit · `}
+                {adStats.total} alert
               </span>
             </button>
           </div>
