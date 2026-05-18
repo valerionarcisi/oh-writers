@@ -72,3 +72,29 @@ button {
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row {
   border-radius: var(--radius-sm) !important;
 }
+
+/* ─── Cesare pulse highlight (driven by [data-cesare-pulse="true"]) ───────── */
+
+[data-cesare-pulse="true"] {
+  animation: cesarePulse 2s ease-out 1;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes cesarePulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--ds-action);
+    outline: 2px solid var(--ds-action);
+  }
+  100% {
+    box-shadow: 0 0 0 20px transparent;
+    outline: 2px solid transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-cesare-pulse="true"] {
+    animation: none;
+    outline: 2px solid var(--ds-action);
+  }
+}

@@ -67,6 +67,10 @@ export type TopBarProps = {
   saveSecondsAgo?: number;
   /** Number of pending Cesare notes — controls the leaf dot animation */
   cesareNoteCount?: number;
+  /** When true, render a red dot on the brand mark to signal an unseen
+   *  agentic result. Independent from `cesareNoteCount` (action-tracked vs
+   *  conversation-tracked). When count > 0 the count badge takes precedence. */
+  cesareHasUnseen?: boolean;
   presenceUsers?: PresenceUser[];
   notificationCount?: number;
   userInitials: string;
@@ -103,6 +107,7 @@ export function TopBar({
   saveState,
   saveSecondsAgo,
   cesareNoteCount = 0,
+  cesareHasUnseen = false,
   presenceUsers = [],
   notificationCount = 0,
   userInitials,
@@ -218,12 +223,17 @@ export function TopBar({
         <span className={styles.brandLetter} aria-hidden="true">
           O
         </span>
-        {cesareNoteCount > 0 && (
+        {cesareNoteCount > 0 ? (
           <span
             className={[styles.cesareDot, styles.cesareDotActive].join(" ")}
             aria-hidden="true"
           />
-        )}
+        ) : cesareHasUnseen ? (
+          <span
+            className={[styles.cesareDot, styles.cesareDotUnseen].join(" ")}
+            aria-hidden="true"
+          />
+        ) : null}
       </button>
 
       {/* Project breadcrumb */}

@@ -64,6 +64,11 @@
   animation: pulse 2s var(--ds-ease) infinite;
 }
 
+.cesareDotUnseen {
+  background: var(--ds-action);
+  animation: pulse 2s var(--ds-ease) infinite;
+}
+
 .breadcrumbBtn {
   display: inline-flex;
   align-items: center;

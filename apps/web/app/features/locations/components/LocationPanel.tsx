@@ -59,6 +59,7 @@ function CandidateRow({
   return (
     <div
       data-testid={`candidate-card-${candidate.id}`}
+      data-entity-id={candidate.id}
       className={`${styles.candidateCard} ${isConfirmed ? styles.confirmed : ""} ${isSelected ? styles.candidateSelected : ""}`}
     >
       <button

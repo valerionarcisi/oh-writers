@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { TopBar, SkipLink, CommandPalette, useToast } from "@oh-writers/ui";
@@ -13,7 +13,7 @@ import type {
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import { CesareSheet } from "~/features/predictions";
 import { askCesare } from "~/features/predictions";
-import type { CesarePage } from "~/features/predictions";
+import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
@@ -24,6 +24,19 @@ import {
   useActiveDocument,
   useActiveShootingDay,
 } from "../active-scene-context";
+import {
+  CesareNotificationProvider,
+  useCesareNotifications,
+  type CesareNotification,
+} from "../cesare-notification-context";
+import {
+  ACTION_LABEL_BY_PAGE,
+  deriveResultLabel,
+  isAgenticPage,
+} from "../cesare-notification-labels";
+import { useWebPush } from "../hooks/useWebPush";
+import { pulseAffectedEntities } from "../cesare-pulse";
+import { CesareNotificationStack } from "./CesareNotificationPill";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -56,7 +69,9 @@ export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
       <ActiveSceneProvider>
-        <AppShellInner {...props} />
+        <CesareNotificationProvider>
+          <AppShellInner {...props} />
+        </CesareNotificationProvider>
       </ActiveSceneProvider>
     </SaveStateProvider>
   );
@@ -93,6 +108,75 @@ function AppShellInner({
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [cesareOpen, setCesareOpen] = useState(false);
   const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(null);
+  const {
+    notifications,
+    startNotification,
+    completeNotification,
+    failNotification,
+    markAllSeen,
+    hasUnseen,
+  } = useCesareNotifications();
+  const { permission: pushPermission, requestPermission, fire: firePush } =
+    useWebPush();
+  // The id of the notification currently in-progress for the active page —
+  // bridges the gap between askCesare invocation and the response handler.
+  const pendingNotificationId = useRef<string | null>(null);
+  // Latest completed notification — used to pulse entities after the sheet
+  // is opened from any of the three channels.
+  const pendingPulseEntities = useRef<CesareNotification | null>(null);
+
+  // Wrap askCesare so we can fire start/complete notifications around it.
+  // Only agentic pages produce persistent notifications — chat-only pages
+  // (screenplay, shooting-plan) skip this layer entirely.
+  const wrappedAskCesare = useCallback<AskCesareFn>(
+    async (params) => {
+      const page = params.data.pageContext.page as CesarePage;
+      const pid = params.data.projectId;
+      const agentic = isAgenticPage(page);
+
+      if (agentic) {
+        const id = startNotification({
+          actionLabel: ACTION_LABEL_BY_PAGE[page],
+          page,
+          projectId: pid,
+        });
+        pendingNotificationId.current = id;
+      }
+
+      const result = await askCesare(params);
+
+      if (agentic && pendingNotificationId.current) {
+        const id = pendingNotificationId.current;
+        if (result.isOk) {
+          const reply = result.value;
+          const resultLabel = deriveResultLabel(page, reply);
+          completeNotification(id, { resultLabel });
+
+          // Web push when the tab is not visible.
+          firePush({
+            title: "Cesare",
+            body: resultLabel,
+            onClick: () => {
+              setCesareOpen(true);
+              markAllSeen();
+            },
+          });
+        } else {
+          failNotification(id, "Cesare ha avuto un problema");
+        }
+        pendingNotificationId.current = null;
+      }
+
+      return result;
+    },
+    [
+      startNotification,
+      completeNotification,
+      failNotification,
+      firePush,
+      markAllSeen,
+    ],
+  );
 
   const handleCesareAssistantResponse = useCallback((reply: string) => {
     if (cesarePage === "locations" && projectId) {
@@ -175,10 +259,34 @@ function AppShellInner({
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
-  const openCesare = useCallback((opts?: OpenCesareOptions) => {
-    setCesareRequirementId(opts?.requirementId ?? null);
-    setCesareOpen(true);
-  }, []);
+  const openCesare = useCallback(
+    (opts?: OpenCesareOptions) => {
+      setCesareRequirementId(opts?.requirementId ?? null);
+      setCesareOpen(true);
+      markAllSeen();
+    },
+    [markAllSeen],
+  );
+
+  const handleActivateNotification = useCallback(
+    (notification: CesareNotification) => {
+      pendingPulseEntities.current = notification;
+      setCesareOpen(true);
+      markAllSeen();
+      // Pulse after a tick so the sheet is mounted and the user's eye is on
+      // the page underneath the (translucent) scrim.
+      if (notification.affectedEntities && notification.affectedEntities.length > 0) {
+        window.setTimeout(() => {
+          pulseAffectedEntities(notification.affectedEntities!);
+        }, 150);
+      }
+    },
+    [markAllSeen],
+  );
+
+  const handleRequestPush = useCallback(() => {
+    void requestPermission();
+  }, [requestPermission]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -237,6 +345,7 @@ function AppShellInner({
             saveState={saveState}
             saveSecondsAgo={saveSecondsAgo}
             cesareNoteCount={cesareNoteCount}
+            cesareHasUnseen={hasUnseen}
             userInitials={deriveInitials(user.name)}
             presenceUsers={[]}
             isScrolled={isScrolled}
@@ -281,8 +390,15 @@ function AppShellInner({
                 setCesareOpen(false);
                 // TODO: navigate to full Cesare page (future)
               }}
-              askCesare={askCesare}
+              askCesare={wrappedAskCesare}
               onAssistantResponse={handleCesareAssistantResponse}
+            />
+          )}
+          {notifications.length > 0 && (
+            <CesareNotificationStack
+              onActivate={handleActivateNotification}
+              pushPermission={pushPermission}
+              onRequestPush={handleRequestPush}
             />
           )}
         </div>
