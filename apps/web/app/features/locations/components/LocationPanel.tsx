@@ -62,29 +62,48 @@ function CandidateRow({
       data-entity-id={candidate.id}
       className={`${styles.candidateCard} ${isConfirmed ? styles.confirmed : ""} ${isSelected ? styles.candidateSelected : ""}`}
     >
-      <button
-        type="button"
-        className={styles.candidateHead}
-        onClick={() => {
-          setExpanded((v) => !v);
-          onCandidateSelect(candidate.id);
-        }}
-      >
-        <span
-          className={styles.candidateStar}
-          style={{ color: isConfirmed ? "#d97706" : "transparent" }}
-          aria-hidden="true"
+      <div className={styles.candidateHeadRow}>
+        <button
+          type="button"
+          className={styles.candidateHead}
+          onClick={() => {
+            setExpanded((v) => !v);
+            onCandidateSelect(candidate.id);
+          }}
         >
-          ★
-        </span>
-        <span className={styles.candidateName}>{candidate.name}</span>
-        <span
-          className={`${styles.candidateStatusBadge} ${styles[`badge_${candidate.status}`]}`}
-        >
-          {CANDIDATE_STATUS_LABEL[candidate.status]}
-        </span>
-        <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
-      </button>
+          <span
+            className={styles.candidateStar}
+            style={{ color: isConfirmed ? "#d97706" : "transparent" }}
+            aria-hidden="true"
+          >
+            ★
+          </span>
+          <span className={styles.candidateName}>{candidate.name}</span>
+          <span
+            className={`${styles.candidateStatusBadge} ${styles[`badge_${candidate.status}`]}`}
+          >
+            {CANDIDATE_STATUS_LABEL[candidate.status]}
+          </span>
+          <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
+        </button>
+        {(candidate.address || (candidate.lat && candidate.lng)) && (
+          <a
+            href={
+              candidate.lat && candidate.lng
+                ? `https://www.google.com/maps?q=${candidate.lat},${candidate.lng}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(candidate.address ?? "")}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.openInMapsHeader}
+            title="Apri in Google Maps"
+            aria-label={`Apri ${candidate.name} in Google Maps`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            ↗
+          </a>
+        )}
+      </div>
 
       {expanded && (
         <div className={styles.candidateBody}>
