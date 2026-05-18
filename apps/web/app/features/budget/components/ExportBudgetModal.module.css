@@ -1,0 +1,25 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  color: var(--ds-text-mute);
+  font-size: var(--font-size-sm);
+}
+
+.input {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  font: inherit;
+}
