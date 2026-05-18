@@ -362,7 +362,9 @@
 }
 
 .bubbleLoading {
-  opacity: 0.75;
+  opacity: 1;
+  inline-size: 88%;
+  max-inline-size: 480px;
 }
 
 .loadingDots {
@@ -393,21 +395,27 @@
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-2);
-  flex: 1;
-  min-inline-size: 0;
+  flex: 1 1 auto;
+  min-inline-size: 240px;
+  inline-size: 100%;
+  background: var(--ds-agent-soft);
+  border-radius: var(--ds-radius-md);
+  border-end-inline-start-radius: 2px;
+  padding-inline: var(--ds-space-3);
+  padding-block: var(--ds-space-3);
 }
 
 .skeletonLine {
   display: block;
   background: linear-gradient(
     90deg,
-    var(--ds-line) 25%,
-    var(--ds-surface-alt, var(--ds-surface)) 50%,
-    var(--ds-line) 75%
+    color-mix(in oklch, var(--ds-agent) 20%, transparent) 25%,
+    color-mix(in oklch, var(--ds-agent) 45%, transparent) 50%,
+    color-mix(in oklch, var(--ds-agent) 20%, transparent) 75%
   );
   background-size: 200% 100%;
   border-radius: var(--radius-sm, 3px);
-  block-size: 10px;
+  block-size: 12px;
 
   @media (prefers-reduced-motion: no-preference) {
     animation: skeletonShimmer 1.4s ease-in-out infinite;

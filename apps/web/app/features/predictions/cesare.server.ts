@@ -31,7 +31,7 @@ import {
   runBudgetToolLoop,
 } from "./cesare-tools";
 import type { DocumentContext, ScheduleToolContext } from "./cesare-tools";
-import { createMockAnthropicClient } from "./__mocks__/cesare-tool-loop.mock";
+import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 

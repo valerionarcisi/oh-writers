@@ -105,6 +105,12 @@ const loadAnthropic = async (): Promise<AnthropicConstructor> => {
 
 export const loadAnthropicStreamingClient =
   async (): Promise<AnthropicStreamingMessagesClient> => {
+    if (process.env["MOCK_AI"] === "true") {
+      const mock = await import(
+        "../predictions/_mocks/cesare-tool-loop.mock"
+      );
+      return mock.createMockStreamingClient() as unknown as AnthropicStreamingMessagesClient;
+    }
     const sdkModule = "@anthropic-ai/sdk";
     const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
       default?: AnthropicStreamingConstructor;
