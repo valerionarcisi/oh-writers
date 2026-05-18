@@ -33,6 +33,7 @@ import {
   useSetOccurrenceStatus,
   useArchiveBreakdownElement,
   useUpdateBreakdownElement,
+  useAddBreakdownElement,
   useRemoveBreakdownOccurrence,
 } from "../hooks/useBreakdown";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
@@ -231,16 +232,42 @@ function BreakdownPageContent({ projectId }: Props) {
     activeScene?.id ?? null,
   );
 
-  // Group occurrences by category for the panel.
+  const [panelScope, setPanelScope] = useState<"scene" | "project">("scene");
+
+  // Group occurrences by category for the panel — scene or project scope.
   const groupedByCategory = useMemo(() => {
     const map = new Map<BreakdownCategory, SceneOccurrenceWithElement[]>();
-    for (const o of sceneOccurrences) {
-      const arr = map.get(o.element.category) ?? [];
-      arr.push(o);
-      map.set(o.element.category, arr);
+    if (panelScope === "scene") {
+      for (const o of sceneOccurrences) {
+        const arr = map.get(o.element.category) ?? [];
+        arr.push(o);
+        map.set(o.element.category, arr);
+      }
+    } else {
+      // Project scope: one entry per element across all scenes
+      for (const row of allRows) {
+        const arr = map.get(row.element.category) ?? [];
+        arr.push({
+          element: row.element,
+          occurrence: {
+            id: row.element.id,
+            elementId: row.element.id,
+            sceneId: "",
+            screenplayVersionId: versionId,
+            quantity: row.totalQuantity,
+            note: null,
+            cesareStatus: "accepted" as const,
+            source: null,
+            isStale: row.hasStale,
+            createdAt: "",
+            updatedAt: "",
+          },
+        });
+        map.set(row.element.category, arr);
+      }
     }
     return map;
-  }, [sceneOccurrences]);
+  }, [panelScope, sceneOccurrences, allRows, versionId]);
 
   // Scene → element count for the Indice popover badges.
   const scenesWithCounts = useMemo(() => {
@@ -888,17 +915,43 @@ function BreakdownPageContent({ projectId }: Props) {
 
           <div className={styles.panelBody}>
             {panelTab === "categories" && (
-              <CategoriesPanel
+              <>
+                <div className={styles.panelScopeBar}>
+                  <button
+                    type="button"
+                    className={styles.panelScopeBtn}
+                    data-active={panelScope === "scene"}
+                    onClick={() => setPanelScope("scene")}
+                  >
+                    {activeScene ? formatHeading(activeScene).slice(0, 28) : "Scena"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.panelScopeBtn}
+                    data-active={panelScope === "project"}
+                    onClick={() => setPanelScope("project")}
+                  >
+                    Progetto
+                  </button>
+                </div>
+                <CategoriesPanel
                 grouped={groupedByCategory}
                 allRows={allRows}
-                canEdit={canEdit}
+                canEdit={canEdit && panelScope === "scene"}
+                projectId={projectId}
+                sceneId={activeScene?.id ?? ""}
+                versionId={versionId}
                 onAccept={(occurrenceId) =>
                   setStatus.mutate({ occurrenceIds: [occurrenceId], status: "accepted" })
                 }
                 onIgnore={(occurrenceId) =>
                   setStatus.mutate({ occurrenceIds: [occurrenceId], status: "ignored" })
                 }
+                onRemove={(occurrenceId) =>
+                  removeOcc.mutate({ projectId, occurrenceId })
+                }
               />
+              </>
             )}
             {panelTab === "cesare" && (
               <CesareAdPanel
@@ -1094,13 +1147,6 @@ function BreakdownPageContent({ projectId }: Props) {
         }}
         secondaryActions={[
           {
-            label: "Aggiungi",
-            hotkey: "⌘N",
-            onClick: () => {
-              /* TODO */
-            },
-          },
-          {
             label: "Esporta",
             hotkey: "⌘E",
             onClick: () => setExportOpen(true),
@@ -1144,14 +1190,39 @@ interface CategoriesPanelProps {
   grouped: Map<BreakdownCategory, SceneOccurrenceWithElement[]>;
   allRows: ProjectBreakdownRow[];
   canEdit: boolean;
+  projectId: string;
+  sceneId: string;
+  versionId: string;
   onAccept: (occurrenceId: string) => void;
   onIgnore: (occurrenceId: string) => void;
+  onRemove: (occurrenceId: string) => void;
 }
 
-function CategoriesPanel({ grouped, allRows, canEdit, onAccept, onIgnore }: CategoriesPanelProps) {
+function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versionId, onAccept, onIgnore, onRemove }: CategoriesPanelProps) {
   const visibleCats = PANEL_CATEGORY_ORDER.filter((cat) => grouped.has(cat));
   const [suggestedPopover, setSuggestedPopover] = useState<SuggestedPopover | null>(null);
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [addingCat, setAddingCat] = useState<BreakdownCategory | null>(null);
+  const [addName, setAddName] = useState("");
+  const addInputRef = useRef<HTMLInputElement>(null);
+  const addEl = useAddBreakdownElement(projectId, versionId);
+
+  const openAdd = (cat: BreakdownCategory) => {
+    setAddingCat(cat);
+    setAddName("");
+    setTimeout(() => addInputRef.current?.focus(), 0);
+  };
+
+  const closeAdd = () => { setAddingCat(null); setAddName(""); };
+
+  const commitAdd = (cat: BreakdownCategory) => {
+    const name = addName.trim();
+    if (!name || !sceneId) return;
+    addEl.mutate(
+      { projectId, category: cat, name, occurrence: { sceneId, screenplayVersionId: versionId, quantity: 1 } },
+      { onSuccess: closeAdd },
+    );
+  };
 
   const scenesByElement = useMemo(() => {
     const map = new Map<string, number[]>();
@@ -1207,25 +1278,33 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAccept, onIgnore }: Cate
               <span className={styles.catCt} data-num>
                 {items.length}
               </span>
+              {canEdit && (
+                <button
+                  type="button"
+                  className={styles.catAdd}
+                  onClick={() => addingCat === cat ? closeAdd() : openAdd(cat)}
+                  aria-label={`Aggiungi ${meta.labelIt}`}
+                  title={`Aggiungi ${meta.labelIt}`}
+                >
+                  {addingCat === cat ? "×" : "+"}
+                </button>
+              )}
             </div>
             <div className={styles.catList}>
               {items.map((it) => {
                 const isSuggested = it.occurrence.cesareStatus === "pending";
                 const sceneNums = scenesByElement.get(it.element.id) ?? [];
-                const tooltip = !isSuggested && sceneNums.length > 0
-                  ? sceneNums.join(", ")
-                  : undefined;
                 return (
                   <span
                     key={it.occurrence.id}
                     className={[
                       styles.catItem,
                       isSuggested ? styles.catItemSuggested : "",
-                      tooltip ? styles.catItemWithScenes : "",
+                      sceneNums.length > 1 && !isSuggested ? styles.catItemWithScenes : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    data-scenes={tooltip}
+                    data-scenes={!isSuggested && sceneNums.length > 1 ? sceneNums.join(", ") : undefined}
                     onMouseEnter={isSuggested
                       ? (e) => handleSuggestedMouseEnter(e, it.occurrence.id, it.element.name)
                       : undefined}
@@ -1242,9 +1321,46 @@ function CategoriesPanel({ grouped, allRows, canEdit, onAccept, onIgnore }: Cate
                         sc.{sceneNums.join(",")}
                       </span>
                     )}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className={styles.catItemRemove}
+                        onClick={() => isSuggested ? onIgnore(it.occurrence.id) : onRemove(it.occurrence.id)}
+                        aria-label={`Rimuovi ${it.element.name}`}
+                        title={isSuggested ? "Ignora suggerimento" : "Rimuovi dalla scena"}
+                      >
+                        ×
+                      </button>
+                    )}
                   </span>
                 );
               })}
+              {canEdit && addingCat === cat && (
+                <span className={styles.catItemAddForm}>
+                  <input
+                    ref={addInputRef}
+                    type="text"
+                    className={styles.catItemAddInput}
+                    value={addName}
+                    onChange={(e) => setAddName(e.target.value)}
+                    placeholder={`Nuovo ${meta.labelIt.toLowerCase()}…`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitAdd(cat);
+                      if (e.key === "Escape") closeAdd();
+                    }}
+                    disabled={addEl.isPending}
+                  />
+                  <button
+                    type="button"
+                    className={styles.catItemAddConfirm}
+                    onClick={() => commitAdd(cat)}
+                    disabled={!addName.trim() || addEl.isPending}
+                    aria-label="Conferma"
+                  >
+                    ✓
+                  </button>
+                </span>
+              )}
             </div>
           </div>
         );
