@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
-import type { LocationRequirement } from "@oh-writers/domain";
+import type { LocationRequirement, LocationPhoto } from "@oh-writers/domain";
 import { useLeaflet } from "../hooks/useLeaflet";
 import styles from "./LocationMap.module.css";
 
 interface LocationMapProps {
   requirements: LocationRequirement[];
   selectedId: string | null;
+  selectedCandidateId: string | null;
   onSelect: (id: string) => void;
 }
 
@@ -15,13 +16,19 @@ const PIN_COLORS: Record<string, string> = {
   candidate: "#88867e",
 };
 
-export function LocationMap({ requirements, selectedId, onSelect }: LocationMapProps) {
+export function LocationMap({ requirements, selectedId, selectedCandidateId, onSelect }: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
   const drawLayerRef = useRef<any>(null);
   const searchRingRef = useRef<any>(null);
   const leafletReady = useLeaflet();
+
+  const allCandidates = requirements.flatMap((r) => r.candidates);
+  const selectedCandidate = selectedCandidateId
+    ? allCandidates.find((c) => c.id === selectedCandidateId) ?? null
+    : null;
+  const shownPhotos: LocationPhoto[] = selectedCandidate?.photos ?? [];
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !leafletReady) return;
@@ -162,7 +169,8 @@ export function LocationMap({ requirements, selectedId, onSelect }: LocationMapP
   useEffect(() => {
     const L = (window as any).L;
     const map = mapRef.current;
-    if (!L || !map || !selectedId || !leafletReady) return;
+    // When a specific candidate is selected, that effect handles the fly — skip here.
+    if (!L || !map || !selectedId || !leafletReady || selectedCandidateId) return;
 
     const req = requirements.find((r) => r.id === selectedId);
     if (!req) return;
@@ -194,11 +202,48 @@ export function LocationMap({ requirements, selectedId, onSelect }: LocationMapP
       ring.addTo(map);
       searchRingRef.current = ring;
     }
-  }, [selectedId, requirements, leafletReady]);
+  }, [selectedId, selectedCandidateId, requirements, leafletReady]);
+
+  // Fly to selected candidate's coordinates
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !leafletReady || !selectedCandidate) return;
+
+    if (selectedCandidate.lat && selectedCandidate.lng) {
+      if (searchRingRef.current) {
+        map.removeLayer(searchRingRef.current);
+        searchRingRef.current = null;
+      }
+      map.flyTo([selectedCandidate.lat, selectedCandidate.lng], 16, { duration: 0.8 });
+    }
+  }, [selectedCandidate, leafletReady]);
 
   return (
     <div className={styles.mapWrap}>
       <div ref={containerRef} className={styles.map} />
+      {shownPhotos.length > 0 && (
+        <div className={styles.photoStrip} aria-label="Foto location">
+          {shownPhotos.map((photo) => (
+            <a
+              key={photo.id}
+              href={photo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.photoThumb}
+              title={photo.caption ?? undefined}
+            >
+              <img
+                src={photo.url}
+                alt={photo.caption ?? selectedCandidate?.name ?? "Foto location"}
+                className={styles.photoImg}
+              />
+              {photo.caption && (
+                <span className={styles.photoCaption}>{photo.caption}</span>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

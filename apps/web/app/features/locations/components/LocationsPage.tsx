@@ -29,6 +29,13 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const [selectedId, setSelectedId] = useState<string | null>(
     requirements[0]?.id ?? null,
   );
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+
+  const handleSelectRequirement = (id: string) => {
+    setSelectedId(id);
+    setSelectedCandidateId(null);
+  };
+
   const invalidate = () => qc.refetchQueries({ queryKey: ["locations", projectId] });
 
   const syncMutation = useMutation({
@@ -83,12 +90,15 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
         <LocationMap
           requirements={requirements}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          selectedCandidateId={selectedCandidateId}
+          onSelect={handleSelectRequirement}
         />
         <LocationPanel
           requirements={requirements}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={handleSelectRequirement}
+          selectedCandidateId={selectedCandidateId}
+          onCandidateSelect={setSelectedCandidateId}
           onAddCandidate={(requirementId, candidate) =>
             addCandidateMutation.mutate({ requirementId, candidate })
           }

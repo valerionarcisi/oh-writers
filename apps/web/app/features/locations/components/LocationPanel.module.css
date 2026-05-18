@@ -186,6 +186,11 @@
   border-width: 2px;
 }
 
+.candidateSelected {
+  outline: 2px solid #8b3a1a;
+  outline-offset: -1px;
+}
+
 .candidateHead {
   display: flex;
   align-items: center;

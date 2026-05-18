@@ -6,6 +6,8 @@ interface LocationPanelProps {
   requirements: LocationRequirement[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  selectedCandidateId: string | null;
+  onCandidateSelect: (candidateId: string) => void;
   onAddCandidate: (
     requirementId: string,
     candidate: { name: string; address?: string | null; lat?: number | null; lng?: number | null; contactName?: string | null; contactEmail?: string | null; contactPhone?: string | null; estimatedDailyFee?: number | null; permitNotes?: string | null; notes?: string | null; status: "candidate" | "visited" | "rejected" | "confirmed"; aiSuggested: boolean; aiReasoning?: string | null; }
@@ -34,6 +36,8 @@ function CandidateRow({
   candidate,
   requirementId,
   isConfirmed,
+  isSelected,
+  onCandidateSelect,
   onUpdateCandidate,
   onConfirm,
   onRemoveCandidate,
@@ -41,6 +45,8 @@ function CandidateRow({
   candidate: LocationCandidate;
   requirementId: string;
   isConfirmed: boolean;
+  isSelected: boolean;
+  onCandidateSelect: (candidateId: string) => void;
   onUpdateCandidate: (candidateId: string, patch: PatchLocationCandidate) => void;
   onConfirm: (requirementId: string, candidateId: string) => void;
   onRemoveCandidate: (candidateId: string) => void;
@@ -53,12 +59,15 @@ function CandidateRow({
   return (
     <div
       data-testid={`candidate-card-${candidate.id}`}
-      className={`${styles.candidateCard} ${isConfirmed ? styles.confirmed : ""}`}
+      className={`${styles.candidateCard} ${isConfirmed ? styles.confirmed : ""} ${isSelected ? styles.candidateSelected : ""}`}
     >
       <button
         type="button"
         className={styles.candidateHead}
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => {
+          setExpanded((v) => !v);
+          onCandidateSelect(candidate.id);
+        }}
       >
         <span
           className={styles.candidateStar}
@@ -240,6 +249,8 @@ export function LocationPanel({
   requirements,
   selectedId,
   onSelect,
+  selectedCandidateId,
+  onCandidateSelect,
   onAddCandidate,
   onUpdateCandidate,
   onConfirm,
@@ -359,6 +370,8 @@ export function LocationPanel({
                 candidate={c}
                 requirementId={selectedReq.id}
                 isConfirmed={c.id === selectedReq.confirmedCandidateId}
+                isSelected={c.id === selectedCandidateId}
+                onCandidateSelect={onCandidateSelect}
                 onUpdateCandidate={onUpdateCandidate}
                 onConfirm={onConfirm}
                 onRemoveCandidate={onRemoveCandidate}
