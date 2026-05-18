@@ -19,6 +19,11 @@ export interface SeededScene {
   notes: string | null;
 }
 
+// Fixed UUIDs for scenes 3-5 (Cesare RAG window tests require n±2 from scene 3)
+export const TEST_BREAKDOWN_SCENE_3_ID = "00000000-0000-4000-a000-000000010012";
+export const TEST_BREAKDOWN_SCENE_4_ID = "00000000-0000-4000-a000-000000010013";
+export const TEST_BREAKDOWN_SCENE_5_ID = "00000000-0000-4000-a000-000000010014";
+
 export const TEAM_PROJECT_BREAKDOWN_SCENES: SeededScene[] = [
   {
     id: TEST_BREAKDOWN_SCENE_1_ID,
@@ -27,8 +32,23 @@ export const TEAM_PROJECT_BREAKDOWN_SCENES: SeededScene[] = [
     intExt: "INT",
     location: "APPARTAMENTO",
     timeOfDay: "NOTTE",
-    notes:
-      "Marco impugna un Bloody knife sul tavolo. Una bottiglia di vino rotta accanto.",
+    // Notes include a Bloody knife prop and John's dialogue so OHW-514 can
+    // ask "Cosa dice John?" and get a real answer from Cesare's RAG context.
+    notes: `Marco impugna un Bloody knife sul tavolo. Una bottiglia di vino rotta accanto.
+
+JOHN
+(sottovoce)
+Non avrei mai dovuto tornare in questo posto.
+
+John fissa la lama. Le sue mani tremano lentamente.
+
+MARCO
+Siediti. Parliamo da uomini.
+
+JOHN
+Non c'è niente da dire, Marco. È finita.
+
+Marco spinge via la bottiglia. Si avvicina. La stanza è silenziosa tranne per il vento che entra dalla finestra aperta.`,
   },
   {
     id: TEST_BREAKDOWN_SCENE_2_ID,
@@ -37,7 +57,78 @@ export const TEAM_PROJECT_BREAKDOWN_SCENES: SeededScene[] = [
     intExt: "EXT",
     location: "STRADA",
     timeOfDay: "GIORNO",
-    notes: "Sara cammina veloce. Una macchina rossa sfreccia.",
+    notes: `Sara cammina veloce sul marciapiede. Una macchina rossa sfreccia senza fermarsi.
+
+Sara si volta, spaventata. Osserva la targa: non riesce a leggerla.
+
+SARA
+(tra sé)
+Adesso capisco.
+
+Tira fuori il telefono. Cerca un numero. Esita.`,
+  },
+  {
+    id: TEST_BREAKDOWN_SCENE_3_ID,
+    number: 3,
+    heading: "INT. COMMISSARIATO - GIORNO",
+    intExt: "INT",
+    location: "COMMISSARIATO",
+    timeOfDay: "GIORNO",
+    // Central scene for OHW-514b: window n±2 from scene 3 covers scenes 1-5.
+    notes: `L'ispettore Ferretti appoggia una cartella sul tavolo. Sara è seduta di fronte a lui.
+
+FERRETTI
+Vuole spiegarmi cosa ci faceva in quella strada?
+
+SARA
+Stavo andando a trovare mia sorella.
+
+FERRETTI
+A quest'ora? Con quel tempo?
+
+Sara non risponde subito. Guarda fuori dalla finestra sporca di pioggia.
+
+SARA
+Sì. Era urgente.
+
+Ferretti annota qualcosa. Sul muro dietro di lui ci sono foto di scena del crimine — la bottiglia di vino, il coltello, l'appartamento.`,
+  },
+  {
+    id: TEST_BREAKDOWN_SCENE_4_ID,
+    number: 4,
+    heading: "INT. CORRIDOIO OSPEDALE - NOTTE",
+    intExt: "INT",
+    location: "CORRIDOIO OSPEDALE",
+    timeOfDay: "NOTTE",
+    notes: `Le luci al neon lampeggiano. John cammina lentamente lungo il corridoio vuoto.
+
+Un medico esce da una porta laterale.
+
+MEDICO
+Stia tranquillo. È stabile.
+
+JOHN
+Posso vederla?
+
+MEDICO
+Ancora no. Le diamo notizie al mattino.
+
+John si siede su una sedia di plastica. Chiude gli occhi. Nella tasca della giacca, il telefono vibra ripetutamente — non risponde.`,
+  },
+  {
+    id: TEST_BREAKDOWN_SCENE_5_ID,
+    number: 5,
+    heading: "EXT. CORTILE INTERNO - ALBA",
+    intExt: "EXT",
+    location: "CORTILE INTERNO",
+    timeOfDay: "ALBA",
+    notes: `Marco esce dalla porta sul retro. Porta una borsa da viaggio. Si guarda intorno.
+
+Il cortile è deserto. Un gatto attraversa la scena.
+
+Marco raggiunge un motorino parcheggiato nell'angolo. Mette la borsa sul portabagagli. Si ferma un momento — guarda su verso le finestre illuminate dell'appartamento.
+
+Poi parte.`,
   },
 ];
 

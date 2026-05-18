@@ -814,10 +814,11 @@ async function seedTeamProjectBreakdownFixtures() {
     .set({ currentVersionId: TEST_TEAM_SCREENPLAY_VERSION_ID })
     .where(eq(screenplays.id, TEST_TEAM_SCREENPLAY_ID));
 
-  // Hardcoded scenes 1-2 (preserve stable IDs for helpers), then pad with
+  // Hardcoded scenes 1-5 (preserve stable IDs for helpers), then pad with
   // fountain-parsed scenes so `scenesRef.length` in ScriptReader matches the
   // PM doc heading count. Without this the scroll-driven TOC tracking falls
-  // off the end of the array past scene 2.
+  // off the end of the array past the last hardcoded scene.
+  // Use onConflictDoUpdate so re-seeding refreshes notes content (Cesare RAG).
   for (const s of TEAM_PROJECT_BREAKDOWN_SCENES) {
     await db
       .insert(scenes)
@@ -831,7 +832,10 @@ async function seedTeamProjectBreakdownFixtures() {
         timeOfDay: s.timeOfDay,
         notes: s.notes,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [scenes.id],
+        set: { notes: s.notes, heading: s.heading },
+      });
   }
 
   const fountainHeadings: {
