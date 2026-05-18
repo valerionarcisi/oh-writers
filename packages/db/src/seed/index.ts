@@ -16,6 +16,13 @@ import {
   projectRateCard,
   locationRequirements,
   locationCandidates,
+  budgets,
+  budgetLines,
+  budgetCast,
+  budgetCrew,
+  schedules,
+  shootingDays,
+  strips,
 } from "../schema/index";
 import { and, eq } from "drizzle-orm";
 import {
@@ -653,6 +660,8 @@ export async function seed() {
   );
 
   await seedFirstDocumentVersions(VALERIO_PERSONAL_PROJECT_ID, VALERIO_USER_ID);
+  await seedValerioBudget(VALERIO_PERSONAL_PROJECT_ID);
+  await seedValerioSchedule(VALERIO_SCREENPLAY_ID, VALERIO_PERSONAL_PROJECT_ID);
 
   console.log(
     `  -> Valerio personal project + screenplay + version + ${valerioScenesCount} scenes created`,
@@ -1049,6 +1058,244 @@ async function seedDefaultRateCard(projectId: string) {
       })),
     )
     .onConflictDoNothing();
+}
+
+// ─── Valerio's project — Budget seed ──────────────────────────────────────────
+// Realistic Italian indie short-film budget (13-page comedy, ~3 shooting days).
+// Values are educational placeholders in EUR.
+const VALERIO_BUDGET_ID = "00000000-0000-4000-a000-000000000070";
+
+async function seedValerioBudget(projectId: string) {
+  await db
+    .insert(budgets)
+    .values({
+      id: VALERIO_BUDGET_ID,
+      projectId,
+      currency: "EUR",
+      contingencyPercent: "10",
+      shootingDays: 3,
+      status: "estimated" as const,
+      generatedAt: new Date("2026-04-20T10:00:00Z"),
+    })
+    .onConflictDoNothing();
+
+  const lines: Array<{
+    topSheet: "above_the_line" | "production" | "crew" | "post_production" | "contingency";
+    name: string;
+    costType: "daily" | "flat" | "weekly" | "unit" | "percentage";
+    quantity: string;
+    rate: string;
+  }> = [
+    // Above the line
+    { topSheet: "above_the_line", name: "Regia", costType: "daily", quantity: "3", rate: "500" },
+    { topSheet: "above_the_line", name: "Sceneggiatura", costType: "flat", quantity: "1", rate: "1500" },
+    { topSheet: "above_the_line", name: "Produzione esecutiva", costType: "daily", quantity: "5", rate: "350" },
+    // Production
+    { topSheet: "production", name: "Location — appartamento", costType: "daily", quantity: "2", rate: "300" },
+    { topSheet: "production", name: "Location — pizzeria", costType: "daily", quantity: "1", rate: "450" },
+    { topSheet: "production", name: "Trasporti e furgoni", costType: "flat", quantity: "1", rate: "800" },
+    { topSheet: "production", name: "Catering (3 gg × 15 persone)", costType: "unit", quantity: "45", rate: "22" },
+    { topSheet: "production", name: "Noleggio attrezzatura", costType: "daily", quantity: "3", rate: "650" },
+    { topSheet: "production", name: "Noleggio luci", costType: "daily", quantity: "3", rate: "280" },
+    { topSheet: "production", name: "Costumi e scenografia", costType: "flat", quantity: "1", rate: "1200" },
+    { topSheet: "production", name: "Trucco e acconciature", costType: "daily", quantity: "3", rate: "150" },
+    // Crew
+    { topSheet: "crew", name: "Direttore della fotografia", costType: "daily", quantity: "3", rate: "400" },
+    { topSheet: "crew", name: "Operatore di macchina", costType: "daily", quantity: "3", rate: "280" },
+    { topSheet: "crew", name: "Fonico di presa diretta", costType: "daily", quantity: "3", rate: "300" },
+    { topSheet: "crew", name: "Microfonista", costType: "daily", quantity: "3", rate: "200" },
+    { topSheet: "crew", name: "Elettricista capo", costType: "daily", quantity: "3", rate: "220" },
+    { topSheet: "crew", name: "Scenografo", costType: "daily", quantity: "4", rate: "250" },
+    { topSheet: "crew", name: "Assistente regia", costType: "daily", quantity: "3", rate: "180" },
+    { topSheet: "crew", name: "Segretario di edizione", costType: "daily", quantity: "3", rate: "180" },
+    // Post production
+    { topSheet: "post_production", name: "Montaggio (settimane)", costType: "weekly", quantity: "2", rate: "1200" },
+    { topSheet: "post_production", name: "Color grading", costType: "flat", quantity: "1", rate: "900" },
+    { topSheet: "post_production", name: "Mix audio e sound design", costType: "flat", quantity: "1", rate: "1100" },
+    { topSheet: "post_production", name: "Musiche originali", costType: "flat", quantity: "1", rate: "800" },
+    { topSheet: "post_production", name: "Sottotitoli e DCP", costType: "flat", quantity: "1", rate: "400" },
+  ];
+
+  await db
+    .insert(budgetLines)
+    .values(
+      lines.map((l, i) => ({
+        budgetId: VALERIO_BUDGET_ID,
+        topSheet: l.topSheet,
+        name: l.name,
+        costType: l.costType,
+        quantity: l.quantity,
+        rate: l.rate,
+        sortOrder: i,
+      })),
+    )
+    .onConflictDoNothing();
+
+  // Cast rows
+  const castRows = [
+    { name: "Filippo", days: "3", dayRate: "850" },
+    { name: "Tea", days: "2", dayRate: "700" },
+    { name: "Giulio", days: "1", dayRate: "500" },
+    { name: "Nonno (archivio)", days: "1", dayRate: "300" },
+    { name: "Michele", days: "1", dayRate: "300" },
+    { name: "Luca", days: "1", dayRate: "200" },
+  ];
+  await db
+    .insert(budgetCast)
+    .values(
+      castRows.map((r, i) => ({
+        budgetId: VALERIO_BUDGET_ID,
+        name: r.name,
+        days: r.days,
+        dayRate: r.dayRate,
+        rateUnit: "giornata" as const,
+        fiscalRegime: "piva" as const,
+        mealAllowance: "20",
+        accommodation: "0",
+        sortOrder: i,
+      })),
+    )
+    .onConflictDoNothing();
+
+  // Crew rows
+  const crewRows = [
+    { name: "Regia", department: "Regia", days: "3", dayRate: "500" },
+    { name: "DOP", department: "Fotografia", days: "3", dayRate: "400" },
+    { name: "Operatore A", department: "Fotografia", days: "3", dayRate: "280" },
+    { name: "Fonico", department: "Suono", days: "3", dayRate: "300" },
+    { name: "Assistente regia", department: "Regia", days: "3", dayRate: "180" },
+    { name: "Scenografo", department: "Scenografia", days: "4", dayRate: "250" },
+    { name: "Elettricista", department: "Elettrico", days: "3", dayRate: "220" },
+  ];
+  await db
+    .insert(budgetCrew)
+    .values(
+      crewRows.map((r, i) => ({
+        budgetId: VALERIO_BUDGET_ID,
+        name: r.name,
+        department: r.department,
+        days: r.days,
+        dayRate: r.dayRate,
+        rateUnit: "giornata" as const,
+        fiscalRegime: "piva" as const,
+        mealAllowance: "20",
+        accommodation: "0",
+        enabled: true,
+        sortOrder: i,
+      })),
+    )
+    .onConflictDoNothing();
+
+  console.log("  -> Valerio budget seeded");
+}
+
+// ─── Valerio's project — Schedule seed ────────────────────────────────────────
+// 3 shooting days, 9 scenes distributed across them. Starts 2026-06-02.
+const VALERIO_SCHEDULE_ID = "00000000-0000-4000-a000-000000000071";
+const VALERIO_SHOOTING_DAY_1_ID = "00000000-0000-4000-a000-000000000072";
+const VALERIO_SHOOTING_DAY_2_ID = "00000000-0000-4000-a000-000000000073";
+const VALERIO_SHOOTING_DAY_3_ID = "00000000-0000-4000-a000-000000000074";
+
+async function seedValerioSchedule(screenplayId: string, projectId: string) {
+  await db
+    .insert(schedules)
+    .values({
+      id: VALERIO_SCHEDULE_ID,
+      projectId,
+      name: "Piano di Lavorazione — Giugno 2026",
+      startDate: "2026-06-02",
+      countryCode: "IT",
+      status: "draft" as const,
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(shootingDays)
+    .values([
+      {
+        id: VALERIO_SHOOTING_DAY_1_ID,
+        scheduleId: VALERIO_SCHEDULE_ID,
+        dayNumber: 1,
+        date: "2026-06-02",
+        dayType: "shoot" as const,
+        crewCallTime: "07:00",
+        shootStartTime: "08:00",
+        wrapTime: "19:00",
+        notes: "Appartamento Filippo — scene INT",
+      },
+      {
+        id: VALERIO_SHOOTING_DAY_2_ID,
+        scheduleId: VALERIO_SCHEDULE_ID,
+        dayNumber: 2,
+        date: "2026-06-03",
+        dayType: "shoot" as const,
+        crewCallTime: "07:30",
+        shootStartTime: "08:30",
+        wrapTime: "20:00",
+        notes: "Pizzeria — allestimento + scene principali",
+      },
+      {
+        id: VALERIO_SHOOTING_DAY_3_ID,
+        scheduleId: VALERIO_SCHEDULE_ID,
+        dayNumber: 3,
+        date: "2026-06-04",
+        dayType: "shoot" as const,
+        crewCallTime: "08:00",
+        shootStartTime: "09:00",
+        wrapTime: "18:00",
+        notes: "Pizzeria — finale + esterni",
+      },
+    ])
+    .onConflictDoNothing();
+
+  // Load the scenes for this screenplay in order
+  const sceneRows = await db.query.scenes.findMany({
+    where: (s, { eq: e }) => e(s.screenplayId, screenplayId),
+    orderBy: (s, { asc: a }) => [a(s.number)],
+  });
+
+  // Distribute: day 1 → scenes 1-3, day 2 → scenes 4-6, day 3 → scenes 7-9
+  const dayAssignments: Array<{ sceneId: string; dayId: string; position: number; hours: number; color: "white" | "yellow" | "blue" | "green" | "red" | "pink" | "grey" }> = [];
+  for (let i = 0; i < sceneRows.length; i++) {
+    const scene = sceneRows[i]!;
+    let dayId: string;
+    let color: "white" | "yellow" | "blue" | "green" | "red" | "pink" | "grey";
+    if (i < 3) {
+      dayId = VALERIO_SHOOTING_DAY_1_ID;
+      color = "yellow"; // INT apartment
+    } else if (i < 6) {
+      dayId = VALERIO_SHOOTING_DAY_2_ID;
+      color = "blue"; // pizzeria main
+    } else {
+      dayId = VALERIO_SHOOTING_DAY_3_ID;
+      color = "green"; // finale
+    }
+    dayAssignments.push({
+      sceneId: scene.id,
+      dayId,
+      position: i % 3,
+      hours: 1.5,
+      color,
+    });
+  }
+
+  if (dayAssignments.length > 0) {
+    await db
+      .insert(strips)
+      .values(
+        dayAssignments.map((a) => ({
+          scheduleId: VALERIO_SCHEDULE_ID,
+          shootingDayId: a.dayId,
+          sceneId: a.sceneId,
+          position: a.position,
+          bannerColor: a.color,
+          estimatedHours: a.hours,
+        })),
+      )
+      .onConflictDoNothing();
+  }
+
+  console.log(`  -> Valerio schedule seeded (${sceneRows.length} strips across 3 days)`);
 }
 
 // Only auto-run when this file is the entrypoint (tsx src/seed/index.ts).
