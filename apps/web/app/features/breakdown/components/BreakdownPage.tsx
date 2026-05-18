@@ -273,21 +273,45 @@ function BreakdownPageContent({ projectId }: Props) {
   };
   const [hoverTooltip, setHoverTooltip] = useState<HoverTooltip | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // Close tooltip when pointer moves away from both the screenplay and the tooltip.
+  // We use document pointermove instead of React synthetic events because ProseMirror
+  // intercepts and re-dispatches events in ways that make mouseover/mouseleave unreliable.
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!hoverTooltip) return;
+    const onMove = (e: PointerEvent) => {
+      const top = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const overTooltip = tooltipRef.current != null && top != null &&
+        (tooltipRef.current === top || tooltipRef.current.contains(top));
+      const overElement = top?.closest?.("[data-element-id]") != null;
+      if (overTooltip || overElement) {
+        if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+      } else {
+        if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+        hoverCloseTimerRef.current = setTimeout(() => {
+          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+          setHoverTooltip(null);
+        }, 80);
+      }
+    };
+    document.addEventListener("pointermove", onMove);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+    };
+  }, [hoverTooltip]);
 
   const handleScreenplayMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null;
     const elNode = target?.closest<HTMLElement>("[data-element-id]");
-    if (!elNode) {
-      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-      setHoverTooltip(null);
-      return;
-    }
+    if (!elNode) return;
     const elementId = elNode.getAttribute("data-element-id") ?? "";
     const category = (elNode.getAttribute("data-cat") ?? null) as BreakdownCategory | null;
     if (!category) return;
     const isGhost = elNode.getAttribute("data-ghost") === "true";
-    // Ghost decorations carry the real occurrence ID directly on the DOM node
     const ghostOccurrenceId = elNode.getAttribute("data-occurrence-id") ?? null;
     const occ = sceneOccurrences.find((o) => o.element.id === elementId);
     const name = occ?.element.name ?? elNode.textContent?.trim() ?? "";
@@ -302,16 +326,10 @@ function BreakdownPageContent({ projectId }: Props) {
 
   const handleScreenplayMouseLeave = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    hoverCloseTimerRef.current = setTimeout(() => setHoverTooltip(null), 120);
   };
 
-  const handleTooltipMouseEnter = () => {
-    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
-  };
-
-  const handleTooltipMouseLeave = () => {
-    hoverCloseTimerRef.current = setTimeout(() => setHoverTooltip(null), 120);
-  };
+  const handleTooltipMouseEnter = () => undefined;
+  const handleTooltipMouseLeave = () => undefined;
 
   const removeOcc = useRemoveBreakdownOccurrence();
 
@@ -903,10 +921,9 @@ function BreakdownPageContent({ projectId }: Props) {
       {/* ─── HOVER TOOLTIP ─── */}
       {hoverTooltip && (
         <div
+          ref={tooltipRef}
           className={styles.hoverTooltip}
           style={{ left: hoverTooltip.x, top: hoverTooltip.y }}
-          onMouseEnter={handleTooltipMouseEnter}
-          onMouseLeave={handleTooltipMouseLeave}
         >
           <span
             className={styles.hoverTooltipCat}
