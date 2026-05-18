@@ -269,6 +269,7 @@ function BreakdownPageContent({ projectId }: Props) {
     name: string;
     category: BreakdownCategory;
     occurrenceId: string | null;
+    isPending: boolean;
   };
   const [hoverTooltip, setHoverTooltip] = useState<HoverTooltip | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,12 +285,17 @@ function BreakdownPageContent({ projectId }: Props) {
     const elementId = elNode.getAttribute("data-element-id") ?? "";
     const category = (elNode.getAttribute("data-cat") ?? null) as BreakdownCategory | null;
     if (!category) return;
+    const isGhost = elNode.getAttribute("data-ghost") === "true";
+    // Ghost decorations carry the real occurrence ID directly on the DOM node
+    const ghostOccurrenceId = elNode.getAttribute("data-occurrence-id") ?? null;
     const occ = sceneOccurrences.find((o) => o.element.id === elementId);
     const name = occ?.element.name ?? elNode.textContent?.trim() ?? "";
+    const isPending = isGhost || occ?.occurrence.cesareStatus === "pending";
+    const occurrenceId = isGhost ? ghostOccurrenceId : (occ?.occurrence.id ?? null);
     const rect = elNode.getBoundingClientRect();
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     hoverTimerRef.current = setTimeout(() => {
-      setHoverTooltip({ x: rect.left, y: rect.bottom + 6, name, category, occurrenceId: occ?.occurrence.id ?? null });
+      setHoverTooltip({ x: rect.left, y: rect.bottom + 6, name, category, occurrenceId, isPending });
     }, 180);
   };
 
@@ -303,6 +309,20 @@ function BreakdownPageContent({ projectId }: Props) {
   const handleHoverRemove = () => {
     if (!hoverTooltip?.occurrenceId) return;
     removeOcc.mutate({ projectId, occurrenceId: hoverTooltip.occurrenceId });
+    setHoverTooltip(null);
+  };
+
+  const handleHoverAccept = () => {
+    if (!hoverTooltip?.occurrenceId) return;
+    setStatus.mutate({ occurrenceIds: [hoverTooltip.occurrenceId], status: "accepted" });
+    flashFeedback(`Confermato «${hoverTooltip.name}»`);
+    setHoverTooltip(null);
+  };
+
+  const handleHoverReject = () => {
+    if (!hoverTooltip?.occurrenceId) return;
+    removeOcc.mutate({ projectId, occurrenceId: hoverTooltip.occurrenceId });
+    flashFeedback(`Scartato «${hoverTooltip.name}»`);
     setHoverTooltip(null);
   };
 
@@ -888,7 +908,26 @@ function BreakdownPageContent({ projectId }: Props) {
             {CATEGORY_META[hoverTooltip.category]?.labelIt ?? hoverTooltip.category}
           </span>
           <span className={styles.hoverTooltipName}>{hoverTooltip.name}</span>
-          {canEdit && (
+          {canEdit && hoverTooltip.isPending ? (
+            <>
+              <button
+                type="button"
+                className={styles.hoverTooltipAccept}
+                disabled={!hoverTooltip.occurrenceId || setStatus.isPending}
+                onClick={handleHoverAccept}
+              >
+                Accetta
+              </button>
+              <button
+                type="button"
+                className={styles.hoverTooltipReject}
+                disabled={!hoverTooltip.occurrenceId || removeOcc.isPending}
+                onClick={handleHoverReject}
+              >
+                Scarta
+              </button>
+            </>
+          ) : canEdit ? (
             <button
               type="button"
               className={styles.hoverTooltipRemove}
@@ -899,7 +938,7 @@ function BreakdownPageContent({ projectId }: Props) {
             >
               <Trash2 size={12} strokeWidth={2} />
             </button>
-          )}
+          ) : null}
         </div>
       )}
 
