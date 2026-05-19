@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Delegate to the repo-managed pre-commit hook.
+# Husky 9 sets core.hooksPath to .husky/_, so the legacy .githooks/pre-commit
+# would otherwise be ignored after husky init.
+exec bash "$(dirname -- "$0")/../.githooks/pre-commit" "$@"

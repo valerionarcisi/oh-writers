@@ -104,11 +104,13 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 ### Done — already shipped
 
 **Auth & teams**
+
 - **core/01 + 01b — Auth**: email/password, OAuth Google + GitHub, sessions
 - **core/02 — Teams & roles**: Owner / Editor / Viewer
 - **core/03 — Projects**
 
 **Narrative & screenplay editor**
+
 - **core/04 + 04e + 04f — Narrative editor** on ProseMirror (logline, synopsis, outline, treatment, soggetto)
 - **core/04c — Narrative export** (logline + synopsis + treatment → PDF, opt-in cover page, preview tab)
 - **core/05 + 05b–05k — Screenplay editor**: custom ProseMirror editor, heading slots, scene numbering, inline scene-number edit, autocomplete (character, transition, extension), Tab/Enter flow matrix, `⌘+Number` shortcuts, element toolbar, revision coloring, draft color cross-document
@@ -121,6 +123,7 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/20 — Shooting script PDF import**
 
 **Breakdown**
+
 - **core/10 — Scene Breakdown** (14 categories, Cesare ghost suggestions, PDF/CSV export, version-aware 3-tier stale awareness, auto-clone on new screenplay version)
 - **core/10c — Inline scene tagging** (read-only ProseMirror reader in center column, inline highlight, ghost dashed underline, floating toolbar, TOC scroll-to-scene)
 - **core/10e — Auto-spoglio via RegEx** (zero-click population on first open: 9 categories, confidence-based status, idempotent via `text_hash`)
@@ -129,18 +132,22 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 - **core/10i — Breakdown dictionary pass** (WordNet artifact whitelist EN+IT; `projects.locale`; locale select in Settings)
 
 **Budget, schedule, shooting plan**
+
 - **core/11 — Budget** (Cast/Crew/Equipment/Misc widgets, scene chip filter, editable settings, AI-estimated line items, CSV/PDF export, E2E tests OHW-390–393)
 - **core/12 — Shooting schedule** (strip board, Italy calendar, greedy generator, drag-and-drop, scene drawer, week/day toggle, day drawer with capacity bar, scene effort per day, CSV/PDF export, E2E tests OHW-380–386)
 - **core/27 + 27b — Shooting plan** (per-scene shot list editor, parallel scenarios, blocking canvas, blocking editor, scene effort 1–5, shot list CSV/PDF export, E2E tests OHW-395–398)
 - **core/28 — Export audit** (unified export UX across budget, schedule, shooting plan; CSV + PDF for all three)
 
 **Locations**
+
 - **core/13 — Locations & scouting** (location candidates, notes, scouting map, Cesare agentic search via Google Places)
 
 **Cesare AI assistant**
+
 - **ai/17 + 29 — Cesare v1** (universal in-page assistant; breakdown drafting; narrative structure review; schedule drafting; contextual popover with DOM highlight; agentic location scouting)
 
 **Design system & infra**
+
 - **infra/07b — Design system v2** (DS Dialog migration, primitives unification, ambient dark theme, react-aria adoption for all interactive primitives)
 - **infra/23 — Server pipeline refactor** (`withProjectAccess` canonical pattern; `toShape`/`unwrapResult` at all server/client boundaries)
 - **infra/12d — DS primitives unification** (FloatingDock, SheetPanel, unified tokens)
@@ -551,7 +558,9 @@ pnpm exec playwright test --grep "\[OHW-380\]"
 Every Playwright test name starts with a tag referencing the feature spec:
 
 ```ts
-test("[OHW-380] exports schedule as CSV", async ({ authenticatedPage: page }) => {
+test("[OHW-380] exports schedule as CSV", async ({
+  authenticatedPage: page,
+}) => {
   // ...
 });
 ```
@@ -567,6 +576,30 @@ Tests require a seeded test database. Run once before the first test run:
 ```bash
 pnpm db:seed:test   # seeds oh_writers_test DB
 ```
+
+### QA Pipeline
+
+Every push to `main` and every PR is validated by GitHub Actions (`.github/workflows/qa.yml`). Locally, a Husky pre-push hook (`.husky/pre-push`) runs the same checks before allowing the push, so what passes locally also passes CI.
+
+**What gets checked**
+
+1. **Typecheck** — `pnpm typecheck` (recursive `tsc --noEmit` across all workspaces)
+2. **Lint** — `pnpm lint` (ESLint, `--max-warnings 0`)
+3. **Unit tests** — `pnpm test:unit` (Vitest in `@oh-writers/web`)
+4. **Mock E2E** — `MOCK_AI=true pnpm test:e2e -- --project=mock-ui` (Cesare agentic Playwright suite against the test DB)
+5. **Production build** — `pnpm build` (packages + web app)
+
+**Bypassing the hook (emergency only)**
+
+```bash
+git push --no-verify
+```
+
+Use sparingly. CI will still block the merge if any job fails. Branch protection on `main` requires every QA job to be green.
+
+**Manual cost smoke (Cesare-touching features only)**
+
+For Cesare-touching features, run `pnpm cost:smoke:<feature>` locally with `ANTHROPIC_API_KEY` set to measure real token costs. This is **not** in CI (would burn real API credits). See the vernissage report for each feature.
 
 ---
 
@@ -722,7 +755,9 @@ export const getMyFeature = createServerFn({ method: "GET" })
 // tests/myFeature/myFeature.spec.ts
 import { test, expect } from "../fixtures";
 
-test("[OHW-0XX] can create a my feature", async ({ authenticatedPage: page }) => {
+test("[OHW-0XX] can create a my feature", async ({
+  authenticatedPage: page,
+}) => {
   await page.goto(`${BASE_URL}/projects/${PROJECT_ID}/my-feature`);
   // ...
 });
