@@ -159,15 +159,17 @@ export function FloatingDock({
               cesareIsThinking
                 ? "Cesare sta lavorando"
                 : cesareNoteCount > 0
-                  ? `Cesare — ${cesareNoteCount} note`
+                  ? `Cesare — ${cesareNoteCount} ${cesareNoteCount === 1 ? "nota su questa pagina" : "note su questa pagina"}`
                   : "Cesare"
             }
             title={
               cesareIsThinking
                 ? "Cesare sta lavorando…"
-                : cesareIsOn
-                  ? "Disattiva overlay Cesare"
-                  : "Attiva overlay Cesare"
+                : cesareNoteCount > 0
+                  ? `${cesareNoteCount} ${cesareNoteCount === 1 ? "nota di Cesare su questa pagina" : "note di Cesare su questa pagina"}`
+                  : cesareIsOn
+                    ? "Disattiva overlay Cesare"
+                    : "Attiva overlay Cesare"
             }
           >
             <span className={styles.cesareDot} aria-hidden="true" />

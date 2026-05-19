@@ -290,6 +290,14 @@
   opacity: 0.8;
 }
 
+/* While Cesare is thinking, hide the per-page count and let only the glow
+   speak. The page-count tells "lavoro pendente sulla pagina" — when a new
+   action is mid-flight it would conflict with the pulsing visual. The
+   avatar badge remains the single source of "cose da leggere" cross-page. */
+:global([data-cesare-thinking="true"]) .cesareCount {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .actionBtn {
     transition: none;
