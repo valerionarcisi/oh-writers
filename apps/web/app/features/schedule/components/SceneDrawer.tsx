@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { CATEGORY_META, BREAKDOWN_CATEGORIES } from "@oh-writers/domain";
+import { Skeleton } from "@oh-writers/ui";
 import { getBreakdownForScene } from "~/features/breakdown";
 import { unwrapResult } from "@oh-writers/utils";
 import type { StripView } from "../server/schedule.server";
@@ -81,7 +82,13 @@ export function SceneDrawer({
 
             <div className={styles.elementsList}>
               {!elements && (
-                <div className={styles.loading}>Caricamento elementi…</div>
+                <div className={styles.loading}>
+                  <Skeleton
+                    lines={5}
+                    widths={["60%", "100%", "40%", "100%", "30%"]}
+                    ariaLabel="Caricamento elementi scena"
+                  />
+                </div>
               )}
 
               {grouped && Object.keys(grouped).length === 0 && (

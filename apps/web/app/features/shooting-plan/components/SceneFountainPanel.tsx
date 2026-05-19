@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import { ReadOnlyScreenplayView } from "~/features/screenplay-editor";
 import { sceneFountainQueryOptions } from "../server/shooting-plan.server";
@@ -9,7 +10,10 @@ interface SceneFountainPanelProps {
   projectId: string;
 }
 
-export function SceneFountainPanel({ sceneId, projectId }: SceneFountainPanelProps) {
+export function SceneFountainPanel({
+  sceneId,
+  projectId,
+}: SceneFountainPanelProps) {
   const { data, isLoading } = useQuery({
     ...sceneFountainQueryOptions(sceneId, projectId),
     select: (raw) => {
@@ -25,12 +29,17 @@ export function SceneFountainPanel({ sceneId, projectId }: SceneFountainPanelPro
     <div className={styles.panel}>
       <div className={styles.label}>TESTO SCENA</div>
       <div className={styles.scrollArea}>
-        {isLoading && <div className={styles.loading}>Caricamento…</div>}
+        {isLoading && (
+          <div className={styles.loading}>
+            <Skeleton
+              lines={3}
+              widths={["80%", "100%", "60%"]}
+              ariaLabel="Caricamento testo scena"
+            />
+          </div>
+        )}
         {!isLoading && data && (
-          <ReadOnlyScreenplayView
-            content={data}
-            className={styles.editor}
-          />
+          <ReadOnlyScreenplayView content={data} className={styles.editor} />
         )}
         {!isLoading && !data && (
           <div className={styles.empty}>

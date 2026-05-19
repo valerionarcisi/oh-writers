@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Button, Dialog } from "@oh-writers/ui";
+import { Button, Dialog, Skeleton } from "@oh-writers/ui";
 import {
   DRAFT_REVISION_COLORS,
   type DraftRevisionColor,
@@ -196,7 +196,15 @@ export function VersionsList({
       )}
 
       <div className={styles.body}>
-        {isLoading && <div className={styles.status}>Caricamento…</div>}
+        {isLoading && (
+          <div className={styles.status}>
+            <Skeleton
+              lines={4}
+              widths={["70%", "100%", "60%", "100%"]}
+              ariaLabel="Caricamento versioni"
+            />
+          </div>
+        )}
         {!isLoading && items.length === 0 && (
           <div className={styles.empty}>Nessuna versione salvata.</div>
         )}

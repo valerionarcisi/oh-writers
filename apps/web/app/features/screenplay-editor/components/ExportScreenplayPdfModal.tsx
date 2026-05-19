@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DsButton, Modal } from "@oh-writers/ui";
+import { DsButton, Modal, Skeleton } from "@oh-writers/ui";
 import { EXPORT_FORMAT_META, type ExportFormat } from "@oh-writers/domain";
 import { useListScreenplayScenes } from "../hooks/useListScreenplayScenes";
 import styles from "./ExportScreenplayPdfModal.module.css";
@@ -80,53 +80,59 @@ export function ExportScreenplayPdfModal({
       }
     >
       <div data-testid="screenplay-export-modal">
-      <p className={styles.description}>{meta.descriptionIt}</p>
+        <p className={styles.description}>{meta.descriptionIt}</p>
 
-      {meta.requiresSceneSelection && (
-        <div
-          className={styles.scenes}
-          data-testid="screenplay-export-scene-list"
-        >
-          <div className={styles.scenesHeader}>
-            Scegli le scene ({selected.size} selezionate)
+        {meta.requiresSceneSelection && (
+          <div
+            className={styles.scenes}
+            data-testid="screenplay-export-scene-list"
+          >
+            <div className={styles.scenesHeader}>
+              Scegli le scene ({selected.size} selezionate)
+            </div>
+            {scenesQuery.isLoading ? (
+              <div className={styles.empty}>
+                <Skeleton
+                  lines={5}
+                  widths={["100%", "100%", "100%", "100%", "60%"]}
+                  ariaLabel="Caricamento scene"
+                />
+              </div>
+            ) : scenes.length === 0 ? (
+              <p className={styles.empty}>Nessuna scena trovata.</p>
+            ) : (
+              <ul className={styles.sceneGrid}>
+                {scenes.map((s) => {
+                  const isChecked = selected.has(s.number);
+                  return (
+                    <li key={`${s.number}-${s.lineIndex}`}>
+                      <label className={styles.sceneRow}>
+                        <input
+                          type="checkbox"
+                          data-testid={`screenplay-export-scene-${s.number}`}
+                          checked={isChecked}
+                          onChange={() => toggle(s.number)}
+                        />
+                        <span className={styles.sceneNumber}>{s.number}.</span>
+                        <span className={styles.sceneHeading}>{s.heading}</span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-          {scenesQuery.isLoading ? (
-            <p className={styles.empty}>Caricamento scene…</p>
-          ) : scenes.length === 0 ? (
-            <p className={styles.empty}>Nessuna scena trovata.</p>
-          ) : (
-            <ul className={styles.sceneGrid}>
-              {scenes.map((s) => {
-                const isChecked = selected.has(s.number);
-                return (
-                  <li key={`${s.number}-${s.lineIndex}`}>
-                    <label className={styles.sceneRow}>
-                      <input
-                        type="checkbox"
-                        data-testid={`screenplay-export-scene-${s.number}`}
-                        checked={isChecked}
-                        onChange={() => toggle(s.number)}
-                      />
-                      <span className={styles.sceneNumber}>{s.number}.</span>
-                      <span className={styles.sceneHeading}>{s.heading}</span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
+        )}
 
-      <label className={styles.checkboxRow}>
-        <input
-          type="checkbox"
-          data-testid="screenplay-export-include-cover-page"
-          checked={includeCoverPage}
-          onChange={(e) => setIncludeCoverPage(e.target.checked)}
-        />
-        <span>Includi cover page</span>
-      </label>
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            data-testid="screenplay-export-include-cover-page"
+            checked={includeCoverPage}
+            onChange={(e) => setIncludeCoverPage(e.target.checked)}
+          />
+          <span>Includi cover page</span>
+        </label>
       </div>
     </Modal>
   );

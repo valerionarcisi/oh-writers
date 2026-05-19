@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@oh-writers/ui";
 import {
   buildDayCells,
   buildWeekRows,
@@ -21,7 +22,15 @@ interface CalendarGridViewProps {
 
 // ─── Column header row (Mon–Sun) ───────────────────────────────────────────────
 
-const DAY_HEADERS_IT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"] as const;
+const DAY_HEADERS_IT = [
+  "Lun",
+  "Mar",
+  "Mer",
+  "Gio",
+  "Ven",
+  "Sab",
+  "Dom",
+] as const;
 
 // ─── Day cell component ────────────────────────────────────────────────────────
 
@@ -32,7 +41,9 @@ interface DayCellCardProps {
 
 function DayCellCard({ cell, onClick }: DayCellCardProps) {
   const dateAbbrev = cell.date ? getDayAbbrev(cell.date) : null;
-  const calendarDay = cell.date ? parseInt(cell.date.split("-")[2] ?? "0", 10) : null;
+  const calendarDay = cell.date
+    ? parseInt(cell.date.split("-")[2] ?? "0", 10)
+    : null;
 
   return (
     <button
@@ -48,7 +59,9 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
           {calendarDay !== null && (
             <span className={styles.dayNum}>{calendarDay}</span>
           )}
-          {dateAbbrev && <span className={styles.dayAbbr}>{dateAbbrev.toUpperCase()}</span>}
+          {dateAbbrev && (
+            <span className={styles.dayAbbr}>{dateAbbrev.toUpperCase()}</span>
+          )}
         </div>
         <span className={styles.dayBadge}>G·{cell.dayNumber}</span>
       </div>
@@ -62,7 +75,9 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
 
       {/* Pills row */}
       <div className={styles.dayPills}>
-        <span className={styles.pillScene}>{cell.sceneCount} {cell.sceneCount === 1 ? "sc" : "sc"}</span>
+        <span className={styles.pillScene}>
+          {cell.sceneCount} {cell.sceneCount === 1 ? "sc" : "sc"}
+        </span>
         <span className={styles.pillShot}>{cell.shotCount} inq</span>
       </div>
 
@@ -70,7 +85,8 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
       <div className={styles.dayDuration}>
         <div className={styles.dayDurationLabel}>
           <span className={styles.dayDurationText}>
-            {cell.totalMinutes > 0 ? formatMinutes(cell.totalMinutes) : "—"} / 8h
+            {cell.totalMinutes > 0 ? formatMinutes(cell.totalMinutes) : "—"} /
+            8h
           </span>
           <span className={styles.dayDurationPct}>{cell.durationPct}%</span>
         </div>
@@ -86,7 +102,9 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
       {cell.isOverloaded && <span className={styles.dayWarning} aria-hidden />}
 
       {/* Hover hint */}
-      <span className={styles.dayHoverHint} aria-hidden>Apri →</span>
+      <span className={styles.dayHoverHint} aria-hidden>
+        Apri →
+      </span>
     </button>
   );
 }
@@ -129,11 +147,20 @@ function WeekRowBlock({ week, weekId, onDayClick }: WeekRowBlockProps) {
           <span className={styles.weekDates}>{week.dateRangeLabel}</span>
         )}
         <div className={styles.weekStats}>
-          <span><strong>{week.activeDays}</strong> {week.activeDays === 1 ? "giorno" : "giorni"}</span>
-          <span><strong>{week.totalScenes}</strong> scene</span>
-          <span><strong>{week.totalShots}</strong> inq</span>
+          <span>
+            <strong>{week.activeDays}</strong>{" "}
+            {week.activeDays === 1 ? "giorno" : "giorni"}
+          </span>
+          <span>
+            <strong>{week.totalScenes}</strong> scene
+          </span>
+          <span>
+            <strong>{week.totalShots}</strong> inq
+          </span>
           {week.totalMinutes > 0 && (
-            <span><strong>{formatMinutes(week.totalMinutes)}</strong> pianificate</span>
+            <span>
+              <strong>{formatMinutes(week.totalMinutes)}</strong> pianificate
+            </span>
           )}
         </div>
       </div>
@@ -175,7 +202,8 @@ function NoScheduleState() {
   return (
     <div className={styles.emptyState}>
       <p className={styles.emptyStateText}>
-        Nessun piano di lavorazione trovato. Genera un piano dalla sezione Schedule.
+        Nessun piano di lavorazione trovato. Genera un piano dalla sezione
+        Schedule.
       </p>
     </div>
   );
@@ -218,7 +246,11 @@ export function CalendarGridView({
   if (scheduleQuery.isLoading) {
     return (
       <div className={styles.loading}>
-        <span className={styles.loadingText}>Caricamento calendario…</span>
+        <Skeleton
+          lines={4}
+          widths={["100%", "100%", "100%", "60%"]}
+          ariaLabel="Caricamento calendario"
+        />
       </div>
     );
   }
@@ -250,10 +282,13 @@ export function CalendarGridView({
           >
             <span className={styles.weekSidebarLabel}>{week.label}</span>
             {week.dateRangeLabel && (
-              <span className={styles.weekSidebarDates}>{week.dateRangeLabel}</span>
+              <span className={styles.weekSidebarDates}>
+                {week.dateRangeLabel}
+              </span>
             )}
             <span className={styles.weekSidebarMeta}>
-              {week.activeDays} {week.activeDays === 1 ? "giorno" : "giorni"} · {week.totalScenes} sc
+              {week.activeDays} {week.activeDays === 1 ? "giorno" : "giorni"} ·{" "}
+              {week.totalScenes} sc
             </span>
           </a>
         ))}
@@ -282,7 +317,9 @@ export function CalendarGridView({
             <div className={styles.sidebarTotalsRow}>
               <span className={styles.sidebarTotalsLabel}>Pianificate</span>
               <span className={styles.sidebarTotalsValue}>
-                {formatMinutes(dayCells.reduce((sum, c) => sum + c.totalMinutes, 0))}
+                {formatMinutes(
+                  dayCells.reduce((sum, c) => sum + c.totalMinutes, 0),
+                )}
               </span>
             </div>
           )}

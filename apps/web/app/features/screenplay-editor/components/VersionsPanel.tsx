@@ -4,6 +4,7 @@ import {
   DRAFT_REVISION_COLORS,
   type DraftRevisionColor,
 } from "@oh-writers/domain";
+import { Skeleton } from "@oh-writers/ui";
 import {
   useVersions,
   useCreateManualVersion,
@@ -253,7 +254,15 @@ export function VersionsPanel({
       )}
 
       <div className={styles.body}>
-        {isLoading && <div className={styles.status}>Caricamento…</div>}
+        {isLoading && (
+          <div className={styles.status}>
+            <Skeleton
+              lines={4}
+              widths={["70%", "100%", "60%", "100%"]}
+              ariaLabel="Caricamento versioni"
+            />
+          </div>
+        )}
         {!isLoading && versions.length === 0 && (
           <div className={styles.empty}>
             Nessuna versione salvata. Crea la prima snapshot.
