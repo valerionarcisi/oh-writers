@@ -6,7 +6,7 @@ import {
   useQueryClient,
   useQuery,
 } from "@tanstack/react-query";
-import { useToast } from "@oh-writers/ui";
+import { Skeleton, useToast } from "@oh-writers/ui";
 import {
   scenesWithPlanSummaryQueryOptions,
   getOrCreateInitialPlan,
@@ -14,7 +14,11 @@ import {
   updateSceneEffort,
   generateShotPlansFromEffort,
 } from "../server/shooting-plan.server";
-import { EFFORT_LEVELS, EFFORT_LABELS, type EffortLevel } from "@oh-writers/domain";
+import {
+  EFFORT_LEVELS,
+  EFFORT_LABELS,
+  type EffortLevel,
+} from "@oh-writers/domain";
 import { ScriptPanel } from "./ScriptPanel";
 import { SceneFountainPanel } from "./SceneFountainPanel";
 import { BlockingCard } from "./BlockingCard";
@@ -85,7 +89,9 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       effort: EffortLevel;
     }) => updateSceneEffort({ data: { sceneId, projectId, effort } }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["shooting-plan", "scenes", projectId] });
+      qc.invalidateQueries({
+        queryKey: ["shooting-plan", "scenes", projectId],
+      });
     },
   });
 
@@ -98,7 +104,10 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         queryKey: ["shooting-plan", "scenes", projectId],
       });
       if (!result.isOk) {
-        showToast({ message: "Errore durante la generazione del piano.", variant: "error" });
+        showToast({
+          message: "Errore durante la generazione del piano.",
+          variant: "error",
+        });
         return;
       }
       const { createdCount, skippedCount, estimatedDays } = result.value;
@@ -115,7 +124,10 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       }
     },
     onError: () => {
-      showToast({ message: "Errore durante la generazione del piano.", variant: "error" });
+      showToast({
+        message: "Errore durante la generazione del piano.",
+        variant: "error",
+      });
     },
   });
 
@@ -177,7 +189,15 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [projectId, selectedScene, selectedSceneId, activePlanId, navigate, generatePlanMut, initialPlanMut]);
+  }, [
+    projectId,
+    selectedScene,
+    selectedSceneId,
+    activePlanId,
+    navigate,
+    generatePlanMut,
+    initialPlanMut,
+  ]);
 
   const totalShots = scenes.reduce((sum, s) => sum + s.shotCount, 0);
   const totalMinutesAll = scenes.reduce(
@@ -314,7 +334,15 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                 projectId={projectId}
               />
               {activePlanId && (
-                <Suspense fallback={null}>
+                <Suspense
+                  fallback={
+                    <Skeleton
+                      lines={2}
+                      widths={["80%", "50%"]}
+                      ariaLabel="Caricamento blocking"
+                    />
+                  }
+                >
                   <BlockingCard
                     sceneId={selectedScene.sceneId}
                     planId={activePlanId}

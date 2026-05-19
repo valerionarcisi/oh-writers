@@ -12,6 +12,7 @@ import {
   FloatingDock,
   Popover,
   SegmentedControl,
+  Skeleton,
   VersionTrigger,
   Viewbar,
   ViewbarSep,
@@ -85,12 +86,37 @@ const UNDERLINE_CHIPS: ReadonlyArray<{
   color: string;
   defaultOn: boolean;
 }> = [
-  { key: "cast",        label: "Cast",       color: "var(--ds-cat-cast)",        defaultOn: true  },
-  { key: "locations",   label: "Locations",  color: "var(--ds-cat-locations)",   defaultOn: true  },
-  { key: "props",       label: "Props",      color: "var(--ds-cat-scenografia)", defaultOn: true  },
-  { key: "costumes",    label: "Costumi",    color: "var(--ds-cat-costumi)",     defaultOn: false },
-  { key: "photography", label: "Fotografia", color: "var(--ds-cat-fotografia)",  defaultOn: false },
-  { key: "sound",       label: "Suono",      color: "var(--ds-cat-suono)",       defaultOn: false },
+  { key: "cast", label: "Cast", color: "var(--ds-cat-cast)", defaultOn: true },
+  {
+    key: "locations",
+    label: "Locations",
+    color: "var(--ds-cat-locations)",
+    defaultOn: true,
+  },
+  {
+    key: "props",
+    label: "Props",
+    color: "var(--ds-cat-scenografia)",
+    defaultOn: true,
+  },
+  {
+    key: "costumes",
+    label: "Costumi",
+    color: "var(--ds-cat-costumi)",
+    defaultOn: false,
+  },
+  {
+    key: "photography",
+    label: "Fotografia",
+    color: "var(--ds-cat-fotografia)",
+    defaultOn: false,
+  },
+  {
+    key: "sound",
+    label: "Suono",
+    color: "var(--ds-cat-suono)",
+    defaultOn: false,
+  },
 ];
 
 const initialUnderlineState = (): Record<UnderlineKey, boolean> =>
@@ -125,7 +151,17 @@ const formatHeading = (scene: BreakdownSceneSummary): string => {
 
 export function BreakdownPage({ projectId }: Props) {
   return (
-    <Suspense fallback={<p className={styles.empty}>Caricamento…</p>}>
+    <Suspense
+      fallback={
+        <div className={styles.empty}>
+          <Skeleton
+            lines={4}
+            widths={["100%", "100%", "100%", "60%"]}
+            ariaLabel="Caricamento spoglio"
+          />
+        </div>
+      }
+    >
       <BreakdownPageContent projectId={projectId} />
     </Suspense>
   );
@@ -311,14 +347,21 @@ function BreakdownPageContent({ projectId }: Props) {
   useEffect(() => {
     if (!hoverTooltip) return;
     const onMove = (e: PointerEvent) => {
-      const top = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-      const overTooltip = tooltipRef.current != null && top != null &&
+      const top = document.elementFromPoint(
+        e.clientX,
+        e.clientY,
+      ) as HTMLElement | null;
+      const overTooltip =
+        tooltipRef.current != null &&
+        top != null &&
         (tooltipRef.current === top || tooltipRef.current.contains(top));
       const overElement = top?.closest?.("[data-element-id]") != null;
       if (overTooltip || overElement) {
-        if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+        if (hoverCloseTimerRef.current)
+          clearTimeout(hoverCloseTimerRef.current);
       } else {
-        if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+        if (hoverCloseTimerRef.current)
+          clearTimeout(hoverCloseTimerRef.current);
         hoverCloseTimerRef.current = setTimeout(() => {
           if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
           setHoverTooltip(null);
@@ -337,18 +380,28 @@ function BreakdownPageContent({ projectId }: Props) {
     const elNode = target?.closest<HTMLElement>("[data-element-id]");
     if (!elNode) return;
     const elementId = elNode.getAttribute("data-element-id") ?? "";
-    const category = (elNode.getAttribute("data-cat") ?? null) as BreakdownCategory | null;
+    const category = (elNode.getAttribute("data-cat") ??
+      null) as BreakdownCategory | null;
     if (!category) return;
     const isGhost = elNode.getAttribute("data-ghost") === "true";
     const ghostOccurrenceId = elNode.getAttribute("data-occurrence-id") ?? null;
     const occ = sceneOccurrences.find((o) => o.element.id === elementId);
     const name = occ?.element.name ?? elNode.textContent?.trim() ?? "";
     const isPending = isGhost || occ?.occurrence.cesareStatus === "pending";
-    const occurrenceId = isGhost ? ghostOccurrenceId : (occ?.occurrence.id ?? null);
+    const occurrenceId = isGhost
+      ? ghostOccurrenceId
+      : (occ?.occurrence.id ?? null);
     const rect = elNode.getBoundingClientRect();
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     hoverTimerRef.current = setTimeout(() => {
-      setHoverTooltip({ x: rect.left, y: rect.bottom + 6, name, category, occurrenceId, isPending });
+      setHoverTooltip({
+        x: rect.left,
+        y: rect.bottom + 6,
+        name,
+        category,
+        occurrenceId,
+        isPending,
+      });
     }, 180);
   };
 
@@ -369,7 +422,10 @@ function BreakdownPageContent({ projectId }: Props) {
 
   const handleHoverAccept = () => {
     if (!hoverTooltip?.occurrenceId) return;
-    setStatus.mutate({ occurrenceIds: [hoverTooltip.occurrenceId], status: "accepted" });
+    setStatus.mutate({
+      occurrenceIds: [hoverTooltip.occurrenceId],
+      status: "accepted",
+    });
     flashFeedback(`Confermato «${hoverTooltip.name}»`);
     setHoverTooltip(null);
   };
@@ -531,9 +587,7 @@ function BreakdownPageContent({ projectId }: Props) {
       elementId: ctxMenu.elementId,
       patch: { category: nextCat },
     });
-    flashFeedback(
-      `«${ctxMenu.name}» → ${CATEGORY_META[nextCat].labelIt}`,
-    );
+    flashFeedback(`«${ctxMenu.name}» → ${CATEGORY_META[nextCat].labelIt}`);
     closeCtxMenu();
   };
 
@@ -680,40 +734,15 @@ function BreakdownPageContent({ projectId }: Props) {
                 anchor logic scrolls to the correct breakdown scene block.
                 The popover items have no working onClick handler today. */}
             {false && (
-            <div className={styles.indiceWrap} ref={indiceWrapRef}>
-              <button
-                type="button"
-                className={styles.pillBtn}
-                aria-haspopup="dialog"
-                aria-expanded={indiceOpen}
-                onClick={() => setIndiceOpen((o) => !o)}
-                data-testid="breakdown-indice-trigger"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  aria-hidden="true"
+              <div className={styles.indiceWrap} ref={indiceWrapRef}>
+                <button
+                  type="button"
+                  className={styles.pillBtn}
+                  aria-haspopup="dialog"
+                  aria-expanded={indiceOpen}
+                  onClick={() => setIndiceOpen((o) => !o)}
+                  data-testid="breakdown-indice-trigger"
                 >
-                  <path d="M3 6h18M3 12h18M3 18h12" />
-                </svg>
-                Indice
-                <span className={styles.badgeCount} data-num>
-                  {activeSceneIdx}/{totalScenes}
-                </span>
-                ▾
-              </button>
-
-              <Popover
-                isOpen={indiceOpen}
-                onClose={() => setIndiceOpen(false)}
-                placement="bottom-end"
-                width={320}
-              >
-                <div className={styles.popSearch}>
                   <svg
                     width="14"
                     height="14"
@@ -722,49 +751,74 @@ function BreakdownPageContent({ projectId }: Props) {
                     stroke="currentColor"
                     strokeWidth="1.7"
                     aria-hidden="true"
-                    style={{ color: "var(--ds-text-3)" }}
                   >
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" />
+                    <path d="M3 6h18M3 12h18M3 18h12" />
                   </svg>
-                  <input
-                    ref={indiceSearchRef}
-                    type="text"
-                    value={indiceQuery}
-                    onChange={(e) => setIndiceQuery(e.target.value)}
-                    placeholder="Cerca scena o luogo…"
-                    aria-label="Cerca scena"
-                  />
-                  <span className={styles.popKbd}>⌘K</span>
-                </div>
-                {filteredScenes.length === 0 ? (
-                  <p className={styles.popAct}>Nessuna scena trovata.</p>
-                ) : (
-                  filteredScenes.map(({ scene, count }) => {
-                    const isCurrent = scene.id === activeScene?.id;
-                    return (
-                      <button
-                        key={scene.id}
-                        type="button"
-                        className={[
-                          styles.popItem,
-                          isCurrent ? styles.popItemCurrent : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        onClick={() => handleSceneSelect(scene.id)}
-                      >
-                        <span className="n">SC.{scene.fountainNumber}</span>
-                        <span className="lbl">{formatHeading(scene)}</span>
-                        <span className={styles.popKbd} data-num>
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </Popover>
-            </div>
+                  Indice
+                  <span className={styles.badgeCount} data-num>
+                    {activeSceneIdx}/{totalScenes}
+                  </span>
+                  ▾
+                </button>
+
+                <Popover
+                  isOpen={indiceOpen}
+                  onClose={() => setIndiceOpen(false)}
+                  placement="bottom-end"
+                  width={320}
+                >
+                  <div className={styles.popSearch}>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      aria-hidden="true"
+                      style={{ color: "var(--ds-text-3)" }}
+                    >
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m20 20-3.5-3.5" />
+                    </svg>
+                    <input
+                      ref={indiceSearchRef}
+                      type="text"
+                      value={indiceQuery}
+                      onChange={(e) => setIndiceQuery(e.target.value)}
+                      placeholder="Cerca scena o luogo…"
+                      aria-label="Cerca scena"
+                    />
+                    <span className={styles.popKbd}>⌘K</span>
+                  </div>
+                  {filteredScenes.length === 0 ? (
+                    <p className={styles.popAct}>Nessuna scena trovata.</p>
+                  ) : (
+                    filteredScenes.map(({ scene, count }) => {
+                      const isCurrent = scene.id === activeScene?.id;
+                      return (
+                        <button
+                          key={scene.id}
+                          type="button"
+                          className={[
+                            styles.popItem,
+                            isCurrent ? styles.popItemCurrent : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() => handleSceneSelect(scene.id)}
+                        >
+                          <span className="n">SC.{scene.fountainNumber}</span>
+                          <span className="lbl">{formatHeading(scene)}</span>
+                          <span className={styles.popKbd} data-num>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </Popover>
+              </div>
             )}
 
             <DraftMetaBadge projectId={projectId} />
@@ -774,20 +828,32 @@ function BreakdownPageContent({ projectId }: Props) {
               menuItems={[
                 ...screenplayVersions.map((v, idx) => ({
                   id: `version-${v.id}`,
-                  label: v.id === versionId ? `● ${v.label ?? `Versione ${idx + 1}`}` : (v.label ?? `Versione ${idx + 1}`),
+                  label:
+                    v.id === versionId
+                      ? `● ${v.label ?? `Versione ${idx + 1}`}`
+                      : (v.label ?? `Versione ${idx + 1}`),
                   onSelect: () => {
                     if (ctx.screenplayId) {
-                      openVersionsDrawer({ kind: "screenplay", screenplayId: ctx.screenplayId });
+                      openVersionsDrawer({
+                        kind: "screenplay",
+                        screenplayId: ctx.screenplayId,
+                      });
                     }
                   },
-                  tone: v.id === versionId ? ("default" as const) : ("muted" as const),
+                  tone:
+                    v.id === versionId
+                      ? ("default" as const)
+                      : ("muted" as const),
                 })),
                 {
                   id: "open-drawer",
                   label: "Apri Versioni →",
                   onSelect: () => {
                     if (ctx.screenplayId) {
-                      openVersionsDrawer({ kind: "screenplay", screenplayId: ctx.screenplayId });
+                      openVersionsDrawer({
+                        kind: "screenplay",
+                        screenplayId: ctx.screenplayId,
+                      });
                     }
                   },
                 },
@@ -836,144 +902,152 @@ function BreakdownPageContent({ projectId }: Props) {
       )}
 
       {viewTab === "per-scene" && (
-      <div className={styles.layout}>
-        {/* Screenplay */}
-        <div
-          ref={screenplayContainerRef}
-          className={styles.screenplay}
-          onContextMenu={handleScreenplayContextMenu}
-          onMouseOver={handleScreenplayMouseOver}
-          onMouseLeave={handleScreenplayMouseLeave}
-          data-show-cast={underline.cast}
-          data-show-locations={underline.locations}
-          data-show-props={underline.props}
-          data-show-costumes={underline.costumes}
-          data-show-photography={underline.photography}
-          data-show-sound={underline.sound}
-          data-testid="breakdown-screenplay"
-        >
-          {ctx.versionContent ? (
-            <ScriptReader
-              ref={scriptReaderRef}
-              projectId={projectId}
-              versionId={versionId}
-              versionContent={ctx.versionContent}
-              scenes={scenes}
-              elements={elementsForHighlight}
-              suggestions={suggestions}
-              canEdit={canEdit}
-              activeSceneId={activeScene?.id ?? null}
-              onActiveSceneChange={setActiveSceneId}
-            />
-          ) : (
-            <p className={styles.empty}>
-              Nessuna versione disponibile per questa sceneggiatura.
-            </p>
-          )}
-        </div>
-
-        {/* Right panel */}
-        <aside className={styles.panel} aria-label="Pannello laterale">
-          <div className={styles.panelTabs} role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panelTab === "categories"}
-              className={styles.panelTab}
-              onClick={() => setPanelTab("categories")}
-            >
-              Categorie
-              <span className="count" data-num>
-                {groupedByCategory.size}
-              </span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={panelTab === "cesare"}
-              className={styles.panelTab}
-              onClick={() => setPanelTab("cesare")}
-              data-testid="breakdown-cesare-tab"
-              aria-label={
-                adStats.critical > 0
-                  ? `Cesare: ${adStats.critical} critici su ${adStats.total} alert`
-                  : `Cesare: ${adStats.total} alert`
-              }
-            >
-              Cesare
-              <span
-                className={`count ${adStats.critical > 0 ? styles.countCritical : ""}`}
-                data-num
-              >
-                {adStats.critical > 0 && (
-                  <span className={styles.criticalDot} aria-hidden="true" />
-                )}
-                {adStats.critical > 0 && `${adStats.critical} crit · `}
-                {adStats.total} alert
-              </span>
-            </button>
-          </div>
-
-          <div className={styles.panelBody}>
-            {panelTab === "categories" && (
-              <>
-                <div className={styles.panelScopeBar}>
-                  <button
-                    type="button"
-                    className={styles.panelScopeBtn}
-                    data-active={panelScope === "scene"}
-                    onClick={() => setPanelScope("scene")}
-                  >
-                    {activeScene ? formatHeading(activeScene).slice(0, 28) : "Scena"}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.panelScopeBtn}
-                    data-active={panelScope === "project"}
-                    onClick={() => setPanelScope("project")}
-                  >
-                    Progetto
-                  </button>
-                </div>
-                {panelScope === "scene" && activeScene && (
-                  <SceneCostPanel
-                    projectId={projectId}
-                    sceneNumber={activeSceneIdx}
-                    sceneLabel={formatHeading(activeScene)}
-                  />
-                )}
-                <CategoriesPanel
-                grouped={groupedByCategory}
-                allRows={allRows}
-                canEdit={canEdit && panelScope === "scene"}
+        <div className={styles.layout}>
+          {/* Screenplay */}
+          <div
+            ref={screenplayContainerRef}
+            className={styles.screenplay}
+            onContextMenu={handleScreenplayContextMenu}
+            onMouseOver={handleScreenplayMouseOver}
+            onMouseLeave={handleScreenplayMouseLeave}
+            data-show-cast={underline.cast}
+            data-show-locations={underline.locations}
+            data-show-props={underline.props}
+            data-show-costumes={underline.costumes}
+            data-show-photography={underline.photography}
+            data-show-sound={underline.sound}
+            data-testid="breakdown-screenplay"
+          >
+            {ctx.versionContent ? (
+              <ScriptReader
+                ref={scriptReaderRef}
                 projectId={projectId}
-                sceneId={activeScene?.id ?? ""}
                 versionId={versionId}
-                onAccept={(occurrenceId) =>
-                  setStatus.mutate({ occurrenceIds: [occurrenceId], status: "accepted" })
-                }
-                onIgnore={(occurrenceId) =>
-                  setStatus.mutate({ occurrenceIds: [occurrenceId], status: "ignored" })
-                }
-                onRemove={(occurrenceId) =>
-                  removeOcc.mutate({ projectId, occurrenceId })
-                }
-              />
-              </>
-            )}
-            {panelTab === "cesare" && (
-              <CesareAdPanel
-                projectId={projectId}
+                versionContent={ctx.versionContent}
                 scenes={scenes}
-                rows={allRows}
-                screenplayText={ctx.versionContent ?? ""}
+                elements={elementsForHighlight}
+                suggestions={suggestions}
+                canEdit={canEdit}
                 activeSceneId={activeScene?.id ?? null}
-                onOpenScene={handleSceneSelect}
+                onActiveSceneChange={setActiveSceneId}
               />
+            ) : (
+              <p className={styles.empty}>
+                Nessuna versione disponibile per questa sceneggiatura.
+              </p>
             )}
           </div>
-        </aside>
-      </div>
+
+          {/* Right panel */}
+          <aside className={styles.panel} aria-label="Pannello laterale">
+            <div className={styles.panelTabs} role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panelTab === "categories"}
+                className={styles.panelTab}
+                onClick={() => setPanelTab("categories")}
+              >
+                Categorie
+                <span className="count" data-num>
+                  {groupedByCategory.size}
+                </span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panelTab === "cesare"}
+                className={styles.panelTab}
+                onClick={() => setPanelTab("cesare")}
+                data-testid="breakdown-cesare-tab"
+                aria-label={
+                  adStats.critical > 0
+                    ? `Cesare: ${adStats.critical} critici su ${adStats.total} alert`
+                    : `Cesare: ${adStats.total} alert`
+                }
+              >
+                Cesare
+                <span
+                  className={`count ${adStats.critical > 0 ? styles.countCritical : ""}`}
+                  data-num
+                >
+                  {adStats.critical > 0 && (
+                    <span className={styles.criticalDot} aria-hidden="true" />
+                  )}
+                  {adStats.critical > 0 && `${adStats.critical} crit · `}
+                  {adStats.total} alert
+                </span>
+              </button>
+            </div>
+
+            <div className={styles.panelBody}>
+              {panelTab === "categories" && (
+                <>
+                  <div className={styles.panelScopeBar}>
+                    <button
+                      type="button"
+                      className={styles.panelScopeBtn}
+                      data-active={panelScope === "scene"}
+                      onClick={() => setPanelScope("scene")}
+                    >
+                      {activeScene
+                        ? formatHeading(activeScene).slice(0, 28)
+                        : "Scena"}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.panelScopeBtn}
+                      data-active={panelScope === "project"}
+                      onClick={() => setPanelScope("project")}
+                    >
+                      Progetto
+                    </button>
+                  </div>
+                  {panelScope === "scene" && activeScene && (
+                    <SceneCostPanel
+                      projectId={projectId}
+                      sceneNumber={activeSceneIdx}
+                      sceneLabel={formatHeading(activeScene)}
+                    />
+                  )}
+                  <CategoriesPanel
+                    grouped={groupedByCategory}
+                    allRows={allRows}
+                    canEdit={canEdit && panelScope === "scene"}
+                    projectId={projectId}
+                    sceneId={activeScene?.id ?? ""}
+                    versionId={versionId}
+                    onAccept={(occurrenceId) =>
+                      setStatus.mutate({
+                        occurrenceIds: [occurrenceId],
+                        status: "accepted",
+                      })
+                    }
+                    onIgnore={(occurrenceId) =>
+                      setStatus.mutate({
+                        occurrenceIds: [occurrenceId],
+                        status: "ignored",
+                      })
+                    }
+                    onRemove={(occurrenceId) =>
+                      removeOcc.mutate({ projectId, occurrenceId })
+                    }
+                  />
+                </>
+              )}
+              {panelTab === "cesare" && (
+                <CesareAdPanel
+                  projectId={projectId}
+                  scenes={scenes}
+                  rows={allRows}
+                  screenplayText={ctx.versionContent ?? ""}
+                  activeSceneId={activeScene?.id ?? null}
+                  onOpenScene={handleSceneSelect}
+                />
+              )}
+            </div>
+          </aside>
+        </div>
       )}
 
       {/* ─── HOVER TOOLTIP ─── */}
@@ -985,9 +1059,12 @@ function BreakdownPageContent({ projectId }: Props) {
         >
           <span
             className={styles.hoverTooltipCat}
-            style={{ color: `var(${CATEGORY_META[hoverTooltip.category]?.colorToken ?? "--ds-text-mute"})` }}
+            style={{
+              color: `var(${CATEGORY_META[hoverTooltip.category]?.colorToken ?? "--ds-text-mute"})`,
+            }}
           >
-            {CATEGORY_META[hoverTooltip.category]?.labelIt ?? hoverTooltip.category}
+            {CATEGORY_META[hoverTooltip.category]?.labelIt ??
+              hoverTooltip.category}
           </span>
           <span className={styles.hoverTooltipName}>{hoverTooltip.name}</span>
           {canEdit && hoverTooltip.isPending ? (
@@ -1015,7 +1092,11 @@ function BreakdownPageContent({ projectId }: Props) {
               className={styles.hoverTooltipRemove}
               disabled={!hoverTooltip.occurrenceId || removeOcc.isPending}
               onClick={handleHoverRemove}
-              title={hoverTooltip.occurrenceId ? "Rimuovi dalla scena" : "Seleziona una scena per rimuovere"}
+              title={
+                hoverTooltip.occurrenceId
+                  ? "Rimuovi dalla scena"
+                  : "Seleziona una scena per rimuovere"
+              }
               aria-label="Rimuovi dalla scena"
             >
               <Trash2 size={12} strokeWidth={2} />
@@ -1206,9 +1287,20 @@ interface CategoriesPanelProps {
   onRemove: (occurrenceId: string) => void;
 }
 
-function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versionId, onAccept, onIgnore, onRemove }: CategoriesPanelProps) {
+function CategoriesPanel({
+  grouped,
+  allRows,
+  canEdit,
+  projectId,
+  sceneId,
+  versionId,
+  onAccept,
+  onIgnore,
+  onRemove,
+}: CategoriesPanelProps) {
   const visibleCats = PANEL_CATEGORY_ORDER.filter((cat) => grouped.has(cat));
-  const [suggestedPopover, setSuggestedPopover] = useState<SuggestedPopover | null>(null);
+  const [suggestedPopover, setSuggestedPopover] =
+    useState<SuggestedPopover | null>(null);
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [addingCat, setAddingCat] = useState<BreakdownCategory | null>(null);
   const [addName, setAddName] = useState("");
@@ -1221,13 +1313,21 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
     setTimeout(() => addInputRef.current?.focus(), 0);
   };
 
-  const closeAdd = () => { setAddingCat(null); setAddName(""); };
+  const closeAdd = () => {
+    setAddingCat(null);
+    setAddName("");
+  };
 
   const commitAdd = (cat: BreakdownCategory) => {
     const name = addName.trim();
     if (!name || !sceneId) return;
     addEl.mutate(
-      { projectId, category: cat, name, occurrence: { sceneId, screenplayVersionId: versionId, quantity: 1 } },
+      {
+        projectId,
+        category: cat,
+        name,
+        occurrence: { sceneId, screenplayVersionId: versionId, quantity: 1 },
+      },
       { onSuccess: closeAdd },
     );
   };
@@ -1235,7 +1335,9 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
   const scenesByElement = useMemo(() => {
     const map = new Map<string, number[]>();
     for (const row of allRows) {
-      const nums = row.scenesPresent.map((s) => s.sceneNumber).sort((a, b) => a - b);
+      const nums = row.scenesPresent
+        .map((s) => s.sceneNumber)
+        .sort((a, b) => a - b);
       map.set(row.element.id, nums);
     }
     return map;
@@ -1249,7 +1351,12 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
     if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
     const rect = e.currentTarget.getBoundingClientRect();
     popoverTimerRef.current = setTimeout(() => {
-      setSuggestedPopover({ x: rect.left, y: rect.bottom + 6, occurrenceId, name });
+      setSuggestedPopover({
+        x: rect.left,
+        y: rect.bottom + 6,
+        occurrenceId,
+        name,
+      });
     }, 160);
   };
 
@@ -1290,7 +1397,9 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
                 <button
                   type="button"
                   className={styles.catAdd}
-                  onClick={() => addingCat === cat ? closeAdd() : openAdd(cat)}
+                  onClick={() =>
+                    addingCat === cat ? closeAdd() : openAdd(cat)
+                  }
                   aria-label={`Aggiungi ${meta.labelIt}`}
                   title={`Aggiungi ${meta.labelIt}`}
                 >
@@ -1308,15 +1417,30 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
                     className={[
                       styles.catItem,
                       isSuggested ? styles.catItemSuggested : "",
-                      sceneNums.length > 1 && !isSuggested ? styles.catItemWithScenes : "",
+                      sceneNums.length > 1 && !isSuggested
+                        ? styles.catItemWithScenes
+                        : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    data-scenes={!isSuggested && sceneNums.length > 1 ? sceneNums.join(", ") : undefined}
-                    onMouseEnter={isSuggested
-                      ? (e) => handleSuggestedMouseEnter(e, it.occurrence.id, it.element.name)
-                      : undefined}
-                    onMouseLeave={isSuggested ? handleSuggestedMouseLeave : undefined}
+                    data-scenes={
+                      !isSuggested && sceneNums.length > 1
+                        ? sceneNums.join(", ")
+                        : undefined
+                    }
+                    onMouseEnter={
+                      isSuggested
+                        ? (e) =>
+                            handleSuggestedMouseEnter(
+                              e,
+                              it.occurrence.id,
+                              it.element.name,
+                            )
+                        : undefined
+                    }
+                    onMouseLeave={
+                      isSuggested ? handleSuggestedMouseLeave : undefined
+                    }
                   >
                     {it.element.name}
                     {it.occurrence.quantity > 1 && (
@@ -1333,9 +1457,17 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
                       <button
                         type="button"
                         className={styles.catItemRemove}
-                        onClick={() => isSuggested ? onIgnore(it.occurrence.id) : onRemove(it.occurrence.id)}
+                        onClick={() =>
+                          isSuggested
+                            ? onIgnore(it.occurrence.id)
+                            : onRemove(it.occurrence.id)
+                        }
                         aria-label={`Rimuovi ${it.element.name}`}
-                        title={isSuggested ? "Ignora suggerimento" : "Rimuovi dalla scena"}
+                        title={
+                          isSuggested
+                            ? "Ignora suggerimento"
+                            : "Rimuovi dalla scena"
+                        }
                       >
                         ×
                       </button>
@@ -1385,14 +1517,21 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
           onMouseLeave={() => setSuggestedPopover(null)}
         >
           <div className={styles.suggestedPopoverHeader}>
-            <span className={styles.suggestedPopoverIcon} aria-hidden>✦</span>
-            <span className={styles.suggestedPopoverName}>{suggestedPopover.name}</span>
+            <span className={styles.suggestedPopoverIcon} aria-hidden>
+              ✦
+            </span>
+            <span className={styles.suggestedPopoverName}>
+              {suggestedPopover.name}
+            </span>
           </div>
           <p className={styles.suggestedPopoverHint}>Suggerito da Cesare</p>
           <div className={styles.suggestedPopoverActions}>
             <button
               type="button"
-              className={[styles.suggestedPopoverBtn, styles.suggestedPopoverBtnAccept].join(" ")}
+              className={[
+                styles.suggestedPopoverBtn,
+                styles.suggestedPopoverBtnAccept,
+              ].join(" ")}
               onClick={() => {
                 onAccept(suggestedPopover.occurrenceId);
                 setSuggestedPopover(null);
@@ -1402,7 +1541,10 @@ function CategoriesPanel({ grouped, allRows, canEdit, projectId, sceneId, versio
             </button>
             <button
               type="button"
-              className={[styles.suggestedPopoverBtn, styles.suggestedPopoverBtnIgnore].join(" ")}
+              className={[
+                styles.suggestedPopoverBtn,
+                styles.suggestedPopoverBtnIgnore,
+              ].join(" ")}
               onClick={() => {
                 onIgnore(suggestedPopover.occurrenceId);
                 setSuggestedPopover(null);
@@ -1474,4 +1616,3 @@ function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
     </form>
   );
 }
-
