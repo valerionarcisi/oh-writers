@@ -197,6 +197,15 @@ export const addLocationRequirement = createServerFn({ method: "POST" })
       ),
   );
 
+const MAX_PHOTOS_PER_CANDIDATE = 3;
+const PHOTO_MAX_WIDTH_PX = 800;
+
+// SECURITY TODO: API key is embedded inline in the stored URL. Move to a server-side
+// proxy endpoint (e.g. /api/places-photo?name=...) before exposing these URLs publicly.
+// Same exposure pattern as cesare-tools.ts:buildPlacePhotoUrl.
+const buildPlacePhotoUrl = (photoName: string, apiKey: string): string =>
+  `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${PHOTO_MAX_WIDTH_PX}&key=${apiKey}`;
+
 export const addLocationCandidate = createServerFn({ method: "POST" })
   .validator(
     z.object({
@@ -218,6 +227,7 @@ export const addLocationCandidate = createServerFn({ method: "POST" })
         notes: z.string().nullable().optional(),
         aiSuggested: z.boolean().optional(),
         aiReasoning: z.string().nullable().optional(),
+        photoNames: z.array(z.string()).optional(),
       }),
     }),
   )
@@ -246,11 +256,32 @@ export const addLocationCandidate = createServerFn({ method: "POST" })
                 aiSuggested: data.candidate.aiSuggested ?? false,
                 aiReasoning: data.candidate.aiReasoning ?? null,
               })
-              .returning(),
+              .returning({ id: locationCandidates.id }),
             (e) => new DbError("addLocationCandidate", e),
-          ).andThen(() =>
-            loadRequirementsForProject(db, access.project.id),
-          ),
+          )
+            .andThen((inserted) => {
+              const candidateId = inserted[0]?.id;
+              const photoNames = (data.candidate.photoNames ?? [])
+                .filter((n) => typeof n === "string" && n.startsWith("places/"))
+                .slice(0, MAX_PHOTOS_PER_CANDIDATE);
+              const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
+
+              if (!candidateId || photoNames.length === 0 || !apiKey) {
+                return ResultAsync.fromSafePromise(Promise.resolve());
+              }
+
+              return ResultAsync.fromPromise(
+                db.insert(locationPhotos).values(
+                  photoNames.map((photoName) => ({
+                    candidateId,
+                    url: buildPlacePhotoUrl(photoName, apiKey),
+                    caption: null,
+                  })),
+                ),
+                (e) => new DbError("addLocationCandidate/photos", e),
+              ).map(() => undefined);
+            })
+            .andThen(() => loadRequirementsForProject(db, access.project.id)),
         ),
       ),
   );

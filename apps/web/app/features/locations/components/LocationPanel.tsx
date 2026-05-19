@@ -1,6 +1,25 @@
 import { useState } from "react";
 import type { LocationRequirement, LocationCandidate, PatchLocationCandidate } from "@oh-writers/domain";
+import { PlacesCombobox } from "./PlacesCombobox";
+import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import styles from "./LocationPanel.module.css";
+
+interface AddCandidatePayload {
+  name: string;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  estimatedDailyFee?: number | null;
+  permitNotes?: string | null;
+  notes?: string | null;
+  status: "candidate" | "visited" | "rejected" | "confirmed";
+  aiSuggested: boolean;
+  aiReasoning?: string | null;
+  photoNames?: string[];
+}
 
 interface LocationPanelProps {
   requirements: LocationRequirement[];
@@ -8,14 +27,13 @@ interface LocationPanelProps {
   onSelect: (id: string) => void;
   selectedCandidateId: string | null;
   onCandidateSelect: (candidateId: string) => void;
-  onAddCandidate: (
-    requirementId: string,
-    candidate: { name: string; address?: string | null; lat?: number | null; lng?: number | null; contactName?: string | null; contactEmail?: string | null; contactPhone?: string | null; estimatedDailyFee?: number | null; permitNotes?: string | null; notes?: string | null; status: "candidate" | "visited" | "rejected" | "confirmed"; aiSuggested: boolean; aiReasoning?: string | null; }
-  ) => void;
+  onAddCandidate: (requirementId: string, candidate: AddCandidatePayload) => void;
   onUpdateCandidate: (candidateId: string, patch: PatchLocationCandidate) => void;
   onConfirm: (requirementId: string, candidateId: string) => void;
   onRemoveCandidate: (candidateId: string) => void;
   onAskCesare: (requirementId: string) => void;
+  /** Bias passed to Google Places — e.g. project region or "Italia". */
+  defaultLocationBias?: string;
 }
 
 const STATUS_DOT: Record<string, string> = {
