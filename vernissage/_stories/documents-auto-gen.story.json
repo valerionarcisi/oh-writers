@@ -1,0 +1,55 @@
+{
+  "id": "documents-auto-gen",
+  "title": "Cesare genera draft di documenti (propose/accept)",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/synopsis",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "mockContext": {},
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"narrative-docs-shell\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-synopsis-page-clean"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: /^Cesare(\\s—.*)?$/ })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[placeholder=\"Chiedi a Cesare…\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-cesare-open"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Scrivimi la sinossi."
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"document-draft-banner\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "03-draft-banner-visible"
+    },
+    {
+      "kind": "expect_dom",
+      "selector": "[data-testid=\"document-draft-banner\"]",
+      "exists": true
+    }
+  ]
+}

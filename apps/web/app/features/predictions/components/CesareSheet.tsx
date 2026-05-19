@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type React from "react";
 import { useButton } from "react-aria";
 import type { ResultShape } from "@oh-writers/utils";
@@ -203,7 +198,9 @@ const deriveQuickPrompts = (
 ): string[] => {
   if (messages.length === 0) return QUICK_PROMPTS_INITIAL[page];
 
-  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  const lastAssistant = [...messages]
+    .reverse()
+    .find((m) => m.role === "assistant");
   if (!lastAssistant) return QUICK_PROMPTS_INITIAL[page];
 
   // Locations: after a search that found candidates, show specific follow-up
@@ -290,9 +287,17 @@ const callAskCesare = async (
 
 function CloseButton({ onPress }: { onPress: () => void }) {
   const ref = useRef<HTMLButtonElement>(null);
-  const { buttonProps } = useButton({ onPress, "aria-label": "Chiudi Cesare" }, ref);
+  const { buttonProps } = useButton(
+    { onPress, "aria-label": "Chiudi Cesare" },
+    ref,
+  );
   return (
-    <button ref={ref} {...buttonProps} className={styles.closeBtn} type="button">
+    <button
+      ref={ref}
+      {...buttonProps}
+      className={styles.closeBtn}
+      type="button"
+    >
       ✕
     </button>
   );
@@ -302,13 +307,24 @@ function FullPageButton({ onPress }: { onPress: () => void }) {
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton({ onPress }, ref);
   return (
-    <button ref={ref} {...buttonProps} className={styles.fullPageBtn} type="button">
+    <button
+      ref={ref}
+      {...buttonProps}
+      className={styles.fullPageBtn}
+      type="button"
+    >
       Pagina intera →
     </button>
   );
 }
 
-function SendButton({ onPress, isDisabled }: { onPress: () => void; isDisabled: boolean }) {
+function SendButton({
+  onPress,
+  isDisabled,
+}: {
+  onPress: () => void;
+  isDisabled: boolean;
+}) {
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton({ onPress, isDisabled }, ref);
   return (
@@ -360,6 +376,7 @@ function stripToolCalls(content: string): string {
     .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
     .replace(/<tool_call>[\s\S]*$/g, "")
     .replace(/<!--ohw:tools=\d+-->/g, "")
+    .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
     .trim();
 }
 
@@ -371,6 +388,21 @@ export function parseToolsExecuted(content: string): number {
   const m = content.match(/<!--ohw:tools=(\d+)-->/);
   if (!m) return 0;
   return parseInt(m[1]!, 10);
+}
+
+/**
+ * Server side-channel for tool payloads that the canvas/UI needs (e.g. a
+ * blocking proposal that must render as ghost overlays). Returns the parsed
+ * payload or null when no marker is present / JSON is malformed.
+ */
+export function parseBlockingProposalMarker(content: string): unknown | null {
+  const m = content.match(/<!--ohw:blocking-proposal:([\s\S]*?)-->/);
+  if (!m || !m[1]) return null;
+  try {
+    return JSON.parse(m[1]);
+  } catch {
+    return null;
+  }
 }
 
 interface TableState {
@@ -439,7 +471,9 @@ function renderMarkdown(content: string): React.ReactNode {
       nodes.push(
         <ol key={key++} className={styles.mdOrderedList}>
           {items.map((item, i) => (
-            <li key={i} className={styles.mdListItem}>{renderInline(item)}</li>
+            <li key={i} className={styles.mdListItem}>
+              {renderInline(item)}
+            </li>
           ))}
         </ol>,
       );
@@ -447,7 +481,9 @@ function renderMarkdown(content: string): React.ReactNode {
       nodes.push(
         <ul key={key++} className={styles.mdList}>
           {items.map((item, i) => (
-            <li key={i} className={styles.mdListItem}>{renderInline(item)}</li>
+            <li key={i} className={styles.mdListItem}>
+              {renderInline(item)}
+            </li>
           ))}
         </ul>,
       );
@@ -483,16 +519,32 @@ function renderMarkdown(content: string): React.ReactNode {
 
     if (h4) {
       flushList();
-      nodes.push(<h5 key={key++} className={styles.mdH3}>{renderInline(h4[1]!)}</h5>);
+      nodes.push(
+        <h5 key={key++} className={styles.mdH3}>
+          {renderInline(h4[1]!)}
+        </h5>,
+      );
     } else if (h3) {
       flushList();
-      nodes.push(<h4 key={key++} className={styles.mdH3}>{renderInline(h3[1]!)}</h4>);
+      nodes.push(
+        <h4 key={key++} className={styles.mdH3}>
+          {renderInline(h3[1]!)}
+        </h4>,
+      );
     } else if (h2) {
       flushList();
-      nodes.push(<h3 key={key++} className={styles.mdH2}>{renderInline(h2[1]!)}</h3>);
+      nodes.push(
+        <h3 key={key++} className={styles.mdH2}>
+          {renderInline(h2[1]!)}
+        </h3>,
+      );
     } else if (h1) {
       flushList();
-      nodes.push(<h2 key={key++} className={styles.mdH1}>{renderInline(h1[1]!)}</h2>);
+      nodes.push(
+        <h2 key={key++} className={styles.mdH1}>
+          {renderInline(h1[1]!)}
+        </h2>,
+      );
     } else if (hr) {
       flushList();
       nodes.push(<hr key={key++} className={styles.mdHr} />);
@@ -513,7 +565,11 @@ function renderMarkdown(content: string): React.ReactNode {
       nodes.push(<div key={key++} className={styles.mdSpacer} />);
     } else {
       flushList();
-      nodes.push(<p key={key++} className={styles.mdPara}>{renderInline(line)}</p>);
+      nodes.push(
+        <p key={key++} className={styles.mdPara}>
+          {renderInline(line)}
+        </p>,
+      );
     }
   }
   flushList();
@@ -530,7 +586,9 @@ function MessageBubble({ message }: { message: Message }) {
       ].join(" ")}
     >
       {message.role === "assistant" && (
-        <span className={styles.bubbleIcon} aria-hidden>✦</span>
+        <span className={styles.bubbleIcon} aria-hidden>
+          ✦
+        </span>
       )}
       {message.role === "assistant" ? (
         <div className={[styles.bubbleText, styles.bubbleMarkdown].join(" ")}>
@@ -545,12 +603,28 @@ function MessageBubble({ message }: { message: Message }) {
 
 function LoadingIndicator() {
   return (
-    <div className={[styles.bubble, styles.bubbleAssistant, styles.bubbleLoading].join(" ")} aria-busy="true" aria-label="Cesare sta rispondendo">
-      <span className={styles.bubbleIcon} aria-hidden>✦</span>
+    <div
+      className={[
+        styles.bubble,
+        styles.bubbleAssistant,
+        styles.bubbleLoading,
+      ].join(" ")}
+      aria-busy="true"
+      aria-label="Cesare sta rispondendo"
+    >
+      <span className={styles.bubbleIcon} aria-hidden>
+        ✦
+      </span>
       <div className={styles.skeletonBody}>
-        <span className={[styles.skeletonLine, styles.skeletonLong].join(" ")} />
-        <span className={[styles.skeletonLine, styles.skeletonMedium].join(" ")} />
-        <span className={[styles.skeletonLine, styles.skeletonShort].join(" ")} />
+        <span
+          className={[styles.skeletonLine, styles.skeletonLong].join(" ")}
+        />
+        <span
+          className={[styles.skeletonLine, styles.skeletonMedium].join(" ")}
+        />
+        <span
+          className={[styles.skeletonLine, styles.skeletonShort].join(" ")}
+        />
       </div>
     </div>
   );
@@ -559,7 +633,9 @@ function LoadingIndicator() {
 function EmptyState() {
   return (
     <div className={styles.emptyState}>
-      <span className={styles.emptyIcon} aria-hidden>✦</span>
+      <span className={styles.emptyIcon} aria-hidden>
+        ✦
+      </span>
       <p className={styles.emptyText}>Ciao. Sono Cesare.</p>
       <p className={styles.emptyHint}>Chiedimi qualcosa sul progetto.</p>
     </div>
@@ -592,31 +668,39 @@ export function CesareSheet({
   const [isLoading, setIsLoading] = useState(false);
   const conversationRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [sheetHeight, setSheetHeight] = useState(() => Math.round(getViewportHeight() * 0.42));
+  const [sheetHeight, setSheetHeight] = useState(() =>
+    Math.round(getViewportHeight() * 0.42),
+  );
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
 
-  const handleHandlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    dragStartY.current = e.clientY;
-    dragStartHeight.current = sheetHeight;
-    setIsDragging(true);
+  const handleHandlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      dragStartY.current = e.clientY;
+      dragStartHeight.current = sheetHeight;
+      setIsDragging(true);
 
-    const onMove = (ev: PointerEvent) => {
-      const maxH = Math.round(getViewportHeight() * 0.85);
-      const delta = dragStartY.current - ev.clientY;
-      const next = Math.max(MIN_HEIGHT, Math.min(maxH, dragStartHeight.current + delta));
-      setSheetHeight(next);
-    };
-    const onUp = () => {
-      setIsDragging(false);
-      document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", onUp);
-    };
-    document.addEventListener("pointermove", onMove);
-    document.addEventListener("pointerup", onUp);
-  }, [sheetHeight]);
+      const onMove = (ev: PointerEvent) => {
+        const maxH = Math.round(getViewportHeight() * 0.85);
+        const delta = dragStartY.current - ev.clientY;
+        const next = Math.max(
+          MIN_HEIGHT,
+          Math.min(maxH, dragStartHeight.current + delta),
+        );
+        setSheetHeight(next);
+      };
+      const onUp = () => {
+        setIsDragging(false);
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+      };
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+    },
+    [sheetHeight],
+  );
 
   // Close on Escape
   useEffect(() => {
@@ -661,13 +745,28 @@ export function CesareSheet({
           shootingDayId,
           shootingDayNumber,
           prev, // history before the new user message
-        ).then((reply) => {
-          const content = reply ?? "Mi dispiace, si è verificato un errore. Riprova.";
-          setMessages((m) => [...m, { role: "assistant", content }]);
-          onAssistantResponse?.(content);
-        }).finally(() => {
-          setIsLoading(false);
-        });
+        )
+          .then((reply) => {
+            const content =
+              reply ?? "Mi dispiace, si è verificato un errore. Riprova.";
+            setMessages((m) => [...m, { role: "assistant", content }]);
+            onAssistantResponse?.(content);
+            // Side-channel: if Cesare emitted a blocking-proposal marker, fan
+            // it out as a DOM event so the BlockingCanvas can render ghost
+            // overlays. The canvas is mounted in a different feature tree and
+            // we want to avoid plumbing this through props.
+            const proposal = parseBlockingProposalMarker(content);
+            if (proposal && typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("ohw:cesare:blocking-proposal", {
+                  detail: proposal,
+                }),
+              );
+            }
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
         return next;
       });
       setInput("");
@@ -707,10 +806,7 @@ export function CesareSheet({
   };
 
   const pageLabel = PAGE_LABELS[page];
-  const contextLabel =
-    sceneNumber != null
-      ? `SC. ${sceneNumber}`
-      : pageLabel;
+  const contextLabel = sceneNumber != null ? `SC. ${sceneNumber}` : pageLabel;
 
   return (
     <>
@@ -744,7 +840,9 @@ export function CesareSheet({
         {/* Header */}
         <header className={styles.header}>
           <div className={styles.headerStart}>
-            <span className={styles.agentIcon} aria-hidden>✦</span>
+            <span className={styles.agentIcon} aria-hidden>
+              ✦
+            </span>
             <span className={styles.agentName}>Cesare</span>
             <span className={styles.contextChip}>{contextLabel}</span>
           </div>
@@ -804,10 +902,12 @@ export function CesareSheet({
             aria-label="Messaggio per Cesare"
             disabled={isLoading}
           />
-          <SendButton onPress={handleSend} isDisabled={!input.trim() || isLoading} />
+          <SendButton
+            onPress={handleSend}
+            isDisabled={!input.trim() || isLoading}
+          />
         </div>
       </div>
     </>
   );
 }
-

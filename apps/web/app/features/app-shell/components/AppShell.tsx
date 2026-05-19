@@ -1,4 +1,11 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { TopBar, SkipLink, CommandPalette, useToast } from "@oh-writers/ui";
@@ -107,7 +114,9 @@ function AppShellInner({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [cesareOpen, setCesareOpen] = useState(false);
-  const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(null);
+  const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(
+    null,
+  );
   const {
     notifications,
     startNotification,
@@ -117,8 +126,11 @@ function AppShellInner({
     markAllSeen,
     hasUnseen,
   } = useCesareNotifications();
-  const { permission: pushPermission, requestPermission, fire: firePush } =
-    useWebPush();
+  const {
+    permission: pushPermission,
+    requestPermission,
+    fire: firePush,
+  } = useWebPush();
   // The id of the notification currently in-progress for the active page —
   // bridges the gap between askCesare invocation and the response handler.
   const pendingNotificationId = useRef<string | null>(null);
@@ -188,100 +200,144 @@ function AppShellInner({
     ],
   );
 
-  const handleCesareAssistantResponse = useCallback((reply: string) => {
-    if (cesarePage === "locations" && projectId) {
-      void queryClient.invalidateQueries({ queryKey: ["locations", projectId] });
-      // Show a toast when Cesare adds candidates or performs a scouting action
-      const lc = reply.toLowerCase();
-      if (lc.includes("aggiunto") || lc.includes("candidato") || lc.includes("trovato")) {
-        showToast({
-          message: "✦ Cesare ha aggiornato le location",
-          variant: "success",
+  const handleCesareAssistantResponse = useCallback(
+    (reply: string) => {
+      if (cesarePage === "locations" && projectId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["locations", projectId],
         });
+        // Show a toast when Cesare adds candidates or performs a scouting action
+        const lc = reply.toLowerCase();
+        if (
+          lc.includes("aggiunto") ||
+          lc.includes("candidato") ||
+          lc.includes("trovato")
+        ) {
+          showToast({
+            message: "✦ Cesare ha aggiornato le location",
+            variant: "success",
+          });
+        }
+        return;
       }
-      return;
-    }
 
-    // Document pages — Cesare may have applied an edit via tools. Invalidate
-    // the active document query so the editor refetches the new content, and
-    // surface a toast when the reply hints at a successful tool call.
-    const isDocPage =
-      cesarePage === "soggetto" ||
-      cesarePage === "synopsis" ||
-      cesarePage === "outline" ||
-      cesarePage === "treatment";
-    if (isDocPage && projectId && activeDocument) {
-      void queryClient.invalidateQueries({
-        queryKey: ["documents", projectId, activeDocument.type],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["document-versions", activeDocument.id],
-      });
-      const lc = reply.toLowerCase();
-      if (
-        lc.includes("aggiornato") ||
-        lc.includes("espanso") ||
-        lc.includes("compresso") ||
-        lc.includes("riscritto") ||
-        lc.includes("modificato") ||
-        lc.includes("sostituito")
-      ) {
-        const labels: Record<string, string> = {
-          soggetto: "il soggetto",
-          synopsis: "la sinossi",
-          outline: "la scaletta",
-          treatment: "il trattamento",
-        };
-        showToast({
-          message: `✦ Cesare ha aggiornato ${labels[cesarePage] ?? "il documento"}`,
-          variant: "success",
-        });
+      // Document pages — Cesare may have applied an edit via tools. Invalidate
+      // the active document query so the editor refetches the new content, and
+      // surface a toast when the reply hints at a successful tool call.
+      const isDocPage =
+        cesarePage === "soggetto" ||
+        cesarePage === "synopsis" ||
+        cesarePage === "outline" ||
+        cesarePage === "treatment";
+      if (isDocPage && projectId) {
+        // propose_* tools may produce drafts on ANY narrative document, not just
+        // the one currently open. Invalidate every doc type's content + the
+        // draft list so the banner appears on whichever page the user navigates
+        // to (e.g. user is on soggetto, asks "genera logline" → logline draft
+        // banner must render the next time they open the logline editor).
+        const docTypes = [
+          "logline",
+          "soggetto",
+          "synopsis",
+          "outline",
+          "treatment",
+        ] as const;
+        for (const t of docTypes) {
+          void queryClient.invalidateQueries({
+            queryKey: ["documents", projectId, t],
+          });
+        }
+        void queryClient.invalidateQueries({ queryKey: ["document-drafts"] });
       }
-    }
+      if (isDocPage && projectId && activeDocument) {
+        void queryClient.invalidateQueries({
+          queryKey: ["document-versions", activeDocument.id],
+        });
+        const lc = reply.toLowerCase();
+        if (
+          lc.includes("aggiornato") ||
+          lc.includes("espanso") ||
+          lc.includes("compresso") ||
+          lc.includes("riscritto") ||
+          lc.includes("modificato") ||
+          lc.includes("sostituito")
+        ) {
+          const labels: Record<string, string> = {
+            soggetto: "il soggetto",
+            synopsis: "la sinossi",
+            outline: "la scaletta",
+            treatment: "il trattamento",
+          };
+          showToast({
+            message: `✦ Cesare ha aggiornato ${labels[cesarePage] ?? "il documento"}`,
+            variant: "success",
+          });
+        }
+        if (
+          lc.includes("draft") ||
+          lc.includes("bozza") ||
+          lc.includes("generato") ||
+          lc.includes("ho proposto")
+        ) {
+          const labels: Record<string, string> = {
+            soggetto: "soggetto",
+            synopsis: "sinossi",
+            outline: "scaletta",
+            treatment: "trattamento",
+            logline: "logline",
+          };
+          showToast({
+            message: `✦ Cesare ha proposto una bozza di ${labels[cesarePage] ?? "documento"}`,
+            variant: "success",
+          });
+        }
+      }
 
-    // Budget page — Cesare acts as a Line Producer via budget tools.
-    if (cesarePage === "budget" && projectId) {
-      void queryClient.invalidateQueries({ queryKey: ["budget", projectId] });
-      const lc = reply.toLowerCase();
-      if (
-        lc.includes("aggiornato") ||
-        lc.includes("aggiunto") ||
-        lc.includes("ridistribuito") ||
-        lc.includes("modificato") ||
-        lc.includes("spostato")
-      ) {
-        showToast({
-          message: "✦ Cesare ha aggiornato il budget",
-          variant: "success",
-        });
+      // Budget page — Cesare acts as a Line Producer via budget tools.
+      if (cesarePage === "budget" && projectId) {
+        void queryClient.invalidateQueries({ queryKey: ["budget", projectId] });
+        const lc = reply.toLowerCase();
+        if (
+          lc.includes("aggiornato") ||
+          lc.includes("aggiunto") ||
+          lc.includes("ridistribuito") ||
+          lc.includes("modificato") ||
+          lc.includes("spostato")
+        ) {
+          showToast({
+            message: "✦ Cesare ha aggiornato il budget",
+            variant: "success",
+          });
+        }
       }
-    }
 
-    // Shooting plan page — Cesare acts as a Director of Photography via
-    // shot-plan tools. Invalidate both the per-scene shot-plan view and the
-    // top-level scene-with-plan summary so the parallel plans editor and the
-    // scene list both refresh.
-    if (cesarePage === "shooting-plan" && projectId) {
-      void queryClient.invalidateQueries({
-        queryKey: ["shooting-plan", "scenes", projectId],
-      });
-      void queryClient.invalidateQueries({ queryKey: ["shot-plan"] });
-      const lc = reply.toLowerCase();
-      if (
-        lc.includes("creato") ||
-        lc.includes("aggiunto") ||
-        lc.includes("salvato") ||
-        lc.includes("aggiornato") ||
-        lc.includes("rimosso") ||
-        lc.includes("attivato")
-      ) {
-        showToast({
-          message: "✦ Cesare ha aggiornato il piano inquadrature",
-          variant: "success",
+      // Shooting plan page — Cesare acts as a Director of Photography via
+      // shot-plan tools. Invalidate both the per-scene shot-plan view and the
+      // top-level scene-with-plan summary so the parallel plans editor and the
+      // scene list both refresh.
+      if (cesarePage === "shooting-plan" && projectId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["shooting-plan", "scenes", projectId],
         });
+        void queryClient.invalidateQueries({ queryKey: ["shot-plan"] });
+        const lc = reply.toLowerCase();
+        if (
+          lc.includes("creato") ||
+          lc.includes("aggiunto") ||
+          lc.includes("salvato") ||
+          lc.includes("aggiornato") ||
+          lc.includes("rimosso") ||
+          lc.includes("attivato")
+        ) {
+          showToast({
+            message: "✦ Cesare ha aggiornato il piano inquadrature",
+            variant: "success",
+          });
+        }
       }
-    }
-  }, [cesarePage, projectId, queryClient, showToast, activeDocument]);
+    },
+    [cesarePage, projectId, queryClient, showToast, activeDocument],
+  );
 
   useEffect(() => {
     const main = document.getElementById("main-content");
@@ -310,7 +366,10 @@ function AppShellInner({
       markAllSeen();
       // Pulse after a tick so the sheet is mounted and the user's eye is on
       // the page underneath the (translucent) scrim.
-      if (notification.affectedEntities && notification.affectedEntities.length > 0) {
+      if (
+        notification.affectedEntities &&
+        notification.affectedEntities.length > 0
+      ) {
         window.setTimeout(() => {
           pulseAffectedEntities(notification.affectedEntities!);
         }, 150);

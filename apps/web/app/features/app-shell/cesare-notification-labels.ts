@@ -48,6 +48,7 @@ const AGENTIC_PAGES = new Set<CesarePage>([
   "synopsis",
   "outline",
   "treatment",
+  "screenplay",
 ]);
 
 export const isAgenticPage = (page: CesarePage): boolean =>
@@ -57,10 +58,7 @@ export const isAgenticPage = (page: CesarePage): boolean =>
  * Parse the reply text and produce a short Italian result label.
  * Heuristic — looks for action verbs that the tool loops generate.
  */
-export const deriveResultLabel = (
-  page: CesarePage,
-  reply: string,
-): string => {
+export const deriveResultLabel = (page: CesarePage, reply: string): string => {
   const lc = reply.toLowerCase();
 
   if (page === "locations") {
@@ -68,25 +66,35 @@ export const deriveResultLabel = (
     if (countMatch && (lc.includes("aggiunto") || lc.includes("trovat"))) {
       return `Aggiunti ${countMatch[1]} candidati`;
     }
-    if (lc.includes("aggiunto") || lc.includes("candidat") || lc.includes("trovato")) {
+    if (
+      lc.includes("aggiunto") ||
+      lc.includes("candidat") ||
+      lc.includes("trovato")
+    ) {
       return "Aggiornate le location";
     }
   }
 
   if (page === "budget") {
-    if (lc.includes("aggiunto") || lc.includes("aggiunti")) return "Aggiunte voci al budget";
-    if (lc.includes("aggiornato") || lc.includes("modificato")) return "Aggiornato il budget";
-    if (lc.includes("spostato") || lc.includes("ridistribuito")) return "Budget riorganizzato";
+    if (lc.includes("aggiunto") || lc.includes("aggiunti"))
+      return "Aggiunte voci al budget";
+    if (lc.includes("aggiornato") || lc.includes("modificato"))
+      return "Aggiornato il budget";
+    if (lc.includes("spostato") || lc.includes("ridistribuito"))
+      return "Budget riorganizzato";
   }
 
   if (page === "breakdown") {
     if (lc.includes("aggiunto")) return "Aggiunti elementi al breakdown";
-    if (lc.includes("rimosso") || lc.includes("cancellato")) return "Breakdown ripulito";
-    if (lc.includes("aggiornato") || lc.includes("modificato")) return "Breakdown aggiornato";
+    if (lc.includes("rimosso") || lc.includes("cancellato"))
+      return "Breakdown ripulito";
+    if (lc.includes("aggiornato") || lc.includes("modificato"))
+      return "Breakdown aggiornato";
   }
 
   if (page === "schedule") {
-    if (lc.includes("spostato") || lc.includes("riordinato")) return "Pianificazione aggiornata";
+    if (lc.includes("spostato") || lc.includes("riordinato"))
+      return "Pianificazione aggiornata";
     if (lc.includes("aggiunto")) return "Aggiunti elementi al piano";
   }
 
@@ -97,9 +105,24 @@ export const deriveResultLabel = (
     page === "treatment"
   ) {
     if (lc.includes("espanso")) return "Documento espanso";
-    if (lc.includes("compresso") || lc.includes("riassunto")) return "Documento riassunto";
-    if (lc.includes("riscritto") || lc.includes("sostituito")) return "Documento riscritto";
-    if (lc.includes("aggiornato") || lc.includes("modificato")) return "Documento aggiornato";
+    if (lc.includes("compresso") || lc.includes("riassunto"))
+      return "Documento riassunto";
+    if (lc.includes("riscritto") || lc.includes("sostituito"))
+      return "Documento riscritto";
+    if (lc.includes("aggiornato") || lc.includes("modificato"))
+      return "Documento aggiornato";
+  }
+
+  if (page === "screenplay") {
+    if (
+      lc.includes("preparato") ||
+      lc.includes("draft") ||
+      lc.includes("versione")
+    )
+      return "Cesare ha preparato una nuova versione";
+    if (lc.includes("rinomina")) return "Cesare ha proposto una rinomina";
+    if (lc.includes("proposto") || lc.includes("propost"))
+      return "Cesare ha proposto una modifica";
   }
 
   return DEFAULT_RESULT_BY_PAGE[page];

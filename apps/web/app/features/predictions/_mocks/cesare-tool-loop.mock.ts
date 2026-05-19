@@ -273,6 +273,30 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       },
     ],
   },
+
+  // Shooting plan — propose_blocking_for_scene (OHW-580).
+  // The real executor loads scene + cast and (in MOCK_AI=true) short-circuits
+  // to parseCesareBlockingResponse with an empty LLM response, falling back
+  // to a small demo proposal so the ghost UI still renders.
+  {
+    match:
+      /suggerisci blocking|proponi blocking|proponi un blocking|dove metto attori|disposizione blocking|proposta blocking/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_blocking_for_scene",
+            input: { scene_id: "{{SCENE_ID}}" },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho preparato una proposta di blocking: rivedi i ghost-pin sull'editor e accetta quelli che convincono.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
 ];
 
 // ─── Internal: placeholder substitution ───────────────────────────────────────
