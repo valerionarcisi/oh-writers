@@ -21,11 +21,54 @@
       }
       * { box-sizing: border-box; }
       html, body { background: var(--bg); color: var(--text); }
+      html { scroll-behavior: smooth; }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
         margin: 0;
         line-height: 1.6;
       }
+      .topnav {
+        position: sticky; top: 0; z-index: 50;
+        background: rgba(15,17,21,0.92);
+        backdrop-filter: saturate(160%) blur(12px);
+        -webkit-backdrop-filter: saturate(160%) blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .topnav .inner {
+        max-width: 1200px; margin: 0 auto; padding: 12px 24px;
+        display: flex; align-items: center; gap: 18px; font-size: 14px;
+      }
+      .topnav .brand { font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+      .topnav .brand .dot { display: inline-block; width: 10px; height: 10px; background: var(--accent); border-radius: 50%; margin-inline-end: 8px; vertical-align: middle; }
+      .topnav .spacer { flex: 1; }
+      .topnav a.navlink {
+        color: var(--muted); padding: 6px 10px; border-radius: 6px;
+        text-decoration: none;
+      }
+      .topnav a.navlink:hover { color: var(--text); background: var(--surface-2); }
+      .topnav a.navlink.active { color: var(--accent); background: rgba(76,196,176,0.10); }
+      .progress {
+        position: fixed; top: 0; left: 0; right: 0; height: 3px;
+        z-index: 60; pointer-events: none;
+      }
+      .progress .fill {
+        height: 100%; width: 0%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        transition: width 80ms linear;
+      }
+      .backtop {
+        position: fixed; right: 24px; bottom: 24px;
+        width: 44px; height: 44px; border-radius: 50%;
+        background: var(--surface-2); border: 1px solid var(--border);
+        color: var(--text); font-size: 18px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; opacity: 0; transform: translateY(8px);
+        transition: opacity 200ms ease, transform 200ms ease;
+        z-index: 40; text-decoration: none;
+      }
+      .backtop.visible { opacity: 1; transform: translateY(0); }
+      .table-wrap { overflow-x: auto; border-radius: var(--radius); margin: 16px 0; }
+      .table-wrap > table { margin: 0; }
       .wrap {
         max-width: 1100px;
         margin: 0 auto;
@@ -183,6 +226,23 @@
     </style>
   </head>
   <body>
+    <div class="progress" aria-hidden="true"><div class="fill"></div></div>
+    <div id="local-banner" style="display:none; background: rgba(255,138,101,0.10); border-bottom: 1px solid rgba(255,138,101,0.3); padding: 10px 24px; font-size: 13px; color: #ffc4a8; text-align: center;">
+      Stai aprendo la pagina da <code style="background: rgba(0,0,0,0.3); padding: 1px 6px; border-radius: 4px;">file://</code>. Per nav e link corretti apri
+      <a href="http://localhost:3000/learning/index.html" style="color: #ffc4a8; text-decoration: underline;">http://localhost:3000/learning/index.html</a> con <code style="background: rgba(0,0,0,0.3); padding: 1px 6px; border-radius: 4px;">pnpm dev</code> attivo.
+    </div>
+    <script>
+      if (location.protocol === 'file:') document.getElementById('local-banner').style.display = 'block';
+    </script>
+    <nav class="topnav" aria-label="Navigazione learning">
+      <div class="inner">
+        <span class="brand"><span class="dot"></span>Oh Writers · Learning</span>
+        <span class="spacer"></span>
+        <a class="navlink active" href="./index.html" aria-current="page">Recap walkthrough</a>
+        <a class="navlink" href="./ai-architecture.html">Architettura AI</a>
+        <a class="navlink" href="../../apps/web/public/market-analysis.html">Market analysis →</a>
+      </div>
+    </nav>
     <div class="wrap">
       <header>
         <h1>Oh Writers — Walkthrough recap Wave 4</h1>
@@ -460,8 +520,33 @@
       <footer>
         Vernissage Wave 4 · markdown report sorella in
         <code>vernissage/wave-4-composite.md</code> · approfondimento
-        architetturale in <code>vernissage/recap/ai-architecture.html</code>.
+        architetturale in
+        <a href="./ai-architecture.html">/learning/ai-architecture.html</a>.
       </footer>
     </div>
+    <a href="#" class="backtop" aria-label="Torna su" title="Torna su">↑</a>
+    <script>
+      (function () {
+        var fill = document.querySelector('.progress .fill');
+        var backtop = document.querySelector('.backtop');
+        function update() {
+          var doc = document.documentElement;
+          var max = (doc.scrollHeight - doc.clientHeight) || 1;
+          var pct = Math.min(100, Math.max(0, (window.scrollY / max) * 100));
+          fill.style.width = pct + '%';
+          if (window.scrollY > 400) backtop.classList.add('visible');
+          else backtop.classList.remove('visible');
+        }
+        window.addEventListener('scroll', update, { passive: true });
+        update();
+        document.querySelectorAll('table').forEach(function (t) {
+          if (t.parentElement && t.parentElement.classList.contains('table-wrap')) return;
+          var wrap = document.createElement('div');
+          wrap.className = 'table-wrap';
+          t.parentNode.insertBefore(wrap, t);
+          wrap.appendChild(t);
+        });
+      })();
+    </script>
   </body>
 </html>
