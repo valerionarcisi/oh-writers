@@ -24,6 +24,7 @@ import {
 import { ProjectCardGrid } from "./ProjectCardGrid";
 import { ProjectCardCompact } from "./ProjectCardCompact";
 import { DashboardEmptyState } from "./DashboardEmptyState";
+import { SkeletonCard } from "@oh-writers/ui";
 import styles from "./DashboardPage.module.css";
 
 const matchesTab = (
@@ -131,7 +132,11 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <p className={styles.status}>Caricamento…</p>
+        <div className={styles.skeletonGrid} aria-label="Caricamento progetti">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} ariaLabel="Caricamento progetto" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -220,4 +225,3 @@ export const __test__ = {
   computeHeroStats,
   matchesTab,
 };
-

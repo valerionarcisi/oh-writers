@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { FloatingDock } from "@oh-writers/ui";
+import { FloatingDock, Skeleton } from "@oh-writers/ui";
 import {
   ExportPdfModal,
   ExportSiaeModal,
@@ -34,7 +34,15 @@ function SoggettoPage() {
   const logline = useDocument(id, DocumentTypes.LOGLINE);
 
   if (soggetto.isLoading || logline.isLoading) {
-    return <div className={styles.status}>Caricamento…</div>;
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={4}
+          widths={["80%", "100%", "100%", "65%"]}
+          ariaLabel="Caricamento soggetto"
+        />
+      </div>
+    );
   }
   if (!soggetto.data || !logline.data) return null;
 

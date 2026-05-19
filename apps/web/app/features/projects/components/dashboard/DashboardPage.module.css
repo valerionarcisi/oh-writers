@@ -18,6 +18,13 @@
   font-size: 14px;
 }
 
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--ds-space-4);
+  margin-block-start: var(--ds-space-4);
+}
+
 .statusError {
   color: var(--ds-danger);
   font-size: 14px;

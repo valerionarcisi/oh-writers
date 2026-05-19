@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { useConfirmDialog } from "@oh-writers/ui";
+import { useConfirmDialog, Skeleton } from "@oh-writers/ui";
 import {
   useArchiveProject,
   useRestoreProject,
@@ -26,7 +26,16 @@ interface ProjectOverviewPageProps {
 export function ProjectOverviewPage({ projectId }: ProjectOverviewPageProps) {
   const { data: result, isLoading } = useProjectOverview(projectId);
 
-  if (isLoading) return <div className={styles.status}>Caricamento…</div>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={3}
+          widths={["60%", "40%", "30%"]}
+          ariaLabel="Caricamento panoramica progetto"
+        />
+      </div>
+    );
   if (!result) return null;
 
   return match(result)
@@ -101,9 +110,7 @@ function ProjectOverviewContent({
         onArchive={onArchive}
         onRestore={onRestore}
         onDelete={onDelete}
-        isMutating={
-          archive.isPending || restore.isPending || remove.isPending
-        }
+        isMutating={archive.isPending || restore.isPending || remove.isPending}
       />
 
       <ProjectKpiStrip kpi={overview.kpi} />

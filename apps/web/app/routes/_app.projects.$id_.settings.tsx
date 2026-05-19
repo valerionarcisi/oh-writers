@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { Button, useConfirmDialog } from "@oh-writers/ui";
+import { Button, useConfirmDialog, Skeleton } from "@oh-writers/ui";
 import { Locales, type Locale } from "@oh-writers/domain";
 import {
   useProject,
@@ -26,7 +26,16 @@ function ProjectSettingsPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useProject(id);
 
-  if (isLoading) return <div className={styles.status}>Caricamento…</div>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={5}
+          widths={["50%", "100%", "100%", "70%", "30%"]}
+          ariaLabel="Caricamento impostazioni progetto"
+        />
+      </div>
+    );
   if (!result) return null;
 
   return match(result)
@@ -83,7 +92,8 @@ function ProjectSettingsContent({
   const handleDelete = () => {
     void confirm({
       title: "Eliminare il progetto?",
-      message: "Eliminare definitivamente questo progetto? L'operazione non può essere annullata.",
+      message:
+        "Eliminare definitivamente questo progetto? L'operazione non può essere annullata.",
       confirmLabel: "Elimina",
       destructive: true,
     }).then((ok) => {
@@ -173,7 +183,8 @@ function ProjectSettingsContent({
                 <div>
                   <strong>Elimina progetto</strong>
                   <p className={styles.dangerDesc}>
-                    Elimina definitivamente questo progetto e tutto il suo contenuto.
+                    Elimina definitivamente questo progetto e tutto il suo
+                    contenuto.
                   </p>
                 </div>
                 <Button
@@ -191,7 +202,8 @@ function ProjectSettingsContent({
               <div>
                 <strong>Archivia progetto</strong>
                 <p className={styles.dangerDesc}>
-                  Rendi questo progetto in sola lettura. Potrai ripristinarlo o eliminarlo in seguito.
+                  Rendi questo progetto in sola lettura. Potrai ripristinarlo o
+                  eliminarlo in seguito.
                 </p>
               </div>
               <Button
