@@ -9,7 +9,9 @@
     "start": "vinxi start",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
-    "test:unit:watch": "vitest"
+    "test:unit:watch": "vitest",
+    "vernissage:walk": "pnpm exec tsx ../../scripts/vernissage-walk.ts --target=test",
+    "vernissage:scaffold": "pnpm exec tsx ../../scripts/vernissage-scaffold.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.65.0",

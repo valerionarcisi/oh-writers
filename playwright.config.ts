@@ -23,6 +23,14 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      // Agentic specs require MOCK_AI=true and live in the mock-ui project; keep
+      // them out of the default run so they aren't executed twice.
+      testIgnore: /cesare-agentic-.*\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mock-ui",
+      testMatch: /cesare-agentic-.*\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"] },
     },
   ],

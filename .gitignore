@@ -42,3 +42,9 @@ playwright/.cache/
 *.png
 .worktrees/
 .tokensave
+
+# Vernissage walk artifacts (raw output). The _template.md, _stories/, and
+# curated report.md files stay tracked.
+vernissage/*/screenshots/
+vernissage/*/log.json
+vernissage/*/failures.json

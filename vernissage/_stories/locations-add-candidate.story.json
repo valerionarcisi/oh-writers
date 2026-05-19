@@ -1,0 +1,61 @@
+{
+  "id": "locations-add-candidate",
+  "title": "Cesare aggiunge un candidato location via add_candidate",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/locations",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "mockContext": {
+    "REQ_ID": "00000000-0000-4000-a000-000000000040"
+  },
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"locations-page\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "click",
+      "ref": "[data-testid^=\"requirement-row-\"]"
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-requirement-selected"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: /^Cesare(\\s—.*)?$/ })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[placeholder=\"Chiedi a Cesare…\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-cesare-open"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Trova candidati per questa scena."
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid^=\"candidate-card-\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "03-candidate-added"
+    },
+    {
+      "kind": "expect_dom",
+      "selector": "[data-testid^=\"candidate-card-\"]",
+      "exists": true
+    }
+  ]
+}
