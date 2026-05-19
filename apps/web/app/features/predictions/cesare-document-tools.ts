@@ -622,7 +622,15 @@ const handleProposeSoggettoV2 = (
           ),
         );
       }
-      const user = `Istruzione: ${instruction}\n\nSoggetto attuale:\n---\n${doc.content.slice(0, 18_000)}\n---`;
+      const user = `Stai riscrivendo IL SOGGETTO seguendo questa istruzione: ${instruction}.
+
+REGOLA TASSATIVA: la tua versione DEVE essere diversa dal soggetto attuale. Non limitarti a riformattarlo. Cambia tono/struttura/dettagli secondo l'istruzione. Se non hai abbastanza informazione per cambiare nulla, espandi i dettagli sensoriali e drammatici delle scene esistenti.
+
+Soggetto attuale (NON ritornarlo identico):
+---
+${doc.content.slice(0, 18_000)}
+---`;
+      const previousContent = doc.content.trim();
       return runGeneration(
         SOGGETTO_SYSTEM,
         user,
@@ -631,6 +639,16 @@ const handleProposeSoggettoV2 = (
       )
         .map((s) => s.trim())
         .andThen((next) => {
+          // Guard against the model returning the input verbatim — happened
+          // when the instruction is vague and Sonnet falls back to "looks fine
+          // already". A draft identical to v1 is worse than no draft.
+          if (next === previousContent) {
+            return errAsync(
+              new CesareError(
+                "Il modello ha restituito un soggetto identico all'attuale. Riformula la richiesta con un'istruzione più specifica (es. 'più asciutto', 'tono noir', 'taglia la sequenza finale').",
+              ),
+            );
+          }
           const creator = doc.ownerId ?? userIdFallback;
           if (!creator) {
             return errAsync(

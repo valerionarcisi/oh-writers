@@ -204,7 +204,11 @@
 
 /* Element highlight applied to spans inside ScriptReader */
 .screenplay :global([data-element-id]) {
-  background: color-mix(in oklch, var(--cat-color, var(--ds-text-3)) 14%, transparent);
+  background: color-mix(
+    in oklch,
+    var(--cat-color, var(--ds-text-3)) 14%,
+    transparent
+  );
   border-block-end: 1.5px solid var(--cat-color, var(--ds-text-3));
   padding-inline: 2px;
   border-radius: 2px;
@@ -213,7 +217,11 @@
 }
 
 .screenplay :global([data-element-id]:hover) {
-  background: color-mix(in oklch, var(--cat-color, var(--ds-text-3)) 26%, transparent);
+  background: color-mix(
+    in oklch,
+    var(--cat-color, var(--ds-text-3)) 26%,
+    transparent
+  );
 }
 
 .screenplay :global([data-element-id][data-stale="true"]) {
@@ -231,27 +239,49 @@
 }
 
 /* Category color mapping via data-cat */
-.screenplay :global([data-cat="cast"])        { --cat-color: var(--ds-cat-cast); }
-.screenplay :global([data-cat="extras"])      { --cat-color: var(--ds-cat-comparse); }
-.screenplay :global([data-cat="locations"])   { --cat-color: var(--ds-cat-locations); }
-.screenplay :global([data-cat="vehicles"])    { --cat-color: var(--ds-cat-vehicles); }
-.screenplay :global([data-cat="props"])       { --cat-color: var(--ds-cat-scenografia); }
-.screenplay :global([data-cat="set_dress"])   { --cat-color: var(--ds-cat-scenografia); }
-.screenplay :global([data-cat="wardrobe"])    { --cat-color: var(--ds-cat-costumi); }
-.screenplay :global([data-cat="makeup"])      { --cat-color: var(--ds-cat-costumi); }
-.screenplay :global([data-cat="sound"])       { --cat-color: var(--ds-cat-suono); }
-.screenplay :global([data-cat="vfx"])         { --cat-color: var(--ds-cat-vfx); }
-.screenplay :global([data-cat="sfx"])         { --cat-color: var(--ds-cat-vfx); }
+.screenplay :global([data-cat="cast"]) {
+  --cat-color: var(--ds-cat-cast);
+}
+.screenplay :global([data-cat="extras"]) {
+  --cat-color: var(--ds-cat-comparse);
+}
+.screenplay :global([data-cat="locations"]) {
+  --cat-color: var(--ds-cat-locations);
+}
+.screenplay :global([data-cat="vehicles"]) {
+  --cat-color: var(--ds-cat-vehicles);
+}
+.screenplay :global([data-cat="props"]) {
+  --cat-color: var(--ds-cat-scenografia);
+}
+.screenplay :global([data-cat="set_dress"]) {
+  --cat-color: var(--ds-cat-scenografia);
+}
+.screenplay :global([data-cat="wardrobe"]) {
+  --cat-color: var(--ds-cat-costumi);
+}
+.screenplay :global([data-cat="makeup"]) {
+  --cat-color: var(--ds-cat-costumi);
+}
+.screenplay :global([data-cat="sound"]) {
+  --cat-color: var(--ds-cat-suono);
+}
+.screenplay :global([data-cat="vfx"]) {
+  --cat-color: var(--ds-cat-vfx);
+}
+.screenplay :global([data-cat="sfx"]) {
+  --cat-color: var(--ds-cat-vfx);
+}
 
 /* Selectively hide highlights when underline toggle is off */
-.screenplay[data-show-cast="false"]        :global([data-cat="cast"]),
-.screenplay[data-show-locations="false"]   :global([data-cat="locations"]),
-.screenplay[data-show-props="false"]       :global([data-cat="props"]),
-.screenplay[data-show-props="false"]       :global([data-cat="set_dress"]),
-.screenplay[data-show-costumes="false"]    :global([data-cat="wardrobe"]),
-.screenplay[data-show-costumes="false"]    :global([data-cat="makeup"]),
+.screenplay[data-show-cast="false"] :global([data-cat="cast"]),
+.screenplay[data-show-locations="false"] :global([data-cat="locations"]),
+.screenplay[data-show-props="false"] :global([data-cat="props"]),
+.screenplay[data-show-props="false"] :global([data-cat="set_dress"]),
+.screenplay[data-show-costumes="false"] :global([data-cat="wardrobe"]),
+.screenplay[data-show-costumes="false"] :global([data-cat="makeup"]),
 .screenplay[data-show-photography="false"] :global([data-cat="vfx"]),
-.screenplay[data-show-sound="false"]       :global([data-cat="sound"]) {
+.screenplay[data-show-sound="false"] :global([data-cat="sound"]) {
   background: transparent;
   border-block-end-color: transparent;
 }
@@ -329,8 +359,13 @@
 }
 
 @keyframes criticalPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -346,6 +381,10 @@
   flex-direction: column;
   gap: var(--ds-space-3);
   padding-inline-end: 4px;
+  /* Leave room at the bottom for the FloatingDock (≈42px high + 20px bottom
+     inset + breathing). Without this, the last categories ("Veicoli",
+     "Comparse"…) sit under the dock and aren't reachable on short screens. */
+  padding-block-end: 80px;
 }
 
 /* Scope toggle (Scena / Progetto) */
@@ -424,7 +463,6 @@
   color: var(--ds-text-3);
 }
 
-
 .catAdd {
   inline-size: 20px;
   block-size: 20px;
@@ -462,6 +500,20 @@
   border: 1px solid color-mix(in oklch, var(--cat-color) 35%, transparent);
   border-radius: 100px;
   color: var(--ds-text);
+  /* Allow chips to shrink and the scene list to wrap onto the next line
+     inside a narrow side panel — previously the inline-flex item refused to
+     shrink, so chip content got clipped past the panel edge. */
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.catItemScenes,
+.catItemX {
+  /* Keep the meta block from forcing the chip past the panel; long
+     comma-separated scene lists wrap on the next visual row inside the
+     same chip. */
+  min-width: 0;
+  word-break: break-word;
 }
 
 .catItemX {
@@ -492,7 +544,9 @@
   border: none;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 100ms ease, color 100ms ease;
+  transition:
+    opacity 100ms ease,
+    color 100ms ease;
 
   &:hover {
     color: var(--ds-danger);
@@ -1328,7 +1382,9 @@
   border: none;
   border-radius: var(--ds-radius-sm, 4px);
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
 
   &:disabled {
     opacity: 0.35;
@@ -1337,7 +1393,10 @@
 
   &:hover:not(:disabled) {
     color: var(--ds-danger);
-    background: var(--ds-danger-soft, color-mix(in oklch, var(--ds-danger) 10%, transparent));
+    background: var(
+      --ds-danger-soft,
+      color-mix(in oklch, var(--ds-danger) 10%, transparent)
+    );
   }
 }
 
@@ -1451,7 +1510,10 @@
   border-radius: var(--ds-radius-sm, 4px);
   border: 1px solid var(--ds-line);
   cursor: pointer;
-  transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
+  transition:
+    background 100ms ease,
+    color 100ms ease,
+    border-color 100ms ease;
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;
@@ -1477,7 +1539,10 @@
 
   &:hover,
   &:focus-visible {
-    background: var(--ds-danger-soft, color-mix(in oklch, var(--ds-danger) 10%, transparent));
+    background: var(
+      --ds-danger-soft,
+      color-mix(in oklch, var(--ds-danger) 10%, transparent)
+    );
     color: var(--ds-danger);
     border-color: color-mix(in oklch, var(--ds-danger) 30%, var(--ds-line));
     outline: none;

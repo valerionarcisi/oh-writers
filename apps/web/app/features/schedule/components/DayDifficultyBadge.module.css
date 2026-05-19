@@ -1,4 +1,5 @@
 .badge {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-1);
@@ -147,4 +148,41 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Custom hover tooltip — replaces the native `title=` attribute which the
+   browser renders with its own dark popup, dissonant against the light
+   linen theme. Visible only on badge hover/focus-within. */
+.tooltip {
+  position: absolute;
+  z-index: 20;
+  inset-block-end: calc(100% + 6px);
+  inset-inline-start: 0;
+  min-inline-size: 220px;
+  max-inline-size: 320px;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-3);
+  font-family: var(--ds-font-sans);
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms var(--ds-ease, ease);
+}
+
+.badge:hover .tooltip,
+.badge:focus-within .tooltip {
+  opacity: 1;
+}
+
+.tooltipLine {
+  padding-block: 2px;
+  color: var(--ds-text-2);
+}
+.tooltipLine:first-child {
+  color: var(--ds-text);
 }

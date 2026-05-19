@@ -144,7 +144,38 @@
 /* Pulsing glow shown while a long-running Cesare action is in flight. The
    pill replaces the legacy top-right "Cesare sta lavorando…" toast — keeping
    the signal docked next to the trigger keeps the user's attention in the
-   right place without a popup intruding from the corner. */
+   right place without a popup intruding from the corner. App-shell flips
+   `data-cesare-thinking` on <body> so the dock pill picks up the state
+   without prop-drilling through every page. */
+:global([data-cesare-thinking="true"]) .cesarePill {
+  position: relative;
+  isolation: isolate;
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  border-color: color-mix(in srgb, var(--ds-agent) 35%, transparent);
+  animation: cesarePillBreathe 1.8s ease-in-out infinite;
+}
+:global([data-cesare-thinking="true"]) .cesarePill::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--ds-agent) 35%, transparent),
+    transparent 70%
+  );
+  z-index: -1;
+  filter: blur(6px);
+  animation: cesarePillGlow 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+:global([data-cesare-thinking="true"]) .cesarePill .cesareDot {
+  background: var(--ds-agent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-agent) 25%, transparent);
+  animation: cesareDotBlink 1.2s ease-in-out infinite;
+}
+
 .cesarePillThinking {
   position: relative;
   isolation: isolate;

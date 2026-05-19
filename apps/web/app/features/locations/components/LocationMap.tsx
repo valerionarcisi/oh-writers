@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   LocationRequirement,
   LocationCandidate,
@@ -7,6 +7,7 @@ import type {
 import { useLeaflet } from "../hooks/useLeaflet";
 import { parseDrawnCircle, type DrawnCircle } from "../lib/area-search";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
+import { PlacesCombobox } from "./PlacesCombobox";
 import styles from "./LocationMap.module.css";
 
 interface LocationMapProps {
@@ -218,69 +219,61 @@ export function LocationMap({
       // Leaflet.draw not loaded — skip draw controls gracefully
     }
 
-    // Delegate clicks on popup "Vedi dettagli" buttons (markup is plain HTML
-    // inside Leaflet popups, so we can't bind React handlers directly).
-    map.on("popupopen", (e: any) => {
-      const popupNode: HTMLElement | null = e.popup?.getElement?.() ?? null;
-      const btn = popupNode?.querySelector<HTMLButtonElement>(
+    // Delegate clicks for popup buttons via a single map-container listener.
+    // Per-popup binding was racy: when Leaflet swapped popups, `getElement()`
+    // could return a stale node and `{ once: true }` consumed the handler the
+    // first time it dispatched on the parent wrapper instead of the button.
+    // A document-style delegated listener on the map container handles every
+    // popup re-render without timing issues.
+    const onMapContainerClick = (ev: Event) => {
+      const target = ev.target as HTMLElement | null;
+      if (!target) return;
+      const detailsBtn = target.closest<HTMLButtonElement>(
         "[data-candidate-details]",
       );
-      if (!btn) return;
-      btn.addEventListener(
-        "click",
-        (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const id = btn.getAttribute("data-candidate-details");
-          if (!id) return;
-          // Prefer opening the dedicated detail modal when wired up. The
-          // legacy panel-scroll fallback stays for parents that have not
-          // adopted the modal yet — eventually removable when every consumer
-          // passes `onOpenDetailModal`.
-          if (onOpenDetailModalRef.current) {
-            onOpenDetailModalRef.current(id);
-            return;
-          }
-          onCandidateSelectRef.current?.(id);
-          const card = document.querySelector<HTMLElement>(
-            `[data-testid="candidate-card-${id}"]`,
-          );
-          if (card) {
-            card.scrollIntoView({ behavior: "smooth", block: "center" });
-            const head = card.querySelector<HTMLButtonElement>("button");
-            head?.click();
-          }
-        },
-        { once: true },
-      );
-
-      // Delegate clicks on candidate photos inside the popup so they open the
-      // in-page PhotoLightbox (instead of having to navigate away or zoom into
-      // a tiny Leaflet thumbnail).
-      const thumbs = popupNode?.querySelectorAll<HTMLElement>(
-        "[data-candidate-photo]",
-      );
-      thumbs?.forEach((thumb) => {
-        thumb.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const candidateId = thumb.getAttribute("data-candidate-photo");
-          const photoIndex = Number(
-            thumb.getAttribute("data-photo-index") ?? "0",
-          );
-          if (!candidateId) return;
-          window.dispatchEvent(
-            new CustomEvent("ohw:locations:open-lightbox", {
-              detail: { candidateId, photoIndex },
-            }),
-          );
-        });
-      });
-    });
+      if (detailsBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const id = detailsBtn.getAttribute("data-candidate-details");
+        if (!id) return;
+        if (onOpenDetailModalRef.current) {
+          onOpenDetailModalRef.current(id);
+          return;
+        }
+        onCandidateSelectRef.current?.(id);
+        const card = document.querySelector<HTMLElement>(
+          `[data-testid="candidate-card-${id}"]`,
+        );
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          const head = card.querySelector<HTMLButtonElement>("button");
+          head?.click();
+        }
+        return;
+      }
+      const photoBtn = target.closest<HTMLElement>("[data-candidate-photo]");
+      if (photoBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const candidateId = photoBtn.getAttribute("data-candidate-photo");
+        const photoIndex = Number(
+          photoBtn.getAttribute("data-photo-index") ?? "0",
+        );
+        if (!candidateId) return;
+        window.dispatchEvent(
+          new CustomEvent("ohw:locations:open-lightbox", {
+            detail: { candidateId, photoIndex },
+          }),
+        );
+      }
+    };
+    const containerEl = containerRef.current;
+    containerEl.addEventListener("click", onMapContainerClick);
 
     mapRef.current = map;
 
     return () => {
+      containerEl.removeEventListener("click", onMapContainerClick);
       map.remove();
       mapRef.current = null;
     };
@@ -504,6 +497,40 @@ export function LocationMap({
   return (
     <div className={styles.mapWrap}>
       <div ref={containerRef} className={styles.map} />
+      <MapSearchOverlay
+        onSelect={(s) => {
+          const map = mapRef.current;
+          if (!map) return;
+          map.setView([s.lat, s.lng], 16, { animate: true });
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Map search overlay ──────────────────────────────────────────────────────
+// A small PlacesCombobox anchored top-left of the map. Picking a result
+// re-centres the map on the chosen place; no candidate is added — the user
+// can then open the popup and decide what to do (add candidate from the
+// AreaSearchPanel, drop a marker manually, etc).
+function MapSearchOverlay({
+  onSelect,
+}: {
+  readonly onSelect: (s: PlaceSuggestion) => void;
+}) {
+  const [query, setQuery] = useState("");
+  return (
+    <div className={styles.searchOverlay}>
+      <PlacesCombobox
+        value={query}
+        onChange={setQuery}
+        onSelect={(s) => {
+          onSelect(s);
+          setQuery(s.name);
+        }}
+        placeholder="Cerca un luogo sulla mappa…"
+        inputTestId="map-search-input"
+      />
     </div>
   );
 }

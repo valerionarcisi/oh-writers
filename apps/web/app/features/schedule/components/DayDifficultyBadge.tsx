@@ -73,9 +73,17 @@ export function DayDifficultyBadge({
       className={styles.badge}
       data-tone={tone}
       data-testid="day-difficulty-badge"
-      title={tooltip}
       aria-label={ariaLabel}
     >
+      {tooltip && (
+        <div className={styles.tooltip} role="tooltip">
+          {tooltipLines.map((line, i) => (
+            <div key={i} className={styles.tooltipLine}>
+              {line}
+            </div>
+          ))}
+        </div>
+      )}
       <div className={styles.row}>
         <span className={styles.label}>Difficoltà</span>
         <span

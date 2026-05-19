@@ -43,7 +43,7 @@ import {
 } from "../cesare-notification-labels";
 import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
-import { CesareNotificationStack } from "./CesareNotificationPill";
+import { NotificationCenterDrawer } from "./NotificationCenterDrawer";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -114,6 +114,9 @@ function AppShellInner({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [cesareOpen, setCesareOpen] = useState(false);
+  const [isNotifDrawerOpen, setNotifDrawerOpen] = useState(false);
+  // unseenCount is computed from notifications below (after the context hook)
+  // and is referenced in the TopBar JSX further down.
   const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(
     null,
   );
@@ -126,6 +129,24 @@ function AppShellInner({
     markAllSeen,
     hasUnseen,
   } = useCesareNotifications();
+  const unseenCount = notifications.filter(
+    (n) => !n.seen && (n.status === "completed" || n.status === "failed"),
+  ).length;
+  const isCesareThinking = notifications.some(
+    (n) => n.status === "in-progress",
+  );
+
+  // Broadcast the "Cesare is thinking" signal as a document body attribute so
+  // the FloatingDock pill (in `packages/ui`, no access to app context) can
+  // light up its CSS glow without prop-drilling through every caller.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isCesareThinking) {
+      document.body.setAttribute("data-cesare-thinking", "true");
+    } else {
+      document.body.removeAttribute("data-cesare-thinking");
+    }
+  }, [isCesareThinking]);
   const {
     permission: pushPermission,
     requestPermission,
@@ -456,8 +477,9 @@ function AppShellInner({
             onSearch={openPalette}
             onBell={undefined}
             onAskCesare={undefined}
-            onAvatarClick={undefined}
-            userMenuItems={userMenuItems}
+            onAvatarClick={() => setNotifDrawerOpen(true)}
+            userMenuItems={undefined}
+            notificationCount={unseenCount}
           />
           <main id="main-content" className={styles.main}>
             {children}
@@ -488,13 +510,14 @@ function AppShellInner({
               onAssistantResponse={handleCesareAssistantResponse}
             />
           )}
-          {notifications.length > 0 && (
-            <CesareNotificationStack
-              onActivate={handleActivateNotification}
-              pushPermission={pushPermission}
-              onRequestPush={handleRequestPush}
-            />
-          )}
+          <NotificationCenterDrawer
+            isOpen={isNotifDrawerOpen}
+            onClose={() => setNotifDrawerOpen(false)}
+            onActivate={handleActivateNotification}
+          />
+          {/* The legacy floating pill stack is gone: the dock pill's pulsing
+              glow now signals in-progress work, the avatar badge counts
+              unseen results, and the drawer above is the cronologia. */}
         </div>
       </CesareProvider>
     </VersionsDrawerProvider>

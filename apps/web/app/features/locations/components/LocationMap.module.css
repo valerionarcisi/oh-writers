@@ -34,7 +34,7 @@
   background: var(--ds-surface) !important;
   border: 1px solid var(--ds-line) !important;
   border-radius: var(--radius-md) !important;
-  box-shadow: 0 4px 12px rgba(28,26,23,0.10) !important;
+  box-shadow: 0 4px 12px rgba(28, 26, 23, 0.1) !important;
   padding: 6px 10px !important;
   font-family: var(--font-sans) !important;
   font-size: 12px !important;
@@ -48,7 +48,7 @@
 /* ── Popup styling (Leaflet popup that holds candidate details + photos) ── */
 :global(.leaflet-popup-content-wrapper) {
   border-radius: var(--radius-md) !important;
-  box-shadow: 0 6px 20px rgba(28,26,23,0.14) !important;
+  box-shadow: 0 6px 20px rgba(28, 26, 23, 0.14) !important;
   border: 1px solid var(--ds-line) !important;
   background: var(--ds-surface) !important;
 }
@@ -62,4 +62,14 @@
 :global(.leaflet-popup-tip) {
   background: var(--ds-surface) !important;
   border: 1px solid var(--ds-line) !important;
+}
+
+/* Floating autocomplete search box anchored top-left of the map. Sits above
+   Leaflet's controls but below the dock and modals. */
+.searchOverlay {
+  position: absolute;
+  inset-block-start: var(--ds-space-3);
+  inset-inline-start: var(--ds-space-3);
+  z-index: 600;
+  inline-size: min(360px, calc(100% - 2 * var(--ds-space-3)));
 }
