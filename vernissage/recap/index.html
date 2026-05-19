@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oh Writers — Recap walkthrough Wave 4</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --surface: #161a22;
+        --surface-2: #1d222c;
+        --border: #2a3140;
+        --text: #e7ecf3;
+        --muted: #9aa6b8;
+        --accent: #4cc4b0;
+        --accent-2: #ff8a65;
+        --ok: #4cc4b0;
+        --warn: #ffb74d;
+        --err: #e57373;
+        --radius: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--text); }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.6;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+      header {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 24px;
+        margin-bottom: 32px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+      }
+      header .sub {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      h2 {
+        margin: 48px 0 16px;
+        font-size: 22px;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h2::before {
+        content: "";
+        display: inline-block;
+        width: 4px;
+        height: 22px;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 16px;
+      }
+      p, li { font-size: 15px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+      }
+      .card .label {
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .card .value {
+        font-size: 28px;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .pill.ok { background: rgba(76, 196, 176, 0.15); color: var(--ok); }
+      .pill.warn { background: rgba(255, 183, 77, 0.15); color: var(--warn); }
+      .pill.err { background: rgba(229, 115, 115, 0.15); color: var(--err); }
+      .pill.info { background: rgba(255, 138, 101, 0.15); color: var(--accent-2); }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      th, td {
+        padding: 12px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        font-size: 14px;
+      }
+      th {
+        background: var(--surface-2);
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+      }
+      tr:last-child td { border-bottom: none; }
+      code, pre {
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 13px;
+      }
+      code {
+        background: var(--surface-2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+      }
+      .shot {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        margin: 16px 0;
+      }
+      .shot img {
+        width: 100%;
+        display: block;
+        border-bottom: 1px solid var(--border);
+      }
+      .shot .cap {
+        padding: 12px 16px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .shot .cap b { color: var(--text); }
+      ul { padding-inline-start: 22px; }
+      li + li { margin-top: 4px; }
+      .legend {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .legend .pill { font-size: 11px; }
+      .crossLink {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 14px;
+        background: linear-gradient(135deg, rgba(76,196,176,0.15), rgba(255,138,101,0.15));
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .crossLink:hover { background: var(--surface-2); }
+      footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Oh Writers — Walkthrough recap Wave 4</h1>
+        <div class="sub">
+          Verifica live cross-feature dei flussi Cesare agentic · ramo
+          <code>main</code> · 2026-05-19 · commit
+          <code>1417c9f</code>
+        </div>
+        <a class="crossLink" href="ai-architecture.html">
+          📖 Approfondimento — Architettura AI agents (RAG lazy, prompt caching, tool loop, propose/accept). Zona di learning sempre aggiornata →
+        </a>
+      </header>
+
+      <h2>Sintesi a colpo d'occhio</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="label">Test eseguiti</div>
+          <div class="value">5 / 5</div>
+        </div>
+        <div class="card">
+          <div class="label">OK live</div>
+          <div class="value" style="color: var(--ok);">2 + 2 parziali</div>
+        </div>
+        <div class="card">
+          <div class="label">Bug fixati live</div>
+          <div class="value" style="color: var(--accent-2);">5</div>
+        </div>
+        <div class="card">
+          <div class="label">Da ri-verificare</div>
+          <div class="value" style="color: var(--warn);">2</div>
+        </div>
+      </div>
+
+      <h2>Risultati dei 5 flussi richiesti</h2>
+      <p>
+        Sotto, per ognuno: cosa volevi provare, cosa ho trovato live nel
+        browser, e — se rotto — cosa ho fissato in code subito.
+      </p>
+
+      <h3>① Screenplay propose/accept <span class="pill warn">PARTIAL</span></h3>
+      <p>
+        <b>Atteso</b>: chiedere a Cesare "rendi più tesa la scena 1" produce
+        una decoration inline con ✓/✕.<br />
+        <b>Trovato</b>: editor carica, Cesare apre, risponde con un pannello
+        "Sc. 1 · 5 rifiniture" (corretto), ma <i>non</i> chiama
+        <code>propose_screenplay_edit</code>. Inoltre leakava
+        <code>&lt;tool_response&gt;</code> in chiaro.
+      </p>
+      <div class="shot">
+        <img src="screenshots/11-cesare-tool-leak.png" alt="Cesare tool_response leak" />
+        <div class="cap">
+          <b>Prima del fix</b>: si vede chiaramente il marker
+          <code>&lt;tool_response&gt;</code> nel messaggio. Ora strippato in
+          <code>stripToolCalls</code>.
+        </div>
+      </div>
+
+      <h3>② Documents auto-gen <span class="pill warn">PARTIAL</span></h3>
+      <p>
+        <b>Atteso</b>: "scrivi il soggetto" / "scrivi la logline" → banner
+        DRAFT sopra l'editor con accept/reject.<br />
+        <b>Trovato</b>: Cesare ha scritto soggetto e proposto 3 alternative
+        di logline <i>inline nel chat</i> invece di chiamare i tool
+        <code>propose_soggetto_v2</code> / <code>propose_logline_from_screenplay</code>.
+        Skeleton primitive funziona correttamente al caricamento.
+      </p>
+      <p>
+        <b>Root cause identificato</b>: il model router mandava i verbi
+        <code>scrivi</code> / <code>proponi</code> / <code>rendi</code> verso
+        Haiku, che evita tool-loops complessi. Aggiunti alla regex
+        imperative + rinforzata la guidance "documenti vuoti = chiama propose_*".
+      </p>
+
+      <h3>③ Budget weekly + cap <span class="pill ok">OK</span></h3>
+      <div class="shot">
+        <img src="screenshots/12-budget-weekly-cap.png" alt="Budget weekly + cap 50k" />
+        <div class="cap">
+          <b>Tutto OK</b>: tab "Settimane" — Settimana 1, 3 giornate, 2–4
+          giu, 16.984 € totale. Breakdown Troupe 6780 € · Altro 8660 € ·
+          Contingenza 1544 €. Cap impostato a <b>50.000 €</b>.
+          Fix UX live: i chip degli UUID truncati ("3dc1be...") sono stati
+          sostituiti con un più leggibile "3 scene".
+        </div>
+      </div>
+
+      <h3>④ Locations area-search <span class="pill warn">PARTIAL</span></h3>
+      <div class="shot">
+        <img src="screenshots/13-locations-page.png" alt="Locations page" />
+        <div class="cap">
+          <b>OK funzionale</b>: pagina renderizza 6 location, mappa Google
+          montata (4 elementi DOM), Cesare risponde a "trova candidati a
+          Falerone".<br />
+          <b>Limite</b>: <code>AreaSearchPanel</code> monta solo dopo aver
+          disegnato un cerchio sulla mappa — l'interazione coinvolge il
+          canvas di Google Maps, non testabile via DOM snapshot. Andrà
+          provata a mano oppure via E2E con stub diretto del
+          <code>drawnCircle</code> state.
+        </div>
+      </div>
+
+      <h3>⑤ Shooting blocking propose <span class="pill ok">OK FULL</span></h3>
+      <div class="shot">
+        <img src="screenshots/15-shooting-blocking.png" alt="Shooting blocking propose" />
+        <div class="cap">
+          <b>Funziona end-to-end</b>: ho chiesto "proponi il blocking per
+          questa scena" → Cesare ha letto la Scena 1 e ha proposto 4 camere
+          come ghost-pins (<b>A · MS, B · WS, C · WS, D · WS</b>), ognuna
+          con bottoni <i>Accetta ✓</i> / <i>Scarta ✕</i> + un bulk
+          <i>Accetta tutto</i> / <i>Scarta tutto</i>. Cliccando
+          "Accetta tutto" Piano A è diventato attivo con 4 shot. Questo è
+          il flusso propose/accept più maturo dell'app.
+        </div>
+      </div>
+
+      <h2>Bug live trovati e risolti in sessione</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Bug</th>
+            <th>File</th>
+            <th>Stato</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>A</td>
+            <td>Plain "Loading…" testo su screenplay / versions / title-page / documents</td>
+            <td>4 file routes</td>
+            <td><span class="pill ok">fixato</span></td>
+          </tr>
+          <tr>
+            <td>B</td>
+            <td><code>&lt;tool_response&gt;</code> leak visibile in chat Cesare</td>
+            <td><code>CesareSheet.stripToolCalls</code></td>
+            <td><span class="pill ok">fixato</span></td>
+          </tr>
+          <tr>
+            <td>C</td>
+            <td>Router mandava <code>scrivi / proponi / rendi / tendi</code> a Haiku → niente tool</td>
+            <td><code>cesare-model-router.ts</code></td>
+            <td><span class="pill ok">fixato</span></td>
+          </tr>
+          <tr>
+            <td>D</td>
+            <td>UUID truncati visibili in Budget weekly chips</td>
+            <td><code>BudgetWeeklyView.tsx</code></td>
+            <td><span class="pill ok">fixato</span></td>
+          </tr>
+          <tr>
+            <td>E</td>
+            <td>Guidance doc-gen non abbastanza assertiva su documenti vuoti</td>
+            <td><code>cesare.server.ts::buildDocumentGenToolsGuidance</code></td>
+            <td><span class="pill ok">fixato</span></td>
+          </tr>
+          <tr>
+            <td>F</td>
+            <td><code>getProjectById</code> chiamato con <code>projectId: ""</code> (race in route loader)</td>
+            <td>loader projects</td>
+            <td><span class="pill warn">aperto</span></td>
+          </tr>
+          <tr>
+            <td>G</td>
+            <td><code>/logline</code> e <code>/synopsis</code> ritornano 404 (non hanno route propria — vivono in <code>/soggetto</code>)</td>
+            <td>routing</td>
+            <td><span class="pill info">UX expectation</span></td>
+          </tr>
+          <tr>
+            <td>H</td>
+            <td>Login: Better Auth scrypt mismatch dopo riseed — serve rehash con <code>better-auth/crypto.hashPassword</code></td>
+            <td>dev DB</td>
+            <td><span class="pill info">workaround applicato</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Bug più sottile (vale la pena spiegarlo)</h2>
+      <p>
+        Per ① Screenplay e ② Documents, Cesare <i>capisce</i> la richiesta
+        e produce contenuti pertinenti (l'analisi della scena 1, le tre
+        loglines alternative) — ma poi lo scrive nel chat invece di passare
+        per il tool <code>propose_*</code>. Il sintomo è banale, la causa è
+        più profonda:
+      </p>
+      <ul>
+        <li>
+          <b>Router troppo aggressivo verso Haiku</b>. La regex imperative
+          ora include i verbi mancanti, ma il vero problema è che la decisione
+          si basa solo sulla forma del prompt utente, non sull'esito atteso.
+          Una "domanda" può comunque generare un edit (es. "questa scena è
+          troppo lunga?" → l'utente vuole proporre un taglio).
+        </li>
+        <li>
+          <b>System prompt che cita i tool come "se vuoi"</b>. Il modello
+          interpreta "potresti chiamare propose_*" come opzionale. Ora la
+          regola è "<i>se il doc è vuoto DEVI chiamare il tool</i>" — è
+          tassativa.
+        </li>
+        <li>
+          <b>Conflitto fra due pipeline</b>. La Scena 1 viene già taggata
+          da un'altra pipeline di "ghost suggestions" (cesareAppliedHighlightKey),
+          e Cesare le vede in contesto come "già fatto", quindi non propone
+          nuovi edit. Va separato lo scope dei due meccanismi.
+        </li>
+      </ul>
+
+      <h2>Cosa è stato verificato live (con prova)</h2>
+      <div class="legend">
+        <span class="pill ok">verificato</span>
+        <span class="pill warn">parziale / da ri-verificare</span>
+      </div>
+      <ol>
+        <li>Dashboard + Skeleton primitive — <span class="pill ok">verificato</span></li>
+        <li>Editor screenplay carica + Cesare panel risponde — <span class="pill ok">verificato</span></li>
+        <li>Budget weekly view + cap 50k — <span class="pill ok">verificato</span></li>
+        <li>Shooting blocking propose ✓/✕ accept-all — <span class="pill ok">verificato</span></li>
+        <li>Locations Cesare risponde + mappa montata — <span class="pill ok">verificato</span></li>
+        <li>Screenplay propose_screenplay_edit invocato — <span class="pill warn">parziale</span></li>
+        <li>Documents propose_*_v2 invocato — <span class="pill warn">parziale</span></li>
+      </ol>
+
+      <h2>Zona di learning</h2>
+      <p>
+        Ho lanciato un agente separato che sta scrivendo un capitolo a
+        parte dedicato all'<b>architettura AI agentic</b> della tua app —
+        è la pagina linkata in testa, <code>ai-architecture.html</code>.
+        Tratta in dettaglio: RAG lazy (cuore dell'argomento), prompt
+        caching, tool-use loop, model tier router, pattern propose/accept,
+        e cosa abbiamo scelto di non fare. È pensata come zona di studio
+        sempre viva: ogni volta che cambia un layer (nuovo tool, nuovo
+        modello, nuovo pattern) va ri-toccata lì.
+      </p>
+
+      <h2>Cosa fare ora (per te, quando provi a mano)</h2>
+      <ol>
+        <li>
+          Apri <code>http://localhost:3000</code>, fai login
+          <code>valerio@ohwriters.dev / valerio123</code>.
+        </li>
+        <li>
+          <b>Budget weekly + cap</b> — pagina Budget, tab "Settimane". Già
+          provata, dovrebbe lavorare al primo colpo.
+        </li>
+        <li>
+          <b>Shooting blocking</b> — apri shooting-plan di una scena (es.
+          Scena 1), chiedi "proponi il blocking". Funziona end-to-end.
+        </li>
+        <li>
+          <b>Screenplay propose</b> — apri editor screenplay, chiedi
+          "rendi più tesa la scena 1". <b>Ri-prova questo</b>: il fix
+          router è committato (<code>1417c9f</code>), ma serve un nuovo
+          giro per confermarlo. Se ancora Cesare scrive in chat invece di
+          proporre, è il bug "due pipeline" elencato sopra.
+        </li>
+        <li>
+          <b>Documents</b> — pagina soggetto, chiedi "scrivi la logline".
+          Stessa cosa: il fix è in main, va ri-provato.
+        </li>
+        <li>
+          <b>Locations area-search</b> — disegna un cerchio sulla mappa
+          (tool draw), il <code>AreaSearchPanel</code> deve montarsi
+          accanto. Non l'ho potuto testare via DOM, serve mano umana.
+        </li>
+      </ol>
+
+      <h2>Commit di questa sessione</h2>
+      <pre style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; overflow-x: auto;">
+1417c9f  [OHW] fix(wave-4): live-walk fixes (loaders, tool_response leak,
+                          router verbs, budget weekly chips, doc-gen guidance)
+2dcc53e  [OHW] fix(cesare): break circular import via cesare.errors.ts
+10b5a74  [OHW] fix(cesare-screenplay): crypto.randomUUID() not node:crypto
+0d9e403  [OHW] docs(loaders): add loading states convention to CLAUDE.md
+... + tutta la sequenza skeleton refactor (b154af9 → d8f7d77)</pre>
+
+      <footer>
+        Vernissage Wave 4 · markdown report sorella in
+        <code>vernissage/wave-4-composite.md</code> · approfondimento
+        architetturale in <code>vernissage/recap/ai-architecture.html</code>.
+      </footer>
+    </div>
+  </body>
+</html>
