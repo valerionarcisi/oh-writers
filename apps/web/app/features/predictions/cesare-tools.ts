@@ -1490,6 +1490,12 @@ const runGenericToolLoop = (
           system: args.systemPrompt,
           messages: currentMessages,
           tools: args.tools,
+          // Explicit tool_choice = auto. Without this, some models emit
+          // XML-style `<function_calls><invoke name="...">` blocks as plain
+          // text instead of proper Anthropic `tool_use` content blocks —
+          // making the loop silently no-op. Stating the choice mode tells
+          // the model to use the native block format.
+          tool_choice: { type: "auto" },
         });
 
         const toolBlocks = response.content.filter(isToolUseBlock);

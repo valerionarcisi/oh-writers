@@ -373,15 +373,30 @@ type ListState =
 // back internal protocol scaffolding. They are intended for the server, never
 // the user.
 function stripToolCalls(content: string): string {
-  return content
-    .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
-    .replace(/<tool_call>[\s\S]*$/g, "")
-    .replace(/<tool_response>[\s\S]*?<\/tool_response>/g, "")
-    .replace(/<tool_response>[\s\S]*$/g, "")
-    .replace(/<\/tool_response>/g, "")
-    .replace(/<!--ohw:tools=\d+-->/g, "")
-    .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
-    .trim();
+  return (
+    content
+      .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
+      .replace(/<tool_call>[\s\S]*$/g, "")
+      .replace(/<tool_response>[\s\S]*?<\/tool_response>/g, "")
+      .replace(/<tool_response>[\s\S]*$/g, "")
+      .replace(/<\/tool_response>/g, "")
+      // XML-style tool calls some models emit as plain text instead of the
+      // native Anthropic `tool_use` content block.
+      .replace(/<function_calls>[\s\S]*?<\/function_calls>/g, "")
+      .replace(/<function_calls>[\s\S]*$/g, "")
+      .replace(/<function_calls>[\s\S]*?<\/antml:function_calls>/g, "")
+      .replace(/<function_calls>[\s\S]*$/g, "")
+      .replace(/<invoke[\s\S]*?<\/invoke>/g, "")
+      .replace(/<invoke[\s\S]*$/g, "")
+      .replace(/<parameter[\s\S]*?<\/parameter>/g, "")
+      .replace(
+        /<\/?(function_calls|antml:function_calls|invoke|parameter)[^>]*>/g,
+        "",
+      )
+      .replace(/<!--ohw:tools=\d+-->/g, "")
+      .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
+      .trim()
+  );
 }
 
 /**
@@ -497,6 +512,30 @@ function renderMarkdown(content: string): React.ReactNode {
 
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li]!;
+
+    // Code fence block: capture everything between the opening ``` and the
+    // closing ``` as a <pre>. The opening line may carry a language hint
+    // (e.g. ```fountain) — we keep it as a data attribute for styling but
+    // do not syntax-highlight (CSS handles the monospace block look).
+    const fenceOpen = line.match(/^```(\w+)?\s*$/);
+    if (fenceOpen) {
+      flushList();
+      flushTable();
+      const lang = fenceOpen[1] ?? "";
+      const buf: string[] = [];
+      li++;
+      while (li < lines.length && !/^```\s*$/.test(lines[li]!)) {
+        buf.push(lines[li]!);
+        li++;
+      }
+      nodes.push(
+        <pre key={key++} className={styles.mdCodeBlock} data-lang={lang}>
+          <code>{buf.join("\n")}</code>
+        </pre>,
+      );
+      continue;
+    }
+
     const h4 = line.match(/^#### (.+)/);
     const h3 = line.match(/^### (.+)/);
     const h2 = line.match(/^## (.+)/);

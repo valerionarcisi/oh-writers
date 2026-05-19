@@ -1,7 +1,7 @@
 /* packages/ui/src/themes/linen.css — layer 1 raw tokens, default theme */
 :root {
   /* Linen — paper warm neutrals */
-  --ds-linen-50:  #f5f3ee;
+  --ds-linen-50: #f5f3ee;
   --ds-linen-100: #ebe9e3;
   --ds-linen-200: #e2dfd6;
   --ds-linen-300: #d8d6cd;
@@ -16,25 +16,25 @@
   --ds-white: #ffffff;
 
   /* Clay — user action, page accent, primary */
-  --ds-clay-50:  #f4dccb;
+  --ds-clay-50: #f4dccb;
   --ds-clay-500: #8b3a1a;
   --ds-clay-600: #75301a;
 
   /* Leaf — Cesare, agent */
-  --ds-leaf-50:  #e5e9d8;
+  --ds-leaf-50: #e5e9d8;
   --ds-leaf-500: #5a6b3c;
 
   /* Category accents — muted, low chroma */
-  --ds-cat-cast:        #6b3e7a;
-  --ds-cat-crew:        #3d6b4a;
-  --ds-cat-locations:   #9a5128;
-  --ds-cat-vehicles:    #2c6168;
+  --ds-cat-cast: #6b3e7a;
+  --ds-cat-crew: #3d6b4a;
+  --ds-cat-locations: #9a5128;
+  --ds-cat-vehicles: #2c6168;
   --ds-cat-scenografia: #8a5a1f;
-  --ds-cat-costumi:     #8b3565;
-  --ds-cat-fotografia:  #34487a;
-  --ds-cat-suono:       #5a6b25;
-  --ds-cat-vfx:         #6a3e8a;
-  --ds-cat-comparse:    #7a5524;
+  --ds-cat-costumi: #8b3565;
+  --ds-cat-fotografia: #34487a;
+  --ds-cat-suono: #5a6b25;
+  --ds-cat-vfx: #6a3e8a;
+  --ds-cat-comparse: #7a5524;
 
   /* Plan accents — Shot Plan v2 only */
   --ds-plan-1: #34487a;
@@ -44,8 +44,87 @@
   /* Override default teal accent with clay for linen theme */
   --color-accent: var(--ds-clay-500);
   --color-accent-hover: var(--ds-clay-600);
-  --color-accent-subtle: color-mix(in srgb, var(--ds-clay-500) 10%, transparent);
-  --color-accent-border: color-mix(in srgb, var(--ds-clay-500) 25%, transparent);
+  --color-accent-subtle: color-mix(
+    in srgb,
+    var(--ds-clay-500) 10%,
+    transparent
+  );
+  --color-accent-border: color-mix(
+    in srgb,
+    var(--ds-clay-500) 25%,
+    transparent
+  );
   --color-border-focus: var(--ds-clay-500);
-  --ring-focus: 0 0 0 2px var(--ds-bg, var(--color-bg)), 0 0 0 4px var(--ds-clay-500);
+  --ring-focus:
+    0 0 0 2px var(--ds-bg, var(--color-bg)), 0 0 0 4px var(--ds-clay-500);
+
+  /* ─── Legacy --color-* migration to light theme ──────────────
+     Several feature CSS modules still reference the original dark
+     `--color-*` tokens defined in packages/ui/src/styles/tokens.css.
+     Until each file is migrated to the --ds-* tokens, alias them here
+     so they pick up the linen light palette instead of the dark
+     defaults. Removing these aliases is safe once every consumer has
+     switched to --ds-*.                                           */
+
+  /* Backgrounds */
+  --color-bg: var(--ds-bg);
+  --color-surface: var(--ds-surface);
+  --color-elevated: var(--ds-surface-alt);
+  --color-overlay: var(--ds-surface-deep);
+  --color-surface-inset: var(--ds-bg);
+  --color-surface-hover: var(--ds-surface-alt);
+  --color-surface-active: var(--ds-surface-deep);
+  --color-subtle: var(--ds-surface-alt);
+
+  /* Text */
+  --color-fg: var(--ds-text);
+  --color-fg-secondary: var(--ds-text-2);
+  --color-fg-muted: var(--ds-text-mute);
+  --color-fg-inverse: var(--ds-text-on-dark);
+  --color-text: var(--ds-text);
+  --color-text-muted: var(--ds-text-mute);
+  --color-text-subtle: var(--ds-text-3);
+  --color-muted: var(--ds-text-2);
+  --color-placeholder: var(--ds-text-faint);
+  --color-inverse: var(--ds-text-on-dark);
+
+  /* Borders */
+  --color-border: var(--ds-line);
+  --color-border-strong: var(--ds-linen-400);
+  --border-muted: var(--border-width) solid var(--ds-line);
+
+  /* Legacy gray aliases */
+  --color-black: var(--ds-text);
+  --color-white: var(--ds-surface);
+  --color-gray-100: var(--ds-surface-alt);
+  --color-gray-200: var(--ds-surface-deep);
+  --color-gray-500: var(--ds-text-3);
+  --color-gray-700: var(--ds-text-2);
+  --color-gray-900: var(--ds-text);
+
+  /* Status — keep colourways but route through DS tokens so they
+     match the warm-paper palette. */
+  --color-danger: var(--ds-danger);
+  --color-danger-subtle: var(--ds-danger-soft);
+  --color-warning: var(--ds-warning);
+  --color-warning-subtle: var(--ds-warning-soft);
+  --color-success: var(--ds-success);
+  --color-success-subtle: var(--ds-success-soft);
+  --color-info: var(--ds-info);
+  --color-info-subtle: color-mix(in srgb, var(--ds-info) 12%, transparent);
+  --color-error: var(--ds-danger);
+  --color-error-subtle: var(--ds-danger-soft);
+
+  /* Shadows — softer in a light theme */
+  --shadow-xs: 0 1px 2px rgba(28, 26, 23, 0.06);
+  --shadow-sm: 0 2px 4px rgba(28, 26, 23, 0.06);
+  --shadow-md: 0 4px 12px rgba(28, 26, 23, 0.08);
+  --shadow-lg: 0 8px 24px -8px rgba(28, 26, 23, 0.14);
+  --shadow-xl: 0 16px 48px -12px rgba(28, 26, 23, 0.2);
+
+  /* Diff view aliases */
+  --color-diff-insert-bg: var(--ds-diff-add-bg);
+  --color-diff-insert-fg: var(--ds-diff-add-fg);
+  --color-diff-delete-bg: var(--ds-diff-remove-bg);
+  --color-diff-delete-fg: var(--ds-diff-remove-fg);
 }
