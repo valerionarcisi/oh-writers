@@ -72,6 +72,22 @@ const deriveInitials = (name: string): string =>
     .toUpperCase()
     .slice(0, 2);
 
+// Map Cesare's CesarePage identifier to the URL segment under `/projects/:id`
+// — used by the notification activation handler to navigate the user to
+// where the action happened.
+const PAGE_TO_ROUTE_SEGMENT: Partial<Record<CesarePage, string>> = {
+  screenplay: "screenplay",
+  soggetto: "soggetto",
+  synopsis: "synopsis",
+  outline: "outline",
+  treatment: "treatment",
+  breakdown: "breakdown",
+  budget: "budget",
+  schedule: "schedule",
+  locations: "locations",
+  "shooting-plan": "shooting-plan",
+};
+
 export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
@@ -383,20 +399,36 @@ function AppShellInner({
   const handleActivateNotification = useCallback(
     (notification: CesareNotification) => {
       pendingPulseEntities.current = notification;
-      setCesareOpen(true);
       markAllSeen();
-      // Pulse after a tick so the sheet is mounted and the user's eye is on
-      // the page underneath the (translucent) scrim.
+
+      // 1. Always navigate to the page where the action happened. If the
+      //    user is somewhere else (or on a different project) the click
+      //    must put them in front of the thing the notification is about.
+      const pageSegment = PAGE_TO_ROUTE_SEGMENT[notification.page];
+      if (notification.projectId && pageSegment) {
+        void router.navigate({
+          to: `/projects/${notification.projectId}/${pageSegment}`,
+        });
+      }
+
+      // 2. Open Cesare panel after the route mounts so the user sees the
+      //    related context. The sheet hosts the pulse animation for
+      //    affected entities (handled below).
+      setCesareOpen(true);
+
+      // 3. Pulse the affected entities after the page settles (route
+      //    transition + sheet mount ~ 250ms). Skip when no entities — a
+      //    chat-only reply has nothing to highlight.
       if (
         notification.affectedEntities &&
         notification.affectedEntities.length > 0
       ) {
         window.setTimeout(() => {
           pulseAffectedEntities(notification.affectedEntities!);
-        }, 150);
+        }, 250);
       }
     },
-    [markAllSeen],
+    [markAllSeen, router],
   );
 
   const handleRequestPush = useCallback(() => {

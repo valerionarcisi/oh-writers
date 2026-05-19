@@ -110,6 +110,21 @@ function SoggettoPageReady({
   const setActiveDocument = useSetActiveDocument();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
 
+  // When the server-side current version changes (e.g. user activates a
+  // Cesare draft from the drawer, or promotes a version), the route query
+  // refetches and `soggettoDoc.content` is now the new active text — but the
+  // local `useState` initial value is frozen at mount. Re-sync the editor
+  // state whenever the active version id changes. We don't sync on every
+  // content change to avoid stomping over the user's in-flight edits.
+  useEffect(() => {
+    setSoggettoContent(soggettoDoc.content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soggettoDoc.currentVersionId]);
+  useEffect(() => {
+    setLoglineContent(loglineDoc.content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loglineDoc.currentVersionId]);
+
   // Publish the soggetto as the active document so Cesare's tool router can
   // operate on its content when this page is open.
   useEffect(() => {
