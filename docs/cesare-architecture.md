@@ -591,7 +591,7 @@ When the user draws a circle on the map:
 
 ## 10. QA policy
 
-Every non-trivial feature is delivered with a **3-level QA suite** (4 for Cesare-touching features). This is mandatory, not optional.
+Every non-trivial feature is delivered with a **3-level QA suite** (4 for Cesare-touching features). This is a **mandatory pipeline gate**, not optional. See `CLAUDE.md § Testing` for the project-wide policy that applies to every feature, not just Cesare.
 
 ### Level 1 — Vitest pure-function tests
 
