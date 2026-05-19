@@ -37,6 +37,11 @@ import {
   type ShootingPlanToolContext,
 } from "./cesare-shooting-plan-tools";
 import { CESARE_READ_TOOLS, tryExecuteReadTool } from "./cesare-read-tools";
+import {
+  CESARE_DOCUMENT_GEN_TOOLS,
+  executeDocumentGenTool,
+  isDocumentGenToolName,
+} from "./cesare-document-tools";
 
 export { CESARE_SCHEDULE_TOOLS } from "./cesare-schedule-tools";
 export type { ScheduleToolContext } from "./cesare-schedule-tools";
@@ -88,7 +93,8 @@ export const CESARE_LOCATION_TOOLS = [
       properties: {
         requirement_id: {
           type: "string",
-          description: "UUID del location requirement a cui aggiungere il candidato",
+          description:
+            "UUID del location requirement a cui aggiungere il candidato",
         },
         name: { type: "string", description: "Nome del luogo" },
         address: { type: "string", description: "Indirizzo completo" },
@@ -271,7 +277,8 @@ export const CESARE_BREAKDOWN_TOOLS = [
       properties: {
         scene_number: {
           type: "number",
-          description: "Numero ordinale della scena di cui aggiungere i costi al budget.",
+          description:
+            "Numero ordinale della scena di cui aggiungere i costi al budget.",
         },
       },
       required: ["scene_number"],
@@ -478,7 +485,9 @@ interface ToolUseBlock {
 }
 
 const isToolUseBlock = (b: unknown): b is ToolUseBlock =>
-  typeof b === "object" && b !== null && (b as ToolUseBlock).type === "tool_use";
+  typeof b === "object" &&
+  b !== null &&
+  (b as ToolUseBlock).type === "tool_use";
 
 interface ToolResult {
   type: "tool_result";
@@ -651,7 +660,10 @@ const executeApplyTextEdit = (
   input: ApplyTextEditInput,
   db: Db,
   doc: DocumentContext,
-): ResultAsync<{ ok: boolean; reason?: string; toast?: string }, CesareError> => {
+): ResultAsync<
+  { ok: boolean; reason?: string; toast?: string },
+  CesareError
+> => {
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
   }
@@ -741,7 +753,10 @@ const generateAndReplaceSection = (
   prompt: string,
   maxTokens: number,
   toastVerb: string,
-): ResultAsync<{ ok: boolean; reason?: string; toast?: string }, CesareError> => {
+): ResultAsync<
+  { ok: boolean; reason?: string; toast?: string },
+  CesareError
+> => {
   const range = findSection(doc.content, heading);
   if (!range) {
     return okAsync({
@@ -752,7 +767,8 @@ const generateAndReplaceSection = (
 
   return callHaiku(
     {
-      system: "Sei un editor letterario professionale. Rispondi sempre in italiano.",
+      system:
+        "Sei un editor letterario professionale. Rispondi sempre in italiano.",
       fewShot: [],
       user: prompt,
       model: EXPAND_SECTION_MODEL,
@@ -760,9 +776,7 @@ const generateAndReplaceSection = (
     },
     "cesare.documents.section",
   )
-    .mapErr(
-      (e) => new CesareError(`Section generation failed: ${e.message}`),
-    )
+    .mapErr((e) => new CesareError(`Section generation failed: ${e.message}`))
     .andThen((haiku) => {
       const newText = extractText(haiku.content);
       if (!newText) {
@@ -870,22 +884,32 @@ const findSceneIdByNumber = (
   ResultAsync.fromPromise(
     (async () => {
       const [screenplay] = await db
-        .select({ id: screenplays.id, currentVersionId: screenplays.currentVersionId })
+        .select({
+          id: screenplays.id,
+          currentVersionId: screenplays.currentVersionId,
+        })
         .from(screenplays)
         .where(eq(screenplays.projectId, projectId))
         .limit(1);
-      if (!screenplay) throw new Error(`No screenplay for project ${projectId}`);
+      if (!screenplay)
+        throw new Error(`No screenplay for project ${projectId}`);
       if (!screenplay.currentVersionId)
         throw new Error("Screenplay has no current version");
       const [scene] = await db
         .select({ id: scenes.id })
         .from(scenes)
         .where(
-          and(eq(scenes.screenplayId, screenplay.id), eq(scenes.number, sceneNumber)),
+          and(
+            eq(scenes.screenplayId, screenplay.id),
+            eq(scenes.number, sceneNumber),
+          ),
         )
         .limit(1);
       if (!scene) throw new Error(`Scene ${sceneNumber} not found`);
-      return { sceneId: scene.id, screenplayVersionId: screenplay.currentVersionId };
+      return {
+        sceneId: scene.id,
+        screenplayVersionId: screenplay.currentVersionId,
+      };
     })(),
     (e) =>
       new CesareError(
@@ -893,13 +917,17 @@ const findSceneIdByNumber = (
       ),
   );
 
-const VALID_CATEGORIES: ReadonlyArray<BreakdownCategoryDb> = BREAKDOWN_CATEGORIES;
+const VALID_CATEGORIES: ReadonlyArray<BreakdownCategoryDb> =
+  BREAKDOWN_CATEGORIES;
 
 const executeTagElement = (
   input: TagElementInput,
   db: Db,
   projectId: string,
-): ResultAsync<{ elementId: string; occurrenceId: string; toast_message: string }, CesareError> => {
+): ResultAsync<
+  { elementId: string; occurrenceId: string; toast_message: string },
+  CesareError
+> => {
   const cat = input.category as BreakdownCategoryDb;
   if (!VALID_CATEGORIES.includes(cat)) {
     return errAsync(new CesareError(`Invalid category: ${input.category}`));
@@ -1021,8 +1049,7 @@ const loadRatesForCesare = (
     const overrides: Partial<ProductionRates> = {};
     for (const r of rows) {
       const v = Number(r.value);
-      if (Number.isFinite(v))
-        (overrides as Record<string, number>)[r.key] = v;
+      if (Number.isFinite(v)) (overrides as Record<string, number>)[r.key] = v;
     }
     return { ...DEFAULT_PRODUCTION_RATES, ...overrides };
   });
@@ -1114,7 +1141,8 @@ const executeAddSceneToBudget = (
           .from(budgets)
           .where(eq(budgets.projectId, projectId))
           .limit(1);
-        if (!budget) throw new Error("Budget non ancora generato per questo progetto");
+        if (!budget)
+          throw new Error("Budget non ancora generato per questo progetto");
         if (budget.status === "locked")
           throw new Error("Il budget è lockato e non accetta nuove righe");
         const existing = await db
@@ -1238,7 +1266,10 @@ export const executeTool = (
       return okAsync(
         successResult(
           block.id,
-          JSON.stringify({ error: "requirement_id missing — cannot add candidate without a selected location requirement" }),
+          JSON.stringify({
+            error:
+              "requirement_id missing — cannot add candidate without a selected location requirement",
+          }),
         ),
       );
     }
@@ -1251,7 +1282,10 @@ export const executeTool = (
   if (readFallthrough) return readFallthrough;
 
   return okAsync(
-    successResult(block.id, JSON.stringify({ error: `Unknown tool: ${block.name}` })),
+    successResult(
+      block.id,
+      JSON.stringify({ error: `Unknown tool: ${block.name}` }),
+    ),
   );
 };
 
@@ -1305,6 +1339,7 @@ export const runDocumentToolLoop = (
   projectId: string,
   model: string,
   docContext: DocumentContext,
+  userIdFallback: string | null = null,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
     client,
@@ -1315,11 +1350,20 @@ export const runDocumentToolLoop = (
     model,
     tools: [
       ...CESARE_DOCUMENT_TOOLS,
+      ...CESARE_DOCUMENT_GEN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
       if (readFallthrough) return readFallthrough;
+      if (isDocumentGenToolName(block.name)) {
+        return executeDocumentGenTool(
+          block,
+          dbArg,
+          projectIdArg,
+          userIdFallback,
+        );
+      }
       return executeDocumentTool(block, dbArg, docContext);
     },
   });
@@ -1438,7 +1482,9 @@ const runGenericToolLoop = (
         const toolBlocks = response.content.filter(isToolUseBlock);
         const textBlocks = response.content.filter(
           (b): b is { type: "text"; text: string } =>
-            typeof b === "object" && b !== null && (b as { type: string }).type === "text",
+            typeof b === "object" &&
+            b !== null &&
+            (b as { type: string }).type === "text",
         );
 
         // Collect any text in this turn
@@ -1466,6 +1512,25 @@ const runGenericToolLoop = (
           } else {
             toolsExecuted += 1;
             toolResults.push(result.value);
+            // Side-channel: surface blocking proposals to the client by
+            // emitting an invisible HTML marker. CesareSheet parses these and
+            // dispatches a DOM event the canvas listens to.
+            if (block.name === "propose_blocking_for_scene") {
+              try {
+                const payload = JSON.parse(result.value.content);
+                if (
+                  payload &&
+                  typeof payload === "object" &&
+                  !("error" in payload)
+                ) {
+                  textAccumulator.push(
+                    `<!--ohw:blocking-proposal:${JSON.stringify(payload)}-->`,
+                  );
+                }
+              } catch {
+                // ignore malformed payloads — the marker is best-effort
+              }
+            }
           }
         }
 
@@ -1544,9 +1609,15 @@ export const CESARE_BUDGET_TOOLS = [
           ],
           description: "Categoria top sheet a cui appartiene la nuova voce",
         },
-        description: { type: "string", description: "Nome/descrizione della voce" },
+        description: {
+          type: "string",
+          description: "Nome/descrizione della voce",
+        },
         rate: { type: "number", description: "Importo unitario in euro" },
-        quantity: { type: "number", description: "Numero di unita (default 1)" },
+        quantity: {
+          type: "number",
+          description: "Numero di unita (default 1)",
+        },
         linked_category: {
           type: "string",
           description:
@@ -1692,7 +1763,10 @@ export const executeUpdateBudgetLine = (
   input: UpdateBudgetLineInput,
   db: Db,
   projectId: string,
-): ResultAsync<{ id: string; field: BudgetLineField; value: unknown }, CesareError> =>
+): ResultAsync<
+  { id: string; field: BudgetLineField; value: unknown },
+  CesareError
+> =>
   ResultAsync.fromPromise(
     (async () => {
       if (!BUDGET_LINE_FIELDS.includes(input.field)) {
@@ -1778,10 +1852,7 @@ export const executeAddBudgetLine = (
         .select({ sortOrder: budgetLines.sortOrder })
         .from(budgetLines)
         .where(eq(budgetLines.budgetId, budget.id));
-      const maxSort = existing.reduce(
-        (m, r) => Math.max(m, r.sortOrder),
-        -1,
-      );
+      const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
 
       const [inserted] = await db
         .insert(budgetLines)
@@ -1907,9 +1978,12 @@ export const executeRedistributeTopsheet = (
       let toLineName: string;
       let toRate: number;
       if (existingTarget) {
-        const prev = existingTarget.rate !== null ? Number(existingTarget.rate) : 0;
+        const prev =
+          existingTarget.rate !== null ? Number(existingTarget.rate) : 0;
         const prevQty =
-          existingTarget.quantity !== null ? Number(existingTarget.quantity) : 1;
+          existingTarget.quantity !== null
+            ? Number(existingTarget.quantity)
+            : 1;
         const newRateTo = prev + input.amount / Math.max(prevQty, 1);
         await db
           .update(budgetLines)
@@ -1923,10 +1997,7 @@ export const executeRedistributeTopsheet = (
           .select({ sortOrder: budgetLines.sortOrder })
           .from(budgetLines)
           .where(eq(budgetLines.budgetId, budget.id));
-        const maxSort = existing.reduce(
-          (m, r) => Math.max(m, r.sortOrder),
-          -1,
-        );
+        const maxSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1);
         const [inserted] = await db
           .insert(budgetLines)
           .values({

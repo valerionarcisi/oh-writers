@@ -239,7 +239,15 @@ interface CesareContext {
 const loadScreenplayContext = (
   db: Db,
   projectId: string,
-): ResultAsync<{ id: string | null; title: string; scenes: SceneRow[]; characters: string[] }, CesareError> =>
+): ResultAsync<
+  {
+    id: string | null;
+    title: string;
+    scenes: SceneRow[];
+    characters: string[];
+  },
+  CesareError
+> =>
   ResultAsync.fromPromise(
     (async () => {
       const [screenplay] = await db
@@ -420,11 +428,7 @@ const loadScheduleSummary = (
       const [totals] = await db
         .select({ total: count() })
         .from(shootingDays)
-        .where(
-          and(
-            eq(shootingDays.scheduleId, schedule.id),
-          ),
-        );
+        .where(and(eq(shootingDays.scheduleId, schedule.id)));
 
       // shootingDays table has no locked flag — count all shoot-type days
       // as total; locked state lives on strips, not days
@@ -478,53 +482,79 @@ const loadLocationsContext = (
         .where(eq(locationRequirements.projectId, projectId));
 
       // Load scenes linked to each requirement with their breakdown elements
-      const allLinkedSceneJoins = reqIds.length === 0 ? [] : await db
-        .select({
-          requirementId: locationRequirementScenes.requirementId,
-          sceneId: locationRequirementScenes.sceneId,
-          number: scenes.number,
-          heading: scenes.heading,
-          intExt: scenes.intExt,
-          timeOfDay: scenes.timeOfDay,
-          characterNames: scenes.characterNames,
-          notes: scenes.notes,
-        })
-        .from(locationRequirementScenes)
-        .innerJoin(scenes, eq(locationRequirementScenes.sceneId, scenes.id))
-        .innerJoin(locationRequirements, eq(locationRequirementScenes.requirementId, locationRequirements.id))
-        .where(eq(locationRequirements.projectId, projectId));
+      const allLinkedSceneJoins =
+        reqIds.length === 0
+          ? []
+          : await db
+              .select({
+                requirementId: locationRequirementScenes.requirementId,
+                sceneId: locationRequirementScenes.sceneId,
+                number: scenes.number,
+                heading: scenes.heading,
+                intExt: scenes.intExt,
+                timeOfDay: scenes.timeOfDay,
+                characterNames: scenes.characterNames,
+                notes: scenes.notes,
+              })
+              .from(locationRequirementScenes)
+              .innerJoin(
+                scenes,
+                eq(locationRequirementScenes.sceneId, scenes.id),
+              )
+              .innerJoin(
+                locationRequirements,
+                eq(
+                  locationRequirementScenes.requirementId,
+                  locationRequirements.id,
+                ),
+              )
+              .where(eq(locationRequirements.projectId, projectId));
 
       // Load breakdown elements for each linked scene
       const linkedSceneIds = allLinkedSceneJoins.map((j) => j.sceneId);
-      const allSceneElements = linkedSceneIds.length === 0 ? [] : await db
-        .select({
-          sceneId: breakdownOccurrences.sceneId,
-          category: breakdownElements.category,
-          name: breakdownElements.name,
-        })
-        .from(breakdownOccurrences)
-        .innerJoin(breakdownElements, eq(breakdownOccurrences.elementId, breakdownElements.id))
-        .where(
-          and(
-            eq(breakdownElements.projectId, projectId),
-            isNull(breakdownElements.archivedAt),
-          ),
-        );
+      const allSceneElements =
+        linkedSceneIds.length === 0
+          ? []
+          : await db
+              .select({
+                sceneId: breakdownOccurrences.sceneId,
+                category: breakdownElements.category,
+                name: breakdownElements.name,
+              })
+              .from(breakdownOccurrences)
+              .innerJoin(
+                breakdownElements,
+                eq(breakdownOccurrences.elementId, breakdownElements.id),
+              )
+              .where(
+                and(
+                  eq(breakdownElements.projectId, projectId),
+                  isNull(breakdownElements.archivedAt),
+                ),
+              );
 
-      const elementsByScene = allSceneElements.reduce<Record<string, string[]>>((acc, el) => {
-        if (!el.sceneId) return acc;
-        const list = acc[el.sceneId] ?? [];
-        list.push(`${el.name} (${el.category})`);
-        acc[el.sceneId] = list;
-        return acc;
-      }, {});
+      const elementsByScene = allSceneElements.reduce<Record<string, string[]>>(
+        (acc, el) => {
+          if (!el.sceneId) return acc;
+          const list = acc[el.sceneId] ?? [];
+          list.push(`${el.name} (${el.category})`);
+          acc[el.sceneId] = list;
+          return acc;
+        },
+        {},
+      );
 
       return reqs.map((req) => ({
         ...req,
         timeOfDay: (req.timeOfDay as string[] | null) ?? [],
         candidates: allCandidates
           .filter((c) => c.requirementId === req.id)
-          .map((c) => ({ id: c.id, name: c.name, address: c.address, status: c.status })),
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            address: c.address,
+            status: c.status,
+          })),
         linkedScenes: allLinkedSceneJoins
           .filter((j) => j.requirementId === req.id)
           .map((j) => ({
@@ -671,7 +701,10 @@ const loadSceneWindow = (
         isCurrent: r.number === centerSceneNumber,
       }));
     })(),
-    (e) => new CesareError(`loadSceneWindow failed: ${e instanceof Error ? e.message : String(e)}`),
+    (e) =>
+      new CesareError(
+        `loadSceneWindow failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
   );
 };
 
@@ -685,7 +718,10 @@ const loadShotPlansForScene = (
     (async (): Promise<ShotPlanSummary[]> => {
       if (!sceneId) return [];
       const plan = await db
-        .select({ id: shotPlans.id, activeScenarioId: shotPlans.activeScenarioId })
+        .select({
+          id: shotPlans.id,
+          activeScenarioId: shotPlans.activeScenarioId,
+        })
         .from(shotPlans)
         .where(eq(shotPlans.sceneId, sceneId))
         .limit(1)
@@ -758,19 +794,23 @@ const assembleContext = (
           loadScheduleSummary(db, projectId).andThen((schedule) =>
             loadLocationsContext(db, projectId).andThen((locations) => {
               // sceneId may be "" when only sceneNumber is known (screenplay editor scroll tracking)
-              const effectiveSceneId = pageContext.sceneId && pageContext.sceneId.length > 10
-                ? pageContext.sceneId
-                : null;
+              const effectiveSceneId =
+                pageContext.sceneId && pageContext.sceneId.length > 10
+                  ? pageContext.sceneId
+                  : null;
               const currentScene = effectiveSceneId
-                ? (screenplay.scenes.find((s) => s.id === effectiveSceneId) ?? null)
+                ? (screenplay.scenes.find((s) => s.id === effectiveSceneId) ??
+                  null)
                 : pageContext.sceneNumber !== null
-                  ? (screenplay.scenes.find((s) => s.number === pageContext.sceneNumber) ?? null)
+                  ? (screenplay.scenes.find(
+                      (s) => s.number === pageContext.sceneNumber,
+                    ) ?? null)
                   : null;
 
-              let currentRequirement =
-                pageContext.requirementId
-                  ? (locations.find((r) => r.id === pageContext.requirementId) ?? null)
-                  : null;
+              let currentRequirement = pageContext.requirementId
+                ? (locations.find((r) => r.id === pageContext.requirementId) ??
+                  null)
+                : null;
 
               // For locations: use linked scene IDs; for other pages: use number window
               let linkedSceneIds =
@@ -829,35 +869,39 @@ const assembleContext = (
                 currentScene?.number ?? pageContext.sceneNumber,
                 linkedSceneIds,
               ).andThen((sceneWindow) =>
-                loadProjectDocuments(db, projectId).andThen((projectDocuments) =>
-                  loadShotPlansForScene(db, shotPlanSceneId).map(
-                    (shotPlanSummaries) => {
-                      const activeDocId = pageContext.documentId ?? null;
-                      const activeDocument: ActiveDocumentRow | null = activeDocId
-                        ? (() => {
-                            const found = projectDocuments.find(
-                              (d) => d.id === activeDocId,
-                            );
-                            return found ? { ...found, isActive: true } : null;
-                          })()
-                        : null;
-                      return {
-                        projectTitle: screenplay.title,
-                        scenes: screenplay.scenes,
-                        currentScene,
-                        sceneWindow,
-                        characters: screenplay.characters,
-                        breakdownElements: elements,
-                        budget,
-                        schedule,
-                        locations,
-                        currentRequirement,
-                        activeDocument,
-                        projectDocuments,
-                        shotPlans: shotPlanSummaries,
-                      };
-                    },
-                  ),
+                loadProjectDocuments(db, projectId).andThen(
+                  (projectDocuments) =>
+                    loadShotPlansForScene(db, shotPlanSceneId).map(
+                      (shotPlanSummaries) => {
+                        const activeDocId = pageContext.documentId ?? null;
+                        const activeDocument: ActiveDocumentRow | null =
+                          activeDocId
+                            ? (() => {
+                                const found = projectDocuments.find(
+                                  (d) => d.id === activeDocId,
+                                );
+                                return found
+                                  ? { ...found, isActive: true }
+                                  : null;
+                              })()
+                            : null;
+                        return {
+                          projectTitle: screenplay.title,
+                          scenes: screenplay.scenes,
+                          currentScene,
+                          sceneWindow,
+                          characters: screenplay.characters,
+                          breakdownElements: elements,
+                          budget,
+                          schedule,
+                          locations,
+                          currentRequirement,
+                          activeDocument,
+                          projectDocuments,
+                          shotPlans: shotPlanSummaries,
+                        };
+                      },
+                    ),
                 ),
               );
             }),
@@ -892,25 +936,45 @@ const formatBreakdownContext = (
 const formatLocationsContext = (ctx: CesareContext): string => {
   if (ctx.locations.length === 0) return "";
 
-  const formatRequirement = (req: LocationRequirementRow, selected: boolean): string => {
-    const candidateLines = req.candidates.length > 0
-      ? req.candidates.map((c) => `    - ${c.name}${c.address ? ` (${c.address})` : ""} [${c.status}]`).join("\n")
-      : "    Nessun candidato ancora";
+  const formatRequirement = (
+    req: LocationRequirementRow,
+    selected: boolean,
+  ): string => {
+    const candidateLines =
+      req.candidates.length > 0
+        ? req.candidates
+            .map(
+              (c) =>
+                `    - ${c.name}${c.address ? ` (${c.address})` : ""} [${c.status}]`,
+            )
+            .join("\n")
+        : "    Nessun candidato ancora";
 
-    const sceneLines = req.linkedScenes.length > 0
-      ? req.linkedScenes.map((s) => {
-          const chars = s.characterNames.length > 0 ? `Personaggi: ${s.characterNames.join(", ")}` : "";
-          const els = s.breakdownElements.length > 0 ? `Elementi: ${s.breakdownElements.slice(0, 8).join(", ")}` : "";
-          const notes = s.notes ? `Note: ${s.notes}` : "";
-          const details = [chars, els, notes].filter(Boolean).join(" | ");
-          return `    - Scena ${s.number}: ${s.heading}${details ? ` — ${details}` : ""}`;
-        }).join("\n")
-      : "    Nessuna scena collegata";
+    const sceneLines =
+      req.linkedScenes.length > 0
+        ? req.linkedScenes
+            .map((s) => {
+              const chars =
+                s.characterNames.length > 0
+                  ? `Personaggi: ${s.characterNames.join(", ")}`
+                  : "";
+              const els =
+                s.breakdownElements.length > 0
+                  ? `Elementi: ${s.breakdownElements.slice(0, 8).join(", ")}`
+                  : "";
+              const notes = s.notes ? `Note: ${s.notes}` : "";
+              const details = [chars, els, notes].filter(Boolean).join(" | ");
+              return `    - Scena ${s.number}: ${s.heading}${details ? ` — ${details}` : ""}`;
+            })
+            .join("\n")
+        : "    Nessuna scena collegata";
 
     const meta = [
       req.intExt ?? "",
       req.timeOfDay.length > 0 ? req.timeOfDay.join("/") : "",
-    ].filter(Boolean).join(" · ");
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
     const header = selected
       ? `LOCATION SELEZIONATA: "${req.name}"${meta ? ` [${meta}]` : ""} [${req.status}]\n  requirement_id: ${req.id}`
@@ -921,12 +985,13 @@ const formatLocationsContext = (ctx: CesareContext): string => {
     }
     // Even when not selected, surface a short scene list per location so
     // Cesare always knows the narrative context of each requirement.
-    const shortScenes = req.linkedScenes.length > 0
-      ? req.linkedScenes
-          .slice(0, 4)
-          .map((s) => `Sc.${s.number} ${s.heading}`)
-          .join("; ")
-      : "nessuna scena";
+    const shortScenes =
+      req.linkedScenes.length > 0
+        ? req.linkedScenes
+            .slice(0, 4)
+            .map((s) => `Sc.${s.number} ${s.heading}`)
+            .join("; ")
+        : "nessuna scena";
     return `${header}\n    scene: ${shortScenes}`;
   };
 
@@ -934,7 +999,9 @@ const formatLocationsContext = (ctx: CesareContext): string => {
     return formatRequirement(ctx.currentRequirement, true);
   }
 
-  const summary = ctx.locations.map((r) => formatRequirement(r, false)).join("\n");
+  const summary = ctx.locations
+    .map((r) => formatRequirement(r, false))
+    .join("\n");
   return `\nLOCATION DEL PROGETTO (${ctx.locations.length} requisiti):\n${summary}`;
 };
 
@@ -995,7 +1062,31 @@ STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
 - expand_section(heading): espande la sezione sotto un heading in 2-3 paragrafi.
 - compress_section(heading, target_words): comprime una sezione mantenendo i beat.
 
-Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.`;
+Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.${buildDocumentGenToolsGuidance(ctx.activeDocument.type)}`;
+};
+
+const buildDocumentGenToolsGuidance = (activeDocType: DocumentType): string => {
+  const label = DOCUMENT_LABELS[activeDocType];
+  return `
+
+GENERAZIONE DOCUMENTI (propose/accept):
+Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta) USA I TOOLS dedicati. Tutto crea una DRAFT visibile in un banner sopra l'editor con i pulsanti "Promuovi a attiva" / "Scarta".
+
+WORKFLOW:
+- "genera la logline" / "scrivimi la logline" → propose_logline_from_screenplay({ instruction? })
+- "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
+- "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
+- "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
+
+❌ SBAGLIATO:
+"Ora ti scrivo la logline: …"
+(Scrive il testo nella chat, non chiama il tool. NON FARE COSÌ.)
+
+✅ CORRETTO:
+[propose_logline_from_screenplay({ instruction: "più commerciale" })]
+"Ho generato una logline draft per il progetto. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor."
+
+Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
 };
 
 const buildBreakdownToolsGuidance = (page: PageContext["page"]): string => {
@@ -1024,9 +1115,9 @@ const buildScheduleToolsGuidance = (
 - swap_scenes(scene_a_number, scene_b_number): scambia la posizione di due scene.
 - lock_day(day_number) / unlock_day(day_number): blocca/sblocca tutte le strip di una giornata.
 - get_weather_forecast(lat, lng, date): previsioni Open-Meteo per data + coordinate (entro 16 giorni). Usalo per valutare il rischio meteo sugli esterni — la probabilità di riuscita della giornata cala con pioggia/temporale.
-- suggest_reorder(strategy?): proponi una sequenza ottimizzata (es. 'minimize_location_changes') senza applicarla; l'utente conferma.
+- suggest_reorder(strategy?, respect_location_confirmed?): proponi una sequenza ottimizzata (es. 'minimize_location_changes') senza applicarla; l'utente conferma. Passa respect_location_confirmed=true quando vedi giornate con location ancora "pending"/"scouting" — il tool penalizza lo spostare scene verso giornate con location non confermate e restituisce locationWarnings.
 
-Quando l'utente chiede di riorganizzare lo schedule, USA i tools — non limitarti a descrivere il cambio. Per esterni con dubbi sul meteo, chiama get_weather_forecast prima di consigliare lo spostamento. Conferma sempre in italiano cosa hai fatto e l'impatto sulla difficoltà/riuscita della giornata.${activeHint}`;
+Quando l'utente chiede di riorganizzare lo schedule, USA i tools — non limitarti a descrivere il cambio. Per esterni con dubbi sul meteo, chiama get_weather_forecast prima di consigliare lo spostamento. Quando alcune scene hanno location non ancora confermate, chiama suggest_reorder con respect_location_confirmed=true. Conferma sempre in italiano cosa hai fatto e l'impatto sulla difficoltà/riuscita della giornata.${activeHint}`;
 };
 
 const TOP_SHEET_LABEL_IT: Record<string, string> = {
@@ -1047,9 +1138,10 @@ const formatBudgetContext = (
   if (!ctx.budget) {
     return "\n\nBUDGET: nessun budget generato per il progetto. Suggerisci all'utente di generare il budget dalla pagina Budget prima di usare i tools.";
   }
-  const fmt = (n: number) =>
-    Math.round(n).toLocaleString("it-IT");
-  const linesByTopSheet = ctx.budget.lines.reduce<Record<string, BudgetLineDetail[]>>((acc, l) => {
+  const fmt = (n: number) => Math.round(n).toLocaleString("it-IT");
+  const linesByTopSheet = ctx.budget.lines.reduce<
+    Record<string, BudgetLineDetail[]>
+  >((acc, l) => {
     const list = acc[l.topSheet] ?? [];
     list.push(l);
     acc[l.topSheet] = list;
@@ -1069,15 +1161,17 @@ const formatBudgetContext = (
       const rateLabel = l.rate !== null ? `${fmt(l.rate)}€` : "n/d";
       const qtyLabel = l.quantity !== null ? `x${l.quantity}` : "";
       const estLabel = `€${fmt(l.estimated)}`;
-      const actualLabel = l.actual !== null ? ` consuntivo €${fmt(l.actual)}` : "";
+      const actualLabel =
+        l.actual !== null ? ` consuntivo €${fmt(l.actual)}` : "";
       const catLabel = l.category ? ` <${l.category}>` : "";
       return `    - id:${l.id} "${l.name}"${catLabel} ${rateLabel}${qtyLabel} stima ${estLabel}${actualLabel}`;
     });
     sections.push(`${header}\n${lineLines.join("\n")}`);
   }
-  const truncated = ctx.budget.lines.length > totalShown
-    ? `\n  …e altre ${ctx.budget.lines.length - totalShown} righe (chiedi all'utente per il dettaglio)`
-    : "";
+  const truncated =
+    ctx.budget.lines.length > totalShown
+      ? `\n  …e altre ${ctx.budget.lines.length - totalShown} righe (chiedi all'utente per il dettaglio)`
+      : "";
 
   const statusLabel = ctx.budget.status ? `status=${ctx.budget.status}` : "";
   return `\n\nBUDGET COMPLETO ${statusLabel} (totale stimato €${fmt(ctx.budget.totalAllocated)}):
@@ -1132,17 +1226,18 @@ const formatShotPlansContext = (
   }
   const lines = ctx.shotPlans.map((plan) => {
     const tag = plan.isActive ? " [ATTIVO]" : "";
-    const shotLines = plan.shots.length > 0
-      ? plan.shots
-          .slice(0, 12)
-          .map(
-            (s, i) =>
-              `      ${i + 1}. ${s.shotSize}/${s.cameraMovement}${
-                s.durationMin !== null ? ` (${s.durationMin}min)` : ""
-              }${s.notes ? ` — ${s.notes}` : ""}`,
-          )
-          .join("\n")
-      : "      (nessuno shot)";
+    const shotLines =
+      plan.shots.length > 0
+        ? plan.shots
+            .slice(0, 12)
+            .map(
+              (s, i) =>
+                `      ${i + 1}. ${s.shotSize}/${s.cameraMovement}${
+                  s.durationMin !== null ? ` (${s.durationMin}min)` : ""
+                }${s.notes ? ` — ${s.notes}` : ""}`,
+            )
+            .join("\n")
+        : "      (nessuno shot)";
     return `  - "${plan.name}"${tag} — ${plan.shotCount} shot (scenarioId: ${plan.scenarioId})\n${shotLines}`;
   });
   return `\n\nPIANI ESISTENTI PER LA SCENA CORRENTE:\n${lines.join("\n")}`;
@@ -1165,6 +1260,9 @@ TOOLS DISPONIBILI SUL PIANO INQUADRATURE:
 - update_shot(shot_id, patch): modifica uno shot esistente.
 - remove_shot(shot_id): elimina uno shot.
 - generate_plan_from_description(scene_id, plan_name, description): scorciatoia — crea un piano e popola gli shot leggendo una descrizione testuale.
+- propose_blocking_for_scene(scene_id?): propone un'intera disposizione di blocking (attori + camere) come ghost-pins sulla canvas 2D. NON scrive nulla — l'utente accetta dalla UI. Usa questo quando l'utente dice "suggerisci blocking", "proponi una disposizione", "dove metto attori e camere".
+- propose_move_actor_position(actor_position_id, x, y, reason?): propone di spostare un singolo attore. Anteprima fantasma.
+- propose_move_camera_pin(camera_pin_id, x, y, direction_deg?, reason?): propone di spostare una camera. Anteprima fantasma.
 
 WORKFLOW per "fai il Piano B":
 1. add_parallel_plan(scene_id, name: "Piano B")
@@ -1212,27 +1310,28 @@ const LAZY_READ_GUIDANCE = `\n\nLETTURA LAZY (read tools):
 Quando ti serve il testo letterale di una scena, il contenuto di un documento, le righe del budget, gli elementi del breakdown, i dettagli di un requirement di location o le strip di una giornata di ripresa, USA i tool \`read_*\` (es. read_scene, read_scene_range, read_document, read_budget_lines, read_breakdown, read_location_requirement, read_shooting_day). NON attendere che il dato compaia nel system prompt: il system prompt contiene solo metadati e indici; il dettaglio lo recuperi tu su richiesta.`;
 
 const buildProductionContextBlock = (ctx: CesareContext): string => {
-  const sceneList = ctx.scenes.length > 0
-    ? ctx.scenes
-        .slice(0, 200)
-        .map((s) => `  ${s.number}. ${s.heading}`)
-        .join("\n")
-    : "  (nessuna scena)";
+  const sceneList =
+    ctx.scenes.length > 0
+      ? ctx.scenes
+          .slice(0, 200)
+          .map((s) => `  ${s.number}. ${s.heading}`)
+          .join("\n")
+      : "  (nessuna scena)";
 
   const truncationNote =
     ctx.scenes.length > 200
       ? `\n  …e altre ${ctx.scenes.length - 200} scene (usa read_scene/read_scene_range per il dettaglio)`
       : "";
 
-  const characters = ctx.characters.length > 0
-    ? ctx.characters.join(", ")
-    : "(nessuno)";
+  const characters =
+    ctx.characters.length > 0 ? ctx.characters.join(", ") : "(nessuno)";
 
-  const projectDocSummary = ctx.projectDocuments.length > 0
-    ? ctx.projectDocuments
-        .map((d) => `  - ${DOCUMENT_LABELS[d.type]} (id: ${d.id})`)
-        .join("\n")
-    : "  (nessun documento)";
+  const projectDocSummary =
+    ctx.projectDocuments.length > 0
+      ? ctx.projectDocuments
+          .map((d) => `  - ${DOCUMENT_LABELS[d.type]} (id: ${d.id})`)
+          .join("\n")
+      : "  (nessun documento)";
 
   return `PROGETTO: "${ctx.projectTitle}"
 
@@ -1312,7 +1411,8 @@ const formatSceneWindowHeadings = (window: SceneBodyRow[]): string => {
   if (window.length === 0) return "";
   const lines = window.map((s) => {
     const label = s.isCurrent ? "→ SCENA CORRENTE" : "  ";
-    const chars = s.characterNames.length > 0 ? ` [${s.characterNames.join(", ")}]` : "";
+    const chars =
+      s.characterNames.length > 0 ? ` [${s.characterNames.join(", ")}]` : "";
     return `${label} Sc.${s.number} ${s.heading}${chars}`;
   });
   return `\nFINESTRA SCENE (solo heading — usa read_scene/read_scene_range per il corpo):\n${lines.join("\n")}`;
@@ -1373,9 +1473,13 @@ const MOCK_RESPONSES: Record<string, string> = {
     "Ho analizzato i tuoi candidati. Il secondo sembra più adatto al tono del film — spazio neutro che lascia parlare i personaggi. Il primo rischia di distrarre. Ti suggerisco di visitarlo in una giornata feriale per valutare rumori e luce naturale.",
 };
 
-const mockResponse = (pageContext: PageContext): ResultAsync<string, CesareError> =>
+const mockResponse = (
+  pageContext: PageContext,
+): ResultAsync<string, CesareError> =>
   ResultAsync.fromSafePromise(
-    Promise.resolve(MOCK_RESPONSES[pageContext.page] ?? MOCK_RESPONSES["default"]!),
+    Promise.resolve(
+      MOCK_RESPONSES[pageContext.page] ?? MOCK_RESPONSES["default"]!,
+    ),
   );
 
 // ─── Anthropic streaming call ─────────────────────────────────────────────────
@@ -1482,13 +1586,24 @@ const callCesareWithTools = (
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
-    (e) => new CesareError(`Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
   ).andThen((client) => {
     const messages = [
       ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
       { role: "user" as const, content: message },
     ];
-    return runToolLoop(client, systemPrompt, messages, db, projectId, model, requirementId ?? null);
+    return runToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      db,
+      projectId,
+      model,
+      requirementId ?? null,
+    );
   });
 
 const callCesareWithDocumentTools = (
@@ -1499,6 +1614,7 @@ const callCesareWithDocumentTools = (
   projectId: string,
   docContext: DocumentContext,
   model: string,
+  userIdFallback: string | null,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1519,6 +1635,7 @@ const callCesareWithDocumentTools = (
       projectId,
       model,
       docContext,
+      userIdFallback,
     );
   });
 
@@ -1670,7 +1787,7 @@ const AGENTIC_PAGES = new Set<string>([
 const handleAskCesare = (
   data: CesareInput,
   db: Db,
-  _access: ProjectAccess,
+  access: ProjectAccess,
 ): ResultAsync<string, CesareError> => {
   if (
     process.env["MOCK_AI"] === "true" &&
@@ -1687,92 +1804,99 @@ const handleAskCesare = (
   const model = tierToModel(tier);
 
   if (process.env["CESARE_DEBUG"] === "true") {
-    // eslint-disable-next-line no-console
-    console.log(
+    console.warn(
       `[cesare] tier=${tier} model=${model} page=${data.pageContext.page} convLen=${data.conversationHistory.length} msg="${data.message.slice(0, 60)}"`,
     );
   }
 
-  return assembleContext(db, data.projectId, data.pageContext).andThen((ctx) => {
-    const activeSceneIdForPrompt =
-      ctx.currentScene?.id ?? data.pageContext.sceneId ?? null;
-    const systemPrompt = buildSystemPrompt(
-      ctx,
-      data.pageContext.page,
-      data.pageContext.shootingDayNumber ?? null,
-      activeSceneIdForPrompt,
-    );
-    if (data.pageContext.page === "locations") {
-      return callCesareWithTools(
-        systemPrompt,
-        data.conversationHistory,
-        data.message,
-        db,
-        data.projectId,
-        data.pageContext.requirementId,
-        model,
-      );
-    }
-    if (data.pageContext.page === "breakdown") {
-      return callCesareWithBreakdownTools(
-        systemPrompt,
-        data.conversationHistory,
-        data.message,
-        db,
-        data.projectId,
-        model,
-      );
-    }
-    if (data.pageContext.page === "schedule") {
-      return callCesareWithScheduleTools(
-        systemPrompt,
-        data.conversationHistory,
-        data.message,
-        db,
-        data.projectId,
+  return assembleContext(db, data.projectId, data.pageContext).andThen(
+    (ctx) => {
+      const activeSceneIdForPrompt =
+        ctx.currentScene?.id ?? data.pageContext.sceneId ?? null;
+      const systemPrompt = buildSystemPrompt(
+        ctx,
+        data.pageContext.page,
         data.pageContext.shootingDayNumber ?? null,
-        model,
-      );
-    }
-    if (data.pageContext.page === "budget") {
-      return callCesareWithBudgetTools(
-        systemPrompt,
-        data.conversationHistory,
-        data.message,
-        db,
-        data.projectId,
-        model,
-      );
-    }
-    if (data.pageContext.page === "shooting-plan") {
-      return callCesareWithShootingPlanTools(
-        systemPrompt,
-        data.conversationHistory,
-        data.message,
-        db,
-        data.projectId,
         activeSceneIdForPrompt,
-        model,
       );
-    }
-    if (isDocumentPage(data.pageContext.page) && ctx.activeDocument) {
-      const docContext: DocumentContext = {
-        documentId: ctx.activeDocument.id,
-        documentType: ctx.activeDocument.type,
-        content: ctx.activeDocument.content,
-      };
-      return callCesareWithDocumentTools(
+      if (data.pageContext.page === "locations") {
+        return callCesareWithTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
+          data.pageContext.requirementId,
+          model,
+        );
+      }
+      if (data.pageContext.page === "breakdown") {
+        return callCesareWithBreakdownTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
+          model,
+        );
+      }
+      if (data.pageContext.page === "schedule") {
+        return callCesareWithScheduleTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
+          data.pageContext.shootingDayNumber ?? null,
+          model,
+        );
+      }
+      if (data.pageContext.page === "budget") {
+        return callCesareWithBudgetTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
+          model,
+        );
+      }
+      if (data.pageContext.page === "shooting-plan") {
+        return callCesareWithShootingPlanTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
+          activeSceneIdForPrompt,
+          model,
+        );
+      }
+      if (isDocumentPage(data.pageContext.page) && ctx.activeDocument) {
+        const docContext: DocumentContext = {
+          documentId: ctx.activeDocument.id,
+          documentType: ctx.activeDocument.type,
+          content: ctx.activeDocument.content,
+        };
+        return callCesareWithDocumentTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
+          docContext,
+          model,
+          access.user.id,
+        );
+      }
+      return callCesare(
         systemPrompt,
         data.conversationHistory,
         data.message,
-        db,
-        data.projectId,
-        docContext,
         model,
       );
-    }
-    return callCesare(systemPrompt, data.conversationHistory, data.message, model);
-  });
+    },
+  );
 };
 
 // ─── Server function ──────────────────────────────────────────────────────────

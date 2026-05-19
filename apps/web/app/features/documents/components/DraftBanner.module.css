@@ -1,0 +1,117 @@
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--ds-surface-2);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-3);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-weight: var(--weight-bold);
+  color: var(--ds-text);
+  font-size: var(--text-sm);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--ds-text-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--ds-surface);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--ds-text);
+  font-weight: var(--weight-medium);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  max-block-size: 50vh;
+  overflow: auto;
+  border-block-start: var(--border);
+  padding-block-start: var(--space-2);
+}
+
+.diffSide {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--ds-surface-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ds-text);
+  overflow-x: auto;
+}
+
+.lineEqual {
+  color: var(--ds-text-2);
+}
+
+.lineInsert {
+  color: var(--ds-success, var(--ds-text));
+  background: color-mix(
+    in srgb,
+    var(--ds-success, currentColor) 12%,
+    transparent
+  );
+}
+
+.lineDelete {
+  color: var(--ds-danger, var(--ds-text));
+  background: color-mix(
+    in srgb,
+    var(--ds-danger, currentColor) 12%,
+    transparent
+  );
+}
+
+.linePlaceholder {
+  color: transparent;
+}

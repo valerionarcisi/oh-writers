@@ -16,6 +16,7 @@ import {
   LOGLINE_MAX,
 } from "../documents.schema";
 import { ExportPdfModal } from "./ExportPdfModal";
+import { DraftBanner } from "./DraftBanner";
 import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
@@ -55,7 +56,8 @@ interface NarrativeEditorProps {
 }
 
 const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
-  [DocumentTypes.LOGLINE]: "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",
+  [DocumentTypes.LOGLINE]:
+    "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",
   [DocumentTypes.SOGGETTO]: "Inizia il tuo soggetto qui…",
   [DocumentTypes.SYNOPSIS]: "Inizia la tua sinossi qui…",
   [DocumentTypes.OUTLINE]: "",
@@ -228,9 +230,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const versionMenuItems = [
     ...docVersions.map((v, idx) => ({
       id: `version-${v.id}`,
-      label: v.id === document.currentVersionId ? `● ${v.label ?? `Versione ${idx + 1}`}` : (v.label ?? `Versione ${idx + 1}`),
+      label:
+        v.id === document.currentVersionId
+          ? `● ${v.label ?? `Versione ${idx + 1}`}`
+          : (v.label ?? `Versione ${idx + 1}`),
       onSelect: openVersionsDrawer,
-      tone: v.id === document.currentVersionId ? ("default" as const) : ("muted" as const),
+      tone:
+        v.id === document.currentVersionId
+          ? ("default" as const)
+          : ("muted" as const),
     })),
     {
       id: "open-drawer",
@@ -396,6 +404,16 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     </div>
   ) : null;
 
+  const draftBanner = (
+    <DraftBanner
+      documentId={document.id}
+      projectId={document.projectId}
+      docType={type}
+      currentContent={content}
+      canEdit={document.canEdit}
+    />
+  );
+
   // The Logline route (if ever wired directly) doesn't get the narrative
   // shell — the logline lives in the viewbar pill on the other 4 routes.
   if (isLogline) {
@@ -403,7 +421,10 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       <div className={styles.page}>
         {readOnlyBadge}
         <div className={styles.editorArea}>
-          <div className={styles.editorMain}>{editorBody}</div>
+          <div className={styles.editorMain}>
+            {draftBanner}
+            {editorBody}
+          </div>
         </div>
         {isExportModalOpen && (
           <ExportPdfModal
@@ -437,7 +458,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       content={plainContent}
     />
   );
-  const leftAside = isTreatment ? <TreatmentToc content={content} /> : undefined;
+  const leftAside = isTreatment ? (
+    <TreatmentToc content={content} />
+  ) : undefined;
 
   return (
     <div className={styles.page}>
@@ -454,6 +477,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         leftAside={leftAside}
         rightAside={rightAside}
       >
+        {draftBanner}
         {editorBody}
       </NarrativeDocsShell>
       {isExportModalOpen && (

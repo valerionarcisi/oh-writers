@@ -14,25 +14,25 @@ The panel is a **right-side drawer**, ~380px wide, that slides in alongside the 
 
 ### The four primary use cases
 
-| # | Question (Italian, as a filmmaker would ask it) | Domains crossed |
-|---|---|---|
-| 1 | "Questa scena è fattibile domani?" | Breakdown + Schedule + Budget |
-| 2 | "Suggerisci come riscrivere questa scena per ridurre i costi" | Screenplay + Breakdown + Budget |
-| 3 | "Aiutami a scrivere il dialogo di questa scena" | Screenplay (character voice from full script) |
-| 4 | "Ottimizza lo schedule per ridurre i giorni di ripresa" | Breakdown + Schedule + Budget |
+| #   | Question (Italian, as a filmmaker would ask it)               | Domains crossed                               |
+| --- | ------------------------------------------------------------- | --------------------------------------------- |
+| 1   | "Questa scena è fattibile domani?"                            | Breakdown + Schedule + Budget                 |
+| 2   | "Suggerisci come riscrivere questa scena per ridurre i costi" | Screenplay + Breakdown + Budget               |
+| 3   | "Aiutami a scrivere il dialogo di questa scena"               | Screenplay (character voice from full script) |
+| 4   | "Ottimizza lo schedule per ridurre i giorni di ripresa"       | Breakdown + Schedule + Budget                 |
 
 ---
 
 ## 2. Relationship to Spec 17
 
-| Dimension | Spec 17 (inline markers) | Spec 29 (chat drawer) |
-|---|---|---|
-| UX paradigm | Liquid — anchored to DOM elements | Drawer — persistent right panel |
-| Trigger | "✦ Chiedi a Cesare" toolbar button per editor | Floating "C" button, `Cmd+Shift+A`, text selection context menu |
-| Scope | One document at a time (logline / outline / screenplay) | Full production graph |
-| Interaction | Read-only analysis → annotated markers → executable actions | Free-form chat with streaming responses |
-| Output | Structured `CesareReport` (findings + anchors) | Conversational text (markdown, with optional action chips) |
-| Session memory | None (analysis is stateless per run) | In-memory per session (open question: persist across sessions?) |
+| Dimension      | Spec 17 (inline markers)                                    | Spec 29 (chat drawer)                                           |
+| -------------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
+| UX paradigm    | Liquid — anchored to DOM elements                           | Drawer — persistent right panel                                 |
+| Trigger        | "✦ Chiedi a Cesare" toolbar button per editor               | Floating "C" button, `Cmd+Shift+A`, text selection context menu |
+| Scope          | One document at a time (logline / outline / screenplay)     | Full production graph                                           |
+| Interaction    | Read-only analysis → annotated markers → executable actions | Free-form chat with streaming responses                         |
+| Output         | Structured `CesareReport` (findings + anchors)              | Conversational text (markdown, with optional action chips)      |
+| Session memory | None (analysis is stateless per run)                        | In-memory per session (open question: persist across sessions?) |
 
 Both modes share the `✦` visual signature and the `CesareContext` assembler on the server. The chat drawer can reference findings from the marker mode ("I see Cesare flagged scene 7 — tell me more") but does not render inline markers.
 
@@ -127,12 +127,12 @@ Clicking it opens the chat drawer with the selected text pre-loaded as context a
 
 Chips show what data Cesare has loaded into the current context payload. Each chip is a pill button that expands inline to show a summary of the loaded data (e.g. "📄 Sceneggiatura: 87 scene, 12 personaggi"). They are informational, not interactive beyond the expand toggle.
 
-| Chip | Present when | Expand summary |
-|---|---|---|
-| `📄 Sceneggiatura` | A screenplay is open in the project | N scenes, M characters |
+| Chip                | Present when                                                             | Expand summary                       |
+| ------------------- | ------------------------------------------------------------------------ | ------------------------------------ |
+| `📄 Sceneggiatura`  | A screenplay is open in the project                                      | N scenes, M characters               |
 | `🎬 Breakdown sc.N` | User is on the breakdown page or screenplay editor with a scene selected | K elements (cast, props, locations…) |
-| `💰 Budget` | Project has a budget defined | Totale €X — residuo €Y |
-| `📅 Schedule` | Project has a schedule with at least one shooting day | N giorni, prossimo: {date} |
+| `💰 Budget`         | Project has a budget defined                                             | Totale €X — residuo €Y               |
+| `📅 Schedule`       | Project has a schedule with at least one shooting day                    | N giorni, prossimo: {date}           |
 
 Missing context shows a greyed-out chip: `[📅 Schedule —]` with tooltip "Schedule non ancora definito per questo progetto".
 
@@ -156,12 +156,12 @@ Four chips above the input. Single tap pre-fills the textarea. Double-tap (or ta
 
 Full expanded question injected into the textarea on tap:
 
-| Chip | Full question injected |
-|---|---|
-| Fattibile domani? | `Questa scena è fattibile nella giornata di ripresa di domani? Considera cast disponibile, location prenotata e budget residuo per la categoria.` |
-| Riduci i costi | `Suggerisci come riscrivere questa scena per ridurre i costi di produzione, mantenendo l'intento narrativo.` |
-| Scrivi il dialogo | `Aiutami a scrivere il dialogo di questa scena. Usa la voce dei personaggi come emerge dal resto della sceneggiatura.` |
-| Ottimizza schedule | `Ottimizza lo schedule per ridurre il numero totale di giorni di ripresa, considerando le disponibilità degli attori e le location prenotate.` |
+| Chip               | Full question injected                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fattibile domani?  | `Questa scena è fattibile nella giornata di ripresa di domani? Considera cast disponibile, location prenotata e budget residuo per la categoria.` |
+| Riduci i costi     | `Suggerisci come riscrivere questa scena per ridurre i costi di produzione, mantenendo l'intento narrativo.`                                      |
+| Scrivi il dialogo  | `Aiutami a scrivere il dialogo di questa scena. Usa la voce dei personaggi come emerge dal resto della sceneggiatura.`                            |
+| Ottimizza schedule | `Ottimizza lo schedule per ridurre il numero totale di giorni di ripresa, considerando le disponibilità degli attori e le location prenotate.`    |
 
 ### 4.5 Input area
 
@@ -390,52 +390,52 @@ interface CesareContext {
     id: string;
     number: number;
     heading: string;
-    content: string;         // full Fountain text of the scene
-    characters: string[];    // characters appearing in this scene
-  } | null;                  // null when no specific scene is in scope
+    content: string; // full Fountain text of the scene
+    characters: string[]; // characters appearing in this scene
+  } | null; // null when no specific scene is in scope
 
   screenplay: {
     title: string;
     totalScenes: number;
     characterVoices: Record<
       string,
-      string[]               // character name → their last 20 dialogue lines
+      string[] // character name → their last 20 dialogue lines
     >;
   };
 
   breakdown: {
-    sceneElements: BreakdownElement[];  // elements for the current scene
+    sceneElements: BreakdownElement[]; // elements for the current scene
     categoryBudgets: Record<
-      string,                           // category key (e.g. "cast", "props")
-      { allocated: number; residual: number }  // in cents
+      string, // category key (e.g. "cast", "props")
+      { allocated: number; residual: number } // in cents
     >;
-  } | null;                             // null when no breakdown data exists
+  } | null; // null when no breakdown data exists
 
   schedule: {
-    shootingDays: ShootingDay[];        // all scheduled shooting days
+    shootingDays: ShootingDay[]; // all scheduled shooting days
     actorAvailability: Record<
-      string,                           // actor name / element id
-      string[]                          // ISO dates when unavailable
+      string, // actor name / element id
+      string[] // ISO dates when unavailable
     >;
     locationBookings: Record<
-      string,                           // location id
-      string[]                          // ISO dates when booked
+      string, // location id
+      string[] // ISO dates when booked
     >;
-  } | null;                             // null when no schedule exists
+  } | null; // null when no schedule exists
 }
 ```
 
 ### Context assembly rules
 
-| User is on… | `scene` | `breakdown` | `schedule` |
-|---|---|---|---|
-| Screenplay editor, scene selected | Full scene data | Elements for that scene, if breakdown exists | Full schedule, if defined |
-| Screenplay editor, no scene selected | `null` | `null` (no scene scope) | Full schedule, if defined |
-| Breakdown page, scene selected | Scene heading + characters | Elements for that scene | Full schedule, if defined |
-| Breakdown page, project view | `null` | All elements aggregated | Full schedule, if defined |
-| Budget page | `null` | All elements (for budget context) | Full schedule, if defined |
-| Schedule page | `null` | All elements (for scheduling context) | Full schedule |
-| Any other page | `null` | `null` | Full schedule, if defined |
+| User is on…                          | `scene`                    | `breakdown`                                  | `schedule`                |
+| ------------------------------------ | -------------------------- | -------------------------------------------- | ------------------------- |
+| Screenplay editor, scene selected    | Full scene data            | Elements for that scene, if breakdown exists | Full schedule, if defined |
+| Screenplay editor, no scene selected | `null`                     | `null` (no scene scope)                      | Full schedule, if defined |
+| Breakdown page, scene selected       | Scene heading + characters | Elements for that scene                      | Full schedule, if defined |
+| Breakdown page, project view         | `null`                     | All elements aggregated                      | Full schedule, if defined |
+| Budget page                          | `null`                     | All elements (for budget context)            | Full schedule, if defined |
+| Schedule page                        | `null`                     | All elements (for scheduling context)        | Full schedule             |
+| Any other page                       | `null`                     | `null`                                       | Full schedule, if defined |
 
 The `screenplay.characterVoices` field is always populated when a screenplay exists — it is the key that enables voice-aware dialogue writing regardless of which page the user is on.
 
@@ -455,7 +455,7 @@ export const streamCesareMessage = createServerFn({ method: "POST" })
     z.object({
       projectId: z.string().uuid(),
       sceneId: z.string().uuid().nullable(),
-      messages: z.array(MessageSchema),   // conversation history (last N turns)
+      messages: z.array(MessageSchema), // conversation history (last N turns)
     }),
   )
   .handler(async ({ data }) => {
@@ -474,7 +474,10 @@ The `useCesareChat` hook opens the stream via `fetch` and consumes it as a `Read
 
 ```typescript
 // Pseudocode — actual implementation uses neverthrow ResultAsync
-const response = await fetch(cesareChatEndpoint, { method: "POST", body: payload });
+const response = await fetch(cesareChatEndpoint, {
+  method: "POST",
+  body: payload,
+});
 const reader = response.body.getReader();
 const decoder = new TextDecoder();
 
@@ -542,6 +545,7 @@ The context assembler (`cesare-context-assembler.ts`) reuses the same DB query p
 ### Mock mode
 
 When `MOCK_AI=true`:
+
 - `streamCesareMessage` returns a fixture response from `apps/web/mocks/cesare-chat-responses.ts`
 - The fixture response streams character by character with a 15ms delay to simulate streaming
 - One fixture per use case (feasibility, cost reduction, dialogue writing, schedule optimization)
@@ -612,8 +616,13 @@ The streaming ellipsis:
 
 ```css
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.2; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
 }
 
 .streamingCursor {
@@ -622,7 +631,9 @@ The streaming ellipsis:
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .streamingCursor { animation: none; }
+  .streamingCursor {
+    animation: none;
+  }
 }
 ```
 
@@ -662,20 +673,20 @@ These questions are intentionally left unresolved. They require product and data
 
 Test file: `tests/cesare/cesare-chat.spec.ts`
 
-| Tag | Scenario |
-|---|---|
-| OHW-340 | Floating `✦C` button visible on all project pages |
-| OHW-341 | `Cmd+Shift+A` opens and closes the panel |
-| OHW-342 | Panel opens with empty state message when no conversation exists |
+| Tag     | Scenario                                                                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------- |
+| OHW-340 | Floating `✦C` button visible on all project pages                                                              |
+| OHW-341 | `Cmd+Shift+A` opens and closes the panel                                                                       |
+| OHW-342 | Panel opens with empty state message when no conversation exists                                               |
 | OHW-343 | Context chips reflect the current page (screenplay page → 📄 chip active, 🎬 chip present if breakdown exists) |
-| OHW-344 | Tapping a quick prompt chip pre-fills the textarea with the full question |
-| OHW-345 | Tapping a quick prompt chip twice sends the message immediately |
-| OHW-346 | Sending a message displays user bubble right-aligned, then Cesare streaming bubble |
-| OHW-347 | Stop button (⬛) aborts streaming mid-response |
-| OHW-348 | Conversation history persists when user navigates from screenplay to breakdown page |
-| OHW-349 | Context chip for 💰 Budget shows greyed-out state when project has no budget |
-| OHW-350 | Expanding a context chip shows the correct summary (scene count, character count, etc.) |
-| OHW-351 | Text selection in screenplay editor → context menu → "Chiedi a Cesare" opens panel with scene pre-context |
+| OHW-344 | Tapping a quick prompt chip pre-fills the textarea with the full question                                      |
+| OHW-345 | Tapping a quick prompt chip twice sends the message immediately                                                |
+| OHW-346 | Sending a message displays user bubble right-aligned, then Cesare streaming bubble                             |
+| OHW-347 | Stop button (⬛) aborts streaming mid-response                                                                 |
+| OHW-348 | Conversation history persists when user navigates from screenplay to breakdown page                            |
+| OHW-349 | Context chip for 💰 Budget shows greyed-out state when project has no budget                                   |
+| OHW-350 | Expanding a context chip shows the correct summary (scene count, character count, etc.)                        |
+| OHW-351 | Text selection in screenplay editor → context menu → "Chiedi a Cesare" opens panel with scene pre-context      |
 
 All tests run with `MOCK_AI=true`.
 
@@ -733,3 +744,46 @@ All Spec 17 files remain unchanged. This spec adds a new surface to Cesare; it d
 ```
 [OHW] feat(cesare): production-aware chat panel (spec 29)
 ```
+
+---
+
+## 15. Document auto-generation (propose/accept)
+
+Cesare can generate four narrative documents end-to-end via dedicated tools that emit DRAFT versions instead of overwriting the active text. The user reviews each draft in a banner above the editor and chooses to promote or discard it.
+
+### Tools
+
+| Tool                               | Source                     | Target document                   | Required input         |
+| ---------------------------------- | -------------------------- | --------------------------------- | ---------------------- |
+| `propose_logline_from_screenplay`  | Full screenplay            | `logline` (LOGLINE_MAX = 200)     | `instruction?`         |
+| `propose_synopsis_from_screenplay` | Full screenplay            | `synopsis` (~400 words)           | `instruction?`         |
+| `propose_soggetto_v2`              | Current `soggetto` content | `soggetto` (variant)              | `instruction`, `label` |
+| `propose_scaletta_from_soggetto`   | Current `soggetto` content | `outline` (`OutlineContent` JSON) | `target_scene_count?`  |
+
+Each tool loads the source content from PostgreSQL, calls Sonnet 4.6 with a specialised Italian system prompt, inserts a row in `document_versions` with `is_draft=true` and a label generated by `buildDraftLabel(docType, hint)`, and returns `{ ok: true, version_id, document_type, label, toast }`.
+
+When `MOCK_AI=true` or `ANTHROPIC_API_KEY` is missing, the Sonnet call is replaced by canned `MOCK_OUTPUTS` so Vitest + mock-ui Playwright run deterministically.
+
+### Schema
+
+`document_versions.is_draft boolean NOT NULL DEFAULT false` — migration `0028_draft_versions.sql` (shared with `screenplay_versions`).
+
+### UI — DraftBanner
+
+`apps/web/app/features/documents/components/DraftBanner.tsx` is mounted at the top of the editor body inside `NarrativeEditor`. It queries `["document-drafts", documentId]` and renders one row per draft with:
+
+- **Confronta** toggles a side-by-side line diff (`lib/diff-document.ts`, LCS-based).
+- **Promuovi a attiva** atomically sets `is_draft=false`, sets `documents.currentVersionId = draft.id`, and mirrors `documents.content`.
+- **Scarta** deletes the draft row.
+
+All three actions go through `react-aria` buttons from `@oh-writers/ui`.
+
+### Server fns
+
+`apps/web/app/features/documents/server/drafts.server.ts` exposes `getDocumentDrafts`, `promoteDocumentDraft`, `discardDocumentDraft`. All three enforce `assertCanEdit` / `assertCanRead` against the project's membership.
+
+### Tests
+
+- **Vitest**: `apps/web/app/features/predictions/cesare-document-tools.test.ts` (19 cases), `apps/web/app/features/documents/lib/diff-document.test.ts` (5 cases).
+- **Mock E2E**: `tests/cesare-agentic-documents-gen.spec.ts` — `[OHW-575]` logline, `[OHW-576]` synopsis, `[OHW-577]` soggetto v2, `[OHW-578]` scaletta.
+- **Vernissage**: `vernissage/_stories/documents-auto-gen.story.json`, `vernissage/documents-auto-gen.md`.

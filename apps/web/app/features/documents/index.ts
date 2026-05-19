@@ -1,4 +1,16 @@
 export { NarrativeEditor } from "./components/NarrativeEditor";
+export { DraftBanner } from "./components/DraftBanner";
+export {
+  useDocumentDrafts,
+  usePromoteDocumentDraft,
+  useDiscardDocumentDraft,
+  documentDraftsQueryOptions,
+  getDocumentDrafts,
+} from "./hooks/useDocumentDrafts";
+export {
+  promoteDocumentDraft,
+  discardDocumentDraft,
+} from "./server/drafts.server";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
 export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
