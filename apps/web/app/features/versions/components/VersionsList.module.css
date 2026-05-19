@@ -11,6 +11,14 @@
   padding: var(--ds-space-3) var(--ds-space-5);
   border-block-end: 1px solid var(--ds-line);
   flex-shrink: 0;
+  /* Wrap on narrow drawers (≤ ~380px) so "Confronta versioni" doesn't get
+     clipped against the right edge — happens whenever the drawer is at its
+     min-width. Buttons grow to fill the row when wrapped. */
+  flex-wrap: wrap;
+}
+
+.toolbar > button {
+  flex-shrink: 0;
 }
 
 .createForm {

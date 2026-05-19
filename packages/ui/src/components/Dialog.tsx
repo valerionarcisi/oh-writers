@@ -1,5 +1,10 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { FocusScope, useDialog, useOverlay, usePreventScroll } from "react-aria";
+import {
+  FocusScope,
+  useDialog,
+  useOverlay,
+  usePreventScroll,
+} from "react-aria";
 import styles from "./Dialog.module.css";
 
 type DialogSize = "sm" | "md" | "lg" | "xl";
@@ -25,6 +30,12 @@ interface DialogProps {
   id?: string;
   /** Optional data-testid forwarded to the underlying <dialog>. */
   "data-testid"?: string;
+  /** When false, the dialog ignores click-outside dismissal. ESC and the
+   *  explicit action buttons still close it. Useful for confirm dialogs
+   *  where react-aria's `useOverlay` listener would swallow the
+   *  Confirm/Cancel button click (it captures `mousedown` before the
+   *  button's `onClick` fires, so the dialog closes mid-action). */
+  isDismissable?: boolean;
 }
 
 export function Dialog({
@@ -38,6 +49,7 @@ export function Dialog({
   showCloseButton = false,
   id,
   "data-testid": testId,
+  isDismissable = true,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -73,7 +85,7 @@ export function Dialog({
 
   // useOverlay provides ESC dismiss and click-outside dismiss on the content element.
   const { overlayProps } = useOverlay(
-    { isOpen, onClose, isDismissable: true, isKeyboardDismissDisabled: false },
+    { isOpen, onClose, isDismissable, isKeyboardDismissDisabled: false },
     contentRef,
   );
 
@@ -90,10 +102,16 @@ export function Dialog({
       id={id}
       data-testid={testId}
       className={classes}
-      // Clicks that land directly on <dialog> (outside .content) are backdrop clicks.
-      onClick={(e) => {
-        if (e.target === dialogRef.current) onClose();
-      }}
+      // Clicks that land directly on <dialog> (outside .content) are backdrop
+      // clicks. Honoured only when `isDismissable` is on — otherwise the
+      // dialog must be closed via ESC or its explicit action buttons.
+      onClick={
+        isDismissable
+          ? (e) => {
+              if (e.target === dialogRef.current) onClose();
+            }
+          : undefined
+      }
     >
       <FocusScope contain restoreFocus autoFocus>
         <div
