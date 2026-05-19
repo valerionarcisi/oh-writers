@@ -125,6 +125,10 @@
   border-inline-start: 3px solid transparent;
   cursor: pointer;
   transition: background var(--ds-duration-1, 150ms) var(--ds-ease);
+  /* Prevent the label text from getting selected when the user clicks the row
+     to activate the version — selection blocks the click handler from firing
+     a clean activation. Inner inputs (rename) keep `user-select: text`. */
+  user-select: none;
 
   &:last-child {
     border-block-end: none;
@@ -133,6 +137,10 @@
   &:hover {
     background: var(--ds-surface-alt);
   }
+}
+
+.row input {
+  user-select: text;
 }
 
 .rowActive {

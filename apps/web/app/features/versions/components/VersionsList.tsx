@@ -416,6 +416,20 @@ export function VersionsList({
                   </div>
 
                   <div className={styles.rowActions}>
+                    {!isActive && onSelect && (
+                      <button
+                        type="button"
+                        className={styles.btnPrimary}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(item);
+                        }}
+                        data-testid={`version-activate-${item.id}`}
+                        title="Imposta come versione attiva"
+                      >
+                        Attiva
+                      </button>
+                    )}
                     {canEdit && onDuplicate && (
                       <button
                         type="button"
