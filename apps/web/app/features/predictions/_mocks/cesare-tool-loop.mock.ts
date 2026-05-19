@@ -101,7 +101,8 @@ export interface MockScenario {
 export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
   // Locations — search_places + add_candidate flow
   {
-    match: /trova candidati|trova location|cerca candidat|trova una piazza|trova due bar|cerca ristorant|trova un|trova locand|trova ristorant/i,
+    match:
+      /trova candidati|trova location|cerca candidat|trova una piazza|trova due bar|cerca ristorant|trova un|trova locand|trova ristorant/i,
     turns: [
       {
         tool_uses: [
@@ -129,7 +130,8 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
 
   // Documents — expand_section
   {
-    match: /espandi la sezione|espandi atto|sviluppa la sezione|espandi sezione|espandi il secondo atto|espandi atto ii/i,
+    match:
+      /espandi la sezione|espandi atto|sviluppa la sezione|espandi sezione|espandi il secondo atto|espandi atto ii/i,
     turns: [
       {
         tool_uses: [
@@ -233,6 +235,44 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       },
     ],
   },
+
+  // Cost-foundation — read_scene lazy-RAG (OHW-561)
+  // Triggered by a question about a specific scene's dialogue. The first
+  // turn invokes the read_scene tool; the second turn cites a string from
+  // the seeded scene 1 notes so the spec can assert on it.
+  {
+    match:
+      /che dice john nella scena|cosa dice john nella scena|john nella scena 1|dialogo della scena 1/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "read_scene",
+            input: { scene_number: 1 },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Nella scena 1 John dice: \"Non avrei mai dovuto tornare in questo posto.\" È un'apertura che pesa: regret prima dell'azione.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Cost-foundation — short acknowledgement loop (OHW-562)
+  // Matches a bare "ok" so we can drive the multi-turn cached-context test
+  // without colliding with the other scenarios above. Each request returns
+  // a one-line text turn and ends.
+  {
+    match: /^\s*ok\s*$/i,
+    turns: [
+      {
+        text: "Ok, dimmi pure il prossimo passo.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
 ];
 
 // ─── Internal: placeholder substitution ───────────────────────────────────────
@@ -309,7 +349,11 @@ const lastUserText = (messages: ReadonlyArray<unknown>): string => {
 const findScenario = (text: string): MockScenario | null => {
   for (const scenario of MOCK_SCENARIOS) {
     const match = scenario.match;
-    if (match instanceof RegExp ? match.test(text) : text.toLowerCase().includes(match.toLowerCase())) {
+    if (
+      match instanceof RegExp
+        ? match.test(text)
+        : text.toLowerCase().includes(match.toLowerCase())
+    ) {
       return scenario;
     }
   }
@@ -382,7 +426,10 @@ export const createMockAnthropicClient = (): MockAnthropicMessagesClient => ({
         TURN_INDEX.delete(key);
         return {
           content: [
-            { type: "text", text: scenario.turns.at(-1)?.text ?? FALLBACK_TEXT },
+            {
+              type: "text",
+              text: scenario.turns.at(-1)?.text ?? FALLBACK_TEXT,
+            },
           ],
           stop_reason: "end_turn",
         };

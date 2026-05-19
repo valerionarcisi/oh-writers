@@ -28,6 +28,7 @@
     "test:fixtures:pdf": "tsx scripts/generate-test-pdfs.ts",
     "vernissage:walk": "tsx scripts/vernissage-walk.ts --target=test",
     "vernissage:scaffold": "tsx scripts/vernissage-scaffold.ts",
+    "cost:smoke:cesare": "tsx scripts/cost-smoke-cesare.ts",
     "prepare": "husky"
   },
   "devDependencies": {

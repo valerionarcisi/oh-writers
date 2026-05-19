@@ -1,0 +1,59 @@
+{
+  "id": "cost-foundation",
+  "title": "Cesare cost foundation — read_scene lazy-RAG walk",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/breakdown",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"breakdown-page-v2\"]",
+      "timeout_ms": 20000
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"scene-cost-panel\"]",
+      "timeout_ms": 20000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-breakdown-loaded"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: /^Cesare(\\s—.*)?$/ })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[placeholder=\"Chiedi a Cesare…\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-cesare-open"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Che dice John nella scena 1?"
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[role=\"log\"][aria-label=\"Conversazione con Cesare\"] p",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "03-read-scene-reply"
+    },
+    {
+      "kind": "expect_text",
+      "selector": "[role=\"log\"][aria-label=\"Conversazione con Cesare\"]",
+      "text": "Non avrei mai dovuto tornare"
+    }
+  ]
+}
