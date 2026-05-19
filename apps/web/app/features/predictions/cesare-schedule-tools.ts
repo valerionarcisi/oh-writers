@@ -5,6 +5,8 @@ import {
   shootingDays,
   strips,
   scenes,
+  locationRequirements,
+  locationRequirementScenes,
 } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { CesareError } from "./cesare.server";
@@ -119,6 +121,11 @@ export const CESARE_SCHEDULE_TOOLS = [
           description:
             "Strategia di ottimizzazione, es. 'minimize_location_changes', 'concentrate_night_exteriors', 'balance_workload'",
         },
+        respect_location_confirmed: {
+          type: "boolean",
+          description:
+            "Se true, penalizza il riassegnare scene a giornate la cui location non è ancora confermata (status diverso da 'confirmed'/'locked'). Default false.",
+        },
       },
       required: [],
     },
@@ -147,9 +154,12 @@ const findScheduleForProject = (
         `findScheduleForProject failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
   ).andThen((row) => {
-    if (!row) return errAsync(new CesareError("Schedule non trovato per il progetto"));
+    if (!row)
+      return errAsync(new CesareError("Schedule non trovato per il progetto"));
     if (row.status === "locked")
-      return errAsync(new CesareError("Schedule bloccato — sbloccarlo prima di modificarlo"));
+      return errAsync(
+        new CesareError("Schedule bloccato — sbloccarlo prima di modificarlo"),
+      );
     return okAsync({ id: row.id, status: row.status as "draft" | "locked" });
   });
 
@@ -214,7 +224,9 @@ const findStripBySceneNumber = (
   ).andThen((row) =>
     row
       ? okAsync(row)
-      : errAsync(new CesareError(`Scena ${sceneNumber} non trovata nello schedule`)),
+      : errAsync(
+          new CesareError(`Scena ${sceneNumber} non trovata nello schedule`),
+        ),
   );
 
 // ─── Tool executors ───────────────────────────────────────────────────────────
@@ -228,18 +240,25 @@ const executeMoveSceneToDay = (
   input: MoveSceneToDayInput,
   db: Db,
   ctx: ScheduleToolContext,
-): ResultAsync<{ moved: true; sceneNumber: number; dayNumber: number; toastMessage: string }, CesareError> =>
+): ResultAsync<
+  { moved: true; sceneNumber: number; dayNumber: number; toastMessage: string },
+  CesareError
+> =>
   findScheduleForProject(db, ctx.projectId).andThen((schedule) =>
-    findStripBySceneNumber(db, schedule.id, input.scene_number).andThen((strip) => {
-      if (strip.isLocked) {
-        return errAsync(
-          new CesareError(
-            `Scena ${input.scene_number} è bloccata — sbloccala prima di spostarla`,
-          ),
-        );
-      }
-      return findDayByNumber(db, schedule.id, input.target_day_number).andThen(
-        (day) =>
+    findStripBySceneNumber(db, schedule.id, input.scene_number).andThen(
+      (strip) => {
+        if (strip.isLocked) {
+          return errAsync(
+            new CesareError(
+              `Scena ${input.scene_number} è bloccata — sbloccala prima di spostarla`,
+            ),
+          );
+        }
+        return findDayByNumber(
+          db,
+          schedule.id,
+          input.target_day_number,
+        ).andThen((day) =>
           ResultAsync.fromPromise(
             db.transaction(async (tx) => {
               const dayStrips = await tx
@@ -266,7 +285,9 @@ const executeMoveSceneToDay = (
                     ),
                   )
                   .orderBy(asc(strips.position));
-                const without = sourceStrips.filter((s) => s.id !== strip.stripId);
+                const without = sourceStrips.filter(
+                  (s) => s.id !== strip.stripId,
+                );
                 for (let i = 0; i < without.length; i++) {
                   await tx
                     .update(strips)
@@ -294,8 +315,9 @@ const executeMoveSceneToDay = (
             dayNumber: day.dayNumber,
             toastMessage: `Scena ${input.scene_number} spostata in Giornata ${day.dayNumber}`,
           })),
-      );
-    }),
+        );
+      },
+    ),
   );
 
 interface MergeDaysInput {
@@ -567,6 +589,7 @@ const executeGetWeatherForecast = (
 
 interface SuggestReorderInput {
   strategy?: string;
+  respect_location_confirmed?: boolean;
 }
 
 const executeSuggestReorder = (
@@ -577,6 +600,12 @@ const executeSuggestReorder = (
   {
     suggestion: ReadonlyArray<{ dayNumber: number; sceneNumbers: number[] }>;
     rationale: string;
+    locationWarnings: ReadonlyArray<{
+      dayNumber: number;
+      sceneNumber: number;
+      requirementName: string;
+      status: string;
+    }>;
   },
   CesareError
 > =>
@@ -593,6 +622,7 @@ const executeSuggestReorder = (
             stripId: strips.id,
             shootingDayId: strips.shootingDayId,
             position: strips.position,
+            sceneId: scenes.id,
             sceneNumber: scenes.number,
             location: scenes.location,
             intExt: scenes.intExt,
@@ -602,6 +632,53 @@ const executeSuggestReorder = (
           .innerJoin(scenes, eq(strips.sceneId, scenes.id))
           .where(eq(strips.scheduleId, schedule.id))
           .orderBy(asc(strips.position));
+
+        // Resolve location requirement status per scene so we can bias the
+        // suggestion away from days with unconfirmed locations.
+        const respectLocations = input.respect_location_confirmed === true;
+        const sceneIds = stripRows.map((s) => s.sceneId);
+        const locStatusByScene = new Map<
+          string,
+          {
+            requirementName: string;
+            status: string;
+          }
+        >();
+        const dayHasUnconfirmedSet = new Set<string>();
+
+        if (sceneIds.length > 0) {
+          const reqRows = await db
+            .select({
+              sceneId: locationRequirementScenes.sceneId,
+              requirementName: locationRequirements.name,
+              status: locationRequirements.status,
+            })
+            .from(locationRequirementScenes)
+            .innerJoin(
+              locationRequirements,
+              eq(
+                locationRequirements.id,
+                locationRequirementScenes.requirementId,
+              ),
+            );
+          for (const r of reqRows) {
+            if (!sceneIds.includes(r.sceneId)) continue;
+            // Keep the worst (least-confirmed) status per scene.
+            const prev = locStatusByScene.get(r.sceneId);
+            if (!prev || rankLocStatus(r.status) < rankLocStatus(prev.status)) {
+              locStatusByScene.set(r.sceneId, {
+                requirementName: r.requirementName,
+                status: r.status,
+              });
+            }
+          }
+          for (const s of stripRows) {
+            const loc = locStatusByScene.get(s.sceneId);
+            if (loc && loc.status !== "confirmed" && loc.status !== "locked") {
+              if (s.shootingDayId) dayHasUnconfirmedSet.add(s.shootingDayId);
+            }
+          }
+        }
 
         const stripsByDay = new Map<string, typeof stripRows>();
         for (const s of stripRows) {
@@ -613,7 +690,18 @@ const executeSuggestReorder = (
 
         const strategy = input.strategy ?? "minimize_location_changes";
         const suggestion = days.map((day) => {
-          const dayStrips = stripsByDay.get(day.id) ?? [];
+          let dayStrips = stripsByDay.get(day.id) ?? [];
+          // When respect_location_confirmed is on, keep scenes whose location
+          // is unconfirmed at the END of the day so the AD can absorb the risk
+          // last (cheaper to bump a later strip than a first-take).
+          if (respectLocations) {
+            dayStrips = [...dayStrips].sort((a, b) => {
+              const aPending = isUnconfirmed(locStatusByScene.get(a.sceneId));
+              const bPending = isUnconfirmed(locStatusByScene.get(b.sceneId));
+              if (aPending === bPending) return 0;
+              return aPending ? 1 : -1;
+            });
+          }
           // Sort scenes by location to minimize swaps when strategy says so.
           const sorted =
             strategy === "minimize_location_changes"
@@ -627,12 +715,38 @@ const executeSuggestReorder = (
           };
         });
 
-        const rationale =
+        const locationWarnings: Array<{
+          dayNumber: number;
+          sceneNumber: number;
+          requirementName: string;
+          status: string;
+        }> = [];
+        for (const day of days) {
+          const dayStrips = stripsByDay.get(day.id) ?? [];
+          for (const s of dayStrips) {
+            const loc = locStatusByScene.get(s.sceneId);
+            if (loc && loc.status !== "confirmed" && loc.status !== "locked") {
+              locationWarnings.push({
+                dayNumber: day.dayNumber,
+                sceneNumber: s.sceneNumber,
+                requirementName: loc.requirementName,
+                status: loc.status,
+              });
+            }
+          }
+        }
+
+        const baseRationale =
           strategy === "minimize_location_changes"
             ? "Ho raggruppato le scene per location all'interno di ciascuna giornata. Conferma per applicare la sequenza con move_scene_to_day."
             : "Suggerimento generato. Conferma per applicare uno spostamento alla volta.";
+        const warnSuffix =
+          respectLocations && locationWarnings.length > 0
+            ? ` Attenzione: ${locationWarnings.length} scena/e hanno location non ancora confermata — le ho posticipate dentro la giornata.`
+            : "";
+        const rationale = baseRationale + warnSuffix;
 
-        return { suggestion, rationale };
+        return { suggestion, rationale, locationWarnings };
       })(),
       (e) =>
         new CesareError(
@@ -640,6 +754,18 @@ const executeSuggestReorder = (
         ),
     ),
   );
+
+const rankLocStatus = (status: string): number => {
+  if (status === "locked") return 3;
+  if (status === "confirmed") return 2;
+  if (status === "scouting") return 1;
+  return 0;
+};
+
+const isUnconfirmed = (loc: { status: string } | undefined): boolean => {
+  if (!loc) return false;
+  return loc.status !== "confirmed" && loc.status !== "locked";
+};
 
 // ─── Tool block & router ──────────────────────────────────────────────────────
 
@@ -685,20 +811,14 @@ export const executeScheduleTool = (
     );
   }
   if (block.name === "lock_day") {
-    return setLockForDay(
-      block.input as LockUnlockDayInput,
-      db,
-      ctx,
-      true,
-    ).map((r) => okResult(block.id, r));
+    return setLockForDay(block.input as LockUnlockDayInput, db, ctx, true).map(
+      (r) => okResult(block.id, r),
+    );
   }
   if (block.name === "unlock_day") {
-    return setLockForDay(
-      block.input as LockUnlockDayInput,
-      db,
-      ctx,
-      false,
-    ).map((r) => okResult(block.id, r));
+    return setLockForDay(block.input as LockUnlockDayInput, db, ctx, false).map(
+      (r) => okResult(block.id, r),
+    );
   }
   if (block.name === "get_weather_forecast") {
     return executeGetWeatherForecast(block.input as WeatherInput).map((r) =>

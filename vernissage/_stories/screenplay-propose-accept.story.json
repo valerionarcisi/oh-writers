@@ -1,0 +1,75 @@
+{
+  "id": "screenplay-propose-accept",
+  "title": "Cesare propose/accept — screenplay micro/macro/rename",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/screenplay",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"prosemirror-view\"]",
+      "timeout_ms": 20000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-screenplay-loaded"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: /^Cesare(\\s—.*)?$/ })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[placeholder=\"Chiedi a Cesare…\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-cesare-open"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Rendi questa scena più tesa."
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"proposal-accept\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "03-proposal-overlay"
+    },
+    {
+      "kind": "click",
+      "ref": "locator('[data-testid=\"proposal-accept\"]').first()"
+    },
+    {
+      "kind": "screenshot",
+      "filename": "04-edit-applied"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Fammi una v2 più corta."
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"cesare-draft-banner\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "05-draft-banner"
+    }
+  ]
+}

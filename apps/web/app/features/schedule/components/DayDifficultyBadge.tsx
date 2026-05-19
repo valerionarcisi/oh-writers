@@ -5,7 +5,16 @@ interface DayDifficultyBadgeProps {
   readonly estimate: DayEstimate;
   readonly weather: WeatherFactor | null;
   readonly isWeatherLoading: boolean;
+  readonly dayNumber?: number;
 }
+
+const TONE_LABEL: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "bassa",
+  2: "medio-bassa",
+  3: "media",
+  4: "medio-alta",
+  5: "critica",
+};
 
 const DIFFICULTY_TONE: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: "low",
@@ -44,6 +53,7 @@ export function DayDifficultyBadge({
   estimate,
   weather,
   isWeatherLoading,
+  dayNumber,
 }: DayDifficultyBadgeProps) {
   const tone = DIFFICULTY_TONE[estimate.difficulty];
   const hasWeatherImpact = estimate.weatherImpactPct !== 0;
@@ -52,6 +62,11 @@ export function DayDifficultyBadge({
     ...estimate.recommendations.map((r) => `→ ${r}`),
   ];
   const tooltip = tooltipLines.length > 0 ? tooltipLines.join("\n") : "";
+  const dayLabel = dayNumber ? `giorno ${dayNumber}` : "questa giornata";
+  const probabilityLabel = hasWeatherImpact
+    ? `Riuscita stimata ${estimate.successProbabilityClear}% con tempo sereno, ${estimate.successProbabilityActual}% con il meteo previsto.`
+    : `Riuscita stimata ${estimate.successProbabilityActual}%.`;
+  const ariaLabel = `Difficoltà ${dayLabel}: ${TONE_LABEL[estimate.difficulty]}, ${estimate.difficulty} punti su 5. ${probabilityLabel}`;
 
   return (
     <div
@@ -59,6 +74,7 @@ export function DayDifficultyBadge({
       data-tone={tone}
       data-testid="day-difficulty-badge"
       title={tooltip}
+      aria-label={ariaLabel}
     >
       <div className={styles.row}>
         <span className={styles.label}>Difficoltà</span>

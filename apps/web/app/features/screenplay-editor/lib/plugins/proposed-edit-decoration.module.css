@@ -1,0 +1,117 @@
+.matchHighlight {
+  background-color: var(
+    --ds-action-soft,
+    color-mix(in srgb, var(--ds-action) 18%, transparent)
+  );
+  border-radius: var(--radius-sm, 4px);
+  padding-inline: 2px;
+  outline: 1px dashed var(--ds-action, currentColor);
+  outline-offset: 1px;
+  animation: proposalFlash 600ms ease-out;
+}
+
+@keyframes proposalFlash {
+  0% {
+    box-shadow: 0 0 0 0 var(--ds-action, currentColor);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .matchHighlight {
+    animation: none;
+  }
+}
+
+.bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  margin-inline-start: var(--space-2, 0.5rem);
+  padding: var(--space-1, 0.25rem) var(--space-2, 0.5rem);
+  background-color: var(--ds-surface-raised, var(--color-surface, #fafafa));
+  border: 1px solid var(--ds-action, currentColor);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.08));
+  font-size: var(--text-sm, 0.875rem);
+  user-select: none;
+  vertical-align: baseline;
+}
+
+.replace {
+  color: var(--ds-action, currentColor);
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+
+.reason {
+  color: var(--ds-text-muted, #6b6b6b);
+  font-size: var(--text-xs, 0.75rem);
+  font-style: italic;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+}
+
+.accept,
+.reject {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 24px;
+  block-size: 24px;
+  padding: 0 var(--space-1, 0.25rem);
+  background: transparent;
+  border: 1px solid var(--ds-border, currentColor);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.accept {
+  color: var(--ds-success, #1f7a4d);
+}
+
+.accept:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--ds-success, #1f7a4d) 12%,
+    transparent
+  );
+  border-color: var(--ds-success, #1f7a4d);
+}
+
+.reject {
+  color: var(--ds-danger, #b3261e);
+}
+
+.reject:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--ds-danger, #b3261e) 12%,
+    transparent
+  );
+  border-color: var(--ds-danger, #b3261e);
+}
+
+.accept:focus-visible,
+.reject:focus-visible {
+  outline: 2px solid var(--ds-action, currentColor);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accept,
+  .reject {
+    transition: none;
+  }
+}

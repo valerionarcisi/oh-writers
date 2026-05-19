@@ -54,7 +54,9 @@
   border-radius: var(--ds-radius-sm);
   padding: 3px var(--ds-space-2);
   cursor: pointer;
-  transition: background var(--ds-duration-1) var(--ds-ease), color var(--ds-duration-1) var(--ds-ease);
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
 
   &:hover:not(:disabled) {
     background: var(--ds-surface-alt);
@@ -114,7 +116,9 @@
   padding: var(--ds-space-1) var(--ds-space-2);
   cursor: pointer;
   margin-block-start: auto;
-  transition: border-color var(--ds-duration-1) var(--ds-ease), color var(--ds-duration-1) var(--ds-ease);
+  transition:
+    border-color var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease);
 
   &:hover:not(:disabled) {
     border-color: var(--ds-action);
@@ -123,6 +127,7 @@
 }
 
 .canvasWrapper {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;

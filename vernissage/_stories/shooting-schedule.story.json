@@ -1,0 +1,62 @@
+{
+  "id": "shooting-schedule",
+  "title": "Cesare propone blocking 2D e Schedule mostra warning location",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/shooting-plan",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "mockContext": {
+    "SCENE_ID": "00000000-0000-4000-a000-000000000050"
+  },
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "button:has-text('SC.')",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "click",
+      "ref": "button:has-text('SC.')"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "text=/ANTEPRIMA BLOCKING/",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-blocking-card"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: /^Cesare(\\s—.*)?$/ })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[placeholder=\"Chiedi a Cesare…\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Suggerisci blocking per questa scena."
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"blocking-proposal-panel\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-cesare-blocking-proposal"
+    },
+    {
+      "kind": "expect_dom",
+      "selector": "[data-testid=\"blocking-proposal-panel\"]",
+      "exists": true
+    }
+  ]
+}

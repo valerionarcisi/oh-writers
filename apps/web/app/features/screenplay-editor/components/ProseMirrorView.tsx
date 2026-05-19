@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { EditorState } from "prosemirror-state";
+import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
@@ -73,6 +73,10 @@ interface ProseMirrorViewProps {
   onReady?: (view: EditorView) => void;
   /** When true the editor is non-editable — used by the version viewer. */
   readOnly?: boolean;
+  /** Optional extra plugins appended after the core plugin chain. Used by
+   *  ScreenplayEditor to install the Cesare propose/accept decoration plugin
+   *  without coupling ProseMirrorView to the agentic layer. */
+  pluginsExtra?: Plugin[];
 }
 
 // Maps PM node type names to the ElementType the toolbar understands.
@@ -101,6 +105,7 @@ export function ProseMirrorView({
   onPageChange,
   onReady,
   readOnly = false,
+  pluginsExtra,
 }: ProseMirrorViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -161,6 +166,7 @@ export function ProseMirrorView({
         }),
         buildPaginatorPlugin(),
         buildCesareAppliedHighlightPlugin(),
+        ...(pluginsExtra ?? []),
       ],
     });
 

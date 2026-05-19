@@ -2,10 +2,51 @@ import { useEffect, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { blockingQueryOptions } from "../server/blocking.server";
 import { useBlocking } from "../hooks/useBlocking";
-import { BlockingCanvas } from "./BlockingCanvas";
+import { BlockingCanvas, type ProposedBlockingChange } from "./BlockingCanvas";
+import { BlockingProposalPanel } from "./BlockingProposalPanel";
 import { unwrapResult } from "@oh-writers/utils";
 import type { ActorPosition, CameraPin } from "@oh-writers/domain";
 import styles from "./BlockingCard.module.css";
+
+interface BlockingProposalEventDetail {
+  readonly sceneId?: string;
+  readonly proposalId?: string;
+  readonly suggestions?: ReadonlyArray<unknown>;
+}
+
+const toProposedChanges = (
+  raw: ReadonlyArray<unknown>,
+): ProposedBlockingChange[] => {
+  const out: ProposedBlockingChange[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const i = item as Record<string, unknown>;
+    if (i["kind"] === "actor" && typeof i["castId"] === "string") {
+      out.push({
+        kind: "actor",
+        castId: i["castId"] as string,
+        label: typeof i["label"] === "string" ? (i["label"] as string) : "",
+        x: typeof i["x"] === "number" ? (i["x"] as number) : 0,
+        y: typeof i["y"] === "number" ? (i["y"] as number) : 0,
+      });
+    } else if (i["kind"] === "camera" && typeof i["shotId"] === "string") {
+      out.push({
+        kind: "camera",
+        shotId: i["shotId"] as string,
+        label: typeof i["label"] === "string" ? (i["label"] as string) : "",
+        x: typeof i["x"] === "number" ? (i["x"] as number) : 0,
+        y: typeof i["y"] === "number" ? (i["y"] as number) : 0,
+        coneDirection:
+          typeof i["coneDirection"] === "number"
+            ? (i["coneDirection"] as number)
+            : 180,
+        coneAngle:
+          typeof i["coneAngle"] === "number" ? (i["coneAngle"] as number) : 45,
+      });
+    }
+  }
+  return out;
+};
 
 interface BlockingCardProps {
   sceneId: string;
@@ -30,11 +71,111 @@ export function BlockingCard({
 
   const [localActors, setLocalActors] = useState(blocking.actorPositions);
   const [localCameras, setLocalCameras] = useState(blocking.cameraPins);
+  const [proposals, setProposals] = useState<
+    ReadonlyArray<ProposedBlockingChange>
+  >([]);
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     setLocalActors(blocking.actorPositions);
     setLocalCameras(blocking.cameraPins);
   }, [blocking.actorPositions, blocking.cameraPins]);
+
+  useEffect(() => {
+    const onProposal = (event: Event) => {
+      const detail = (event as CustomEvent<BlockingProposalEventDetail>).detail;
+      if (!detail) return;
+      if (detail.sceneId && detail.sceneId !== sceneId) return;
+      if (!Array.isArray(detail.suggestions)) return;
+      setProposals(toProposedChanges(detail.suggestions));
+    };
+    window.addEventListener("ohw:cesare:blocking-proposal", onProposal);
+    return () =>
+      window.removeEventListener("ohw:cesare:blocking-proposal", onProposal);
+  }, [sceneId]);
+
+  // Internal helper that does NOT flip isApplying — used by handleAcceptAll
+  // so the spinner stays on for the whole batch.
+  const handleAcceptOneInternal = async (item: ProposedBlockingChange) => {
+    if (item.kind === "actor") {
+      const exists = localActors.some((a) => a.castId === item.castId);
+      const newActor: ActorPosition = {
+        castId: item.castId,
+        label: item.label,
+        x: item.x,
+        y: item.y,
+        arrow: null,
+      };
+      const final: ActorPosition[] = exists
+        ? localActors.map((a) =>
+            a.castId === item.castId ? { ...a, x: item.x, y: item.y } : a,
+          )
+        : [...localActors, newActor];
+      setLocalActors(final);
+      await moveActor.mutateAsync({
+        sceneBlockingId: blocking.sceneBlockingId,
+        positions: final,
+      });
+    } else {
+      const existingPin = localCameras.find((c) => c.shotId === item.shotId);
+      const merged: CameraPin = existingPin
+        ? {
+            ...existingPin,
+            x: item.x,
+            y: item.y,
+            coneDirection: item.coneDirection,
+            coneAngle: item.coneAngle,
+          }
+        : {
+            shotId: item.shotId,
+            label: item.label,
+            x: item.x,
+            y: item.y,
+            coneDirection: item.coneDirection,
+            coneAngle: item.coneAngle,
+            movement: null,
+          };
+      const updated: CameraPin[] = existingPin
+        ? localCameras.map((c) => (c.shotId === item.shotId ? merged : c))
+        : [...localCameras, merged];
+      setLocalCameras(updated);
+      await moveCamera.mutateAsync({
+        planSceneCamerasId: blocking.planSceneCamerasId,
+        pin: merged,
+      });
+    }
+  };
+
+  const handleAcceptOne = async (item: ProposedBlockingChange) => {
+    setIsApplying(true);
+    try {
+      await handleAcceptOneInternal(item);
+      setProposals((prev) => prev.filter((p) => p !== item));
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleAcceptAll = async () => {
+    setIsApplying(true);
+    try {
+      for (const p of proposals) {
+        // eslint-disable-next-line no-await-in-loop
+        await handleAcceptOneInternal(p);
+      }
+      setProposals([]);
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleRejectOne = (item: ProposedBlockingChange) => {
+    setProposals((prev) => prev.filter((p) => p !== item));
+  };
+
+  const handleRejectAll = () => {
+    setProposals([]);
+  };
 
   const handleActorMove = (castId: string, x: number, y: number) => {
     const updated: ActorPosition[] = localActors.map((a) =>
@@ -135,19 +276,42 @@ export function BlockingCard({
             widthCm={blocking.location.widthCm}
             heightCm={blocking.location.heightCm}
             selectedShotId={selectedShotId}
+            proposedChanges={proposals}
             onActorMove={handleActorMove}
             onCameraMove={handleCameraMove}
             onCameraRotate={handleCameraRotate}
             onPinClick={onShotSelect}
           />
+          {proposals.length > 0 && (
+            <BlockingProposalPanel
+              proposals={proposals}
+              onAcceptAll={() => void handleAcceptAll()}
+              onRejectAll={handleRejectAll}
+              onAcceptOne={(item) => void handleAcceptOne(item)}
+              onRejectOne={handleRejectOne}
+              isApplying={isApplying}
+            />
+          )}
           <div className={styles.legend} aria-label="Legenda blocking">
-            <span className={styles.legendItem} data-kind="camera" aria-label="Camera">
+            <span
+              className={styles.legendItem}
+              data-kind="camera"
+              aria-label="Camera"
+            >
               Camera
             </span>
-            <span className={styles.legendItem} data-kind="actor" aria-label="Personaggio">
+            <span
+              className={styles.legendItem}
+              data-kind="actor"
+              aria-label="Personaggio"
+            >
               Personaggio
             </span>
-            <span className={styles.legendItem} data-kind="furniture" aria-label="Arredo">
+            <span
+              className={styles.legendItem}
+              data-kind="furniture"
+              aria-label="Arredo"
+            >
               Arredo
             </span>
           </div>

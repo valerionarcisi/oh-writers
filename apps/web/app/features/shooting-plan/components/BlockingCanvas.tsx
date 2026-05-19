@@ -5,6 +5,26 @@ import styles from "./BlockingCanvas.module.css";
 
 const DISPLAY_W = 680;
 
+export interface ProposedActorChange {
+  readonly kind: "actor";
+  readonly castId: string;
+  readonly label: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface ProposedCameraChange {
+  readonly kind: "camera";
+  readonly shotId: string;
+  readonly label: string;
+  readonly x: number;
+  readonly y: number;
+  readonly coneDirection: number;
+  readonly coneAngle: number;
+}
+
+export type ProposedBlockingChange = ProposedActorChange | ProposedCameraChange;
+
 interface BlockingCanvasProps {
   primitives: Primitive[];
   actorPositions: ActorPosition[];
@@ -14,6 +34,7 @@ interface BlockingCanvasProps {
   isSuggested?: boolean;
   readOnly?: boolean;
   selectedShotId?: string | null;
+  proposedChanges?: ReadonlyArray<ProposedBlockingChange> | null;
   onActorMove?: (castId: string, x: number, y: number) => void;
   onCameraMove?: (shotId: string, x: number, y: number) => void;
   onCameraRotate?: (shotId: string, coneDirection: number) => void;
@@ -28,6 +49,7 @@ export function BlockingCanvas({
   heightCm,
   readOnly = false,
   selectedShotId,
+  proposedChanges,
   onActorMove,
   onCameraMove,
   onCameraRotate,
@@ -52,7 +74,8 @@ export function BlockingCanvas({
     | null
   >(null);
 
-  const [localActors, setLocalActors] = useState<ActorPosition[]>(actorPositions);
+  const [localActors, setLocalActors] =
+    useState<ActorPosition[]>(actorPositions);
   const [localCameras, setLocalCameras] = useState<CameraPin[]>(cameraPins);
 
   // Sync external prop changes when no drag is in progress
@@ -288,16 +311,79 @@ export function BlockingCanvas({
           scale={scale}
           isReadOnly={readOnly}
           isSelected={pin.shotId === selectedShotId}
-          onPointerDown={handlePointerDown(
-            "camera",
-            pin.shotId,
-            pin.x,
-            pin.y,
-          )}
+          onPointerDown={handlePointerDown("camera", pin.shotId, pin.x, pin.y)}
           onRotateHandleDown={handleRotateDown(pin.shotId, pin.coneDirection)}
           onClick={() => onPinClick?.(pin.shotId)}
         />
       ))}
+
+      {proposedChanges && proposedChanges.length > 0 && (
+        <g
+          className={styles.ghostLayer}
+          aria-label="Proposte di blocking suggerite da Cesare"
+        >
+          {proposedChanges.map((p) => {
+            if (p.kind === "actor") {
+              const r = 14 * scale;
+              return (
+                <g key={`gh-actor-${p.castId}`} className={styles.ghostActor}>
+                  <circle
+                    cx={p.x * scale}
+                    cy={p.y * scale}
+                    r={r}
+                    fill="var(--color-accent-green)"
+                    fillOpacity={0.25}
+                    stroke="var(--color-accent-green)"
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                  />
+                  <text
+                    x={p.x * scale}
+                    y={p.y * scale + 4}
+                    textAnchor="middle"
+                    fontSize={Math.max(8, 11 * scale)}
+                    fill="var(--color-accent-green)"
+                    fontWeight={700}
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {p.label.slice(0, 2).toUpperCase()}
+                  </text>
+                </g>
+              );
+            }
+            // Camera ghost: dashed triangle outline + label
+            const boxW = 36 * scale;
+            const boxH = 24 * scale;
+            return (
+              <g key={`gh-cam-${p.shotId}`} className={styles.ghostCamera}>
+                <rect
+                  x={p.x * scale - boxW / 2}
+                  y={p.y * scale - boxH / 2}
+                  width={boxW}
+                  height={boxH}
+                  rx={3 * scale}
+                  fill="var(--color-accent-red)"
+                  fillOpacity={0.18}
+                  stroke="var(--color-accent-red)"
+                  strokeWidth={2}
+                  strokeDasharray="4 3"
+                />
+                <text
+                  x={p.x * scale}
+                  y={p.y * scale + 4}
+                  textAnchor="middle"
+                  fontSize={Math.max(7, 9 * scale)}
+                  fill="var(--color-accent-red)"
+                  fontWeight={700}
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {p.label}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      )}
     </svg>
   );
 }

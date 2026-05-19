@@ -8,6 +8,7 @@ import {
   customType,
   unique,
   date,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { projects } from "./projects";
@@ -55,6 +56,7 @@ export const screenplayVersions = pgTable(
     pageCount: integer("page_count").notNull().default(0),
     draftColor: text("draft_color"),
     draftDate: date("draft_date"),
+    isDraft: boolean("is_draft").notNull().default(false),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),

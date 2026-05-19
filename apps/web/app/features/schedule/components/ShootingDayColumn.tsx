@@ -5,6 +5,7 @@ import { computeDayKpis, formatDayHours } from "@oh-writers/domain";
 import type { ShootingDayView, StripView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
 import { DayDifficultyBadge } from "./DayDifficultyBadge";
+import { DayLocationWarningBanner } from "./DayLocationWarningBanner";
 import { useDayEstimate, type DayWeatherAnchor } from "../hooks/useDayEstimate";
 import styles from "./ShootingDayColumn.module.css";
 
@@ -288,15 +289,17 @@ export function ShootingDayColumn({
             )}
           </div>
         )}
-        {isRest && (
-          <div className={styles.restLabel}>— giorno di riposo —</div>
-        )}
+        {isRest && <div className={styles.restLabel}>— giorno di riposo —</div>}
         {!isRest && day.strips.length > 0 && (
           <DayDifficultyBadge
             estimate={estimate}
             weather={weather}
             isWeatherLoading={isWeatherLoading}
+            dayNumber={day.dayNumber}
           />
+        )}
+        {!isRest && day.strips.length > 0 && (
+          <DayLocationWarningBanner dayId={day.id} dayNumber={day.dayNumber} />
         )}
       </header>
 

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
+import type { Plugin } from "prosemirror-state";
 import { DocStats, FloatingDock } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
@@ -25,6 +26,18 @@ import {
   cesareAppliedHighlightKey,
   highlightAppliedRange,
 } from "../lib/plugins/cesare-applied-highlight";
+import {
+  buildProposedEditPlugin,
+  proposedEditPluginKey,
+  setProposedEdits,
+  type ProposedEdit as PmProposedEdit,
+} from "../lib/plugins/proposed-edit-decoration";
+import {
+  useScreenplayProposals,
+  useRemoveScreenplayProposal,
+  usePromoteDraftToActive,
+  useDiscardDraftVersion,
+} from "../hooks/useProposals";
 import { ToolbarMenu } from "./ToolbarMenu";
 import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
@@ -75,9 +88,7 @@ interface ScreenplayEditorProps {
   }) => void;
   /** Emits the list of scene headings extracted from the PM doc whenever the
    *  doc changes. Used by the shell to populate the Indice popover TOC. */
-  onScenesChange?: (
-    scenes: Array<{ number: string; title: string }>,
-  ) => void;
+  onScenesChange?: (scenes: Array<{ number: string; title: string }>) => void;
 }
 
 /** Imperative handle exposed by the editor so the parent route can drive
@@ -216,6 +227,59 @@ export const ScreenplayEditor = forwardRef<
 
   const isViewing = viewing.kind === "viewing";
 
+  // ─── Cesare propose/accept wiring ──────────────────────────────────────
+  // Proposals live in a server-side in-memory store; the chat hook
+  // invalidates the query whenever Cesare finishes a turn so the plugin
+  // sees fresh edits as soon as they're emitted.
+  const proposalsQuery = useScreenplayProposals(screenplay.id);
+  const removeProposal = useRemoveScreenplayProposal(screenplay.id);
+  const promoteDraft = usePromoteDraftToActive(screenplay.id);
+  const discardDraft = useDiscardDraftVersion(screenplay.id);
+
+  // Stable plugin reference — created once per editor mount. The callbacks
+  // ride on a ref so we don't re-instantiate the plugin when handlers
+  // identity shifts.
+  const proposalCallbacksRef = useRef({
+    onAccept: (id: string) => removeProposal.mutate(id),
+    onReject: (id: string) => removeProposal.mutate(id),
+  });
+  proposalCallbacksRef.current = {
+    onAccept: (id: string) => removeProposal.mutate(id),
+    onReject: (id: string) => removeProposal.mutate(id),
+  };
+
+  const pluginsExtraRef = useRef<Plugin[] | null>(null);
+  if (pluginsExtraRef.current === null) {
+    pluginsExtraRef.current = [
+      buildProposedEditPlugin({
+        onAccept: (id) => proposalCallbacksRef.current.onAccept(id),
+        onReject: (id) => proposalCallbacksRef.current.onReject(id),
+      }),
+    ];
+  }
+
+  // Sync proposal state into the PM plugin whenever the query data changes.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const edits = proposalsQuery.data?.edits ?? [];
+    const pmProposals: PmProposedEdit[] = edits.map((e) => ({
+      id: e.id,
+      kind: e.kind,
+      find: e.find,
+      replace: e.replace,
+      reason: e.reason,
+    }));
+    view.dispatch(
+      view.state.tr.setMeta(
+        proposedEditPluginKey,
+        setProposedEdits(pmProposals),
+      ),
+    );
+  }, [proposalsQuery.data]);
+
+  const draftBanners = proposalsQuery.data?.drafts ?? [];
+
   const { data: versionsResult } = useVersions(screenplay.id);
   const versionsCount = versionsResult?.isOk ? versionsResult.value.length : 0;
   const latestVersion =
@@ -336,7 +400,11 @@ export const ScreenplayEditor = forwardRef<
       const segments: TextSegment[] = [];
       view.state.doc.descendants((node, pos) => {
         if (node.isText && node.text) {
-          segments.push({ text: node.text, from: pos, to: pos + node.text.length });
+          segments.push({
+            text: node.text,
+            from: pos,
+            to: pos + node.text.length,
+          });
         }
         return true;
       });
@@ -709,6 +777,54 @@ export const ScreenplayEditor = forwardRef<
           {versionsLoadError}
         </div>
       )}
+      {!isFocusMode && draftBanners.length > 0 && (
+        <div
+          role="status"
+          className={styles.toast}
+          data-testid="cesare-draft-banner"
+        >
+          {draftBanners.map((d) => (
+            <div key={d.id} className={styles.draftBannerRow}>
+              <span data-testid="cesare-draft-banner-label">
+                {`✦ Cesare ha preparato la versione: "${d.label}".`}
+              </span>
+              <a
+                className={styles.draftBannerLink}
+                data-testid="cesare-draft-banner-open"
+                href={`/projects/${screenplay.projectId}/screenplay/versions/${d.versionId}`}
+              >
+                Apri il diff →
+              </a>
+              <button
+                type="button"
+                className={styles.draftBannerAccept}
+                data-testid="cesare-draft-banner-accept"
+                onClick={() =>
+                  promoteDraft.mutate(d.versionId, {
+                    onSuccess: () => removeProposal.mutate(d.id),
+                  })
+                }
+                disabled={promoteDraft.isPending}
+              >
+                Promuovi a attiva
+              </button>
+              <button
+                type="button"
+                className={styles.draftBannerDiscard}
+                data-testid="cesare-draft-banner-discard"
+                onClick={() =>
+                  discardDraft.mutate(d.versionId, {
+                    onSuccess: () => removeProposal.mutate(d.id),
+                  })
+                }
+                disabled={discardDraft.isPending}
+              >
+                Scarta draft
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {!isFocusMode && isViewing && (
         <VersionViewingBanner
           label={viewing.label}
@@ -739,8 +855,26 @@ export const ScreenplayEditor = forwardRef<
             onSceneIndexChange={setCurrentSceneIndex}
             onPageChange={(current, total) => setPageInfo({ current, total })}
             readOnly={isViewing || !(screenplay.canEdit ?? false)}
+            pluginsExtra={pluginsExtraRef.current ?? undefined}
             onReady={(view) => {
               viewRef.current = view;
+              // Seed any proposals that loaded before the editor mounted.
+              const edits = proposalsQuery.data?.edits ?? [];
+              if (edits.length > 0) {
+                const pmProposals: PmProposedEdit[] = edits.map((e) => ({
+                  id: e.id,
+                  kind: e.kind,
+                  find: e.find,
+                  replace: e.replace,
+                  reason: e.reason,
+                }));
+                view.dispatch(
+                  view.state.tr.setMeta(
+                    proposedEditPluginKey,
+                    setProposedEdits(pmProposals),
+                  ),
+                );
+              }
             }}
           />
         </div>
@@ -824,7 +958,6 @@ export const ScreenplayEditor = forwardRef<
           toast={toast}
         />
       )}
-
     </div>
   );
 });

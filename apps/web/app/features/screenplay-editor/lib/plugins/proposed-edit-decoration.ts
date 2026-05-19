@@ -1,0 +1,351 @@
+import { Plugin, PluginKey } from "prosemirror-state";
+import type { EditorState, Transaction } from "prosemirror-state";
+import { Decoration, DecorationSet } from "prosemirror-view";
+import type { EditorView } from "prosemirror-view";
+import type { Node as PMNode } from "prosemirror-model";
+import styles from "./proposed-edit-decoration.module.css";
+import {
+  cesareAppliedHighlightKey,
+  highlightAppliedRange,
+} from "./cesare-applied-highlight";
+
+// ─── Public types ─────────────────────────────────────────────────────────────
+
+export type ProposedEditKind = "edit" | "rename_character" | "rename_location";
+
+export interface ProposedEdit {
+  readonly id: string;
+  readonly kind: ProposedEditKind;
+  /** Verbatim string to find in the doc. For rename proposals this is the
+   *  whole entity name; matching is whole-word case-insensitive. For
+   *  `edit` proposals it must match verbatim. */
+  readonly find: string;
+  readonly replace: string;
+  readonly reason: string;
+}
+
+export interface ProposalCallbacks {
+  /** Invoked when the user clicks ✓. Receives the proposal id so the parent
+   *  can dispatch the DB-side `removeScreenplayProposal` mutation. */
+  onAccept: (proposalId: string) => void;
+  /** Invoked when the user clicks ✕. */
+  onReject: (proposalId: string) => void;
+}
+
+// ─── Plugin state ─────────────────────────────────────────────────────────────
+
+interface ProposedEditState {
+  proposals: ProposedEdit[];
+  decos: DecorationSet;
+}
+
+interface SetProposalsMeta {
+  readonly kind: "setProposals";
+  readonly proposals: ProposedEdit[];
+}
+
+interface RemoveProposalMeta {
+  readonly kind: "removeProposal";
+  readonly proposalId: string;
+}
+
+type ProposalMeta = SetProposalsMeta | RemoveProposalMeta;
+
+export const proposedEditPluginKey = new PluginKey<ProposedEditState>(
+  "screenplay-proposed-edit",
+);
+
+// ─── Public meta actions ──────────────────────────────────────────────────────
+
+export const setProposedEdits = (
+  proposals: ProposedEdit[],
+): SetProposalsMeta => ({
+  kind: "setProposals",
+  proposals,
+});
+
+export const removeProposedEditMeta = (
+  proposalId: string,
+): RemoveProposalMeta => ({ kind: "removeProposal", proposalId });
+
+// ─── Leaf-text walk algorithm (server-equivalent) ─────────────────────────────
+//
+// Walks the doc collecting text leaf segments with their exact PM positions.
+// Returns ALL non-overlapping matches of `find`. For rename proposals we use
+// whole-word case-insensitive matching; for plain edits we use exact match
+// to avoid surprising the writer.
+
+interface TextSegment {
+  readonly text: string;
+  readonly from: number;
+}
+
+const collectTextSegments = (doc: PMNode): TextSegment[] => {
+  const segments: TextSegment[] = [];
+  doc.descendants((node, pos) => {
+    if (node.isText && node.text) {
+      segments.push({ text: node.text, from: pos });
+    }
+    return true;
+  });
+  return segments;
+};
+
+interface MatchRange {
+  readonly from: number;
+  readonly to: number;
+}
+
+// Map a flat-index range over the concatenated text back into PM positions.
+// Returns null when the flat range straddles a non-text gap (which shouldn't
+// happen for verbatim matches but defensively guards against bad input).
+const mapFlatRangeToPm = (
+  segments: TextSegment[],
+  flatStart: number,
+  flatEnd: number,
+): MatchRange | null => {
+  let posStart = -1;
+  let posEnd = -1;
+  let cursor = 0;
+  for (const seg of segments) {
+    const segEnd = cursor + seg.text.length;
+    if (posStart < 0 && cursor <= flatStart && flatStart < segEnd) {
+      posStart = seg.from + (flatStart - cursor);
+    }
+    if (posEnd < 0 && cursor < flatEnd && flatEnd <= segEnd) {
+      posEnd = seg.from + (flatEnd - cursor);
+    }
+    if (posStart >= 0 && posEnd >= 0) break;
+    cursor = segEnd;
+  }
+  if (posStart < 0 || posEnd < 0) return null;
+  return { from: posStart, to: posEnd };
+};
+
+const escapeRegex = (s: string): string =>
+  s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const findAllMatches = (doc: PMNode, proposal: ProposedEdit): MatchRange[] => {
+  const segments = collectTextSegments(doc);
+  const fullText = segments.map((s) => s.text).join("");
+  if (proposal.kind === "edit") {
+    const idx = fullText.indexOf(proposal.find);
+    if (idx < 0) return [];
+    const mapped = mapFlatRangeToPm(segments, idx, idx + proposal.find.length);
+    return mapped ? [mapped] : [];
+  }
+  // rename — whole-word, case-insensitive, all occurrences
+  const re = new RegExp(`\\b${escapeRegex(proposal.find)}\\b`, "gi");
+  const results: MatchRange[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(fullText)) !== null) {
+    const mapped = mapFlatRangeToPm(segments, m.index, m.index + m[0].length);
+    if (mapped) results.push(mapped);
+    // Defensive: avoid pathological infinite loops on zero-width regex.
+    if (m.index === re.lastIndex) re.lastIndex += 1;
+  }
+  return results;
+};
+
+// ─── Decorations ──────────────────────────────────────────────────────────────
+
+const buildWidget = (
+  proposal: ProposedEdit,
+  callbacks: ProposalCallbacks,
+  view: EditorView,
+): HTMLElement => {
+  const wrap = document.createElement("span");
+  wrap.className = styles["bubble"] ?? "";
+  wrap.setAttribute("data-proposal-id", proposal.id);
+  wrap.setAttribute("data-proposal-kind", proposal.kind);
+  wrap.contentEditable = "false";
+
+  const replaceLine = document.createElement("span");
+  replaceLine.className = styles["replace"] ?? "";
+  replaceLine.textContent = `→ ${proposal.replace}`;
+  wrap.appendChild(replaceLine);
+
+  if (proposal.reason.length > 0) {
+    const reason = document.createElement("span");
+    reason.className = styles["reason"] ?? "";
+    reason.textContent = proposal.reason;
+    wrap.appendChild(reason);
+  }
+
+  const actions = document.createElement("span");
+  actions.className = styles["actions"] ?? "";
+
+  const accept = document.createElement("button");
+  accept.type = "button";
+  accept.className = styles["accept"] ?? "";
+  accept.setAttribute("aria-label", "Accetta proposta");
+  accept.setAttribute("data-testid", "proposal-accept");
+  accept.textContent = "✓";
+  accept.addEventListener("mousedown", (e) => e.preventDefault());
+  accept.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    applyProposalToView(view, proposal);
+    callbacks.onAccept(proposal.id);
+  });
+  actions.appendChild(accept);
+
+  const reject = document.createElement("button");
+  reject.type = "button";
+  reject.className = styles["reject"] ?? "";
+  reject.setAttribute("aria-label", "Rifiuta proposta");
+  reject.setAttribute("data-testid", "proposal-reject");
+  reject.textContent = "✕";
+  reject.addEventListener("mousedown", (e) => e.preventDefault());
+  reject.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    callbacks.onReject(proposal.id);
+    // Optimistically remove from local state so the bubble disappears
+    // immediately; the parent will refetch on success.
+    view.dispatch(
+      view.state.tr.setMeta(
+        proposedEditPluginKey,
+        removeProposedEditMeta(proposal.id),
+      ),
+    );
+  });
+  actions.appendChild(reject);
+
+  wrap.appendChild(actions);
+  return wrap;
+};
+
+// Apply a proposal's replacements to the doc as a single transaction.
+// For `edit` proposals: one replacement at the first match.
+// For `rename_*` proposals: replace every whole-word occurrence in one
+// transaction so undo restores the screenplay in a single step.
+const applyProposalToView = (
+  view: EditorView,
+  proposal: ProposedEdit,
+): void => {
+  const matches = findAllMatches(view.state.doc, proposal);
+  if (matches.length === 0) return;
+  // Sort descending so earlier replacements don't shift later positions.
+  const sorted = [...matches].sort((a, b) => b.from - a.from);
+  let tr = view.state.tr;
+  for (const m of sorted) {
+    tr = tr.replaceWith(m.from, m.to, view.state.schema.text(proposal.replace));
+  }
+  // Flash on the first (top-most after sort, last in original order)
+  // replacement position so the writer sees something animate.
+  const first = matches[0];
+  if (first) {
+    const mappedFrom = tr.mapping.map(first.from);
+    const mappedTo = mappedFrom + proposal.replace.length;
+    tr.setMeta(
+      cesareAppliedHighlightKey,
+      highlightAppliedRange(mappedFrom, mappedTo),
+    );
+  }
+  view.dispatch(tr);
+};
+
+const buildDecorationSet = (
+  doc: PMNode,
+  proposals: ProposedEdit[],
+  callbacks: ProposalCallbacks,
+  view: EditorView | null,
+): DecorationSet => {
+  const decorations: Decoration[] = [];
+  for (const proposal of proposals) {
+    const matches = findAllMatches(doc, proposal);
+    if (matches.length === 0) continue;
+    // Inline highlight on every match (visible difference from regular text)
+    for (const m of matches) {
+      decorations.push(
+        Decoration.inline(m.from, m.to, {
+          class: styles["matchHighlight"] ?? "",
+          "data-proposal-id": proposal.id,
+        }),
+      );
+    }
+    // Widget bubble anchored to the first match. The widget renders the
+    // proposed replacement + ✓/✕ buttons.
+    const first = matches[0]!;
+    if (view) {
+      decorations.push(
+        Decoration.widget(
+          first.to,
+          () => buildWidget(proposal, callbacks, view),
+          {
+            side: 1,
+            key: `proposal-widget-${proposal.id}`,
+          },
+        ),
+      );
+    }
+  }
+  return DecorationSet.create(doc, decorations);
+};
+
+// ─── Plugin factory ───────────────────────────────────────────────────────────
+
+export const buildProposedEditPlugin = (
+  callbacks: ProposalCallbacks,
+): Plugin<ProposedEditState> => {
+  let cachedView: EditorView | null = null;
+  return new Plugin<ProposedEditState>({
+    key: proposedEditPluginKey,
+    state: {
+      init: () => ({ proposals: [], decos: DecorationSet.empty }),
+      apply(
+        tr: Transaction,
+        prev: ProposedEditState,
+        _old: EditorState,
+        newState: EditorState,
+      ): ProposedEditState {
+        const meta = tr.getMeta(proposedEditPluginKey) as
+          | ProposalMeta
+          | undefined;
+        let nextProposals = prev.proposals;
+        if (meta?.kind === "setProposals") {
+          nextProposals = meta.proposals;
+        } else if (meta?.kind === "removeProposal") {
+          nextProposals = prev.proposals.filter(
+            (p) => p.id !== meta.proposalId,
+          );
+        } else if (!tr.docChanged) {
+          // Selection-only change: keep cached decoration set.
+          return prev;
+        }
+        const decos = buildDecorationSet(
+          newState.doc,
+          nextProposals,
+          callbacks,
+          cachedView,
+        );
+        return { proposals: nextProposals, decos };
+      },
+    },
+    props: {
+      decorations(state: EditorState) {
+        return proposedEditPluginKey.getState(state)?.decos ?? null;
+      },
+    },
+    view(view: EditorView) {
+      cachedView = view;
+      // Re-build decorations now that we have a view to attach widget
+      // callbacks to. The init step ran without a view reference.
+      const state = proposedEditPluginKey.getState(view.state);
+      if (state && state.proposals.length > 0) {
+        view.dispatch(
+          view.state.tr.setMeta(
+            proposedEditPluginKey,
+            setProposedEdits(state.proposals),
+          ),
+        );
+      }
+      return {
+        destroy() {
+          cachedView = null;
+        },
+      };
+    },
+  });
+};

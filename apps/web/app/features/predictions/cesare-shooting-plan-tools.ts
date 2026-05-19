@@ -6,8 +6,22 @@ import {
   shots,
   scenes,
   screenplays,
+  sceneBlockings,
+  planSceneCameras,
+  locations,
+  breakdownElements,
+  breakdownOccurrences,
 } from "@oh-writers/db/schema";
+import {
+  buildCesareBlockingPrompt,
+  parseCesareBlockingResponse,
+  type CesareBlockingInput,
+  type ActorPosition,
+  type CameraPin,
+  type Primitive,
+} from "@oh-writers/domain";
 import type { Db } from "~/server/db";
+import { callHaiku, extractText } from "~/features/ai";
 import { CesareError } from "./cesare.server";
 
 // ─── Shot enum (mirrors the Drizzle schema) ──────────────────────────────────
@@ -86,8 +100,7 @@ export const CESARE_SHOOTING_PLAN_TOOLS = [
         camera_movement: {
           type: "string",
           enum: [...CAMERA_MOVEMENTS],
-          description:
-            "Movimento camera. Default STATIC se non specificato.",
+          description: "Movimento camera. Default STATIC se non specificato.",
         },
         description: {
           type: "string",
@@ -140,7 +153,8 @@ export const CESARE_SHOOTING_PLAN_TOOLS = [
   },
   {
     name: "remove_shot",
-    description: "Rimuove uno shot dal piano. La scena/piano deve appartenere al progetto corrente.",
+    description:
+      "Rimuove uno shot dal piano. La scena/piano deve appartenere al progetto corrente.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -160,7 +174,8 @@ export const CESARE_SHOOTING_PLAN_TOOLS = [
       properties: {
         scene_id: {
           type: "string",
-          description: "UUID della scena. Se omesso, viene usata la scena attiva.",
+          description:
+            "UUID della scena. Se omesso, viene usata la scena attiva.",
         },
         plan_name: { type: "string", description: "Nome del nuovo piano." },
         description: {
@@ -171,6 +186,75 @@ export const CESARE_SHOOTING_PLAN_TOOLS = [
       required: ["plan_name", "description"],
     },
   },
+  {
+    name: "propose_blocking_for_scene",
+    description:
+      "Propone una disposizione completa di blocking (attori + camere) per una scena, mostrata come ghost-pins sull'editor 2D che l'utente può accettare singolarmente o in blocco. Non scrive nulla a DB: restituisce solo il payload della proposta.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_id: {
+          type: "string",
+          description:
+            "UUID della scena per cui proporre il blocking. Se omesso, viene usata la scena attiva del contesto.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "propose_move_actor_position",
+    description:
+      "Propone di spostare un attore a una nuova posizione (x, y) nello stage 2D. L'utente vede un'anteprima fantasma e può accettare. Non scrive a DB.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        actor_position_id: {
+          type: "string",
+          description: "Identificatore dell'attore (castId).",
+        },
+        x: { type: "number", description: "Nuova coordinata x in cm." },
+        y: { type: "number", description: "Nuova coordinata y in cm." },
+        reason: {
+          type: "string",
+          description: "Motivo dello spostamento (mostrato all'utente).",
+        },
+      },
+      required: ["actor_position_id", "x", "y"],
+    },
+  },
+  {
+    name: "propose_move_camera_pin",
+    description:
+      "Propone di spostare una camera a una nuova posizione (x, y, direction). Anteprima fantasma. Non scrive a DB.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        camera_pin_id: {
+          type: "string",
+          description: "Identificatore della camera (shotId).",
+        },
+        x: { type: "number", description: "Nuova coordinata x in cm." },
+        y: { type: "number", description: "Nuova coordinata y in cm." },
+        direction_deg: {
+          type: "number",
+          description:
+            "Nuova direzione del cono camera in gradi (0 = nord, in senso orario).",
+        },
+        reason: {
+          type: "string",
+          description: "Motivo dello spostamento (mostrato all'utente).",
+        },
+      },
+      required: ["camera_pin_id", "x", "y"],
+    },
+  },
+] as const;
+
+export const CESARE_SHOOTING_PLAN_PROPOSE_TOOLS = [
+  "propose_blocking_for_scene",
+  "propose_move_actor_position",
+  "propose_move_camera_pin",
 ] as const;
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -193,9 +277,18 @@ const SHOT_KEYWORD_PATTERNS: ReadonlyArray<{
 }> = [
   { regex: /\bews\b|campo\s+lunghissimo|extreme\s+wide/i, shotSize: "EWS" },
   { regex: /\bws\b|wide(?:\s+shot)?|campo\s+lungo|totale/i, shotSize: "WS" },
-  { regex: /\bots\b|over[- ]?the[- ]?shoulder|su\s+le?\s+spalle/i, shotSize: "OTS" },
-  { regex: /\becu\b|extreme\s+close[- ]?up|primissimo\s+piano/i, shotSize: "ECU" },
-  { regex: /\bmcu\b|medium\s+close[- ]?up|mezzo\s+primo\s+piano/i, shotSize: "MCU" },
+  {
+    regex: /\bots\b|over[- ]?the[- ]?shoulder|su\s+le?\s+spalle/i,
+    shotSize: "OTS",
+  },
+  {
+    regex: /\becu\b|extreme\s+close[- ]?up|primissimo\s+piano/i,
+    shotSize: "ECU",
+  },
+  {
+    regex: /\bmcu\b|medium\s+close[- ]?up|mezzo\s+primo\s+piano/i,
+    shotSize: "MCU",
+  },
   { regex: /\bcu\b|close[- ]?up|primo\s+piano/i, shotSize: "CU" },
   { regex: /\binserts?\b|dettagli[oa]?/i, shotSize: "INSERT" },
   { regex: /\btwo[- ]?shot\b|campo\s+a\s+due/i, shotSize: "TWO_SHOT" },
@@ -314,7 +407,9 @@ const ensureSceneInProject = (
     row
       ? okAsync({ sceneId: row.id })
       : errAsync(
-          new CesareError(`Scena ${sceneId} non appartiene al progetto corrente`),
+          new CesareError(
+            `Scena ${sceneId} non appartiene al progetto corrente`,
+          ),
         ),
   );
 
@@ -347,7 +442,8 @@ const loadScenarioInProject = (
         `loadScenarioInProject failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
   ).andThen((row) => {
-    if (!row) return errAsync(new CesareError(`Piano ${scenarioId} non trovato`));
+    if (!row)
+      return errAsync(new CesareError(`Piano ${scenarioId} non trovato`));
     if (row.planProjectId !== projectId)
       return errAsync(
         new CesareError(
@@ -458,7 +554,9 @@ const executeAddParallelPlan = (
           .from(shotPlanScenarios)
           .where(eq(shotPlanScenarios.shotPlanId, planRow.id));
 
-        if (siblings.some((s) => s.name.toLowerCase() === planName.toLowerCase())) {
+        if (
+          siblings.some((s) => s.name.toLowerCase() === planName.toLowerCase())
+        ) {
           throw new Error(
             `Esiste già un piano con nome "${planName}" per questa scena`,
           );
@@ -709,9 +807,7 @@ const executeGeneratePlanFromDescription = (
     db,
     ctx,
   ).andThen((plan) => {
-    const addOne = (
-      index: number,
-    ): ResultAsync<void, CesareError> => {
+    const addOne = (index: number): ResultAsync<void, CesareError> => {
       if (index >= parsedShots.length) return okAsync(undefined);
       const shot = parsedShots[index];
       if (!shot) return okAsync(undefined);
@@ -732,6 +828,358 @@ const executeGeneratePlanFromDescription = (
       shot_count: parsedShots.length,
       toast_message: `${plan.name} creato con ${parsedShots.length} shot`,
     }));
+  });
+};
+
+// ─── Blocking proposal generator (testable, framework-agnostic) ───────────────
+//
+// Proposals are NOT persisted to DB: they are returned to the client as a
+// payload that the canvas renders as ghost overlays. Acceptance flows back to
+// the existing `saveActorPositions` / `saveCameraPin` server functions, which
+// already handle the writes.
+
+export interface BlockingProposalActor {
+  readonly kind: "actor";
+  readonly castId: string;
+  readonly label: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface BlockingProposalCamera {
+  readonly kind: "camera";
+  readonly shotId: string;
+  readonly label: string;
+  readonly x: number;
+  readonly y: number;
+  readonly coneDirection: number;
+  readonly coneAngle: number;
+}
+
+export type BlockingProposalItem =
+  | BlockingProposalActor
+  | BlockingProposalCamera;
+
+export interface BlockingProposal {
+  readonly proposalId: string;
+  readonly sceneId: string;
+  readonly suggestions: ReadonlyArray<BlockingProposalItem>;
+  readonly reason?: string;
+}
+
+// Pure parser: turns a Cesare blocking response (already parsed by the
+// shared domain helper) into the wire-friendly proposal payload. Exported for
+// Vitest tests.
+export const parseBlockingProposal = (
+  sceneId: string,
+  actorPositions: ReadonlyArray<ActorPosition>,
+  cameraPins: ReadonlyArray<CameraPin>,
+  proposalId: string,
+): BlockingProposal => {
+  const actors: BlockingProposalActor[] = actorPositions.map((a) => ({
+    kind: "actor" as const,
+    castId: a.castId,
+    label: a.label,
+    x: a.x,
+    y: a.y,
+  }));
+  const cameras: BlockingProposalCamera[] = cameraPins.map((c) => ({
+    kind: "camera" as const,
+    shotId: c.shotId,
+    label: c.label,
+    x: c.x,
+    y: c.y,
+    coneDirection: c.coneDirection,
+    coneAngle: c.coneAngle,
+  }));
+  return {
+    proposalId,
+    sceneId,
+    suggestions: [...actors, ...cameras],
+  };
+};
+
+// Generates a UUID-like id without pulling in extra deps. Good enough for an
+// in-memory proposal handle (the client uses it only to disambiguate).
+const newProposalId = (): string =>
+  `prop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+const loadSceneForBlockingProposal = (
+  db: Db,
+  sceneId: string,
+  projectId: string,
+): ResultAsync<
+  { sceneId: string; heading: string; notes: string },
+  CesareError
+> =>
+  ResultAsync.fromPromise(
+    db
+      .select({
+        id: scenes.id,
+        heading: scenes.heading,
+        notes: scenes.notes,
+        projectId: screenplays.projectId,
+      })
+      .from(scenes)
+      .innerJoin(screenplays, eq(scenes.screenplayId, screenplays.id))
+      .where(eq(scenes.id, sceneId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    (e) =>
+      new CesareError(
+        `loadSceneForBlockingProposal failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((row) => {
+    if (!row) return errAsync(new CesareError(`Scena ${sceneId} non trovata`));
+    if (row.projectId !== projectId)
+      return errAsync(
+        new CesareError(`Scena ${sceneId} non appartiene al progetto corrente`),
+      );
+    return okAsync({
+      sceneId: row.id,
+      heading: row.heading ?? "",
+      notes: row.notes ?? "",
+    });
+  });
+
+interface ProposeBlockingForSceneInput {
+  scene_id?: string;
+}
+
+const executeProposeBlockingForScene = (
+  input: ProposeBlockingForSceneInput,
+  db: Db,
+  ctx: ShootingPlanToolContext,
+): ResultAsync<BlockingProposal, CesareError> => {
+  const sceneId = resolveSceneId(ctx, input.scene_id);
+  if (!sceneId) {
+    return errAsync(
+      new CesareError(
+        "scene_id mancante e nessuna scena attiva — chiedi all'utente quale scena.",
+      ),
+    );
+  }
+  return loadSceneForBlockingProposal(db, sceneId, ctx.projectId).andThen(
+    (scene) =>
+      ResultAsync.fromPromise(
+        (async (): Promise<BlockingProposal> => {
+          // Look up cast occurrences + the existing scene blocking so the
+          // proposal can be regenerated when the user is dissatisfied.
+          const castRows = await db
+            .select({
+              id: breakdownElements.id,
+              label: breakdownElements.name,
+            })
+            .from(breakdownOccurrences)
+            .innerJoin(
+              breakdownElements,
+              eq(breakdownOccurrences.elementId, breakdownElements.id),
+            )
+            .where(
+              and(
+                eq(breakdownOccurrences.sceneId, scene.sceneId),
+                eq(breakdownElements.category, "cast"),
+              ),
+            );
+
+          const existingBlocking = await db.query.sceneBlockings.findFirst({
+            where: eq(sceneBlockings.sceneId, scene.sceneId),
+          });
+
+          const locationRow = existingBlocking
+            ? await db.query.locations.findFirst({
+                where: eq(locations.id, existingBlocking.locationId),
+              })
+            : null;
+
+          const widthCm = locationRow?.widthCm ?? 600;
+          const heightCm = locationRow?.heightCm ?? 400;
+          const primitives = (locationRow?.primitives ??
+            []) as unknown as Primitive[];
+
+          const existingPlanCameras = existingBlocking
+            ? await db.query.planSceneCameras.findFirst({
+                where: eq(planSceneCameras.sceneId, scene.sceneId),
+              })
+            : null;
+
+          const cesareInput: CesareBlockingInput = {
+            fountainText: scene.notes,
+            sceneHeading: scene.heading,
+            cast: castRows,
+            props: [],
+            shots: (existingPlanCameras?.cameraPins as unknown as
+              | CameraPin[]
+              | undefined)
+              ? (existingPlanCameras!.cameraPins as unknown as CameraPin[]).map(
+                  (p, i) => ({
+                    id: p.shotId,
+                    shotSize: "WS",
+                    cameraMovement: "STATIC",
+                    cameraLabel: `${String.fromCharCode(65 + i)} · ${p.label}`,
+                  }),
+                )
+              : [],
+            locationPrimitives: primitives,
+            widthCm,
+            heightCm,
+            projectSuggestionHistory: { accepted: [], ignored: [] },
+          };
+
+          if (process.env["MOCK_AI"] === "true") {
+            const parsed = parseCesareBlockingResponse("", cesareInput);
+            // When the seed lacks breakdownOccurrences/cast, the safe defaults
+            // are empty. Emit a small demonstration proposal so the ghost UI
+            // still shows up in mock E2E.
+            const demoActors =
+              parsed.actorPositions.length > 0
+                ? parsed.actorPositions
+                : [
+                    {
+                      castId: `demo-actor-${scene.sceneId}`,
+                      label: "Personaggio A",
+                      x: Math.round(widthCm * 0.4),
+                      y: Math.round(heightCm * 0.5),
+                      arrow: null,
+                    },
+                  ];
+            const demoCameras =
+              parsed.cameraPins.length > 0
+                ? parsed.cameraPins
+                : [
+                    {
+                      shotId: `demo-cam-${scene.sceneId}`,
+                      label: "A · WS",
+                      x: Math.round(widthCm * 0.7),
+                      y: Math.round(heightCm * 0.3),
+                      coneAngle: 60,
+                      coneDirection: 225,
+                      movement: null,
+                    },
+                  ];
+            return parseBlockingProposal(
+              scene.sceneId,
+              demoActors,
+              demoCameras,
+              newProposalId(),
+            );
+          }
+
+          const result = await callHaiku(
+            {
+              system:
+                "You are a professional film assistant director. Respond only with JSON.",
+              fewShot: {},
+              user: buildCesareBlockingPrompt(cesareInput),
+              maxTokens: 1024,
+            },
+            "cesare/blocking-propose",
+          );
+          if (result.isErr()) {
+            const fallback = parseCesareBlockingResponse("", cesareInput);
+            return parseBlockingProposal(
+              scene.sceneId,
+              fallback.actorPositions,
+              fallback.cameraPins,
+              newProposalId(),
+            );
+          }
+          const text = extractText(result.value.content) ?? "";
+          const parsed = parseCesareBlockingResponse(text, cesareInput);
+          return parseBlockingProposal(
+            scene.sceneId,
+            parsed.actorPositions,
+            parsed.cameraPins,
+            newProposalId(),
+          );
+        })(),
+        (e) =>
+          new CesareError(
+            `proposeBlockingForScene failed: ${e instanceof Error ? e.message : String(e)}`,
+          ),
+      ),
+  );
+};
+
+interface ProposeMoveActorInput {
+  actor_position_id: string;
+  x: number;
+  y: number;
+  reason?: string;
+}
+
+const executeProposeMoveActor = (
+  input: ProposeMoveActorInput,
+  _db: Db,
+  _ctx: ShootingPlanToolContext,
+): ResultAsync<
+  {
+    proposed_id: string;
+    kind: "actor";
+    castId: string;
+    x: number;
+    y: number;
+    reason: string | null;
+  },
+  CesareError
+> => {
+  if (!input.actor_position_id) {
+    return errAsync(new CesareError("actor_position_id mancante"));
+  }
+  if (!Number.isFinite(input.x) || !Number.isFinite(input.y)) {
+    return errAsync(new CesareError("x/y devono essere numeri finiti"));
+  }
+  return okAsync({
+    proposed_id: newProposalId(),
+    kind: "actor" as const,
+    castId: input.actor_position_id,
+    x: input.x,
+    y: input.y,
+    reason: input.reason ?? null,
+  });
+};
+
+interface ProposeMoveCameraInput {
+  camera_pin_id: string;
+  x: number;
+  y: number;
+  direction_deg?: number;
+  reason?: string;
+}
+
+const executeProposeMoveCamera = (
+  input: ProposeMoveCameraInput,
+  _db: Db,
+  _ctx: ShootingPlanToolContext,
+): ResultAsync<
+  {
+    proposed_id: string;
+    kind: "camera";
+    shotId: string;
+    x: number;
+    y: number;
+    direction_deg: number | null;
+    reason: string | null;
+  },
+  CesareError
+> => {
+  if (!input.camera_pin_id) {
+    return errAsync(new CesareError("camera_pin_id mancante"));
+  }
+  if (!Number.isFinite(input.x) || !Number.isFinite(input.y)) {
+    return errAsync(new CesareError("x/y devono essere numeri finiti"));
+  }
+  return okAsync({
+    proposed_id: newProposalId(),
+    kind: "camera" as const,
+    shotId: input.camera_pin_id,
+    x: input.x,
+    y: input.y,
+    direction_deg:
+      input.direction_deg !== undefined && Number.isFinite(input.direction_deg)
+        ? input.direction_deg
+        : null,
+    reason: input.reason ?? null,
   });
 };
 
@@ -769,18 +1217,14 @@ export const executeShootingPlanTool = (
     ).map((r) => ok(block.id, r));
   }
   if (block.name === "add_shot_to_plan") {
-    return executeAddShotToPlan(
-      block.input as AddShotToPlanInput,
-      db,
-      ctx,
-    ).map((r) => ok(block.id, r));
+    return executeAddShotToPlan(block.input as AddShotToPlanInput, db, ctx).map(
+      (r) => ok(block.id, r),
+    );
   }
   if (block.name === "set_active_plan") {
-    return executeSetActivePlan(
-      block.input as SetActivePlanInput,
-      db,
-      ctx,
-    ).map((r) => ok(block.id, r));
+    return executeSetActivePlan(block.input as SetActivePlanInput, db, ctx).map(
+      (r) => ok(block.id, r),
+    );
   }
   if (block.name === "update_shot") {
     return executeUpdateShot(block.input as UpdateShotInput, db, ctx).map((r) =>
@@ -795,6 +1239,27 @@ export const executeShootingPlanTool = (
   if (block.name === "generate_plan_from_description") {
     return executeGeneratePlanFromDescription(
       block.input as GeneratePlanFromDescriptionInput,
+      db,
+      ctx,
+    ).map((r) => ok(block.id, r));
+  }
+  if (block.name === "propose_blocking_for_scene") {
+    return executeProposeBlockingForScene(
+      block.input as ProposeBlockingForSceneInput,
+      db,
+      ctx,
+    ).map((r) => ok(block.id, r));
+  }
+  if (block.name === "propose_move_actor_position") {
+    return executeProposeMoveActor(
+      block.input as ProposeMoveActorInput,
+      db,
+      ctx,
+    ).map((r) => ok(block.id, r));
+  }
+  if (block.name === "propose_move_camera_pin") {
+    return executeProposeMoveCamera(
+      block.input as ProposeMoveCameraInput,
       db,
       ctx,
     ).map((r) => ok(block.id, r));

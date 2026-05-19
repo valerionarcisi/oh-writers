@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   unique,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { documents } from "./documents";
@@ -19,6 +20,7 @@ export const documentVersions = pgTable(
     number: integer("number").notNull(),
     label: text("label"),
     content: text("content").notNull().default(""),
+    isDraft: boolean("is_draft").notNull().default(false),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
