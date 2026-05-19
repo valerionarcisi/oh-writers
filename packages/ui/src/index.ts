@@ -3,7 +3,7 @@ export { Badge } from "./components/Badge";
 export { Input } from "./components/Input";
 export { FormField } from "./components/FormField";
 export { Avatar } from "./components/Avatar";
-export { Skeleton } from "./components/Skeleton";
+export { Skeleton, SkeletonCard } from "./components/Skeleton";
 export { EmptyState } from "./components/EmptyState";
 export { Kbd } from "./components/Kbd";
 export { Tabs } from "./components/Tabs";
@@ -85,10 +85,17 @@ export { ToggleChip } from "./primitives/ToggleChip/ToggleChip";
 export type { ToggleChipProps } from "./primitives/ToggleChip/ToggleChip";
 
 export { Tooltip } from "./primitives/Tooltip/Tooltip";
-export type { TooltipProps, TooltipKind, TooltipPlacement } from "./primitives/Tooltip/Tooltip";
+export type {
+  TooltipProps,
+  TooltipKind,
+  TooltipPlacement,
+} from "./primitives/Tooltip/Tooltip";
 
 export { Popover } from "./primitives/Popover/Popover";
-export type { PopoverProps, PopoverPlacement } from "./primitives/Popover/Popover";
+export type {
+  PopoverProps,
+  PopoverPlacement,
+} from "./primitives/Popover/Popover";
 
 export { Drawer } from "./primitives/Drawer/Drawer";
 export type { DrawerProps, DrawerSide } from "./primitives/Drawer/Drawer";
@@ -97,10 +104,17 @@ export { SavePill } from "./primitives/SavePill/SavePill";
 export type { SavePillProps, SaveState } from "./primitives/SavePill/SavePill";
 
 export { Presence } from "./primitives/Presence/Presence";
-export type { PresenceProps, PresenceUser } from "./primitives/Presence/Presence";
+export type {
+  PresenceProps,
+  PresenceUser,
+} from "./primitives/Presence/Presence";
 
 export { Button as DsButton } from "./primitives/Button/Button";
-export type { ButtonProps as DsButtonProps, ButtonVariant, ButtonSize } from "./primitives/Button/Button";
+export type {
+  ButtonProps as DsButtonProps,
+  ButtonVariant,
+  ButtonSize,
+} from "./primitives/Button/Button";
 
 export { Modal } from "./primitives/Modal/Modal";
 export type { ModalProps, ModalSize } from "./primitives/Modal/Modal";
@@ -147,7 +161,10 @@ export { Viewbar, ViewbarSep } from "./shell/Viewbar/Viewbar";
 export type { ViewbarProps } from "./shell/Viewbar/Viewbar";
 
 export { FloatingDock } from "./shell/FloatingDock/FloatingDock";
-export type { FloatingDockProps, DockAction } from "./shell/FloatingDock/FloatingDock";
+export type {
+  FloatingDockProps,
+  DockAction,
+} from "./shell/FloatingDock/FloatingDock";
 
 export { CommandPalette } from "./shell/CommandPalette/CommandPalette";
 export type {
@@ -157,7 +174,13 @@ export type {
 
 // ─── DS-v2 Composites ───────────────────────────────────────
 export { HeroKPI } from "./composites/HeroKPI/HeroKPI";
-export type { HeroKPIProps, DeltaDirection } from "./composites/HeroKPI/HeroKPI";
+export type {
+  HeroKPIProps,
+  DeltaDirection,
+} from "./composites/HeroKPI/HeroKPI";
 
 export { MarginNote } from "./composites/MarginNote/MarginNote";
-export type { MarginNoteProps, MarginNoteKind } from "./composites/MarginNote/MarginNote";
+export type {
+  MarginNoteProps,
+  MarginNoteKind,
+} from "./composites/MarginNote/MarginNote";

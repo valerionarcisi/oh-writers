@@ -1,26 +1,96 @@
+/* Skeleton — loading placeholders with shimmer */
+
+/* ─── Single rectangle (legacy / inline use) ───────────────────────── */
+
 .skeleton {
   background: var(--ds-surface);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, var(--ds-radius-md));
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .skeleton {
-    animation: shimmer 1.5s ease-in-out infinite;
+    animation: skeletonPulse 1.5s ease-in-out infinite;
   }
 }
 
 .rounded {
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-full, var(--ds-radius-pill));
 }
 
-@keyframes shimmer {
-  0% {
+@keyframes skeletonPulse {
+  0%,
+  100% {
     opacity: 0.4;
   }
   50% {
     opacity: 0.7;
   }
-  100% {
-    opacity: 0.4;
+}
+
+/* ─── Multi-line shimmer group ─────────────────────────────────────── */
+
+.shimmerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  inline-size: 100%;
+}
+
+.shimmerLine {
+  display: block;
+  block-size: 12px;
+  border-radius: var(--radius-sm, var(--ds-radius-sm, 4px));
+  background: linear-gradient(
+    90deg,
+    var(--ds-surface-alt, var(--ds-line)) 0%,
+    color-mix(in oklch, var(--ds-line) 60%, transparent) 50%,
+    var(--ds-surface-alt, var(--ds-line)) 100%
+  );
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shimmerLine {
+    animation: skeletonShimmer 1.4s linear infinite;
   }
+}
+
+/* Agent tone — uses agent colour palette for Cesare-related loaders */
+.toneAgent .shimmerLine {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--ds-agent) 20%, transparent) 0%,
+    color-mix(in oklch, var(--ds-agent) 45%, transparent) 50%,
+    color-mix(in oklch, var(--ds-agent) 20%, transparent) 100%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmerLine {
+    animation: none;
+    background: var(--ds-line);
+  }
+}
+
+/* ─── Card variant ─────────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md, var(--ds-radius-md));
+  background: var(--ds-surface);
+  min-block-size: 120px;
 }
