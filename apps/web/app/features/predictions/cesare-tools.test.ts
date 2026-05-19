@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { findSection } from "./cesare-tools";
+import { parsePlanDescription } from "./cesare-shooting-plan-tools";
 
 describe("findSection", () => {
   it("finds a markdown section and bounds the body at the next heading", () => {
@@ -45,5 +46,49 @@ describe("findSection", () => {
     expect(range).not.toBeNull();
     if (!range) return;
     expect(range.bodyEnd).toBe(5);
+  });
+});
+
+describe("parsePlanDescription", () => {
+  it("recognizes a mixed Italian/English shot list", () => {
+    const shots = parsePlanDescription(
+      "classico: WS forno, due CU di Giulio, OTS Tea, insert delle foto",
+    );
+    expect(shots.map((s) => s.shotSize)).toEqual([
+      "WS",
+      "CU",
+      "CU",
+      "OTS",
+      "INSERT",
+    ]);
+  });
+
+  it("expands Italian repetition keywords (tre CU)", () => {
+    const shots = parsePlanDescription("tre CU di Giulio");
+    expect(shots).toHaveLength(3);
+    expect(shots.every((s) => s.shotSize === "CU")).toBe(true);
+  });
+
+  it("falls back to a single WS when no keyword is recognized", () => {
+    const shots = parsePlanDescription("qualcosa di completamente non descritto");
+    expect(shots).toHaveLength(1);
+    expect(shots[0]?.shotSize).toBe("WS");
+  });
+
+  it("disambiguates primissimo piano (ECU) from primo piano (CU)", () => {
+    const shots = parsePlanDescription("primissimo piano di Giulio");
+    expect(shots).toHaveLength(1);
+    expect(shots[0]?.shotSize).toBe("ECU");
+  });
+
+  it("treats numeric prefixes as repeat counts", () => {
+    const shots = parsePlanDescription("4 inserts delle foto");
+    expect(shots).toHaveLength(4);
+    expect(shots.every((s) => s.shotSize === "INSERT")).toBe(true);
+  });
+
+  it("preserves order across separators ('e', 'poi', commas)", () => {
+    const shots = parsePlanDescription("WS, poi CU e infine OTS");
+    expect(shots.map((s) => s.shotSize)).toEqual(["WS", "CU", "OTS"]);
   });
 });

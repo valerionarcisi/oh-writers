@@ -16,6 +16,9 @@ import {
   locationCandidates,
   documents,
   documentVersions,
+  shotPlans,
+  shotPlanScenarios,
+  shots,
 } from "@oh-writers/db/schema";
 import type { DocumentType } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
@@ -29,8 +32,13 @@ import {
   runBreakdownToolLoop,
   runScheduleToolLoop,
   runBudgetToolLoop,
+  runShootingPlanToolLoop,
 } from "./cesare-tools";
-import type { DocumentContext, ScheduleToolContext } from "./cesare-tools";
+import type {
+  DocumentContext,
+  ScheduleToolContext,
+  ShootingPlanToolContext,
+} from "./cesare-tools";
 import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
 
 // ─── Error ────────────────────────────────────────────────────────────────────
@@ -185,6 +193,21 @@ interface ActiveDocumentRow extends ProjectDocumentRow {
   isActive: true;
 }
 
+interface ShotSummary {
+  shotSize: string;
+  cameraMovement: string;
+  durationMin: number | null;
+  notes: string | null;
+}
+
+interface ShotPlanSummary {
+  scenarioId: string;
+  name: string;
+  isActive: boolean;
+  shotCount: number;
+  shots: ShotSummary[];
+}
+
 interface CesareContext {
   projectTitle: string;
   scenes: SceneRow[];
@@ -200,6 +223,8 @@ interface CesareContext {
   activeDocument: ActiveDocumentRow | null;
   /** Short summaries of all other docs in the project (for cross-doc context). */
   projectDocuments: ProjectDocumentRow[];
+  /** Existing shot-plans for the active scene (only populated on the shooting-plan page). */
+  shotPlans: ShotPlanSummary[];
 }
 
 const loadScreenplayContext = (
@@ -641,6 +666,77 @@ const loadSceneWindow = (
   );
 };
 
+// Loads the shot plans for a scene. Only used by the shooting-plan page so
+// Cesare can avoid duplicating Piano A's structure when generating Piano B.
+const loadShotPlansForScene = (
+  db: Db,
+  sceneId: string | null,
+): ResultAsync<ShotPlanSummary[], CesareError> =>
+  ResultAsync.fromPromise(
+    (async (): Promise<ShotPlanSummary[]> => {
+      if (!sceneId) return [];
+      const plan = await db
+        .select({ id: shotPlans.id, activeScenarioId: shotPlans.activeScenarioId })
+        .from(shotPlans)
+        .where(eq(shotPlans.sceneId, sceneId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+      if (!plan) return [];
+
+      const scenarioRows = await db
+        .select({
+          id: shotPlanScenarios.id,
+          name: shotPlanScenarios.name,
+          position: shotPlanScenarios.position,
+        })
+        .from(shotPlanScenarios)
+        .where(eq(shotPlanScenarios.shotPlanId, plan.id));
+      if (scenarioRows.length === 0) return [];
+
+      const scenarioIds = scenarioRows.map((s) => s.id);
+      const shotRows = await db
+        .select({
+          scenarioId: shots.scenarioId,
+          shotSize: shots.shotSize,
+          cameraMovement: shots.cameraMovement,
+          estimatedMinutes: shots.estimatedMinutes,
+          notes: shots.notes,
+          position: shots.position,
+        })
+        .from(shots)
+        .where(inArray(shots.scenarioId, scenarioIds));
+
+      const shotsByScenario = new Map<string, ShotSummary[]>();
+      for (const s of [...shotRows].sort((a, b) => a.position - b.position)) {
+        const list = shotsByScenario.get(s.scenarioId) ?? [];
+        list.push({
+          shotSize: s.shotSize,
+          cameraMovement: s.cameraMovement,
+          durationMin: s.estimatedMinutes ?? null,
+          notes: s.notes ?? null,
+        });
+        shotsByScenario.set(s.scenarioId, list);
+      }
+
+      return scenarioRows
+        .sort((a, b) => a.position - b.position)
+        .map((s) => {
+          const scenarioShots = shotsByScenario.get(s.id) ?? [];
+          return {
+            scenarioId: s.id,
+            name: s.name,
+            isActive: s.id === plan.activeScenarioId,
+            shotCount: scenarioShots.length,
+            shots: scenarioShots,
+          };
+        });
+    })(),
+    (e) =>
+      new CesareError(
+        `loadShotPlansForScene failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
 const assembleContext = (
   db: Db,
   projectId: string,
@@ -712,6 +808,11 @@ const assembleContext = (
                 }
               }
 
+              const shotPlanSceneId =
+                pageContext.page === "shooting-plan"
+                  ? (currentScene?.id ?? effectiveSceneId)
+                  : null;
+
               return loadSceneWindow(
                 db,
                 projectId,
@@ -719,31 +820,36 @@ const assembleContext = (
                 currentScene?.number ?? pageContext.sceneNumber,
                 linkedSceneIds,
               ).andThen((sceneWindow) =>
-                loadProjectDocuments(db, projectId).map((projectDocuments) => {
-                  const activeDocId = pageContext.documentId ?? null;
-                  const activeDocument: ActiveDocumentRow | null = activeDocId
-                    ? (() => {
-                        const found = projectDocuments.find(
-                          (d) => d.id === activeDocId,
-                        );
-                        return found ? { ...found, isActive: true } : null;
-                      })()
-                    : null;
-                  return {
-                    projectTitle: screenplay.title,
-                    scenes: screenplay.scenes,
-                    currentScene,
-                    sceneWindow,
-                    characters: screenplay.characters,
-                    breakdownElements: elements,
-                    budget,
-                    schedule,
-                    locations,
-                    currentRequirement,
-                    activeDocument,
-                    projectDocuments,
-                  };
-                }),
+                loadProjectDocuments(db, projectId).andThen((projectDocuments) =>
+                  loadShotPlansForScene(db, shotPlanSceneId).map(
+                    (shotPlanSummaries) => {
+                      const activeDocId = pageContext.documentId ?? null;
+                      const activeDocument: ActiveDocumentRow | null = activeDocId
+                        ? (() => {
+                            const found = projectDocuments.find(
+                              (d) => d.id === activeDocId,
+                            );
+                            return found ? { ...found, isActive: true } : null;
+                          })()
+                        : null;
+                      return {
+                        projectTitle: screenplay.title,
+                        scenes: screenplay.scenes,
+                        currentScene,
+                        sceneWindow,
+                        characters: screenplay.characters,
+                        breakdownElements: elements,
+                        budget,
+                        schedule,
+                        locations,
+                        currentRequirement,
+                        activeDocument,
+                        projectDocuments,
+                        shotPlans: shotPlanSummaries,
+                      };
+                    },
+                  ),
+                ),
               );
             }),
           ),
@@ -1024,6 +1130,65 @@ REGOLE FERREE:
 - Aggiungi 2-3 candidati per ricerca quando l'utente chiede "trova candidati"; aggiungi SOLO quello richiesto quando l'utente specifica un nome.`;
 };
 
+const formatShotPlansContext = (
+  ctx: CesareContext,
+  page: PageContext["page"],
+): string => {
+  if (page !== "shooting-plan") return "";
+  if (ctx.shotPlans.length === 0) {
+    return "\n\nPIANI ESISTENTI PER LA SCENA CORRENTE: nessuno (la scena è scoperta — il primo piano viene creato automaticamente dalla UI).";
+  }
+  const lines = ctx.shotPlans.map((plan) => {
+    const tag = plan.isActive ? " [ATTIVO]" : "";
+    const shotLines = plan.shots.length > 0
+      ? plan.shots
+          .slice(0, 12)
+          .map(
+            (s, i) =>
+              `      ${i + 1}. ${s.shotSize}/${s.cameraMovement}${
+                s.durationMin !== null ? ` (${s.durationMin}min)` : ""
+              }${s.notes ? ` — ${s.notes}` : ""}`,
+          )
+          .join("\n")
+      : "      (nessuno shot)";
+    return `  - "${plan.name}"${tag} — ${plan.shotCount} shot (scenarioId: ${plan.scenarioId})\n${shotLines}`;
+  });
+  return `\n\nPIANI ESISTENTI PER LA SCENA CORRENTE:\n${lines.join("\n")}`;
+};
+
+const buildShootingPlanToolsGuidance = (
+  page: PageContext["page"],
+  activeSceneId: string | null,
+): string => {
+  if (page !== "shooting-plan") return "";
+  const sceneHint = activeSceneId
+    ? `\nScena attiva (selezionata dall'utente): ${activeSceneId}. Usala come default per scene_id nei tool quando l'utente non specifica una scena diversa.`
+    : "\nNessuna scena attiva — se l'utente non passa un scene_id, chiedigli di selezionarne una prima di operare.";
+  return `\n\nRUOLO: in questa pagina sei un DIRETTORE DELLA FOTOGRAFIA. Quando l'utente ti chiede di costruire o salvare un piano, USA I TOOLS per farlo davvero — non descrivere soltanto.
+
+TOOLS DISPONIBILI SUL PIANO INQUADRATURE:
+- add_parallel_plan(scene_id, name): crea un piano parallelo (es. "Piano B"). Il primo piano (Piano A) esiste già — non ricrearlo.
+- add_shot_to_plan(plan_id, shot_type, description?, duration_min?): aggiunge uno shot in coda al piano. shot_type ∈ {WS, EWS, MS, MCU, CU, ECU, INSERT, OTS, TWO_SHOT, POV}.
+- set_active_plan(plan_id): rende un piano attivo (in modo atomico, disattiva gli altri della stessa scena).
+- update_shot(shot_id, patch): modifica uno shot esistente.
+- remove_shot(shot_id): elimina uno shot.
+- generate_plan_from_description(scene_id, plan_name, description): scorciatoia — crea un piano e popola gli shot leggendo una descrizione testuale.
+
+WORKFLOW per "fai il Piano B":
+1. add_parallel_plan(scene_id, name: "Piano B")
+2. Per ogni shot del piano: add_shot_to_plan(plan_id, shot_type, description, duration_min)
+3. Solo DOPO aver salvato, scrivi il messaggio finale che riassume cosa hai creato.
+
+❌ SBAGLIATO: "Salvo ora il Piano B" (senza chiamare i tool)
+✅ CORRETTO: [add_parallel_plan, add_shot_to_plan×N, "Ho creato Piano B con N shot"]
+
+REGOLE FERREE:
+- L'utente lavora su una scena specifica — usa scene_id dal contesto come default.
+- Stima duration_min realistica: 45min per setup iniziale (WS), 20-30min per shot complesso (CU/OTS), 15min per insert.
+- Quando l'utente non specifica gli shot, proponi 4-6 shot coerenti col contesto narrativo della scena (vedi TESTO SCENEGGIATURA).
+- Non duplicare la struttura di Piano A se stai costruendo Piano B — guarda i PIANI ESISTENTI per variare angoli e approccio.${sceneHint}`;
+};
+
 const buildBudgetToolsGuidance = (page: PageContext["page"]): string => {
   if (page !== "budget") return "";
   return `\n\nRUOLO: in questa pagina sei un LINE PRODUCER esperto del cinema italiano. Quando l'utente ti chiede di aggiustare il budget, USA I TOOLS per farlo direttamente — non limitarti a descrivere come si potrebbe fare. Conferma SEMPRE in italiano l'azione eseguita nel messaggio finale ('Ho aggiornato…', 'Ho aggiunto…', 'Ho ridistribuito…').
@@ -1045,6 +1210,7 @@ const buildSystemPrompt = (
   ctx: CesareContext,
   page: PageContext["page"],
   activeShootingDayNumber: number | null = null,
+  activeSceneId: string | null = null,
 ): string => {
   const totalBudget = ctx.budget
     ? Math.round(ctx.budget.totalAllocated).toLocaleString("it-IT")
@@ -1070,6 +1236,7 @@ const buildSystemPrompt = (
   const documentsCtx = formatDocumentsContext(ctx);
   const documentToolsGuidance = buildDocumentToolsGuidance(ctx);
   const budgetCtx = formatBudgetContext(ctx, page);
+  const shotPlansCtx = formatShotPlansContext(ctx, page);
 
   return `Sei Cesare, l'assistente AI di Oh Writers, ispirato a Cesare Zavattini.
 Non sei un chatbot generico. Conosci l'intera produzione del film "${ctx.projectTitle}".
@@ -1079,7 +1246,7 @@ CONTESTO PRODUZIONE:
 - Scena corrente: ${ctx.currentScene?.heading ?? "nessuna"}
 - Budget: €${totalBudget} totale, €${residualBudget} residuo
 - Schedule: ${shootingDaysLabel} giorni di ripresa
-${breakdownCtx}${locationsCtx}${sceneWindowCtx}${documentsCtx}${budgetCtx}
+${breakdownCtx}${locationsCtx}${sceneWindowCtx}${documentsCtx}${budgetCtx}${shotPlansCtx}
 
 Rispondi in italiano. Sii concreto e specifico — non generare testo generico.
 Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
@@ -1087,7 +1254,7 @@ Quando parli di costi, usa i numeri reali dal budget.
 Quando parli di disponibilità, usa i dati reali dello schedule.
 Quando parli di location, aiuta il regista a valutare i candidati in base al contesto narrativo della scena.
 ${buildLocationsToolsGuidance(page)}
-Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.${documentToolsGuidance}${buildBreakdownToolsGuidance(page)}${buildScheduleToolsGuidance(page, activeShootingDayNumber)}${buildBudgetToolsGuidance(page)}`;
+Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.${documentToolsGuidance}${buildBreakdownToolsGuidance(page)}${buildScheduleToolsGuidance(page, activeShootingDayNumber)}${buildBudgetToolsGuidance(page)}${buildShootingPlanToolsGuidance(page, activeSceneId)}`;
 };
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
@@ -1327,6 +1494,40 @@ const callCesareWithScheduleTools = (
     );
   });
 
+const callCesareWithShootingPlanTools = (
+  systemPrompt: string,
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+  activeSceneId: string | null,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    const shootingPlanContext: ShootingPlanToolContext = {
+      projectId,
+      activeSceneId,
+    };
+    return runShootingPlanToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      db,
+      projectId,
+      CESARE_MODEL,
+      shootingPlanContext,
+    );
+  });
+
 const callCesareWithBudgetTools = (
   systemPrompt: string,
   conversationHistory: ConversationMessage[],
@@ -1365,6 +1566,7 @@ const AGENTIC_PAGES = new Set<string>([
   "breakdown",
   "schedule",
   "budget",
+  "shooting-plan",
   "soggetto",
   "synopsis",
   "outline",
@@ -1384,10 +1586,13 @@ const handleAskCesare = (
   }
 
   return assembleContext(db, data.projectId, data.pageContext).andThen((ctx) => {
+    const activeSceneIdForPrompt =
+      ctx.currentScene?.id ?? data.pageContext.sceneId ?? null;
     const systemPrompt = buildSystemPrompt(
       ctx,
       data.pageContext.page,
       data.pageContext.shootingDayNumber ?? null,
+      activeSceneIdForPrompt,
     );
     if (data.pageContext.page === "locations") {
       return callCesareWithTools(
@@ -1425,6 +1630,16 @@ const handleAskCesare = (
         data.message,
         db,
         data.projectId,
+      );
+    }
+    if (data.pageContext.page === "shooting-plan") {
+      return callCesareWithShootingPlanTools(
+        systemPrompt,
+        data.conversationHistory,
+        data.message,
+        db,
+        data.projectId,
+        activeSceneIdForPrompt,
       );
     }
     if (isDocumentPage(data.pageContext.page) && ctx.activeDocument) {
