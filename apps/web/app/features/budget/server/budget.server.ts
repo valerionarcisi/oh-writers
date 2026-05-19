@@ -59,7 +59,7 @@ import {
   type DayCost,
 } from "./budget-helpers";
 import { resourceTotal } from "@oh-writers/domain";
-import { getProjectBreakdownRows } from "~/features/breakdown/server/breakdown.server";
+import { getProjectBreakdownRows } from "~/features/breakdown";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -137,9 +137,7 @@ const findBudgetRowById = (
   ResultAsync.fromPromise(
     db.query.budgets.findFirst({ where: eq(budgets.id, id) }),
     (e) => new DbError("findBudgetRowById", e),
-  ).andThen((row) =>
-    row ? ok(row) : err(new BudgetNotFoundError(id)),
-  );
+  ).andThen((row) => (row ? ok(row) : err(new BudgetNotFoundError(id))));
 
 const findBudgetLineRowById = (
   db: Db,
@@ -151,9 +149,7 @@ const findBudgetLineRowById = (
   ResultAsync.fromPromise(
     db.query.budgetLines.findFirst({ where: eq(budgetLines.id, id) }),
     (e) => new DbError("findBudgetLineRowById", e),
-  ).andThen((row) =>
-    row ? ok(row) : err(new BudgetLineNotFoundError(id)),
-  );
+  ).andThen((row) => (row ? ok(row) : err(new BudgetLineNotFoundError(id))));
 
 const findBudgetCastRowById = (
   db: Db,
@@ -196,7 +192,10 @@ export const getBudget = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<Budget | null, ProjectNotFoundError | ForbiddenError | DbError>
+      ResultShape<
+        Budget | null,
+        ProjectNotFoundError | ForbiddenError | DbError
+      >
     > =>
       toShape(
         await withProjectAccess(data.projectId, "view", ({ db, access }) =>
@@ -338,199 +337,213 @@ export const generateBudget = createServerFn({ method: "POST" })
                 budgetId = inserted!.id;
               }
 
-          // 1. Split generated lines into per-element and aggregate
-          const { perElement, aggregate } =
-            aggregateProductionLines(generatedLines);
+              // 1. Split generated lines into per-element and aggregate
+              const { perElement, aggregate } =
+                aggregateProductionLines(generatedLines);
 
-          // 2. Batch: fetch all occurrences for per-element elements in one query
-          const allPerElementIds = perElement
-            .map((l) => l.linkedElementId!)
-            .filter(Boolean);
+              // 2. Batch: fetch all occurrences for per-element elements in one query
+              const allPerElementIds = perElement
+                .map((l) => l.linkedElementId!)
+                .filter(Boolean);
 
-          const allOccurrences =
-            allPerElementIds.length > 0
-              ? await db
-                  .select({
-                    elementId: breakdownOccurrences.elementId,
-                    sceneId: breakdownOccurrences.sceneId,
-                  })
-                  .from(breakdownOccurrences)
-                  .where(
-                    inArray(breakdownOccurrences.elementId, allPerElementIds),
-                  )
-              : [];
+              const allOccurrences =
+                allPerElementIds.length > 0
+                  ? await db
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(
+                        inArray(
+                          breakdownOccurrences.elementId,
+                          allPerElementIds,
+                        ),
+                      )
+                  : [];
 
-          // Build elementId → Set<shootingDayId> map
-          const elementDayMap = new Map<string, Set<string>>();
-          for (const occ of allOccurrences) {
-            const daySet = elementDayMap.get(occ.elementId) ?? new Set();
-            if (scheduleInfo) {
-              const days = scheduleInfo.sceneTodays.get(occ.sceneId);
-              if (days) for (const d of days) daySet.add(d);
-            }
-            elementDayMap.set(occ.elementId, daySet);
-          }
+              // Build elementId → Set<shootingDayId> map
+              const elementDayMap = new Map<string, Set<string>>();
+              for (const occ of allOccurrences) {
+                const daySet = elementDayMap.get(occ.elementId) ?? new Set();
+                if (scheduleInfo) {
+                  const days = scheduleInfo.sceneTodays.get(occ.sceneId);
+                  if (days) for (const d of days) daySet.add(d);
+                }
+                elementDayMap.set(occ.elementId, daySet);
+              }
 
-          // Batch: fetch all existing per-element budget lines in one query
-          const existingPerElementLines =
-            allPerElementIds.length > 0
-              ? await db
-                  .select()
-                  .from(budgetLines)
-                  .where(
-                    and(
-                      eq(budgetLines.budgetId, budgetId),
-                      inArray(budgetLines.linkedElementId, allPerElementIds),
-                    ),
-                  )
-              : [];
-          const existingByElementId = new Map(
-            existingPerElementLines.map((l) => [l.linkedElementId!, l]),
-          );
+              // Batch: fetch all existing per-element budget lines in one query
+              const existingPerElementLines =
+                allPerElementIds.length > 0
+                  ? await db
+                      .select()
+                      .from(budgetLines)
+                      .where(
+                        and(
+                          eq(budgetLines.budgetId, budgetId),
+                          inArray(
+                            budgetLines.linkedElementId,
+                            allPerElementIds,
+                          ),
+                        ),
+                      )
+                  : [];
+              const existingByElementId = new Map(
+                existingPerElementLines.map((l) => [l.linkedElementId!, l]),
+              );
 
-          // 3. Upsert per-element lines (locations, vehicles), preserving actual
-          for (const line of perElement) {
-            const daySet =
-              elementDayMap.get(line.linkedElementId!) ?? new Set();
-            const qty =
-              scheduleInfo && daySet.size > 0 ? daySet.size : line.quantity;
+              // 3. Upsert per-element lines (locations, vehicles), preserving actual
+              for (const line of perElement) {
+                const daySet =
+                  elementDayMap.get(line.linkedElementId!) ?? new Set();
+                const qty =
+                  scheduleInfo && daySet.size > 0 ? daySet.size : line.quantity;
 
-            const existing = existingByElementId.get(line.linkedElementId!);
-            if (existing) {
-              await db
-                .update(budgetLines)
-                .set({
-                  quantity: String(qty),
-                  rate: String(line.rate ?? 0),
-                  updatedAt: new Date(),
-                })
-                .where(eq(budgetLines.id, existing.id));
-            } else {
-              await db.insert(budgetLines).values({
-                budgetId,
-                topSheet: line.topSheet,
-                name: line.name,
-                costType: line.costType,
-                quantity: String(qty),
-                rate: String(line.rate ?? 0),
-                actual: null,
-                notes: null,
-                linkedElementId: line.linkedElementId,
-                linkedCategory: line.linkedCategory,
-                sortOrder: line.sortOrder,
-              });
-            }
-          }
+                const existing = existingByElementId.get(line.linkedElementId!);
+                if (existing) {
+                  await db
+                    .update(budgetLines)
+                    .set({
+                      quantity: String(qty),
+                      rate: String(line.rate ?? 0),
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(budgetLines.id, existing.id));
+                } else {
+                  await db.insert(budgetLines).values({
+                    budgetId,
+                    topSheet: line.topSheet,
+                    name: line.name,
+                    costType: line.costType,
+                    quantity: String(qty),
+                    rate: String(line.rate ?? 0),
+                    actual: null,
+                    notes: null,
+                    linkedElementId: line.linkedElementId,
+                    linkedCategory: line.linkedCategory,
+                    sortOrder: line.sortOrder,
+                  });
+                }
+              }
 
-          // Batch: fetch all existing aggregate lines in one query
-          const aggregateCategories = aggregate
-            .map((l) => l.linkedCategory!)
-            .filter(Boolean);
-          const existingAggregateLines =
-            aggregateCategories.length > 0
-              ? await db
-                  .select()
-                  .from(budgetLines)
-                  .where(
-                    and(
-                      eq(budgetLines.budgetId, budgetId),
-                      inArray(budgetLines.linkedCategory, aggregateCategories),
-                      isNull(budgetLines.linkedElementId),
-                    ),
-                  )
-              : [];
-          const existingByCategory = new Map(
-            existingAggregateLines.map((l) => [l.linkedCategory!, l]),
-          );
+              // Batch: fetch all existing aggregate lines in one query
+              const aggregateCategories = aggregate
+                .map((l) => l.linkedCategory!)
+                .filter(Boolean);
+              const existingAggregateLines =
+                aggregateCategories.length > 0
+                  ? await db
+                      .select()
+                      .from(budgetLines)
+                      .where(
+                        and(
+                          eq(budgetLines.budgetId, budgetId),
+                          inArray(
+                            budgetLines.linkedCategory,
+                            aggregateCategories,
+                          ),
+                          isNull(budgetLines.linkedElementId),
+                        ),
+                      )
+                  : [];
+              const existingByCategory = new Map(
+                existingAggregateLines.map((l) => [l.linkedCategory!, l]),
+              );
 
-          // 4. Upsert aggregate lines (one per collapsed category key), preserving actual
-          for (const line of aggregate) {
-            const existing = existingByCategory.get(line.linkedCategory!);
-            if (existing) {
-              await db
-                .update(budgetLines)
-                .set({
-                  quantity: String(line.quantity ?? 0),
-                  rate: String(line.rate ?? 0),
-                  updatedAt: new Date(),
-                })
-                .where(eq(budgetLines.id, existing.id));
-            } else {
-              await db.insert(budgetLines).values({
-                budgetId,
-                topSheet: line.topSheet,
-                name: line.name,
-                costType: line.costType,
-                quantity: String(line.quantity ?? 0),
-                rate: String(line.rate ?? 0),
-                actual: null,
-                notes: null,
-                linkedElementId: null,
-                linkedCategory: line.linkedCategory,
-                sortOrder: line.sortOrder,
-              });
-            }
-          }
+              // 4. Upsert aggregate lines (one per collapsed category key), preserving actual
+              for (const line of aggregate) {
+                const existing = existingByCategory.get(line.linkedCategory!);
+                if (existing) {
+                  await db
+                    .update(budgetLines)
+                    .set({
+                      quantity: String(line.quantity ?? 0),
+                      rate: String(line.rate ?? 0),
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(budgetLines.id, existing.id));
+                } else {
+                  await db.insert(budgetLines).values({
+                    budgetId,
+                    topSheet: line.topSheet,
+                    name: line.name,
+                    costType: line.costType,
+                    quantity: String(line.quantity ?? 0),
+                    rate: String(line.rate ?? 0),
+                    actual: null,
+                    notes: null,
+                    linkedElementId: null,
+                    linkedCategory: line.linkedCategory,
+                    sortOrder: line.sortOrder,
+                  });
+                }
+              }
 
               // Load rate card for this project to pre-fill cast rates
               const rateCardRows = await db.query.projectRateCard.findMany({
                 where: eq(projectRateCard.projectId, projectId),
               });
-          const rateByName = new Map(
-            rateCardRows.map((r) => [r.name.toLowerCase(), r]),
-          );
+              const rateByName = new Map(
+                rateCardRows.map((r) => [r.name.toLowerCase(), r]),
+              );
 
-          // Populate cast from breakdown cast elements
-          await db.delete(budgetCast).where(eq(budgetCast.budgetId, budgetId));
-          const castRows = rows.filter((r) => r.element.category === "cast");
-          if (castRows.length > 0) {
-            await db.insert(budgetCast).values(
-              castRows.map((r, idx) => {
-                const rate = rateByName.get(r.element.name.toLowerCase());
-                const units =
-                  rate?.rateUnit === "forfait" ? 1 : resolvedShootingDays;
-                return {
-                  budgetId,
-                  elementId: r.element.id,
-                  name: r.element.name,
-                  days: String(units),
-                  dayRate: rate ? String(rate.rateValue) : "0",
-                  rateUnit: (rate?.rateUnit ??
-                    "giornata") as (typeof RATE_UNITS)[number],
-                  fiscalRegime: (rate?.fiscalRegime ?? "piva") as FiscalRegime,
-                  mealAllowance: rate
-                    ? String(Number(rate.mealAllowance) * units)
-                    : "0",
-                  accommodation: rate
-                    ? String(Number(rate.accommodation) * units)
-                    : "0",
-                  sortOrder: idx,
-                };
-              }),
-            );
-          }
+              // Populate cast from breakdown cast elements
+              await db
+                .delete(budgetCast)
+                .where(eq(budgetCast.budgetId, budgetId));
+              const castRows = rows.filter(
+                (r) => r.element.category === "cast",
+              );
+              if (castRows.length > 0) {
+                await db.insert(budgetCast).values(
+                  castRows.map((r, idx) => {
+                    const rate = rateByName.get(r.element.name.toLowerCase());
+                    const units =
+                      rate?.rateUnit === "forfait" ? 1 : resolvedShootingDays;
+                    return {
+                      budgetId,
+                      elementId: r.element.id,
+                      name: r.element.name,
+                      days: String(units),
+                      dayRate: rate ? String(rate.rateValue) : "0",
+                      rateUnit: (rate?.rateUnit ??
+                        "giornata") as (typeof RATE_UNITS)[number],
+                      fiscalRegime: (rate?.fiscalRegime ??
+                        "piva") as FiscalRegime,
+                      mealAllowance: rate
+                        ? String(Number(rate.mealAllowance) * units)
+                        : "0",
+                      accommodation: rate
+                        ? String(Number(rate.accommodation) * units)
+                        : "0",
+                      sortOrder: idx,
+                    };
+                  }),
+                );
+              }
 
-          // Populate crew with defaults only on first generation
-          const existingCrewCount = await db.query.budgetCrew
-            .findMany({ where: eq(budgetCrew.budgetId, budgetId) })
-            .then((r) => r.length);
-          if (existingCrewCount === 0) {
-            await db.insert(budgetCrew).values(
-              CREW_ROLES.map((role, idx) => ({
-                budgetId,
-                roleKey: role.key,
-                name: role.labelIt,
-                department: role.department,
-                days: String(resolvedShootingDays),
-                dayRate: String(role.defaultDayRate),
-                fiscalRegime: "piva" as const,
-                mealAllowance: "0",
-                accommodation: "0",
-                enabled: true,
-                sortOrder: idx,
-              })),
-            );
-          }
+              // Populate crew with defaults only on first generation
+              const existingCrewCount = await db.query.budgetCrew
+                .findMany({ where: eq(budgetCrew.budgetId, budgetId) })
+                .then((r) => r.length);
+              if (existingCrewCount === 0) {
+                await db.insert(budgetCrew).values(
+                  CREW_ROLES.map((role, idx) => ({
+                    budgetId,
+                    roleKey: role.key,
+                    name: role.labelIt,
+                    department: role.department,
+                    days: String(resolvedShootingDays),
+                    dayRate: String(role.defaultDayRate),
+                    fiscalRegime: "piva" as const,
+                    mealAllowance: "0",
+                    accommodation: "0",
+                    enabled: true,
+                    sortOrder: idx,
+                  })),
+                );
+              }
 
               const reloadResult = await findBudgetWithLines(db, projectId);
               if (reloadResult.isErr()) throw reloadResult.error;
@@ -603,7 +616,8 @@ export const updateBudgetLine = createServerFn({ method: "POST" })
                     data.patch.quantity !== null
                       ? String(data.patch.quantity)
                       : null;
-                if (data.patch.notes !== undefined) set.notes = data.patch.notes;
+                if (data.patch.notes !== undefined)
+                  set.notes = data.patch.notes;
                 return ResultAsync.fromPromise(
                   db
                     .update(budgetLines)
@@ -660,12 +674,13 @@ export const updateBudgetSettings = createServerFn({ method: "POST" })
                   .set(set)
                   .where(eq(budgets.id, data.budgetId)),
                 (e) => new DbError("updateBudgetSettings", e),
-              ).andThen(() => findBudgetWithLines(db, budget.projectId))
-               .andThen((updated) =>
-                updated
-                  ? ok(updated)
-                  : err(new DbError("updateBudgetSettings", "reload failed")),
-              );
+              )
+                .andThen(() => findBudgetWithLines(db, budget.projectId))
+                .andThen((updated) =>
+                  updated
+                    ? ok(updated)
+                    : err(new DbError("updateBudgetSettings", "reload failed")),
+                );
             }),
           ),
         ),
@@ -725,37 +740,40 @@ export const getCastAndCrew = createServerFn({ method: "GET" })
               });
               if (!budget) return null;
 
-          const SLUGLINE_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT)\.?\b/i;
+              const SLUGLINE_PREFIX = /^(INT|EXT|EST|I\/E|INT\/EXT)\.?\b/i;
 
-          const [rawCast, crew] = await Promise.all([
-            db.query.budgetCast.findMany({
-              where: eq(budgetCast.budgetId, budget.id),
-              orderBy: (t) => t.sortOrder,
-            }),
-            db.query.budgetCrew.findMany({
-              where: eq(budgetCrew.budgetId, budget.id),
-              orderBy: (t) => t.sortOrder,
-            }),
-          ]);
-          // strip breakdown noise: slugline tokens (Int, Ext, Est) misidentified as cast
-          const cast = rawCast.filter((r) => !SLUGLINE_PREFIX.test(r.name));
+              const [rawCast, crew] = await Promise.all([
+                db.query.budgetCast.findMany({
+                  where: eq(budgetCast.budgetId, budget.id),
+                  orderBy: (t) => t.sortOrder,
+                }),
+                db.query.budgetCrew.findMany({
+                  where: eq(budgetCrew.budgetId, budget.id),
+                  orderBy: (t) => t.sortOrder,
+                }),
+              ]);
+              // strip breakdown noise: slugline tokens (Int, Ext, Est) misidentified as cast
+              const cast = rawCast.filter((r) => !SLUGLINE_PREFIX.test(r.name));
 
-          // Build castSceneMap: cast row id → scene numbers they appear in
-          const castSceneMap: CastSceneMap = {};
-          for (const row of cast) {
-            if (!row.elementId) {
-              castSceneMap[row.id] = [];
-              continue;
-            }
-            const occurrences = await db
-              .select({ sceneNumber: scenes.number })
-              .from(breakdownOccurrences)
-              .innerJoin(scenes, eq(breakdownOccurrences.sceneId, scenes.id))
-              .where(eq(breakdownOccurrences.elementId, row.elementId));
-            castSceneMap[row.id] = [
-              ...new Set(occurrences.map((o) => o.sceneNumber)),
-            ].sort((a, b) => a - b);
-          }
+              // Build castSceneMap: cast row id → scene numbers they appear in
+              const castSceneMap: CastSceneMap = {};
+              for (const row of cast) {
+                if (!row.elementId) {
+                  castSceneMap[row.id] = [];
+                  continue;
+                }
+                const occurrences = await db
+                  .select({ sceneNumber: scenes.number })
+                  .from(breakdownOccurrences)
+                  .innerJoin(
+                    scenes,
+                    eq(breakdownOccurrences.sceneId, scenes.id),
+                  )
+                  .where(eq(breakdownOccurrences.elementId, row.elementId));
+                castSceneMap[row.id] = [
+                  ...new Set(occurrences.map((o) => o.sceneNumber)),
+                ].sort((a, b) => a - b);
+              }
 
               return { cast, crew, castSceneMap };
             })(),
@@ -1183,154 +1201,157 @@ export const getDayCosts = createServerFn({ method: "GET" })
               });
               if (!budget) return [];
 
-          const dayRows = await db.query.shootingDays.findMany({
-            where: and(
-              eq(shootingDays.scheduleId, schedule.id),
-              eq(shootingDays.dayType, "shoot"),
-            ),
-            orderBy: (t) => t.dayNumber,
-          });
-          if (dayRows.length === 0) return [];
-
-          const stripRows = await db
-            .select({
-              shootingDayId: strips.shootingDayId,
-              sceneId: strips.sceneId,
-            })
-            .from(strips)
-            .where(eq(strips.scheduleId, schedule.id));
-
-          const dayScenes = new Map<string, string[]>();
-          for (const s of stripRows) {
-            if (!s.shootingDayId) continue;
-            const arr = dayScenes.get(s.shootingDayId) ?? [];
-            arr.push(s.sceneId);
-            dayScenes.set(s.shootingDayId, arr);
-          }
-
-          const castRows = await db.query.budgetCast.findMany({
-            where: eq(budgetCast.budgetId, budget.id),
-          });
-
-          const elementIds = castRows
-            .map((r) => r.elementId)
-            .filter((id): id is string => id !== null);
-
-          const castOccurrences =
-            elementIds.length > 0
-              ? await db
-                  .select({
-                    elementId: breakdownOccurrences.elementId,
-                    sceneId: breakdownOccurrences.sceneId,
-                  })
-                  .from(breakdownOccurrences)
-                  .where(inArray(breakdownOccurrences.elementId, elementIds))
-              : [];
-
-          const occsByElement = new Map<string, string[]>();
-          for (const occ of castOccurrences) {
-            const arr = occsByElement.get(occ.elementId) ?? [];
-            arr.push(occ.sceneId);
-            occsByElement.set(occ.elementId, arr);
-          }
-
-          const castCostsByScene: Record<string, number> = {};
-          for (const row of castRows) {
-            const sceneIds = row.elementId
-              ? (occsByElement.get(row.elementId) ?? [])
-              : [];
-            if (sceneIds.length === 0) continue;
-            const total =
-              Number(row.dayRate) * Number(row.days) +
-              Number(row.mealAllowance) +
-              Number(row.accommodation);
-            const perScene = total / sceneIds.length;
-            for (const sid of sceneIds) {
-              castCostsByScene[sid] = (castCostsByScene[sid] ?? 0) + perScene;
-            }
-          }
-
-          const crewRows = await db.query.budgetCrew.findMany({
-            where: and(
-              eq(budgetCrew.budgetId, budget.id),
-              eq(budgetCrew.enabled, true),
-            ),
-          });
-          const totalCrewCost = crewRows.reduce(
-            (sum, r) =>
-              sum +
-              Number(r.dayRate) * Number(r.days) +
-              Number(r.mealAllowance) +
-              Number(r.accommodation),
-            0,
-          );
-
-          const prodLines = await db.query.budgetLines.findMany({
-            where: and(
-              eq(budgetLines.budgetId, budget.id),
-              eq(budgetLines.topSheet, "production"),
-            ),
-          });
-
-          const perElementLineCosts: PerElementLineCost[] = [];
-          let otherLinesTotalCost = 0;
-
-          const prodElementIds = prodLines
-            .filter(
-              (l) =>
-                l.linkedElementId !== null &&
-                (l.linkedCategory === "locations" ||
-                  l.linkedCategory === "vehicles"),
-            )
-            .map((l) => l.linkedElementId as string);
-
-          const prodOccurrences =
-            prodElementIds.length > 0
-              ? await db
-                  .select({
-                    elementId: breakdownOccurrences.elementId,
-                    sceneId: breakdownOccurrences.sceneId,
-                  })
-                  .from(breakdownOccurrences)
-                  .where(
-                    inArray(breakdownOccurrences.elementId, prodElementIds),
-                  )
-              : [];
-
-          const prodOccsByElement = new Map<string, string[]>();
-          for (const occ of prodOccurrences) {
-            const arr = prodOccsByElement.get(occ.elementId) ?? [];
-            arr.push(occ.sceneId);
-            prodOccsByElement.set(occ.elementId, arr);
-          }
-
-          for (const line of prodLines) {
-            const effective =
-              line.actual !== null
-                ? Number(line.actual)
-                : Number(line.quantity ?? 1) * Number(line.rate ?? 0);
-
-            if (
-              line.linkedElementId &&
-              (line.linkedCategory === "locations" ||
-                line.linkedCategory === "vehicles")
-            ) {
-              perElementLineCosts.push({
-                linkedCategory: line.linkedCategory,
-                sceneIds: prodOccsByElement.get(line.linkedElementId) ?? [],
-                effectiveTotal: effective,
+              const dayRows = await db.query.shootingDays.findMany({
+                where: and(
+                  eq(shootingDays.scheduleId, schedule.id),
+                  eq(shootingDays.dayType, "shoot"),
+                ),
+                orderBy: (t) => t.dayNumber,
               });
-            } else {
-              otherLinesTotalCost += effective;
-            }
-          }
+              if (dayRows.length === 0) return [];
 
-          const days = dayRows.map((d) => ({
-            id: d.id,
-            dayNumber: d.dayNumber,
-            date: d.date,
-            sceneIds: dayScenes.get(d.id) ?? [],
-          }));
+              const stripRows = await db
+                .select({
+                  shootingDayId: strips.shootingDayId,
+                  sceneId: strips.sceneId,
+                })
+                .from(strips)
+                .where(eq(strips.scheduleId, schedule.id));
+
+              const dayScenes = new Map<string, string[]>();
+              for (const s of stripRows) {
+                if (!s.shootingDayId) continue;
+                const arr = dayScenes.get(s.shootingDayId) ?? [];
+                arr.push(s.sceneId);
+                dayScenes.set(s.shootingDayId, arr);
+              }
+
+              const castRows = await db.query.budgetCast.findMany({
+                where: eq(budgetCast.budgetId, budget.id),
+              });
+
+              const elementIds = castRows
+                .map((r) => r.elementId)
+                .filter((id): id is string => id !== null);
+
+              const castOccurrences =
+                elementIds.length > 0
+                  ? await db
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(
+                        inArray(breakdownOccurrences.elementId, elementIds),
+                      )
+                  : [];
+
+              const occsByElement = new Map<string, string[]>();
+              for (const occ of castOccurrences) {
+                const arr = occsByElement.get(occ.elementId) ?? [];
+                arr.push(occ.sceneId);
+                occsByElement.set(occ.elementId, arr);
+              }
+
+              const castCostsByScene: Record<string, number> = {};
+              for (const row of castRows) {
+                const sceneIds = row.elementId
+                  ? (occsByElement.get(row.elementId) ?? [])
+                  : [];
+                if (sceneIds.length === 0) continue;
+                const total =
+                  Number(row.dayRate) * Number(row.days) +
+                  Number(row.mealAllowance) +
+                  Number(row.accommodation);
+                const perScene = total / sceneIds.length;
+                for (const sid of sceneIds) {
+                  castCostsByScene[sid] =
+                    (castCostsByScene[sid] ?? 0) + perScene;
+                }
+              }
+
+              const crewRows = await db.query.budgetCrew.findMany({
+                where: and(
+                  eq(budgetCrew.budgetId, budget.id),
+                  eq(budgetCrew.enabled, true),
+                ),
+              });
+              const totalCrewCost = crewRows.reduce(
+                (sum, r) =>
+                  sum +
+                  Number(r.dayRate) * Number(r.days) +
+                  Number(r.mealAllowance) +
+                  Number(r.accommodation),
+                0,
+              );
+
+              const prodLines = await db.query.budgetLines.findMany({
+                where: and(
+                  eq(budgetLines.budgetId, budget.id),
+                  eq(budgetLines.topSheet, "production"),
+                ),
+              });
+
+              const perElementLineCosts: PerElementLineCost[] = [];
+              let otherLinesTotalCost = 0;
+
+              const prodElementIds = prodLines
+                .filter(
+                  (l) =>
+                    l.linkedElementId !== null &&
+                    (l.linkedCategory === "locations" ||
+                      l.linkedCategory === "vehicles"),
+                )
+                .map((l) => l.linkedElementId as string);
+
+              const prodOccurrences =
+                prodElementIds.length > 0
+                  ? await db
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(
+                        inArray(breakdownOccurrences.elementId, prodElementIds),
+                      )
+                  : [];
+
+              const prodOccsByElement = new Map<string, string[]>();
+              for (const occ of prodOccurrences) {
+                const arr = prodOccsByElement.get(occ.elementId) ?? [];
+                arr.push(occ.sceneId);
+                prodOccsByElement.set(occ.elementId, arr);
+              }
+
+              for (const line of prodLines) {
+                const effective =
+                  line.actual !== null
+                    ? Number(line.actual)
+                    : Number(line.quantity ?? 1) * Number(line.rate ?? 0);
+
+                if (
+                  line.linkedElementId &&
+                  (line.linkedCategory === "locations" ||
+                    line.linkedCategory === "vehicles")
+                ) {
+                  perElementLineCosts.push({
+                    linkedCategory: line.linkedCategory,
+                    sceneIds: prodOccsByElement.get(line.linkedElementId) ?? [],
+                    effectiveTotal: effective,
+                  });
+                } else {
+                  otherLinesTotalCost += effective;
+                }
+              }
+
+              const days = dayRows.map((d) => ({
+                id: d.id,
+                dayNumber: d.dayNumber,
+                date: d.date,
+                sceneIds: dayScenes.get(d.id) ?? [],
+              }));
 
               return computeDayCosts({
                 days,

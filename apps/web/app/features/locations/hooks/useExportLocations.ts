@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
-import { downloadTextFile } from "~/features/documents/lib/download";
+import { downloadTextFile } from "~/features/documents";
 import { exportLocationsCsv } from "../server/locations-export.server";
 
 export const useExportLocations = (projectId: string) =>

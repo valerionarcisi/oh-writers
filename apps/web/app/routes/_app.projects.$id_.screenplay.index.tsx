@@ -9,8 +9,8 @@ import {
   useScreenplay,
   useVersions,
   type ScreenplayEditorHandle,
+  type ElementType,
 } from "~/features/screenplay-editor";
-import type { ElementType } from "~/features/screenplay-editor/lib/fountain-element-detector";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { useVersionsDrawer } from "~/features/versions";
 import styles from "./_app.projects.$id_.editor.module.css";
@@ -22,8 +22,7 @@ export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
 function ScreenplayEditorPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useScreenplay(id);
-  const screenplayId =
-    result && result.isOk ? result.value.id : "";
+  const screenplayId = result && result.isOk ? result.value.id : "";
   const { data: versionsResult } = useVersions(screenplayId || "");
   const [isCesareOn, setIsCesareOn] = useState(true);
   const [isCesarePanelOpen, setIsCesarePanelOpen] = useState(true);

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { CATEGORY_META, BREAKDOWN_CATEGORIES } from "@oh-writers/domain";
-import { getBreakdownForScene } from "~/features/breakdown/server/breakdown.server";
+import { getBreakdownForScene } from "~/features/breakdown";
 import { unwrapResult } from "@oh-writers/utils";
 import type { StripView } from "../server/schedule.server";
 import styles from "./SceneDrawer.module.css";

@@ -48,7 +48,7 @@ import {
   statusForConfidence,
 } from "../lib/llm-spoglio-prompt";
 import { mockFullScriptBreakdown } from "~/mocks/ai-responses";
-import { loadAnthropicStreamingClient } from "~/features/ai/anthropic-client";
+import { loadAnthropicStreamingClient } from "~/features/ai";
 
 export interface StreamFullSpoglioResult {
   scenesProcessed: number;
@@ -522,26 +522,22 @@ const streamFromAnthropic = async (
   // The SDK's MessageStream emits "inputJson" with a string delta for each
   // partial JSON chunk from the tool_use block.
   stream.on("inputJson", (chunk: string) => {
-      if (chunk.length === 0) return;
-      buffer += chunk;
-      const { scenes: ready, nextCursor } = extractCompleteScenes(
-        buffer,
-        cursor,
-      );
-      cursor = nextCursor;
-      for (const parsed of ready) {
-        if (seen.has(parsed.sceneNumber)) continue;
-        seen.add(parsed.sceneNumber);
-        // Persistence is async; we don't await in the listener (the SDK
-        // doesn't await listeners) but we capture the promise so a
-        // background error surfaces in the next tick.
-        sink(parsed).catch((e: unknown) => {
-          // eslint-disable-next-line no-console
-          console.error("[streamFullSpoglio] sink error", e);
-        });
-      }
-    },
-  );
+    if (chunk.length === 0) return;
+    buffer += chunk;
+    const { scenes: ready, nextCursor } = extractCompleteScenes(buffer, cursor);
+    cursor = nextCursor;
+    for (const parsed of ready) {
+      if (seen.has(parsed.sceneNumber)) continue;
+      seen.add(parsed.sceneNumber);
+      // Persistence is async; we don't await in the listener (the SDK
+      // doesn't await listeners) but we capture the promise so a
+      // background error surfaces in the next tick.
+      sink(parsed).catch((e: unknown) => {
+        // eslint-disable-next-line no-console
+        console.error("[streamFullSpoglio] sink error", e);
+      });
+    }
+  });
 
   await stream.finalMessage();
   // Final drain: in case the last chunk completed a scene exactly at the

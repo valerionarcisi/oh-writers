@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DsButton, Modal } from "@oh-writers/ui";
-import { openPdfPreview } from "~/features/documents";
-import { downloadTextFile } from "~/features/documents/lib/download";
+import { openPdfPreview, downloadTextFile } from "~/features/documents";
 import { useExportBudget } from "../hooks/useExportBudget";
 import styles from "./ExportBudgetModal.module.css";
 

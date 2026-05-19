@@ -10,8 +10,10 @@ import {
   screenplays,
   screenplayVersions,
 } from "@oh-writers/db/schema";
-import { ensureFirstVersion } from "~/features/screenplay-editor";
-import { syncScenesFromFountain } from "~/features/screenplay-editor/server/scenes-sync";
+import {
+  ensureFirstVersion,
+  syncScenesFromFountain,
+} from "~/features/screenplay-editor";
 import {
   BreakdownCategorySchema,
   BreakdownElementSchema,
@@ -392,25 +394,28 @@ export const getStaleScenes = createServerFn({ method: "GET" })
             .andThen((version) =>
               findScreenplayById(db, version.screenplayId).andThen(
                 (screenplay) =>
-                  requireProjectAccess(db, screenplay.projectId, "view").andThen(
-                    () =>
-                      ResultAsync.fromPromise(
-                        db
-                          .selectDistinct({
-                            sceneId: breakdownOccurrences.sceneId,
-                          })
-                          .from(breakdownOccurrences)
-                          .where(
-                            and(
-                              eq(
-                                breakdownOccurrences.screenplayVersionId,
-                                data.screenplayVersionId,
-                              ),
-                              eq(breakdownOccurrences.isStale, true),
+                  requireProjectAccess(
+                    db,
+                    screenplay.projectId,
+                    "view",
+                  ).andThen(() =>
+                    ResultAsync.fromPromise(
+                      db
+                        .selectDistinct({
+                          sceneId: breakdownOccurrences.sceneId,
+                        })
+                        .from(breakdownOccurrences)
+                        .where(
+                          and(
+                            eq(
+                              breakdownOccurrences.screenplayVersionId,
+                              data.screenplayVersionId,
                             ),
+                            eq(breakdownOccurrences.isStale, true),
                           ),
-                        (e) => new DbError("getStaleScenes", e),
-                      ).map((rows) => rows.map((r) => r.sceneId)),
+                        ),
+                      (e) => new DbError("getStaleScenes", e),
+                    ).map((rows) => rows.map((r) => r.sceneId)),
                   ),
               ),
             ),
@@ -675,7 +680,9 @@ export const setOccurrenceStatus = createServerFn({ method: "POST" })
             >(
               (acc, pid) =>
                 acc.andThen(() =>
-                  requireProjectAccess(db, pid, "edit").map(() => true as const),
+                  requireProjectAccess(db, pid, "edit").map(
+                    () => true as const,
+                  ),
                 ),
               okAsync(true as const),
             );
@@ -903,7 +910,8 @@ export const bulkUpdateBreakdownElements = createServerFn({ method: "POST" })
           if (data.patch.category !== undefined)
             set.category = data.patch.category;
           if (data.patch.archivedAt !== undefined)
-            set.archivedAt = data.patch.archivedAt === "now" ? new Date() : null;
+            set.archivedAt =
+              data.patch.archivedAt === "now" ? new Date() : null;
           return ResultAsync.fromPromise(
             db
               .update(breakdownElements)
@@ -1010,10 +1018,7 @@ export const removeBreakdownOccurrence = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      ResultShape<
-        { ok: true },
-        ProjectNotFoundError | ForbiddenError | DbError
-      >
+      ResultShape<{ ok: true }, ProjectNotFoundError | ForbiddenError | DbError>
     > =>
       toShape(
         await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
@@ -1030,7 +1035,9 @@ export const removeBreakdownOccurrence = createServerFn({ method: "POST" })
                     db
                       .select({ id: breakdownElements.id })
                       .from(breakdownElements)
-                      .where(eq(breakdownElements.projectId, access.project.id)),
+                      .where(
+                        eq(breakdownElements.projectId, access.project.id),
+                      ),
                   ),
                 ),
               ),
@@ -1098,11 +1105,13 @@ export const mergeBreakdownElements = createServerFn({ method: "POST" })
                 const sourceOccs = await db
                   .select()
                   .from(breakdownOccurrences)
-                  .where(inArray(breakdownOccurrences.elementId, data.mergeIds));
+                  .where(
+                    inArray(breakdownOccurrences.elementId, data.mergeIds),
+                  );
                 let movedOccurrences = 0;
                 for (const occ of sourceOccs) {
-                  const existing = await db.query.breakdownOccurrences.findFirst(
-                    {
+                  const existing =
+                    await db.query.breakdownOccurrences.findFirst({
                       where: and(
                         eq(breakdownOccurrences.elementId, data.keepId),
                         eq(
@@ -1111,8 +1120,7 @@ export const mergeBreakdownElements = createServerFn({ method: "POST" })
                         ),
                         eq(breakdownOccurrences.sceneId, occ.sceneId),
                       ),
-                    },
-                  );
+                    });
                   if (existing) {
                     await db
                       .update(breakdownOccurrences)

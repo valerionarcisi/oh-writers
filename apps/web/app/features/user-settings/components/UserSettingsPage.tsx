@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button, Input, FormField } from "@oh-writers/ui";
-import { PasswordInput } from "~/features/auth/components/PasswordInput";
+import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
 import { authClient } from "~/lib/auth-client";
 import {
@@ -18,7 +18,10 @@ interface UserSettingsPageProps {
   userEmail: string;
 }
 
-export function UserSettingsPage({ userName, userEmail }: UserSettingsPageProps) {
+export function UserSettingsPage({
+  userName,
+  userEmail,
+}: UserSettingsPageProps) {
   const profileQuery = useQuery(userProfileQueryOptions());
   const profile = profileQuery.data?.isOk ? profileQuery.data.value : null;
 
@@ -49,7 +52,10 @@ export function UserSettingsPage({ userName, userEmail }: UserSettingsPageProps)
 // ── Profile ────────────────────────────────────────────────────────────────
 
 const ProfileSchema = z.object({
-  name: z.string().min(1, "Il nome è obbligatorio").max(100, "Massimo 100 caratteri"),
+  name: z
+    .string()
+    .min(1, "Il nome è obbligatorio")
+    .max(100, "Massimo 100 caratteri"),
   avatarUrl: z
     .string()
     .url("URL non valido")
@@ -70,7 +76,10 @@ function ProfileSection({
   const qc = useQueryClient();
   const [name, setName] = useState(initialName);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl ?? "");
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; avatarUrl?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    avatarUrl?: string;
+  }>({});
   const [success, setSuccess] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -78,7 +87,10 @@ function ProfileSection({
 
   const mut = useMutation({
     mutationFn: async () => {
-      const parsed = ProfileSchema.safeParse({ name, avatarUrl: avatarUrl || null });
+      const parsed = ProfileSchema.safeParse({
+        name,
+        avatarUrl: avatarUrl || null,
+      });
       if (!parsed.success) {
         const errs = parsed.error.flatten().fieldErrors;
         setFieldErrors({
@@ -89,7 +101,9 @@ function ProfileSection({
       }
       setFieldErrors({});
       return unwrapResult(
-        await updateUserProfile({ data: { name: parsed.data.name, avatarUrl: parsed.data.avatarUrl } }),
+        await updateUserProfile({
+          data: { name: parsed.data.name, avatarUrl: parsed.data.avatarUrl },
+        }),
       );
     },
     onSuccess: () => {
@@ -113,9 +127,16 @@ function ProfileSection({
         {previewUrl ? (
           <img src={previewUrl} alt="Avatar" className={styles.avatarPreview} />
         ) : (
-          <div className={styles.avatarFallback}>{name.charAt(0).toUpperCase()}</div>
+          <div className={styles.avatarFallback}>
+            {name.charAt(0).toUpperCase()}
+          </div>
         )}
-        <FormField label="URL avatar" htmlFor="avatar-url" error={fieldErrors.avatarUrl} className={styles.avatarField}>
+        <FormField
+          label="URL avatar"
+          htmlFor="avatar-url"
+          error={fieldErrors.avatarUrl}
+          className={styles.avatarField}
+        >
           <Input
             id="avatar-url"
             type="url"
@@ -191,8 +212,9 @@ function PasswordSection() {
   if (providersQuery.isLoading) return null;
   if (!hasPassword) return null;
 
-  const setField = (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setFields((prev) => ({ ...prev, [k]: e.target.value }));
+  const setField =
+    (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setFields((prev) => ({ ...prev, [k]: e.target.value }));
 
   const handleSubmit = async () => {
     const parsed = PasswordSchema.safeParse(fields);
@@ -216,7 +238,9 @@ function PasswordSection() {
         revokeOtherSessions: false,
       });
       if (result.error) {
-        setApiError(result.error.message ?? "Errore durante il cambio password.");
+        setApiError(
+          result.error.message ?? "Errore durante il cambio password.",
+        );
       } else {
         setSuccess(true);
         setFields({ current: "", next: "", confirm: "" });
@@ -234,7 +258,11 @@ function PasswordSection() {
       <h2 className={styles.sectionTitle}>Cambia password</h2>
 
       <div className={styles.fieldGroup}>
-        <FormField label="Password attuale" htmlFor="current-pwd" error={fieldErrors.current}>
+        <FormField
+          label="Password attuale"
+          htmlFor="current-pwd"
+          error={fieldErrors.current}
+        >
           <PasswordInput
             id="current-pwd"
             autoComplete="current-password"
@@ -246,7 +274,11 @@ function PasswordSection() {
           />
         </FormField>
 
-        <FormField label="Nuova password" htmlFor="new-pwd" error={fieldErrors.next}>
+        <FormField
+          label="Nuova password"
+          htmlFor="new-pwd"
+          error={fieldErrors.next}
+        >
           <PasswordInput
             id="new-pwd"
             autoComplete="new-password"
@@ -258,7 +290,11 @@ function PasswordSection() {
           />
         </FormField>
 
-        <FormField label="Conferma nuova password" htmlFor="confirm-pwd" error={fieldErrors.confirm}>
+        <FormField
+          label="Conferma nuova password"
+          htmlFor="confirm-pwd"
+          error={fieldErrors.confirm}
+        >
           <PasswordInput
             id="confirm-pwd"
             autoComplete="new-password"
@@ -272,7 +308,9 @@ function PasswordSection() {
       </div>
 
       <div className={styles.formActions}>
-        {success && <span className={styles.successMsg}>Password aggiornata!</span>}
+        {success && (
+          <span className={styles.successMsg}>Password aggiornata!</span>
+        )}
         {apiError && <span className={styles.apiError}>{apiError}</span>}
         <Button
           variant="primary"
@@ -293,8 +331,7 @@ function PasswordSection() {
 function TeamsSection() {
   const teamsQuery = useQuery(userTeamsQueryOptions());
 
-  const teamList =
-    teamsQuery.data?.isOk ? teamsQuery.data.value : [];
+  const teamList = teamsQuery.data?.isOk ? teamsQuery.data.value : [];
 
   return (
     <section className={styles.section}>
@@ -307,7 +344,11 @@ function TeamsSection() {
           {teamList.map((team) => (
             <div key={team.id} className={styles.teamRow}>
               {team.avatarUrl ? (
-                <img src={team.avatarUrl} alt={team.name} className={styles.teamAvatar} />
+                <img
+                  src={team.avatarUrl}
+                  alt={team.name}
+                  className={styles.teamAvatar}
+                />
               ) : (
                 <div className={styles.teamAvatarFallback}>
                   {team.name.charAt(0).toUpperCase()}

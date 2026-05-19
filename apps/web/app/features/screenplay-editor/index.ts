@@ -67,6 +67,11 @@ export {
   extractLocations,
 } from "./lib/fountain-autocomplete";
 export { diffScreenplays, diffStats } from "./lib/diff";
+export { detectElement } from "./lib/fountain-element-detector";
+export type { ElementType } from "./lib/fountain-element-detector";
+
+// Server — scene sync
+export { syncScenesFromFountain, extractSceneRows } from "./server/scenes-sync";
 
 // Types
 export type { ScreenplayView } from "./server/screenplay.server";
