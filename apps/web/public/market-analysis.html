@@ -1229,13 +1229,512 @@
       margin-top: 4px;
       display: block;
     }
+
+    /* ── Slide — Cesare dialogue (chat) ── */
+    .chat-wrap {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow-2);
+    }
+    .chat-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 78%;
+    }
+    .chat-row.user {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+    .chat-row.cesare {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+    .chat-author {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 6px;
+    }
+    .chat-row.cesare .chat-author {
+      color: var(--agent);
+    }
+    .chat-bubble {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      color: var(--text-2);
+    }
+    .chat-row.user .chat-bubble {
+      background: var(--action-soft);
+      border: 1px solid rgba(139,58,26,0.2);
+      color: var(--text);
+      border-bottom-right-radius: 2px;
+    }
+    .chat-row.cesare .chat-bubble {
+      background: var(--agent-soft);
+      border: 1px solid rgba(90,107,60,0.25);
+      border-bottom-left-radius: 2px;
+    }
+    .chat-bubble strong {
+      color: var(--text);
+    }
+    .chat-tool-chip {
+      display: inline-block;
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 0.78rem;
+      background: rgba(28,26,23,0.06);
+      border-radius: var(--radius-sm);
+      padding: 2px 6px;
+      margin: 0 2px;
+      color: var(--text-2);
+    }
+    .chat-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .chat-action {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.02em;
+    }
+    .chat-action.accept {
+      background: var(--agent);
+      color: #fff;
+    }
+    .chat-action.reject {
+      background: var(--surface);
+      color: var(--text-3);
+      border: 1px solid var(--line);
+    }
+    .chat-footnote {
+      margin-top: 18px;
+      font-size: 0.85rem;
+      color: var(--text-3);
+      line-height: 1.55;
+      font-style: italic;
+    }
+
+    /* ── Slide — End-to-end journey ── */
+    .journey-rail {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      position: relative;
+    }
+    .journey-step {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      gap: 20px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .journey-step:last-child {
+      border-bottom: none;
+    }
+    .journey-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--agent-soft);
+      color: var(--agent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+    .journey-step.user .journey-dot {
+      background: var(--action-soft);
+      color: var(--action);
+    }
+    .journey-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .journey-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .journey-desc {
+      font-size: 0.85rem;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+    .journey-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      color: var(--text-mute);
+      background: var(--surface-alt);
+    }
+    .journey-step.user .journey-tag {
+      color: var(--action);
+      background: var(--action-soft);
+    }
+    .journey-step.cesare .journey-tag {
+      color: var(--agent);
+      background: var(--agent-soft);
+    }
+
+    /* ── Slide — Locations scouting ── */
+    .scout-hero {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .scout-map {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      min-height: 220px;
+      position: relative;
+      overflow: hidden;
+    }
+    .scout-map-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--line-soft) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+      background-size: 28px 28px;
+      opacity: 0.7;
+    }
+    .scout-map-circle {
+      position: absolute;
+      left: 38%;
+      top: 38%;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 2px dashed var(--action);
+      background: rgba(139,58,26,0.05);
+      transform: translate(-50%, -50%);
+    }
+    .scout-pin {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--action);
+      box-shadow: 0 0 0 4px var(--action-soft), var(--shadow-1);
+    }
+    .scout-map-label {
+      position: absolute;
+      bottom: 14px;
+      left: 18px;
+      font-size: 0.78rem;
+      color: var(--text-mute);
+      background: rgba(255,255,255,0.92);
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--line);
+    }
+    .scout-callout {
+      background: var(--agent-soft);
+      border: 1px solid rgba(90,107,60,0.25);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .scout-callout-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--agent);
+    }
+    .scout-callout-quote {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .scout-callout-result {
+      font-size: 0.88rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+    .scout-callout-result strong {
+      color: var(--agent);
+    }
+    .scout-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .scout-feature {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+    .scout-feature-name {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .scout-feature-desc {
+      font-size: 0.82rem;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+    .scout-versus {
+      margin-top: 14px;
+      padding: 12px 18px;
+      background: var(--action-soft);
+      border-left: 3px solid var(--action);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      font-size: 0.88rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+
+    /* ── Slide — Shooting plan ── */
+    .shoot-hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .shoot-stage {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      min-height: 200px;
+      position: relative;
+      overflow: hidden;
+    }
+    .shoot-stage-grid {
+      position: absolute;
+      inset: 18px;
+      background-image:
+        linear-gradient(var(--line-soft) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+      background-size: 22px 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+    .shoot-stage-label {
+      position: absolute;
+      top: 8px;
+      left: 22px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+    }
+    .shoot-actor {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--action);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-1);
+    }
+    .shoot-camera {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: var(--agent);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-1);
+    }
+    .shoot-ghost {
+      opacity: 0.45;
+      border: 2px dashed var(--agent);
+      background: var(--agent-soft);
+      color: var(--agent);
+    }
+    .shoot-plans {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .shoot-plan {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .shoot-plan.active {
+      border: 2px solid var(--action);
+      background: var(--action-soft);
+    }
+    .shoot-plan-letter {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: var(--action);
+      width: 24px;
+      flex-shrink: 0;
+    }
+    .shoot-plan-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+    .shoot-plan-name {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .shoot-plan-shots {
+      font-size: 0.78rem;
+      color: var(--text-3);
+      font-family: ui-monospace, Menlo, monospace;
+    }
+    .shoot-versus {
+      margin-top: 14px;
+      padding: 12px 18px;
+      background: var(--action-soft);
+      border-left: 3px solid var(--action);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      font-size: 0.88rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+
+    /* ── Slide — Time saved bars ── */
+    .timebars {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .timebar-row {
+      display: grid;
+      grid-template-columns: 220px 1fr 110px;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .timebar-row:last-child {
+      border-bottom: none;
+    }
+    .timebar-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .timebar-track {
+      position: relative;
+      height: 32px;
+      background: var(--surface-alt);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .timebar-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      padding-left: 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+    .timebar-fill.before {
+      background: var(--danger);
+      opacity: 0.85;
+    }
+    .timebar-fill.after {
+      background: var(--agent);
+    }
+    .timebar-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .timebar-delta {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--action);
+      line-height: 1;
+    }
+    .timebar-delta-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+    }
+    .timebar-legend {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 14px;
+      font-size: 0.78rem;
+      color: var(--text-3);
+    }
+    .timebar-legend-swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-sm);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .timebar-legend-swatch.before { background: var(--danger); }
+    .timebar-legend-swatch.after { background: var(--agent); }
   </style>
 </head>
 <body>
 
   <!-- Progress bar -->
   <div class="progress-bar">
-    <div class="progress-fill" style="width: 5.26%"></div>
+    <div class="progress-fill" style="width: 4.17%"></div>
   </div>
 
   <!-- ── Slide 1 — Hero ── -->
@@ -1299,6 +1798,72 @@
     </div>
   </div>
 
+  <!-- ── Slide — End-to-end journey ── -->
+  <div class="slide" id="slide-journey">
+    <div class="slide-content">
+      <p class="eyebrow">La giornata di una scrittrice-regista</p>
+      <h2 class="slide-title" style="margin-bottom: 20px;">Dalla pagina bianca<br>al primo ciak.</h2>
+      <div class="journey-rail">
+        <div class="journey-step user">
+          <div class="journey-dot">1</div>
+          <div class="journey-body">
+            <div class="journey-title">Apre Oh Writers su una pagina vuota.</div>
+            <div class="journey-desc">Scrive una logline di 2 righe. Niente template, niente prompt magici.</div>
+          </div>
+          <div class="journey-tag">utente</div>
+        </div>
+        <div class="journey-step cesare">
+          <div class="journey-dot">✦</div>
+          <div class="journey-body">
+            <div class="journey-title">Cesare propone un soggetto v1.</div>
+            <div class="journey-desc">Banner DRAFT verde in cima al documento. L'autrice apre, legge, accetta una riga, rifiuta un'altra.</div>
+          </div>
+          <div class="journey-tag">cesare propone</div>
+        </div>
+        <div class="journey-step cesare">
+          <div class="journey-dot">✦</div>
+          <div class="journey-body">
+            <div class="journey-title">Da soggetto → scaletta → sceneggiatura.</div>
+            <div class="journey-desc">Stesso pattern: bozza generata, l'autrice tiene il controllo riga per riga.</div>
+          </div>
+          <div class="journey-tag">cesare propone</div>
+        </div>
+        <div class="journey-step cesare">
+          <div class="journey-dot">✦</div>
+          <div class="journey-body">
+            <div class="journey-title">Tagga il breakdown e stima il costo.</div>
+            <div class="journey-desc">Cast, props, location per ogni scena. Funzione pura: numeri dal DB, mai allucinati.</div>
+          </div>
+          <div class="journey-tag">cesare esegue</div>
+        </div>
+        <div class="journey-step cesare">
+          <div class="journey-dot">✦</div>
+          <div class="journey-body">
+            <div class="journey-title">Cerca le location reali su mappa.</div>
+            <div class="journey-desc">Google Places, foto in-app, candidati salvati sulla scena. Mai aperto Google Maps in un'altra tab.</div>
+          </div>
+          <div class="journey-tag">cesare esegue</div>
+        </div>
+        <div class="journey-step cesare">
+          <div class="journey-dot">✦</div>
+          <div class="journey-body">
+            <div class="journey-title">Propone il piano inquadrature.</div>
+            <div class="journey-desc">2D blocking della scena, Piano A classico + Piano B alternativo. L'autrice sceglie.</div>
+          </div>
+          <div class="journey-tag">cesare propone</div>
+        </div>
+        <div class="journey-step user">
+          <div class="journey-dot">7</div>
+          <div class="journey-body">
+            <div class="journey-title">Apre il piano di lavorazione: pronta al ciak.</div>
+            <div class="journey-desc">Schedule meteo-aware, budget al verde, location confermate, shot list in mano alla troupe. Zero tool switch.</div>
+          </div>
+          <div class="journey-tag">utente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Slide 4 — Bandi & Finanziamenti ── -->
   <div class="slide" id="slide-4">
     <div class="slide-content">
@@ -1338,7 +1903,7 @@
         </div>
       </div>
       <div class="bandi-moat">
-        <strong>Il vero vantaggio:</strong> la sceneggiatura e i bandi vivono nella stessa app. Cesare conosce genere, formato, budget, fase e regione del progetto. Il match è zero-friction. Anchor source: <em>Collettivo Incendio</em>; 10 fonti curate al lancio, feed RSS personalizzabili dal team. Nessun competitor fa questo.
+        <strong>Il momento "wow":</strong> la sceneggiatrice apre Oh Writers la mattina alle 9. In cima alla home: <em>"✦ Cesare ha trovato 3 bandi pertinenti stanotte."</em> Apulia Film Fund scade fra 12 giorni, importo compatibile con il budget, regione coerente con la location già scelta. Zero ricerca manuale, zero scadenze perse. Anchor source <em>Collettivo Incendio</em>, 10 fonti curate al lancio, feed RSS personalizzabili. Nessun competitor fa questo.
       </div>
     </div>
   </div>
@@ -1430,6 +1995,140 @@
     </div>
   </div>
 
+  <!-- ── Slide — Cesare dialogue (chat) ── -->
+  <div class="slide" id="slide-dialogue">
+    <div class="slide-content">
+      <p class="eyebrow">Cesare in una conversazione reale</p>
+      <h2 class="slide-title" style="margin-bottom: 20px;">"Fammi una v2 più tesa."</h2>
+      <div class="chat-wrap">
+        <div class="chat-row user">
+          <span class="chat-author">Sceneggiatrice</span>
+          <div class="chat-bubble">Cesare, l'Atto II è piatto. Fammi una v2 più tesa, mantieni il finale.</div>
+        </div>
+        <div class="chat-row cesare">
+          <span class="chat-author">Cesare</span>
+          <div class="chat-bubble">
+            Ho letto le 12 scene dell'Atto II via <span class="chat-tool-chip">read_screenplay</span>. Ho preparato una v2: <strong>7 scene riscritte</strong>, conflitto anticipato di 4 pagine, due nuove svolte sui personaggi Giulio e Tea. Il finale è invariato.
+            <div class="chat-actions">
+              <span class="chat-action accept">✓ Apri il diff</span>
+              <span class="chat-action reject">✕ Annulla</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-row user">
+          <span class="chat-author">Sceneggiatrice</span>
+          <div class="chat-bubble">Aggiorna anche il budget di conseguenza.</div>
+        </div>
+        <div class="chat-row cesare">
+          <span class="chat-author">Cesare</span>
+          <div class="chat-bubble">
+            Le scene nuove aggiungono 1 location esterna notturna e 4 comparse. Stima via <span class="chat-tool-chip">estimate_scene_cost</span>: <strong>+€8.400</strong>. Ho ridistribuito attingendo dalla riserva "imprevisti". Variance entro il 3%.
+            <div class="chat-actions">
+              <span class="chat-action accept">✓ Applica</span>
+              <span class="chat-action reject">✕ Rivedi</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="chat-footnote">Tre concetti in una schermata: Cesare <strong>legge</strong> il contesto via read-tools, <strong>propone</strong> un draft tracciabile, l'utente <strong>accetta o rifiuta</strong>. Nessun edit silenzioso. Nessuna allucinazione: i numeri arrivano da funzioni pure sul DB.</p>
+    </div>
+  </div>
+
+  <!-- ── Slide — Locations scouting (NEW) ── -->
+  <div class="slide" id="slide-locations">
+    <div class="slide-content">
+      <p class="eyebrow">Locations scouting · TripAdvisor + AI</p>
+      <h2 class="slide-title" style="margin-bottom: 18px;">Trova la location.<br>In 30 secondi, non in 2 giorni.</h2>
+      <div class="scout-hero">
+        <div class="scout-map" aria-hidden="true">
+          <div class="scout-map-grid"></div>
+          <div class="scout-map-circle"></div>
+          <span class="scout-pin" style="left:42%; top:38%;"></span>
+          <span class="scout-pin" style="left:50%; top:46%;"></span>
+          <span class="scout-pin" style="left:38%; top:52%;"></span>
+          <span class="scout-pin" style="left:55%; top:36%;"></span>
+          <span class="scout-pin" style="left:46%; top:60%;"></span>
+          <span class="scout-map-label">Area di ricerca · Napoli centro</span>
+        </div>
+        <div class="scout-callout">
+          <span class="scout-callout-eyebrow">Cesare agentic</span>
+          <div class="scout-callout-quote">"Trova candidati per la pizzeria con forno a legna a Napoli."</div>
+          <div class="scout-callout-result">
+            Cesare legge la scena dal breakdown via RAG, chiama Google Places, salva <strong>5 candidati</strong> con foto, indirizzo, coordinate. Notifica via pill: <em>"✦ Cesare ha aggiunto 5 candidati"</em>.
+          </div>
+        </div>
+      </div>
+      <div class="scout-features">
+        <div class="scout-feature">
+          <div class="scout-feature-name">Area search TripAdvisor-style</div>
+          <div class="scout-feature-desc">L'utente disegna un cerchio sulla mappa. Pin cluster con foto, un click per aggiungere.</div>
+        </div>
+        <div class="scout-feature">
+          <div class="scout-feature-name">Foto in-app, mai fuori contesto</div>
+          <div class="scout-feature-desc">LocationDetailModal + PhotoLightbox. Nessun redirect a Maps per vedere le immagini.</div>
+        </div>
+      </div>
+      <div class="scout-versus">
+        <strong>Il vantaggio:</strong> Trello + Google Maps + AI in un'unica app. I competitor obbligano a saltare fra 3-4 tool. Tempo medio scouting iniziale: da <strong>2 giorni</strong> a <strong>30 secondi</strong>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Slide — Shooting plan / Inquadrature (NEW) ── -->
+  <div class="slide" id="slide-shooting">
+    <div class="slide-content">
+      <p class="eyebrow">Piano inquadrature · 2D blocking</p>
+      <h2 class="slide-title" style="margin-bottom: 18px;">Il regista vede il set<br>prima del set.</h2>
+      <div class="shoot-hero">
+        <div class="shoot-stage" aria-hidden="true">
+          <span class="shoot-stage-label">Scena 17 · INT. Cucina · NIGHT</span>
+          <div class="shoot-stage-grid"></div>
+          <span class="shoot-actor" style="left:32%; top:54%;">G</span>
+          <span class="shoot-actor" style="left:54%; top:52%;">T</span>
+          <span class="shoot-actor shoot-ghost" style="left:46%; top:64%;">M</span>
+          <span class="shoot-camera" style="left:24%; top:32%;">A</span>
+          <span class="shoot-camera shoot-ghost" style="left:64%; top:36%;">B</span>
+        </div>
+        <div class="shoot-plans">
+          <div class="shoot-plan active">
+            <div class="shoot-plan-letter">A</div>
+            <div class="shoot-plan-body">
+              <div class="shoot-plan-name">Piano A · Classico</div>
+              <div class="shoot-plan-shots">WS · OTS Giulio · CU Tea · INSERT mani</div>
+            </div>
+          </div>
+          <div class="shoot-plan">
+            <div class="shoot-plan-letter">B</div>
+            <div class="shoot-plan-body">
+              <div class="shoot-plan-name">Piano B · Long take</div>
+              <div class="shoot-plan-shots">Steadicam unico, 2'40"</div>
+            </div>
+          </div>
+          <div class="shoot-plan">
+            <div class="shoot-plan-letter">C</div>
+            <div class="shoot-plan-body">
+              <div class="shoot-plan-name">Piano C · Cesare propone</div>
+              <div class="shoot-plan-shots">"genera Piano B classico" → 6 shot</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scout-features">
+        <div class="scout-feature">
+          <div class="scout-feature-name">Piani paralleli A/B/C</div>
+          <div class="scout-feature-desc">Stessa scena, shot list diverse. Si comparano fianco a fianco, si bloccano quelle approvate.</div>
+        </div>
+        <div class="scout-feature">
+          <div class="scout-feature-name">Cesare blocca attori e camere</div>
+          <div class="scout-feature-desc">Posizioni proposte come ghost overlay sulla scena. L'utente accetta ✓ o rifiuta ✕ per ogni elemento.</div>
+        </div>
+      </div>
+      <div class="shoot-versus">
+        <strong>Il vantaggio:</strong> StudioBinder, Final Draft, Movie Magic non hanno il 2D blocking. Da <strong>1 ora</strong> di stesura manuale a <strong>5 minuti</strong> con Cesare che propone, regista che decide.
+      </div>
+    </div>
+  </div>
+
   <!-- ── Slide 7 — Cost engineering ── -->
   <div class="slide" id="slide-7-cost">
     <div class="slide-content">
@@ -1462,6 +2161,65 @@
         </div>
       </div>
       <p class="qa-footnote">Implicazione: piano Team a €29/mese per utente mantiene margine lordo 95%+ anche con uso intensivo di Cesare.</p>
+    </div>
+  </div>
+
+  <!-- ── Slide — Time saved bars (NEW) ── -->
+  <div class="slide" id="slide-timebars">
+    <div class="slide-content">
+      <p class="eyebrow">Il tempo che restituiamo all'autore</p>
+      <h2 class="slide-title" style="margin-bottom: 14px;">Quattro operazioni.<br>Una giornata diventa cinque minuti.</h2>
+      <div class="timebar-legend">
+        <span><span class="timebar-legend-swatch before"></span>Workflow attuale</span>
+        <span><span class="timebar-legend-swatch after"></span>Con Cesare</span>
+      </div>
+      <div class="timebars">
+        <div class="timebar-row">
+          <div class="timebar-label">Soggetto v1 da logline</div>
+          <div class="timebar-stack">
+            <div class="timebar-track"><div class="timebar-fill before" style="width:100%;">3–7 giorni</div></div>
+            <div class="timebar-track"><div class="timebar-fill after" style="width:4%;">30s</div></div>
+          </div>
+          <div>
+            <div class="timebar-delta">−99%</div>
+            <div class="timebar-delta-label">tempo</div>
+          </div>
+        </div>
+        <div class="timebar-row">
+          <div class="timebar-label">Scouting iniziale location</div>
+          <div class="timebar-stack">
+            <div class="timebar-track"><div class="timebar-fill before" style="width:85%;">2 giorni</div></div>
+            <div class="timebar-track"><div class="timebar-fill after" style="width:3%;">30s</div></div>
+          </div>
+          <div>
+            <div class="timebar-delta">−99%</div>
+            <div class="timebar-delta-label">tempo</div>
+          </div>
+        </div>
+        <div class="timebar-row">
+          <div class="timebar-label">Piano inquadrature scena</div>
+          <div class="timebar-stack">
+            <div class="timebar-track"><div class="timebar-fill before" style="width:55%;">~1 ora</div></div>
+            <div class="timebar-track"><div class="timebar-fill after" style="width:8%;">5 min</div></div>
+          </div>
+          <div>
+            <div class="timebar-delta">−92%</div>
+            <div class="timebar-delta-label">tempo</div>
+          </div>
+        </div>
+        <div class="timebar-row">
+          <div class="timebar-label">Breakdown + stima costo scena</div>
+          <div class="timebar-stack">
+            <div class="timebar-track"><div class="timebar-fill before" style="width:70%;">30–60 min</div></div>
+            <div class="timebar-track"><div class="timebar-fill after" style="width:4%;">15s</div></div>
+          </div>
+          <div>
+            <div class="timebar-delta">−98%</div>
+            <div class="timebar-delta-label">tempo</div>
+          </div>
+        </div>
+      </div>
+      <p class="qa-footnote">Stime basate sui workflow attuali raccolti su Final Draft + Excel + StudioBinder; tempi con Cesare misurati sul prodotto in main. Le ore restituite tornano sul progetto che conta: la storia.</p>
     </div>
   </div>
 
@@ -1892,7 +2650,7 @@
   <nav class="nav-bar">
     <button class="btn-nav btn-prev" aria-label="Slide precedente">&#8249;</button>
     <div class="nav-center">
-      <span class="counter">1 / 19</span>
+      <span class="counter">1 / 24</span>
       <span class="nav-dot"></span>
       <span class="brand">oh writers</span>
     </div>
