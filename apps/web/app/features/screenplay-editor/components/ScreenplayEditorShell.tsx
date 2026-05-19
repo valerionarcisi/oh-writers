@@ -7,6 +7,7 @@ import {
   VersionTrigger,
 } from "@oh-writers/ui";
 import { DraftMetaBadge } from "~/features/projects";
+import { SaveStatusIndicator } from "~/features/app-shell";
 import styles from "./ScreenplayEditorShell.module.css";
 
 // ─── Editor shell ──────────────────────────────────────────────────────────
@@ -159,135 +160,123 @@ export function ScreenplayEditorShell({
         data-scrolled={isScrolled || undefined}
       >
         <Viewbar>
-        <div className={styles.viewbarGrid}>
-          <div className={styles.viewbarCenter}>{viewbarCenter}</div>
+          <div className={styles.viewbarGrid}>
+            <div className={styles.viewbarCenter}>{viewbarCenter}</div>
 
-          <div className={styles.viewbarRight}>
-            {cesarePanel && onToggleCesarePanel && (
-              <button
-                type="button"
-                className={[
-                  styles.cesareToggle,
-                  isCesarePanelOpen ? styles.cesareToggleActive : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={onToggleCesarePanel}
-                aria-pressed={isCesarePanelOpen}
-                aria-label={isCesarePanelOpen ? "Chiudi pannello Cesare" : "Apri pannello Cesare"}
-                title={isCesarePanelOpen ? "Chiudi pannello Cesare" : "Apri pannello Cesare"}
-                data-testid="cesare-panel-toggle"
-              >
-                ✦
-              </button>
-            )}
-            {hasRealToc && (
-            <div className={styles.indiceWrap}>
-              <button
-                type="button"
-                className={styles.indiceButton}
-                onClick={() => setIndiceOpen((v) => !v)}
-                aria-haspopup="dialog"
-                aria-expanded={isIndiceOpen}
-                aria-label="Apri indice scene"
-                data-testid="screenplay-indice-trigger"
-              >
-                <Icon name="book" size={14} aria-hidden />
-                <span>Indice</span>
-                <span className={styles.indiceBadge} data-num>
-                  {currentSceneIdx}/{totalScenes}
-                </span>
-                <span className={styles.indiceCaret} aria-hidden>
-                  ▾
-                </span>
-              </button>
+            <div className={styles.viewbarRight}>
+              {/* The ✦ Cesare panel toggle used to live here. Removed because
+                the FloatingDock already exposes a "Cesare" pill (with glow
+                while thinking) and the right-side panel itself is a visible
+                affordance — three separate triggers were redundant. */}
+              <SaveStatusIndicator />
+              {hasRealToc && (
+                <div className={styles.indiceWrap}>
+                  <button
+                    type="button"
+                    className={styles.indiceButton}
+                    onClick={() => setIndiceOpen((v) => !v)}
+                    aria-haspopup="dialog"
+                    aria-expanded={isIndiceOpen}
+                    aria-label="Apri indice scene"
+                    data-testid="screenplay-indice-trigger"
+                  >
+                    <Icon name="book" size={14} aria-hidden />
+                    <span>Indice</span>
+                    <span className={styles.indiceBadge} data-num>
+                      {currentSceneIdx}/{totalScenes}
+                    </span>
+                    <span className={styles.indiceCaret} aria-hidden>
+                      ▾
+                    </span>
+                  </button>
 
-              <Popover
-                isOpen={isIndiceOpen}
-                onClose={() => setIndiceOpen(false)}
-                placement="bottom-end"
-                width={320}
-                className={styles.indicePopover}
-              >
-                <div className={styles.popSearch}>
-                  <Icon name="search" size={14} aria-hidden />
-                  <input
-                    type="text"
-                    value={indiceQuery}
-                    onChange={(e) => setIndiceQuery(e.target.value)}
-                    placeholder="Cerca scena o luogo…"
-                    aria-label="Cerca scena o luogo"
-                    className={styles.popSearchInput}
-                    autoFocus
-                  />
-                  <kbd className={styles.popKbd}>⌘K</kbd>
+                  <Popover
+                    isOpen={isIndiceOpen}
+                    onClose={() => setIndiceOpen(false)}
+                    placement="bottom-end"
+                    width={320}
+                    className={styles.indicePopover}
+                  >
+                    <div className={styles.popSearch}>
+                      <Icon name="search" size={14} aria-hidden />
+                      <input
+                        type="text"
+                        value={indiceQuery}
+                        onChange={(e) => setIndiceQuery(e.target.value)}
+                        placeholder="Cerca scena o luogo…"
+                        aria-label="Cerca scena o luogo"
+                        className={styles.popSearchInput}
+                        autoFocus
+                      />
+                      <kbd className={styles.popKbd}>⌘K</kbd>
+                    </div>
+
+                    <div className={styles.popList}>
+                      {filteredActs.length === 0 ? (
+                        <p className={styles.popEmpty}>Nessuna scena trovata</p>
+                      ) : (
+                        filteredActs.map((act) => (
+                          <div key={act.name}>
+                            <p className={styles.popAct}>{act.name}</p>
+                            {act.scenes.map((scene) => (
+                              <button
+                                type="button"
+                                key={`${act.name}-${scene.number}`}
+                                className={[
+                                  styles.popItem,
+                                  scene.isCurrent ? styles.popItemCurrent : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                                aria-current={
+                                  scene.isCurrent ? "true" : undefined
+                                }
+                                onClick={() => scrollToScene(scene.domIndex)}
+                              >
+                                <span className={styles.popItemNum}>
+                                  SC.{scene.number.replace(".", "")}
+                                </span>
+                                <span className={styles.popItemLabel}>
+                                  {scene.title}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </Popover>
                 </div>
+              )}
 
-                <div className={styles.popList}>
-                  {filteredActs.length === 0 ? (
-                    <p className={styles.popEmpty}>Nessuna scena trovata</p>
-                  ) : (
-                    filteredActs.map((act) => (
-                      <div key={act.name}>
-                        <p className={styles.popAct}>{act.name}</p>
-                        {act.scenes.map((scene) => (
-                          <button
-                            type="button"
-                            key={`${act.name}-${scene.number}`}
-                            className={[
-                              styles.popItem,
-                              scene.isCurrent ? styles.popItemCurrent : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            aria-current={scene.isCurrent ? "true" : undefined}
-                            onClick={() => scrollToScene(scene.domIndex)}
-                          >
-                            <span className={styles.popItemNum}>
-                              SC.{scene.number.replace(".", "")}
-                            </span>
-                            <span className={styles.popItemLabel}>
-                              {scene.title}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </Popover>
+              <DraftMetaBadge projectId={projectId} />
+              {onOpenVersions && (
+                <VersionTrigger
+                  variant="pill"
+                  versionLabel={versionLabel}
+                  menuItems={[
+                    ...(versions && versions.length > 0
+                      ? versions.map((v) => ({
+                          id: `version-${v.id}`,
+                          label: v.isCurrent ? `● ${v.label}` : v.label,
+                          onSelect: onOpenVersions,
+                          tone: v.isCurrent
+                            ? ("default" as const)
+                            : ("muted" as const),
+                        }))
+                      : []),
+                    {
+                      id: "open-drawer",
+                      label: "Apri Versioni →",
+                      onSelect: onOpenVersions,
+                    },
+                  ]}
+                />
+              )}
             </div>
-            )}
-
-            <DraftMetaBadge projectId={projectId} />
-            {onOpenVersions && (
-              <VersionTrigger
-                variant="pill"
-                versionLabel={versionLabel}
-                menuItems={[
-                  ...(versions && versions.length > 0
-                    ? versions.map((v) => ({
-                        id: `version-${v.id}`,
-                        label: v.isCurrent ? `● ${v.label}` : v.label,
-                        onSelect: onOpenVersions,
-                        tone: v.isCurrent
-                          ? ("default" as const)
-                          : ("muted" as const),
-                      }))
-                    : []),
-                  {
-                    id: "open-drawer",
-                    label: "Apri Versioni →",
-                    onSelect: onOpenVersions,
-                  },
-                ]}
-              />
-            )}
           </div>
-        </div>
         </Viewbar>
       </div>
-
 
       <div
         className={

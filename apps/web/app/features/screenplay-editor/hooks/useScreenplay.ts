@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
+import { useSaveStatePublisher } from "~/features/app-shell";
 import {
   getScreenplay,
   saveScreenplay,
@@ -110,6 +111,24 @@ export const useAutoSave = (
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
+
+  // Publish the auto-save state to the SaveStateProvider so the Viewbar
+  // pill ("Salvataggio…" / "Salvato N s fa" / "Offline") renders without
+  // each caller having to wire it. Choose the most informative state.
+  const publishedState = useMemo<
+    "saving" | "saved" | "offline" | undefined
+  >(() => {
+    if (disabled) return undefined;
+    if (isOffline) return "offline";
+    if (save.isPending || isDirty) return "saving";
+    if (lastSavedAt !== null) return "saved";
+    return undefined;
+  }, [disabled, isOffline, save.isPending, isDirty, lastSavedAt]);
+  const secondsAgo = useMemo(() => {
+    if (!lastSavedAt) return undefined;
+    return Math.floor((Date.now() - lastSavedAt) / 1000);
+  }, [lastSavedAt]);
+  useSaveStatePublisher(publishedState, secondsAgo);
 
   return {
     isDirty,

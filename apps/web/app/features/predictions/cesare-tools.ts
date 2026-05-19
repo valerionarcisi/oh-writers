@@ -1344,6 +1344,41 @@ export const runToolLoop = (
       executeTool(block, dbArg, projectIdArg, fallbackRequirementId),
   });
 
+export const runScreenplayToolLoop = (
+  client: AnthropicClient,
+  systemPrompt: string | readonly unknown[],
+  messages: Message[],
+  db: Db,
+  projectId: string,
+  model: string,
+  forcedFirstTool?: string,
+): ResultAsync<string, CesareError> => {
+  // Dynamic import to keep the screenplay-tools bundle out of pages that
+  // don't use it. The module also exports the tool definitions and the
+  // executor, both server-side only.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const screenplay =
+    require("./cesare-screenplay-tools") as typeof import("./cesare-screenplay-tools");
+  return runGenericToolLoop({
+    client,
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    forcedFirstTool,
+    tools: [
+      ...screenplay.CESARE_SCREENPLAY_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
+    executor: (block, dbArg, projectIdArg) => {
+      const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
+      if (readFallthrough) return readFallthrough;
+      return screenplay.executeScreenplayTool(block, dbArg, projectIdArg);
+    },
+  });
+};
+
 export const runDocumentToolLoop = (
   client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
@@ -1471,6 +1506,11 @@ interface RunToolLoopArgs {
     db: Db,
     projectId: string,
   ) => ResultAsync<ToolResult, CesareError>;
+  /** When set, forces the FIRST iteration to use a specific tool. Subsequent
+   *  iterations fall back to "auto" so the model can choose follow-up tools
+   *  (e.g. a read_* after the mandated propose_*). Used by the semantic
+   *  intent classifier to make propose_* deterministic. */
+  forcedFirstTool?: string;
 }
 
 const runGenericToolLoop = (
@@ -1484,18 +1524,24 @@ const runGenericToolLoop = (
       let toolsExecuted = 0;
 
       for (let i = 0; i < MAX_ITERATIONS; i++) {
+        // First iteration honours `forcedFirstTool` from the semantic
+        // intent classifier: when the user's request is unambiguously a
+        // macro rewrite / rename / micro-edit, the classifier mandates the
+        // exact tool the model MUST call. Without forcing, the model often
+        // produces the rewrite inline in chat and silently skips the tool.
+        // After the first turn we relax to "auto" so follow-up reads /
+        // confirmations can flow normally.
+        const toolChoice =
+          i === 0 && args.forcedFirstTool
+            ? ({ type: "tool", name: args.forcedFirstTool } as const)
+            : ({ type: "auto" } as const);
         const response = await args.client.messages.create({
           model: args.model,
           max_tokens: 1500,
           system: args.systemPrompt,
           messages: currentMessages,
           tools: args.tools,
-          // Explicit tool_choice = auto. Without this, some models emit
-          // XML-style `<function_calls><invoke name="...">` blocks as plain
-          // text instead of proper Anthropic `tool_use` content blocks —
-          // making the loop silently no-op. Stating the choice mode tells
-          // the model to use the native block format.
-          tool_choice: { type: "auto" },
+          tool_choice: toolChoice,
         });
 
         const toolBlocks = response.content.filter(isToolUseBlock);

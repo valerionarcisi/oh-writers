@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSaveStatePublisher } from "~/features/app-shell";
 import {
   useMutation,
   useQuery,
@@ -114,6 +115,20 @@ export const useAutoSave = (
       { onSuccess: () => setLastSavedAt(Date.now()) },
     );
   };
+
+  // Publish to the SaveStateProvider so every narrative editor (soggetto,
+  // sinossi, scaletta, trattamento, logline) shows the auto-save pill in
+  // the Viewbar without each caller wiring it.
+  const publishedState = useMemo<"saving" | "saved" | undefined>(() => {
+    if (save.isPending || isDirty) return "saving";
+    if (lastSavedAt !== null) return "saved";
+    return undefined;
+  }, [save.isPending, isDirty, lastSavedAt]);
+  const secondsAgo = useMemo(() => {
+    if (!lastSavedAt) return undefined;
+    return Math.floor((Date.now() - lastSavedAt) / 1000);
+  }, [lastSavedAt]);
+  useSaveStatePublisher(publishedState, secondsAgo);
 
   return {
     isDirty,

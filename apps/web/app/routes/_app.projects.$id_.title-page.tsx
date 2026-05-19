@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { Viewbar, ViewbarSep, Skeleton } from "@oh-writers/ui";
+import { SaveStatusIndicator } from "~/features/app-shell";
 import {
   TitlePageEditor,
   TitlePageDraftPanel,
@@ -119,6 +120,7 @@ function TitlePageRouteInner({
           Frontespizio
         </span>
         <span className={styles.viewbarSpacer} />
+        <SaveStatusIndicator />
         <button type="button" className={styles.viewbarLink} onClick={onClose}>
           Chiudi
         </button>

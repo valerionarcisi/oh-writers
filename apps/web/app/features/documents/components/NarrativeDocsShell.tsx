@@ -16,6 +16,7 @@ import {
 } from "../lib/narrative-shell";
 import { DOCUMENT_LABELS } from "../lib/document-display";
 import { LoglinePill } from "./LoglinePill";
+import { SaveStatusIndicator } from "~/features/app-shell";
 import styles from "./NarrativeDocsShell.module.css";
 
 type NarrativeLayoutVariant = "single" | "two" | "three";
@@ -28,7 +29,12 @@ export interface NarrativeDocsShellProps {
   readonly canEditLogline: boolean;
   readonly onLoglineChange?: (next: string) => void;
   readonly versionLabel?: string;
-  readonly versionMenuItems?: ReadonlyArray<{ id: string; label: string; onSelect: () => void; tone?: "default" | "muted" }>;
+  readonly versionMenuItems?: ReadonlyArray<{
+    id: string;
+    label: string;
+    onSelect: () => void;
+    tone?: "default" | "muted";
+  }>;
   readonly onOpenVersions?: () => void;
   readonly leftAside?: ReactNode;
   readonly rightAside?: ReactNode;
@@ -85,6 +91,7 @@ export function NarrativeDocsShell({
               onChange={onLoglineChange}
             />
             <div className={styles.viewbarRight}>
+              <SaveStatusIndicator />
               {onOpenVersions !== undefined && (
                 <VersionTrigger
                   variant="pill"
@@ -116,9 +123,10 @@ export function NarrativeDocsShell({
           <aside className={styles.left}>{leftAside}</aside>
         )}
         <section className={styles.editor}>{children}</section>
-        {(layout === "two" || layout === "three") && rightAside !== undefined && (
-          <aside className={styles.right}>{rightAside}</aside>
-        )}
+        {(layout === "two" || layout === "three") &&
+          rightAside !== undefined && (
+            <aside className={styles.right}>{rightAside}</aside>
+          )}
       </main>
     </div>
   );

@@ -368,6 +368,25 @@ const insertDraftVersion = (
 ): ResultAsync<CreatedDraft, CesareError> =>
   ResultAsync.fromPromise(
     db.transaction(async (tx) => {
+      const trimmed = content.trim();
+      if (!trimmed) {
+        throw new Error("Il modello ha restituito un contenuto vuoto.");
+      }
+      // Guard against the LLM returning the previous active content verbatim
+      // (or an existing draft byte-identical to it). A draft equal to the
+      // current version is useless — the user can't tell what changed and
+      // promoting it would be a no-op. Block at the DB boundary so every
+      // propose_* tool inherits the protection.
+      const existing = await tx
+        .select({ content: documentVersions.content })
+        .from(documentVersions)
+        .where(eq(documentVersions.documentId, documentId));
+      const isDuplicate = existing.some((e) => e.content.trim() === trimmed);
+      if (isDuplicate) {
+        throw new Error(
+          "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
+        );
+      }
       const [maxRow] = await tx
         .select({
           max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
@@ -391,7 +410,7 @@ const insertDraftVersion = (
     }),
     (e) =>
       new CesareError(
-        `insertDraftVersion: ${e instanceof Error ? e.message : String(e)}`,
+        e instanceof Error ? e.message : `insertDraftVersion: ${String(e)}`,
       ),
   ).map((versionId) => ({ versionId, documentType, label }));
 

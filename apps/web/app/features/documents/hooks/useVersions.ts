@@ -25,7 +25,10 @@ const invalidateVersions = (
   documentId: string,
 ) => {
   void qc.invalidateQueries({ queryKey: ["document-versions", documentId] });
-  void qc.invalidateQueries({ queryKey: ["documents"] });
+  // Force-refetch the active document so the editor body reflects the new
+  // current version. Plain invalidate() is a no-op when the data is fresh,
+  // which leaves the editor stuck on the previous version's content.
+  void qc.refetchQueries({ queryKey: ["documents"], type: "active" });
 };
 
 export const useCreateVersionFromScratch = (documentId: string) => {

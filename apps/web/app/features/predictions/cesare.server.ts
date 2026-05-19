@@ -33,7 +33,9 @@ import {
   runScheduleToolLoop,
   runBudgetToolLoop,
   runShootingPlanToolLoop,
+  runScreenplayToolLoop,
 } from "./cesare-tools";
+import { classifyIntent } from "./cesare-intent-classifier";
 import type {
   DocumentContext,
   ScheduleToolContext,
@@ -1301,6 +1303,32 @@ Linee guida:
 - Per i tool che iniziano con propose_* o evaluate_*: ritorna sempre il riepilogo numerico all'utente in chiaro. Sono read-only e non scrivono nel DB.`;
 };
 
+const buildScreenplayToolsGuidance = (page: PageContext["page"]): string => {
+  if (page !== "screenplay") return "";
+  return `\n\nRUOLO: in questa pagina sei un DRAMATURG. Ogni richiesta di modifica al testo della sceneggiatura DEVE passare per un tool propose_*, MAI scrivere il testo nuovo direttamente nel chat.
+
+TOOLS DISPONIBILI SULLA SCENEGGIATURA:
+- propose_screenplay_edit({ scene_number, find, replace, reason }): micro-edit di una stringa esatta. Usa per cambiare una battuta, una parola, una direzione di scena puntuale. La 'find' DEVE essere una stringa letterale presente nella scena.
+- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza", "rendi più tesa l'intera scena". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
+- propose_rename_entity({ kind: "character" | "location", from, to }): trova tutte le occorrenze di un personaggio o di una location nella sceneggiatura e propone il rename in una sola operazione. Usa per "rinomina X in Y".
+
+REGOLA TASSATIVA: per QUALSIASI richiesta che produca testo nuovo lungo (più di 2-3 righe Fountain), DEVI chiamare propose_screenplay_revision. Mai scrivere il Fountain risultante nel chat.
+
+❌ SBAGLIATO:
+"Ecco la versione 2 ambientata in un ristorante stellato:
+\`\`\`fountain
+Title: NON FA RIDERE (v2)
+...
+\`\`\`"
+(Scrive l'intera sceneggiatura nel chat. NON FARE COSÌ.)
+
+✅ CORRETTO:
+[propose_screenplay_revision({ scope: { kind: "whole_screenplay" }, instruction: "ambienta tutta la sceneggiatura in un ristorante stellato, mantenendo i personaggi e la struttura", label: "v2 — Lo Stellato" })]
+"Ho preparato la versione 2 'Lo Stellato' come draft. Apri il drawer Versioni per confrontarla con l'attuale e promuoverla se ti convince."
+
+Quando l'utente chiede una modifica ambigua, fai PRIMA una domanda di chiarimento sullo scope, POI chiama il tool. Mai produrre Fountain inline.`;
+};
+
 const ROLE_TEXT = `Sei Cesare, l'assistente AI di Oh Writers, ispirato a Cesare Zavattini.
 Non sei un chatbot generico. Conosci l'intera produzione del film su cui stai lavorando.
 
@@ -1366,7 +1394,7 @@ const buildToolGuidanceBlock = (
   )}${buildBudgetToolsGuidance(page)}${buildShootingPlanToolsGuidance(
     page,
     activeSceneId,
-  )}${LAZY_READ_GUIDANCE}`;
+  )}${buildScreenplayToolsGuidance(page)}${LAZY_READ_GUIDANCE}`;
 };
 
 const buildDynamicStateBlock = (
@@ -1609,6 +1637,61 @@ const callCesareWithTools = (
       model,
       requirementId ?? null,
     );
+  });
+
+const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
+  "propose_screenplay_edit",
+  "propose_screenplay_revision",
+  "propose_rename_entity",
+]);
+
+const callCesareWithScreenplayTools = (
+  systemPrompt: SystemPromptBlock[],
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+  model: string,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    // Run the semantic intent classifier first (cheap Haiku call). On any
+    // error or low confidence, the classifier returns a no-op intent and we
+    // fall back to `tool_choice: auto`.
+    return classifyIntent({
+      client: client as unknown as Parameters<
+        typeof classifyIntent
+      >[0]["client"],
+      userMessage: message,
+      page: "screenplay",
+      availableTools: SCREENPLAY_PROPOSE_TOOLS,
+    })
+      .map((intent) => intent.suggestedTool)
+      .orElse(() =>
+        ResultAsync.fromSafePromise(
+          Promise.resolve<string | undefined>(undefined),
+        ),
+      )
+      .andThen((forcedFirstTool) =>
+        runScreenplayToolLoop(
+          client,
+          systemPrompt,
+          messages,
+          db,
+          projectId,
+          model,
+          forcedFirstTool,
+        ),
+      );
   });
 
 const callCesareWithDocumentTools = (
@@ -1874,6 +1957,16 @@ const handleAskCesare = (
           db,
           data.projectId,
           activeSceneIdForPrompt,
+          model,
+        );
+      }
+      if (data.pageContext.page === "screenplay") {
+        return callCesareWithScreenplayTools(
+          systemPrompt,
+          data.conversationHistory,
+          data.message,
+          db,
+          data.projectId,
           model,
         );
       }

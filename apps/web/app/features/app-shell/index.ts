@@ -1,4 +1,5 @@
 export { AppShell } from "./components/AppShell";
+export { SaveStatusIndicator } from "./components/SaveStatusIndicator";
 export {
   SaveStateProvider,
   useSaveStatePublisher,
@@ -16,10 +17,7 @@ export {
   useActiveShootingDay,
   useSetActiveShootingDay,
 } from "./active-scene-context";
-export type {
-  ActiveDocument,
-  ActiveShootingDay,
-} from "./active-scene-context";
+export type { ActiveDocument, ActiveShootingDay } from "./active-scene-context";
 export {
   CesareNotificationProvider,
   useCesareNotifications,
