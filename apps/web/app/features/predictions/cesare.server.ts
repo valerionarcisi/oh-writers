@@ -40,6 +40,15 @@ import type {
   ShootingPlanToolContext,
 } from "./cesare-tools";
 import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
+import { routeModel, tierToModel } from "./cesare-model-router";
+
+// ─── System prompt blocks ─────────────────────────────────────────────────────
+
+export interface SystemPromptBlock {
+  readonly type: "text";
+  readonly text: string;
+  readonly cache_control?: { readonly type: "ephemeral" };
+}
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 
@@ -859,23 +868,6 @@ const assembleContext = (
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
-const MAX_BODY_CHARS = 600;
-
-const formatSceneWindow = (window: SceneBodyRow[]): string => {
-  if (window.length === 0) return "";
-
-  const lines = window.map((s) => {
-    const label = s.isCurrent ? "SCENA CORRENTE" : `Scena ${s.number}`;
-    const chars = s.characterNames.length > 0 ? ` [${s.characterNames.join(", ")}]` : "";
-    const body = s.body
-      ? (s.body.length > MAX_BODY_CHARS ? s.body.slice(0, MAX_BODY_CHARS) + "…" : s.body)
-      : "(nessun corpo)";
-    return `${label} ${s.number}: ${s.heading}${chars}\n---\n${body}\n---`;
-  });
-
-  return `\nTESTO SCENEGGIATURA:\n${lines.join("\n\n")}`;
-};
-
 const formatBreakdownContext = (
   elements: BreakdownElementRow[],
   sceneId: string | null,
@@ -1206,11 +1198,77 @@ Linee guida:
 - Quando ridistribuisci, spiega in 1-2 frasi il razionale ("Sposto €X dalla post-produzione alla contingenza perche…").`;
 };
 
-const buildSystemPrompt = (
+const ROLE_TEXT = `Sei Cesare, l'assistente AI di Oh Writers, ispirato a Cesare Zavattini.
+Non sei un chatbot generico. Conosci l'intera produzione del film su cui stai lavorando.
+
+Rispondi in italiano. Sii concreto e specifico — non generare testo generico.
+Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
+Quando parli di costi, usa i numeri reali dal budget.
+Quando parli di disponibilità, usa i dati reali dello schedule.
+Quando parli di location, aiuta il regista a valutare i candidati in base al contesto narrativo della scena.
+Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.`;
+
+const LAZY_READ_GUIDANCE = `\n\nLETTURA LAZY (read tools):
+Quando ti serve il testo letterale di una scena, il contenuto di un documento, le righe del budget, gli elementi del breakdown, i dettagli di un requirement di location o le strip di una giornata di ripresa, USA i tool \`read_*\` (es. read_scene, read_scene_range, read_document, read_budget_lines, read_breakdown, read_location_requirement, read_shooting_day). NON attendere che il dato compaia nel system prompt: il system prompt contiene solo metadati e indici; il dettaglio lo recuperi tu su richiesta.`;
+
+const buildProductionContextBlock = (ctx: CesareContext): string => {
+  const sceneList = ctx.scenes.length > 0
+    ? ctx.scenes
+        .slice(0, 200)
+        .map((s) => `  ${s.number}. ${s.heading}`)
+        .join("\n")
+    : "  (nessuna scena)";
+
+  const truncationNote =
+    ctx.scenes.length > 200
+      ? `\n  …e altre ${ctx.scenes.length - 200} scene (usa read_scene/read_scene_range per il dettaglio)`
+      : "";
+
+  const characters = ctx.characters.length > 0
+    ? ctx.characters.join(", ")
+    : "(nessuno)";
+
+  const projectDocSummary = ctx.projectDocuments.length > 0
+    ? ctx.projectDocuments
+        .map((d) => `  - ${DOCUMENT_LABELS[d.type]} (id: ${d.id})`)
+        .join("\n")
+    : "  (nessun documento)";
+
+  return `PROGETTO: "${ctx.projectTitle}"
+
+INDICE SCENEGGIATURA (${ctx.scenes.length} scene totali):
+${sceneList}${truncationNote}
+
+PERSONAGGI: ${characters}
+
+DOCUMENTI DEL PROGETTO:
+${projectDocSummary}`;
+};
+
+const buildToolGuidanceBlock = (
   ctx: CesareContext,
   page: PageContext["page"],
-  activeShootingDayNumber: number | null = null,
-  activeSceneId: string | null = null,
+  activeShootingDayNumber: number | null,
+  activeSceneId: string | null,
+): string => {
+  const documentToolsGuidance = buildDocumentToolsGuidance(ctx);
+  return `GUIDA AGLI STRUMENTI per la pagina "${page}":${buildLocationsToolsGuidance(
+    page,
+  )}${documentToolsGuidance}${buildBreakdownToolsGuidance(
+    page,
+  )}${buildScheduleToolsGuidance(
+    page,
+    activeShootingDayNumber,
+  )}${buildBudgetToolsGuidance(page)}${buildShootingPlanToolsGuidance(
+    page,
+    activeSceneId,
+  )}${LAZY_READ_GUIDANCE}`;
+};
+
+const buildDynamicStateBlock = (
+  ctx: CesareContext,
+  page: PageContext["page"],
+  activeShootingDayNumber: number | null,
 ): string => {
   const totalBudget = ctx.budget
     ? Math.round(ctx.budget.totalAllocated).toLocaleString("it-IT")
@@ -1230,32 +1288,63 @@ const buildSystemPrompt = (
     ctx.breakdownElements,
     ctx.currentScene?.id ?? null,
   );
-
   const locationsCtx = formatLocationsContext(ctx);
-  const sceneWindowCtx = formatSceneWindow(ctx.sceneWindow);
+  // Headings-only window: bodies are excluded from the prompt to save tokens —
+  // Cesare can call read_scene(N) if it needs the body. Keep the marker for
+  // the current scene so Cesare knows which one the user is focused on.
+  const sceneWindowCtx = formatSceneWindowHeadings(ctx.sceneWindow);
   const documentsCtx = formatDocumentsContext(ctx);
-  const documentToolsGuidance = buildDocumentToolsGuidance(ctx);
   const budgetCtx = formatBudgetContext(ctx, page);
   const shotPlansCtx = formatShotPlansContext(ctx, page);
 
-  return `Sei Cesare, l'assistente AI di Oh Writers, ispirato a Cesare Zavattini.
-Non sei un chatbot generico. Conosci l'intera produzione del film "${ctx.projectTitle}".
+  const activeDayHint = activeShootingDayNumber
+    ? `\n- Giornata attiva: ${activeShootingDayNumber}`
+    : "";
 
-CONTESTO PRODUZIONE:
-- Sceneggiatura: ${ctx.scenes.length} scene, ${ctx.characters.length} personaggi
+  return `STATO CORRENTE (dinamico, non in cache):
 - Scena corrente: ${ctx.currentScene?.heading ?? "nessuna"}
 - Budget: €${totalBudget} totale, €${residualBudget} residuo
-- Schedule: ${shootingDaysLabel} giorni di ripresa
-${breakdownCtx}${locationsCtx}${sceneWindowCtx}${documentsCtx}${budgetCtx}${shotPlansCtx}
-
-Rispondi in italiano. Sii concreto e specifico — non generare testo generico.
-Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
-Quando parli di costi, usa i numeri reali dal budget.
-Quando parli di disponibilità, usa i dati reali dello schedule.
-Quando parli di location, aiuta il regista a valutare i candidati in base al contesto narrativo della scena.
-${buildLocationsToolsGuidance(page)}
-Quando hai il testo della sceneggiatura, citalo esplicitamente nelle tue risposte.${documentToolsGuidance}${buildBreakdownToolsGuidance(page)}${buildScheduleToolsGuidance(page, activeShootingDayNumber)}${buildBudgetToolsGuidance(page)}${buildShootingPlanToolsGuidance(page, activeSceneId)}`;
+- Schedule: ${shootingDaysLabel} giorni di ripresa${activeDayHint}
+${breakdownCtx}${locationsCtx}${sceneWindowCtx}${documentsCtx}${budgetCtx}${shotPlansCtx}`;
 };
+
+const formatSceneWindowHeadings = (window: SceneBodyRow[]): string => {
+  if (window.length === 0) return "";
+  const lines = window.map((s) => {
+    const label = s.isCurrent ? "→ SCENA CORRENTE" : "  ";
+    const chars = s.characterNames.length > 0 ? ` [${s.characterNames.join(", ")}]` : "";
+    return `${label} Sc.${s.number} ${s.heading}${chars}`;
+  });
+  return `\nFINESTRA SCENE (solo heading — usa read_scene/read_scene_range per il corpo):\n${lines.join("\n")}`;
+};
+
+const buildSystemPrompt = (
+  ctx: CesareContext,
+  page: PageContext["page"],
+  activeShootingDayNumber: number | null = null,
+  activeSceneId: string | null = null,
+): SystemPromptBlock[] => [
+  { type: "text", text: ROLE_TEXT, cache_control: { type: "ephemeral" } },
+  {
+    type: "text",
+    text: buildProductionContextBlock(ctx),
+    cache_control: { type: "ephemeral" },
+  },
+  {
+    type: "text",
+    text: buildToolGuidanceBlock(
+      ctx,
+      page,
+      activeShootingDayNumber,
+      activeSceneId,
+    ),
+    cache_control: { type: "ephemeral" },
+  },
+  {
+    type: "text",
+    text: buildDynamicStateBlock(ctx, page, activeShootingDayNumber),
+  },
+];
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
 
@@ -1291,12 +1380,11 @@ const mockResponse = (pageContext: PageContext): ResultAsync<string, CesareError
 
 // ─── Anthropic streaming call ─────────────────────────────────────────────────
 
-const CESARE_MODEL = "claude-sonnet-4-6";
-
 const callCesare = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     (async () => {
@@ -1311,7 +1399,7 @@ const callCesare = (
       ];
 
       const stream = client.messages.stream({
-        model: CESARE_MODEL,
+        model,
         max_tokens: 1024,
         system: systemPrompt,
         messages,
@@ -1384,12 +1472,13 @@ const loadAnthropicNonStreaming = async () => {
 };
 
 const callCesareWithTools = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   db: Db,
   projectId: string,
   requirementId: string | null | undefined,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1399,16 +1488,17 @@ const callCesareWithTools = (
       ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
       { role: "user" as const, content: message },
     ];
-    return runToolLoop(client, systemPrompt, messages, db, projectId, CESARE_MODEL, requirementId ?? null);
+    return runToolLoop(client, systemPrompt, messages, db, projectId, model, requirementId ?? null);
   });
 
 const callCesareWithDocumentTools = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   db: Db,
   projectId: string,
   docContext: DocumentContext,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1427,17 +1517,18 @@ const callCesareWithDocumentTools = (
       messages,
       db,
       projectId,
-      CESARE_MODEL,
+      model,
       docContext,
     );
   });
 
 const callCesareWithBreakdownTools = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   db: Db,
   projectId: string,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1456,17 +1547,18 @@ const callCesareWithBreakdownTools = (
       messages,
       db,
       projectId,
-      CESARE_MODEL,
+      model,
     );
   });
 
 const callCesareWithScheduleTools = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   db: Db,
   projectId: string,
   activeDayNumber: number | null,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1489,18 +1581,19 @@ const callCesareWithScheduleTools = (
       messages,
       db,
       projectId,
-      CESARE_MODEL,
+      model,
       scheduleContext,
     );
   });
 
 const callCesareWithShootingPlanTools = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   db: Db,
   projectId: string,
   activeSceneId: string | null,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1523,17 +1616,18 @@ const callCesareWithShootingPlanTools = (
       messages,
       db,
       projectId,
-      CESARE_MODEL,
+      model,
       shootingPlanContext,
     );
   });
 
 const callCesareWithBudgetTools = (
-  systemPrompt: string,
+  systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   db: Db,
   projectId: string,
+  model: string,
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     loadAnthropicNonStreaming(),
@@ -1552,7 +1646,7 @@ const callCesareWithBudgetTools = (
       messages,
       db,
       projectId,
-      CESARE_MODEL,
+      model,
     );
   });
 
@@ -1585,6 +1679,20 @@ const handleAskCesare = (
     return mockResponse(data.pageContext);
   }
 
+  const tier = routeModel({
+    userMessage: data.message,
+    page: data.pageContext.page,
+    conversationLength: data.conversationHistory.length,
+  });
+  const model = tierToModel(tier);
+
+  if (process.env["CESARE_DEBUG"] === "true") {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[cesare] tier=${tier} model=${model} page=${data.pageContext.page} convLen=${data.conversationHistory.length} msg="${data.message.slice(0, 60)}"`,
+    );
+  }
+
   return assembleContext(db, data.projectId, data.pageContext).andThen((ctx) => {
     const activeSceneIdForPrompt =
       ctx.currentScene?.id ?? data.pageContext.sceneId ?? null;
@@ -1602,6 +1710,7 @@ const handleAskCesare = (
         db,
         data.projectId,
         data.pageContext.requirementId,
+        model,
       );
     }
     if (data.pageContext.page === "breakdown") {
@@ -1611,6 +1720,7 @@ const handleAskCesare = (
         data.message,
         db,
         data.projectId,
+        model,
       );
     }
     if (data.pageContext.page === "schedule") {
@@ -1621,6 +1731,7 @@ const handleAskCesare = (
         db,
         data.projectId,
         data.pageContext.shootingDayNumber ?? null,
+        model,
       );
     }
     if (data.pageContext.page === "budget") {
@@ -1630,6 +1741,7 @@ const handleAskCesare = (
         data.message,
         db,
         data.projectId,
+        model,
       );
     }
     if (data.pageContext.page === "shooting-plan") {
@@ -1640,6 +1752,7 @@ const handleAskCesare = (
         db,
         data.projectId,
         activeSceneIdForPrompt,
+        model,
       );
     }
     if (isDocumentPage(data.pageContext.page) && ctx.activeDocument) {
@@ -1655,9 +1768,10 @@ const handleAskCesare = (
         db,
         data.projectId,
         docContext,
+        model,
       );
     }
-    return callCesare(systemPrompt, data.conversationHistory, data.message);
+    return callCesare(systemPrompt, data.conversationHistory, data.message, model);
   });
 };
 

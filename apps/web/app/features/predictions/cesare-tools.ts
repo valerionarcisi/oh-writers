@@ -36,11 +36,13 @@ import {
   executeShootingPlanTool,
   type ShootingPlanToolContext,
 } from "./cesare-shooting-plan-tools";
+import { CESARE_READ_TOOLS, tryExecuteReadTool } from "./cesare-read-tools";
 
 export { CESARE_SCHEDULE_TOOLS } from "./cesare-schedule-tools";
 export type { ScheduleToolContext } from "./cesare-schedule-tools";
 export { CESARE_SHOOTING_PLAN_TOOLS } from "./cesare-shooting-plan-tools";
 export type { ShootingPlanToolContext } from "./cesare-shooting-plan-tools";
+export { CESARE_READ_TOOLS } from "./cesare-read-tools";
 
 const MAX_PHOTOS_PER_CANDIDATE = 3;
 const PHOTO_MAX_WIDTH_PX = 800;
@@ -1199,6 +1201,8 @@ export const executeBreakdownTool = (
       projectId,
     ).map((r) => successResult(block.id, r));
   }
+  const readFallthrough = tryExecuteReadTool(block, db, projectId);
+  if (readFallthrough) return readFallthrough;
   return okAsync(
     successResult(block.id, { error: `Unknown breakdown tool: ${block.name}` }),
   );
@@ -1243,6 +1247,9 @@ export const executeTool = (
     );
   }
 
+  const readFallthrough = tryExecuteReadTool(block, db, projectId);
+  if (readFallthrough) return readFallthrough;
+
   return okAsync(
     successResult(block.id, JSON.stringify({ error: `Unknown tool: ${block.name}` })),
   );
@@ -1268,7 +1275,7 @@ interface AnthropicClient {
 
 export const runToolLoop = (
   client: AnthropicClient,
-  systemPrompt: string,
+  systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
@@ -1282,14 +1289,17 @@ export const runToolLoop = (
     db,
     projectId,
     model,
-    tools: CESARE_LOCATION_TOOLS as unknown as readonly unknown[],
+    tools: [
+      ...CESARE_LOCATION_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
     executor: (block, dbArg, projectIdArg) =>
       executeTool(block, dbArg, projectIdArg, fallbackRequirementId),
   });
 
 export const runDocumentToolLoop = (
   client: AnthropicClient,
-  systemPrompt: string,
+  systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
@@ -1303,13 +1313,20 @@ export const runDocumentToolLoop = (
     db,
     projectId,
     model,
-    tools: CESARE_DOCUMENT_TOOLS as unknown as readonly unknown[],
-    executor: (block, dbArg) => executeDocumentTool(block, dbArg, docContext),
+    tools: [
+      ...CESARE_DOCUMENT_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
+    executor: (block, dbArg, projectIdArg) => {
+      const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
+      if (readFallthrough) return readFallthrough;
+      return executeDocumentTool(block, dbArg, docContext);
+    },
   });
 
 export const runBreakdownToolLoop = (
   client: AnthropicClient,
-  systemPrompt: string,
+  systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
@@ -1322,14 +1339,17 @@ export const runBreakdownToolLoop = (
     db,
     projectId,
     model,
-    tools: CESARE_BREAKDOWN_TOOLS as unknown as readonly unknown[],
+    tools: [
+      ...CESARE_BREAKDOWN_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
     executor: (block, dbArg, projectIdArg) =>
       executeBreakdownTool(block, dbArg, projectIdArg),
   });
 
 export const runScheduleToolLoop = (
   client: AnthropicClient,
-  systemPrompt: string,
+  systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
@@ -1343,14 +1363,20 @@ export const runScheduleToolLoop = (
     db,
     projectId,
     model,
-    tools: CESARE_SCHEDULE_TOOLS as unknown as readonly unknown[],
-    executor: (block, dbArg) =>
-      executeScheduleTool(block, dbArg, scheduleContext),
+    tools: [
+      ...CESARE_SCHEDULE_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
+    executor: (block, dbArg, projectIdArg) => {
+      const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
+      if (readFallthrough) return readFallthrough;
+      return executeScheduleTool(block, dbArg, scheduleContext);
+    },
   });
 
 export const runShootingPlanToolLoop = (
   client: AnthropicClient,
-  systemPrompt: string,
+  systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
@@ -1364,14 +1390,20 @@ export const runShootingPlanToolLoop = (
     db,
     projectId,
     model,
-    tools: CESARE_SHOOTING_PLAN_TOOLS as unknown as readonly unknown[],
-    executor: (block, dbArg) =>
-      executeShootingPlanTool(block, dbArg, shootingPlanContext),
+    tools: [
+      ...CESARE_SHOOTING_PLAN_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
+    executor: (block, dbArg, projectIdArg) => {
+      const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
+      if (readFallthrough) return readFallthrough;
+      return executeShootingPlanTool(block, dbArg, shootingPlanContext);
+    },
   });
 
 interface RunToolLoopArgs {
   client: AnthropicClient;
-  systemPrompt: string;
+  systemPrompt: string | readonly unknown[];
   messages: Message[];
   db: Db;
   projectId: string;
@@ -2123,6 +2155,9 @@ export const executeBudgetTool = (
     ).map((r) => ok(JSON.stringify(r)));
   }
 
+  const readFallthrough = tryExecuteReadTool(block, db, projectId);
+  if (readFallthrough) return readFallthrough;
+
   return okAsync(
     ok(JSON.stringify({ error: `Unknown budget tool: ${block.name}` })),
   );
@@ -2132,7 +2167,7 @@ export const executeBudgetTool = (
 
 export const runBudgetToolLoop = (
   client: AnthropicClient,
-  systemPrompt: string,
+  systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
@@ -2145,6 +2180,9 @@ export const runBudgetToolLoop = (
     db,
     projectId,
     model,
-    tools: CESARE_BUDGET_TOOLS as unknown as readonly unknown[],
+    tools: [
+      ...CESARE_BUDGET_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
     executor: executeBudgetTool,
   });
