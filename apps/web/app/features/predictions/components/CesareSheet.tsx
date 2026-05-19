@@ -359,7 +359,18 @@ function stripToolCalls(content: string): string {
   return content
     .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
     .replace(/<tool_call>[\s\S]*$/g, "")
+    .replace(/<!--ohw:tools=\d+-->/g, "")
     .trim();
+}
+
+/**
+ * Server appends "<!--ohw:tools=N-->" to the reply so the client can tell
+ * whether tools were executed. Returns the integer N (default 0).
+ */
+export function parseToolsExecuted(content: string): number {
+  const m = content.match(/<!--ohw:tools=(\d+)-->/);
+  if (!m) return 0;
+  return parseInt(m[1]!, 10);
 }
 
 interface TableState {

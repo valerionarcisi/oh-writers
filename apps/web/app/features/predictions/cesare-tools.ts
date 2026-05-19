@@ -31,9 +31,16 @@ import {
   executeScheduleTool,
   type ScheduleToolContext,
 } from "./cesare-schedule-tools";
+import {
+  CESARE_SHOOTING_PLAN_TOOLS,
+  executeShootingPlanTool,
+  type ShootingPlanToolContext,
+} from "./cesare-shooting-plan-tools";
 
 export { CESARE_SCHEDULE_TOOLS } from "./cesare-schedule-tools";
 export type { ScheduleToolContext } from "./cesare-schedule-tools";
+export { CESARE_SHOOTING_PLAN_TOOLS } from "./cesare-shooting-plan-tools";
+export type { ShootingPlanToolContext } from "./cesare-shooting-plan-tools";
 
 const MAX_PHOTOS_PER_CANDIDATE = 3;
 const PHOTO_MAX_WIDTH_PX = 800;
@@ -1341,6 +1348,27 @@ export const runScheduleToolLoop = (
       executeScheduleTool(block, dbArg, scheduleContext),
   });
 
+export const runShootingPlanToolLoop = (
+  client: AnthropicClient,
+  systemPrompt: string,
+  messages: Message[],
+  db: Db,
+  projectId: string,
+  model: string,
+  shootingPlanContext: ShootingPlanToolContext,
+): ResultAsync<string, CesareError> =>
+  runGenericToolLoop({
+    client,
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    tools: CESARE_SHOOTING_PLAN_TOOLS as unknown as readonly unknown[],
+    executor: (block, dbArg) =>
+      executeShootingPlanTool(block, dbArg, shootingPlanContext),
+  });
+
 interface RunToolLoopArgs {
   client: AnthropicClient;
   systemPrompt: string;
@@ -1364,6 +1392,7 @@ const runGenericToolLoop = (
       const MAX_ITERATIONS = 5;
       const currentMessages: Message[] = [...args.messages];
       const textAccumulator: string[] = [];
+      let toolsExecuted = 0;
 
       for (let i = 0; i < MAX_ITERATIONS; i++) {
         const response = await args.client.messages.create({
@@ -1403,6 +1432,7 @@ const runGenericToolLoop = (
               content: JSON.stringify({ error: result.error.message }),
             });
           } else {
+            toolsExecuted += 1;
             toolResults.push(result.value);
           }
         }
@@ -1418,7 +1448,11 @@ const runGenericToolLoop = (
         });
       }
 
-      return textAccumulator.join("\n\n");
+      // Append an invisible marker so the client can tell whether real
+      // mutations happened. The MessageBubble's stripToolCalls + comment
+      // stripping hides this from the rendered text.
+      const marker = `<!--ohw:tools=${toolsExecuted}-->`;
+      return `${textAccumulator.join("\n\n")}\n${marker}`;
     })(),
     (e) =>
       new CesareError(

@@ -11,7 +11,7 @@ import type {
   DropdownMenuItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
-import { CesareSheet } from "~/features/predictions";
+import { CesareSheet, parseToolsExecuted } from "~/features/predictions";
 import { askCesare } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import type { AppUser } from "~/server/context";
@@ -113,6 +113,7 @@ function AppShellInner({
     startNotification,
     completeNotification,
     failNotification,
+    dismissNotification,
     markAllSeen,
     hasUnseen,
   } = useCesareNotifications();
@@ -149,18 +150,27 @@ function AppShellInner({
         const id = pendingNotificationId.current;
         if (result.isOk) {
           const reply = result.value;
-          const resultLabel = deriveResultLabel(page, reply);
-          completeNotification(id, { resultLabel });
+          // Only fire the "completed" notification when Cesare actually
+          // executed a tool — text-only replies are normal conversation,
+          // not a side effect worth surfacing as a persistent pill.
+          const toolsRan = parseToolsExecuted(reply);
+          if (toolsRan > 0) {
+            const resultLabel = deriveResultLabel(page, reply);
+            completeNotification(id, { resultLabel });
 
-          // Web push when the tab is not visible.
-          firePush({
-            title: "Cesare",
-            body: resultLabel,
-            onClick: () => {
-              setCesareOpen(true);
-              markAllSeen();
-            },
-          });
+            // Web push when the tab is not visible.
+            firePush({
+              title: "Cesare",
+              body: resultLabel,
+              onClick: () => {
+                setCesareOpen(true);
+                markAllSeen();
+              },
+            });
+          } else {
+            // Silent dismiss — nothing happened on the backend.
+            dismissNotification(id);
+          }
         } else {
           failNotification(id, "Cesare ha avuto un problema");
         }
@@ -242,6 +252,31 @@ function AppShellInner({
       ) {
         showToast({
           message: "✦ Cesare ha aggiornato il budget",
+          variant: "success",
+        });
+      }
+    }
+
+    // Shooting plan page — Cesare acts as a Director of Photography via
+    // shot-plan tools. Invalidate both the per-scene shot-plan view and the
+    // top-level scene-with-plan summary so the parallel plans editor and the
+    // scene list both refresh.
+    if (cesarePage === "shooting-plan" && projectId) {
+      void queryClient.invalidateQueries({
+        queryKey: ["shooting-plan", "scenes", projectId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["shot-plan"] });
+      const lc = reply.toLowerCase();
+      if (
+        lc.includes("creato") ||
+        lc.includes("aggiunto") ||
+        lc.includes("salvato") ||
+        lc.includes("aggiornato") ||
+        lc.includes("rimosso") ||
+        lc.includes("attivato")
+      ) {
+        showToast({
+          message: "✦ Cesare ha aggiornato il piano inquadrature",
           variant: "success",
         });
       }
