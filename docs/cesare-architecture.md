@@ -589,6 +589,41 @@ When the user draws a circle on the map:
 
 ---
 
+## 10. QA policy
+
+Every non-trivial feature is delivered with a **3-level QA suite** (4 for Cesare-touching features). This is mandatory, not optional.
+
+### Level 1 — Vitest pure-function tests
+
+For every new pure function (`estimateSceneCost`, `routeModel`, parsers, transformers). Minimum 5 cases: happy path, edge, boundary, error, default. Co-located file (`feature.test.ts`). Runs in CI on every PR.
+
+### Level 2 — Mock E2E spec
+
+A new `tests/cesare-agentic-<feature>.spec.ts` file with a unique `[OHW-NNN]` tag and a matching `MockScenario` in `_mocks/cesare-tool-loop.mock.ts`. Must exercise the full user flow (click → type → Cesare send → assert DOM side effect → assert DB row when applicable). Runs with `MOCK_AI=true` in CI, completes in <60s.
+
+### Level 3 — Vernissage walk + report
+
+JSON story in `vernissage/_stories/<feature>.story.json`, screenshots produced by `pnpm vernissage:walk`, markdown report `vernissage/<feature>.md` filled from `_template.md` with a manual verification checklist.
+
+### Level 4 (Cesare only) — Cost smoke script
+
+`scripts/cost-smoke-<feature>.ts` invoked via `pnpm cost:smoke:<feature>`. Disables `MOCK_AI`, runs 2-3 real chats, logs `usage.cache_read_input_tokens`, `usage.cache_creation_input_tokens`, `usage.input_tokens`, `usage.output_tokens`. Output: a table comparing expected vs measured cost reduction. **Not** in CI (costs real API calls). Documented in README.
+
+### Workflow
+
+The orchestrator spawns a dedicated **QA-companion agent** immediately AFTER the feature agent commits. The QA agent works on a separate worktree, reads the feature commit, writes the tests, commits with `[OHW] test(<feature>): vitest + mock e2e + vernissage + cost smoke`.
+
+### Exceptions
+
+- Trivial hotfixes (1-2 lines CSS, typos): OK without tests.
+- Behaviour-preserving refactors: Vitest on touched pure functions + existing E2E must still pass.
+- Product features: all 3 levels mandatory (4 if Cesare).
+- Infra features (mock framework, vernissage tooling, cost layers): mock E2E + smoke test of their own mechanism.
+
+Only skipped when the user explicitly says "skip QA for this".
+
+---
+
 ## Quick references
 
 - Main spec: `docs/specs/34-cesare-agentic-everywhere.md`
