@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { VersionsList, useScreenplay } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
+import { Skeleton } from "@oh-writers/ui";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/screenplay/versions")(
@@ -14,7 +15,16 @@ function VersionsPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useScreenplay(id);
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={4}
+          widths={["55%", "100%", "100%", "70%"]}
+          ariaLabel="Caricamento versioni"
+        />
+      </div>
+    );
   if (!result) return null;
 
   return match(result)

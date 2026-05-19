@@ -13,6 +13,7 @@ import {
 } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { useVersionsDrawer } from "~/features/versions";
+import { Skeleton } from "@oh-writers/ui";
 import styles from "./_app.projects.$id_.editor.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
@@ -64,7 +65,16 @@ function ScreenplayEditorPage() {
     [],
   );
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={6}
+          widths={["60%", "100%", "100%", "85%", "100%", "70%"]}
+          ariaLabel="Caricamento sceneggiatura"
+        />
+      </div>
+    );
   if (!result) return null;
 
   return match(result)

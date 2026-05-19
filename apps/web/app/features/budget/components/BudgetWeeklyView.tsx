@@ -180,16 +180,7 @@ function WeekCard({ week }: WeekCardProps) {
 
       {week.sceneIds.length > 0 && (
         <div className={styles.weekScenes}>
-          {week.sceneIds.slice(0, 6).map((sid) => (
-            <span key={sid} className={styles.sceneChip}>
-              {sid.slice(0, 6)}
-            </span>
-          ))}
-          {week.sceneIds.length > 6 && (
-            <span className={styles.sceneChip}>
-              +{week.sceneIds.length - 6}
-            </span>
-          )}
+          <span className={styles.sceneChip}>{week.sceneIds.length} scene</span>
         </div>
       )}
     </article>

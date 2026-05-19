@@ -1077,12 +1077,14 @@ WORKFLOW:
 ❌ SBAGLIATO:
 "Ora ti scrivo la logline: …"
 (Scrive il testo nella chat, non chiama il tool. NON FARE COSÌ.)
+"Leggo la sceneggiatura, poi ti scrivo la sinossi qui sotto."
+(Stessa cosa. Niente testo nel chat per documenti interi.)
 
 ✅ CORRETTO:
 [propose_logline_from_screenplay({ instruction: "più commerciale" })]
 "Ho generato una logline draft per il progetto. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor."
 
-Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
+REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
 };
 
 const buildBreakdownToolsGuidance = (page: PageContext["page"]): string => {

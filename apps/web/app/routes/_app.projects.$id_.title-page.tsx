@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { Viewbar, ViewbarSep } from "@oh-writers/ui";
+import { Viewbar, ViewbarSep, Skeleton } from "@oh-writers/ui";
 import {
   TitlePageEditor,
   TitlePageDraftPanel,
@@ -25,7 +25,16 @@ function TitlePageRoute() {
   const { data: result, isLoading } = useTitlePageState(id);
   const update = useUpdateTitlePageState();
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={5}
+          widths={["50%", "100%", "85%", "100%", "70%"]}
+          ariaLabel="Caricamento title page"
+        />
+      </div>
+    );
   if (!result) return null;
 
   return match(result)
@@ -70,11 +79,8 @@ function TitlePageRouteInner({
   const isDirty = JSON.stringify(local) !== lastSavedRef.current;
   // Read-only frontespizio (canEdit=false) never publishes — pill stays
   // hidden. Editable but untouched also stays hidden until first edit.
-  const publishedSaveState = canEdit && hasEdited
-    ? isDirty
-      ? "saving"
-      : "saved"
-    : undefined;
+  const publishedSaveState =
+    canEdit && hasEdited ? (isDirty ? "saving" : "saved") : undefined;
   useSaveStatePublisher(publishedSaveState);
 
   useEffect(() => {
@@ -113,11 +119,7 @@ function TitlePageRouteInner({
           Frontespizio
         </span>
         <span className={styles.viewbarSpacer} />
-        <button
-          type="button"
-          className={styles.viewbarLink}
-          onClick={onClose}
-        >
+        <button type="button" className={styles.viewbarLink} onClick={onClose}>
           Chiudi
         </button>
       </Viewbar>

@@ -4,6 +4,7 @@ import type { DocumentType } from "@oh-writers/domain";
 import { NarrativeEditor } from "./NarrativeEditor";
 import { useDocument } from "../hooks/useDocument";
 import { ResultErrorView } from "~/components/ResultErrorView";
+import { Skeleton } from "@oh-writers/ui";
 import styles from "../../../routes/_app.projects.$id_.editor.module.css";
 
 interface DocumentRoutePageProps {
@@ -17,7 +18,16 @@ export const DocumentRoutePage: FC<DocumentRoutePageProps> = ({
 }) => {
   const { data: result, isLoading } = useDocument(projectId, type);
 
-  if (isLoading) return <div className={styles.status}>Loading…</div>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={5}
+          widths={["50%", "100%", "100%", "75%", "60%"]}
+          ariaLabel="Caricamento documento"
+        />
+      </div>
+    );
   if (!result) return null;
 
   return match(result)

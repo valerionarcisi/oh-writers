@@ -368,13 +368,17 @@ type ListState =
   | { kind: "ol"; items: string[] }
   | null;
 
-// Strip raw <tool_call>{...}</tool_call> blocks that occasionally leak into
-// the assistant text when the model emits a malformed tool invocation. They
-// are intended for the server, never the user.
+// Strip raw <tool_call>{...}</tool_call> and <tool_response>…</tool_response>
+// blocks that occasionally leak into the assistant text when the model echoes
+// back internal protocol scaffolding. They are intended for the server, never
+// the user.
 function stripToolCalls(content: string): string {
   return content
     .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
     .replace(/<tool_call>[\s\S]*$/g, "")
+    .replace(/<tool_response>[\s\S]*?<\/tool_response>/g, "")
+    .replace(/<tool_response>[\s\S]*$/g, "")
+    .replace(/<\/tool_response>/g, "")
     .replace(/<!--ohw:tools=\d+-->/g, "")
     .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
     .trim();
