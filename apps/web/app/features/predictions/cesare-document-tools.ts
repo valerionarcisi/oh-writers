@@ -7,7 +7,7 @@ import {
 } from "@oh-writers/db/schema";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
-import { callHaiku, extractText } from "~/features/ai/anthropic-client";
+import { callHaiku, extractText } from "~/features/ai";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.server";
 

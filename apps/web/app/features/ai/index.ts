@@ -2,6 +2,7 @@ export {
   callHaiku,
   extractText,
   extractToolUse,
+  loadAnthropicStreamingClient,
   AnthropicError,
 } from "./anthropic-client";
 export type {

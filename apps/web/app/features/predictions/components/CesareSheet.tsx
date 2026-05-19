@@ -866,8 +866,7 @@ export function CesareSheet({
             <>
               {messages.map((msg, i) => (
                 // Messages are append-only; index is stable
-                // eslint-disable-next-line react/no-array-index-key
-                <MessageBubble key={i} message={msg} />
+                <MessageBubble key={`msg-${i}-${msg.role}`} message={msg} />
               ))}
               {isLoading && <LoadingIndicator />}
             </>

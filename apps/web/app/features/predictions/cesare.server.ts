@@ -25,7 +25,7 @@ import { toShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
-import { loadAnthropicStreamingClient } from "~/features/ai/anthropic-client";
+import { loadAnthropicStreamingClient } from "~/features/ai";
 import {
   runToolLoop,
   runDocumentToolLoop,

@@ -24,7 +24,7 @@ import {
   type ProductionRates,
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
-import { callHaiku, extractText } from "~/features/ai/anthropic-client";
+import { callHaiku, extractText } from "~/features/ai";
 import { CesareError } from "./cesare.server";
 import {
   CESARE_SCHEDULE_TOOLS,

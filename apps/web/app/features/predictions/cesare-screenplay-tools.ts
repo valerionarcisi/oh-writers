@@ -3,7 +3,7 @@ import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, sql } from "drizzle-orm";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
-import { callHaiku, extractText } from "~/features/ai/anthropic-client";
+import { callHaiku, extractText } from "~/features/ai";
 import { CesareError } from "./cesare.server";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
