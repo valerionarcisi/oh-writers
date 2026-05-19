@@ -10,7 +10,7 @@ import { getDb } from "~/server/db";
 import { requireProjectAccess } from "~/server/access";
 import type { ProjectAccessError } from "~/server/access";
 import { DbError } from "@oh-writers/utils";
-import { CesareError } from "./cesare.server";
+import { CesareError } from "./cesare.errors";
 import {
   listScreenplayProposals,
   removeScreenplayProposal,

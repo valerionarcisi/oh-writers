@@ -208,6 +208,7 @@ export const versionsQueryOptions = (screenplayId: string) =>
   queryOptions({
     queryKey: ["versions", screenplayId] as const,
     queryFn: () => listVersions({ data: { screenplayId } }),
+    enabled: screenplayId.length > 0,
   });
 
 // ─── Get single version ───────────────────────────────────────────────────────

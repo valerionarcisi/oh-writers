@@ -26,7 +26,7 @@ import {
 
 type TopSheet = (typeof TOP_SHEETS)[number];
 import type { Db } from "~/server/db";
-import { CesareError } from "./cesare.server";
+import { CesareError } from "./cesare.errors";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 

@@ -9,7 +9,7 @@ import {
   locationRequirementScenes,
 } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
-import { CesareError } from "./cesare.server";
+import { CesareError } from "./cesare.errors";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 

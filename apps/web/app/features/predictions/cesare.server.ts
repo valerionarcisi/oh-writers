@@ -51,14 +51,10 @@ export interface SystemPromptBlock {
 }
 
 // ─── Error ────────────────────────────────────────────────────────────────────
-
-export class CesareError {
-  readonly _tag = "CesareError" as const;
-  readonly message: string;
-  constructor(readonly cause: string) {
-    this.message = `Cesare error: ${cause}`;
-  }
-}
+// Moved to cesare.errors.ts to break the cesare-*-tools.ts ↔ cesare.server.ts
+// circular import cycle. Re-exported for back-compat with existing callers.
+import { CesareError } from "./cesare.errors";
+export { CesareError };
 
 // ─── Input schemas ────────────────────────────────────────────────────────────
 

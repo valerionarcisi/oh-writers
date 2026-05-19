@@ -35,7 +35,7 @@ import {
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
-import { CesareError } from "./cesare.server";
+import { CesareError } from "./cesare.errors";
 import {
   CESARE_SCHEDULE_TOOLS,
   executeScheduleTool,

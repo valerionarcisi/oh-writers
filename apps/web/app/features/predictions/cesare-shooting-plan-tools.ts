@@ -22,7 +22,7 @@ import {
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
-import { CesareError } from "./cesare.server";
+import { CesareError } from "./cesare.errors";
 
 // ─── Shot enum (mirrors the Drizzle schema) ──────────────────────────────────
 
