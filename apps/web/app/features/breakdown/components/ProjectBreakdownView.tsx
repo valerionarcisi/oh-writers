@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useConfirmDialog } from "@oh-writers/ui";
+import { Skeleton, useConfirmDialog } from "@oh-writers/ui";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
@@ -50,9 +50,7 @@ const toInputRow = (r: ProjectBreakdownRow): ProjectBreakdownInputRow => ({
   description: r.element.description ?? null,
   castTier: r.element.castTier ?? null,
   totalQuantity: r.totalQuantity,
-  sceneNumbers: r.scenesPresent
-    .map((s) => s.sceneNumber)
-    .sort((a, b) => a - b),
+  sceneNumbers: r.scenesPresent.map((s) => s.sceneNumber).sort((a, b) => a - b),
   status: r.hasStale ? "stale" : r.hasPending ? "pending" : "accepted",
   source: r.latestSource ?? null,
 });
@@ -70,12 +68,14 @@ const STATUS_LABEL: Record<ProjectBreakdownInputRow["status"], string> = {
   stale: "obsoleto",
 };
 
-const SOURCE_LABEL: Record<NonNullable<ProjectBreakdownInputRow["source"]>, string> =
-  {
-    cesare: "Cesare",
-    regex: "Regex",
-    manual: "Manuale",
-  };
+const SOURCE_LABEL: Record<
+  NonNullable<ProjectBreakdownInputRow["source"]>,
+  string
+> = {
+  cesare: "Cesare",
+  regex: "Regex",
+  manual: "Manuale",
+};
 
 export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   const { data: rawRows = [], isLoading } = useQuery(
@@ -164,8 +164,10 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   }, [groups]);
 
   const flatVisibleRows = useMemo(() => {
-    const out: { row: ProjectBreakdownInputRow; category: BreakdownCategory }[] =
-      [];
+    const out: {
+      row: ProjectBreakdownInputRow;
+      category: BreakdownCategory;
+    }[] = [];
     for (const g of groups) {
       if (!expanded.has(g.category)) continue;
       for (const r of g.rows) out.push({ row: r, category: g.category });
@@ -271,7 +273,11 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   };
 
   const bulkRecategorize = (category: BreakdownCategory) => {
-    bulkUpdate.mutate({ projectId, elementIds: [...selected], patch: { category } });
+    bulkUpdate.mutate({
+      projectId,
+      elementIds: [...selected],
+      patch: { category },
+    });
     clearSelection();
   };
 
@@ -323,9 +329,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
       if (inField) return;
       if (e.key === "j") {
         e.preventDefault();
-        setFocusedIndex((i) =>
-          Math.min(flatVisibleRows.length - 1, i + 1),
-        );
+        setFocusedIndex((i) => Math.min(flatVisibleRows.length - 1, i + 1));
       } else if (e.key === "k") {
         e.preventDefault();
         setFocusedIndex((i) => Math.max(0, i - 1));
@@ -343,7 +347,11 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   if (isLoading)
     return (
       <div className={styles.root}>
-        <p className={styles.statusLine}>Caricamento spoglio…</p>
+        <Skeleton
+          lines={3}
+          widths={["60%", "100%", "40%"]}
+          ariaLabel="Caricamento spoglio"
+        />
       </div>
     );
 
@@ -418,7 +426,9 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
           <div className={styles.dupBody}>
             <h4 className={styles.dupTitle}>
               {duplicates.length} possibil
-              {duplicates.length === 1 ? "e duplicato rilevato" : "i duplicati rilevati"}
+              {duplicates.length === 1
+                ? "e duplicato rilevato"
+                : "i duplicati rilevati"}
             </h4>
             <p className={styles.dupList}>
               {duplicates
@@ -462,7 +472,11 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
           onChange={(e) => setSearch(e.target.value)}
           data-testid="breakdown-view-search"
         />
-        <div className={styles.chips} role="group" aria-label="Filtri categoria">
+        <div
+          className={styles.chips}
+          role="group"
+          aria-label="Filtri categoria"
+        >
           {BREAKDOWN_CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
             const isOn = catFilter.has(cat);
@@ -602,7 +616,9 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
             >
               <span className={styles.groupDot} aria-hidden />
               <span className={styles.groupName}>{meta.labelIt}</span>
-              <span className={styles.groupCount}>{g.rows.length} elementi</span>
+              <span className={styles.groupCount}>
+                {g.rows.length} elementi
+              </span>
               {g.pendingCount > 0 && (
                 <span className={styles.groupBadge}>
                   {g.pendingCount} pending
@@ -628,10 +644,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
               </span>
             </button>
             {isOpen && (
-              <div
-                id={`group-body-${g.category}`}
-                className={styles.tableWrap}
-              >
+              <div id={`group-body-${g.category}`} className={styles.tableWrap}>
                 <CategoryTable
                   group={g}
                   canEdit={canEdit}
@@ -700,7 +713,10 @@ function CategoryTable({
   focusedIndex,
   flatVisibleRows,
 }: {
-  group: { category: BreakdownCategory; rows: readonly ProjectBreakdownInputRow[] };
+  group: {
+    category: BreakdownCategory;
+    rows: readonly ProjectBreakdownInputRow[];
+  };
   canEdit: boolean;
   selected: Set<string>;
   onToggle: (id: string) => void;

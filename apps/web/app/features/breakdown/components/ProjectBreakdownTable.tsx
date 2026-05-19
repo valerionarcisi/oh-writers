@@ -11,6 +11,7 @@ import {
   Tag,
   ContextMenu,
   EditableCell,
+  Skeleton,
   useConfirmDialog,
 } from "@oh-writers/ui";
 import {
@@ -273,7 +274,16 @@ export function ProjectBreakdownTable({
   const recategorizeMenuRef = useRef<HTMLDivElement>(null);
   const [recatOpen, setRecatOpen] = useState(false);
 
-  if (isLoading) return <p className={styles.status}>Caricamento…</p>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={8}
+          widths={["20%", "80%", "20%", "80%", "20%", "80%", "20%", "80%"]}
+          ariaLabel="Caricamento tabella spoglio"
+        />
+      </div>
+    );
 
   return (
     <div className={styles.root}>

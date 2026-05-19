@@ -1,7 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Rows3 } from "lucide-react";
-import { MatrixGrid, type MatrixRow, type MatrixColumn } from "@oh-writers/ui";
+import {
+  MatrixGrid,
+  Skeleton,
+  type MatrixRow,
+  type MatrixColumn,
+} from "@oh-writers/ui";
 import { BREAKDOWN_CATEGORIES, CATEGORY_META } from "@oh-writers/domain";
 import {
   projectBreakdownOptions,
@@ -214,7 +219,16 @@ export function BreakdownMatrix({
       ? (cellMap.get(activeCell.elementId)?.get(activeCell.sceneId) ?? null)
       : null;
 
-  if (isLoading) return <p className={styles.status}>Caricamento…</p>;
+  if (isLoading)
+    return (
+      <div className={styles.status}>
+        <Skeleton
+          lines={6}
+          widths={["100%", "100%", "100%", "100%", "100%", "60%"]}
+          ariaLabel="Caricamento matrice spoglio"
+        />
+      </div>
+    );
   if (rows.length === 0)
     return (
       <p className={styles.status}>
@@ -237,10 +251,7 @@ export function BreakdownMatrix({
         </button>
         <button
           type="button"
-          className={[
-            styles.compactBtn,
-            compact ? styles.compactBtnActive : "",
-          ]
+          className={[styles.compactBtn, compact ? styles.compactBtnActive : ""]
             .filter(Boolean)
             .join(" ")}
           onClick={() => setCompact((c) => !c)}
