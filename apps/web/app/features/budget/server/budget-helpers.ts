@@ -237,7 +237,6 @@ export const computeBudgetOverview = (
   };
 };
 
-
 export const PER_ELEMENT_CATEGORIES = new Set(["locations", "vehicles"]);
 
 const AGGREGATE_CATEGORY_LABELS: Record<string, string> = {
@@ -367,6 +366,152 @@ export type DayCostInput = {
   totalCrewCost: number;
   perElementLineCosts: PerElementLineCost[];
   otherLinesTotalCost: number;
+};
+
+// ─── Weekly production aggregation (Wave 3 — spec 30) ───────────────────────
+//
+// Builds production-week buckets from a shooting calendar. The first shoot
+// day is "week 1, day 1". Days falling in the same ISO calendar week (Mon-Sun)
+// stay in the same bucket; the next bucket starts on the following Monday
+// after the previous week's last day. Costs are taken from `computeDayCosts`,
+// so the caller passes in the already-computed per-day breakdowns. Pure.
+
+export interface WeekBucket {
+  readonly weekNumber: number;
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly dayCount: number;
+  readonly totalCents: number;
+  readonly linesByCategory: Record<
+    string,
+    { totalCents: number; lineCount: number }
+  >;
+  readonly sceneIds: ReadonlyArray<string>;
+}
+
+export interface WeeklyDayInput {
+  readonly dayId: string;
+  readonly date: string;
+  readonly cost: DayCost;
+}
+
+// Normalise to YYYY-MM-DD without timezone math (dates are already plain dates
+// from the DB `date` column).
+const toISODate = (raw: string | Date): string => {
+  if (typeof raw === "string") return raw.slice(0, 10);
+  const y = raw.getUTCFullYear();
+  const m = String(raw.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(raw.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+// 0 = Monday, 6 = Sunday. We parse the YYYY-MM-DD string in UTC so the result
+// does not depend on the runtime timezone of the test machine.
+const isoDayOfWeek = (iso: string): number => {
+  const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10)) as [
+    number,
+    number,
+    number,
+  ];
+  const utc = Date.UTC(y, m - 1, d);
+  const jsDow = new Date(utc).getUTCDay();
+  return (jsDow + 6) % 7;
+};
+
+const toCents = (value: number): number => Math.round(value * 100);
+
+export const aggregateProductionLinesByWeek = (
+  days: ReadonlyArray<WeeklyDayInput>,
+): WeekBucket[] => {
+  if (days.length === 0) return [];
+
+  const sorted = [...days].sort((a, b) =>
+    toISODate(a.date) < toISODate(b.date) ? -1 : 1,
+  );
+
+  type Open = {
+    weekNumber: number;
+    startISO: string;
+    endISO: string;
+    dayCount: number;
+    totalCents: number;
+    sceneIds: Set<string>;
+    linesByCategory: Map<string, { totalCents: number; lineCount: number }>;
+  };
+
+  // Compute the Monday-of-ISO-week for an ISO date as YYYY-MM-DD.
+  const isoMonday = (iso: string): string => {
+    const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10)) as [
+      number,
+      number,
+      number,
+    ];
+    const utc = Date.UTC(y, m - 1, d);
+    const dow = isoDayOfWeek(iso);
+    const monday = new Date(utc - dow * 86400_000);
+    return toISODate(monday);
+  };
+
+  const buckets: Open[] = [];
+  let current: Open | null = null;
+  let weekIndex = 0;
+  let currentMonday: string | null = null;
+
+  for (const day of sorted) {
+    const iso = toISODate(day.date);
+    const monday = isoMonday(iso);
+    const startsNewWeek = current === null || monday !== currentMonday;
+
+    if (!current || startsNewWeek) {
+      weekIndex += 1;
+      currentMonday = monday;
+      current = {
+        weekNumber: weekIndex,
+        startISO: iso,
+        endISO: iso,
+        dayCount: 0,
+        totalCents: 0,
+        sceneIds: new Set<string>(),
+        linesByCategory: new Map(),
+      };
+      buckets.push(current);
+    }
+
+    current.endISO = iso;
+    current.dayCount += 1;
+    current.totalCents += toCents(day.cost.total);
+    for (const sid of day.cost.sceneIds) current.sceneIds.add(sid);
+
+    const breakdownByCat: Array<[string, number]> = [
+      ["cast", day.cost.breakdown.cast],
+      ["crew", day.cost.breakdown.crew],
+      ["locations", day.cost.breakdown.locations],
+      ["vehicles", day.cost.breakdown.vehicles],
+      ["other", day.cost.breakdown.other],
+      ["contingency", day.cost.breakdown.contingency],
+    ];
+    for (const [category, value] of breakdownByCat) {
+      if (value <= 0) continue;
+      const prev = current.linesByCategory.get(category) ?? {
+        totalCents: 0,
+        lineCount: 0,
+      };
+      current.linesByCategory.set(category, {
+        totalCents: prev.totalCents + toCents(value),
+        lineCount: prev.lineCount + 1,
+      });
+    }
+  }
+
+  return buckets.map((b) => ({
+    weekNumber: b.weekNumber,
+    startDate: b.startISO,
+    endDate: b.endISO,
+    dayCount: b.dayCount,
+    totalCents: b.totalCents,
+    linesByCategory: Object.fromEntries(b.linesByCategory),
+    sceneIds: Array.from(b.sceneIds),
+  }));
 };
 
 export const computeDayCosts = (input: DayCostInput): DayCost[] => {

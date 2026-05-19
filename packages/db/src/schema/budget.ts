@@ -7,6 +7,7 @@ import {
   boolean,
   timestamp,
   unique,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 import { breakdownElements } from "./breakdown";
@@ -110,7 +111,9 @@ export const budgetCast = pgTable("budget_cast", {
   name: text("name").notNull(),
   days: numeric("days").notNull().default("1"),
   dayRate: numeric("day_rate").notNull().default("0"),
-  rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("giornata"),
+  rateUnit: text("rate_unit", { enum: RATE_UNITS })
+    .notNull()
+    .default("giornata"),
   fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
     .notNull()
     .default("piva"),
@@ -131,7 +134,9 @@ export const budgetCrew = pgTable("budget_crew", {
   department: text("department").notNull(),
   days: numeric("days").notNull().default("1"),
   dayRate: numeric("day_rate").notNull().default("0"),
-  rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("giornata"),
+  rateUnit: text("rate_unit", { enum: RATE_UNITS })
+    .notNull()
+    .default("giornata"),
   fiscalRegime: text("fiscal_regime", { enum: FISCAL_REGIMES })
     .notNull()
     .default("piva"),
@@ -152,7 +157,9 @@ export const projectRateCard = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     role: text("role"),
-    rateUnit: text("rate_unit", { enum: RATE_UNITS }).notNull().default("giornata"),
+    rateUnit: text("rate_unit", { enum: RATE_UNITS })
+      .notNull()
+      .default("giornata"),
     rateValue: numeric("rate_value").notNull().default("0"),
     mealAllowance: numeric("meal_allowance").notNull().default("0"),
     accommodation: numeric("accommodation").notNull().default("0"),
@@ -172,3 +179,26 @@ export type BudgetCrew = typeof budgetCrew.$inferSelect;
 export type NewBudgetCrew = typeof budgetCrew.$inferInsert;
 export type ProjectRateCard = typeof projectRateCard.$inferSelect;
 export type NewProjectRateCard = typeof projectRateCard.$inferInsert;
+
+// ─── Budget caps (Wave 3 — Spec 30) ──────────────────────────────────────────
+//
+// A `topSheet === null` row is the global cap for the project. A row with a
+// non-null `topSheet` is the cap for that single top-sheet bucket. The unique
+// index in migration 0029 enforces "one global cap + one per top sheet".
+export const budgetCaps = pgTable("budget_caps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  topSheet: text("top_sheet"),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type BudgetCap = typeof budgetCaps.$inferSelect;
+export type NewBudgetCap = typeof budgetCaps.$inferInsert;

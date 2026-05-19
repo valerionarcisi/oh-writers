@@ -1,0 +1,99 @@
+{
+  "id": "budget-intelligence",
+  "title": "Budget intelligence — cap, weekly view, propose flags",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/budget",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"budget-page-v2\"]",
+      "timeout_ms": 20000
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"budget-cap-bar\"]",
+      "timeout_ms": 10000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-budget-loaded"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: /^Cesare(\\s—.*)?$/ })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[placeholder=\"Chiedi a Cesare…\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Imposta tetto a 50000."
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[role=\"log\"][aria-label=\"Conversazione con Cesare\"] p",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-cap-set"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Siamo nel budget?"
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[role=\"log\"][aria-label=\"Conversazione con Cesare\"] p",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "03-evaluate-cap"
+    },
+    {
+      "kind": "type",
+      "ref": "[placeholder=\"Chiedi a Cesare…\"]",
+      "text": "Ci sono voci eccessive nel budget?"
+    },
+    {
+      "kind": "press",
+      "key": "Enter"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[role=\"log\"][aria-label=\"Conversazione con Cesare\"] p",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "04-excessive-lines"
+    },
+    {
+      "kind": "click",
+      "ref": "getByRole('button', { name: 'Settimane' })"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"budget-weekly-view\"]",
+      "timeout_ms": 10000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "05-weekly-view"
+    }
+  ]
+}

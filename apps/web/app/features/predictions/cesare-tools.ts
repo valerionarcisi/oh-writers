@@ -1,11 +1,12 @@
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
-import { eq, and, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import {
   locationCandidates,
   locationPhotos,
   locationRequirements,
   budgets,
   budgetLines,
+  budgetCaps,
   TOP_SHEETS,
   documents,
   documentVersions,
@@ -17,6 +18,15 @@ import {
   BREAKDOWN_CATEGORIES,
   type BreakdownCategoryDb,
 } from "@oh-writers/db/schema";
+import {
+  findExcessiveLines,
+  evaluateAgainstCap,
+  proposeMissingLines,
+  type IntelligenceLine,
+  type CapEvaluation,
+  type ExcessiveLineFlag,
+  type MissingLineProposal,
+} from "./cesare-budget-intelligence";
 import type { DocumentType } from "@oh-writers/domain";
 import {
   estimateSceneCost,
@@ -1032,6 +1042,9 @@ const executeSetGhostStatus = (
       ),
   );
 
+// TODO(spec-30b): expose a per-project Settings UI that lets the line producer
+// edit `production_rates` entries (default day rates, fringes, currency). The
+// rates already drive `estimateSceneCost`; today they can only be tuned via SQL.
 const loadRatesForCesare = (
   db: Db,
   projectId: string,
@@ -1696,6 +1709,98 @@ export const CESARE_BUDGET_TOOLS = [
       required: ["line_id", "actual_amount"],
     },
   },
+  {
+    name: "set_budget_cap",
+    description:
+      "Imposta un tetto di spesa (cap) per il progetto. " +
+      "Scope 'global' = tetto complessivo del budget. " +
+      "Scope 'topsheet' = tetto per uno specifico top sheet (es. cast, production, post_production). " +
+      "Usa questo tool quando l'utente chiede 'non superare X' o 'il cast non puo costare piu di Y'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scope: {
+          oneOf: [
+            {
+              type: "object",
+              properties: { kind: { type: "string", enum: ["global"] } },
+              required: ["kind"],
+            },
+            {
+              type: "object",
+              properties: {
+                kind: { type: "string", enum: ["topsheet"] },
+                top_sheet: {
+                  type: "string",
+                  enum: [
+                    "above_the_line",
+                    "production",
+                    "crew",
+                    "post_production",
+                    "contingency",
+                  ],
+                },
+              },
+              required: ["kind", "top_sheet"],
+            },
+          ],
+        },
+        amount_cents: {
+          type: "number",
+          description: "Tetto in centesimi (es. 5000000 per €50.000).",
+        },
+      },
+      required: ["scope", "amount_cents"],
+    },
+  },
+  {
+    name: "evaluate_against_cap",
+    description:
+      "Legge i cap correnti (globale + per topsheet) e li confronta con l'allocazione di budget effettiva. " +
+      "Ritorna residuo e top sheet che sforano. Pure read — non muta nulla. " +
+      "Usa questo tool per 'siamo dentro budget?' o 'quanto rimane?'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "propose_excessive_lines_flags",
+    description:
+      "Analizza le voci di budget e segnala quelle anomale: >150% della media della loro categoria. " +
+      "Ritorna la lista flaggata — NON muta nulla. L'utente decide se intervenire. " +
+      "Usa questo tool per 'ci sono voci eccessive?' o 'cosa costa troppo?'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        threshold_ratio: {
+          type: "number",
+          description: "Soglia opzionale (default 1.5 = 150% della media)",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "propose_missing_lines",
+    description:
+      "Analizza il breakdown delle scene richieste e propone voci budget potenzialmente mancanti. " +
+      "Ritorna la lista delle categorie scoperte con nomi e stime di default — NON muta nulla. " +
+      "Usa questo tool quando l'utente chiede 'cosa manca nel budget?' o 'verifica copertura'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_ids: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "UUID delle scene da analizzare. Omesso = analizza l'intero progetto.",
+        },
+      },
+      required: [],
+    },
+  },
 ] as const;
 
 // ─── Budget tool executors ────────────────────────────────────────────────────
@@ -2175,6 +2280,276 @@ export const executeMarkLineActual = (
       ),
   );
 
+// ─── set_budget_cap / evaluate_against_cap / excessive / missing ────────────
+
+type CapScope = { kind: "global" } | { kind: "topsheet"; top_sheet: TopSheet };
+
+interface SetBudgetCapInput {
+  scope: CapScope;
+  amount_cents: number;
+}
+
+const isValidTopSheet = (value: unknown): value is TopSheet =>
+  typeof value === "string" &&
+  (TOP_SHEETS as readonly string[]).includes(value);
+
+export const executeSetBudgetCap = (
+  input: SetBudgetCapInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<
+  { id: string; topSheet: string | null; amountCents: number },
+  CesareError
+> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      if (!input.scope || typeof input.scope !== "object") {
+        throw new Error("scope is required");
+      }
+      const kind = input.scope.kind;
+      let topSheet: string | null;
+      if (kind === "global") {
+        topSheet = null;
+      } else if (kind === "topsheet") {
+        if (!isValidTopSheet(input.scope.top_sheet)) {
+          throw new Error(
+            `Unknown top_sheet: ${String(input.scope.top_sheet)}`,
+          );
+        }
+        topSheet = input.scope.top_sheet;
+      } else {
+        throw new Error(`Unknown scope kind: ${String(kind)}`);
+      }
+
+      const amount = Math.trunc(input.amount_cents);
+      if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error(`Invalid amount_cents: ${input.amount_cents}`);
+      }
+
+      const existing = await db
+        .select()
+        .from(budgetCaps)
+        .where(
+          and(
+            eq(budgetCaps.projectId, projectId),
+            topSheet === null
+              ? isNull(budgetCaps.topSheet)
+              : eq(budgetCaps.topSheet, topSheet),
+          ),
+        )
+        .limit(1);
+
+      if (existing[0]) {
+        const [updated] = await db
+          .update(budgetCaps)
+          .set({ amountCents: amount, updatedAt: new Date() })
+          .where(eq(budgetCaps.id, existing[0].id))
+          .returning();
+        return {
+          id: updated!.id,
+          topSheet: updated!.topSheet,
+          amountCents: updated!.amountCents,
+        };
+      }
+
+      const [inserted] = await db
+        .insert(budgetCaps)
+        .values({ projectId, topSheet, amountCents: amount })
+        .returning();
+      return {
+        id: inserted!.id,
+        topSheet: inserted!.topSheet,
+        amountCents: inserted!.amountCents,
+      };
+    })(),
+    (e) =>
+      new CesareError(
+        `executeSetBudgetCap failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+const collectIntelligenceLines = async (
+  db: Db,
+  budgetId: string,
+): Promise<IntelligenceLine[]> => {
+  const rows = await db
+    .select({
+      id: budgetLines.id,
+      name: budgetLines.name,
+      topSheet: budgetLines.topSheet,
+      rate: budgetLines.rate,
+      quantity: budgetLines.quantity,
+      actual: budgetLines.actual,
+      linkedCategory: budgetLines.linkedCategory,
+    })
+    .from(budgetLines)
+    .where(eq(budgetLines.budgetId, budgetId));
+
+  return rows.map((row) => {
+    const rate = row.rate !== null ? Number(row.rate) : 0;
+    const qty = row.quantity !== null ? Number(row.quantity) : 0;
+    const actual = row.actual !== null ? Number(row.actual) : null;
+    const effective = actual !== null ? actual : rate * qty;
+    return {
+      id: row.id,
+      name: row.name,
+      category: row.linkedCategory ?? row.topSheet,
+      amountEuros: effective,
+    };
+  });
+};
+
+const spendByTopSheetCents = async (
+  db: Db,
+  budgetId: string,
+): Promise<Array<{ topSheet: string; usedCents: number }>> => {
+  const rows = await db
+    .select({
+      topSheet: budgetLines.topSheet,
+      rate: budgetLines.rate,
+      quantity: budgetLines.quantity,
+      actual: budgetLines.actual,
+    })
+    .from(budgetLines)
+    .where(eq(budgetLines.budgetId, budgetId));
+
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const rate = row.rate !== null ? Number(row.rate) : 0;
+    const qty = row.quantity !== null ? Number(row.quantity) : 0;
+    const actual = row.actual !== null ? Number(row.actual) : null;
+    const effective = actual !== null ? actual : rate * qty;
+    totals.set(
+      row.topSheet,
+      (totals.get(row.topSheet) ?? 0) + Math.round(effective * 100),
+    );
+  }
+  return Array.from(totals.entries()).map(([topSheet, usedCents]) => ({
+    topSheet,
+    usedCents,
+  }));
+};
+
+export const executeEvaluateAgainstCap = (
+  db: Db,
+  projectId: string,
+): ResultAsync<CapEvaluation, CesareError> =>
+  ResultAsync.fromPromise(
+    (async (): Promise<CapEvaluation> => {
+      const budget = await findBudgetForProject(db, projectId);
+      const capRows = await db
+        .select()
+        .from(budgetCaps)
+        .where(eq(budgetCaps.projectId, projectId));
+
+      const capsInput = capRows.map((r) => ({
+        topSheet: r.topSheet,
+        amountCents: r.amountCents,
+      }));
+
+      const spend = budget ? await spendByTopSheetCents(db, budget.id) : [];
+      return evaluateAgainstCap(capsInput, spend);
+    })(),
+    (e) =>
+      new CesareError(
+        `executeEvaluateAgainstCap failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+interface ExcessiveLinesInput {
+  threshold_ratio?: number;
+}
+
+export const executeProposeExcessiveLines = (
+  input: ExcessiveLinesInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<{ flagged: ReadonlyArray<ExcessiveLineFlag> }, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const budget = await findBudgetForProject(db, projectId);
+      if (!budget) return { flagged: [] };
+      const lines = await collectIntelligenceLines(db, budget.id);
+      const threshold =
+        typeof input.threshold_ratio === "number" &&
+        Number.isFinite(input.threshold_ratio) &&
+        input.threshold_ratio > 1
+          ? input.threshold_ratio
+          : 1.5;
+      return { flagged: findExcessiveLines(lines, threshold) };
+    })(),
+    (e) =>
+      new CesareError(
+        `executeProposeExcessiveLines failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+interface MissingLinesInput {
+  scene_ids?: ReadonlyArray<string>;
+}
+
+export const executeProposeMissingLines = (
+  input: MissingLinesInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<{ missing: ReadonlyArray<MissingLineProposal> }, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const screenplay = await db
+        .select({ id: screenplays.id })
+        .from(screenplays)
+        .where(eq(screenplays.projectId, projectId))
+        .limit(1);
+      if (!screenplay[0]) return { missing: [] };
+
+      // Resolve scenes scope: explicit ids when present, else the whole project.
+      const sceneIdsScope: string[] =
+        input.scene_ids && input.scene_ids.length > 0
+          ? [...input.scene_ids]
+          : await db
+              .select({ id: scenes.id })
+              .from(scenes)
+              .where(eq(scenes.screenplayId, screenplay[0].id))
+              .then((rows) => rows.map((r) => r.id));
+
+      if (sceneIdsScope.length === 0) return { missing: [] };
+
+      const elementRows = await db
+        .select({ category: breakdownElements.category })
+        .from(breakdownOccurrences)
+        .innerJoin(
+          breakdownElements,
+          eq(breakdownOccurrences.elementId, breakdownElements.id),
+        )
+        .where(inArray(breakdownOccurrences.sceneId, sceneIdsScope));
+
+      const categoriesInScenes = Array.from(
+        new Set(elementRows.map((r) => r.category as string)),
+      );
+
+      const budget = await findBudgetForProject(db, projectId);
+      const coveredCategories: string[] = budget
+        ? await db
+            .select({ category: budgetLines.linkedCategory })
+            .from(budgetLines)
+            .where(eq(budgetLines.budgetId, budget.id))
+            .then((rows) =>
+              rows
+                .map((r) => r.category)
+                .filter((c): c is string => c !== null),
+            )
+        : [];
+
+      return {
+        missing: proposeMissingLines(categoriesInScenes, coveredCategories),
+      };
+    })(),
+    (e) =>
+      new CesareError(
+        `executeProposeMissingLines failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
 // ─── Budget tool router ───────────────────────────────────────────────────────
 
 export const executeBudgetTool = (
@@ -2221,6 +2596,36 @@ export const executeBudgetTool = (
   if (block.name === "mark_line_actual") {
     return executeMarkLineActual(
       block.input as MarkLineActualInput,
+      db,
+      projectId,
+    ).map((r) => ok(JSON.stringify(r)));
+  }
+
+  if (block.name === "set_budget_cap") {
+    return executeSetBudgetCap(
+      block.input as SetBudgetCapInput,
+      db,
+      projectId,
+    ).map((r) => ok(JSON.stringify(r)));
+  }
+
+  if (block.name === "evaluate_against_cap") {
+    return executeEvaluateAgainstCap(db, projectId).map((r) =>
+      ok(JSON.stringify(r)),
+    );
+  }
+
+  if (block.name === "propose_excessive_lines_flags") {
+    return executeProposeExcessiveLines(
+      block.input as ExcessiveLinesInput,
+      db,
+      projectId,
+    ).map((r) => ok(JSON.stringify(r)));
+  }
+
+  if (block.name === "propose_missing_lines") {
+    return executeProposeMissingLines(
+      block.input as MissingLinesInput,
       db,
       projectId,
     ).map((r) => ok(JSON.stringify(r)));

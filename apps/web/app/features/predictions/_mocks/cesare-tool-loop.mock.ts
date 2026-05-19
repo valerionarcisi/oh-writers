@@ -212,6 +212,72 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Budget — set_budget_cap (OHW-590)
+  {
+    match:
+      /imposta tetto|imposta il tetto|fissa il tetto|metti un tetto|metti un cap|non superare/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "set_budget_cap",
+            input: {
+              scope: { kind: "global" },
+              amount_cents: 5000000,
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho impostato il tetto budget globale a €50.000.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Budget — evaluate_against_cap (OHW-591)
+  {
+    match:
+      /siamo nel budget|siamo dentro budget|quanto rimane|residuo budget|quanto manca al tetto/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "evaluate_against_cap",
+            input: {},
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Stato budget: rispetto al tetto restano circa €12.000 di residuo. Sei dentro il limite.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Budget — propose_excessive_lines_flags (OHW-592)
+  {
+    match:
+      /voci eccessive|voci troppo costose|cosa costa troppo|cosa sfora di piu|voci anomale/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_excessive_lines_flags",
+            input: {},
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho trovato alcune voci sopra la media di categoria. Verifica le righe segnalate: decidi tu se ridurle.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Budget — update_budget_line (decrease)
   {
     match: /abbassa la voce|riduci la voce|abbassa la riga|diminuisci la voce/i,

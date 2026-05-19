@@ -6,7 +6,12 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import { Viewbar, FloatingDock, SegmentedControl, VersionTrigger } from "@oh-writers/ui";
+import {
+  Viewbar,
+  FloatingDock,
+  SegmentedControl,
+  VersionTrigger,
+} from "@oh-writers/ui";
 import { ExportBudgetModal } from "./ExportBudgetModal";
 import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { resourceTotal } from "@oh-writers/domain";
@@ -39,6 +44,8 @@ import { CastWidget } from "./widgets/CastWidget";
 import { CrewWidget } from "./widgets/CrewWidget";
 import { CategoryFlatTable } from "./CategoryFlatTable";
 import { RateCardSection } from "./RateCardSection";
+import { BudgetWeeklyView } from "./BudgetWeeklyView";
+import { BudgetCapBar } from "./BudgetCapBar";
 import { SectionIds, type SectionId } from "./flat-sections";
 import styles from "./BudgetPage.module.css";
 
@@ -85,7 +92,7 @@ const num = (v: string | number | null | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-type ViewMode = "overview" | "category" | "day";
+type ViewMode = "overview" | "category" | "day" | "weekly";
 
 interface BudgetPageProps {
   projectId: string;
@@ -109,7 +116,9 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const { data: versionsResult } = useVersions(screenplayId);
   const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
   const currentVersionId = screenplay?.currentVersionId ?? null;
-  const currentVersion = screenplayVersions.find((v) => v.id === currentVersionId);
+  const currentVersion = screenplayVersions.find(
+    (v) => v.id === currentVersionId,
+  );
   const versionLabel = currentVersion?.label ?? undefined;
 
   const handleOpenVersionsDrawer = () => {
@@ -118,8 +127,9 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   };
 
   const [view, setView] = useState<ViewMode>("overview");
-  const [drillCategory, setDrillCategory] =
-    useState<BudgetCategoryKey | null>(null);
+  const [drillCategory, setDrillCategory] = useState<BudgetCategoryKey | null>(
+    null,
+  );
   const [isStuck, setIsStuck] = useState(false);
   const [selectedScene, setSelectedScene] = useState<number | null>(null);
   const [focusSection, setFocusSection] = useState<SectionId | null>(null);
@@ -215,10 +225,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       sceneCount: scenes.length,
       perDay: null,
       perScene: null,
-      status: (budget?.status ?? "draft") as
-        | "draft"
-        | "estimated"
-        | "locked",
+      status: (budget?.status ?? "draft") as "draft" | "estimated" | "locked",
       categories: [
         {
           id: "cast",
@@ -266,6 +273,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             { id: "overview", label: "Panoramica" },
             { id: "category", label: "Per categoria" },
             { id: "day", label: "Per giornata" },
+            { id: "weekly", label: "Settimane" },
           ]}
           activeId={view}
           onSelect={(id) => {
@@ -307,13 +315,15 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           menuItems={[
             ...screenplayVersions.map((v, idx) => ({
               id: `version-${v.id}`,
-              label: v.id === currentVersionId
-                ? `● ${v.label ?? `Versione ${idx + 1}`}`
-                : (v.label ?? `Versione ${idx + 1}`),
+              label:
+                v.id === currentVersionId
+                  ? `● ${v.label ?? `Versione ${idx + 1}`}`
+                  : (v.label ?? `Versione ${idx + 1}`),
               onSelect: handleOpenVersionsDrawer,
-              tone: v.id === currentVersionId
-                ? ("default" as const)
-                : ("muted" as const),
+              tone:
+                v.id === currentVersionId
+                  ? ("default" as const)
+                  : ("muted" as const),
             })),
             {
               id: "open-drawer",
@@ -326,6 +336,11 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
 
       <main className={styles.main} id="main">
         <div className={styles.content}>
+          <BudgetCapBar
+            projectId={projectId}
+            currentSpendEuros={effectiveOverview.grandTotal}
+          />
+
           {view === "overview" && (
             <OverviewSection
               overview={effectiveOverview}
@@ -335,10 +350,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
 
           {view === "category" && (
             <>
-              <RateCardSection
-                projectId={projectId}
-                entries={rateCard ?? []}
-              />
+              <RateCardSection projectId={projectId} entries={rateCard ?? []} />
               {budget && (
                 <section className={styles.section}>
                   <header className={styles.sectionHead}>
@@ -360,8 +372,8 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               )}
               {!budget && (
                 <div className={styles.emptyCard}>
-                  Configura le tariffe, poi premi{" "}
-                  <strong>Rigenera</strong> per generare il budget.
+                  Configura le tariffe, poi premi <strong>Rigenera</strong> per
+                  generare il budget.
                 </div>
               )}
             </>
@@ -413,6 +425,18 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               <DayView days={dayCosts ?? []} />
             </section>
           )}
+
+          {view === "weekly" && (
+            <section className={styles.section}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Per settimana</h2>
+                <span className={styles.sectionMeta}>
+                  Ripartizione costi della produzione per settimana di ripresa
+                </span>
+              </header>
+              <BudgetWeeklyView projectId={projectId} />
+            </section>
+          )}
         </div>
       </main>
 
@@ -423,7 +447,11 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           onClick: () => generateMutation.mutate(),
         }}
         secondaryActions={[
-          { label: "Esporta", hotkey: "⌘E", onClick: () => setIsExportOpen(true) },
+          {
+            label: "Esporta",
+            hotkey: "⌘E",
+            onClick: () => setIsExportOpen(true),
+          },
         ]}
         cesareNoteCount={0}
         onCesareClick={openCesare}

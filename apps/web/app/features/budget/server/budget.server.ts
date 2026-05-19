@@ -52,11 +52,13 @@ import {
 import { ProjectNotFoundError } from "~/features/projects";
 import {
   aggregateProductionLines,
+  aggregateProductionLinesByWeek,
   computeBudgetOverview,
   computeDayCosts,
   type BudgetOverview,
   type PerElementLineCost,
   type DayCost,
+  type WeekBucket,
 } from "./budget-helpers";
 import { resourceTotal } from "@oh-writers/domain";
 import { getProjectBreakdownRows } from "~/features/breakdown";
@@ -1698,6 +1700,207 @@ export const getBudgetOverview = createServerFn({ method: "GET" })
               });
             })(),
             (e) => new DbError("getBudgetOverview", e),
+          ),
+        ),
+      ),
+  );
+
+// ─── getBudgetWeeklyOverview ─────────────────────────────────────────────────
+//
+// Builds production-week buckets by reusing `getDayCosts` logic (cast/crew/
+// locations/vehicles/other/contingency) and grouping them by ISO calendar week.
+
+export type { WeekBucket } from "./budget-helpers";
+
+export const getBudgetWeeklyOverview = createServerFn({ method: "GET" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<WeekBucket[], ProjectNotFoundError | ForbiddenError | DbError>
+    > =>
+      toShape(
+        await withProjectAccess(data.projectId, "view", ({ db, access }) =>
+          ResultAsync.fromPromise(
+            (async (): Promise<WeekBucket[]> => {
+              const projectId = access.project.id;
+              const schedule = await db.query.schedules.findFirst({
+                where: eq(schedules.projectId, projectId),
+              });
+              if (!schedule) return [];
+
+              const budget = await db.query.budgets.findFirst({
+                where: eq(budgets.projectId, projectId),
+              });
+              if (!budget) return [];
+
+              const dayRows = await db.query.shootingDays.findMany({
+                where: and(
+                  eq(shootingDays.scheduleId, schedule.id),
+                  eq(shootingDays.dayType, "shoot"),
+                ),
+                orderBy: (t) => t.dayNumber,
+              });
+              const datedDays = dayRows.filter(
+                (d): d is typeof d & { date: string } => d.date !== null,
+              );
+              if (datedDays.length === 0) return [];
+
+              const stripRows = await db
+                .select({
+                  shootingDayId: strips.shootingDayId,
+                  sceneId: strips.sceneId,
+                })
+                .from(strips)
+                .where(eq(strips.scheduleId, schedule.id));
+
+              const dayScenes = new Map<string, string[]>();
+              for (const s of stripRows) {
+                if (!s.shootingDayId) continue;
+                const arr = dayScenes.get(s.shootingDayId) ?? [];
+                arr.push(s.sceneId);
+                dayScenes.set(s.shootingDayId, arr);
+              }
+
+              // Reuse the same building blocks as `getDayCosts` so the weekly
+              // totals match the per-day view exactly.
+              const castRows = await db.query.budgetCast.findMany({
+                where: eq(budgetCast.budgetId, budget.id),
+              });
+              const castElementIds = castRows
+                .map((r) => r.elementId)
+                .filter((id): id is string => id !== null);
+              const castOccurrences =
+                castElementIds.length > 0
+                  ? await db
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(
+                        inArray(breakdownOccurrences.elementId, castElementIds),
+                      )
+                  : [];
+              const castOccsByElement = new Map<string, string[]>();
+              for (const occ of castOccurrences) {
+                const arr = castOccsByElement.get(occ.elementId) ?? [];
+                arr.push(occ.sceneId);
+                castOccsByElement.set(occ.elementId, arr);
+              }
+              const castCostsByScene: Record<string, number> = {};
+              for (const row of castRows) {
+                const sceneIds = row.elementId
+                  ? (castOccsByElement.get(row.elementId) ?? [])
+                  : [];
+                if (sceneIds.length === 0) continue;
+                const total =
+                  Number(row.dayRate) * Number(row.days) +
+                  Number(row.mealAllowance) +
+                  Number(row.accommodation);
+                const perScene = total / sceneIds.length;
+                for (const sid of sceneIds) {
+                  castCostsByScene[sid] =
+                    (castCostsByScene[sid] ?? 0) + perScene;
+                }
+              }
+
+              const crewRows = await db.query.budgetCrew.findMany({
+                where: and(
+                  eq(budgetCrew.budgetId, budget.id),
+                  eq(budgetCrew.enabled, true),
+                ),
+              });
+              const totalCrewCost = crewRows.reduce(
+                (sum, r) =>
+                  sum +
+                  Number(r.dayRate) * Number(r.days) +
+                  Number(r.mealAllowance) +
+                  Number(r.accommodation),
+                0,
+              );
+
+              const prodLines = await db.query.budgetLines.findMany({
+                where: and(
+                  eq(budgetLines.budgetId, budget.id),
+                  eq(budgetLines.topSheet, "production"),
+                ),
+              });
+              const perElementLineCosts: PerElementLineCost[] = [];
+              let otherLinesTotalCost = 0;
+              const prodElementIds = prodLines
+                .filter(
+                  (l) =>
+                    l.linkedElementId !== null &&
+                    (l.linkedCategory === "locations" ||
+                      l.linkedCategory === "vehicles"),
+                )
+                .map((l) => l.linkedElementId as string);
+              const prodOccurrences =
+                prodElementIds.length > 0
+                  ? await db
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(
+                        inArray(breakdownOccurrences.elementId, prodElementIds),
+                      )
+                  : [];
+              const prodOccsByElement = new Map<string, string[]>();
+              for (const occ of prodOccurrences) {
+                const arr = prodOccsByElement.get(occ.elementId) ?? [];
+                arr.push(occ.sceneId);
+                prodOccsByElement.set(occ.elementId, arr);
+              }
+              for (const line of prodLines) {
+                const effective =
+                  line.actual !== null
+                    ? Number(line.actual)
+                    : Number(line.quantity ?? 1) * Number(line.rate ?? 0);
+                if (
+                  line.linkedElementId &&
+                  (line.linkedCategory === "locations" ||
+                    line.linkedCategory === "vehicles")
+                ) {
+                  perElementLineCosts.push({
+                    linkedCategory: line.linkedCategory,
+                    sceneIds: prodOccsByElement.get(line.linkedElementId) ?? [],
+                    effectiveTotal: effective,
+                  });
+                } else {
+                  otherLinesTotalCost += effective;
+                }
+              }
+
+              const days = datedDays.map((d) => ({
+                id: d.id,
+                dayNumber: d.dayNumber,
+                date: d.date,
+                sceneIds: dayScenes.get(d.id) ?? [],
+              }));
+
+              const dayCosts = computeDayCosts({
+                days,
+                totalShootingDays: datedDays.length,
+                contingencyPercent: Number(budget.contingencyPercent),
+                castCostsByScene,
+                totalCrewCost,
+                perElementLineCosts,
+                otherLinesTotalCost,
+              });
+
+              return aggregateProductionLinesByWeek(
+                dayCosts.map((cost, idx) => ({
+                  dayId: cost.dayId,
+                  date: datedDays[idx]!.date,
+                  cost,
+                })),
+              );
+            })(),
+            (e) => new DbError("getBudgetWeeklyOverview", e),
           ),
         ),
       ),
