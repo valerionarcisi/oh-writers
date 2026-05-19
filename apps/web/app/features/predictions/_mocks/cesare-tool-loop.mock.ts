@@ -260,6 +260,92 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Documents — propose_logline_from_screenplay (OHW-575)
+  {
+    match:
+      /genera la logline|generare la logline|scrivimi la logline|scrivimi una logline|fammi una logline/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_logline_from_screenplay",
+            input: { instruction: "più commerciale" },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho generato una logline draft. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — propose_synopsis_from_screenplay (OHW-576)
+  {
+    match: /scrivimi la sinossi|genera la sinossi|fammi la sinossi/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_synopsis_from_screenplay",
+            input: {},
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho generato una sinossi draft. Vai sulla pagina sinossi per accettarla o scartarla dal banner sopra l'editor.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — propose_soggetto_v2 (OHW-577)
+  {
+    match:
+      /v2 del soggetto|riscrivi il soggetto|fammi un v2|soggetto piu asciutto|soggetto più asciutto/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_soggetto_v2",
+            input: {
+              instruction: "più asciutto e tematico",
+              label: "v2 asciutto",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho generato una bozza v2 del soggetto. La trovi nel banner sopra l'editor del soggetto, puoi confrontarla, promuoverla o scartarla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — propose_scaletta_from_soggetto (OHW-578)
+  {
+    match:
+      /dato il soggetto fammi la scaletta|genera la scaletta dal soggetto|fammi la scaletta dal soggetto|scaletta dal soggetto/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_scaletta_from_soggetto",
+            input: { target_scene_count: 10 },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho generato una scaletta draft dal soggetto. Vai sulla pagina scaletta per confrontarla e promuoverla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Cost-foundation — short acknowledgement loop (OHW-562)
   // Matches a bare "ok" so we can drive the multi-turn cached-context test
   // without colliding with the other scenarios above. Each request returns
