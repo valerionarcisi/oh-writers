@@ -115,3 +115,105 @@
 .linePlaceholder {
   color: transparent;
 }
+
+/* ── Outline visual preview ───────────────────────────────────
+   Replaces the raw-JSON line diff for `outline` documents.    */
+.outline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  max-block-size: 60vh;
+  overflow: auto;
+  border-block-start: var(--border);
+  padding-block-start: var(--space-3);
+}
+
+.outlineSide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.outlineSideLabel {
+  font-size: var(--text-xs);
+  color: var(--ds-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: var(--weight-semibold);
+  margin-block-end: var(--space-1);
+}
+
+.act {
+  background: var(--ds-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.actTitle {
+  font-weight: var(--weight-semibold);
+  color: var(--ds-text);
+  font-size: var(--text-sm);
+  margin-block-end: var(--space-2);
+}
+
+.sequence {
+  border-inline-start: 2px solid var(--ds-line);
+  padding-inline-start: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+.sequenceTitle {
+  font-size: var(--text-xs);
+  color: var(--ds-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-block-end: var(--space-1);
+}
+
+.scene {
+  padding-block: var(--space-1);
+}
+
+.sceneHeading {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ds-action);
+  font-weight: var(--weight-semibold);
+}
+
+.sceneDesc {
+  font-size: var(--text-sm);
+  color: var(--ds-text);
+  line-height: 1.5;
+}
+
+.outlineEmpty {
+  font-size: var(--text-sm);
+  color: var(--ds-text-2);
+  font-style: italic;
+}
+
+/* Highlight scenes that exist only on one side */
+.act[data-added="true"] {
+  border-color: color-mix(
+    in srgb,
+    var(--ds-success, currentColor) 35%,
+    var(--ds-line)
+  );
+  background: color-mix(
+    in srgb,
+    var(--ds-success, currentColor) 6%,
+    var(--ds-surface)
+  );
+}
+
+.scene[data-added="true"] {
+  background: color-mix(
+    in srgb,
+    var(--ds-success, currentColor) 8%,
+    transparent
+  );
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-2);
+}

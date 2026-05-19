@@ -101,6 +101,7 @@ export function DraftBanner({
                   id={`draft-diff-${d.id}`}
                   currentContent={currentContent}
                   draft={d}
+                  docType={docType}
                 />
               )}
             </li>
@@ -115,11 +116,22 @@ interface DraftDiffProps {
   readonly id: string;
   readonly currentContent: string;
   readonly draft: DocumentVersion;
+  readonly docType: DocumentType;
 }
 
-function DraftDiff({ id, currentContent, draft }: DraftDiffProps) {
-  // Outline docs are JSON-encoded; render the raw JSON next to a stringified
-  // current outline. Pretty-printing keeps the diff readable.
+function DraftDiff({ id, currentContent, draft, docType }: DraftDiffProps) {
+  // Outline docs are JSON-encoded. A line-by-line diff over the raw JSON is
+  // unreadable for a writer (parentheses, braces, ids, etc). Render a visual
+  // act → sequence → scene preview instead, with new scenes highlighted.
+  if (docType === "outline") {
+    return (
+      <OutlineVisualDiff
+        id={id}
+        current={parseOutlineSafe(currentContent)}
+        next={parseOutlineSafe(draft.content)}
+      />
+    );
+  }
   const left = prettify(currentContent);
   const right = prettify(draft.content);
   const lines = diffDocumentLines(left, right);
@@ -137,6 +149,170 @@ function DraftDiff({ id, currentContent, draft }: DraftDiffProps) {
       </pre>
     </div>
   );
+}
+
+// ── Outline visual diff ────────────────────────────────────────────────────
+// Each side renders the outline as a stack of <Act> cards. Acts/scenes only
+// present on the right (draft) get `data-added` for the highlight CSS.
+
+interface OutlineScene {
+  readonly id?: string;
+  readonly heading?: string;
+  readonly description?: string;
+}
+interface OutlineSequence {
+  readonly id?: string;
+  readonly title?: string;
+  readonly scenes?: ReadonlyArray<OutlineScene>;
+}
+interface OutlineAct {
+  readonly id?: string;
+  readonly title?: string;
+  readonly sequences?: ReadonlyArray<OutlineSequence>;
+}
+interface OutlineDoc {
+  readonly acts?: ReadonlyArray<OutlineAct>;
+}
+
+function parseOutlineSafe(raw: string): OutlineDoc {
+  const trimmed = raw.trim();
+  if (!trimmed) return { acts: [] };
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "acts" in parsed &&
+      Array.isArray((parsed as { acts: unknown }).acts)
+    ) {
+      return parsed as OutlineDoc;
+    }
+  } catch {
+    /* fall through */
+  }
+  return { acts: [] };
+}
+
+function OutlineVisualDiff({
+  id,
+  current,
+  next,
+}: {
+  readonly id: string;
+  readonly current: OutlineDoc;
+  readonly next: OutlineDoc;
+}) {
+  const currentSceneKeys = new Set<string>(collectSceneKeys(current));
+  return (
+    <div id={id} className={styles.outline} data-testid="draft-diff-outline">
+      <section className={styles.outlineSide} aria-label="Versione corrente">
+        <span className={styles.outlineSideLabel}>Attuale</span>
+        <OutlineSide doc={current} sceneKeysFromOther={new Set()} />
+      </section>
+      <section className={styles.outlineSide} aria-label="Bozza di Cesare">
+        <span className={styles.outlineSideLabel}>Bozza Cesare</span>
+        <OutlineSide doc={next} sceneKeysFromOther={currentSceneKeys} />
+      </section>
+    </div>
+  );
+}
+
+function OutlineSide({
+  doc,
+  sceneKeysFromOther,
+}: {
+  readonly doc: OutlineDoc;
+  readonly sceneKeysFromOther: ReadonlySet<string>;
+}) {
+  const acts = doc.acts ?? [];
+  if (acts.length === 0) {
+    return <p className={styles.outlineEmpty}>Nessun atto.</p>;
+  }
+  return (
+    <>
+      {acts.map((act, ai) => {
+        const actKey = `${act.id ?? `act-${ai}`}`;
+        // Mark whole act as added when none of its scenes existed before.
+        const actSceneKeys = collectSceneKeysInAct(act);
+        const allNew =
+          actSceneKeys.length > 0 &&
+          actSceneKeys.every((k) => !sceneKeysFromOther.has(k));
+        return (
+          <article
+            key={actKey}
+            className={styles.act}
+            data-added={
+              sceneKeysFromOther.size > 0 && allNew ? "true" : undefined
+            }
+          >
+            <h4 className={styles.actTitle}>{act.title ?? `Atto ${ai + 1}`}</h4>
+            {(act.sequences ?? []).map((seq, si) => (
+              <div
+                key={`${actKey}-seq-${seq.id ?? si}`}
+                className={styles.sequence}
+              >
+                {seq.title && (
+                  <div className={styles.sequenceTitle}>{seq.title}</div>
+                )}
+                {(seq.scenes ?? []).map((sc, sci) => {
+                  const sceneKey = sceneKey3(act, seq, sc, ai, si, sci);
+                  const added =
+                    sceneKeysFromOther.size > 0 &&
+                    !sceneKeysFromOther.has(sceneKey);
+                  return (
+                    <div
+                      key={sceneKey}
+                      className={styles.scene}
+                      data-added={added ? "true" : undefined}
+                    >
+                      {sc.heading && (
+                        <div className={styles.sceneHeading}>{sc.heading}</div>
+                      )}
+                      {sc.description && (
+                        <div className={styles.sceneDesc}>{sc.description}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </article>
+        );
+      })}
+    </>
+  );
+}
+
+const sceneKey3 = (
+  act: OutlineAct,
+  seq: OutlineSequence,
+  sc: OutlineScene,
+  ai: number,
+  si: number,
+  sci: number,
+): string =>
+  `${act.id ?? `a${ai}`}::${seq.id ?? `s${si}`}::${sc.id ?? `c${sci}`}::${sc.heading ?? ""}`;
+
+function collectSceneKeys(doc: OutlineDoc): string[] {
+  const out: string[] = [];
+  (doc.acts ?? []).forEach((act, ai) => {
+    (act.sequences ?? []).forEach((seq, si) => {
+      (seq.scenes ?? []).forEach((sc, sci) => {
+        out.push(sceneKey3(act, seq, sc, ai, si, sci));
+      });
+    });
+  });
+  return out;
+}
+
+function collectSceneKeysInAct(act: OutlineAct): string[] {
+  const out: string[] = [];
+  (act.sequences ?? []).forEach((seq, si) => {
+    (seq.scenes ?? []).forEach((sc, sci) => {
+      out.push(sceneKey3(act, seq, sc, 0, si, sci));
+    });
+  });
+  return out;
 }
 
 function DiffLineRow({
