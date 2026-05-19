@@ -510,7 +510,7 @@ function AppShellInner({
             onBell={undefined}
             onAskCesare={undefined}
             onAvatarClick={() => setNotifDrawerOpen(true)}
-            userMenuItems={undefined}
+            userMenuItems={userMenuItems}
             notificationCount={unseenCount}
           />
           <main id="main-content" className={styles.main}>
