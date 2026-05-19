@@ -344,6 +344,34 @@
   display: inline-flex;
 }
 
+.gearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-text-2);
+  cursor: pointer;
+  margin-inline-start: 6px;
+  padding: 0;
+  transition:
+    background var(--ds-duration-1, 150ms) var(--ds-ease),
+    color var(--ds-duration-1, 150ms) var(--ds-ease);
+}
+
+.gearBtn:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.gearBtn:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
 /* Project switcher popover */
 .projectWrap {
   position: relative;

@@ -1428,6 +1428,11 @@ function CategoriesPanel({
                         ? sceneNums.join(", ")
                         : undefined
                     }
+                    title={
+                      !isSuggested && sceneNums.length > 1
+                        ? `${it.element.name}${it.occurrence.quantity > 1 ? ` ×${it.occurrence.quantity}` : ""} — scene ${sceneNums.join(", ")}`
+                        : undefined
+                    }
                     onMouseEnter={
                       isSuggested
                         ? (e) =>

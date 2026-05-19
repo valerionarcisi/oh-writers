@@ -500,21 +500,25 @@
   border: 1px solid color-mix(in oklch, var(--cat-color) 35%, transparent);
   border-radius: 100px;
   color: var(--ds-text);
-  /* Allow chips to shrink and the scene list to wrap onto the next line
-     inside a narrow side panel — previously the inline-flex item refused to
-     shrink, so chip content got clipped past the panel edge. */
-  max-width: 100%;
-  flex-wrap: wrap;
+  /* Never overflow the side panel. Long scene lists are truncated with
+     ellipsis instead of breaking the chip layout — the full list is still
+     accessible via the chip title attribute on hover. */
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow: hidden;
 }
 
 .catItemScenes,
 .catItemX {
-  /* Keep the meta block from forcing the chip past the panel; long
-     comma-separated scene lists wrap on the next visual row inside the
-     same chip. */
-  min-width: 0;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-inline-size: 0;
 }
+
+/* No column-stack layout: chips stay compact pills at any width. The
+   max-inline-size + overflow-wrap above is enough to keep them inside the
+   panel even with long comma-separated scene lists. */
 
 .catItemX {
   font-family: var(--ds-font-sans);

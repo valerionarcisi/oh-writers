@@ -27,6 +27,7 @@ export function ConfirmDialog({
       isOpen={isOpen}
       onClose={onCancel}
       title={title}
+      isDismissable={false}
       actions={
         <>
           <Button variant="ghost" onClick={onCancel}>
