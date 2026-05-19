@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, sql } from "drizzle-orm";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
@@ -281,7 +280,7 @@ const executeProposeScreenplayEdit = (
       );
     }
     const proposal: ProposedEdit = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       screenplayId: sp.id,
       kind: "edit",
       sceneNumber: input.scene_number,
@@ -341,7 +340,7 @@ const executeProposeRenameEntity = (
     // match — the user accepts/rejects in bulk per proposal.
     const reason = `Rinomina ${input.kind === "character" ? "personaggio" : "location"} '${input.from}' → '${input.to}' (${occurrences} occorrenze)`;
     const proposal: ProposedEdit = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       screenplayId: sp.id,
       kind: input.kind === "character" ? "rename_character" : "rename_location",
       sceneNumber: null,
@@ -586,7 +585,7 @@ const executeProposeScreenplayRevision = (
             );
           }
           const proposal: DraftRevisionProposal = {
-            id: randomUUID(),
+            id: crypto.randomUUID(),
             screenplayId: sp.id,
             versionId: row.id,
             label,
