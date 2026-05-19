@@ -1,0 +1,69 @@
+{
+  "id": "locations-ux",
+  "title": "Location UX — detail modal, lightbox e ricerca area",
+  "url": "/projects/00000000-0000-4000-a000-000000000011/locations",
+  "login": "test@ohwriters.dev",
+  "password": "testpassword123",
+  "steps": [
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"locations-page\"]",
+      "timeout_ms": 15000
+    },
+    {
+      "kind": "click",
+      "ref": "[data-testid^=\"requirement-row-\"]"
+    },
+    {
+      "kind": "screenshot",
+      "filename": "01-requirement-selected"
+    },
+    {
+      "kind": "eval",
+      "script": "window.dispatchEvent(new CustomEvent('ohw:open-detail-modal', { detail: { id: '00000000-0000-4000-a000-000000000050' } }))"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"location-detail-modal\"]",
+      "timeout_ms": 5000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "02-detail-modal-open"
+    },
+    {
+      "kind": "click",
+      "ref": "[data-testid=\"detail-modal-photo-0\"]"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"photo-lightbox\"]",
+      "timeout_ms": 3000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "03-photo-lightbox"
+    },
+    {
+      "kind": "press",
+      "key": "Escape"
+    },
+    {
+      "kind": "press",
+      "key": "Escape"
+    },
+    {
+      "kind": "eval",
+      "script": "window.dispatchEvent(new CustomEvent('ohw:test-draw-circle', { detail: { lat: 45.46, lng: 9.19, radius_m: 2000 } }))"
+    },
+    {
+      "kind": "wait_for",
+      "selector": "[data-testid=\"area-search-panel\"]",
+      "timeout_ms": 3000
+    },
+    {
+      "kind": "screenshot",
+      "filename": "04-area-search-panel"
+    }
+  ]
+}

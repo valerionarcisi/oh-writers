@@ -16,6 +16,7 @@ import {
   projectRateCard,
   locationRequirements,
   locationCandidates,
+  locationPhotos,
   budgets,
   budgetLines,
   budgetCast,
@@ -1008,6 +1009,8 @@ async function seedLocations() {
         requirementId: SEEDED_LOCATION_REQ_1_ID,
         name: "Via Tortona 18",
         address: "Via Tortona 18, Milano",
+        lat: 45.452,
+        lng: 9.17,
         status: "candidate",
         aiSuggested: false,
       },
@@ -1016,13 +1019,34 @@ async function seedLocations() {
         requirementId: SEEDED_LOCATION_REQ_1_ID,
         name: "Piazza Wagner 5",
         address: "Piazza Wagner 5, Milano",
+        lat: 45.467,
+        lng: 9.155,
         status: "visited",
         aiSuggested: false,
       },
     ])
     .onConflictDoNothing();
 
-  console.log("  -> Location requirements and candidates seeded");
+  // Photos for the first candidate — placeholder URLs that resolve to a small
+  // gradient image, sufficient to render the gallery and exercise the
+  // lightbox UX in mock E2E tests without external API calls.
+  await db
+    .insert(locationPhotos)
+    .values([
+      {
+        candidateId: SEEDED_LOCATION_CANDIDATE_1_ID,
+        url: "https://placehold.co/640x480/8b3a1a/ffffff?text=Tortona+1",
+        caption: "Facciata via Tortona",
+      },
+      {
+        candidateId: SEEDED_LOCATION_CANDIDATE_1_ID,
+        url: "https://placehold.co/640x480/2d6a4f/ffffff?text=Tortona+2",
+        caption: "Cortile interno",
+      },
+    ])
+    .onConflictDoNothing();
+
+  console.log("  -> Location requirements, candidates and photos seeded");
 }
 
 /**
@@ -1074,16 +1098,16 @@ async function seedDefaultRateCard(projectId: string) {
 // after a fresh seed. Editable later via Settings.
 async function seedDefaultProductionRates(projectId: string): Promise<void> {
   const entries: Array<{ key: string; value: string; unit: string }> = [
-    { key: "castLeadDay",       value: "800",  unit: "day" },
-    { key: "castSupportingDay", value: "400",  unit: "day" },
-    { key: "crewDopDay",        value: "600",  unit: "day" },
-    { key: "crewBaseDay",       value: "200",  unit: "day" },
-    { key: "catering",          value: "20",   unit: "meal" },
-    { key: "locationSetupExt",  value: "800",  unit: "day" },
-    { key: "locationSetupInt",  value: "300",  unit: "day" },
-    { key: "equipmentBaseDay",  value: "400",  unit: "day" },
-    { key: "sfxBaseDay",        value: "1500", unit: "day" },
-    { key: "vfxBasePerShot",    value: "800",  unit: "shot" },
+    { key: "castLeadDay", value: "800", unit: "day" },
+    { key: "castSupportingDay", value: "400", unit: "day" },
+    { key: "crewDopDay", value: "600", unit: "day" },
+    { key: "crewBaseDay", value: "200", unit: "day" },
+    { key: "catering", value: "20", unit: "meal" },
+    { key: "locationSetupExt", value: "800", unit: "day" },
+    { key: "locationSetupInt", value: "300", unit: "day" },
+    { key: "equipmentBaseDay", value: "400", unit: "day" },
+    { key: "sfxBaseDay", value: "1500", unit: "day" },
+    { key: "vfxBasePerShot", value: "800", unit: "shot" },
   ];
   await db
     .insert(productionRates)
@@ -1111,40 +1135,189 @@ async function seedValerioBudget(projectId: string) {
     .onConflictDoNothing();
 
   const lines: Array<{
-    topSheet: "above_the_line" | "production" | "crew" | "post_production" | "contingency";
+    topSheet:
+      | "above_the_line"
+      | "production"
+      | "crew"
+      | "post_production"
+      | "contingency";
     name: string;
     costType: "daily" | "flat" | "weekly" | "unit" | "percentage";
     quantity: string;
     rate: string;
   }> = [
     // Above the line
-    { topSheet: "above_the_line", name: "Regia", costType: "daily", quantity: "3", rate: "500" },
-    { topSheet: "above_the_line", name: "Sceneggiatura", costType: "flat", quantity: "1", rate: "1500" },
-    { topSheet: "above_the_line", name: "Produzione esecutiva", costType: "daily", quantity: "5", rate: "350" },
+    {
+      topSheet: "above_the_line",
+      name: "Regia",
+      costType: "daily",
+      quantity: "3",
+      rate: "500",
+    },
+    {
+      topSheet: "above_the_line",
+      name: "Sceneggiatura",
+      costType: "flat",
+      quantity: "1",
+      rate: "1500",
+    },
+    {
+      topSheet: "above_the_line",
+      name: "Produzione esecutiva",
+      costType: "daily",
+      quantity: "5",
+      rate: "350",
+    },
     // Production
-    { topSheet: "production", name: "Location — appartamento", costType: "daily", quantity: "2", rate: "300" },
-    { topSheet: "production", name: "Location — pizzeria", costType: "daily", quantity: "1", rate: "450" },
-    { topSheet: "production", name: "Trasporti e furgoni", costType: "flat", quantity: "1", rate: "800" },
-    { topSheet: "production", name: "Catering (3 gg × 15 persone)", costType: "unit", quantity: "45", rate: "22" },
-    { topSheet: "production", name: "Noleggio attrezzatura", costType: "daily", quantity: "3", rate: "650" },
-    { topSheet: "production", name: "Noleggio luci", costType: "daily", quantity: "3", rate: "280" },
-    { topSheet: "production", name: "Costumi e scenografia", costType: "flat", quantity: "1", rate: "1200" },
-    { topSheet: "production", name: "Trucco e acconciature", costType: "daily", quantity: "3", rate: "150" },
+    {
+      topSheet: "production",
+      name: "Location — appartamento",
+      costType: "daily",
+      quantity: "2",
+      rate: "300",
+    },
+    {
+      topSheet: "production",
+      name: "Location — pizzeria",
+      costType: "daily",
+      quantity: "1",
+      rate: "450",
+    },
+    {
+      topSheet: "production",
+      name: "Trasporti e furgoni",
+      costType: "flat",
+      quantity: "1",
+      rate: "800",
+    },
+    {
+      topSheet: "production",
+      name: "Catering (3 gg × 15 persone)",
+      costType: "unit",
+      quantity: "45",
+      rate: "22",
+    },
+    {
+      topSheet: "production",
+      name: "Noleggio attrezzatura",
+      costType: "daily",
+      quantity: "3",
+      rate: "650",
+    },
+    {
+      topSheet: "production",
+      name: "Noleggio luci",
+      costType: "daily",
+      quantity: "3",
+      rate: "280",
+    },
+    {
+      topSheet: "production",
+      name: "Costumi e scenografia",
+      costType: "flat",
+      quantity: "1",
+      rate: "1200",
+    },
+    {
+      topSheet: "production",
+      name: "Trucco e acconciature",
+      costType: "daily",
+      quantity: "3",
+      rate: "150",
+    },
     // Crew
-    { topSheet: "crew", name: "Direttore della fotografia", costType: "daily", quantity: "3", rate: "400" },
-    { topSheet: "crew", name: "Operatore di macchina", costType: "daily", quantity: "3", rate: "280" },
-    { topSheet: "crew", name: "Fonico di presa diretta", costType: "daily", quantity: "3", rate: "300" },
-    { topSheet: "crew", name: "Microfonista", costType: "daily", quantity: "3", rate: "200" },
-    { topSheet: "crew", name: "Elettricista capo", costType: "daily", quantity: "3", rate: "220" },
-    { topSheet: "crew", name: "Scenografo", costType: "daily", quantity: "4", rate: "250" },
-    { topSheet: "crew", name: "Assistente regia", costType: "daily", quantity: "3", rate: "180" },
-    { topSheet: "crew", name: "Segretario di edizione", costType: "daily", quantity: "3", rate: "180" },
+    {
+      topSheet: "crew",
+      name: "Direttore della fotografia",
+      costType: "daily",
+      quantity: "3",
+      rate: "400",
+    },
+    {
+      topSheet: "crew",
+      name: "Operatore di macchina",
+      costType: "daily",
+      quantity: "3",
+      rate: "280",
+    },
+    {
+      topSheet: "crew",
+      name: "Fonico di presa diretta",
+      costType: "daily",
+      quantity: "3",
+      rate: "300",
+    },
+    {
+      topSheet: "crew",
+      name: "Microfonista",
+      costType: "daily",
+      quantity: "3",
+      rate: "200",
+    },
+    {
+      topSheet: "crew",
+      name: "Elettricista capo",
+      costType: "daily",
+      quantity: "3",
+      rate: "220",
+    },
+    {
+      topSheet: "crew",
+      name: "Scenografo",
+      costType: "daily",
+      quantity: "4",
+      rate: "250",
+    },
+    {
+      topSheet: "crew",
+      name: "Assistente regia",
+      costType: "daily",
+      quantity: "3",
+      rate: "180",
+    },
+    {
+      topSheet: "crew",
+      name: "Segretario di edizione",
+      costType: "daily",
+      quantity: "3",
+      rate: "180",
+    },
     // Post production
-    { topSheet: "post_production", name: "Montaggio (settimane)", costType: "weekly", quantity: "2", rate: "1200" },
-    { topSheet: "post_production", name: "Color grading", costType: "flat", quantity: "1", rate: "900" },
-    { topSheet: "post_production", name: "Mix audio e sound design", costType: "flat", quantity: "1", rate: "1100" },
-    { topSheet: "post_production", name: "Musiche originali", costType: "flat", quantity: "1", rate: "800" },
-    { topSheet: "post_production", name: "Sottotitoli e DCP", costType: "flat", quantity: "1", rate: "400" },
+    {
+      topSheet: "post_production",
+      name: "Montaggio (settimane)",
+      costType: "weekly",
+      quantity: "2",
+      rate: "1200",
+    },
+    {
+      topSheet: "post_production",
+      name: "Color grading",
+      costType: "flat",
+      quantity: "1",
+      rate: "900",
+    },
+    {
+      topSheet: "post_production",
+      name: "Mix audio e sound design",
+      costType: "flat",
+      quantity: "1",
+      rate: "1100",
+    },
+    {
+      topSheet: "post_production",
+      name: "Musiche originali",
+      costType: "flat",
+      quantity: "1",
+      rate: "800",
+    },
+    {
+      topSheet: "post_production",
+      name: "Sottotitoli e DCP",
+      costType: "flat",
+      quantity: "1",
+      rate: "400",
+    },
   ];
 
   await db
@@ -1192,11 +1365,31 @@ async function seedValerioBudget(projectId: string) {
   const crewRows = [
     { name: "Regia", department: "Regia", days: "3", dayRate: "500" },
     { name: "DOP", department: "Fotografia", days: "3", dayRate: "400" },
-    { name: "Operatore A", department: "Fotografia", days: "3", dayRate: "280" },
+    {
+      name: "Operatore A",
+      department: "Fotografia",
+      days: "3",
+      dayRate: "280",
+    },
     { name: "Fonico", department: "Suono", days: "3", dayRate: "300" },
-    { name: "Assistente regia", department: "Regia", days: "3", dayRate: "180" },
-    { name: "Scenografo", department: "Scenografia", days: "4", dayRate: "250" },
-    { name: "Elettricista", department: "Elettrico", days: "3", dayRate: "220" },
+    {
+      name: "Assistente regia",
+      department: "Regia",
+      days: "3",
+      dayRate: "180",
+    },
+    {
+      name: "Scenografo",
+      department: "Scenografia",
+      days: "4",
+      dayRate: "250",
+    },
+    {
+      name: "Elettricista",
+      department: "Elettrico",
+      days: "3",
+      dayRate: "220",
+    },
   ];
   await db
     .insert(budgetCrew)
@@ -1286,7 +1479,13 @@ async function seedValerioSchedule(screenplayId: string, projectId: string) {
   });
 
   // Distribute: day 1 → scenes 1-3, day 2 → scenes 4-6, day 3 → scenes 7-9
-  const dayAssignments: Array<{ sceneId: string; dayId: string; position: number; hours: number; color: "white" | "yellow" | "blue" | "green" | "red" | "pink" | "grey" }> = [];
+  const dayAssignments: Array<{
+    sceneId: string;
+    dayId: string;
+    position: number;
+    hours: number;
+    color: "white" | "yellow" | "blue" | "green" | "red" | "pink" | "grey";
+  }> = [];
   for (let i = 0; i < sceneRows.length; i++) {
     const scene = sceneRows[i]!;
     let dayId: string;
@@ -1326,7 +1525,9 @@ async function seedValerioSchedule(screenplayId: string, projectId: string) {
       .onConflictDoNothing();
   }
 
-  console.log(`  -> Valerio schedule seeded (${sceneRows.length} strips across 3 days)`);
+  console.log(
+    `  -> Valerio schedule seeded (${sceneRows.length} strips across 3 days)`,
+  );
 }
 
 // Only auto-run when this file is the entrypoint (tsx src/seed/index.ts).

@@ -5,6 +5,8 @@ import type {
   LocationPhoto,
 } from "@oh-writers/domain";
 import { useLeaflet } from "../hooks/useLeaflet";
+import { parseDrawnCircle, type DrawnCircle } from "../lib/area-search";
+import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import styles from "./LocationMap.module.css";
 
 interface LocationMapProps {
@@ -13,6 +15,11 @@ interface LocationMapProps {
   selectedCandidateId: string | null;
   onSelect: (id: string) => void;
   onCandidateSelect?: (candidateId: string) => void;
+  onOpenDetailModal?: (candidateId: string) => void;
+  onCircleDrawn?: (circle: DrawnCircle | null) => void;
+  /** External pins for area-search results (rendered with a distinct style). */
+  foundPlaces?: ReadonlyArray<PlaceSuggestion>;
+  onFoundPlaceAdd?: (suggestion: PlaceSuggestion) => void;
 }
 
 const PIN_COLORS: Record<string, string> = {
@@ -81,10 +88,15 @@ export function LocationMap({
   selectedCandidateId,
   onSelect,
   onCandidateSelect,
+  onOpenDetailModal,
+  onCircleDrawn,
+  foundPlaces,
+  onFoundPlaceAdd,
 }: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const foundMarkersRef = useRef<Map<string, any>>(new Map());
   const drawLayerRef = useRef<any>(null);
   const searchRingRef = useRef<any>(null);
   const leafletReady = useLeaflet();
@@ -93,16 +105,29 @@ export function LocationMap({
   // values without re-binding markers on every render.
   const onSelectRef = useRef(onSelect);
   const onCandidateSelectRef = useRef(onCandidateSelect);
+  const onOpenDetailModalRef = useRef(onOpenDetailModal);
+  const onCircleDrawnRef = useRef(onCircleDrawn);
+  const onFoundPlaceAddRef = useRef(onFoundPlaceAdd);
   useEffect(() => {
     onSelectRef.current = onSelect;
     onCandidateSelectRef.current = onCandidateSelect;
-  }, [onSelect, onCandidateSelect]);
+    onOpenDetailModalRef.current = onOpenDetailModal;
+    onCircleDrawnRef.current = onCircleDrawn;
+    onFoundPlaceAddRef.current = onFoundPlaceAdd;
+  }, [
+    onSelect,
+    onCandidateSelect,
+    onOpenDetailModal,
+    onCircleDrawn,
+    onFoundPlaceAdd,
+  ]);
 
   const allCandidates = requirements.flatMap((r) =>
     r.candidates.map((c) => ({ candidate: c, req: r })),
   );
   const selectedCandidatePair = selectedCandidateId
-    ? allCandidates.find((p) => p.candidate.id === selectedCandidateId) ?? null
+    ? (allCandidates.find((p) => p.candidate.id === selectedCandidateId) ??
+      null)
     : null;
   const selectedCandidate = selectedCandidatePair?.candidate ?? null;
 
@@ -149,11 +174,19 @@ export function LocationMap({
         position: "topright",
         draw: {
           polygon: {
-            shapeOptions: { color: "#8b3a1a", fillColor: "#f4dccb", fillOpacity: 0.3 },
+            shapeOptions: {
+              color: "#8b3a1a",
+              fillColor: "#f4dccb",
+              fillOpacity: 0.3,
+            },
             showArea: false,
           },
           circle: {
-            shapeOptions: { color: "#8b3a1a", fillColor: "#f4dccb", fillOpacity: 0.3 },
+            shapeOptions: {
+              color: "#8b3a1a",
+              fillColor: "#f4dccb",
+              fillOpacity: 0.3,
+            },
           },
           rectangle: false,
           polyline: false,
@@ -167,6 +200,19 @@ export function LocationMap({
       map.on(L.Draw.Event.CREATED, (e: any) => {
         drawnItems.clearLayers();
         drawnItems.addLayer(e.layer);
+
+        // Publish the parsed circle so the parent can render the area-search
+        // panel. Non-circle shapes (e.g. polygon) leave the panel closed —
+        // the panel is intentionally scoped to "draw a circle" UX for now.
+        const parsed = parseDrawnCircle({
+          layerType: e.layerType,
+          layer: e.layer,
+        });
+        onCircleDrawnRef.current?.(parsed);
+      });
+
+      map.on("draw:deleted", () => {
+        onCircleDrawnRef.current?.(null);
       });
     } catch {
       // Leaflet.draw not loaded — skip draw controls gracefully
@@ -185,19 +231,21 @@ export function LocationMap({
         () => {
           const id = btn.getAttribute("data-candidate-details");
           if (!id) return;
+          // Prefer opening the dedicated detail modal when wired up. The
+          // legacy panel-scroll fallback stays for parents that have not
+          // adopted the modal yet — eventually removable when every consumer
+          // passes `onOpenDetailModal`.
+          if (onOpenDetailModalRef.current) {
+            onOpenDetailModalRef.current(id);
+            return;
+          }
           onCandidateSelectRef.current?.(id);
-          // Scroll the candidate's card into view in the panel and click it
-          // to ensure expansion (panel cards track their own expand state).
           const card = document.querySelector<HTMLElement>(
             `[data-testid="candidate-card-${id}"]`,
           );
           if (card) {
             card.scrollIntoView({ behavior: "smooth", block: "center" });
             const head = card.querySelector<HTMLButtonElement>("button");
-            // Only click if not already expanded (head class doesn't expose
-            // that; trigger the toggle which the panel handles internally —
-            // worst case it collapses an already-open card, but the scroll
-            // makes it obvious where to click again).
             head?.click();
           }
         },
@@ -304,17 +352,19 @@ export function LocationMap({
   useEffect(() => {
     const L = (window as any).L;
     const map = mapRef.current;
-    if (!L || !map || !selectedId || !leafletReady || selectedCandidateId) return;
+    if (!L || !map || !selectedId || !leafletReady || selectedCandidateId)
+      return;
 
     const req = requirements.find((r) => r.id === selectedId);
     if (!req) return;
 
-    const candidate = req.candidates.find(
-      (c) =>
-        (c.status === "confirmed" || c.status === "visited") &&
-        c.lat != null &&
-        c.lng != null,
-    ) ?? req.candidates.find((c) => c.lat != null && c.lng != null);
+    const candidate =
+      req.candidates.find(
+        (c) =>
+          (c.status === "confirmed" || c.status === "visited") &&
+          c.lat != null &&
+          c.lng != null,
+      ) ?? req.candidates.find((c) => c.lat != null && c.lng != null);
 
     if (candidate?.lat != null && candidate?.lng != null) {
       if (searchRingRef.current) {
@@ -358,6 +408,73 @@ export function LocationMap({
       }
     }
   }, [selectedCandidate, leafletReady]);
+
+  // Sync the "found places" overlay layer — blue ring markers for area-search
+  // results. Each carries an "Aggiungi come candidato" popup button.
+  useEffect(() => {
+    const L = (window as any).L;
+    const map = mapRef.current;
+    if (!L || !map || !leafletReady) return;
+
+    const places = foundPlaces ?? [];
+    const liveIds = new Set(places.map((p) => p.placeId));
+
+    foundMarkersRef.current.forEach((marker, id) => {
+      if (!liveIds.has(id)) {
+        map.removeLayer(marker);
+        foundMarkersRef.current.delete(id);
+      }
+    });
+
+    for (const place of places) {
+      if (!place.lat || !place.lng || !place.placeId) continue;
+      if (foundMarkersRef.current.has(place.placeId)) continue;
+
+      const marker = L.circleMarker([place.lat, place.lng], {
+        radius: 8,
+        color: "#1d4ed8",
+        fillColor: "#dbeafe",
+        fillOpacity: 0.9,
+        weight: 3,
+      });
+
+      marker.bindTooltip(
+        `<strong style="font-size:11px">${escapeHtml(place.name)}</strong><br><span style="font-size:10px;color:#6e6c66">${escapeHtml(place.address)}</span>`,
+        { direction: "top", offset: [0, -6] },
+      );
+
+      const safeId = escapeHtml(place.placeId);
+      marker.bindPopup(
+        `
+        <div style="font-family:system-ui,sans-serif;min-width:200px;max-width:280px">
+          <strong style="font-size:13px;color:#1c1a17">${escapeHtml(place.name)}</strong>
+          <div style="font-size:11px;color:#6e6c66;margin-top:4px">${escapeHtml(place.address)}</div>
+          <button type="button" data-found-add="${safeId}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #1d4ed8;border-radius:6px;background:#1d4ed8;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">+ Aggiungi come candidato</button>
+        </div>
+      `,
+        { maxWidth: 300, closeButton: true, autoPan: true },
+      );
+
+      marker.on("popupopen", (e: any) => {
+        const popupNode: HTMLElement | null = e.popup?.getElement?.() ?? null;
+        const btn = popupNode?.querySelector<HTMLButtonElement>(
+          `[data-found-add="${safeId}"]`,
+        );
+        if (!btn) return;
+        btn.addEventListener(
+          "click",
+          () => {
+            onFoundPlaceAddRef.current?.(place);
+            marker.closePopup();
+          },
+          { once: true },
+        );
+      });
+
+      marker.addTo(map);
+      foundMarkersRef.current.set(place.placeId, marker);
+    }
+  }, [foundPlaces, leafletReady]);
 
   return (
     <div className={styles.mapWrap}>

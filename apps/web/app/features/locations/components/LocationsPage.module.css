@@ -14,3 +14,14 @@
   /* Reserve space for the FloatingDock (28px pill + 20px bottom + 20px gap) */
   padding-block-end: 68px;
 }
+
+.mapColumn {
+  position: relative;
+  min-inline-size: 0;
+  display: flex;
+}
+
+.mapColumn > :first-child {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}

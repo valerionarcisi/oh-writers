@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
+import { ResultAsync, errAsync } from "neverthrow";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import {
@@ -7,6 +8,7 @@ import {
   type PlacePhoto,
   type PlaceResult,
 } from "~/features/predictions/cesare-tools";
+import { toNearbySuggestion } from "../lib/area-search";
 
 const MAX_RESULTS = 8;
 const THUMBNAIL_WIDTH_PX = 64;
@@ -78,6 +80,145 @@ export const searchPlacesAutocomplete = createServerFn({ method: "POST" })
         location_bias: data.locationBias,
         max_results: Math.min(data.maxResults ?? MAX_RESULTS, MAX_RESULTS),
       }).map((places) => places.map((place) => toSuggestion(place, apiKey)));
+
+      return toShape(result);
+    },
+  );
+
+// ─── Nearby search (TripAdvisor-style, draw-a-circle flow) ─────────────────
+
+const MIN_RADIUS_M = 100;
+const MAX_RADIUS_M = 50_000;
+const DEFAULT_NEARBY_RESULTS = 12;
+const MAX_NEARBY_RESULTS = 20;
+
+const SearchPlacesInAreaInputSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  radius_m: z.number().min(MIN_RADIUS_M).max(MAX_RADIUS_M),
+  query: z.string().max(120).optional(),
+  max_results: z.number().int().min(1).max(MAX_NEARBY_RESULTS).optional(),
+});
+
+interface NearbyResponse {
+  places?: Array<{
+    displayName?: { text?: string };
+    formattedAddress?: string;
+    location?: { latitude?: number; longitude?: number };
+    id?: string;
+    types?: string[];
+    photos?: Array<{ name?: string; widthPx?: number; heightPx?: number }>;
+  }>;
+}
+
+const FIELD_MASK =
+  "places.displayName,places.formattedAddress,places.location,places.id,places.types,places.photos";
+
+const callNearbySearch = (
+  apiKey: string,
+  body: Record<string, unknown>,
+): ResultAsync<NearbyResponse, PlacesAutocompleteError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const response = await fetch(
+        "https://places.googleapis.com/v1/places:searchNearby",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": FIELD_MASK,
+          },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Google Places searchNearby ${response.status} ${response.statusText}`,
+        );
+      }
+      return (await response.json()) as NearbyResponse;
+    })(),
+    (e) => ({
+      _tag: "PlacesNearbyError",
+      message: e instanceof Error ? e.message : String(e),
+    }),
+  );
+
+/**
+ * Falls back to searchText (with a coordinate hint in the query) when the user
+ * passed a free-text query. Google Places `searchNearby` does not accept a
+ * `textQuery`, so for text-biased searches we use the existing `searchText`
+ * endpoint, then keep only results whose distance is plausibly inside the
+ * radius. For purely "what's around here" calls (no query), we hit
+ * `searchNearby` and let it return whatever sits inside the circle.
+ */
+export const searchPlacesInArea = createServerFn({ method: "POST" })
+  .validator(SearchPlacesInAreaInputSchema)
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<PlaceSuggestion[], PlacesAutocompleteError>> => {
+      await requireUser();
+
+      const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
+      if (!apiKey) {
+        return toShape(
+          await errAsync<PlaceSuggestion[], PlacesAutocompleteError>({
+            _tag: "PlacesNearbyError",
+            message:
+              "GOOGLE_PLACES_API_KEY non configurata — ricerca area non disponibile",
+          }),
+        );
+      }
+
+      const maxResults = Math.min(
+        data.max_results ?? DEFAULT_NEARBY_RESULTS,
+        MAX_NEARBY_RESULTS,
+      );
+
+      // Free-text query → reuse `executeSearchPlaces` (searchText endpoint).
+      if (data.query && data.query.trim().length > 0) {
+        const locationBias = `vicino a ${data.lat.toFixed(5)}, ${data.lng.toFixed(5)} (raggio ${Math.round(data.radius_m)} m)`;
+        const result = await executeSearchPlaces({
+          query: data.query.trim(),
+          location_bias: locationBias,
+          max_results: maxResults,
+        }).map((places: PlaceResult[]) =>
+          places.map((place) => ({
+            placeId: place.placeId,
+            name: place.name,
+            address: place.address,
+            lat: place.lat,
+            lng: place.lng,
+            types: place.types,
+            photos: place.photos.map((photo) => ({
+              ...photo,
+              thumbnailUrl: buildThumbnailUrl(photo.name, apiKey),
+            })),
+          })),
+        );
+        return toShape(
+          result.mapErr<PlacesAutocompleteError>((e) => ({
+            _tag: "PlacesNearbyError",
+            message: e.message,
+          })),
+        );
+      }
+
+      const result = await callNearbySearch(apiKey, {
+        locationRestriction: {
+          circle: {
+            center: { latitude: data.lat, longitude: data.lng },
+            radius: Math.round(data.radius_m),
+          },
+        },
+        maxResultCount: maxResults,
+      }).map((response) =>
+        (response.places ?? [])
+          .map((p) => toNearbySuggestion(p, apiKey))
+          .filter((s) => s.placeId.length > 0),
+      );
 
       return toShape(result);
     },

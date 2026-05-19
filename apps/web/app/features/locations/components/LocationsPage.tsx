@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { FloatingDock } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import { useCesareOpen, useSetActiveRequirementId } from "~/features/app-shell";
-import type { LocationRequirement } from "@oh-writers/domain";
+import type {
+  LocationRequirement,
+  LocationCandidate,
+} from "@oh-writers/domain";
 import {
   locationsQueryOptions,
   addLocationCandidate,
@@ -12,9 +19,13 @@ import {
   removeLocationCandidate,
   syncRequirementsFromBreakdown,
 } from "../server/locations.server";
+import type { PlaceSuggestion } from "../server/places-autocomplete.server";
+import type { DrawnCircle } from "../lib/area-search";
 import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
 import { LocationPanel } from "./LocationPanel";
+import { LocationDetailModal } from "./LocationDetailModal";
+import { AreaSearchPanel } from "./AreaSearchPanel";
 import styles from "./LocationsPage.module.css";
 
 interface LocationsPageProps {
@@ -30,7 +41,14 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const [selectedId, setSelectedId] = useState<string | null>(
     requirements[0]?.id ?? null,
   );
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+    null,
+  );
+  const [detailCandidateId, setDetailCandidateId] = useState<string | null>(
+    null,
+  );
+  const [drawnCircle, setDrawnCircle] = useState<DrawnCircle | null>(null);
+  const [foundPlaces, setFoundPlaces] = useState<PlaceSuggestion[]>([]);
   const setActiveRequirementId = useSetActiveRequirementId();
 
   // Broadcast the selected requirement to Cesare so opening the chat from
@@ -53,7 +71,51 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     setSelectedCandidateId(candidateId);
   };
 
-  const invalidate = () => qc.refetchQueries({ queryKey: ["locations", projectId] });
+  const handleOpenDetailModal = (candidateId: string) => {
+    setDetailCandidateId(candidateId);
+    handleMapCandidateSelect(candidateId);
+  };
+
+  // Test-only hooks: Playwright drives the modal + area-search flows without
+  // depending on the Leaflet popup HTML (which is async-loaded). These events
+  // are no-ops in production because they fire only when a test dispatches
+  // them. Cheaper than waiting for the marker DOM to settle in CI.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id) handleOpenDetailModal(detail.id);
+    };
+    const onDraw = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{
+          lat: number;
+          lng: number;
+          radius_m: number;
+        }>
+      ).detail;
+      if (
+        typeof detail?.lat === "number" &&
+        typeof detail?.lng === "number" &&
+        typeof detail?.radius_m === "number"
+      ) {
+        setDrawnCircle({
+          lat: detail.lat,
+          lng: detail.lng,
+          radius_m: detail.radius_m,
+        });
+      }
+    };
+    window.addEventListener("ohw:open-detail-modal", onOpen);
+    window.addEventListener("ohw:test-draw-circle", onDraw);
+    return () => {
+      window.removeEventListener("ohw:open-detail-modal", onOpen);
+      window.removeEventListener("ohw:test-draw-circle", onDraw);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requirements]);
+
+  const invalidate = () =>
+    qc.refetchQueries({ queryKey: ["locations", projectId] });
 
   const syncMutation = useMutation({
     mutationFn: () =>
@@ -64,10 +126,16 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const addCandidateMutation = useMutation({
     mutationFn: (vars: {
       requirementId: string;
-      candidate: Parameters<typeof addLocationCandidate>[0]["data"]["candidate"];
+      candidate: Parameters<
+        typeof addLocationCandidate
+      >[0]["data"]["candidate"];
     }) =>
       addLocationCandidate({
-        data: { requirementId: vars.requirementId, projectId, candidate: vars.candidate },
+        data: {
+          requirementId: vars.requirementId,
+          projectId,
+          candidate: vars.candidate,
+        },
       }).then(unwrapResult),
     onSuccess: invalidate,
   });
@@ -99,19 +167,76 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     onSuccess: invalidate,
   });
 
-  const confirmedCount = requirements.filter((r) => r.status === "confirmed").length;
+  const detailCandidate: LocationCandidate | null = (() => {
+    if (!detailCandidateId) return null;
+    for (const r of requirements) {
+      const c = r.candidates.find((c) => c.id === detailCandidateId);
+      if (c) return c;
+    }
+    return null;
+  })();
+
+  const detailRequirementId = detailCandidate
+    ? (requirements.find((r) =>
+        r.candidates.some((c) => c.id === detailCandidate.id),
+      )?.id ?? null)
+    : null;
+
+  const handleAreaAddCandidate = (
+    requirementId: string,
+    suggestion: PlaceSuggestion,
+  ) => {
+    addCandidateMutation.mutate({
+      requirementId,
+      candidate: {
+        name: suggestion.name,
+        address: suggestion.address || null,
+        lat: suggestion.lat,
+        lng: suggestion.lng,
+        aiSuggested: false,
+        photoNames: suggestion.photos.map((p) => p.name).slice(0, 3),
+      },
+    });
+  };
+
+  const confirmedCount = requirements.filter(
+    (r) => r.status === "confirmed",
+  ).length;
   const exportMutation = useExportLocations(projectId);
 
   return (
     <div className={styles.page} data-testid="locations-page">
       <div className={styles.layout}>
-        <LocationMap
-          requirements={requirements}
-          selectedId={selectedId}
-          selectedCandidateId={selectedCandidateId}
-          onSelect={handleSelectRequirement}
-          onCandidateSelect={handleMapCandidateSelect}
-        />
+        <div className={styles.mapColumn}>
+          <LocationMap
+            requirements={requirements}
+            selectedId={selectedId}
+            selectedCandidateId={selectedCandidateId}
+            onSelect={handleSelectRequirement}
+            onCandidateSelect={handleMapCandidateSelect}
+            onOpenDetailModal={handleOpenDetailModal}
+            onCircleDrawn={(circle) => {
+              setDrawnCircle(circle);
+              if (!circle) setFoundPlaces([]);
+            }}
+            foundPlaces={foundPlaces}
+            onFoundPlaceAdd={(suggestion) => {
+              if (selectedId) handleAreaAddCandidate(selectedId, suggestion);
+            }}
+          />
+          {drawnCircle ? (
+            <AreaSearchPanel
+              circle={drawnCircle}
+              requirements={requirements}
+              defaultRequirementId={selectedId}
+              onClose={() => {
+                setDrawnCircle(null);
+                setFoundPlaces([]);
+              }}
+              onAddCandidate={handleAreaAddCandidate}
+            />
+          ) : null}
+        </div>
         <LocationPanel
           requirements={requirements}
           selectedId={selectedId}
@@ -130,11 +255,36 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           onRemoveCandidate={(candidateId) =>
             removeCandidateMutation.mutate(candidateId)
           }
-          onAskCesare={(requirementId) =>
-            openCesare({ requirementId })
-          }
+          onAskCesare={(requirementId) => openCesare({ requirementId })}
         />
       </div>
+
+      <LocationDetailModal
+        candidate={detailCandidate}
+        isOpen={detailCandidate !== null}
+        onClose={() => setDetailCandidateId(null)}
+        onCenterMap={(candidateId) => {
+          handleMapCandidateSelect(candidateId);
+        }}
+        onUpdate={(candidateId, patch) =>
+          updateCandidateMutation.mutate({ candidateId, patch })
+        }
+        onConfirm={(candidateId) => {
+          if (detailRequirementId) {
+            confirmMutation.mutate({
+              requirementId: detailRequirementId,
+              candidateId,
+            });
+          }
+        }}
+        onMarkVisited={(candidateId) =>
+          updateCandidateMutation.mutate({
+            candidateId,
+            patch: { status: "visited" },
+          })
+        }
+        onRemove={(candidateId) => removeCandidateMutation.mutate(candidateId)}
+      />
 
       <FloatingDock
         label="LOCATION"
