@@ -295,7 +295,7 @@ Every client→server interaction goes through `createServerFn`. No tRPC, no raw
    The helper at `~/server/pipeline` bootstraps `getDb`, resolves project access at the requested permission level, and runs the body inside a single chain. No more `requireUser()` + `getDb()` + `resolveAccess()` + `canEdit/canView()` boilerplate per handler.
 
 3. **Inside the body, prefer `.andThen` / `.map` / `.mapErr` over imperative `if (isErr)` branching.**
-   ts-pattern's `.match()` is for the *consumer boundary* (UI rendering, client mutations), not for server function bodies.
+   ts-pattern's `.match()` is for the _consumer boundary_ (UI rendering, client mutations), not for server function bodies.
 
 ### Canonical handler shape
 
@@ -329,7 +329,11 @@ export const updateBudgetLine = createServerFn({ method: "POST" })
               if (budget.status === "locked")
                 return errAsync(new BudgetLockedError());
               return ResultAsync.fromPromise(
-                db.update(budgetLines).set(patch).where(eq(budgetLines.id, data.lineId)).returning(),
+                db
+                  .update(budgetLines)
+                  .set(patch)
+                  .where(eq(budgetLines.id, data.lineId))
+                  .returning(),
                 (e) => new DbError("updateBudgetLine", e),
               );
             }),
@@ -859,6 +863,46 @@ No Framer Motion, no JS for visual transitions. Everything animated lives in CSS
 ```
 
 Always include a `prefers-reduced-motion` rule for any animation that affects layout or opacity.
+
+---
+
+## Loading states
+
+Never render a plain-text loader (`<p>Caricamento…</p>`). Every loading state ships a skeleton shimmer that mimics the layout of the content that will replace it.
+
+Use `<Skeleton>` and `<SkeletonCard>` from `@oh-writers/ui`. The primitive handles `aria-busy`, role, animation, and `prefers-reduced-motion` automatically — never re-implement it locally.
+
+```tsx
+import { Skeleton, SkeletonCard } from "@oh-writers/ui";
+
+// Inline multi-line — give widths that mirror the real content shape
+<Skeleton
+  lines={4}
+  widths={["80%", "100%", "100%", "65%"]}
+  ariaLabel="Caricamento soggetto"
+/>;
+
+// Grid of cards (dashboards, lists)
+<div className={styles.grid}>
+  {Array.from({ length: 6 }).map((_, i) => (
+    <SkeletonCard key={i} ariaLabel="Caricamento progetto" />
+  ))}
+</div>;
+
+// Cesare / agent-related loaders
+<Skeleton lines={3} tone="agent" ariaLabel="Caricamento suggerimenti" />;
+```
+
+Rules:
+
+- `<Skeleton lines={N} widths={[...]}>` for inline placeholders — widths cycle if shorter than `lines`
+- `<SkeletonCard>` for grids that show item cards
+- `tone="agent"` when the skeleton stands in for Cesare output
+- `ariaLabel` in Italian, matching the UI copy ("Caricamento progetti", "Caricamento scene"…)
+- Suspense fallbacks: always render a real skeleton, never `fallback={null}` and never `<p>Caricamento…</p>`
+- Mutation pending states on buttons ("Salvataggio…", "Esportazione…") are NOT loaders — leave them as text
+
+The few feature-local skeletons under `CesareSheet.module.css`, `NarrativeCesarePanel.module.css`, and `ScreenplayCesarePanel.module.css` are intentional — they shape the agent reply bubble exactly. Don't replace them with the primitive.
 
 ---
 
