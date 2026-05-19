@@ -556,6 +556,80 @@
   messages.push({ role: <span class="str">"user"</span>,      content: results });
 }</code></pre>
 
+      <h3>Lo stesso loop, dal codice reale</h3>
+
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/cesare-tools.ts</code> ·
+        è la funzione che ogni page context (soggetto, sceneggiatura, breakdown,
+        budget, schedule, shooting-plan, locations) chiama come spina dorsale
+        dell'agente: ogni feature passa il proprio <code>executor</code> e il
+        proprio set di <code>tools</code>, il loop resta lo stesso.
+      </p>
+
+      <pre><code><span class="kw">const</span> <span class="fn">runGenericToolLoop</span> = (
+  args: RunToolLoopArgs,
+): <span class="fn">ResultAsync</span>&lt;<span class="kw">string</span>, CesareError&gt; =&gt;
+  ResultAsync.<span class="fn">fromPromise</span>(
+    (<span class="kw">async</span> (): <span class="fn">Promise</span>&lt;<span class="kw">string</span>&gt; =&gt; {
+      <span class="kw">const</span> MAX_ITERATIONS = <span class="num">5</span>;
+      <span class="kw">const</span> currentMessages: Message[] = [...args.messages];
+      <span class="kw">const</span> textAccumulator: <span class="kw">string</span>[] = [];
+
+      <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; MAX_ITERATIONS; i++) {
+        <span class="kw">const</span> response = <span class="kw">await</span> args.client.messages.<span class="fn">create</span>({
+          model: args.model,
+          max_tokens: <span class="num">1500</span>,
+          system: args.systemPrompt,
+          messages: currentMessages,
+          tools: args.tools,
+          tool_choice: { type: <span class="str">"auto"</span> },
+        });
+
+        <span class="kw">const</span> toolBlocks = response.content.<span class="fn">filter</span>(isToolUseBlock);
+        <span class="com">// ... raccolta dei text block nel textAccumulator</span>
+
+        <span class="kw">if</span> (response.stop_reason !== <span class="str">"tool_use"</span> || toolBlocks.length === <span class="num">0</span>) {
+          <span class="kw">break</span>;
+        }
+
+        <span class="kw">const</span> toolResults: ToolResult[] = [];
+        <span class="kw">for</span> (<span class="kw">const</span> block <span class="kw">of</span> toolBlocks) {
+          <span class="kw">const</span> result = <span class="kw">await</span> args.<span class="fn">executor</span>(block, args.db, args.projectId);
+          <span class="kw">if</span> (result.<span class="fn">isErr</span>()) {
+            toolResults.<span class="fn">push</span>({
+              type: <span class="str">"tool_result"</span>,
+              tool_use_id: block.id,
+              content: JSON.<span class="fn">stringify</span>({ error: result.error.message }),
+            });
+          } <span class="kw">else</span> {
+            toolResults.<span class="fn">push</span>(result.value);
+            <span class="com">// side-channel marker per propose_blocking_for_scene...</span>
+          }
+        }
+
+        currentMessages.<span class="fn">push</span>({ role: <span class="str">"assistant"</span>, content: response.content });
+        currentMessages.<span class="fn">push</span>({ role: <span class="str">"user"</span>, content: toolResults });
+      }
+      <span class="com">// ... (vedi file completo per il marker finale e il return)</span>
+    })(),
+    (e) =&gt; <span class="kw">new</span> <span class="fn">CesareError</span>(<span class="str">`tool loop failed: ${...}`</span>),
+  );</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>Il loop è puro <em>controllo</em>: niente logica di dominio, niente
+          conoscenza dei tool — solo "chiama modello → se chiede tool, esegui,
+          ricomincia".</li>
+        <li><code>stop_reason !== "tool_use"</code> è l'unica condizione di
+          uscita "normale"; il cap a <code>MAX_ITERATIONS = 5</code> è la rete
+          di sicurezza per i casi patologici.</li>
+        <li>Gli errori dell'executor non escono dal loop: vengono serializzati
+          come <code>tool_result</code> con campo <code>error</code> — il
+          modello li legge e può ri-provare o spiegare all'utente.</li>
+      </ul>
+
       <h3>Diagramma ASCII del flusso</h3>
 
       <pre class="diagram">
@@ -756,6 +830,127 @@
         </tbody>
       </table>
 
+      <h4>Come Anthropic vede i tool</h4>
+
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/cesare-read-tools.ts</code> ·
+        ogni tool è dichiarato come oggetto con <code>name</code>,
+        <code>description</code> e <code>input_schema</code> JSON-Schema.
+        Il modello sceglie quale chiamare leggendo la <code>description</code>:
+        di qui l'investimento in copy chiara, in italiano, con quando-usarlo
+        esplicito.
+      </p>
+
+      <pre><code><span class="kw">export const</span> CESARE_READ_TOOLS = [
+  {
+    name: <span class="str">"read_scene"</span>,
+    description:
+      <span class="str">"Leggi il corpo completo (heading, note, dialoghi) di una specifica scena della sceneggiatura, identificata dal suo numero ordinale. "</span> +
+      <span class="str">"Usalo quando ti serve il testo letterale di una scena per analizzarla, citarla o ragionarci sopra."</span>,
+    input_schema: {
+      type: <span class="str">"object"</span> <span class="kw">as const</span>,
+      properties: {
+        scene_number: {
+          type: <span class="str">"integer"</span>,
+          minimum: <span class="num">1</span>,
+          description: <span class="str">"Numero ordinale della scena (1-based)."</span>,
+        },
+      },
+      required: [<span class="str">"scene_number"</span>],
+    },
+  },
+  {
+    name: <span class="str">"read_scene_range"</span>,
+    description: <span class="str">"Leggi più scene consecutive in un colpo solo, inclusi gli estremi (da `from` a `to`). "</span> +
+                 <span class="str">"Usalo per leggere un blocco narrativo o quando devi confrontare scene adiacenti."</span>,
+    input_schema: {
+      type: <span class="str">"object"</span> <span class="kw">as const</span>,
+      properties: {
+        from: { type: <span class="str">"integer"</span>, minimum: <span class="num">1</span> },
+        to:   { type: <span class="str">"integer"</span>, minimum: <span class="num">1</span> },
+      },
+      required: [<span class="str">"from"</span>, <span class="str">"to"</span>],
+    },
+  },
+  <span class="com">// read_document, read_budget_lines, read_breakdown,</span>
+  <span class="com">// read_location_requirement, read_shooting_day ... (vedi file completo)</span>
+] <span class="kw">as const</span>;</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>I tool sono <em>contratti</em>, non funzioni: il modello li
+          conosce solo da <code>name</code>, <code>description</code> e
+          <code>input_schema</code> — il codice del corpo è completamente
+          opaco a Claude.</li>
+        <li><code>as const</code> congela i tipi così TypeScript può inferire
+          gli input statici degli executors senza duplicare gli schemi.</li>
+        <li>Una <code>description</code> ben scritta vale più di un parametro
+          in più: è il "prompt" privato che insegna al modello quando
+          scegliere quel tool.</li>
+      </ul>
+
+      <h4>Un executor reale — <code>read_scene</code></h4>
+
+      <p class="small">
+        Stesso file, sezione <em>Executors</em>. Ogni read-tool è una query
+        Drizzle puntuale che ritorna <code>ResultAsync</code>. Niente cache,
+        niente embedding, niente vector store: solo una <code>WHERE</code>
+        sul <code>screenplayId</code> + <code>scene.number</code>.
+      </p>
+
+      <pre><code><span class="kw">const</span> <span class="fn">readSceneByNumber</span> = (
+  db: Db,
+  projectId: <span class="kw">string</span>,
+  sceneNumber: <span class="kw">number</span>,
+): <span class="fn">ResultAsync</span>&lt;<span class="kw">unknown</span>, CesareError&gt; =&gt;
+  ResultAsync.<span class="fn">fromPromise</span>(
+    (<span class="kw">async</span> () =&gt; {
+      <span class="kw">const</span> [screenplay] = <span class="kw">await</span> db
+        .<span class="fn">select</span>({ id: screenplays.id })
+        .<span class="fn">from</span>(screenplays)
+        .<span class="fn">where</span>(<span class="fn">eq</span>(screenplays.projectId, projectId))
+        .<span class="fn">limit</span>(<span class="num">1</span>);
+      <span class="kw">if</span> (!screenplay) {
+        <span class="kw">return</span> <span class="fn">errPayload</span>(<span class="str">`No screenplay for project ${projectId}`</span>);
+      }
+      <span class="kw">const</span> [scene] = <span class="kw">await</span> db
+        .<span class="fn">select</span>({
+          id: scenes.id,         number: scenes.number,
+          heading: scenes.heading, body: scenes.notes,
+          intExt: scenes.intExt,  timeOfDay: scenes.timeOfDay,
+          characterNames: scenes.characterNames,
+        })
+        .<span class="fn">from</span>(scenes)
+        .<span class="fn">where</span>(
+          <span class="fn">and</span>(
+            <span class="fn">eq</span>(scenes.screenplayId, screenplay.id),
+            <span class="fn">eq</span>(scenes.number, sceneNumber),
+          ),
+        )
+        .<span class="fn">limit</span>(<span class="num">1</span>);
+      <span class="kw">if</span> (!scene) <span class="kw">return</span> <span class="fn">errPayload</span>(<span class="str">`Scene ${sceneNumber} not found`</span>);
+      <span class="kw">return</span> scene;
+    })(),
+    (e) =&gt; <span class="kw">new</span> <span class="fn">CesareError</span>(<span class="str">`read_scene failed: ${...}`</span>),
+  );</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>Lo scope di tenancy è <em>doppio</em>: la <code>WHERE</code> usa
+          sempre <code>projectId</code> come ancora — anche se
+          <code>withProjectAccess</code> ha già autorizzato, qui si difende
+          contro id confusion del LLM.</li>
+        <li>Il "non trovato" non è un'eccezione: ritorna un payload
+          <code>{ error: "Scene N not found" }</code> che il modello
+          legge come tool_result e può ri-provare con un altro numero.</li>
+        <li>Una query puntuale &lt; 1ms batte qualsiasi similarity search su
+          dati strutturati. Non c'è "magia" da aggiungere.</li>
+      </ul>
+
       <h4>Trade-off: numeri prima/dopo</h4>
 
       <p>
@@ -920,20 +1115,56 @@ DOCUMENTI DEL PROGETTO:
 
       <h3>Come si vede in codice</h3>
 
-      <pre><code><span class="kw">const</span> buildSystemPrompt = (
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/cesare.server.ts</code> ·
+        <code>buildSystemPrompt</code> ritorna l'array di blocchi che Cesare
+        invia ad Anthropic come <code>system</code>. Tre blocchi marcati
+        <code>cache_control: ephemeral</code>, l'ultimo no — questa è
+        l'intera strategia di caching su un'unica funzione.
+      </p>
+
+      <pre><code><span class="kw">const</span> <span class="fn">buildSystemPrompt</span> = (
   ctx: CesareContext,
   page: PageContext[<span class="str">"page"</span>],
   activeShootingDayNumber: <span class="kw">number</span> | <span class="kw">null</span> = <span class="kw">null</span>,
   activeSceneId: <span class="kw">string</span> | <span class="kw">null</span> = <span class="kw">null</span>,
 ): SystemPromptBlock[] =&gt; [
-  { type: <span class="str">"text"</span>, text: ROLE_TEXT,
-    cache_control: { type: <span class="str">"ephemeral"</span> } },                <span class="com">// ① ruolo</span>
-  { type: <span class="str">"text"</span>, text: buildProductionContextBlock(ctx),
-    cache_control: { type: <span class="str">"ephemeral"</span> } },                <span class="com">// ② produzione</span>
-  { type: <span class="str">"text"</span>, text: buildToolGuidanceBlock(ctx, page, ...),
-    cache_control: { type: <span class="str">"ephemeral"</span> } },                <span class="com">// ③ tool guidance</span>
-  { type: <span class="str">"text"</span>, text: buildDynamicStateBlock(ctx, page, ...) }, <span class="com">// ④ no cache</span>
+  { type: <span class="str">"text"</span>, text: ROLE_TEXT, cache_control: { type: <span class="str">"ephemeral"</span> } },
+  {
+    type: <span class="str">"text"</span>,
+    text: <span class="fn">buildProductionContextBlock</span>(ctx),
+    cache_control: { type: <span class="str">"ephemeral"</span> },
+  },
+  {
+    type: <span class="str">"text"</span>,
+    text: <span class="fn">buildToolGuidanceBlock</span>(
+      ctx,
+      page,
+      activeShootingDayNumber,
+      activeSceneId,
+    ),
+    cache_control: { type: <span class="str">"ephemeral"</span> },
+  },
+  {
+    type: <span class="str">"text"</span>,
+    text: <span class="fn">buildDynamicStateBlock</span>(ctx, page, activeShootingDayNumber),
+  },
 ];</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>L'ordine degli elementi nell'array <em>è</em> la cache key:
+          Anthropic confronta il prefisso esatto, quindi spostare un blocco
+          significa invalidare tutta la cache che lo precede.</li>
+        <li>Il blocco dinamico in coda (<code>buildDynamicStateBlock</code>)
+          riceve scena/day attivi: cambia ad ogni interazione utente. Tenerlo
+          fuori dal range cached protegge i tre blocchi caldi.</li>
+        <li>Tutto si decide al boundary di una pura funzione TypeScript:
+          niente classi, niente builder, niente magia — solo un array
+          letterale di shape.</li>
+      </ul>
 
       <h3>Risparmio reale</h3>
 
@@ -984,25 +1215,76 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
         <li><strong>Default</strong> → Sonnet (preferiamo pagare di più che degradare qualità)</li>
       </ol>
 
-      <h3>Il regex degli imperativi italiani</h3>
+      <h3>Il router per intero</h3>
 
-      <p>
-        È intenzionalmente esplicito — preferiamo enumerare i verbi
-        che ci interessano piuttosto che provare a indovinarli con un
-        LLM secondario. Estratto:
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/cesare-model-router.ts</code> ·
+        è una pure function lato server eseguita prima della chiamata API.
+        Niente DB, niente neverthrow (l'output non può fallire), niente
+        React. Tutto qui sotto è letterale, copiato senza modifiche.
       </p>
 
-      <pre><code><span class="kw">const</span> ITALIAN_IMPERATIVE_REGEX =
-  /\b(aggiungi|aggiungere|modifica|modificare|crea|creare|
-       rinomina|rinominare|applica|applicare|salva|salvare|
-       rimuovi|rimuovere|sposta|spostare|sostituisci|elimina|
-       genera|imposta|cambia|togli|metti|fai|costruisci|
-       riscrivi|scrivi|riempi|aggiorna|cancella|propaga|
-       distribuisci|sincronizza|esegui|trova|cerca|espandi|
-       comprimi|accorcia|riassumi|tagga|spoglia|riduci|
-       abbassa|alza|aumenta|rialloca|redistribuisci|proponi|
-       suggerisci|componi|inventa|racconta|disegna|rendi|
-       spingi|tira|tendi)\b/i;</code></pre>
+      <pre><code><span class="kw">export const</span> HAIKU_MODEL  = <span class="str">"claude-haiku-4-5-20251001"</span>;
+<span class="kw">export const</span> SONNET_MODEL = <span class="str">"claude-sonnet-4-6"</span>;
+
+<span class="kw">export type</span> ModelTier = <span class="str">"haiku"</span> | <span class="str">"sonnet"</span>;
+
+<span class="kw">export interface</span> RouteModelInput {
+  <span class="kw">readonly</span> userMessage: <span class="kw">string</span>;
+  <span class="kw">readonly</span> page: CesarePage;
+  <span class="kw">readonly</span> conversationLength: <span class="kw">number</span>;
+}
+
+<span class="com">// Italian imperative verbs that signal a state-changing request.</span>
+<span class="com">// False positives only cost us money (Sonnet when Haiku would have</span>
+<span class="com">// sufficed), false negatives cost correctness — Haiku tries to handle</span>
+<span class="com">// a mutation and fails. Stay permissive.</span>
+<span class="kw">const</span> ITALIAN_IMPERATIVE_REGEX =
+  /\b(aggiungi|aggiungere|modifica|modificare|crea|creare|rinomina|rinominare|applica|applicare|salva|salvare|rimuovi|rimuovere|sposta|spostare|sostituisci|sostituire|elimina|eliminare|genera|generare|imposta|impostare|cambia|cambiare|togli|togliere|metti|mettere|fai|costruisci|costruire|riscrivi|riscrivere|scrivi|scrivere|scrivimi|riempi|riempire|aggiorna|aggiornare|cancella|cancellare|propaga|propagare|distribuisci|distribuire|sincronizza|sincronizzare|esegui|eseguire|trova|trovare|cerca|cercare|espandi|espandere|comprimi|comprimere|accorcia|accorciare|riassumi|riassumere|tagga|taggare|spoglia|spogliare|riduci|ridurre|abbassa|abbassare|alza|alzare|aumenta|aumentare|riallocara|rialloca|riallocare|redistribuisci|redistribuire|proponi|proporre|suggerisci|suggerire|componi|comporre|inventa|inventare|racconta|raccontare|disegna|disegnare|rendi|rendere|spinge|spingi|spingere|tira|tirare|tendi|tendere)\b/i;
+
+<span class="kw">const</span> LONG_MESSAGE_CHAR_LIMIT      = <span class="num">200</span>;
+<span class="kw">const</span> DEEP_CONVERSATION_TURN_LIMIT = <span class="num">4</span>;
+
+<span class="kw">export const</span> <span class="fn">routeModel</span> = ({
+  userMessage,
+  page: _page,
+  conversationLength,
+}: RouteModelInput): ModelTier =&gt; {
+  <span class="kw">const</span> trimmed = userMessage.<span class="fn">trim</span>();
+
+  <span class="com">// Defensive: an empty message is not a real Haiku candidate.</span>
+  <span class="kw">if</span> (trimmed.length === <span class="num">0</span>) <span class="kw">return</span> <span class="str">"sonnet"</span>;
+
+  <span class="com">// Long prompts encode complex intent. Don't gamble on Haiku.</span>
+  <span class="kw">if</span> (trimmed.length &gt; LONG_MESSAGE_CHAR_LIMIT) <span class="kw">return</span> <span class="str">"sonnet"</span>;
+
+  <span class="com">// Late-conversation messages carry accumulated context.</span>
+  <span class="kw">if</span> (conversationLength &gt; DEEP_CONVERSATION_TURN_LIMIT) <span class="kw">return</span> <span class="str">"sonnet"</span>;
+
+  <span class="com">// Imperative trumps everything (including "puoi aggiungere?").</span>
+  <span class="kw">if</span> (ITALIAN_IMPERATIVE_REGEX.<span class="fn">test</span>(trimmed)) <span class="kw">return</span> <span class="str">"sonnet"</span>;
+
+  <span class="com">// Pure questions are cheap and Haiku handles them well.</span>
+  <span class="kw">if</span> (trimmed.<span class="fn">endsWith</span>(<span class="str">"?"</span>)) <span class="kw">return</span> <span class="str">"haiku"</span>;
+
+  <span class="com">// Default conservatively to Sonnet — we'd rather pay more than</span>
+  <span class="com">// degrade quality on an ambiguous prompt.</span>
+  <span class="kw">return</span> <span class="str">"sonnet"</span>;
+};</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>Decisione <em>pura, deterministica, lato server</em>, presa
+          PRIMA della chiamata API. Latenza aggiuntiva: zero misurabile
+          (regex su &lt; 200 char).</li>
+        <li>L'ordine dei guard è la priorità: trigger imperative vincono
+          su <code>endsWith("?")</code> (le mutazioni si formulano come
+          domande gentili in italiano).</li>
+        <li>Default conservativo a Sonnet: in dubbio, paghiamo. Mai
+          degradare la qualità per risparmiare cent.</li>
+      </ul>
 
       <blockquote>
         <strong>Filosofia del falso positivo vs falso negativo</strong> —
@@ -1138,6 +1420,129 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
           </ul>
         </div>
       </div>
+
+      <h3>Il contratto della proposta — <code>ProposedEdit</code></h3>
+
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/cesare-screenplay-tools.ts</code> ·
+        l'interfaccia <code>ProposedEdit</code> è il payload che vive
+        nello store in memoria e attraversa il filo verso l'editor.
+        Subito sotto, la firma del tool che il modello chiama per
+        crearla.
+      </p>
+
+      <pre><code><span class="kw">export type</span> ProposedEditKind =
+  | <span class="str">"edit"</span>
+  | <span class="str">"rename_character"</span>
+  | <span class="str">"rename_location"</span>;
+
+<span class="kw">export interface</span> ProposedEdit {
+  <span class="kw">readonly</span> id: <span class="kw">string</span>;
+  <span class="kw">readonly</span> screenplayId: <span class="kw">string</span>;
+  <span class="kw">readonly</span> kind: ProposedEditKind;
+  <span class="kw">readonly</span> sceneNumber: <span class="kw">number</span> | <span class="kw">null</span>;
+  <span class="kw">readonly</span> find: <span class="kw">string</span>;
+  <span class="kw">readonly</span> replace: <span class="kw">string</span>;
+  <span class="kw">readonly</span> reason: <span class="kw">string</span>;
+  <span class="kw">readonly</span> createdAt: <span class="kw">number</span>;
+}
+
+<span class="com">// Tool definition vista da Anthropic</span>
+{
+  name: <span class="str">"propose_screenplay_edit"</span>,
+  description:
+    <span class="str">"Propone una modifica puntuale al testo di una scena (find/replace verbatim). "</span> +
+    <span class="str">"L'utente vedrà la proposta come overlay sul testo con bottoni ✓/✕. "</span> +
+    <span class="str">"Usa quando la richiesta è una modifica circoscritta a una scena o a poche righe."</span>,
+  input_schema: {
+    type: <span class="str">"object"</span> <span class="kw">as const</span>,
+    properties: {
+      scene_number: { type: <span class="str">"integer"</span>, minimum: <span class="num">1</span> },
+      find:    { type: <span class="str">"string"</span>, description: <span class="str">"Sottostringa esatta da cercare (verbatim, max 400 char)"</span> },
+      replace: { type: <span class="str">"string"</span>, description: <span class="str">"Testo proposto come sostituzione (max 800 char)"</span> },
+      reason:  { type: <span class="str">"string"</span>, description: <span class="str">"Motivazione breve mostrata all'utente nell'overlay"</span> },
+    },
+    required: [<span class="str">"scene_number"</span>, <span class="str">"find"</span>, <span class="str">"replace"</span>, <span class="str">"reason"</span>],
+  },
+}</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>Tutti i campi della proposta sono <code>readonly</code>: una
+          volta creata, non muta — accept/reject la rimuovono dallo store,
+          non la modificano.</li>
+        <li><code>find</code> è verbatim, non un selector PM: l'editor è
+          libero di usare la stringa come vuole (decoration, search, diff),
+          il server non sa nulla di ProseMirror.</li>
+        <li>Il <code>reason</code> è obbligatorio nello schema: Anthropic
+          forza il modello a giustificare la mossa, e l'utente vede il
+          "perché" prima di accettare.</li>
+      </ul>
+
+      <h3>Dalla stringa alle PM positions — la leaf-text walk</h3>
+
+      <p class="small">
+        File: <code>apps/web/app/features/screenplay-editor/lib/plugins/proposed-edit-decoration.ts</code> ·
+        il server propone una stringa <code>find</code>; il client la deve
+        mappare a posizioni ProseMirror per disegnare l'overlay. Il pattern
+        è camminare i nodi text leaf, concatenare il testo, fare
+        <code>indexOf</code> sulla stringa piatta, poi rimappare a
+        coordinate PM.
+      </p>
+
+      <pre><code><span class="kw">interface</span> TextSegment {
+  <span class="kw">readonly</span> text: <span class="kw">string</span>;
+  <span class="kw">readonly</span> from: <span class="kw">number</span>;
+}
+
+<span class="kw">const</span> <span class="fn">collectTextSegments</span> = (doc: PMNode): TextSegment[] =&gt; {
+  <span class="kw">const</span> segments: TextSegment[] = [];
+  doc.<span class="fn">descendants</span>((node, pos) =&gt; {
+    <span class="kw">if</span> (node.isText &amp;&amp; node.text) {
+      segments.<span class="fn">push</span>({ text: node.text, from: pos });
+    }
+    <span class="kw">return true</span>;
+  });
+  <span class="kw">return</span> segments;
+};
+
+<span class="com">// Map a flat-index range over concatenated text back to PM positions.</span>
+<span class="kw">const</span> <span class="fn">mapFlatRangeToPm</span> = (
+  segments: TextSegment[],
+  flatStart: <span class="kw">number</span>,
+  flatEnd: <span class="kw">number</span>,
+): MatchRange | <span class="kw">null</span> =&gt; {
+  <span class="kw">let</span> posStart = -<span class="num">1</span>, posEnd = -<span class="num">1</span>, cursor = <span class="num">0</span>;
+  <span class="kw">for</span> (<span class="kw">const</span> seg <span class="kw">of</span> segments) {
+    <span class="kw">const</span> segEnd = cursor + seg.text.length;
+    <span class="kw">if</span> (posStart &lt; <span class="num">0</span> &amp;&amp; cursor &lt;= flatStart &amp;&amp; flatStart &lt; segEnd) {
+      posStart = seg.from + (flatStart - cursor);
+    }
+    <span class="kw">if</span> (posEnd &lt; <span class="num">0</span> &amp;&amp; cursor &lt; flatEnd &amp;&amp; flatEnd &lt;= segEnd) {
+      posEnd = seg.from + (flatEnd - cursor);
+    }
+    <span class="kw">if</span> (posStart &gt;= <span class="num">0</span> &amp;&amp; posEnd &gt;= <span class="num">0</span>) <span class="kw">break</span>;
+    cursor = segEnd;
+  }
+  <span class="com">// ... (vedi file completo per il null-check finale e il return)</span>
+};</code></pre>
+
+      <p class="small">
+        <strong>Cosa imparare da questo codice</strong>
+      </p>
+      <ul class="small">
+        <li>Il server non parla mai di PM positions: ragiona su stringhe.
+          Il client porta il peso della mappatura — così se domani
+          cambiamo editor (CodeMirror, plain textarea), il server non
+          cambia di una riga.</li>
+        <li>L'algoritmo è lineare sul numero di leaf, niente regex
+          ricorsive. Su un copione di 100 scene è &lt; 1ms.</li>
+        <li>Se il flat range "straddles" un gap di nodi non-text,
+          ritorna <code>null</code> — fail-safe esplicito invece di
+          decoration sballata.</li>
+      </ul>
 
       <h3>Il flusso completo della rename</h3>
 

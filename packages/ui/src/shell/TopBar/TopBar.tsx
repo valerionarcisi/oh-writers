@@ -19,7 +19,10 @@ function SectionMenuItem({
   section: TopBarSection;
   onPick: (href: string) => void;
 }) {
-  const cls = [styles.sectionItem, section.isActive ? styles.sectionItemActive : ""]
+  const cls = [
+    styles.sectionItem,
+    section.isActive ? styles.sectionItemActive : "",
+  ]
     .filter(Boolean)
     .join(" ");
   return (
@@ -30,11 +33,7 @@ function SectionMenuItem({
       onClick={() => onPick(section.href)}
     >
       {section.icon && (
-        <Icon
-          name={section.icon as IconName}
-          size={14}
-          aria-hidden={true}
-        />
+        <Icon name={section.icon as IconName} size={14} aria-hidden={true} />
       )}
       <span>{section.label}</span>
       {section.isActive && (
@@ -302,10 +301,7 @@ export function TopBar({
                           aria-hidden="true"
                         />
                       )}
-                      <header
-                        id={labelId}
-                        className={styles.sectionGroupLabel}
-                      >
+                      <header id={labelId} className={styles.sectionGroupLabel}>
                         {group.label}
                       </header>
                       {group.items.map((s) => (
@@ -388,39 +384,59 @@ export function TopBar({
           <Presence users={presenceUsers} maxVisible={3} />
         )}
 
-        {userMenuItems !== undefined ? (
-          <DropdownMenu
-            trigger={
+        {(() => {
+          const badge =
+            notificationCount > 0 ? (
               <span
+                className={styles.avatarBadge}
+                aria-label={`${notificationCount} notifiche non lette`}
+              >
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            ) : null;
+          if (userMenuItems !== undefined) {
+            return (
+              <DropdownMenu
+                trigger={
+                  <span
+                    className={styles.avatarBtn}
+                    aria-label={`Account utente (${userInitials})${notificationCount > 0 ? ` — ${notificationCount} notifiche` : ""}`}
+                    title="Account"
+                  >
+                    {userInitials}
+                    {badge}
+                  </span>
+                }
+                items={userMenuItems}
+                align="end"
+              />
+            );
+          }
+          if (onAvatarClick !== undefined) {
+            return (
+              <button
+                type="button"
                 className={styles.avatarBtn}
-                aria-label={`Account utente (${userInitials})`}
+                onClick={onAvatarClick}
+                aria-label={`Account utente (${userInitials})${notificationCount > 0 ? ` — ${notificationCount} notifiche` : ""}`}
                 title="Account"
               >
                 {userInitials}
-              </span>
-            }
-            items={userMenuItems}
-            align="end"
-          />
-        ) : onAvatarClick !== undefined ? (
-          <button
-            type="button"
-            className={styles.avatarBtn}
-            onClick={onAvatarClick}
-            aria-label={`Account utente (${userInitials})`}
-            title="Account"
-          >
-            {userInitials}
-          </button>
-        ) : (
-          <span
-            className={styles.avatarBtn}
-            aria-label={`Account utente (${userInitials})`}
-            title="Account"
-          >
-            {userInitials}
-          </span>
-        )}
+                {badge}
+              </button>
+            );
+          }
+          return (
+            <span
+              className={styles.avatarBtn}
+              aria-label={`Account utente (${userInitials})`}
+              title="Account"
+            >
+              {userInitials}
+              {badge}
+            </span>
+          );
+        })()}
       </div>
     </header>
   );

@@ -187,7 +187,11 @@ const makeId = (): string => {
 
 const CesareNotificationContext = createContext<ContextValue | null>(null);
 
-export function CesareNotificationProvider({ children }: { children: ReactNode }) {
+export function CesareNotificationProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [state, dispatch] = useReducer(reducer, { notifications: [] });
 
   // Hydrate from sessionStorage on mount
@@ -279,6 +283,15 @@ export function CesareNotificationProvider({ children }: { children: ReactNode }
       {children}
     </CesareNotificationContext.Provider>
   );
+}
+
+/**
+ * True when at least one Cesare notification is still `pending` — used to
+ * drive the dock-pill "thinking" glow in place of the old top-right toast.
+ */
+export function useCesareIsThinking(): boolean {
+  const { notifications } = useCesareNotifications();
+  return notifications.some((n) => n.status === "in-progress");
 }
 
 export function useCesareNotifications(): ContextValue {

@@ -1,0 +1,318 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--ds-overlay);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 280;
+  transition: opacity 200ms var(--ds-ease);
+}
+.scrim[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  inset-inline-end: 0;
+  width: min(420px, 92vw);
+  background: var(--ds-surface);
+  border-inline-start: 1px solid var(--ds-line);
+  box-shadow: var(--ds-shadow-3);
+  display: flex;
+  flex-direction: column;
+  z-index: 281;
+  transform: translateX(100%);
+  transition: transform 240ms var(--ds-ease);
+}
+.drawer[data-open="true"] {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .drawer {
+    transition: none;
+  }
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-line);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg, 1.0625rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ds-text);
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--ds-text-2);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.linkBtn {
+  background: transparent;
+  border: none;
+  color: var(--ds-action);
+  font-family: var(--ds-font-sans);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+}
+.linkBtn:hover {
+  background: var(--ds-action-soft);
+}
+.linkBtn:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-mute);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.closeBtn:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+.closeBtn:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-line);
+}
+.section:last-of-type {
+  border-block-end: none;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-2);
+}
+
+.soon {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-3);
+  padding: 2px 6px;
+  background: var(--ds-surface-alt);
+  border-radius: var(--ds-radius-pill);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--ds-text-3);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.groupLabel {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-3);
+  padding-block: var(--ds-space-1);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--ds-space-1);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-alt);
+  border: 1px solid transparent;
+  transition:
+    background 120ms var(--ds-ease),
+    border-color 120ms var(--ds-ease);
+}
+.row:hover {
+  background: var(--ds-surface-deep);
+}
+.row[data-status="error"] {
+  border-color: color-mix(in srgb, var(--ds-danger) 35%, transparent);
+}
+
+.rowMain {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: var(--ds-space-2);
+  align-items: start;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: start;
+  font-family: var(--ds-font-sans);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.rowMain:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: -2px;
+  border-radius: var(--ds-radius-md);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: var(--ds-action);
+}
+.dot[data-status="pending"] {
+  background: var(--ds-warning);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.dot[data-status="complete"][data-seen="true"] {
+  background: var(--ds-line);
+}
+.dot[data-status="error"] {
+  background: var(--ds-danger);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-2);
+  font-weight: 600;
+}
+
+.rowAction {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ds-text-3);
+  font-weight: 500;
+}
+
+.rowText {
+  font-size: 0.875rem;
+  color: var(--ds-text);
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.rowEntities {
+  font-size: 0.75rem;
+  color: var(--ds-text-3);
+}
+
+.rowTime {
+  font-size: 0.6875rem;
+  color: var(--ds-text-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowDismiss {
+  flex-shrink: 0;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: var(--ds-space-1);
+  border: none;
+  background: transparent;
+  color: var(--ds-text-3);
+  border-radius: var(--ds-radius-sm);
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 120ms var(--ds-ease),
+    background 120ms var(--ds-ease);
+}
+.row:hover .rowDismiss,
+.rowDismiss:focus-visible {
+  opacity: 1;
+}
+.rowDismiss:hover {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+}
+.rowDismiss:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: -2px;
+}

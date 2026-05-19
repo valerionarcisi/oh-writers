@@ -55,8 +55,8 @@ const buildPopupHtml = (
   const photoStrip = photos.length
     ? `<div style="display:flex;gap:6px;margin-top:8px">${photos
         .map(
-          (p) =>
-            `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" style="display:block;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #d8d6cd"><img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption ?? candidate.name)}" style="width:100%;height:100%;object-fit:cover;display:block" /></a>`,
+          (p, idx) =>
+            `<button type="button" data-candidate-photo="${candidate.id}" data-photo-index="${idx}" title="Apri foto" style="display:block;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #d8d6cd;padding:0;cursor:pointer;background:#fff;font-family:inherit"><img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption ?? candidate.name)}" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none" /></button>`,
         )
         .join("")}</div>`
     : "";
@@ -228,7 +228,9 @@ export function LocationMap({
       if (!btn) return;
       btn.addEventListener(
         "click",
-        () => {
+        (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
           const id = btn.getAttribute("data-candidate-details");
           if (!id) return;
           // Prefer opening the dedicated detail modal when wired up. The
@@ -251,6 +253,29 @@ export function LocationMap({
         },
         { once: true },
       );
+
+      // Delegate clicks on candidate photos inside the popup so they open the
+      // in-page PhotoLightbox (instead of having to navigate away or zoom into
+      // a tiny Leaflet thumbnail).
+      const thumbs = popupNode?.querySelectorAll<HTMLElement>(
+        "[data-candidate-photo]",
+      );
+      thumbs?.forEach((thumb) => {
+        thumb.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const candidateId = thumb.getAttribute("data-candidate-photo");
+          const photoIndex = Number(
+            thumb.getAttribute("data-photo-index") ?? "0",
+          );
+          if (!candidateId) return;
+          window.dispatchEvent(
+            new CustomEvent("ohw:locations:open-lightbox", {
+              detail: { candidateId, photoIndex },
+            }),
+          );
+        });
+      });
     });
 
     mapRef.current = map;

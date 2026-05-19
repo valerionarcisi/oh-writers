@@ -28,6 +28,10 @@ export type FloatingDockProps = {
   /** Whether the Cesare overlay is currently on. Drives the pill's pressed
    *  state and the leaf-dot color. Defaults to true. */
   cesareIsOn?: boolean;
+  /** When true, the Cesare pill emits a soft pulsing glow — used to signal
+   *  that a long-running agentic action is in progress. Replaces the
+   *  floating top-right "Cesare sta lavorando…" pill. */
+  cesareIsThinking?: boolean;
   /** Called when user clicks the Cesare pill. When omitted the pill is hidden. */
   onCesareClick?: () => void;
   /** Inline toast shown to the left of the actions. Auto-collapses when null. */
@@ -46,6 +50,7 @@ export function FloatingDock({
   overflowSlot,
   cesareNoteCount = 0,
   cesareIsOn = true,
+  cesareIsThinking = false,
   onCesareClick,
   toast,
   position = "bottom-right",
@@ -118,9 +123,7 @@ export function FloatingDock({
           onClick={action.onClick}
           aria-label={action.ariaLabel ?? action.label}
           title={
-            action.hotkey
-              ? `${action.label} (${action.hotkey})`
-              : action.label
+            action.hotkey ? `${action.label} (${action.hotkey})` : action.label
           }
         >
           {action.label}
@@ -144,21 +147,32 @@ export function FloatingDock({
             className={[
               styles.cesarePill,
               cesareIsOn ? styles.cesarePillOn : styles.cesarePillOff,
-            ].join(" ")}
+              cesareIsThinking ? styles.cesarePillThinking : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onClick={onCesareClick}
             aria-pressed={cesareIsOn}
+            aria-busy={cesareIsThinking || undefined}
+            data-thinking={cesareIsThinking ? "true" : undefined}
             aria-label={
-              cesareNoteCount > 0
-                ? `Cesare — ${cesareNoteCount} note`
-                : "Cesare"
+              cesareIsThinking
+                ? "Cesare sta lavorando"
+                : cesareNoteCount > 0
+                  ? `Cesare — ${cesareNoteCount} note`
+                  : "Cesare"
             }
             title={
-              cesareIsOn ? "Disattiva overlay Cesare" : "Attiva overlay Cesare"
+              cesareIsThinking
+                ? "Cesare sta lavorando…"
+                : cesareIsOn
+                  ? "Disattiva overlay Cesare"
+                  : "Attiva overlay Cesare"
             }
           >
             <span className={styles.cesareDot} aria-hidden="true" />
             Cesare
-            {cesareNoteCount > 0 && (
+            {cesareNoteCount > 0 && !cesareIsThinking && (
               <span className={styles.cesareCount} aria-hidden="true">
                 {cesareNoteCount}
               </span>

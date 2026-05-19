@@ -26,6 +26,7 @@ import { LocationMap } from "./LocationMap";
 import { LocationPanel } from "./LocationPanel";
 import { LocationDetailModal } from "./LocationDetailModal";
 import { AreaSearchPanel } from "./AreaSearchPanel";
+import { PhotoLightbox, type LightboxPhoto } from "./PhotoLightbox";
 import styles from "./LocationsPage.module.css";
 
 interface LocationsPageProps {
@@ -49,6 +50,10 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   );
   const [drawnCircle, setDrawnCircle] = useState<DrawnCircle | null>(null);
   const [foundPlaces, setFoundPlaces] = useState<PlaceSuggestion[]>([]);
+  const [lightbox, setLightbox] = useState<{
+    photos: ReadonlyArray<LightboxPhoto>;
+    index: number;
+  } | null>(null);
   const setActiveRequirementId = useSetActiveRequirementId();
 
   // Broadcast the selected requirement to Cesare so opening the chat from
@@ -105,11 +110,32 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
         });
       }
     };
+    const onOpenLightbox = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ candidateId: string; photoIndex: number }>
+      ).detail;
+      if (!detail?.candidateId) return;
+      for (const r of requirements) {
+        const c = r.candidates.find((c) => c.id === detail.candidateId);
+        if (c && c.photos.length > 0) {
+          setLightbox({
+            photos: c.photos.map((p) => ({ url: p.url, caption: p.caption })),
+            index: Math.max(
+              0,
+              Math.min(detail.photoIndex ?? 0, c.photos.length - 1),
+            ),
+          });
+          return;
+        }
+      }
+    };
     window.addEventListener("ohw:open-detail-modal", onOpen);
     window.addEventListener("ohw:test-draw-circle", onDraw);
+    window.addEventListener("ohw:locations:open-lightbox", onOpenLightbox);
     return () => {
       window.removeEventListener("ohw:open-detail-modal", onOpen);
       window.removeEventListener("ohw:test-draw-circle", onDraw);
+      window.removeEventListener("ohw:locations:open-lightbox", onOpenLightbox);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requirements]);
@@ -284,6 +310,13 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           })
         }
         onRemove={(candidateId) => removeCandidateMutation.mutate(candidateId)}
+      />
+
+      <PhotoLightbox
+        photos={lightbox?.photos ?? []}
+        initialIndex={lightbox?.index ?? 0}
+        isOpen={lightbox !== null}
+        onClose={() => setLightbox(null)}
       />
 
       <FloatingDock

@@ -141,6 +141,73 @@
   border-color: var(--ds-line);
 }
 
+/* Pulsing glow shown while a long-running Cesare action is in flight. The
+   pill replaces the legacy top-right "Cesare sta lavorando…" toast — keeping
+   the signal docked next to the trigger keeps the user's attention in the
+   right place without a popup intruding from the corner. */
+.cesarePillThinking {
+  position: relative;
+  isolation: isolate;
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  border-color: color-mix(in srgb, var(--ds-agent) 35%, transparent);
+  animation: cesarePillBreathe 1.8s ease-in-out infinite;
+}
+
+.cesarePillThinking::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--ds-agent) 35%, transparent),
+    transparent 70%
+  );
+  z-index: -1;
+  filter: blur(6px);
+  animation: cesarePillGlow 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.cesarePillThinking .cesareDot {
+  background: var(--ds-agent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-agent) 25%, transparent);
+  animation: cesareDotBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes cesarePillBreathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ds-agent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--ds-agent) 18%, transparent);
+  }
+}
+
+@keyframes cesarePillGlow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes cesareDotBlink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.25);
+  }
+}
+
 .cesarePillOff .cesareDot,
 .cesarePillOff:hover {
   filter: none;
@@ -193,6 +260,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .actionBtn { transition: none; }
-  .cesarePill { transition: none; }
+  .actionBtn {
+    transition: none;
+  }
+  .cesarePill {
+    transition: none;
+  }
+  .cesarePillThinking,
+  .cesarePillThinking::before,
+  .cesarePillThinking .cesareDot {
+    animation: none;
+  }
 }
