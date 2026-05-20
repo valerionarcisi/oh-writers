@@ -96,6 +96,24 @@ export const tabCommand: Command = (state, dispatch, view) => {
     return true;
   }
 
+  // Empty dialogue + Tab → parenthetical pre-filled with "()" and cursor
+  // between the parens. Final Draft's author flow (character → empty
+  // dialogue after Enter → Tab adds the parenthetical scaffold).
+  if (
+    blockType.type.name === "dialogue" &&
+    blockType.textContent.length === 0
+  ) {
+    const parenType = schema.nodes["parenthetical"];
+    if (!parenType) return false;
+    if (!dispatch) return true;
+    const blockStart = $from.before($from.depth);
+    const tr = state.tr.setNodeMarkup(blockStart, parenType);
+    tr.insertText("()", blockStart + 1);
+    tr.setSelection(TextSelection.create(tr.doc, blockStart + 2));
+    dispatch(tr);
+    return true;
+  }
+
   const current = elementForNode(blockType.type.name);
 
   const next = nextElementOnTab(current);
