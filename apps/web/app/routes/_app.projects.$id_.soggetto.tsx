@@ -6,6 +6,7 @@ import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
 import { FloatingDock, Skeleton } from "@oh-writers/ui";
 import {
+  DraftBanner,
   ExportPdfModal,
   ExportSiaeModal,
   FreeNarrativeEditor,
@@ -226,6 +227,13 @@ function SoggettoPageReady({
         }
       >
         <div className={styles.pageShell}>
+          <DraftBanner
+            documentId={soggettoDoc.id}
+            projectId={projectId}
+            docType={DocumentTypes.SOGGETTO}
+            currentContent={soggettoContent}
+            canEdit={canEdit}
+          />
           <FreeNarrativeEditor
             content={soggettoContent}
             onChange={setSoggettoContent}

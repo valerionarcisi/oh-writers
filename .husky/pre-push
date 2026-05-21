@@ -11,6 +11,6 @@ echo "→ Unit tests (Vitest)"
 pnpm test:unit
 
 echo "→ Mock E2E (Playwright, MOCK_AI=true, --project=mock-ui)"
-MOCK_AI=true pnpm test:e2e -- --project=mock-ui
+MOCK_AI=true pnpm test:e2e --project=mock-ui
 
 echo "✓ All QA gates passed. Pushing."

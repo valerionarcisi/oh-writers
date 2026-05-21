@@ -1866,6 +1866,7 @@ const AGENTIC_PAGES = new Set<string>([
   "schedule",
   "budget",
   "shooting-plan",
+  "screenplay",
   "soggetto",
   "synopsis",
   "outline",

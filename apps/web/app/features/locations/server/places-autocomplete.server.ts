@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { ResultAsync, errAsync } from "neverthrow";
+import { ResultAsync, okAsync, errAsync } from "neverthrow";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
 import {
@@ -153,6 +153,34 @@ const callNearbySearch = (
  * radius. For purely "what's around here" calls (no query), we hit
  * `searchNearby` and let it return whatever sits inside the circle.
  */
+// Deterministic suggestions used when MOCK_AI=true. Mirrors the shape returned
+// by Google Places searchNearby so the UI can be exercised end-to-end without
+// an upstream API key. Place IDs are stable so Playwright can target rows via
+// `area-search-add-<placeId>` testids.
+const buildMockNearbySuggestions = (
+  lat: number,
+  lng: number,
+): PlaceSuggestion[] => [
+  {
+    placeId: "place_mock_1",
+    name: "Trattoria del Cerchio",
+    address: "Via del Test 1, Milano",
+    lat,
+    lng,
+    types: ["restaurant"],
+    photos: [],
+  },
+  {
+    placeId: "place_mock_2",
+    name: "Bar Centrale",
+    address: "Via del Test 2, Milano",
+    lat: lat + 0.001,
+    lng: lng + 0.001,
+    types: ["bar"],
+    photos: [],
+  },
+];
+
 export const searchPlacesInArea = createServerFn({ method: "POST" })
   .validator(SearchPlacesInAreaInputSchema)
   .handler(
@@ -160,6 +188,14 @@ export const searchPlacesInArea = createServerFn({ method: "POST" })
       data,
     }): Promise<ResultShape<PlaceSuggestion[], PlacesAutocompleteError>> => {
       await requireUser();
+
+      if (process.env["MOCK_AI"] === "true") {
+        return toShape(
+          await okAsync<PlaceSuggestion[], PlacesAutocompleteError>(
+            buildMockNearbySuggestions(data.lat, data.lng),
+          ),
+        );
+      }
 
       const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
       if (!apiKey) {

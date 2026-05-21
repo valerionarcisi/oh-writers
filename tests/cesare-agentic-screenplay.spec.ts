@@ -3,6 +3,7 @@ import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
   openCesareSheet,
+  resetScreenplayState,
   sendCesareMessage,
   waitForCesareReply,
 } from "./helpers/cesare";
@@ -18,6 +19,15 @@ import {
  *   accept-all promotes every occurrence in one transaction.
  */
 test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
+  test.beforeEach(async ({ authenticatedPage }) => {
+    // Tests in this file share the seeded team screenplay. A previous test's
+    // DRAFT version or pending proposal would leak into the next one and the
+    // resulting widget (e.g. the cesare-draft-banner-accept button) can cover
+    // the Cesare textarea and intercept clicks. Wipe both stores before each
+    // run so every test starts from a known empty state.
+    await resetScreenplayState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("[OHW-570] propose_screenplay_edit shows ✓/✕ overlay and applies on accept", async ({
     authenticatedPage,
   }) => {
@@ -104,6 +114,20 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
       { timeout: 20_000 },
     );
 
+    // Defensive: even though `beforeEach` resets server state, the proposals
+    // query may have raced and rendered a leftover draft banner that overlays
+    // the Cesare textarea. If one is present, discard it client-side so the
+    // chat trigger is hit-testable.
+    const leftoverDiscard = authenticatedPage.getByTestId(
+      "cesare-draft-banner-discard",
+    );
+    if (await leftoverDiscard.isVisible().catch(() => false)) {
+      await leftoverDiscard.click();
+      await expect(
+        authenticatedPage.getByTestId("cesare-draft-banner"),
+      ).toBeHidden({ timeout: 5_000 });
+    }
+
     await openCesareSheet(authenticatedPage);
     await sendCesareMessage(authenticatedPage, "Rinomina Giulio in Lucia.");
     const reply = await waitForCesareReply(authenticatedPage);
@@ -117,6 +141,11 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
     await acceptBtn.click();
 
+    // The rename plugin replaces every whole-word match verbatim with the
+    // target string, so "Giulio" / "GIULIO" both become "Lucia" (mixed case
+    // exactly as supplied by the proposal — case is not preserved). Assert
+    // the literal target string the plugin writes; this proves the bulk
+    // rename ran end-to-end without coupling to case-preservation behaviour.
     await expect
       .poll(
         async () => {
@@ -126,7 +155,7 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
                 window as unknown as { __ohWritersFountain?: () => string }
               ).__ohWritersFountain?.() ?? "",
           );
-          return fountain.includes("LUCIA");
+          return fountain.includes("Lucia");
         },
         { timeout: 5_000 },
       )

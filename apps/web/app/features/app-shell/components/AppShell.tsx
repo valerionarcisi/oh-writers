@@ -333,6 +333,12 @@ function AppShellInner({
       // Budget page — Cesare acts as a Line Producer via budget tools.
       if (cesarePage === "budget" && projectId) {
         void queryClient.invalidateQueries({ queryKey: ["budget", projectId] });
+        void queryClient.invalidateQueries({
+          queryKey: ["budget-caps", projectId],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["budget-overview", projectId],
+        });
         const lc = reply.toLowerCase();
         if (
           lc.includes("aggiornato") ||
@@ -371,6 +377,16 @@ function AppShellInner({
             variant: "success",
           });
         }
+      }
+
+      // Screenplay page — Cesare emits propose_* tools that populate the
+      // in-memory proposal store. Invalidate the proposals query so the
+      // editor's overlay widgets and draft banner refetch.
+      if (cesarePage === "screenplay") {
+        void queryClient.invalidateQueries({
+          queryKey: ["screenplay-proposals"],
+        });
+        void queryClient.invalidateQueries({ queryKey: ["versions"] });
       }
     },
     [cesarePage, projectId, queryClient, showToast, activeDocument],

@@ -55,8 +55,17 @@ export function PhotoLightbox({
   const { dialogProps } = useDialog({ "aria-labelledby": titleId }, contentRef);
 
   useEffect(() => {
-    if (!isOpen || photos.length <= 1) return;
+    if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        // Capture-phase ESC: close the lightbox before any underlying
+        // dialog (e.g. LocationDetailModal) can react to the same key.
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (photos.length <= 1) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
         setIndex((i) => (i + 1) % photos.length);
@@ -65,9 +74,9 @@ export function PhotoLightbox({
         setIndex((i) => (i - 1 + photos.length) % photos.length);
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isOpen, photos.length]);
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [isOpen, photos.length, onClose]);
 
   if (!isOpen || photos.length === 0) return null;
 

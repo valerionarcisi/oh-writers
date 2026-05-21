@@ -139,6 +139,14 @@ export const classifyIntent = (
         return { type: "question", confidence: 0 };
       }
 
+      // MOCK_AI escape hatch: the scripted client matches scenarios on the
+      // user text, so calling it for classification would consume the first
+      // scripted turn meant for the main tool loop. Skip the classifier and
+      // let the loop run with tool_choice: "auto".
+      if (process.env["MOCK_AI"] === "true") {
+        return { type: "question", confidence: 0 };
+      }
+
       const response = await opts.client.messages.create({
         model: HAIKU_MODEL,
         max_tokens: 100,

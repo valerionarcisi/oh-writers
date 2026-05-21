@@ -426,10 +426,99 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Screenplay — propose_screenplay_edit (OHW-570).
+  // "Rendi questa scena più tesa." → micro-edit on scene 1 of the team
+  // screenplay (fountain seed: "Si accende una sigaretta."). The replace
+  // string contains "le mani che tremano" so the spec assertion on the
+  // post-accept fountain hits.
+  {
+    match:
+      /rendi questa scena|rendi la scena|più tesa|piu tesa|più tensione|piu tensione/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_screenplay_edit",
+            input: {
+              scene_number: 1,
+              find: "Si accende una sigaretta.",
+              replace: "Si accende una sigaretta con le mani che tremano.",
+              reason: "Aggiunge tensione fisica al gesto.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho preparato una proposta di modifica sulla scena 1. Vai sull'editor: l'overlay ✓/✕ ti permette di accettarla o scartarla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Screenplay — propose_screenplay_revision (OHW-571).
+  // "Fammi una v2 più corta." → macro rewrite of the whole screenplay,
+  // creates a DRAFT version. The reply mentions "v2" so the spec text
+  // assertion (/preparat|v2|versione|draft|diff/) hits.
+  {
+    match:
+      /fammi una v2|v2 più corta|v2 piu corta|riscrivi più corta|riscrivi piu corta|tutto in una stanza/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_screenplay_revision",
+            input: {
+              scope: { kind: "whole_screenplay" },
+              instruction: "più corta, mantieni i beat chiave",
+              label: "V2 — più corta",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho preparato una v2 draft della sceneggiatura. Apri il diff dal banner sopra l'editor per confrontarla con la versione corrente.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Screenplay — propose_rename_entity (OHW-572).
+  // "Rinomina Giulio in Lucia." → whole-word rename on the screenplay.
+  // The fountain seed has many GIULIO occurrences so the tool returns
+  // multiple proposed_edits and the PM plugin decorates each match.
+  {
+    match: /rinomina|rinominare|cambia nome|sostituisci .* con/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_rename_entity",
+            input: {
+              kind: "character",
+              from: "Giulio",
+              to: "Lucia",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho preparato la proposta di rinomina: trovate diverse occorrenze del personaggio. Accetta in blocco dall'overlay sull'editor.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Shooting plan — propose_blocking_for_scene (OHW-580).
   // The real executor loads scene + cast and (in MOCK_AI=true) short-circuits
   // to parseCesareBlockingResponse with an empty LLM response, falling back
-  // to a small demo proposal so the ghost UI still renders.
+  // to a small demo proposal so the ghost UI still renders. We intentionally
+  // omit `scene_id` from the tool input: the executor falls back to
+  // ShootingPlanToolContext.activeSceneId, which the page sets via
+  // setActiveScene() when the user picks a scene from the sidebar. That keeps
+  // the test free of any setMockContext({ SCENE_ID }) bootstrap.
   {
     match:
       /suggerisci blocking|proponi blocking|proponi un blocking|dove metto attori|disposizione blocking|proposta blocking/i,
@@ -438,7 +527,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         tool_uses: [
           {
             name: "propose_blocking_for_scene",
-            input: { scene_id: "{{SCENE_ID}}" },
+            input: {},
           },
         ],
         stop_reason: "tool_use",

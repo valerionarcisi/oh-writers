@@ -48,6 +48,10 @@ import {
 } from "./cesare-shooting-plan-tools";
 import { CESARE_READ_TOOLS, tryExecuteReadTool } from "./cesare-read-tools";
 import {
+  CESARE_SCREENPLAY_TOOLS,
+  executeScreenplayTool,
+} from "./cesare-screenplay-tools";
+import {
   CESARE_DOCUMENT_GEN_TOOLS,
   executeDocumentGenTool,
   isDocumentGenToolName,
@@ -1353,12 +1357,6 @@ export const runScreenplayToolLoop = (
   model: string,
   forcedFirstTool?: string,
 ): ResultAsync<string, CesareError> => {
-  // Dynamic import to keep the screenplay-tools bundle out of pages that
-  // don't use it. The module also exports the tool definitions and the
-  // executor, both server-side only.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const screenplay =
-    require("./cesare-screenplay-tools") as typeof import("./cesare-screenplay-tools");
   return runGenericToolLoop({
     client,
     systemPrompt,
@@ -1368,13 +1366,13 @@ export const runScreenplayToolLoop = (
     model,
     forcedFirstTool,
     tools: [
-      ...screenplay.CESARE_SCREENPLAY_TOOLS,
+      ...CESARE_SCREENPLAY_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
       if (readFallthrough) return readFallthrough;
-      return screenplay.executeScreenplayTool(block, dbArg, projectIdArg);
+      return executeScreenplayTool(block, dbArg, projectIdArg);
     },
   });
 };

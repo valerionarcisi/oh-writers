@@ -36,10 +36,9 @@ export async function waitForCesareReply(page: Page): Promise<string> {
   // The conversation log contains the user message immediately after send and
   // gains a second paragraph (assistant reply) when the server responds.
   await expect
-    .poll(
-      async () => (await log.locator("p").count()) >= 2,
-      { timeout: 30_000 },
-    )
+    .poll(async () => (await log.locator("p").count()) >= 2, {
+      timeout: 30_000,
+    })
     .toBe(true);
   const paragraphs = log.locator("p");
   const n = await paragraphs.count();
@@ -82,4 +81,28 @@ export async function clearMockContext(page: Page): Promise<void> {
     data: { context: {} },
     headers: { "Content-Type": "application/json" },
   });
+}
+
+/**
+ * Wipe transient screenplay state for a project (draft versions left over from
+ * a previous Cesare proposal, in-memory PROPOSAL_STORE bucket). Tests call
+ * this in `beforeEach` so a draft-banner widget from a prior test cannot
+ * intercept clicks on the Cesare textarea in the next one.
+ */
+export async function resetScreenplayState(
+  page: Page,
+  projectId: string,
+): Promise<void> {
+  const response = await page.request.post(
+    `${BASE_URL}/api/test/reset-screenplay-state`,
+    {
+      data: { projectId },
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  if (!response.ok()) {
+    throw new Error(
+      `resetScreenplayState failed: ${response.status()} ${response.statusText()}`,
+    );
+  }
 }

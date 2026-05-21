@@ -139,7 +139,20 @@ interface ProposalBucket {
   drafts: DraftRevisionProposal[];
 }
 
-const PROPOSAL_STORE = new Map<string, ProposalBucket>();
+// Bind the store to globalThis so every module instance Vite/Tanstack Start
+// creates (api routes + .server.ts server functions go through different
+// bundler transforms and can end up with separate module copies in dev) sees
+// the same Map. Without this guard, a draft pushed via a server function is
+// invisible to an api route that imports the same module name.
+const STORE_KEY = Symbol.for("oh-writers.screenplay-proposal-store");
+type GlobalWithStore = {
+  [k: symbol]: Map<string, ProposalBucket> | undefined;
+};
+const g = globalThis as unknown as GlobalWithStore;
+const PROPOSAL_STORE: Map<string, ProposalBucket> = (g[STORE_KEY] ??= new Map<
+  string,
+  ProposalBucket
+>());
 
 const getBucket = (screenplayId: string): ProposalBucket => {
   const existing = PROPOSAL_STORE.get(screenplayId);

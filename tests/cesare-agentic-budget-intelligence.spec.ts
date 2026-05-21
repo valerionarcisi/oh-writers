@@ -94,8 +94,9 @@ test.describe("[Spec 30] Cesare Agentic — Budget intelligence", () => {
   }) => {
     await navigateToBudget(authenticatedPage, BUDGET_PROJECT_ID);
 
-    // Click the "Settimane" tab in the SegmentedControl.
-    await authenticatedPage.getByRole("button", { name: "Settimane" }).click();
+    // Click the "Settimane" tab in the SegmentedControl. The button carries
+    // role="tab" so we target it by its testid rather than the button role.
+    await authenticatedPage.getByTestId("segmented-weekly").click();
 
     await expect(
       authenticatedPage.getByTestId("budget-weekly-view"),
