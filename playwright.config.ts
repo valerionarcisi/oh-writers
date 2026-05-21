@@ -15,7 +15,15 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env["CI"],
   retries: process.env["CI"] ? 2 : 0,
-  reporter: [["html", { open: "never" }]],
+  // Default 30s is tight on CI for tool-loop tests: a single Cesare turn
+  // can hit a cold vinxi route + execute a DB query, easily 20-40s before
+  // the response paragraph appears. Local runs stay under 10s.
+  timeout: process.env["CI"] ? 90_000 : 30_000,
+  // `html` for the artifact upload, `list` so failures appear in CI stdout
+  // (overriding from CLI would drop the html report and break the upload).
+  reporter: process.env["CI"]
+    ? [["list"], ["html", { open: "never" }]]
+    : [["html", { open: "never" }]],
   use: {
     baseURL: TEST_BASE_URL,
     trace: "on-first-retry",

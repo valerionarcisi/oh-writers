@@ -35,9 +35,13 @@ export async function waitForCesareReply(page: Page): Promise<string> {
   const log = page.getByRole("log", { name: /Cesare/i });
   // The conversation log contains the user message immediately after send and
   // gains a second paragraph (assistant reply) when the server responds.
+  // 60s timeout: tool-loop requests (estimate_scene_cost, read_scene) need
+  // a server round-trip + a real DB query; on CI runners with cold vinxi
+  // dev caches the first-after-start request can take 20-40s before the
+  // route handler is JIT-compiled. Local runs return in ~2-3s.
   await expect
     .poll(async () => (await log.locator("p").count()) >= 2, {
-      timeout: 30_000,
+      timeout: 60_000,
     })
     .toBe(true);
   const paragraphs = log.locator("p");
