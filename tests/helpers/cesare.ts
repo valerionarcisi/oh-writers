@@ -20,22 +20,35 @@ export async function sendCesareMessage(
   text: string,
 ): Promise<void> {
   const input = page.getByPlaceholder("Chiedi a Cesare…");
-  await input.click();
-  // `fill` sets the value via a single change event; on CI the React
-  // controlled-input state hasn't picked it up yet when we press Enter,
-  // so the form's `isSubmitDisabled` check still sees an empty string and
-  // swallows the submit. Type the text instead — each keystroke fires a
-  // real input event the React state can react to.
-  await input.pressSequentially(text, { delay: 5 });
-  // Wait for React to flip the submit button from disabled→enabled. This
-  // is the same gate the UI uses and it is the canonical signal that the
-  // controlled-input value has been propagated. Without it, pressing
-  // Enter on slow CI runners can race the form's onKeyDown handler.
-  // The button is the next focusable sibling of the textarea.
+  await input.waitFor({ state: "visible", timeout: 10_000 });
+
+  // CesareSheet uses a React-controlled <textarea>. Two CI-specific quirks
+  // bit us repeatedly:
+  //   - `input.fill(text)` produces one synthetic event that React sometimes
+  //     hasn't reconciled when the next keypress fires.
+  //   - `pressSequentially` types one char at a time but the GitHub runner
+  //     can drop the focus mid-stream, so the form sees an empty string.
+  //
+  // The robust path is to write the value directly into the DOM and fire
+  // an explicit `input` event through React's prototype setter — the same
+  // technique React Testing Library uses for "fireEvent.input". That makes
+  // the controlled-input state catch up before we click.
+  await input.evaluate((el, value) => {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    setter?.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, text);
+
+  // Confirm the value made it into the DOM (catches the cases where the
+  // setter ran on a stale node after a re-render).
+  await expect(input).toHaveValue(text, { timeout: 5_000 });
+
+  // Wait for React to flip the submit button enabled, then click it.
   const sendBtn = input.locator("xpath=following::button[1]");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
-  // Click the send button directly — Enter still works in dev but click
-  // is the deterministic path that mirrors a real user.
   await sendBtn.click();
 }
 
