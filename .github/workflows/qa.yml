@@ -94,7 +94,22 @@ jobs:
       - name: Seed test DB
         run: pnpm db:seed:reset
       - name: Mock E2E (Cesare agentic, --project=mock-ui)
-        run: pnpm test:e2e --project=mock-ui
+        # `list` reporter prints each failing test name + assertion to stdout,
+        # so the failure surfaces in the CI log even when the HTML artifact
+        # cannot be downloaded.
+        run: pnpm test:e2e --project=mock-ui --reporter=list
+      - name: Dump failing-test details on failure
+        if: failure()
+        run: |
+          set -e
+          echo "=== playwright-report/index.html (first 2000 lines) ==="
+          if [ -f playwright-report/index.html ]; then
+            head -2000 playwright-report/index.html
+          else
+            echo "(no html report)"
+          fi
+          echo "=== test-results/ (if any) ==="
+          ls -la test-results/ 2>/dev/null || echo "(no test-results)"
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
