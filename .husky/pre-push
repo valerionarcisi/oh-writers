@@ -10,7 +10,9 @@ pnpm lint
 echo "→ Unit tests (Vitest)"
 pnpm test:unit
 
-echo "→ Mock E2E (Playwright, MOCK_AI=true, --project=mock-ui)"
-MOCK_AI=true pnpm test:e2e --project=mock-ui
-
-echo "✓ All QA gates passed. Pushing."
+# E2E mock-ui intentionally moved to CI only — keeping the local hook under
+# ~30s avoids the temptation of `--no-verify` and the flake noise that came
+# from running the full Playwright suite on every push. CI runs the same
+# command (pnpm test:e2e --project=mock-ui) and blocks merges via branch
+# protection.
+echo "✓ Local QA gates passed. Pushing — CI will run the E2E suite."
