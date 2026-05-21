@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup B — Prodotto + persona + stato — Oh Writers</title>
+    <link rel="stylesheet" href="../assets/css/main.css" />
+    <style>
+      .mockup-banner {
+        background: var(--ds-text);
+        color: var(--ds-text-on-dark);
+        padding: var(--ds-space-3) var(--ds-space-6);
+        text-align: center;
+        font-family: var(--ds-font-mono);
+        font-size: 12px;
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+      }
+      .mockup-banner strong { color: var(--ds-clay-50); }
+
+      /* Hero micro-strip */
+      .hero-strip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        color: var(--ds-text-3);
+        margin-block-end: var(--ds-space-4);
+      }
+      .hero-strip__avatar {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--ds-linen-300), var(--ds-linen-500));
+        flex-shrink: 0;
+      }
+
+      /* Chi sono */
+      .about { background: var(--ds-surface); }
+      .about__grid {
+        display: grid;
+        gap: var(--ds-space-10);
+        grid-template-columns: 1fr;
+        align-items: center;
+      }
+      @media (min-width: 900px) {
+        .about__grid { grid-template-columns: 280px 1fr; }
+      }
+      .about__portrait {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        background: linear-gradient(160deg, var(--ds-linen-200) 0%, var(--ds-linen-300) 60%, var(--ds-linen-400) 100%);
+        border-radius: var(--ds-radius-md);
+        border: 1px solid var(--ds-line);
+        position: relative;
+        box-shadow: var(--ds-shadow-2);
+      }
+      .about__portrait::after {
+        content: "Foto Valerio"; position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-mono); font-size: 11px; color: var(--ds-text-faint);
+        letter-spacing: var(--tracking-wide); text-transform: uppercase;
+      }
+      .about__name {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-medium);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-1);
+      }
+      .about__role {
+        font-size: var(--text-sm); color: var(--ds-text-3);
+        font-family: var(--ds-font-mono);
+        letter-spacing: var(--tracking-wide); text-transform: uppercase;
+        margin-block-end: var(--ds-space-5);
+      }
+      .about__bio {
+        font-size: var(--text-base); line-height: var(--leading-relaxed);
+        color: var(--ds-text-2); margin-block-end: var(--ds-space-4);
+      }
+
+      /* Milestones */
+      .milestones {
+        display: grid;
+        gap: var(--ds-space-4);
+        grid-template-columns: 1fr;
+        margin-block-start: var(--ds-space-8);
+      }
+      @media (min-width: 720px) {
+        .milestones { grid-template-columns: repeat(3, 1fr); }
+      }
+      .milestone {
+        padding: var(--ds-space-5);
+        background: var(--ds-bg);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-2);
+      }
+      .milestone[data-state="done"] { border-color: var(--ds-agent); background: var(--ds-agent-soft); }
+      .milestone__check {
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: var(--ds-surface);
+        border: 2px solid var(--ds-line);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-mono); font-size: 12px; font-weight: 700;
+        color: var(--ds-text-faint);
+      }
+      .milestone[data-state="done"] .milestone__check {
+        background: var(--ds-agent);
+        border-color: var(--ds-agent);
+        color: var(--ds-text-on-dark);
+      }
+      .milestone__when {
+        font-family: var(--ds-font-mono); font-size: 11px;
+        letter-spacing: var(--tracking-wide); text-transform: uppercase;
+        color: var(--ds-text-3);
+      }
+      .milestone__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-lg); font-weight: var(--weight-medium);
+        letter-spacing: var(--tracking-tight);
+      }
+      .milestone__desc {
+        font-size: var(--text-sm); color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+      }
+
+      /* Per chi */
+      .target__grid {
+        display: grid;
+        gap: var(--ds-space-5);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .target__grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      .target-card {
+        padding: var(--ds-space-5);
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-md);
+      }
+      .target-card__avatar {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: var(--ds-action-soft);
+        color: var(--ds-action);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-display); font-style: italic;
+        font-size: 18px; font-weight: 600;
+        margin-block-end: var(--ds-space-4);
+      }
+      .target-card__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-lg); font-weight: var(--weight-medium);
+        margin-block-end: var(--ds-space-2);
+      }
+      .target-card__desc {
+        font-size: var(--text-sm); color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+      }
+
+      /* Footer ricco */
+      .footer-rich {
+        background: var(--ds-text);
+        color: var(--ds-text-on-dark);
+        padding-block: var(--ds-space-10) var(--ds-space-6);
+      }
+      .footer-rich__grid {
+        display: grid; gap: var(--ds-space-8);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .footer-rich__grid { grid-template-columns: 2fr 1fr 1fr; }
+      }
+      .footer-rich h4 {
+        font-family: var(--ds-font-mono); font-size: 11px;
+        letter-spacing: var(--tracking-caps); text-transform: uppercase;
+        color: var(--ds-linen-400);
+        margin-block-end: var(--ds-space-3);
+        font-weight: var(--weight-medium);
+      }
+      .footer-rich__brand {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-xl);
+        margin-block-end: var(--ds-space-3);
+      }
+      .footer-rich__brand em { color: var(--ds-clay-50); font-style: italic; }
+      .footer-rich__tag {
+        font-size: var(--text-sm); color: var(--ds-linen-300);
+        max-width: 360px; line-height: var(--leading-relaxed);
+      }
+      .footer-rich__list { list-style: none; padding: 0; }
+      .footer-rich__list li { margin-block: 6px; }
+      .footer-rich__list a {
+        color: var(--ds-linen-100);
+        font-size: var(--text-sm);
+      }
+      .footer-rich__list a:hover { color: var(--ds-clay-50); }
+      .footer-rich__meta {
+        margin-block-start: var(--ds-space-8);
+        padding-block-start: var(--ds-space-5);
+        border-block-start: 1px solid color-mix(in srgb, var(--ds-linen-100) 12%, transparent);
+        display: flex; justify-content: space-between;
+        font-family: var(--ds-font-mono); font-size: 11px;
+        color: var(--ds-linen-400);
+        letter-spacing: var(--tracking-wide); text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mockup-banner">
+      Mockup <strong>B — Prodotto + persona + stato</strong> · media · +3-4h
+    </div>
+
+    <!-- Hero con micro-strip -->
+    <header class="hero">
+      <div class="container hero__inner">
+        <span class="hero-strip">
+          <span class="hero-strip__avatar"></span>
+          Di Valerio Narcisi · regista e sceneggiatore
+        </span>
+        <h1 class="hero__title">
+          La prima casa creativa per chi scrive <em>e</em> manda in macchina un film.
+        </h1>
+        <p class="hero__subtitle">
+          Logline, scaletta, sceneggiatura, spoglio, location, piano inquadrature,
+          calendario di ripresa e budget — un solo posto, un solo film.
+        </p>
+        <div class="hero__actions">
+          <a class="btn btn--primary btn--lg" href="#">Provalo qui sotto</a>
+          <a class="btn btn--ghost btn--lg" href="mailto:valerio.narcisi@gmail.com">Scrivimi</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- A che punto siamo -->
+    <section class="section section--alt">
+      <div class="container">
+        <p class="section__eyebrow">A che punto siamo</p>
+        <h2 class="section__title">Trasparenza sulla roadmap.</h2>
+        <p class="section__lead">
+          Niente hype. Cosa funziona oggi, cosa apriremo presto, cosa arriva dopo.
+        </p>
+        <div class="milestones">
+          <article class="milestone" data-state="done">
+            <span class="milestone__check">✓</span>
+            <span class="milestone__when">Ora · 2026</span>
+            <h3 class="milestone__title">MVP funzionante</h3>
+            <p class="milestone__desc">
+              Otto strumenti integrati. Lo uso ogni giorno per i miei progetti.
+              Pronto per i primi early adopter.
+            </p>
+          </article>
+          <article class="milestone">
+            <span class="milestone__check">02</span>
+            <span class="milestone__when">Q3 2026</span>
+            <h3 class="milestone__title">Beta privata</h3>
+            <p class="milestone__desc">
+              20 filmmaker selezionati. Sessioni di onboarding 1-a-1.
+              Feedback diretto su roadmap.
+            </p>
+          </article>
+          <article class="milestone">
+            <span class="milestone__check">03</span>
+            <span class="milestone__when">2027</span>
+            <h3 class="milestone__title">Apertura pubblica</h3>
+            <p class="milestone__desc">
+              Iscrizioni aperte. App companion iOS/Android per location scouting
+              e revisione su set.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Per chi -->
+    <section class="section">
+      <div class="container">
+        <p class="section__eyebrow">Per chi</p>
+        <h2 class="section__title">Costruito per il cinema indipendente italiano.</h2>
+        <p class="section__lead">
+          Non per studios da 50 persone. Per chi fa film con un'idea, una troupe ridotta
+          e tanto da coordinare.
+        </p>
+        <div class="target__grid">
+          <article class="target-card">
+            <div class="target-card__avatar">R</div>
+            <h3 class="target-card__title">Writer-director indipendente</h3>
+            <p class="target-card__desc">
+              Scrivi e diriggi i tuoi film. Hai bisogno che lo strumento sappia tutto —
+              non solo la sceneggiatura.
+            </p>
+          </article>
+          <article class="target-card">
+            <div class="target-card__avatar">P</div>
+            <h3 class="target-card__title">Producer indipendente</h3>
+            <p class="target-card__desc">
+              Compagnia piccola, budget ridotto. Vuoi sapere prima quanto costa la storia,
+              non dopo che è già scritta.
+            </p>
+          </article>
+          <article class="target-card">
+            <div class="target-card__avatar">S</div>
+            <h3 class="target-card__title">Studente DAMS / scuole di cinema</h3>
+            <p class="target-card__desc">
+              Stai imparando a fare un film intero. Ti serve uno strumento che ti accompagni
+              dal soggetto al primo ciak.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chi sono -->
+    <section class="section section--alt about">
+      <div class="container">
+        <p class="section__eyebrow">Chi c'è dietro</p>
+        <h2 class="section__title">Oh Writers nasce dal set, non dal codice.</h2>
+        <div class="about__grid">
+          <div class="about__portrait" aria-hidden="true"></div>
+          <div class="about__body">
+            <h3 class="about__name">Valerio Narcisi</h3>
+            <p class="about__role">Regista · Sceneggiatore · Fondatore</p>
+            <p class="about__bio">
+              Vivo a Porto Sant'Elpidio, in provincia di Fermo. Lavoro come regista e sceneggiatore da oltre dieci anni —
+              cortometraggi, documentari, qualche spot. La frustrazione di saltare tra
+              otto strumenti diversi mi ha accompagnato per tutta la carriera.
+            </p>
+            <p class="about__bio">
+              Oh Writers è la risposta. Non un giocattolo: lo uso ogni giorno
+              per i miei progetti.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer ricco -->
+    <footer class="footer-rich">
+      <div class="container">
+        <div class="footer-rich__grid">
+          <div>
+            <p class="footer-rich__brand">Oh <em>Writers</em></p>
+            <p class="footer-rich__tag">
+              Una casa creativa per chi scrive e manda in macchina un film.
+              Costruita a Porto Sant'Elpidio, da chi fa cinema.
+            </p>
+          </div>
+          <div>
+            <h4>Contatti</h4>
+            <ul class="footer-rich__list">
+              <li><a href="mailto:valerio.narcisi@gmail.com">valerio.narcisi@gmail.com</a></li>
+              <li><a href="https://linkedin.com">LinkedIn</a></li>
+              <li><a href="https://imdb.com">IMDb</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Risorse</h4>
+            <ul class="footer-rich__list">
+              <li><a href="#tour">Tour del prodotto</a></li>
+              <li><a href="#stato">A che punto siamo</a></li>
+              <li><a href="#privacy">I tuoi dati</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-rich__meta">
+          <span>Oh Writers · 2026 · Porto Sant'Elpidio (FM) · Pagina riservata</span>
+          <span>Aggiornata · 21 Mag 2026</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

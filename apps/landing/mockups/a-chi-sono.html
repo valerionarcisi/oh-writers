@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup A — "Chi sono" — Oh Writers</title>
+    <link rel="stylesheet" href="../assets/css/main.css" />
+    <style>
+      .mockup-banner {
+        background: var(--ds-text);
+        color: var(--ds-text-on-dark);
+        padding: var(--ds-space-3) var(--ds-space-6);
+        text-align: center;
+        font-family: var(--ds-font-mono);
+        font-size: 12px;
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+      }
+      .mockup-banner strong { color: var(--ds-clay-50); }
+
+      /* ── Chi sono section ── */
+      .about {
+        background: var(--ds-surface);
+      }
+      .about__grid {
+        display: grid;
+        gap: var(--ds-space-10);
+        grid-template-columns: 1fr;
+        align-items: center;
+      }
+      @media (min-width: 900px) {
+        .about__grid {
+          grid-template-columns: 320px 1fr;
+        }
+      }
+      .about__portrait {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        background:
+          linear-gradient(160deg, var(--ds-linen-200) 0%, var(--ds-linen-300) 60%, var(--ds-linen-400) 100%);
+        border-radius: var(--ds-radius-md);
+        border: 1px solid var(--ds-line);
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--ds-shadow-2);
+      }
+      .about__portrait::after {
+        content: "Foto Valerio";
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-faint);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+      .about__body { max-width: 580px; }
+      .about__name {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-medium);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-2);
+      }
+      .about__role {
+        font-size: var(--text-sm);
+        color: var(--ds-text-3);
+        font-family: var(--ds-font-mono);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+        margin-block-end: var(--ds-space-5);
+      }
+      .about__bio {
+        font-size: var(--text-base);
+        line-height: var(--leading-relaxed);
+        color: var(--ds-text-2);
+        margin-block-end: var(--ds-space-5);
+      }
+      .about__bio + .about__bio { margin-block-start: 0; }
+      .about__links {
+        display: flex;
+        gap: var(--ds-space-3);
+        flex-wrap: wrap;
+        font-size: var(--text-sm);
+      }
+      .about__link {
+        color: var(--ds-text-2);
+        text-decoration: none;
+        padding: 6px var(--ds-space-3);
+        background: var(--ds-bg);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-pill);
+        transition: all var(--ds-duration-1) var(--ds-ease);
+      }
+      .about__link:hover {
+        color: var(--ds-text);
+        border-color: var(--ds-text-mute);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mockup-banner">
+      Mockup <strong>A — "Chi sono"</strong> · minima · +1h
+    </div>
+
+    <section class="section section--alt about">
+      <div class="container">
+        <p class="section__eyebrow">Chi c'è dietro</p>
+        <h2 class="section__title">Oh Writers nasce dal set, non dal codice.</h2>
+        <p class="section__lead">
+          L'ho costruito perché lo strumento che avrei voluto avere come regista non esisteva.
+        </p>
+        <div class="about__grid">
+          <div class="about__portrait" aria-hidden="true"></div>
+          <div class="about__body">
+            <h3 class="about__name">Valerio Narcisi</h3>
+            <p class="about__role">Regista · Sceneggiatore · Fondatore</p>
+            <p class="about__bio">
+              Vivo a Porto Sant'Elpidio, in provincia di Fermo. Lavoro come regista e sceneggiatore da oltre dieci anni —
+              cortometraggi, documentari, qualche spot. La frustrazione di saltare tra
+              otto strumenti diversi per portare un film dalla scrivania al set
+              mi ha accompagnato per tutta la carriera.
+            </p>
+            <p class="about__bio">
+              Oh Writers è la risposta che ho costruito. Non un'astrazione, non un giocattolo:
+              lo uso ogni giorno per i miei progetti. Quello che vedi qui è quello che a me serve davvero.
+            </p>
+            <div class="about__links">
+              <a href="mailto:valerio.narcisi@gmail.com" class="about__link">✉ valerio.narcisi@gmail.com</a>
+              <a href="https://linkedin.com" class="about__link">in LinkedIn</a>
+              <a href="https://imdb.com" class="about__link">IMDb</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p style="text-align:center; padding: var(--ds-space-8); color: var(--ds-text-3); font-family: var(--ds-font-mono); font-size: 12px;">
+      ↑ questa sezione si inserisce tra <strong>Quote</strong> e <strong>CTA finale</strong>
+    </p>
+  </body>
+</html>

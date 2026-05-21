@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oh Writers — Il tour dentro lo strumento</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%231c1a17'/><text x='50%25' y='58%25' text-anchor='middle' dominant-baseline='middle' font-family='Georgia,serif' font-style='italic' font-size='17' fill='%23f5f3ee' font-weight='600'>O</text></svg>" />
+    <link rel="stylesheet" href="./assets/css/main.css" />
+    <style>
+      /* ── Tour-specific overrides ─────────────────────────── */
+      .tour-nav {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: color-mix(in srgb, var(--ds-bg) 92%, transparent);
+        backdrop-filter: blur(12px) saturate(160%);
+        border-block-end: 1px solid var(--ds-line);
+      }
+      .tour-nav__inner {
+        display: flex;
+        align-items: center;
+        gap: var(--ds-space-4);
+        height: 56px;
+      }
+      .tour-nav__back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        color: var(--ds-text-2);
+        font-size: 13px;
+        font-weight: var(--weight-medium);
+      }
+      .tour-nav__back:hover { color: var(--ds-text); }
+      .tour-nav__brand {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        font-family: var(--ds-font-display);
+        font-size: var(--text-base);
+      }
+      .tour-nav__brand em { color: var(--ds-action); font-style: italic; }
+      .tour-nav__mark {
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: var(--ds-text);
+        color: var(--ds-text-on-dark);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-display); font-style: italic;
+        font-size: 14px; font-weight: 600;
+      }
+      .tour-nav__spacer { flex: 1; }
+      .tour-nav__counter {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-3);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+
+      /* ── Tour intro ── */
+      .tour-intro {
+        padding-block: var(--ds-space-20) var(--ds-space-16);
+        position: relative;
+        overflow: hidden;
+      }
+      .tour-intro::before {
+        content: "";
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse at 25% 20%, var(--ds-action-soft), transparent 55%),
+          radial-gradient(ellipse at 75% 60%, var(--ds-agent-soft), transparent 50%);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .tour-intro__inner {
+        position: relative;
+        max-width: 720px;
+      }
+      .tour-intro__title {
+        font-family: var(--ds-font-display);
+        font-size: clamp(40px, 4.5vw, 64px);
+        font-weight: var(--weight-normal);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-6);
+        text-wrap: balance;
+      }
+      .tour-intro__title em { color: var(--ds-action); font-style: italic; }
+      .tour-intro__lead {
+        font-size: var(--text-xl);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        margin-block-end: var(--ds-space-5);
+      }
+      .tour-intro__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--ds-space-3);
+        margin-block-start: var(--ds-space-6);
+      }
+      .meta-pill {
+        display: inline-flex; align-items: center; gap: var(--ds-space-2);
+        padding: 6px var(--ds-space-3);
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-pill);
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-2);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+      .meta-pill__dot { width: 6px; height: 6px; border-radius: 50%; }
+      .meta-pill__dot--ok { background: var(--ds-agent); }
+      .meta-pill__dot--build { background: var(--ds-action); }
+      .meta-pill__dot--idea { background: var(--ds-line); border: 1px solid var(--ds-text-mute); }
+
+      /* ── Index (table of contents) ── */
+      .tour-index {
+        background: var(--ds-surface);
+        border-block: 1px solid var(--ds-line);
+      }
+      .tour-index__inner {
+        display: grid;
+        gap: var(--ds-space-3);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .tour-index__inner { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (min-width: 1024px) {
+        .tour-index__inner { grid-template-columns: repeat(3, 1fr); }
+      }
+      .tour-index__item {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--ds-space-3);
+        padding: var(--ds-space-3);
+        border: 1px solid transparent;
+        border-radius: var(--ds-radius-md);
+        color: var(--ds-text);
+        transition: all var(--ds-duration-1) var(--ds-ease);
+      }
+      .tour-index__item:hover {
+        background: var(--ds-bg);
+        border-color: var(--ds-line);
+      }
+      .tour-index__num {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-action);
+        font-weight: var(--weight-semibold);
+        padding-block-start: 4px;
+        min-width: 24px;
+      }
+      .tour-index__label {
+        font-family: var(--ds-font-sans);
+        font-size: 14px;
+        font-weight: var(--weight-medium);
+        line-height: 1.4;
+      }
+      .tour-index__sub {
+        display: block;
+        font-size: 11px;
+        font-family: var(--ds-font-mono);
+        color: var(--ds-text-3);
+        margin-block-start: 2px;
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+
+      /* ── Chapter ── */
+      .chapter {
+        padding-block: var(--ds-space-16);
+        scroll-margin-top: 64px;
+      }
+      .chapter:nth-of-type(even) {
+        background: var(--ds-surface);
+        border-block: 1px solid var(--ds-line);
+      }
+      .chapter__header {
+        max-width: var(--max-width-content);
+        margin-block-end: var(--ds-space-10);
+      }
+      .chapter__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-3);
+        font-family: var(--ds-font-mono);
+        font-size: 12px;
+        font-weight: var(--weight-semibold);
+        color: var(--ds-action);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        margin-block-end: var(--ds-space-4);
+      }
+      .chapter__num {
+        font-family: var(--ds-font-display);
+        font-style: italic;
+        font-weight: var(--weight-normal);
+        font-size: 22px;
+        color: var(--ds-text-mute);
+      }
+      .chapter__title {
+        font-family: var(--ds-font-display);
+        font-size: clamp(28px, 3vw, 44px);
+        font-weight: var(--weight-normal);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-4);
+        text-wrap: balance;
+      }
+      .chapter__title em { color: var(--ds-action); font-style: italic; }
+      .chapter__lead {
+        font-size: var(--text-lg);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+      }
+
+      .chapter__screen {
+        margin-block-end: var(--ds-space-8);
+      }
+      .screen {
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-lg);
+        overflow: hidden;
+        box-shadow: var(--ds-shadow-3);
+      }
+      .screen__chrome {
+        display: flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        padding: var(--ds-space-3) var(--ds-space-4);
+        background: var(--ds-surface-alt);
+        border-block-end: 1px solid var(--ds-line);
+      }
+      .screen__chrome-dot {
+        width: 11px; height: 11px;
+        border-radius: 50%;
+      }
+      .screen__chrome-dot:nth-child(1) { background: #e07c6c; }
+      .screen__chrome-dot:nth-child(2) { background: #d4a853; }
+      .screen__chrome-dot:nth-child(3) { background: #88a86d; }
+      .screen__chrome-url {
+        margin-inline-start: var(--ds-space-3);
+        font-family: var(--ds-font-mono);
+        font-size: 12px;
+        color: var(--ds-text-3);
+      }
+      .screen__img {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: var(--ds-bg);
+      }
+
+      .chapter__body {
+        display: grid;
+        gap: var(--ds-space-8);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 900px) {
+        .chapter__body { grid-template-columns: 1.4fr 1fr; }
+      }
+      .chapter__text p {
+        font-size: var(--text-base);
+        line-height: var(--leading-relaxed);
+        color: var(--ds-text);
+        margin-block-end: var(--ds-space-4);
+      }
+      .chapter__text p:last-child { margin-block-end: 0; }
+      .chapter__text strong { color: var(--ds-action); font-weight: var(--weight-semibold); }
+
+      .status-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-3);
+      }
+      .status {
+        padding: var(--ds-space-4);
+        background: var(--ds-bg);
+        border-radius: var(--ds-radius-md);
+        border-inline-start: 3px solid var(--ds-line);
+      }
+      .status--ok { border-inline-start-color: var(--ds-agent); }
+      .status--build { border-inline-start-color: var(--ds-action); }
+      .status--idea { border-inline-start-color: var(--ds-text-mute); }
+
+      .status__label {
+        font-family: var(--ds-font-mono);
+        font-size: 10px;
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        margin-block-end: var(--ds-space-2);
+      }
+      .status--ok .status__label { color: var(--ds-agent); }
+      .status--build .status__label { color: var(--ds-action); }
+      .status--idea .status__label { color: var(--ds-text-mute); }
+
+      .status__text {
+        font-size: var(--text-sm);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+      }
+
+      /* ── Anecdote box (the stellato story) ── */
+      .anecdote {
+        margin-block-start: var(--ds-space-8);
+        padding: var(--ds-space-6);
+        background: var(--ds-agent-soft);
+        border-radius: var(--ds-radius-md);
+        border-inline-start: 3px solid var(--ds-agent);
+        max-width: 760px;
+      }
+      .anecdote__label {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        color: var(--ds-agent);
+        margin-block-end: var(--ds-space-3);
+      }
+      .anecdote__text {
+        font-family: var(--ds-font-display);
+        font-style: italic;
+        font-size: var(--text-lg);
+        line-height: var(--leading-relaxed);
+        color: var(--ds-text);
+      }
+      .anecdote__text strong {
+        font-style: normal;
+        color: var(--ds-action);
+        font-weight: var(--weight-semibold);
+      }
+
+      /* ── Closing ── */
+      .closing {
+        padding-block: var(--ds-space-20);
+        position: relative;
+        overflow: hidden;
+      }
+      .closing::before {
+        content: "";
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse at 50% 30%, var(--ds-action-soft), transparent 60%);
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .closing__inner {
+        position: relative;
+        max-width: 640px;
+        text-align: center;
+        margin-inline: auto;
+      }
+      .closing__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-3xl);
+        font-weight: var(--weight-normal);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-5);
+      }
+      .closing__lead {
+        font-size: var(--text-lg);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        margin-block-end: var(--ds-space-8);
+      }
+      .closing__email {
+        font-family: var(--ds-font-mono);
+        font-size: var(--text-base);
+        color: var(--ds-action);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="tour-nav">
+      <div class="container tour-nav__inner">
+        <a href="./" class="tour-nav__back">← Indice</a>
+        <span class="tour-nav__brand">
+          <span class="tour-nav__mark">O</span>
+          Oh <em>Writers</em>
+        </span>
+        <span class="tour-nav__spacer"></span>
+        <span class="tour-nav__counter">Tour del prodotto · maggio 2026</span>
+      </div>
+    </nav>
+
+    <!-- Intro -->
+    <header class="tour-intro">
+      <div class="container tour-intro__inner">
+        <p class="eyebrow"><span class="eyebrow__dot"></span> Tour del prodotto</p>
+        <h1 class="tour-intro__title">
+          Cosa c'è già dentro, <em>davvero</em>.
+        </h1>
+        <p class="tour-intro__lead">
+          Non un mockup. Non una promessa. Sono dentro Oh Writers che gira sul mio
+          computer, mentre scrivo questo. Quello che vedi qui sotto è un giro
+          completo nello strumento — screenshot reali, due progetti veri,
+          uno spettro onesto di cosa funziona oggi e cosa sto ancora costruendo.
+        </p>
+        <p class="tour-intro__lead">
+          Tempo di lettura: 8–10 minuti. Niente fretta.
+        </p>
+        <div class="tour-intro__meta">
+          <span class="meta-pill"><span class="meta-pill__dot meta-pill__dot--ok"></span> Funziona</span>
+          <span class="meta-pill"><span class="meta-pill__dot meta-pill__dot--build"></span> Sto costruendo</span>
+          <span class="meta-pill"><span class="meta-pill__dot meta-pill__dot--idea"></span> Ancora idea</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Index -->
+    <section class="section tour-index">
+      <div class="container">
+        <p class="section__eyebrow">Indice</p>
+        <h2 class="section__title">Nove tappe, dal foglio bianco al ciak.</h2>
+        <div class="tour-index__inner">
+          <a class="tour-index__item" href="#cap-01">
+            <span class="tour-index__num">01</span>
+            <span>
+              <span class="tour-index__label">La libreria dei progetti</span>
+              <span class="tour-index__sub">dashboard</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-02">
+            <span class="tour-index__num">02</span>
+            <span>
+              <span class="tour-index__label">Il quadro del singolo film</span>
+              <span class="tour-index__sub">panoramica progetto</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-03">
+            <span class="tour-index__num">03</span>
+            <span>
+              <span class="tour-index__label">Soggetto: dove inizia il film</span>
+              <span class="tour-index__sub">scrittura + Cesare</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-04">
+            <span class="tour-index__num">04</span>
+            <span>
+              <span class="tour-index__label">Sceneggiatura in standard</span>
+              <span class="tour-index__sub">screenplay editor</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-05">
+            <span class="tour-index__num">05</span>
+            <span>
+              <span class="tour-index__label">Spoglio automatico</span>
+              <span class="tour-index__sub">breakdown</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-06">
+            <span class="tour-index__num">06</span>
+            <span>
+              <span class="tour-index__label">Budget vivo</span>
+              <span class="tour-index__sub">budget panoramica</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-07">
+            <span class="tour-index__num">07</span>
+            <span>
+              <span class="tour-index__label">Location manager</span>
+              <span class="tour-index__sub">mappa + candidate</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-08">
+            <span class="tour-index__num">08</span>
+            <span>
+              <span class="tour-index__label">Piano inquadrature</span>
+              <span class="tour-index__sub">shot list per scena</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-09">
+            <span class="tour-index__num">09</span>
+            <span>
+              <span class="tour-index__label">Calendarizzazione</span>
+              <span class="tour-index__sub">strip board, giorni</span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 01 — Dashboard -->
+    <section class="chapter" id="cap-01">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">01</span>
+            La libreria dei progetti
+          </p>
+          <h2 class="chapter__title">Tutti i miei film, in un posto solo.</h2>
+          <p class="chapter__lead">
+            Ogni progetto è un film. Non un documento, non una cartella: <em>un film</em>.
+            Sceneggiatura, breakdown, budget, location, schedule — vivono insieme,
+            collegati tra loro.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">oh-writers · /dashboard</span>
+            </div>
+            <img src="./assets/img/tour/tour-01-dashboard.png" alt="Dashboard con due progetti: La città silenziosa e Non fa ridere" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              Qui sopra c'è la mia dashboard reale, oggi. Due progetti veri:
+              <strong>La città silenziosa</strong> (un thriller lungometraggio che sto sviluppando)
+              e <strong>Non fa ridere</strong> (un corto già completo).
+            </p>
+            <p>
+              Ogni card mostra subito quello che conta: formato, genere,
+              progresso dello sviluppo (la barra in basso), numero di scene, pagine,
+              giornate di ripresa, ruolo (owner / editor / lettore).
+            </p>
+            <p>
+              Niente file da nominare. Niente cartelle annidate. Niente "dov'era quel
+              file?". I progetti sono persone con cui lavoro: le riconosco a colpo d'occhio.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Creazione, modifica, archiviazione, filtri per formato/genere/ruolo, condivisione con collaboratori.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Import da Fountain (esiste, da rifinire). Cartelle / serie per raggruppare più stagioni.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 02 — Panoramica progetto -->
+    <section class="chapter" id="cap-02">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">02</span>
+            Il quadro del singolo film
+          </p>
+          <h2 class="chapter__title">Apro un film, vedo dove sono.</h2>
+          <p class="chapter__lead">
+            Quando entro in un progetto, vedo subito a che punto è — non in astratto,
+            in numeri. Pagine, scene, personaggi, location, durata stimata.
+            E sotto, la <em>pipeline</em>: dal soggetto al budget.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">la-città-silenziosa · /panoramica</span>
+            </div>
+            <img src="./assets/img/tour/tour-02-project.png" alt="Panoramica progetto: pipeline di sviluppo, attività recenti, persone" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              <strong>Pipeline di sviluppo</strong> sotto le metriche: sette tappe,
+              da soggetto a calendarizzazione. Quelle col pallino verde sono fatte.
+              Quelle scarpate sono il prossimo passo.
+            </p>
+            <p>
+              A destra, l'<strong>attività</strong>: chi ha toccato cosa, quando.
+              Quando lavoro con un produttore o un altro sceneggiatore, qui vedo
+              cosa è cambiato dall'ultima volta che ho aperto il progetto.
+            </p>
+            <p>
+              Niente versioning manuale. Niente "v_FINALE_definitiva_v3.fdx".
+              Tutto qui dentro è versionato in automatico, sempre.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Pipeline visiva, metriche live, log attività, gestione team con ruoli (owner/editor/lettore), inviti via email.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Statistiche più ricche (tempo speso per fase, vista "dove sono bloccato"). Commenti inline tra collaboratori.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 03 — Soggetto + Cesare -->
+    <section class="chapter" id="cap-03">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">03</span>
+            Soggetto · dove inizia il film
+          </p>
+          <h2 class="chapter__title">Scrivo. <em>Lui</em> ascolta e ragiona.</h2>
+          <p class="chapter__lead">
+            Il soggetto è il primo documento del film. Pagina bianca, font da libro.
+            A destra c'è <em>Cesare</em> — l'assistente. Non mi interrompe, non scrive
+            al posto mio. Quando gli chiedo qualcosa, ragiona sul mio testo, conosce
+            la mia logline, sa di che film parliamo.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">la-città-silenziosa · /soggetto</span>
+            </div>
+            <img src="./assets/img/tour/tour-03-soggetto.png" alt="Editor del soggetto con Cesare nel pannello a destra" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              <strong>A sinistra il testo</strong>, tipografato come un libro: Fraunces, larghezza
+              giusta per leggersi senza fatica, contatore parole/cartelle in basso.
+              Cancellabile, riscrivibile, tutto a mano libera.
+            </p>
+            <p>
+              <strong>A destra Cesare</strong>: una conversazione, non un menu di comandi.
+              Gli scrivo "fammi una versione 2 più tesa", oppure "spostala dieci anni avanti",
+              oppure "cambiale l'ambientazione". Ragiona, propone, mai impone.
+            </p>
+            <p>
+              Ogni proposta è una <strong>versione</strong>. Non sostituisce niente. La leggo,
+              la confronto con la mia, scelgo. Se non mi piace, resta lì come variante.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Editor a tutta pagina, versionamento automatico, conversazione con Cesare consapevole del contesto, diff tra versioni.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Confronto visivo "side-by-side" di più versioni in parallelo. Note a margine come Google Docs.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="anecdote">
+          <p class="anecdote__label">→ Una cosa vera, ieri</p>
+          <p class="anecdote__text">
+            "Ieri stavo lavorando a un soggetto ambientato in una <strong>pizzeria di provincia</strong>.
+            A un certo punto ho chiesto a Cesare: <em>e se fosse uno stellato?</em>
+            Mi ha fatto la <strong>versione 2</strong> spostata in uno stellato — stesso conflitto,
+            altro mondo. Non l'ha applicata. L'ho letta accanto alla mia,
+            ho scelto cosa tenere. È quel <em>secondo cervello accanto</em> che cercavo da anni."
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 04 — Screenplay -->
+    <section class="chapter" id="cap-04">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">04</span>
+            Sceneggiatura
+          </p>
+          <h2 class="chapter__title">Formato standard. Niente da imparare.</h2>
+          <p class="chapter__lead">
+            Layout broadway-style. Courier. Fountain come grammatica sotto il cofano.
+            Esporto PDF o FDX e Final Draft, Highland, WriterDuet lo aprono come fosse loro.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">non-fa-ridere · /screenplay</span>
+            </div>
+            <img src="./assets/img/tour/tour-05-screenplay-hd.png" alt="Editor sceneggiatura: layout broadway, Cesare a destra che lavora sulla scena" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              A sinistra <strong>l'editor</strong>. Scene heading, azione, personaggio,
+              dialogo, parentetiche — tutto col layout giusto, senza pensarci.
+              Tab e Enter portano dove devo andare.
+            </p>
+            <p>
+              A destra <strong>Cesare</strong> mostra suggerimenti contestuali sulla scena
+              che sto scrivendo: aggiusta il ritmo del dialogo, riscrivi più asciutto,
+              proponi una variante alternativa. Tutto opzionale.
+            </p>
+            <p>
+              Export <strong>PDF</strong> impaginato come Final Draft, <strong>FDX</strong> per gli editor mainstream,
+              <strong>Fountain</strong> plain-text per chi lavora a riga di comando.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Editor Monaco con grammatica Fountain, autocomplete dei personaggi, suggerimenti Cesare contestuali, export PDF/FDX/Fountain.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Confronto fra revisioni della stessa scena. Note inline dei collaboratori (come tracked changes Word).</p>
+            </div>
+            <div class="status status--idea">
+              <p class="status__label">○ Ancora idea</p>
+              <p class="status__text">Co-editing in tempo reale (Yjs è pronto sotto, manca solo UI). Lettura su mobile/iPad.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 05 — Breakdown -->
+    <section class="chapter" id="cap-05">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">05</span>
+            Spoglio · breakdown
+          </p>
+          <h2 class="chapter__title">Lo spoglio non lo faccio più a mano.</h2>
+          <p class="chapter__lead">
+            Cast, scenografia, location, mezzi, fotografia, suono, VFX, comparse.
+            Otto categorie standard del cinema. Cesare le estrae scena per scena;
+            io confermo, riassegno, elimino — al massimo correggo qualcosa.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">non-fa-ridere · /breakdown</span>
+            </div>
+            <img src="./assets/img/tour/tour-breakdown.png" alt="Breakdown: scena con elementi estratti per categoria a destra" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              A sinistra <strong>la scena</strong>, esattamente come scritta in sceneggiatura,
+              con highlight colorati per categoria. A destra <strong>la lista degli elementi</strong>
+              estratti, raggruppati.
+            </p>
+            <p>
+              Lo spoglio a mano su un film breve è un pomeriggio. Su un lungo
+              sono giorni. Cesare lo fa in due minuti — io passo dieci minuti a
+              correggere e validare. <strong>Risparmio ore</strong>, ma soprattutto:
+              quello che vedo è collegato a tutto il resto. Aggiungi un'attrice
+              qui, il budget cambia da solo.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Estrazione automatica 8 categorie standard, validazione manuale, elementi ricorrenti tra scene, calcolo costo per elemento.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Export PDF formato "breakdown sheet" Movie Magic compatibile per chi lavora in produzione tradizionale.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 06 — Budget -->
+    <section class="chapter" id="cap-06">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">06</span>
+            Budget · vivo
+          </p>
+          <h2 class="chapter__title">Quanto costa, oggi, questo film.</h2>
+          <p class="chapter__lead">
+            Niente Excel. Il budget si calcola dalla sceneggiatura e dal piano di lavorazione,
+            in tempo reale. Cambio una scena, sposto un giorno — vedo subito l'impatto.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">non-fa-ridere · /budget</span>
+            </div>
+            <img src="./assets/img/tour/tour-budget.png" alt="Panoramica budget: donut chart per categoria, tetto budget, distribuzione spesa" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              In alto <strong>il tetto del budget</strong> (50K in questo corto),
+              con barra di consumo. Subito sotto, totale stimato con scomposizione
+              <strong>donut</strong> per reparto: troupe, cast, location, fotografia.
+            </p>
+            <p>
+              A destra il <strong>cruscotto di stato</strong>: "pronto per il lock", oppure
+              avvisi se qualche categoria sfora, o se mancano stime. Cesare può
+              suggerire dove tagliare se sforo — sempre con un perché.
+            </p>
+            <p>
+              Il vero salto è questo: <strong>il budget non è più giustificazione a posteriori</strong>.
+              È capire prima, mentre scrivi, se quella scena di notte all'esterno
+              ti costa la metà del film o no.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Stime per reparto (troupe, cast, scenografia, locations, fotografia, post), tetto budget, contingency, ricalcolo live al cambio di scene/schedule.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Tariffari italiani per CCNL/sindacato precaricati (oggi inserisco a mano). Confronto budget tra versioni del film.</p>
+            </div>
+            <div class="status status--idea">
+              <p class="status__label">○ Ancora idea</p>
+              <p class="status__text">Integrazione con bandi MIC / regionali — "quanto chiedere e come".</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 07 — Locations -->
+    <section class="chapter" id="cap-07">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">07</span>
+            Location manager
+          </p>
+          <h2 class="chapter__title">Le location, sulla stessa mappa.</h2>
+          <p class="chapter__lead">
+            Per ogni location ci sono candidate vere: indirizzo, foto del sopralluogo,
+            note del location manager, contatti, scene che la usano.
+            Tutto sulla stessa mappa, non in un foglio Excel separato.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">non-fa-ridere · /locations</span>
+            </div>
+            <img src="./assets/img/tour/tour-locations-v2.png" alt="Location manager: mappa di Milano con location del progetto e lista candidate" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              <strong>A sinistra una mappa vera</strong>, integrata con Google Maps.
+              I pin sono le location del film. A destra la <strong>lista delle candidate</strong>:
+              quella già scelta, quelle alternative, quelle da scoutare ancora.
+            </p>
+            <p>
+              Ogni card mostra <strong>quali scene usano quella location</strong>.
+              Funziona benissimo da iPad sul campo: apri la mappa, fai foto al volo,
+              le note restano lì collegate alla scena.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Mappa interattiva, ricerca Google Places, candidate multiple per scena, foto, indirizzo, note, link scene→location.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Permessi e contatti del comune. Calcolo distanza tra location di giornate consecutive (per il piano di lavorazione).</p>
+            </div>
+            <div class="status status--idea">
+              <p class="status__label">○ Ancora idea</p>
+              <p class="status__text">Companion mobile per il location manager sul campo (foto, note vocali, GPS).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 08 — Shot plan -->
+    <section class="chapter" id="cap-08">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">08</span>
+            Piano inquadrature
+          </p>
+          <h2 class="chapter__title">La shotlist, prima del set.</h2>
+          <p class="chapter__lead">
+            Per ogni scena, una lista di inquadrature: campo, lente, movimento, durata, note
+            di regia. Cesare propone una prima copertura partendo dal copione; io e l'operatore
+            la affiniamo prima di arrivare in macchina.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">non-fa-ridere · /shooting-plan</span>
+            </div>
+            <img src="./assets/img/tour/tour-shooting-plan.png" alt="Piano inquadrature: lista scene a sinistra, dettaglio shot a destra" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              <strong>A sinistra la lista delle scene</strong>: quelle pianificate hanno numero
+              di shot e durata; quelle non ancora pianificate sono in chiaro.
+            </p>
+            <p>
+              Cliccando una scena, a destra si apre <strong>la sua shotlist</strong>:
+              per ogni inquadratura, campo (lungo/medio/PP), lente, movimento (fissa/dolly/steady),
+              durata stimata. Posso generare una bozza con Cesare e poi correggere.
+            </p>
+            <p>
+              In basso a destra c'è il <strong>conteggio totale</strong>:
+              ore pianificate, scene completate. Quando arrivo alla calendarizzazione
+              ho già stime affidabili per ogni giorno.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Shotlist per scena, generazione bozza con Cesare, export stampa per la troupe, conteggi (ore, scene fatte).</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Storyboard visuale: posizionamento camera / attori in 2D su pianta della scena. Già abbozzato, da chiudere.</p>
+            </div>
+            <div class="status status--idea">
+              <p class="status__label">○ Ancora idea</p>
+              <p class="status__text">Generazione di sketch / immagini di riferimento per ogni inquadratura.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 09 — Schedule -->
+    <section class="chapter" id="cap-09">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">09</span>
+            Calendarizzazione
+          </p>
+          <h2 class="chapter__title">Le scene diventano giornate di ripresa.</h2>
+          <p class="chapter__lead">
+            Strip board ordinabile per giornata. Cesare propone raggruppamenti
+            intelligenti per location, cast, INT/EST e giorno/notte — minimizza
+            i viaggi e i set-up. Io sposto le strisce a mano, il piano si aggiorna.
+          </p>
+        </header>
+
+        <div class="chapter__screen">
+          <div class="screen">
+            <div class="screen__chrome">
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-dot"></span>
+              <span class="screen__chrome-url">non-fa-ridere · /schedule</span>
+            </div>
+            <img src="./assets/img/tour/tour-schedule.png" alt="Schedule strip board con tre giorni di ripresa e Cesare che suggerisce consolidamenti" class="screen__img" />
+          </div>
+        </div>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              <strong>Tre giorni di ripresa</strong> in colonna, con le strisce di scene
+              che ho assegnato a ognuno. Ogni striscia mostra numero scena,
+              location, durata in pagine (3 1/8, formato standard americano).
+            </p>
+            <p>
+              <strong>In alto Cesare suggerisce</strong>: "sposta SC.4 al G1 per consolidare
+              la location cucina", oppure "G2 è leggero, ci sta un'altra scena breve".
+              Lo ignoro o accetto con un click.
+            </p>
+            <p>
+              Quando arrivo al primo ciak, il piano di lavorazione è già nelle
+              mani della troupe — esportabile come call sheet stampabile.
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Drag-and-drop scene→giorno, raggruppamenti suggeriti da Cesare, conteggio pagine per giornata, vista timeline + day-by-day + calendario.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Call sheet completa stampabile. Integrazione meteo per scene EST (capire se quel mercoledì piove).</p>
+            </div>
+            <div class="status status--idea">
+              <p class="status__label">○ Ancora idea</p>
+              <p class="status__text">Convocazioni cast/troupe automatizzate (SMS / email il giorno prima).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closing -->
+    <section class="closing">
+      <div class="container closing__inner">
+        <h2 class="closing__title">Questo è dove sono arrivato.</h2>
+        <p class="closing__lead">
+          Tutto quello che hai visto qui sopra esiste, funziona, lo uso ogni giorno.
+          Il resto — quello che ho marcato "sto costruendo" o "ancora idea" — è il
+          piano di lavoro dei prossimi mesi.
+        </p>
+        <p class="closing__lead">
+          Se ti va di parlarne, di provare lo strumento dentro un tuo progetto,
+          o anche solo di farmi domande pungenti per capire se sta in piedi —
+          sai dove trovarmi.
+        </p>
+        <p class="closing__email">valerio.narcisi@gmail.com</p>
+      </div>
+    </section>
+  </body>
+</html>

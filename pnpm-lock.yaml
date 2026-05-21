@@ -52,6 +52,8 @@ importers:
         specifier: 8.59.0
         version: 8.59.0(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
 
+  apps/landing: {}
+
   apps/web:
     dependencies:
       '@anthropic-ai/sdk':

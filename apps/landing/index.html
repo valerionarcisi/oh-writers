@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oh Writers — Recap maggio 2026</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%231c1a17'/><text x='50%25' y='58%25' text-anchor='middle' dominant-baseline='middle' font-family='Georgia,serif' font-style='italic' font-size='17' fill='%23f5f3ee' font-weight='600'>O</text></svg>" />
+    <link rel="stylesheet" href="./assets/css/main.css" />
+    <style>
+      /* Index-specific overrides */
+      .index-hero {
+        padding-block: var(--ds-space-20) var(--ds-space-12);
+        position: relative;
+        overflow: hidden;
+      }
+      .index-hero::before {
+        content: "";
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse at 20% 20%, var(--ds-action-soft), transparent 55%),
+          radial-gradient(ellipse at 80% 70%, var(--ds-agent-soft), transparent 50%);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .index-hero__inner {
+        position: relative;
+        max-width: 760px;
+      }
+      .index-hero__greeting {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-2xl);
+        font-style: italic;
+        color: var(--ds-text-2);
+        margin-block-end: var(--ds-space-4);
+        font-weight: var(--weight-normal);
+      }
+      .index-hero__title {
+        font-family: var(--ds-font-display);
+        font-size: clamp(36px, 4vw, 56px);
+        font-weight: var(--weight-normal);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-6);
+        text-wrap: balance;
+      }
+      .index-hero__title em { color: var(--ds-action); font-style: italic; }
+      .index-hero__lead {
+        font-size: var(--text-lg);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        margin-block-end: var(--ds-space-4);
+      }
+      .index-hero__lead:last-of-type { margin-block-end: 0; }
+
+      /* Entry cards */
+      .entries {
+        padding-block: var(--ds-space-12) var(--ds-space-16);
+      }
+      .entries__grid {
+        display: grid;
+        gap: var(--ds-space-5);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .entries__grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      .entry {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-4);
+        padding: var(--ds-space-8);
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-lg);
+        color: var(--ds-text);
+        transition: all var(--ds-duration-2) var(--ds-ease);
+        text-decoration: none;
+        min-height: 320px;
+      }
+      .entry:hover {
+        border-color: var(--ds-action);
+        box-shadow: var(--ds-shadow-2);
+        transform: translateY(-2px);
+        color: var(--ds-text);
+      }
+      .entry__eyebrow {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        color: var(--ds-action);
+      }
+      .entry__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-medium);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: 0;
+      }
+      .entry__desc {
+        font-size: var(--text-base);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        flex: 1;
+      }
+      .entry__meta {
+        display: flex;
+        align-items: center;
+        gap: var(--ds-space-3);
+        padding-block-start: var(--ds-space-4);
+        border-block-start: 1px solid var(--ds-line);
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-3);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+      .entry__meta-arrow {
+        margin-inline-start: auto;
+        color: var(--ds-action);
+      }
+
+      /* Bottom block */
+      .bottom {
+        background: var(--ds-surface);
+        border-block-start: 1px solid var(--ds-line);
+        padding-block: var(--ds-space-12);
+      }
+      .bottom__inner {
+        max-width: 640px;
+        margin-inline: auto;
+        text-align: center;
+      }
+      .bottom__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-normal);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-4);
+      }
+      .bottom__lead {
+        font-size: var(--text-base);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        margin-block-end: var(--ds-space-6);
+      }
+      .bottom__email {
+        font-family: var(--ds-font-mono);
+        font-size: var(--text-base);
+        color: var(--ds-action);
+      }
+
+      .index-footer {
+        padding-block: var(--ds-space-6);
+        background: var(--ds-bg);
+        border-block-start: 1px solid var(--ds-line);
+      }
+      .index-footer__inner {
+        max-width: var(--max-width-wide);
+        margin-inline: auto;
+        padding-inline: var(--ds-space-6);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-3);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="index-hero">
+      <div class="container index-hero__inner">
+        <p class="index-hero__greeting">Ciao.</p>
+        <h1 class="index-hero__title">
+          Questo è il punto su <em>Oh Writers</em>, oggi.
+        </h1>
+        <p class="index-hero__lead">
+          Te lo mando perché mi hai dato fiducia. Volevo che tu sapessi dove sono
+          arrivato — senza pitch, senza fretta. Quello che trovi qui sotto è
+          un recap in due forme: una più sintetica e strategica (le slide che
+          ho preparato per spiegarmi il mercato), una più lunga e onesta
+          (un giro dentro lo strumento, con screenshot reali e i pezzi che
+          ancora mi mancano).
+        </p>
+        <p class="index-hero__lead">
+          Scegli da dove iniziare. Non c'è un ordine giusto.
+        </p>
+      </div>
+    </header>
+
+    <section class="entries">
+      <div class="container">
+        <div class="entries__grid">
+          <a class="entry" href="./market-analysis.html">
+            <span class="entry__eyebrow">Per chi vuole il quadro</span>
+            <h2 class="entry__title">Recap strategico</h2>
+            <p class="entry__desc">
+              24 slide navigabili: il problema, il mercato italiano e europeo,
+              i competitor, dove ci posizioniamo, la roadmap. Tono asciutto,
+              fatti e numeri. Pensato per leggere in 7–10 minuti.
+            </p>
+            <span class="entry__meta">
+              <span>24 slide</span>
+              <span>· tastiera ← →</span>
+              <span class="entry__meta-arrow">leggi →</span>
+            </span>
+          </a>
+
+          <a class="entry" href="./tour.html">
+            <span class="entry__eyebrow">Per chi vuole vedere</span>
+            <h2 class="entry__title">Tour del prodotto</h2>
+            <p class="entry__desc">
+              Una pagina lunga con il giro completo dentro lo strumento:
+              dashboard, soggetto con Cesare, sceneggiatura, breakdown,
+              budget, location manager, piano inquadrature, schedule.
+              Screenshot reali presi oggi dal mio account. Tono onesto:
+              cosa funziona, cosa sto costruendo, cosa è ancora idea.
+            </p>
+            <span class="entry__meta">
+              <span>9 tappe</span>
+              <span>· 8–10 min</span>
+              <span class="entry__meta-arrow">entra →</span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom">
+      <div class="bottom__inner">
+        <h2 class="bottom__title">Se ti va, parliamone.</h2>
+        <p class="bottom__lead">
+          Non c'è urgenza, non sto vendendo niente. Mi farebbe piacere
+          sentirti dopo che hai guardato, qualunque sia la reazione —
+          interesse, dubbio, "non mi torna questa cosa". Il valore di
+          questo materiale è proprio quello: aprire una conversazione
+          con chi conta.
+        </p>
+        <p class="bottom__email">valerio.narcisi@gmail.com</p>
+      </div>
+    </section>
+
+    <footer class="index-footer">
+      <div class="index-footer__inner">
+        <span>Oh Writers · maggio 2026 · Porto Sant'Elpidio (FM)</span>
+        <span>Pagina privata</span>
+      </div>
+    </footer>
+  </body>
+</html>
