@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../icons/Icon";
 import type { IconName } from "../../icons/icon-names";
-import { SavePill } from "../../primitives/SavePill/SavePill";
 import type { SaveState } from "../../primitives/SavePill/SavePill";
 import { Presence } from "../../primitives/Presence/Presence";
 import type { PresenceUser } from "../../primitives/Presence/Presence";
@@ -103,8 +102,8 @@ export function TopBar({
   projectName,
   sectionName,
   isScrolled = false,
-  saveState,
-  saveSecondsAgo,
+  saveState: _saveState,
+  saveSecondsAgo: _saveSecondsAgo,
   cesareNoteCount = 0,
   cesareHasUnseen = false,
   presenceUsers = [],
@@ -327,10 +326,8 @@ export function TopBar({
 
       <div className={styles.spacer} />
 
-      {/* Save state — hidden on read-only pages (dashboard, project home) */}
-      {saveState !== undefined && (
-        <SavePill state={saveState} secondsAgo={saveSecondsAgo} />
-      )}
+      {/* Save state intentionally not rendered in the TopBar — feature panels
+          surface their own SavePill close to where the editing happens. */}
 
       {/* Right cluster */}
       <div className={styles.rightCluster}>
