@@ -31,9 +31,35 @@ export default defineConfig({
     client: {
       vite: {
         resolve: {
-          alias: {
-            "node:async_hooks": path.resolve("./src/shims/async-hooks.js"),
-          },
+          // Vite walks aliases as an array in order and prefix-matches. Keep
+          // `node:stream/web` before `node:stream` so the longer key wins.
+          alias: [
+            {
+              find: "node:async_hooks",
+              replacement: path.resolve("./src/shims/async-hooks.js"),
+            },
+            // Postgres driver pulls in `perf_hooks`/`net`/`tls` which Vite
+            // externalises in browser mode and then fails at Rollup time
+            // because the resulting stub does not export `performance`. The
+            // real driver never runs client-side: every DB call goes through
+            // a server function. Stub the package so Rollup can short-circuit.
+            {
+              find: /^postgres$/,
+              replacement: path.resolve("./src/shims/postgres.js"),
+            },
+            // `node:stream/web` and `node:stream` are imported at module level
+            // by @tanstack/start-server-core for SSR rendering. Browser bundle
+            // never invokes that code path, but the import must resolve so
+            // Rollup completes the build. Order matters: longest prefix first.
+            {
+              find: "node:stream/web",
+              replacement: path.resolve("./src/shims/node-stream-web.js"),
+            },
+            {
+              find: /^node:stream$/,
+              replacement: path.resolve("./src/shims/node-stream.js"),
+            },
+          ],
         },
       },
     },
