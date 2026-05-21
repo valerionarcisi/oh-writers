@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oh Writers — Chi c'è dietro · Valerio Narcisi</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%231c1a17'/><text x='50%25' y='58%25' text-anchor='middle' dominant-baseline='middle' font-family='Georgia,serif' font-style='italic' font-size='17' fill='%23f5f3ee' font-weight='600'>O</text></svg>" />
+    <link rel="stylesheet" href="./assets/css/main.css" />
+    <style>
+      /* ── About-specific ─────────────────────────────────── */
+      .about-nav {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: color-mix(in srgb, var(--ds-bg) 92%, transparent);
+        backdrop-filter: blur(12px) saturate(160%);
+        border-block-end: 1px solid var(--ds-line);
+      }
+      .about-nav__inner {
+        display: flex;
+        align-items: center;
+        gap: var(--ds-space-4);
+        height: 56px;
+      }
+      .about-nav__back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        color: var(--ds-text-2);
+        font-size: 13px;
+        font-weight: var(--weight-medium);
+      }
+      .about-nav__back:hover { color: var(--ds-text); }
+      .about-nav__brand {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        font-family: var(--ds-font-display);
+        font-size: var(--text-base);
+      }
+      .about-nav__brand em { color: var(--ds-action); font-style: italic; }
+      .about-nav__mark {
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: var(--ds-text);
+        color: var(--ds-text-on-dark);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-display); font-style: italic;
+        font-size: 14px; font-weight: 600;
+      }
+      .about-nav__spacer { flex: 1; }
+      .about-nav__counter {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-3);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+
+      /* Intro */
+      .about-intro {
+        padding-block: var(--ds-space-20) var(--ds-space-12);
+        position: relative;
+        overflow: hidden;
+      }
+      .about-intro::before {
+        content: "";
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse at 20% 30%, var(--ds-action-soft), transparent 55%),
+          radial-gradient(ellipse at 80% 70%, var(--ds-agent-soft), transparent 50%);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .about-intro__inner {
+        position: relative;
+        display: grid;
+        gap: var(--ds-space-12);
+        grid-template-columns: 1fr;
+        align-items: center;
+      }
+      @media (min-width: 900px) {
+        .about-intro__inner { grid-template-columns: 320px 1fr; }
+      }
+      .portrait {
+        width: 100%;
+        max-width: 320px;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background: linear-gradient(160deg, var(--ds-linen-200), var(--ds-linen-400));
+        border: 1px solid var(--ds-line);
+        overflow: hidden;
+        box-shadow: var(--ds-shadow-3);
+        position: relative;
+      }
+      .portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .portrait::after {
+        content: "Foto Valerio";
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-mono); font-size: 12px;
+        color: var(--ds-text-faint);
+        letter-spacing: var(--tracking-wide); text-transform: uppercase;
+      }
+      .portrait:has(img)::after { display: none; }
+
+      .about-intro__body { max-width: 580px; }
+      .about-intro__eyebrow {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        color: var(--ds-action);
+        margin-block-end: var(--ds-space-3);
+      }
+      .about-intro__name {
+        font-family: var(--ds-font-display);
+        font-size: clamp(36px, 4vw, 56px);
+        font-weight: var(--weight-normal);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        margin-block-end: var(--ds-space-4);
+      }
+      .about-intro__tagline {
+        font-family: var(--ds-font-display);
+        font-style: italic;
+        font-size: var(--text-xl);
+        color: var(--ds-action);
+        margin-block-end: var(--ds-space-5);
+      }
+      .about-intro__bio {
+        font-size: var(--text-lg);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        margin-block-end: var(--ds-space-3);
+      }
+
+      /* Section blocks */
+      .about-section {
+        padding-block: var(--ds-space-16);
+      }
+      .about-section:nth-of-type(even) {
+        background: var(--ds-surface);
+        border-block: 1px solid var(--ds-line);
+      }
+      .about-section__header {
+        max-width: var(--max-width-content);
+        margin-block-end: var(--ds-space-10);
+      }
+      .about-section__eyebrow {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-caps);
+        text-transform: uppercase;
+        color: var(--ds-action);
+        margin-block-end: var(--ds-space-3);
+      }
+      .about-section__title {
+        font-family: var(--ds-font-display);
+        font-size: clamp(28px, 3vw, 40px);
+        font-weight: var(--weight-normal);
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+        text-wrap: balance;
+      }
+      .about-section__lead {
+        font-size: var(--text-lg);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        margin-block-start: var(--ds-space-4);
+        max-width: 640px;
+      }
+
+      /* Works grid */
+      .works {
+        display: grid;
+        gap: var(--ds-space-5);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .works { grid-template-columns: repeat(3, 1fr); }
+      }
+      .work {
+        padding: var(--ds-space-6);
+        background: var(--ds-bg);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-3);
+      }
+      .work[data-highlight] {
+        border-color: var(--ds-action);
+        background: var(--ds-action-soft);
+      }
+      .work__kind {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+        color: var(--ds-text-3);
+      }
+      .work__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-2xl);
+        font-weight: var(--weight-medium);
+        letter-spacing: var(--tracking-tight);
+        line-height: 1.2;
+      }
+      .work__title em { font-style: italic; }
+      .work__desc {
+        font-size: var(--text-sm);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+        flex: 1;
+      }
+      .work__award {
+        margin-block-start: var(--ds-space-2);
+        padding-block-start: var(--ds-space-3);
+        border-block-start: 1px solid var(--ds-line);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--ds-space-2);
+        font-size: 12px;
+        color: var(--ds-action);
+        font-family: var(--ds-font-mono);
+      }
+      .work__award strong {
+        font-family: var(--ds-font-sans);
+        font-weight: var(--weight-semibold);
+      }
+
+      /* Timeline */
+      .timeline {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-5);
+        max-width: 720px;
+      }
+      .tl-item {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: var(--ds-space-5);
+        padding-block: var(--ds-space-3);
+        border-block-end: 1px solid var(--ds-line);
+      }
+      .tl-item:last-child { border-block-end: none; }
+      .tl-when {
+        font-family: var(--ds-font-mono);
+        font-size: 12px;
+        color: var(--ds-action);
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-wide);
+      }
+      .tl-body { display: flex; flex-direction: column; gap: 4px; }
+      .tl-title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-lg);
+        font-weight: var(--weight-medium);
+        letter-spacing: var(--tracking-tight);
+      }
+      .tl-desc {
+        font-size: var(--text-sm);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+      }
+
+      /* Two-track section */
+      .twotrack {
+        display: grid;
+        gap: var(--ds-space-8);
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 900px) {
+        .twotrack { grid-template-columns: repeat(2, 1fr); }
+      }
+      .track {
+        padding: var(--ds-space-6);
+        background: var(--ds-bg);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-md);
+        display: flex;
+        flex-direction: column;
+        gap: var(--ds-space-3);
+      }
+      .track__mark {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: var(--ds-text);
+        color: var(--ds-text-on-dark);
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--ds-font-display); font-style: italic;
+        font-size: 16px; font-weight: 600;
+      }
+      .track__title {
+        font-family: var(--ds-font-display);
+        font-size: var(--text-xl);
+        font-weight: var(--weight-medium);
+        letter-spacing: var(--tracking-tight);
+      }
+      .track__desc {
+        font-size: var(--text-sm);
+        color: var(--ds-text-2);
+        line-height: var(--leading-relaxed);
+      }
+
+      /* Quote pull */
+      .pull {
+        max-width: 720px;
+        padding: var(--ds-space-8) var(--ds-space-6);
+        border-inline-start: 3px solid var(--ds-agent);
+        background: var(--ds-agent-soft);
+        border-radius: 0 var(--ds-radius-md) var(--ds-radius-md) 0;
+      }
+      .pull__text {
+        font-family: var(--ds-font-display);
+        font-style: italic;
+        font-size: var(--text-xl);
+        line-height: var(--leading-relaxed);
+        color: var(--ds-text);
+      }
+      .pull__source {
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+        color: var(--ds-text-3);
+        margin-block-start: var(--ds-space-3);
+      }
+
+      /* Links */
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--ds-space-2);
+        max-width: 720px;
+      }
+      .link-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-2);
+        padding: 8px var(--ds-space-4);
+        background: var(--ds-bg);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-pill);
+        color: var(--ds-text);
+        font-size: 13px;
+        font-weight: var(--weight-medium);
+        text-decoration: none;
+        transition: all var(--ds-duration-1) var(--ds-ease);
+      }
+      .link-chip:hover {
+        border-color: var(--ds-action);
+        color: var(--ds-action);
+      }
+      .link-chip__kind {
+        font-family: var(--ds-font-mono);
+        font-size: 10px;
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+        color: var(--ds-text-3);
+      }
+
+      .about-footer {
+        padding-block: var(--ds-space-6);
+        background: var(--ds-bg);
+        border-block-start: 1px solid var(--ds-line);
+      }
+      .about-footer__inner {
+        max-width: var(--max-width-wide);
+        margin-inline: auto;
+        padding-inline: var(--ds-space-6);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--ds-font-mono);
+        font-size: 11px;
+        color: var(--ds-text-3);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="about-nav">
+      <div class="container about-nav__inner">
+        <a href="./" class="about-nav__back">← Indice</a>
+        <span class="about-nav__brand">
+          <span class="about-nav__mark">O</span>
+          Oh <em>Writers</em>
+        </span>
+        <span class="about-nav__spacer"></span>
+        <span class="about-nav__counter">Chi c'è dietro · maggio 2026</span>
+      </div>
+    </nav>
+
+    <!-- Intro -->
+    <header class="about-intro">
+      <div class="container about-intro__inner">
+        <div class="portrait" aria-hidden="true">
+          <img src="./assets/img/valerio.jpg" alt="" onerror="this.style.display='none'" />
+        </div>
+        <div class="about-intro__body">
+          <p class="about-intro__eyebrow">Chi c'è dietro Oh Writers</p>
+          <h1 class="about-intro__name">Valerio Narcisi</h1>
+          <p class="about-intro__tagline">developer · filmmaker</p>
+          <p class="about-intro__bio">
+            Vivo a Porto Sant'Elpidio, in provincia di Fermo. Faccio film
+            e scrivo codice. Le due cose, per anni, sono andate in parallelo
+            senza incontrarsi mai davvero. Oh Writers è il primo lavoro
+            in cui le ho messe a parlare.
+          </p>
+          <p class="about-intro__bio">
+            <em>I solve problems. I tell stories.</em>
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Opere -->
+    <section class="about-section">
+      <div class="container">
+        <header class="about-section__header">
+          <p class="about-section__eyebrow">I film</p>
+          <h2 class="about-section__title">Quello che ho fatto, scritto e diretto.</h2>
+          <p class="about-section__lead">
+            Cortometraggi indipendenti, girati nelle Marche con troupe ridotte e
+            tempi brevi. È il contesto che ha dato forma allo strumento.
+          </p>
+        </header>
+        <div class="works">
+          <article class="work" data-highlight>
+            <span class="work__kind">Cortometraggio · 2025</span>
+            <h3 class="work__title"><em>Caramella</em></h3>
+            <p class="work__desc">
+              Cortometraggio d'autore, scritto e diretto. Storia,
+              regia, post-produzione.
+            </p>
+            <p class="work__award">
+              ★ <strong>Fano International Film Festival 2025</strong> —
+              Miglior film d'autore marchigiano
+            </p>
+          </article>
+          <article class="work">
+            <span class="work__kind">Cortometraggio · 2025</span>
+            <h3 class="work__title"><em>Non fa ridere</em></h3>
+            <p class="work__desc">
+              Girato in <strong>quattro giorni</strong> al Ristorante L'Oasi del Gusto,
+              Piane di Falerone. Filippo, comico fallito, prepara impasti
+              e prova battute. Il progetto demo dentro Oh Writers parla di lui.
+            </p>
+          </article>
+          <article class="work">
+            <span class="work__kind">Cortometraggio</span>
+            <h3 class="work__title"><em>Arturo</em></h3>
+            <p class="work__desc">
+              In programmazione assieme a <em>Caramella</em> al
+              Teatro Beato Pellegrino di Falerone — 22 febbraio 2026.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Le due tracce -->
+    <section class="about-section">
+      <div class="container">
+        <header class="about-section__header">
+          <p class="about-section__eyebrow">Le due tracce</p>
+          <h2 class="about-section__title">
+            Sviluppatore <em>e</em> filmmaker. Non per caso.
+          </h2>
+          <p class="about-section__lead">
+            Oh Writers nasce esattamente nell'intersezione. Tutto quello che
+            costruisco, lo costruisco per chi fa cinema — e lo costruisco
+            sapendo come funziona davvero un set.
+          </p>
+        </header>
+        <div class="twotrack">
+          <article class="track">
+            <span class="track__mark">D</span>
+            <h3 class="track__title">Developer</h3>
+            <p class="track__desc">
+              JavaScript e TypeScript da oltre dieci anni. Stack moderno:
+              TanStack Start, Astro, React, programmazione funzionale.
+              Anthropic API agentic, prompt caching, tool loops. Approccio
+              <em>AI-assisted, human-driven</em> — l'AI lavora con me,
+              non al posto mio.
+            </p>
+          </article>
+          <article class="track">
+            <span class="track__mark">F</span>
+            <h3 class="track__title">Filmmaker</h3>
+            <p class="track__desc">
+              Scrivo e dirigo cortometraggi indipendenti. Conosco gli ottimi
+              strumenti che il mercato offre — Final Draft, Movie Magic,
+              StudioBinder — e conosco bene il vuoto fra loro. Oh Writers
+              è la risposta di un filmmaker, non di un product manager.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Citazione -->
+    <section class="about-section">
+      <div class="container">
+        <div class="pull">
+          <p class="pull__text">
+            "Volevo solo tracciare le mie sessioni di meditazione. Ho finito
+            per ripensare come scrivo codice."
+          </p>
+          <p class="pull__source">— Valerio, su valerionarcisi.me</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Date che contano -->
+    <section class="about-section">
+      <div class="container">
+        <header class="about-section__header">
+          <p class="about-section__eyebrow">Cosa è in arrivo</p>
+          <h2 class="about-section__title">Le prossime date.</h2>
+        </header>
+        <div class="timeline">
+          <div class="tl-item">
+            <span class="tl-when">22 Feb<br>2026</span>
+            <div class="tl-body">
+              <p class="tl-title">Proiezione Arturo + Caramella</p>
+              <p class="tl-desc">
+                Teatro Beato Pellegrino, Falerone (FM). Serata pubblica
+                con i due cortometraggi.
+              </p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <span class="tl-when">Ora<br>2026</span>
+            <div class="tl-body">
+              <p class="tl-title">Oh Writers in sviluppo continuo</p>
+              <p class="tl-desc">
+                Lo uso ogni giorno per i miei progetti. Aperto a chi voglia
+                provarlo dentro un proprio film.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dove sono -->
+    <section class="about-section">
+      <div class="container">
+        <header class="about-section__header">
+          <p class="about-section__eyebrow">Dove sono</p>
+          <h2 class="about-section__title">Email, codice, film.</h2>
+          <p class="about-section__lead">
+            Tutto è raggiungibile. Niente è formale.
+          </p>
+        </header>
+        <div class="links">
+          <a class="link-chip" href="mailto:valerio.narcisi@gmail.com">
+            <span class="link-chip__kind">email</span>
+            valerio.narcisi@gmail.com
+          </a>
+          <a class="link-chip" href="https://valerionarcisi.me" target="_blank" rel="noopener">
+            <span class="link-chip__kind">sito</span>
+            valerionarcisi.me
+          </a>
+          <a class="link-chip" href="https://www.linkedin.com/in/cv-valerio-narcisi" target="_blank" rel="noopener">
+            <span class="link-chip__kind">linkedin</span>
+            cv-valerio-narcisi
+          </a>
+          <a class="link-chip" href="https://github.com/valerionarcisi" target="_blank" rel="noopener">
+            <span class="link-chip__kind">github</span>
+            valerionarcisi
+          </a>
+          <a class="link-chip" href="https://www.instagram.com/narcisi.valerio" target="_blank" rel="noopener">
+            <span class="link-chip__kind">instagram</span>
+            @narcisi.valerio
+          </a>
+          <a class="link-chip" href="https://boxd.it/2mFff" target="_blank" rel="noopener">
+            <span class="link-chip__kind">letterboxd</span>
+            i film che amo
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="about-footer">
+      <div class="about-footer__inner">
+        <span>Oh Writers · maggio 2026 · Porto Sant'Elpidio (FM)</span>
+        <span>Pagina privata</span>
+      </div>
+    </footer>
+  </body>
+</html>
