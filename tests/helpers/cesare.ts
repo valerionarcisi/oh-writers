@@ -27,7 +27,16 @@ export async function sendCesareMessage(
   // swallows the submit. Type the text instead — each keystroke fires a
   // real input event the React state can react to.
   await input.pressSequentially(text, { delay: 5 });
-  await page.keyboard.press("Enter");
+  // Wait for React to flip the submit button from disabled→enabled. This
+  // is the same gate the UI uses and it is the canonical signal that the
+  // controlled-input value has been propagated. Without it, pressing
+  // Enter on slow CI runners can race the form's onKeyDown handler.
+  // The button is the next focusable sibling of the textarea.
+  const sendBtn = input.locator("xpath=following::button[1]");
+  await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
+  // Click the send button directly — Enter still works in dev but click
+  // is the deterministic path that mirrors a real user.
+  await sendBtn.click();
 }
 
 /**
