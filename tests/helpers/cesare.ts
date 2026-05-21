@@ -21,7 +21,12 @@ export async function sendCesareMessage(
 ): Promise<void> {
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await input.click();
-  await input.fill(text);
+  // `fill` sets the value via a single change event; on CI the React
+  // controlled-input state hasn't picked it up yet when we press Enter,
+  // so the form's `isSubmitDisabled` check still sees an empty string and
+  // swallows the submit. Type the text instead — each keystroke fires a
+  // real input event the React state can react to.
+  await input.pressSequentially(text, { delay: 5 });
   await page.keyboard.press("Enter");
 }
 

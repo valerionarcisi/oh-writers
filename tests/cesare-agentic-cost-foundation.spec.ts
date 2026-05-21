@@ -37,9 +37,11 @@ async function sendAndWaitForReply(
   const log = page.getByRole("log", { name: /Cesare/i });
   const before = await log.locator(ASSISTANT_BUBBLE).count();
   await sendCesareMessage(page, prompt);
+  // 60s mirrors `waitForCesareReply` in tests/helpers/cesare.ts — the
+  // first tool-loop request after a cold CI server start can take 20-40s.
   await expect
     .poll(async () => log.locator(ASSISTANT_BUBBLE).count(), {
-      timeout: 30_000,
+      timeout: 60_000,
     })
     .toBeGreaterThan(before);
   const bubbles = log.locator(ASSISTANT_BUBBLE);
