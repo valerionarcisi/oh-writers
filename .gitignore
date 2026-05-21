@@ -48,3 +48,6 @@ playwright/.cache/
 vernissage/*/screenshots/
 vernissage/*/log.json
 vernissage/*/failures.json
+
+# Local Netlify folder
+.netlify

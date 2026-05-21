@@ -5,6 +5,7 @@
   "description": "Static investor / pre-demo landing — pure HTML/CSS/JS, no build step.",
   "scripts": {
     "dev": "npx --yes serve@latest . -l 4173",
-    "preview": "npx --yes serve@latest . -l 4173"
+    "preview": "npx --yes serve@latest . -l 4173",
+    "build": "echo 'Static site — no build step.'"
   }
 }
