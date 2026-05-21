@@ -94,7 +94,7 @@ jobs:
       - name: Seed test DB
         run: pnpm db:seed:reset
       - name: Mock E2E (Cesare agentic, --project=mock-ui)
-        run: pnpm test:e2e -- --project=mock-ui
+        run: pnpm test:e2e --project=mock-ui
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
