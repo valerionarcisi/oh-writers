@@ -3,6 +3,11 @@
 -- outline, treatment) and gives both narrative and screenplay a pointer
 -- to the active version. Drops the legacy auto-version flag.
 
+-- 0003 created a legacy `document_versions` table that was never used in
+-- production — this migration is the canonical schema. Drop the legacy
+-- table if any environment still has it so this `CREATE TABLE` succeeds.
+DROP TABLE IF EXISTS "document_versions";
+
 CREATE TABLE "document_versions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "document_id" uuid NOT NULL REFERENCES "documents"("id") ON DELETE CASCADE,

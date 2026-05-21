@@ -1,13 +1,18 @@
-CREATE TABLE IF NOT EXISTS "document_versions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"document_id" uuid NOT NULL,
-	"label" text,
-	"content" text NOT NULL,
-	"is_auto" boolean DEFAULT false NOT NULL,
-	"created_by" uuid NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-ALTER TABLE "document_versions" ADD CONSTRAINT "document_versions_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;
---> statement-breakpoint
-ALTER TABLE "document_versions" ADD CONSTRAINT "document_versions_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+-- ⚠️  Superseded by 0004_universal_versioning.sql.
+-- This migration originally created a legacy `document_versions` table with a
+-- different shape (had `is_auto`, no `number`/`updated_at`, no unique constraint
+-- on (document_id, number)). 0004 creates the canonical schema and is what
+-- every consumer expects. On a fresh DB both run in sequence — if we let 0003
+-- create the table, 0004 then fails with "relation already exists" because
+-- drizzle-kit runs `CREATE TABLE` (no IF NOT EXISTS).
+--
+-- We keep the journal entry intact so DBs migrated against the historical
+-- sequence stay valid, but the statements are now idempotent no-ops that
+-- never touch the schema on a fresh DB.
+
+DO $$
+BEGIN
+  -- Intentionally empty: 0004 is the source of truth for document_versions.
+  NULL;
+END
+$$;
