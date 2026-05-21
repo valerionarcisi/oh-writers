@@ -7,6 +7,7 @@
 -- production — this migration is the canonical schema. Drop the legacy
 -- table if any environment still has it so this `CREATE TABLE` succeeds.
 DROP TABLE IF EXISTS "document_versions";
+--> statement-breakpoint
 
 CREATE TABLE "document_versions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
