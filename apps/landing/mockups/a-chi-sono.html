@@ -35,27 +35,17 @@
       }
       .about__portrait {
         width: 100%;
-        aspect-ratio: 4 / 5;
-        background:
-          linear-gradient(160deg, var(--ds-linen-200) 0%, var(--ds-linen-300) 60%, var(--ds-linen-400) 100%);
+        aspect-ratio: 1 / 1;
         border-radius: var(--ds-radius-md);
         border: 1px solid var(--ds-line);
-        position: relative;
         overflow: hidden;
         box-shadow: var(--ds-shadow-2);
       }
-      .about__portrait::after {
-        content: "Foto Valerio";
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--ds-font-mono);
-        font-size: 11px;
-        color: var(--ds-text-faint);
-        letter-spacing: var(--tracking-wide);
-        text-transform: uppercase;
+      .about__portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
       }
       .about__body { max-width: 580px; }
       .about__name {
@@ -114,7 +104,16 @@
           L'ho costruito perché lo strumento che avrei voluto avere come regista non esisteva.
         </p>
         <div class="about__grid">
-          <div class="about__portrait" aria-hidden="true"></div>
+          <div class="about__portrait">
+            <img
+              src="../assets/img/valerio.png"
+              alt="Valerio Narcisi"
+              width="800"
+              height="800"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
           <div class="about__body">
             <h3 class="about__name">Valerio Narcisi</h3>
             <p class="about__role">Regista · Sceneggiatore · Fondatore</p>
