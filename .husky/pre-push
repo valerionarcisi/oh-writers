@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 set -e
 
+echo "→ Migration journal integrity"
+bash scripts/check-migrations.sh
+
 echo "→ Typecheck (pnpm typecheck, all workspaces)"
 pnpm typecheck
 
@@ -10,9 +13,17 @@ pnpm lint
 echo "→ Unit tests (Vitest)"
 pnpm test:unit
 
-# E2E mock-ui intentionally moved to CI only — keeping the local hook under
-# ~30s avoids the temptation of `--no-verify` and the flake noise that came
-# from running the full Playwright suite on every push. CI runs the same
-# command (pnpm test:e2e --project=mock-ui) and blocks merges via branch
-# protection.
-echo "✓ Local QA gates passed. Pushing — CI will run the E2E suite."
+# Husky pipes "<local_ref> <local_sha> <remote_ref> <remote_sha>" on stdin.
+# We sniff for refs/heads/main to trigger the full CI repro on main pushes.
+pushed_refs=$(cat || true)
+pushing_main=0
+case "$pushed_refs" in
+  *refs/heads/main*) pushing_main=1 ;;
+esac
+
+if [ "$pushing_main" = "1" ] || [ "${PRE_PUSH_FULL:-0}" = "1" ]; then
+  echo "→ Full CI repro (mirrors qa.yml e2e-mock)"
+  pnpm ci:repro
+else
+  echo "✓ Fast gates passed. (Push to main or PRE_PUSH_FULL=1 to also run ci:repro.)"
+fi

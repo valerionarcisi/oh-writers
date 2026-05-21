@@ -9,6 +9,8 @@
     "dev:reset": "bash scripts/dev-reset.sh",
     "dev:nuke": "bash scripts/dev-nuke.sh",
     "dev:check": "bash scripts/dev-check.sh",
+    "ci:repro": "bash scripts/ci-repro.sh",
+    "check:migrations": "bash scripts/check-migrations.sh",
     "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
     "typecheck": "pnpm --recursive typecheck",
     "lint": "eslint apps/web/app --max-warnings 0",
