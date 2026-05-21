@@ -87,6 +87,8 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Build workspace packages (db needs its dist for runtime imports)
+        run: pnpm --filter './packages/*' build
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       - name: Migrate test DB
