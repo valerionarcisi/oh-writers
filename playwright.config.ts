@@ -40,7 +40,9 @@ export default defineConfig({
       url: TEST_BASE_URL,
       // Always start a dedicated test server so it uses the test DB, never the dev DB.
       reuseExistingServer: false,
-      timeout: 60_000,
+      // CI cold starts (vinxi + Vite) routinely exceed 60s on GitHub runners;
+      // 180s gives headroom without hiding real start-up issues.
+      timeout: 180_000,
     },
   ],
 });
