@@ -26,15 +26,15 @@ export async function sendCesareMessage(
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await input.waitFor({ state: "visible", timeout: 10_000 });
 
-  // Click + fill is the fast path. Click ensures the textarea is focused
-  // (so React's controlled-input state actually receives the change),
-  // fill writes the value, and dispatchEvent fires `input` so React's
-  // onChange runs.
-  await input.click({ force: true });
+  // On CI, `click()` (even with `force: true`) re-runs the viewport
+  // check and trips on "Element is outside of the viewport" because the
+  // Cesare sheet is positioned with `position: fixed; bottom: 0` while
+  // the page underneath has scrolled away. Skip the click+viewport
+  // dance entirely: focus + fill + dispatch is enough to drive the
+  // React controlled input.
+  await input.focus();
   await input.fill(text);
-  await input.evaluate((el) =>
-    el.dispatchEvent(new Event("input", { bubbles: true })),
-  );
+  await input.dispatchEvent("input");
 
   // On slow CI runners React occasionally hasn't reconciled the value
   // by the time we want to click send. Fall back to typing every key.
@@ -47,7 +47,7 @@ export async function sendCesareMessage(
   }
 
   if (!valueOk) {
-    await input.click();
+    await input.focus();
     await page.keyboard.type(text, { delay: 10 });
     await expect(input).toHaveValue(text, { timeout: 5_000 });
   }
