@@ -22,32 +22,32 @@ export async function sendCesareMessage(
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await input.waitFor({ state: "visible", timeout: 10_000 });
 
-  // CesareSheet uses a React-controlled `<textarea value={input}…/>`. To
-  // bypass React's tracker we must call the native-element value setter
-  // from the prototype chain BEFORE dispatching the input event. The
-  // React reconciler keeps a hidden `_valueTracker` against the element;
-  // calling `tracker.setValue('')` first marks the field as dirty so the
-  // subsequent native setter is observed and `onChange` actually fires.
-  // RTL uses this exact pattern in `fireEvent.input`.
-  await input.evaluate((el, value) => {
-    // 1. Reset the React tracker (forces React to see the next value as new).
-    const node = el as HTMLTextAreaElement & {
-      _valueTracker?: { setValue(v: string): void };
-    };
-    if (node._valueTracker) node._valueTracker.setValue("");
-    // 2. Call the native value setter on the prototype.
-    const proto = Object.getPrototypeOf(node) as HTMLTextAreaElement;
-    const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
-    if (setter) setter.call(node, value);
-    else node.value = value;
-    // 3. Dispatch input event — React listens on this and runs onChange.
-    node.dispatchEvent(new Event("input", { bubbles: true }));
-  }, text);
+  // Click + fill is the fast path. Click ensures the textarea is focused
+  // (so React's controlled-input state actually receives the change),
+  // fill writes the value, and dispatchEvent fires `input` so React's
+  // onChange runs.
+  await input.click();
+  await input.fill(text);
+  await input.evaluate((el) =>
+    el.dispatchEvent(new Event("input", { bubbles: true })),
+  );
 
-  // Confirm the DOM value (and, transitively, React state) caught up.
-  await expect(input).toHaveValue(text, { timeout: 5_000 });
+  // On slow CI runners React occasionally hasn't reconciled the value
+  // by the time we want to click send. Fall back to typing every key.
+  let valueOk = false;
+  try {
+    await expect(input).toHaveValue(text, { timeout: 1_500 });
+    valueOk = true;
+  } catch {
+    valueOk = false;
+  }
 
-  // Wait for React to flip the submit button enabled, then click it.
+  if (!valueOk) {
+    await input.click();
+    await page.keyboard.type(text, { delay: 10 });
+    await expect(input).toHaveValue(text, { timeout: 5_000 });
+  }
+
   const sendBtn = input.locator("xpath=following::button[1]");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click();
