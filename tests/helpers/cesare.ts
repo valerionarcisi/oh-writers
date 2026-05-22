@@ -57,9 +57,14 @@ export async function sendCesareMessage(
     await expect(input).toHaveValue(text, { timeout: 5_000 });
   }
 
-  const sendBtn = input.locator("xpath=following::button[1]");
+  // Send button: scoped by aria-label="Invia" (CesareSheet SendButton).
+  // `following::button[1]` is fragile because other buttons can appear
+  // between textarea and send (e.g. the "stop" button while loading).
+  const sendBtn = page.getByRole("button", { name: "Invia" });
+  await expect(sendBtn).toBeVisible({ timeout: 5_000 });
+  await sendBtn.scrollIntoViewIfNeeded({ timeout: 5_000 });
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
-  await sendBtn.click();
+  await sendBtn.click({ force: true });
 }
 
 /**
