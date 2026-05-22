@@ -52,12 +52,12 @@ export async function sendCesareMessage(
     await expect(input).toHaveValue(text, { timeout: 5_000 });
   }
 
-  // Send button: the sheet's SendButton uses react-aria's useButton
-  // which can swallow the JSX `aria-label="Invia"` on some renders.
-  // Fall back to the CSS module class name to find it reliably.
+  // Send button: same viewport issue as the textarea — Playwright's
+  // click viewport check fires even with `force: true` on this CI
+  // version. Dispatch the click event in JS to bypass coords entirely.
   const sendBtn = input.locator("xpath=following::button[1]");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
-  await sendBtn.click({ force: true });
+  await sendBtn.dispatchEvent("click");
 }
 
 /**
