@@ -12,12 +12,11 @@ export async function openCesareSheet(page: Page): Promise<void> {
   await trigger.click();
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await expect(input).toBeVisible({ timeout: 5_000 });
-  // The sheet animates up from the bottom; on CI runners with smaller
-  // viewports the textarea can still be "outside the viewport" after
-  // toBeVisible resolves. Scroll it into view and force-focus before any
-  // click/fill attempts hit the element.
-  await input.scrollIntoViewIfNeeded({ timeout: 5_000 });
-  await input.focus();
+  // The sheet animates up via `transform` with --ds-duration-3 (250ms).
+  // On slow CI runners React can re-render mid-animation, detaching the
+  // textarea and breaking any interaction that races the transition.
+  // Wait for the animation to settle before touching the input.
+  await page.waitForTimeout(400);
 }
 
 export async function sendCesareMessage(
@@ -27,10 +26,6 @@ export async function sendCesareMessage(
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await input.waitFor({ state: "visible", timeout: 10_000 });
 
-  // Make sure the textarea is in viewport before interacting — the sheet
-  // animates from the bottom and CI runners with smaller viewports can
-  // still leave it offscreen even after toBeVisible.
-  await input.scrollIntoViewIfNeeded({ timeout: 5_000 });
   // Click + fill is the fast path. Click ensures the textarea is focused
   // (so React's controlled-input state actually receives the change),
   // fill writes the value, and dispatchEvent fires `input` so React's
@@ -58,11 +53,7 @@ export async function sendCesareMessage(
   }
 
   // Send button: scoped by aria-label="Invia" (CesareSheet SendButton).
-  // `following::button[1]` is fragile because other buttons can appear
-  // between textarea and send (e.g. the "stop" button while loading).
   const sendBtn = page.getByRole("button", { name: "Invia" });
-  await expect(sendBtn).toBeVisible({ timeout: 5_000 });
-  await sendBtn.scrollIntoViewIfNeeded({ timeout: 5_000 });
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click({ force: true });
 }
