@@ -22,6 +22,14 @@ export default defineConfig({
     ssr: {
       external: ["postgres", "@oh-writers/db", "pdfkit", "pdf-parse"],
     },
+    // Expose the MOCK_AI build-env flag to the client bundle so the UI
+    // can opt out of side effects that race the test harness (e.g. the
+    // breakdown page's auto-spoglio mutation, see BreakdownPage.tsx).
+    define: {
+      "import.meta.env.MOCK_AI": JSON.stringify(
+        process.env["MOCK_AI"] === "true",
+      ),
+    },
   },
   routers: {
     // Provide a browser no-op shim for node:async_hooks so that server-side

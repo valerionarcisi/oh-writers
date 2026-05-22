@@ -217,9 +217,14 @@ function BreakdownPageContent({ projectId }: Props) {
   const indiceWrapRef = useRef<HTMLDivElement>(null);
 
   // Auto-spoglio on mount, same guard pattern as v1.
+  // Skipped under MOCK_AI (E2E suite): the mock seed already pre-populates
+  // breakdown rows and the mutation triggers a layout shift mid-test that
+  // races the Cesare sheet interaction. The dedicated auto-spoglio specs
+  // exercise this path explicitly on a real-AI build.
   const autoSpoglio = useRunAutoSpoglio(projectId, versionId);
   const autoSpoglioStartedRef = useRef(false);
   useEffect(() => {
+    if (import.meta.env.MOCK_AI) return;
     if (!canEdit) return;
     if (versionId.length === 0) return;
     if (autoSpoglioStartedRef.current) return;
