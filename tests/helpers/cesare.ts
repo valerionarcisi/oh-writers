@@ -22,28 +22,29 @@ export async function sendCesareMessage(
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await input.waitFor({ state: "visible", timeout: 10_000 });
 
-  // CesareSheet uses a React-controlled <textarea>. Two CI-specific quirks
-  // bit us repeatedly:
-  //   - `input.fill(text)` produces one synthetic event that React sometimes
-  //     hasn't reconciled when the next keypress fires.
-  //   - `pressSequentially` types one char at a time but the GitHub runner
-  //     can drop the focus mid-stream, so the form sees an empty string.
-  //
-  // The robust path is to write the value directly into the DOM and fire
-  // an explicit `input` event through React's prototype setter — the same
-  // technique React Testing Library uses for "fireEvent.input". That makes
-  // the controlled-input state catch up before we click.
+  // CesareSheet uses a React-controlled `<textarea value={input}…/>`. To
+  // bypass React's tracker we must call the native-element value setter
+  // from the prototype chain BEFORE dispatching the input event. The
+  // React reconciler keeps a hidden `_valueTracker` against the element;
+  // calling `tracker.setValue('')` first marks the field as dirty so the
+  // subsequent native setter is observed and `onChange` actually fires.
+  // RTL uses this exact pattern in `fireEvent.input`.
   await input.evaluate((el, value) => {
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value",
-    )?.set;
-    setter?.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
+    // 1. Reset the React tracker (forces React to see the next value as new).
+    const node = el as HTMLTextAreaElement & {
+      _valueTracker?: { setValue(v: string): void };
+    };
+    if (node._valueTracker) node._valueTracker.setValue("");
+    // 2. Call the native value setter on the prototype.
+    const proto = Object.getPrototypeOf(node) as HTMLTextAreaElement;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+    if (setter) setter.call(node, value);
+    else node.value = value;
+    // 3. Dispatch input event — React listens on this and runs onChange.
+    node.dispatchEvent(new Event("input", { bubbles: true }));
   }, text);
 
-  // Confirm the value made it into the DOM (catches the cases where the
-  // setter ran on a stale node after a re-render).
+  // Confirm the DOM value (and, transitively, React state) caught up.
   await expect(input).toHaveValue(text, { timeout: 5_000 });
 
   // Wait for React to flip the submit button enabled, then click it.
