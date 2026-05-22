@@ -34,7 +34,13 @@ async function sendAndWaitForReply(
   page: Page,
   prompt: string,
 ): Promise<string> {
-  const log = page.getByRole("log", { name: /Cesare/i });
+  // Use a DOM attribute selector, not `getByRole`. CesareSheet wraps its
+  // body in `aria-hidden={!isOpen}` during the open animation; on slow CI
+  // runners the accessibility-tree query races the transition and returns
+  // zero matches even when the messages are in the DOM.
+  const log = page.locator(
+    '[role="log"][aria-label="Conversazione con Cesare"]',
+  );
   const before = await log.locator(ASSISTANT_BUBBLE).count();
   await sendCesareMessage(page, prompt);
   // 60s mirrors `waitForCesareReply` in tests/helpers/cesare.ts — the
