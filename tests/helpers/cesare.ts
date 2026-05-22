@@ -10,9 +10,16 @@ export async function openCesareSheet(page: Page): Promise<void> {
   const trigger = page.getByRole("button", { name: /^Cesare(\s—.*)?$/ });
   await expect(trigger).toBeVisible({ timeout: 15_000 });
   await trigger.click();
-  await expect(page.getByPlaceholder("Chiedi a Cesare…")).toBeVisible({
-    timeout: 5_000,
-  });
+  const input = page.getByPlaceholder("Chiedi a Cesare…");
+  await expect(input).toBeVisible({ timeout: 5_000 });
+  // CesareSheet schedules `textareaRef.current?.focus()` 280ms after
+  // `isOpen` becomes true. Wait for the textarea to actually be the
+  // document's active element so subsequent `fill`/`type` lands on it.
+  await expect
+    .poll(async () => input.evaluate((el) => document.activeElement === el), {
+      timeout: 3_000,
+    })
+    .toBe(true);
 }
 
 export async function sendCesareMessage(
