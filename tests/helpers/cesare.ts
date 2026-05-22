@@ -12,10 +12,11 @@ export async function openCesareSheet(page: Page): Promise<void> {
   await trigger.click();
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await expect(input).toBeVisible({ timeout: 5_000 });
-  // CesareSheet schedules `textareaRef.current?.focus()` 280ms after
-  // `isOpen` becomes true. On slow CI runners the auto-focus can miss
-  // (the browser refuses to focus an element mid-transition). Force
-  // focus explicitly from the test side as a safety net.
+  // The sheet animates up from the bottom; on CI runners with smaller
+  // viewports the textarea can still be "outside the viewport" after
+  // toBeVisible resolves. Scroll it into view and force-focus before any
+  // click/fill attempts hit the element.
+  await input.scrollIntoViewIfNeeded({ timeout: 5_000 });
   await input.focus();
 }
 
@@ -26,11 +27,15 @@ export async function sendCesareMessage(
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await input.waitFor({ state: "visible", timeout: 10_000 });
 
+  // Make sure the textarea is in viewport before interacting — the sheet
+  // animates from the bottom and CI runners with smaller viewports can
+  // still leave it offscreen even after toBeVisible.
+  await input.scrollIntoViewIfNeeded({ timeout: 5_000 });
   // Click + fill is the fast path. Click ensures the textarea is focused
   // (so React's controlled-input state actually receives the change),
   // fill writes the value, and dispatchEvent fires `input` so React's
   // onChange runs.
-  await input.click();
+  await input.click({ force: true });
   await input.fill(text);
   await input.evaluate((el) =>
     el.dispatchEvent(new Event("input", { bubbles: true })),
