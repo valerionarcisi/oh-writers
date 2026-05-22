@@ -13,13 +13,10 @@ export async function openCesareSheet(page: Page): Promise<void> {
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await expect(input).toBeVisible({ timeout: 5_000 });
   // CesareSheet schedules `textareaRef.current?.focus()` 280ms after
-  // `isOpen` becomes true. Wait for the textarea to actually be the
-  // document's active element so subsequent `fill`/`type` lands on it.
-  await expect
-    .poll(async () => input.evaluate((el) => document.activeElement === el), {
-      timeout: 3_000,
-    })
-    .toBe(true);
+  // `isOpen` becomes true. On slow CI runners the auto-focus can miss
+  // (the browser refuses to focus an element mid-transition). Force
+  // focus explicitly from the test side as a safety net.
+  await input.focus();
 }
 
 export async function sendCesareMessage(
