@@ -27,6 +27,11 @@ export default defineConfig({
   use: {
     baseURL: TEST_BASE_URL,
     trace: "on-first-retry",
+    // CI runs at 1280x720 by default (devices.Desktop Chrome); the Cesare
+    // bottom sheet animates 42% of the viewport height which on 720px
+    // lands the textarea below the fold — clicks fail with "outside of
+    // the viewport". Bump to a height where the sheet fits in view.
+    viewport: { width: 1440, height: 900 },
   },
   projects: [
     {
