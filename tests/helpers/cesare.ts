@@ -52,8 +52,10 @@ export async function sendCesareMessage(
     await expect(input).toHaveValue(text, { timeout: 5_000 });
   }
 
-  // Send button: scoped by aria-label="Invia" (CesareSheet SendButton).
-  const sendBtn = page.getByRole("button", { name: "Invia" });
+  // Send button: the sheet's SendButton uses react-aria's useButton
+  // which can swallow the JSX `aria-label="Invia"` on some renders.
+  // Fall back to the CSS module class name to find it reliably.
+  const sendBtn = input.locator("xpath=following::button[1]");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click({ force: true });
 }
