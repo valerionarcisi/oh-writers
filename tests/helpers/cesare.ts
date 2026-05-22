@@ -55,31 +55,54 @@ export async function sendCesareMessage(
   // Send button: same viewport issue as the textarea — Playwright's
   // click viewport check fires even with `force: true` on this CI
   // version. Dispatch the click event in JS to bypass coords entirely.
-  const sendBtn = input.locator("xpath=following::button[1]");
+  // Locate via the explicit aria-label on the send button. We DON'T use
+  // `getByRole("button", { name: "Invia" })` because the Cesare sheet has
+  // `aria-hidden={!isOpen}` on its `role="complementary"` ancestor, and on
+  // slow CI runners Playwright's accessibility-tree query can race with the
+  // open transition and skip the subtree. A plain CSS attribute selector
+  // queries the DOM directly and is immune to ARIA-tree timing.
+  const sendBtn = page.locator('[aria-label="Invia"]').first();
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.dispatchEvent("click");
 }
 
 /**
  * Wait for Cesare to finish responding and return the last assistant message
- * text. We watch the conversation log for a new assistant paragraph rather
- * than the send button — the button stays disabled while the textarea is
- * empty, which it always is after a send.
+ * text. We watch the conversation log for the assistant `<p>` paragraph
+ * rather than the send button — the button stays disabled while the
+ * textarea is empty, which it always is after a send.
+ *
+ * Locator note: we deliberately AVOID `getByRole("log", { name: /Cesare/i })`.
+ * The Cesare sheet sets `aria-hidden={!isOpen}` on its `role="complementary"`
+ * wrapper; on slow CI runners Playwright's accessibility-tree query can race
+ * with the open transition and treat the entire subtree as a11y-hidden,
+ * making `getByRole` return zero matches even after both `<p>` paragraphs
+ * are present in the DOM. A plain CSS attribute selector queries the raw DOM
+ * and is immune to that race.
  */
 export async function waitForCesareReply(page: Page): Promise<string> {
-  const log = page.getByRole("log", { name: /Cesare/i });
-  // The conversation log contains the user message immediately after send and
-  // gains a second paragraph (assistant reply) when the server responds.
+  // The only [role="log"] in the entire app is the Cesare conversation div
+  // (verified by repo-wide grep). Use the attribute selector directly — it
+  // does not consult the accessibility tree, so aria-hidden on an ancestor
+  // does NOT mask it.
+  const log = page.locator(
+    '[role="log"][aria-label="Conversazione con Cesare"]',
+  );
+  // Both bubbles render at least one <p>:
+  //   - user bubble: <p class={bubbleText}>{content}</p>
+  //   - assistant bubble: renderMarkdown(...) which wraps each line in
+  //     <p class={mdPara}>...</p>
+  // So once the assistant reply arrives we have >= 2 paragraphs total.
   // 60s timeout: tool-loop requests (estimate_scene_cost, read_scene) need
   // a server round-trip + a real DB query; on CI runners with cold vinxi
   // dev caches the first-after-start request can take 20-40s before the
   // route handler is JIT-compiled. Local runs return in ~2-3s.
+  const paragraphs = log.locator("p");
   await expect
-    .poll(async () => (await log.locator("p").count()) >= 2, {
+    .poll(async () => await paragraphs.count(), {
       timeout: 60_000,
     })
-    .toBe(true);
-  const paragraphs = log.locator("p");
+    .toBeGreaterThanOrEqual(2);
   const n = await paragraphs.count();
   if (n === 0) return "";
   return (await paragraphs.nth(n - 1).textContent()) ?? "";
