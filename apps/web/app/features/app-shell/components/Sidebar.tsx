@@ -14,6 +14,7 @@ import {
   Clapperboard,
   Euro,
   MapPin,
+  Sparkles,
   Users,
   PanelLeftClose,
   PanelLeftOpen,
@@ -237,6 +238,20 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
                 <MapPin size={ICON_SIZE} strokeWidth={ICON_STROKE} />
                 {!isCollapsed && (
                   <span className={styles.navLabel}>Locations</span>
+                )}
+              </Link>
+              <Link
+                to="/projects/$id/opportunities"
+                params={{ id: projectId }}
+                className={styles.navLink}
+                activeProps={{
+                  className: `${styles.navLink} ${styles.active}`,
+                }}
+                title="Opportunità"
+              >
+                <Sparkles size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+                {!isCollapsed && (
+                  <span className={styles.navLabel}>Opportunità</span>
                 )}
               </Link>
             </div>

@@ -1,14 +1,25 @@
 import { createAPIFileRoute } from "@tanstack/start/api";
 import { getDb } from "~/server/db";
-import { fundraisingSources, fundraisingItems } from "@oh-writers/db/schema";
+import {
+  fundraisingSources,
+  fundraisingItems,
+  fundraisingOpportunities,
+  type FundraisingOpportunityKind,
+} from "@oh-writers/db/schema";
 
 /**
- * Test-only endpoint: seed a fundraising source + item for E2E classification
- * tests.
+ * Test-only endpoint: seed a fundraising source + item (+ optional opportunity)
+ * for E2E tests.
  *
  * Active only when `MOCK_AI=true`. Returns 404 in production.
- * Body: `{ title: string; guid: string; rawText: string }`
- * Response: `{ itemId: string }`
+ *
+ * Body:
+ *   `{ title: string; guid: string; rawText?: string; withOpportunity?: OpportunityFields }`
+ *
+ * `withOpportunity` — if present, also inserts a `fundraising_opportunities` row:
+ *   `{ kind, status, deadlineAt? (ISO string), organization? }`
+ *
+ * Response: `{ itemId: string; opportunityId?: string }`
  */
 export const APIRoute = createAPIFileRoute("/api/test/fundraising-seed")({
   POST: async ({ request }) => {
@@ -19,6 +30,12 @@ export const APIRoute = createAPIFileRoute("/api/test/fundraising-seed")({
       title?: string;
       guid?: string;
       rawText?: string;
+      withOpportunity?: {
+        kind: FundraisingOpportunityKind;
+        status: "active" | "expired" | "unknown";
+        deadlineAt?: string;
+        organization?: string;
+      };
     } | null;
     if (!body || !body.title || !body.guid) {
       return new Response("Bad request: title and guid required", {
@@ -72,7 +89,38 @@ export const APIRoute = createAPIFileRoute("/api/test/fundraising-seed")({
       return new Response("Failed to insert test item", { status: 500 });
     }
 
-    return new Response(JSON.stringify({ itemId: item.id }), {
+    let opportunityId: string | undefined;
+
+    if (body.withOpportunity) {
+      const opp = body.withOpportunity;
+      const [inserted] = await db
+        .insert(fundraisingOpportunities)
+        .values({
+          itemId: item.id,
+          kind: opp.kind,
+          title: body.title,
+          summary: body.rawText ?? "",
+          organization: opp.organization ?? null,
+          deadlineAt: opp.deadlineAt ? new Date(opp.deadlineAt) : null,
+          link: `https://test.ohwriters.dev/items/${body.guid}`,
+          status: opp.status,
+          confidence: "0.9",
+        })
+        .onConflictDoUpdate({
+          target: fundraisingOpportunities.itemId,
+          set: {
+            kind: opp.kind,
+            title: body.title,
+            status: opp.status,
+            deadlineAt: opp.deadlineAt ? new Date(opp.deadlineAt) : null,
+          },
+        })
+        .returning({ id: fundraisingOpportunities.id });
+
+      opportunityId = inserted?.id;
+    }
+
+    return new Response(JSON.stringify({ itemId: item.id, opportunityId }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
