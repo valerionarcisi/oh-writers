@@ -62,6 +62,52 @@ export const filterCandidatesInPolygon = (
 };
 
 /**
+ * Reduce a polygon/multipolygon geometry to a covering circle: the centre of
+ * its bounding box plus a radius that reaches the farthest corner. Used to bias
+ * a Google Places nearby query to the selected boundary. Returns null for
+ * non-polygon geometries.
+ */
+export const geometryToCircle = (
+  geometry: GeoJSON.Geometry,
+): { lat: number; lng: number; radius_m: number } | null => {
+  if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
+    return null;
+  }
+  const rings =
+    geometry.type === "Polygon"
+      ? geometry.coordinates
+      : geometry.coordinates.flat();
+  let minLng = Infinity;
+  let minLat = Infinity;
+  let maxLng = -Infinity;
+  let maxLat = -Infinity;
+  for (const ring of rings) {
+    for (const position of ring) {
+      const lng = position[0];
+      const lat = position[1];
+      if (lng == null || lat == null) continue;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+  }
+  if (!Number.isFinite(minLng) || !Number.isFinite(minLat)) return null;
+
+  const centerLat = (minLat + maxLat) / 2;
+  const centerLng = (minLng + maxLng) / 2;
+
+  // Approximate metres-per-degree at this latitude, then half-diagonal radius.
+  const mPerDegLat = 111_320;
+  const mPerDegLng = 111_320 * Math.cos((centerLat * Math.PI) / 180);
+  const halfH = ((maxLat - minLat) / 2) * mPerDegLat;
+  const halfW = ((maxLng - minLng) / 2) * mPerDegLng;
+  const radius_m = Math.sqrt(halfH * halfH + halfW * halfW);
+
+  return { lat: centerLat, lng: centerLng, radius_m };
+};
+
+/**
  * Collect all candidates from a flat requirements list.
  */
 export const collectAllCandidates = (

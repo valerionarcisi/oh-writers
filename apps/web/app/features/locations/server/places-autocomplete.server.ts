@@ -181,6 +181,89 @@ const buildMockNearbySuggestions = (
   },
 ];
 
+interface NearbyParams {
+  readonly lat: number;
+  readonly lng: number;
+  readonly radius_m: number;
+  readonly query?: string;
+  readonly max_results?: number;
+  /** Google Places types to restrict a no-query nearby search (e.g. ["restaurant","bar"]). */
+  readonly includedTypes?: readonly string[];
+}
+
+/**
+ * Core nearby-place search, callable from other server functions (no auth — the
+ * caller is responsible for the auth gate). Honours MOCK_AI and the missing-key
+ * path. Free-text query → searchText; empty query → searchNearby.
+ */
+export const fetchNearbyPlaces = (
+  params: NearbyParams,
+): ResultAsync<PlaceSuggestion[], PlacesAutocompleteError> => {
+  if (process.env["MOCK_AI"] === "true") {
+    return okAsync(buildMockNearbySuggestions(params.lat, params.lng));
+  }
+
+  const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
+  if (!apiKey) {
+    return errAsync({
+      _tag: "PlacesNearbyError",
+      message:
+        "GOOGLE_PLACES_API_KEY non configurata — ricerca area non disponibile",
+    });
+  }
+
+  const maxResults = Math.min(
+    params.max_results ?? DEFAULT_NEARBY_RESULTS,
+    MAX_NEARBY_RESULTS,
+  );
+
+  if (params.query && params.query.trim().length > 0) {
+    const locationBias = `vicino a ${params.lat.toFixed(5)}, ${params.lng.toFixed(5)} (raggio ${Math.round(params.radius_m)} m)`;
+    return executeSearchPlaces({
+      query: params.query.trim(),
+      location_bias: locationBias,
+      max_results: maxResults,
+    })
+      .map((places: PlaceResult[]) =>
+        places.map((place) => ({
+          placeId: place.placeId,
+          name: place.name,
+          address: place.address,
+          lat: place.lat,
+          lng: place.lng,
+          types: place.types,
+          photos: place.photos.map((photo) => ({
+            ...photo,
+            thumbnailUrl: buildThumbnailUrl(photo.name, apiKey),
+          })),
+        })),
+      )
+      .mapErr<PlacesAutocompleteError>((e) => ({
+        _tag: "PlacesNearbyError",
+        message: e.message,
+      }));
+  }
+
+  const includedTypes =
+    params.includedTypes && params.includedTypes.length > 0
+      ? { includedTypes: [...params.includedTypes] }
+      : {};
+  return callNearbySearch(apiKey, {
+    ...includedTypes,
+    locationRestriction: {
+      circle: {
+        center: { latitude: params.lat, longitude: params.lng },
+        radius: Math.round(params.radius_m),
+      },
+    },
+    maxResultCount: maxResults,
+  }).map((response) =>
+    (response.places ?? [])
+      .map((p) => toNearbySuggestion(p, apiKey))
+      .filter((s) => s.placeId.length > 0),
+  );
+};
+
 export const searchPlacesInArea = createServerFn({ method: "POST" })
   .validator(SearchPlacesInAreaInputSchema)
   .handler(
@@ -188,75 +271,7 @@ export const searchPlacesInArea = createServerFn({ method: "POST" })
       data,
     }): Promise<ResultShape<PlaceSuggestion[], PlacesAutocompleteError>> => {
       await requireUser();
-
-      if (process.env["MOCK_AI"] === "true") {
-        return toShape(
-          await okAsync<PlaceSuggestion[], PlacesAutocompleteError>(
-            buildMockNearbySuggestions(data.lat, data.lng),
-          ),
-        );
-      }
-
-      const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
-      if (!apiKey) {
-        return toShape(
-          await errAsync<PlaceSuggestion[], PlacesAutocompleteError>({
-            _tag: "PlacesNearbyError",
-            message:
-              "GOOGLE_PLACES_API_KEY non configurata — ricerca area non disponibile",
-          }),
-        );
-      }
-
-      const maxResults = Math.min(
-        data.max_results ?? DEFAULT_NEARBY_RESULTS,
-        MAX_NEARBY_RESULTS,
-      );
-
-      // Free-text query → reuse `executeSearchPlaces` (searchText endpoint).
-      if (data.query && data.query.trim().length > 0) {
-        const locationBias = `vicino a ${data.lat.toFixed(5)}, ${data.lng.toFixed(5)} (raggio ${Math.round(data.radius_m)} m)`;
-        const result = await executeSearchPlaces({
-          query: data.query.trim(),
-          location_bias: locationBias,
-          max_results: maxResults,
-        }).map((places: PlaceResult[]) =>
-          places.map((place) => ({
-            placeId: place.placeId,
-            name: place.name,
-            address: place.address,
-            lat: place.lat,
-            lng: place.lng,
-            types: place.types,
-            photos: place.photos.map((photo) => ({
-              ...photo,
-              thumbnailUrl: buildThumbnailUrl(photo.name, apiKey),
-            })),
-          })),
-        );
-        return toShape(
-          result.mapErr<PlacesAutocompleteError>((e) => ({
-            _tag: "PlacesNearbyError",
-            message: e.message,
-          })),
-        );
-      }
-
-      const result = await callNearbySearch(apiKey, {
-        locationRestriction: {
-          circle: {
-            center: { latitude: data.lat, longitude: data.lng },
-            radius: Math.round(data.radius_m),
-          },
-        },
-        maxResultCount: maxResults,
-      }).map((response) =>
-        (response.places ?? [])
-          .map((p) => toNearbySuggestion(p, apiKey))
-          .filter((s) => s.placeId.length > 0),
-      );
-
-      return toShape(result);
+      return toShape(await fetchNearbyPlaces(data));
     },
   );
 

@@ -20,8 +20,10 @@ import {
   syncRequirementsFromBreakdown,
 } from "../server/locations.server";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
+import { discoverPlacesInArea } from "../server/discovery.server";
 import type { DrawnCircle } from "../lib/area-search";
 import type { AreaFilterResult } from "../lib/area-filter";
+import { geometryToCircle } from "../lib/area-filter";
 import { buildCrossMatches } from "../lib/cross-match";
 import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
@@ -56,6 +58,11 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const [drawnCircle, setDrawnCircle] = useState<DrawnCircle | null>(null);
   const [foundPlaces, setFoundPlaces] = useState<PlaceSuggestion[]>([]);
   const [areaFilter, setAreaFilter] = useState<AreaFilterResult | null>(null);
+  // placeId → best-matching requirement for discovered places, so adding a
+  // hollow pin assigns it to the right requirement without asking.
+  const [discoveryTargets, setDiscoveryTargets] = useState<
+    ReadonlyMap<string, { requirementId: string; requirementName: string }>
+  >(new Map());
   const [lightbox, setLightbox] = useState<{
     photos: ReadonlyArray<LightboxPhoto>;
     index: number;
@@ -68,6 +75,65 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     () => buildCrossMatches(requirements),
     [requirements],
   );
+
+  // placeId → requirement name, for the hollow-pin popup label.
+  const foundPlaceLabels = useMemo(
+    () =>
+      new Map(
+        [...discoveryTargets].map(([placeId, t]) => [
+          placeId,
+          t.requirementName,
+        ]),
+      ),
+    [discoveryTargets],
+  );
+
+  // Discovery (spec 37 Phase 2): when an area is selected, fetch real places
+  // inside it from Google Places and render them as hollow pins. Cleared when
+  // the area filter is dismissed.
+  useEffect(() => {
+    if (!areaFilter) {
+      setFoundPlaces([]);
+      setDiscoveryTargets(new Map());
+      return;
+    }
+    const circle =
+      areaFilter.kind === "boundary"
+        ? geometryToCircle(areaFilter.geojson)
+        : drawnCircle;
+    if (!circle) return;
+
+    let cancelled = false;
+    void (async () => {
+      const response = await discoverPlacesInArea({
+        data: {
+          projectId,
+          lat: circle.lat,
+          lng: circle.lng,
+          radius_m: circle.radius_m,
+        },
+      });
+      if (cancelled || !response.isOk) return;
+      const results = response.value;
+      setFoundPlaces(results.map((r) => r.suggestion));
+      setDiscoveryTargets(
+        new Map(
+          results
+            .filter((r) => r.discovered.matches.length > 0)
+            .map((r) => [
+              r.suggestion.placeId,
+              {
+                requirementId: r.discovered.matches[0]!.requirementId,
+                requirementName: r.discovered.matches[0]!.requirementName,
+              },
+            ]),
+        ),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [areaFilter, drawnCircle, projectId]);
 
   // Broadcast the selected requirement to Cesare so opening the chat from
   // anywhere on this page carries the location context implicitly.
@@ -287,8 +353,14 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
               if (!circle) setFoundPlaces([]);
             }}
             foundPlaces={foundPlaces}
+            foundPlaceLabels={foundPlaceLabels}
             onFoundPlaceAdd={(suggestion) => {
-              if (selectedId) handleAreaAddCandidate(selectedId, suggestion);
+              // Prefer the requirement the discovery matched this place to;
+              // fall back to the currently selected requirement.
+              const target =
+                discoveryTargets.get(suggestion.placeId)?.requirementId ??
+                selectedId;
+              if (target) handleAreaAddCandidate(target, suggestion);
             }}
             onAreaFilter={setAreaFilter}
             highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}

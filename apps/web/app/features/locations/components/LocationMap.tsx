@@ -29,6 +29,8 @@ interface LocationMapProps {
   onCircleDrawn?: (circle: DrawnCircle | null) => void;
   /** External pins for area-search results (rendered with a distinct style). */
   foundPlaces?: ReadonlyArray<PlaceSuggestion>;
+  /** placeId → best-matching requirement name, shown in the hollow-pin popup. */
+  foundPlaceLabels?: ReadonlyMap<string, string>;
   onFoundPlaceAdd?: (suggestion: PlaceSuggestion) => void;
   /**
    * Called when the user selects an administrative area from the map search
@@ -109,6 +111,7 @@ export function LocationMap({
   onOpenDetailModal,
   onCircleDrawn,
   foundPlaces,
+  foundPlaceLabels,
   onFoundPlaceAdd,
   onAreaFilter,
   highlightedCandidateIds,
@@ -557,11 +560,16 @@ export function LocationMap({
       );
 
       const safeId = escapeHtml(place.placeId);
+      const matchLabel = foundPlaceLabels?.get(place.placeId);
+      const matchLine = matchLabel
+        ? `<div style="font-size:11px;color:#1d4ed8;margin-top:6px;font-weight:600">→ adatto a: ${escapeHtml(matchLabel)}</div>`
+        : "";
       marker.bindPopup(
         `
         <div style="font-family:system-ui,sans-serif;min-width:200px;max-width:280px">
           <strong style="font-size:13px;color:#1c1a17">${escapeHtml(place.name)}</strong>
           <div style="font-size:11px;color:#6e6c66;margin-top:4px">${escapeHtml(place.address)}</div>
+          ${matchLine}
           <button type="button" data-found-add="${safeId}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #1d4ed8;border-radius:6px;background:#1d4ed8;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">+ Aggiungi come candidato</button>
         </div>
       `,
@@ -587,7 +595,7 @@ export function LocationMap({
       marker.addTo(map);
       foundMarkersRef.current.set(place.placeId, marker);
     }
-  }, [foundPlaces, leafletReady]);
+  }, [foundPlaces, foundPlaceLabels, leafletReady]);
 
   return (
     <div className={styles.mapWrap}>
