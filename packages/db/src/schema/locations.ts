@@ -28,6 +28,11 @@ export const LOCATION_CANDIDATE_STATUSES = [
 
 export const INT_EXT_VALUES = ["INT", "EXT", "INT/EXT"] as const;
 
+// How a requirement's location_type was resolved (spec 37, Step 1).
+// The location_type value itself follows the LocationType vocabulary in
+// @oh-writers/domain; stored as plain text here since db is below domain.
+export const LOCATION_TYPE_SOURCES = ["dictionary", "haiku"] as const;
+
 export type LocationRequirementStatus =
   (typeof LOCATION_REQUIREMENT_STATUSES)[number];
 export type LocationCandidateStatus =
@@ -46,6 +51,10 @@ export const locationRequirements = pgTable("location_requirements", {
   description: text("description"),
   intExt: text("int_ext", { enum: INT_EXT_VALUES }),
   timeOfDay: jsonb("time_of_day").$type<string[]>().default([]),
+  locationType: text("location_type"),
+  locationTypeSource: text("location_type_source", {
+    enum: LOCATION_TYPE_SOURCES,
+  }),
   confirmedCandidateId: uuid("confirmed_candidate_id"),
   status: text("status", { enum: LOCATION_REQUIREMENT_STATUSES })
     .notNull()

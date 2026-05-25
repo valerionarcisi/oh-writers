@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { LOCATION_TYPES, LOCATION_TYPE_SOURCES } from "./location-types.js";
+
+export const LocationTypeSchema = z.enum(LOCATION_TYPES);
+export const LocationTypeSourceSchema = z.enum(LOCATION_TYPE_SOURCES);
 
 export const LocationRequirementStatusSchema = z.enum([
   "pending",
@@ -64,6 +68,8 @@ export const LocationRequirementSchema = z.object({
   description: z.string().nullable(),
   intExt: LocationIntExtSchema.nullable(),
   timeOfDay: z.array(z.string()),
+  locationType: LocationTypeSchema.nullable(),
+  locationTypeSource: LocationTypeSourceSchema.nullable(),
   confirmedCandidateId: z.string().uuid().nullable(),
   status: LocationRequirementStatusSchema,
   sceneCount: z.number().int(),
@@ -82,5 +88,8 @@ export const NewLocationCandidateSchema = LocationCandidateSchema.omit({
 });
 export type NewLocationCandidate = z.infer<typeof NewLocationCandidateSchema>;
 
-export const PatchLocationCandidateSchema = NewLocationCandidateSchema.partial();
-export type PatchLocationCandidate = z.infer<typeof PatchLocationCandidateSchema>;
+export const PatchLocationCandidateSchema =
+  NewLocationCandidateSchema.partial();
+export type PatchLocationCandidate = z.infer<
+  typeof PatchLocationCandidateSchema
+>;
