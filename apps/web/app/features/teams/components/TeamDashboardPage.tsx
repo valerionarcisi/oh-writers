@@ -88,10 +88,14 @@ export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
           {members.map((member) => (
             <li key={member.id} className={styles.memberRow}>
               <div className={styles.memberAvatar}>
-                {member.userId.slice(0, 2).toUpperCase()}
+                {(member.userName ?? member.userEmail)
+                  .slice(0, 2)
+                  .toUpperCase()}
               </div>
               <div className={styles.memberDetails}>
-                <span className={styles.memberId}>{member.userId}</span>
+                <span className={styles.memberId}>
+                  {member.userName ?? member.userEmail}
+                </span>
                 <span className={styles.memberRole}>{member.role}</span>
               </div>
             </li>

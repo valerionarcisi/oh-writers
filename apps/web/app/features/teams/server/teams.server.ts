@@ -6,7 +6,12 @@ import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
-import { teams, teamMembers, teamInvitations } from "@oh-writers/db/schema";
+import {
+  teams,
+  teamMembers,
+  teamInvitations,
+  users,
+} from "@oh-writers/db/schema";
 import type { Team, TeamMember, TeamInvitation } from "@oh-writers/db/schema";
 import { requireUser, getUser } from "~/server/context";
 import { getDb } from "~/server/db";
@@ -27,8 +32,14 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type TeamMemberWithUser = TeamMember & {
+  userName: string | null;
+  userEmail: string;
+  userAvatarUrl: string | null;
+};
+
 export type TeamWithMembers = Team & {
-  members: TeamMember[];
+  members: TeamMemberWithUser[];
   invitations: TeamInvitation[];
 };
 
@@ -160,8 +171,19 @@ export const getTeam = createServerFn({ method: "GET" })
             return ResultAsync.fromPromise(
               Promise.all([
                 db
-                  .select()
+                  .select({
+                    id: teamMembers.id,
+                    teamId: teamMembers.teamId,
+                    userId: teamMembers.userId,
+                    role: teamMembers.role,
+                    invitedBy: teamMembers.invitedBy,
+                    joinedAt: teamMembers.joinedAt,
+                    userName: users.name,
+                    userEmail: users.email,
+                    userAvatarUrl: users.avatarUrl,
+                  })
                   .from(teamMembers)
+                  .innerJoin(users, eq(teamMembers.userId, users.id))
                   .where(eq(teamMembers.teamId, team.id)),
                 db
                   .select()

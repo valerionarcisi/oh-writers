@@ -173,9 +173,13 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
           {team.members.map((member) => (
             <li key={member.id} className={styles.row}>
               <div className={styles.memberAvatar}>
-                {member.userId.slice(0, 2).toUpperCase()}
+                {(member.userName ?? member.userEmail)
+                  .slice(0, 2)
+                  .toUpperCase()}
               </div>
-              <span className={styles.memberId}>{member.userId}</span>
+              <span className={styles.memberId}>
+                {member.userName ?? member.userEmail}
+              </span>
               <select
                 className={styles.roleSelect}
                 value={member.role}
