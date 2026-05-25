@@ -1,6 +1,6 @@
 # Oh Writers
 
-Professional screenplay collaboration platform. Real-time co-writing, AI-assisted narrative development, and production cost/risk predictions.
+Italian-first platform for the indie writer-director: screenplay editor, pre-production pipeline (breakdown, budget, schedule, locations, shot list), and an agentic AI copilot named Cesare. Scope: writing + pre-production + agentic AI.
 
 ---
 
@@ -26,7 +26,9 @@ Professional screenplay collaboration platform. Real-time co-writing, AI-assiste
 
 ### TL;DR
 
-Oh Writers is a SaaS that follows a film from the first line of the logline to the first cut of the edit. Screenwriting, 1st AD work, production planning, and post hand-off — all in one project, one team, one AI copilot named **Cesare**. Built for indie production houses and film schools that don't want to stitch together Final Draft, Movie Magic, StudioBinder, Filmustage and an NLE plug-in just to make a movie.
+Oh Writers is a SaaS that follows a film from the first line of the logline to a shoot-ready production plan. Screenwriting, 1st AD work, and production planning — all in one project, one team, one AI copilot named **Cesare**, working in Italian. Built for the indie writer-director who doesn't want to stitch together Final Draft, Excel, Movie Magic, StudioBinder/Filmustage and a moodboard tool just to make a movie.
+
+**Scope:** writing + pre-production + agentic AI in Italian. The post-production / NLE bridge is exploratory roadmap, not part of the current product.
 
 **Status:** pre-demo. Actively seeking early design partners.
 
@@ -38,62 +40,61 @@ The enterprise stack costs thousands of euros per seat. Indie production houses,
 
 ### The solution — Oh Writers
 
-One platform that walks with the production from first idea to rough cut, organized around five pillars:
+One platform that walks with the production from the first idea to a shoot-ready plan, organized around three pillars:
 
-1. **Write** — logline, synopsis, outline, treatment, screenplay. Real-time co-writing, universal versioning, comments, roles.
-2. **Plan (with the 1st AD)** — automatic per-scene breakdown (cast, props, locations, VFX, vehicles, extras, sound FX); shooting schedule composition; **calendar templates per country of production** (working days, national holidays, allowed hours, night shifts, minimum rest); call sheets; budget. All generated and kept in sync by Cesare. For small and mid productions, this is enough to stop needing Movie Magic; complex productions can still export and integrate with it.
-3. **Previsualize** — moodboards built from visual references and the treatment, then storyboards generated scene by scene from screenplay and breakdown, with shot lists tied to the shooting schedule. Cesare proposes frames, the director refines them. Replaces the Milanote + Boords + StudioBinder-shotlist stitch-up.
-4. **Shoot** — locked scenes, director's notes, location scouting, version tracking on every take and rewrite.
-5. **Edit** — scene markers and a rough cut assembled by our **DaVinci Resolve and Adobe Premiere agents**, returning into the platform as a living part of the project.
+1. **Write** — logline, synopsis, outline, treatment, screenplay. Universal versioning, comments, roles. Real-time co-writing (2 users on Free, unlimited on Team) is in progress — the Yjs scaffold is ready, the UI is being built.
+2. **Pre-production** — automatic per-scene breakdown (cast, props, locations, VFX, vehicles, extras, sound FX); budget; shooting schedule composition with **calendar templates per country of production** (working days, national holidays, allowed hours, night shifts, minimum rest); location scouting on a map; 2D shot-list and blocking. All draftable and kept in sync by Cesare. For small and mid productions, this is enough to stop needing Movie Magic; complex productions can still export and integrate with it.
+3. **Agentic AI in Italian** — Cesare knows the whole project and acts on six pages: documents, breakdown, budget, schedule, locations, shooting plan. It proposes; the user accepts or rejects.
 
 ### Meet Cesare
 
-Cesare is Oh Writers' AI copilot — not a chatbot parked on the side, but an agent that knows the project end-to-end. Cesare unblocks the blank page, reviews structure and beats, drafts breakdowns, composes shooting schedules under the labor constraints of the country you're shooting in, flags cast/location conflicts when the script changes, and — once the material is on the edit timeline — maps cuts back to the written scenes. One name, one voice, one memory spanning the whole production.
+Cesare is Oh Writers' AI copilot — not a chatbot parked on the side, but an agent that knows the project end-to-end. Cesare unblocks the blank page, reviews structure and beats, drafts breakdowns, composes shooting schedules under the labor constraints of the country you're shooting in, estimates per-scene cost from pure functions over the DB, and flags cast/location conflicts when the script changes. One name, one voice, one memory spanning the production. The model: Cesare reasons, deterministic tools execute — numbers come from the DB and pure functions, never hallucinated.
 
 ### Why now
 
 - **AI finally understands narrative.** Modern models genuinely grasp structure, beats, and scene-level conflict. An AI copilot is useful, not decorative.
-- **Agents can talk to professional software.** MCP and adjacent protocols let our platform integrate natively with DaVinci, Premiere, and other AI agents — no brittle file exports, no plug-in zoo.
-- **Live collaboration is solved.** CRDT (Yjs) makes a Google-Docs-class experience native to screenwriting.
-- **The market gap is wide.** The indie + school + small-production segment has no vertical platform — only enterprise suites or generic tools.
+- **Agentic AI is cheap enough to ship.** Prompt caching, lazy RAG and a model-tier router bring the cost per active user to ~$0.30/day. LLM prices fall ~50% a year, so the economics only improve.
+- **Live collaboration is solvable.** CRDT (Yjs) makes a Google-Docs-class experience native to screenwriting; the scaffold is in place, the UI is in progress.
+- **The market gap is wide.** The Italian indie writer-director has no vertical platform in their language — only English enterprise suites or generic tools.
 
 ### Who it's for
 
-1. **Small production houses (priority 1).** 2–30 people, 1–5 projects a year. Today bleeding budget on fragmented enterprise licenses. Oh Writers replaces the stack with one team subscription.
-2. **Film schools and screenwriting courses (priority 2).** Annual institutional licenses, multi-student access, Cesare as integrated tutor. Students touch the full pipeline — logline to rough cut — without per-seat enterprise costs.
-3. **Professional screenwriters and writing teams (priority 3).** Individual or team plans, editor plus Cesare as a shared story doctor. Viral entry point: writers bring the platform into the productions they work with.
-4. **1st ADs and independent directors.** Natural extension from the screenwriter's project — already inside Oh Writers, no new tool to buy.
+1. **The Italian indie writer-director (primary target).** Writes and directs the same film, budget €200K–2M. Today on Final Draft + Notion/Excel, suffering context-switching more than anyone. The whole product is built for this person. They sign up on the Solo plan.
+2. **Small production houses (the Team segment).** 2–30 people, 1–5 projects a year. Not a separate target audience — the Team tier of the same product, with real-time collaboration, roles, and export branding.
+3. **Film schools and screenwriting courses (a product of their own).** Annual institutional licenses, shared Cesare action pool, faculty onboarding. Students touch the full writing + pre-production pipeline without per-seat enterprise costs.
 
 ### Competitive landscape
 
-| Stage                  | Incumbents                                 | Oh Writers                                                                                          |
-| ---------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Screenwriting          | Final Draft, WriterDuet, Arc Studio, Celtx | Modern editor, real-time co-writing, Cesare as story doctor                                         |
-| Breakdown & pre-prod   | StudioBinder, Filmustage                   | Breakdown auto-generated from the live script, country-aware schedules                              |
-| Scheduling             | Movie Magic Scheduling                     | Cesare handles scheduling natively for small-to-mid productions; export path kept for complex cases |
-| Moodboard & storyboard | Milanote, Boords, StudioBinder shot lists  | Moodboard + storyboard + shot list generated by Cesare from script + breakdown                      |
-| Post-production bridge | Manual exports, per-NLE plug-ins           | DaVinci Resolve & Adobe Premiere agents, script ⇄ rough cut round-trip                              |
+| Stage                | Incumbents                                 | Oh Writers                                                                                          |
+| -------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Screenwriting        | Final Draft, WriterDuet, Arc Studio, Celtx | Modern editor, Cesare as agentic story doctor, Italian-first                                        |
+| Breakdown & pre-prod | StudioBinder, Filmustage                   | Breakdown auto-generated from the live script, country-aware schedules                              |
+| Scheduling           | Movie Magic Scheduling                     | Cesare handles scheduling natively for small-to-mid productions; export path kept for complex cases |
+| Location scouting    | Trello + Google Maps stitch-up             | Map + Google Places + Cesare candidates, all in one app                                             |
+| Shot list & blocking | StudioBinder shot lists                    | 2D blocking + parallel coverage plans, drafted by Cesare                                            |
 
-No single competitor covers the full arc. Most don't speak to each other. None has an AI copilot that remembers the project across phases.
+No single competitor covers writing through pre-production in one tool. Most don't speak to each other. None has an agentic AI copilot that knows the whole project and works in Italian. (A post-production / NLE round-trip is exploratory roadmap — see below — not a current claim.)
 
 ### Business model
 
-Two tiers from day one:
+Writing is free, forever, even for two. Cesare is the conversion — flat rate with a usage cap, not pay-as-you-go.
 
-- **Oh Writers SaaS — Teams & Schools.** Simple subscription, self-serve sign-up. For indie productions, film schools, writing collectives, and individual pros. Designed to replace the generalist stack at a fraction of the cost.
-- **Oh Writers Enterprise.** Custom deployment for larger production houses, studios, or institutions with compliance and procurement needs. Dedicated onboarding, custom integrations, SLA.
+- **Free — €0.** Full screenplay editor (Fountain, PDF/FDX/Fountain export), soggetto/scaletta/treatment, manual breakdown/budget/schedule/locations/shot list, real-time co-writing up to 2 users, unlimited projects and versioning. No Cesare.
+- **Solo — €15/month.** Everything in Free plus Cesare everywhere; 300 Cesare actions/month (enough for a full feature), inline autocomplete unlimited.
+- **Team — €25/seat/month (min 2 seats).** Everything in Solo plus unlimited Cesare (fair use), unlimited real-time collaboration, roles & permissions, export branding.
+- **Scuola — custom annual license.** Indicative €40/student/year, shared Cesare action pool, faculty onboarding.
 
-Exact pricing is being defined during the pre-demo / design-partner phase.
+Annual billing: 2 months free. Margin is ~80% gross weighted across paying users (78–83% at typical usage); the Solo 300-action cap is the guardrail. A pay-as-you-go add-on may come post-launch as a Free→Solo bridge, but is not in the launch pricing.
 
-### The NLE bridge — our competitive moat
+### The NLE bridge — exploratory roadmap (not in scope today)
 
-No competitor in the indie tier closes the loop from script to rough cut. Oh Writers will, through agents running inside **DaVinci Resolve** and **Adobe Premiere**:
+The current product is writing + pre-production + agentic AI in Italian. A post-production round-trip is a longer-term idea, not a current capability and not part of the pitch. If pursued, it would work through agents inside **DaVinci Resolve** and **Adobe Premiere**:
 
 1. Oh Writers exports the approved scene plus markers (scene number, beat, dialogue).
-2. The NLE agent assembles a **rough cut** from tagged clips, guided by the beats of the script.
+2. The NLE agent assembles a rough cut from tagged clips, guided by the beats of the script.
 3. The cut returns as a timeline in the platform, driving scene status: `written → shot → assembled → locked`.
 
-This is the piece that turns Oh Writers from "writing + pre-production" into a **full indie production platform** — and justifies a premium positioning over StudioBinder, Filmustage, and the generalist scheduling stack. None of them have a native AI round-trip with the edit.
+This would extend Oh Writers from "writing + pre-production" toward a full indie production platform. It is explicitly deferred — see the Post-MVP roadmap below — and should not be communicated as a shipped or near-term differentiator.
 
 ---
 
@@ -246,13 +247,13 @@ oh-writers/
 
 ### Package responsibilities
 
-| Package                 | What it owns                                         |
-| ----------------------- | ---------------------------------------------------- |
-| `@oh-writers/web`       | All UI, routes, tRPC client, Better Auth client      |
-| `@oh-writers/ws-server` | WebSocket server, Yjs provider, room auth            |
-| `@oh-writers/db`        | Drizzle schema, migrations, `db` client export       |
-| `@oh-writers/shared`    | Zod schemas, branded IDs, tagged consts, Result type |
-| `@oh-writers/ui`        | `tokens.css` design tokens, shared component stubs   |
+| Package                 | What it owns                                               |
+| ----------------------- | ---------------------------------------------------------- |
+| `@oh-writers/web`       | All UI, routes, `createServerFn` calls, Better Auth client |
+| `@oh-writers/ws-server` | WebSocket server, Yjs provider, room auth                  |
+| `@oh-writers/db`        | Drizzle schema, migrations, `db` client export             |
+| `@oh-writers/shared`    | Zod schemas, branded IDs, tagged consts, Result type       |
+| `@oh-writers/ui`        | `tokens.css` design tokens, shared component stubs         |
 
 ---
 
@@ -659,7 +660,7 @@ member.role === TeamRoles.OWNER;
 | React component | `PascalCase.tsx`        | `ScreenplayEditor.tsx`        |
 | CSS module      | `PascalCase.module.css` | `ScreenplayEditor.module.css` |
 | Hook            | `useCamelCase.ts`       | `useScreenplayEditor.ts`      |
-| tRPC router     | `domain.router.ts`      | `screenplay.router.ts`        |
+| Server function | `domain.server.ts`      | `screenplay.server.ts`        |
 | Zod schema      | `domain.schema.ts`      | `screenplay.schema.ts`        |
 
 ### Git commits
@@ -698,7 +699,7 @@ apps/web/app/features/<feature-name>/
 ├── hooks/
 │   └── useMyFeature.ts
 ├── server/
-│   └── myFeature.router.ts
+│   └── myFeature.server.ts
 └── index.ts
 ```
 

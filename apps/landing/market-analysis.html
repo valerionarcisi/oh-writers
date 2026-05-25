@@ -688,18 +688,27 @@
     /* ── Slide 12 — Prezzi ── */
     .pricing-cards {
       display: flex;
-      gap: 20px;
+      flex-wrap: wrap;
+      gap: 14px;
       align-items: stretch;
     }
     .pricing-card {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 190px;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
-      padding: 32px 28px;
+      padding: 22px 20px;
       display: flex;
       flex-direction: column;
       position: relative;
+    }
+    .pricing-card .pricing-features li {
+      font-size: 0.82rem;
+      padding: 6px 0;
+    }
+    .pricing-card .pricing-price {
+      font-size: 2.1rem;
     }
     .pricing-card.featured {
       border: 2px solid var(--action);
@@ -1734,7 +1743,7 @@
 
   <!-- Progress bar -->
   <div class="progress-bar">
-    <div class="progress-fill" style="width: 4.17%"></div>
+    <div class="progress-fill" style="width: 3.70%"></div>
   </div>
 
   <!-- ── Slide 0 — Apertura privata ── -->
@@ -1768,7 +1777,7 @@
       <p class="eyebrow">Il problema</p>
       <div class="split-layout">
         <div class="split-left">
-          <div class="big-number">4</div>
+          <div class="big-number">6–8</div>
           <div class="big-number-label">tool diversi</div>
           <div class="big-number-sub">per fare un film</div>
         </div>
@@ -1779,8 +1788,11 @@
             <li><span class="tool-name">Excel</span> — breakdown</li>
             <li><span class="tool-name">Movie Magic</span> — schedule</li>
             <li><span class="tool-name">Notion</span> — note e produzione</li>
+            <li><span class="tool-name">StudioBinder / Filmustage</span> — set e shot list</li>
+            <li><span class="tool-name">Milanote / Boords</span> — moodboard e storyboard</li>
+            <li><span class="tool-name">Plug-in DaVinci</span> — passaggio al montaggio</li>
           </ul>
-          <p class="problem-conclusion">Quattro contesti. Zero integrazione. Ogni cambio di tool è frizione. Ogni frizione è tempo perso sul progetto che conta.</p>
+          <p class="problem-conclusion">Sei, otto contesti diversi. Zero integrazione. Ogni cambio di tool è frizione. Ogni frizione è tempo perso sul progetto che conta.</p>
         </div>
       </div>
     </div>
@@ -1880,9 +1892,13 @@
   <!-- ── Slide 4 — Bandi & Finanziamenti ── -->
   <div class="slide" id="slide-4">
     <div class="slide-content">
-      <p class="eyebrow">La soluzione — in più</p>
-      <h2 class="slide-title" style="margin-bottom: 20px;">Bandi & Finanziamenti.<br>Ingestion automatica + match AI.</h2>
-      <p class="bandi-intro">Il filmmaker italiano insegue bandi su Substack, IG, siti ministeriali, film commission regionali. Oh Writers ingerisce ogni notte i feed RSS di fonti curate, Cesare classifica ogni opportunità (scadenza, importo, eleggibilità) e la confronta con il progetto. Zero ricerca manuale, zero scadenze perse.</p>
+      <p class="eyebrow">Roadmap — in costruzione</p>
+      <h2 class="slide-title" style="margin-bottom: 14px;">Bandi & Finanziamenti.<br>Ingestion automatica + match AI.</h2>
+      <div style="display:inline-flex; align-items:center; gap:8px; background: var(--info-soft); color: var(--info); border-radius: var(--radius-pill); padding: 5px 14px; font-size: 0.78rem; font-weight: 600; margin-bottom: 18px;">
+        <span style="width:6px; height:6px; border-radius:50%; background: var(--info);"></span>
+        Sto costruendo · Spec 35 · Phase 1 su branch, merge in arrivo
+      </div>
+      <p class="bandi-intro">Il filmmaker italiano insegue bandi su Substack, IG, siti ministeriali, film commission regionali. Oh Writers ingerirà ogni notte i feed RSS di fonti curate, Cesare classificherà ogni opportunità (scadenza, importo, eleggibilità) e la confronterà con il progetto. Zero ricerca manuale, zero scadenze perse. Non è ancora in main: è la prossima cosa che spedisco.</p>
       <div class="bandi-grid">
         <div class="bandi-card">
           <div class="bandi-card-type">Nazionale</div>
@@ -1916,7 +1932,7 @@
         </div>
       </div>
       <div class="bandi-moat">
-        <strong>Il momento "wow":</strong> la sceneggiatrice apre Oh Writers la mattina alle 9. In cima alla home: <em>"✦ Cesare ha trovato 3 bandi pertinenti stanotte."</em> Apulia Film Fund scade fra 12 giorni, importo compatibile con il budget, regione coerente con la location già scelta. Zero ricerca manuale, zero scadenze perse. Anchor source <em>Collettivo Incendio</em>, 10 fonti curate al lancio, feed RSS personalizzabili. Nessun competitor fa questo.
+        <strong>Il momento "wow" a cui punto:</strong> la sceneggiatrice apre Oh Writers la mattina alle 9. In cima alla home: <em>"✦ Cesare ha trovato 3 bandi pertinenti stanotte."</em> Apulia Film Fund scade fra 12 giorni, importo compatibile con il budget, regione coerente con la location già scelta. Zero ricerca manuale, zero scadenze perse. Anchor source <em>Collettivo Incendio</em>, 10 fonti curate al lancio, feed RSS personalizzabili. Nessun competitor fa questo — e quando sarà in main, sarà un differenziatore vero.
       </div>
     </div>
   </div>
@@ -2153,7 +2169,7 @@
       <p class="eyebrow">Sostenibilità economica</p>
       <h2 class="slide-title" style="margin-bottom: 24px;">L'AI agentic costa.<br>La nostra no.</h2>
       <div class="cost-headline">
-        <span class="cost-from">$2/giorno</span>
+        <span class="cost-from">$2/giorno <span style="font-size:0.6em; text-decoration:none; color:var(--text-mute); display:block; margin-top:2px;">teorico, senza ottimizzazioni</span></span>
         <span class="cost-arrow">→</span>
         <span class="cost-to">$0.30<span class="cost-to-label">/giorno per utente attivo</span></span>
         <span class="cost-savings-badge">−85%</span>
@@ -2178,7 +2194,7 @@
           <div class="cost-layer-desc">Pure function. Haiku per domande conversazionali, Sonnet per azioni agentic. Qualità intatta, prezzo dimezzato.</div>
         </div>
       </div>
-      <p class="qa-footnote">Implicazione: piano Team a €29/mese per utente mantiene margine lordo 95%+ anche con uso intensivo di Cesare.</p>
+      <p class="qa-footnote">Costo API mensile per profilo d'uso: <strong>casuale</strong> (20–40 azioni) $1–2 · <strong>medio</strong> (50–150) $2–4 · <strong>heavy al cap</strong> (200–300) $8–12. Dato reale founder: ~$4/mese mentre lavora a due film. Margine medio ponderato sui paying: <strong>~80% lordo</strong> (78–83% a regime di uso medio). Il cap 300 azioni sul Solo protegge il margine.</p>
     </div>
   </div>
 
@@ -2186,14 +2202,17 @@
   <div class="slide" id="slide-timebars">
     <div class="slide-content">
       <p class="eyebrow">Il tempo che restituiamo all'autore</p>
-      <h2 class="slide-title" style="margin-bottom: 14px;">Quattro operazioni.<br>Una giornata diventa cinque minuti.</h2>
+      <h2 class="slide-title" style="margin-bottom: 8px;">Da 0 a draft iterabile<br>in pochi secondi.</h2>
+      <p style="font-size: 0.95rem; color: var(--text-3); line-height: 1.55; margin-bottom: 18px; max-width: 760px;">
+        Il tempo per arrivare al lavoro finito resta tuo. Cesare cancella la pagina bianca: ti dà un punto di partenza, non un risultato definitivo.
+      </p>
       <div class="timebar-legend">
-        <span><span class="timebar-legend-swatch before"></span>Workflow attuale</span>
-        <span><span class="timebar-legend-swatch after"></span>Con Cesare</span>
+        <span><span class="timebar-legend-swatch before"></span>Da zero, oggi</span>
+        <span><span class="timebar-legend-swatch after"></span>Primo draft con Cesare</span>
       </div>
       <div class="timebars">
         <div class="timebar-row">
-          <div class="timebar-label">Soggetto v1 da logline</div>
+          <div class="timebar-label">Primo draft soggetto da logline</div>
           <div class="timebar-stack">
             <div class="timebar-track"><div class="timebar-fill before" style="width:100%;">3–7 giorni</div></div>
             <div class="timebar-track"><div class="timebar-fill after" style="width:4%;">30s</div></div>
@@ -2204,7 +2223,7 @@
           </div>
         </div>
         <div class="timebar-row">
-          <div class="timebar-label">Scouting iniziale location</div>
+          <div class="timebar-label">Prima rosa di candidate location</div>
           <div class="timebar-stack">
             <div class="timebar-track"><div class="timebar-fill before" style="width:85%;">2 giorni</div></div>
             <div class="timebar-track"><div class="timebar-fill after" style="width:3%;">30s</div></div>
@@ -2215,7 +2234,7 @@
           </div>
         </div>
         <div class="timebar-row">
-          <div class="timebar-label">Piano inquadrature scena</div>
+          <div class="timebar-label">Prima copertura inquadrature scena</div>
           <div class="timebar-stack">
             <div class="timebar-track"><div class="timebar-fill before" style="width:55%;">~1 ora</div></div>
             <div class="timebar-track"><div class="timebar-fill after" style="width:8%;">5 min</div></div>
@@ -2226,7 +2245,7 @@
           </div>
         </div>
         <div class="timebar-row">
-          <div class="timebar-label">Breakdown + stima costo scena</div>
+          <div class="timebar-label">Primo spoglio + stima costo scena</div>
           <div class="timebar-stack">
             <div class="timebar-track"><div class="timebar-fill before" style="width:70%;">30–60 min</div></div>
             <div class="timebar-track"><div class="timebar-fill after" style="width:4%;">15s</div></div>
@@ -2237,7 +2256,7 @@
           </div>
         </div>
       </div>
-      <p class="qa-footnote">Stime basate sui workflow attuali raccolti su Final Draft + Excel + StudioBinder; tempi con Cesare misurati sul prodotto in main. Le ore restituite tornano sul progetto che conta: la storia.</p>
+      <p class="qa-footnote">I tempi "da zero" sono quelli per partire senza strumenti (Final Draft + Excel + StudioBinder); i tempi con Cesare sono per arrivare al <strong>primo draft / first pass</strong> misurato sul prodotto in main — non al risultato finito, che resta lavoro dell'autore. Quello che cancelliamo è la pagina bianca.</p>
     </div>
   </div>
 
@@ -2295,9 +2314,9 @@
           <span class="stat-label">film/anno in Italia</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number">65.000</span>
-          <span class="stat-label">professionisti</span>
-          <span class="stat-sub">audiovisivo italiano</span>
+          <span class="stat-number">500–1k</span>
+          <span class="stat-label">writer-director</span>
+          <span class="stat-sub">attivi/anno + scuole + indie</span>
         </div>
         <div class="stat-item">
           <span class="stat-number">77%</span>
@@ -2305,7 +2324,7 @@
           <span class="stat-sub">in Europa</span>
         </div>
       </div>
-      <p class="source-line">ANICA 2024 · EAO 2015–2023</p>
+      <p class="source-line">Target più piccolo dei 65k professionisti dell'audiovisivo, ma difendibile e raggiungibile. ANICA 2024 · EAO 2015–2023</p>
     </div>
   </div>
 
@@ -2426,7 +2445,7 @@
           <tr class="differentiator">
             <td>Bandi & Finanziamenti</td>
             <td><span class="check-danger">✗ Nessuno</span></td>
-            <td><span class="check-agent">✓</span></td>
+            <td><span class="check-agent">✓ in arrivo</span></td>
           </tr>
           <tr class="differentiator">
             <td>In italiano</td>
@@ -2453,11 +2472,11 @@
         <span class="quote-attr">— European Audiovisual Observatory, 2015–2023</span>
       </blockquote>
       <div class="tag-row">
-        <span class="tag">Registi-sceneggiatori</span>
+        <span class="tag">Registi-sceneggiatori indie</span>
         <span class="tag">Budget €200K–2M</span>
-        <span class="tag">Scuole di cinema</span>
+        <span class="tag">Italia prima</span>
       </div>
-      <p class="target-body">Questo filmmaker usa Final Draft per scrivere e Notion/Excel per il resto. Soffre il cambio di contesto più di chiunque altro. Oh Writers è costruito per lui.</p>
+      <p class="target-body">Questo filmmaker usa Final Draft per scrivere e Notion/Excel per il resto. Soffre il cambio di contesto più di chiunque altro. Oh Writers è costruito per lui — è il target primario unico. Le case di produzione sono il segmento Team; le scuole sono un prodotto a sé, con licenza annuale dedicata.</p>
     </div>
   </div>
 
@@ -2493,41 +2512,97 @@
   <div class="slide" id="slide-13">
     <div class="slide-content">
       <p class="eyebrow">05 / Prezzi</p>
-      <h2 class="slide-title" style="margin-bottom: 28px;">I ricavi veri vengono dai team.</h2>
+      <h2 class="slide-title" style="margin-bottom: 12px;">Scrivere è gratis. Sempre.<br>Cesare è la conversione.</h2>
+      <p style="font-size: 0.95rem; color: var(--text-3); line-height: 1.55; margin-bottom: 14px; max-width: 760px;">
+        L'editor è il loss leader: quello che Final Draft fa pagare $199, gratis per sempre, anche in due. Cesare costa perché ti fa risparmiare giorni di lavoro.
+      </p>
+      <div style="display:inline-flex; align-items:center; gap:8px; background: var(--info-soft); color: var(--info); border-radius: var(--radius-pill); padding: 5px 14px; font-size: 0.78rem; font-weight: 600; margin-bottom: 22px;">
+        <span style="width:6px; height:6px; border-radius:50%; background: var(--info);"></span>
+        Sto costruendo · billing e account scuola (Spec 16) non ancora in main — tariffe indicative
+      </div>
       <div class="pricing-cards">
         <div class="pricing-card">
-          <div class="pricing-plan">Gratuito</div>
+          <div class="pricing-plan">Free</div>
           <div class="pricing-price">€0</div>
-          <span class="pricing-period">&nbsp;</span>
+          <span class="pricing-period">sempre · nessuna carta</span>
           <ul class="pricing-features">
-            <li>1 progetto</li>
-            <li>Scrittura completa</li>
-            <li>Breakdown base</li>
-          </ul>
-        </div>
-        <div class="pricing-card">
-          <div class="pricing-plan">Individuale</div>
-          <div class="pricing-price">€12</div>
-          <span class="pricing-period">al mese</span>
-          <ul class="pricing-features">
-            <li>Progetti illimitati</li>
-            <li>Budget e schedule</li>
-            <li>Cesare AI (100 msg/mese)</li>
+            <li>Editor sceneggiatura completo (Fountain, export PDF/FDX/Fountain)</li>
+            <li>Soggetto, scaletta, treatment</li>
+            <li>Breakdown, budget, schedule, location, shot list e blocking 2D — manuali</li>
+            <li>Co-writing real-time fino a 2 utenti</li>
+            <li>Progetti illimitati, versioning, export</li>
+            <li style="color: var(--text-mute);">Nessun Cesare AI</li>
           </ul>
         </div>
         <div class="pricing-card featured">
           <div class="recommended-badge">★ Consigliato</div>
-          <div class="pricing-plan">Team</div>
-          <div class="pricing-price">€29</div>
-          <span class="pricing-period">al mese per utente</span>
+          <div class="pricing-plan">Solo</div>
+          <div class="pricing-price">€15</div>
+          <span class="pricing-period">al mese</span>
           <ul class="pricing-features">
-            <li>Collaborazione real-time</li>
-            <li>Cesare AI illimitato</li>
-            <li>Export e integrazioni</li>
+            <li>Tutto il Free, più Cesare ovunque</li>
+            <li>Breakdown automatico, stima costo scena, schedule meteo-aware</li>
+            <li>Location candidates, shot list AI, chat sulle 6 pagine</li>
+            <li>Cap 300 azioni Cesare/mese (un lungometraggio intero)</li>
+            <li>Autocomplete inline incluso, senza limite</li>
+          </ul>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-plan">Team</div>
+          <div class="pricing-price">€25</div>
+          <span class="pricing-period">per seat/mese · min 2 seat</span>
+          <ul class="pricing-features">
+            <li>Tutto il Solo, più Cesare illimitato (fair use)</li>
+            <li>Real-time collab senza limite di utenti</li>
+            <li>Ruoli e permessi</li>
+            <li>Branding personalizzato sugli export</li>
+          </ul>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-plan">Scuola</div>
+          <div class="pricing-price">su misura</div>
+          <span class="pricing-period">licenza annuale</span>
+          <ul class="pricing-features">
+            <li>Orientativo €40/studente/anno</li>
+            <li>Pool azioni Cesare condiviso</li>
+            <li>Onboarding del corpo docente</li>
           </ul>
         </div>
       </div>
-      <p class="pricing-footnote">Prezzi indicativi. Costo Cesare per utente attivo: ~$0.30/giorno grazie ai 3 layer di cost engineering. Margine lordo sul piano Team: 95%+.</p>
+      <p class="pricing-footnote">Pagamento annuale: 2 mesi gratis (€150/anno Solo, €250/anno per seat Team). Costo Cesare per utente attivo: ~$0.30/giorno grazie ai 3 layer di cost engineering. Il cap 300 azioni sul Solo è il guardrail che protegge il margine. Co-writing real-time: <em>sto costruendo</em> — scaffold Yjs pronto, UI in costruzione.</p>
+    </div>
+  </div>
+
+  <!-- ── Slide — Economia unitaria + modello ── -->
+  <div class="slide" id="slide-economics">
+    <div class="slide-content">
+      <p class="eyebrow">05 / Economia unitaria</p>
+      <h2 class="slide-title" style="margin-bottom: 20px;">Flat rate con cap.<br>Non pay-as-you-go.</h2>
+      <div class="cost-headline" style="display: block; padding: 22px 26px;">
+        <div style="font-size: 0.95rem; color: var(--text-2); line-height: 1.6;">
+          A regime, <strong>1.000 paying user</strong> con mix 60% casual / 30% medio / 10% heavy:
+        </div>
+        <div class="stats-row" style="margin: 14px 0 0; border-top: 1px solid var(--line); padding-top: 8px;">
+          <div class="stat-item"><span class="stat-number" style="font-size: 2.4rem;">~€18k</span><span class="stat-label">revenue/mese</span><span class="stat-sub">prezzo medio ~€18</span></div>
+          <div class="stat-item"><span class="stat-number" style="font-size: 2.4rem;">~€2.6k</span><span class="stat-label">costo API/mese</span></div>
+          <div class="stat-item"><span class="stat-number" style="font-size: 2.4rem;">~80%</span><span class="stat-label">margine lordo</span></div>
+          <div class="stat-item"><span class="stat-number" style="font-size: 2.4rem;">~€173k</span><span class="stat-label">profitto lordo/anno</span></div>
+        </div>
+      </div>
+      <div class="cost-layers" style="margin-top: 18px;">
+        <div class="cost-layer">
+          <div class="cost-layer-name">Perché flat, non PAYG</div>
+          <div class="cost-layer-desc">Pay-as-you-go produrrebbe ~50% di revenue in meno: i light user, che nel flat sussidiano gli heavy, pagherebbero molto meno.</div>
+        </div>
+        <div class="cost-layer">
+          <div class="cost-layer-name">Predicibilità</div>
+          <div class="cost-layer-desc">Bolletta fissa per l'utente, ricavo prevedibile per il business. Niente bill shock.</div>
+        </div>
+        <div class="cost-layer">
+          <div class="cost-layer-name">Break-even</div>
+          <div class="cost-layer-desc">Per founder solo: ~500–700 paying user. Eventuale add-on PAYG come bridge dal Free al Solo, non al lancio.</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2549,8 +2624,8 @@
         <div class="risk-response">È il laboratorio, non la destinazione. La sequenza è: valida in IT, scala in EU. Bandi e fonti italiane sono il moat di partenza.</div>
       </div>
       <div class="risk-row">
-        <div class="risk-label">L'AI agentic è troppo costosa per stare a margine</div>
-        <div class="risk-response">3 layer di cost engineering già spediti: prompt caching, lazy RAG, model router. Da $2 a $0.30/giorno per utente. Margine 95%+ sul piano Team.</div>
+        <div class="risk-label">Dipendenza dai costi AI: e se l'AI agentic resta cara?</div>
+        <div class="risk-response">Tre risposte. <strong>(1)</strong> I costi LLM calano ~50% l'anno: Haiku 4.5 oggi costa 1/15 di GPT-4 di 18 mesi fa, con qualità superiore — trend strutturale. <strong>(2)</strong> Architettura di costo già pronta: i tre layer portano l'utente attivo da ~$2/giorno teorico a ~$0.30 reale. <strong>(3)</strong> Il pricing assorbe il rischio: se i costi raddoppiano invece di dimezzarsi, si alza il prezzo per tutti i player del settore. Margine medio ~80% lordo sui paying.</div>
       </div>
     </div>
   </div>
@@ -2673,7 +2748,7 @@
           <div class="source-num">[4]</div>
           <div class="source-body">
             <div class="source-name">Prezzi competitor verificati dai siti ufficiali</div>
-            <div class="source-detail">Final Draft, Movie Magic, StudioBinder, Celtx, Arc Studio Pro. Verificati maggio 2025.</div>
+            <div class="source-detail">Final Draft, Movie Magic, StudioBinder, Celtx, Arc Studio Pro. Verificati maggio 2026.</div>
           </div>
         </li>
       </ul>
@@ -2684,11 +2759,19 @@
   <nav class="nav-bar">
     <button class="btn-nav btn-prev" aria-label="Slide precedente">&#8249;</button>
     <div class="nav-center">
-      <span class="counter">1 / 26</span>
+      <span class="counter">1 / 27</span>
       <span class="nav-dot"></span>
       <span class="brand">oh writers</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn-fullscreen" id="btn-copy-link" aria-label="Copia link a questa slide" title="Copia link a questa slide">
+        <svg id="icon-link" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6.5 9.5L9.5 6.5M5.5 7.5L4 9C2.9 10.1 2.9 11.9 4 13C5.1 14.1 6.9 14.1 8 13L9.5 11.5M10.5 8.5L12 7C13.1 5.9 13.1 4.1 12 3C10.9 1.9 9.1 1.9 8 3L6.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg id="icon-copied" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
+          <path d="M3 8.5L6 11.5L13 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button class="btn-fullscreen" id="btn-fullscreen" aria-label="Schermo intero" title="Schermo intero (F)">
         <svg id="icon-enter" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M1 6V1H6M10 1H15V6M15 10V15H10M6 15H1V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2705,7 +2788,13 @@
     const slides = document.querySelectorAll('.slide');
     let current = 0;
 
-    function goTo(n) {
+    // Deep-link: each slide is reachable via #N (1-based position in the deck).
+    function slideFromHash() {
+      const n = parseInt(window.location.hash.slice(1), 10);
+      return Number.isInteger(n) ? n - 1 : 0;
+    }
+
+    function goTo(n, updateHash = true) {
       slides[current].classList.remove('active');
       current = Math.max(0, Math.min(n, slides.length - 1));
       slides[current].classList.add('active');
@@ -2713,6 +2802,9 @@
       document.querySelector('.progress-fill').style.width = `${((current + 1) / slides.length) * 100}%`;
       document.querySelector('.btn-prev').disabled = current === 0;
       document.querySelector('.btn-next').disabled = current === slides.length - 1;
+      if (updateHash) {
+        history.replaceState(null, '', `#${current + 1}`);
+      }
     }
 
     document.addEventListener('keydown', e => {
@@ -2753,7 +2845,37 @@
     btnFs.addEventListener('click', toggleFullscreen);
     document.addEventListener('fullscreenchange', updateFsIcons);
 
-    goTo(0);
+    // Copy a direct link to the current slide.
+    const btnCopy = document.getElementById('btn-copy-link');
+    const iconLink = document.getElementById('icon-link');
+    const iconCopied = document.getElementById('icon-copied');
+    let copyResetTimer = null;
+
+    function copyCurrentLink() {
+      const url = `${location.origin}${location.pathname}#${current + 1}`;
+      const showCopied = () => {
+        iconLink.style.display = 'none';
+        iconCopied.style.display = '';
+        btnCopy.title = 'Link copiato';
+        clearTimeout(copyResetTimer);
+        copyResetTimer = setTimeout(() => {
+          iconLink.style.display = '';
+          iconCopied.style.display = 'none';
+          btnCopy.title = 'Copia link a questa slide';
+        }, 1400);
+      };
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(url).then(showCopied).catch(() => prompt('Copia il link:', url));
+      } else {
+        prompt('Copia il link:', url);
+      }
+    }
+    btnCopy.addEventListener('click', copyCurrentLink);
+
+    // React to back/forward and pasted #N links.
+    window.addEventListener('hashchange', () => goTo(slideFromHash(), false));
+
+    goTo(slideFromHash(), false);
   </script>
 
 </body>
