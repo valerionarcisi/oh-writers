@@ -47,6 +47,19 @@ export class FundraisingCronAuthError {
   readonly message = "Invalid cron secret";
 }
 
+export class ClassificationError {
+  readonly _tag = "ClassificationError" as const;
+  readonly message: string;
+  readonly cause: string | null;
+  constructor(
+    readonly itemId: string,
+    cause: unknown,
+  ) {
+    this.cause = cause instanceof Error ? cause.message : String(cause ?? null);
+    this.message = `Classification failed for item ${itemId}: ${this.cause}`;
+  }
+}
+
 export class FundraisingThrottledError {
   readonly _tag = "FundraisingThrottledError" as const;
   readonly message: string;
