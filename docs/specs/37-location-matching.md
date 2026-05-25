@@ -1,6 +1,6 @@
 # Spec 37 — Location Matching & Area Discovery
 
-> **Status:** draft — awaiting approval
+> **Status:** Phase 1 built (2026-05-25) — Phases 2–3 pending
 > **Owner:** locations feature
 > **Depends on:** boundary search (`lib/boundary.ts`), area-search (`lib/area-search.ts`, `server/places-autocomplete.server.ts`), breakdown → requirement sync (`syncRequirementsFromBreakdown`)
 
@@ -254,6 +254,29 @@ chips would appear on only ~2 of 9 real requirements.
 - Accent-insensitive, case-insensitive.
 
 **Test:** OHW-370 (match engine, Vitest ≥ 5 cases), OHW-371 (E2E: select area → chips on candidate pins), OHW-375 (normalise mock: `Bancone → bar` via fixture, dictionary path for `Ristorante - Forno`). Cost smoke `cost:smoke:location-normalise` (real Haiku batch, not in CI).
+
+> **Built 2026-05-25.** Shipped as specified except:
+>
+> - Migration is `0030_location_type.sql` (hand-written: drizzle-kit generate is
+>   interactive in this repo and prompted unrelated renames). Columns are nullable.
+> - Chips render **in the panel candidate rows** as cross-matches
+>   ("Va bene anche per: [Requirement] (N scene)") via `lib/cross-match.ts` —
+>   the on-map-pin chips are deferred to Phase 2 (when discovered hollow pins
+>   exist and the map gains a chip layer). Panel chips deliver the same value for
+>   existing candidates now.
+> - Verified live on "Non fa ridere": dictionary resolves Bancone→bar,
+>   Appartamento→appartamento, Ristorante-Forno→ristorante, Strada→strada;
+>   Haiku (mock) collapses Sala/Cucina/Angolo→ristorante, Montage→altro. Real
+>   data exposed two matcher bugs, fixed: substring false-positive ("pub" in
+>   "pubblico") → word-boundary tokenise; over-greedy generic interiors → empty
+>   dictionary keywords for `interno_generico` so they defer to Haiku.
+> - **Build landmine fixed:** `tsconfig.json` mapped `@turf/*` paths to their
+>   `.d.ts`, which `vite-tsconfig-paths` used for runtime resolution (loading a
+>   type-only module). Replaced with ambient `app/types/turf.d.ts` + passing raw
+>   `[lng,lat]` coords to turf rather than importing the `@turf/helpers` barrel.
+> - Tests: OHW-370 + normalise fixtures + `lib/cross-match` + `lib/area-filter` —
+>   41 Vitest green. OHW-371 Playwright E2E still TODO. Cost smoke wired
+>   (`pnpm cost:smoke:location-normalise`), not yet run (needs API key).
 
 ### Phase 2 — Discovery of new places (Google Places, reuse `searchPlacesInArea`)
 
