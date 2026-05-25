@@ -1,5 +1,9 @@
 import { useState } from "react";
-import type { LocationRequirement, LocationCandidate, PatchLocationCandidate } from "@oh-writers/domain";
+import type {
+  LocationRequirement,
+  LocationCandidate,
+  PatchLocationCandidate,
+} from "@oh-writers/domain";
 import { PlacesCombobox } from "./PlacesCombobox";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import styles from "./LocationPanel.module.css";
@@ -21,14 +25,31 @@ interface AddCandidatePayload {
   photoNames?: string[];
 }
 
+type RequirementFilter = "all" | "pending" | "scouting" | "confirmed";
+
+const FILTER_LABELS: Record<RequirementFilter, string> = {
+  all: "Tutte",
+  pending: "Da fare",
+  scouting: "In sopralluogo",
+  confirmed: "Confermate",
+};
+
 interface LocationPanelProps {
   requirements: LocationRequirement[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   selectedCandidateId: string | null;
   onCandidateSelect: (candidateId: string) => void;
-  onAddCandidate: (requirementId: string, candidate: AddCandidatePayload) => void;
-  onUpdateCandidate: (candidateId: string, patch: PatchLocationCandidate) => void;
+  /** Called with the candidateId when the user hovers a card, null on leave. */
+  onCandidateHover?: (candidateId: string | null) => void;
+  onAddCandidate: (
+    requirementId: string,
+    candidate: AddCandidatePayload,
+  ) => void;
+  onUpdateCandidate: (
+    candidateId: string,
+    patch: PatchLocationCandidate,
+  ) => void;
   onConfirm: (requirementId: string, candidateId: string) => void;
   onRemoveCandidate: (candidateId: string) => void;
   onAskCesare: (requirementId: string) => void;
@@ -56,6 +77,7 @@ function CandidateRow({
   isConfirmed,
   isSelected,
   onCandidateSelect,
+  onCandidateHover,
   onUpdateCandidate,
   onConfirm,
   onRemoveCandidate,
@@ -65,7 +87,11 @@ function CandidateRow({
   isConfirmed: boolean;
   isSelected: boolean;
   onCandidateSelect: (candidateId: string) => void;
-  onUpdateCandidate: (candidateId: string, patch: PatchLocationCandidate) => void;
+  onCandidateHover?: (candidateId: string | null) => void;
+  onUpdateCandidate: (
+    candidateId: string,
+    patch: PatchLocationCandidate,
+  ) => void;
   onConfirm: (requirementId: string, candidateId: string) => void;
   onRemoveCandidate: (candidateId: string) => void;
 }) {
@@ -74,145 +100,168 @@ function CandidateRow({
   const [contact, setContact] = useState(candidate.contactName ?? "");
   const [fee, setFee] = useState(candidate.estimatedDailyFee?.toString() ?? "");
 
+  const thumbnailUrl = candidate.photos[0]?.url ?? null;
+
   return (
     <div
       data-testid={`candidate-card-${candidate.id}`}
       data-entity-id={candidate.id}
       className={`${styles.candidateCard} ${isConfirmed ? styles.confirmed : ""} ${isSelected ? styles.candidateSelected : ""}`}
+      onMouseEnter={() => onCandidateHover?.(candidate.id)}
+      onMouseLeave={() => onCandidateHover?.(null)}
     >
-      <div className={styles.candidateHeadRow}>
-        <button
-          type="button"
-          className={styles.candidateHead}
-          onClick={() => {
-            setExpanded((v) => !v);
-            onCandidateSelect(candidate.id);
-          }}
-        >
-          <span
-            className={styles.candidateStar}
-            style={{ color: isConfirmed ? "#d97706" : "transparent" }}
-            aria-hidden="true"
-          >
-            ★
-          </span>
-          <span className={styles.candidateName}>{candidate.name}</span>
-          <span
-            className={`${styles.candidateStatusBadge} ${styles[`badge_${candidate.status}`]}`}
-          >
-            {CANDIDATE_STATUS_LABEL[candidate.status]}
-          </span>
-          <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
-        </button>
-        <button
-          type="button"
-          className={styles.openInMapsHeader}
-          title="Centra sulla mappa"
-          aria-label={`Centra ${candidate.name} sulla mappa`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onCandidateSelect(candidate.id);
-          }}
-        >
-          📍
-        </button>
-      </div>
-
-      {expanded && (
-        <div className={styles.candidateBody}>
-          {(candidate.address || (candidate.lat && candidate.lng)) && (
-            <div className={styles.candidateRow}>
-              <span>📍</span>
-              <span className={styles.candidateAddressText}>
-                {candidate.address ?? `${candidate.lat}, ${candidate.lng}`}
-              </span>
-            </div>
-          )}
-          {candidate.aiSuggested && candidate.aiReasoning && (
-            <div className={styles.aiReasoning}>
-              <span className={styles.aiTag}>✦ Cesare</span>
-              {candidate.aiReasoning}
-            </div>
-          )}
-
-          <div className={styles.candidateForm}>
-            <div className={styles.formField}>
-              <label className={styles.fieldLabel}>Contatto</label>
-              <input
-                className={styles.fieldInput}
-                value={contact}
-                placeholder="Nome, email, telefono…"
-                onChange={(e) => setContact(e.target.value)}
-                onBlur={() =>
-                  onUpdateCandidate(candidate.id, { contactName: contact || null })
-                }
-              />
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.fieldLabel}>€ / giorno</label>
-              <input
-                className={styles.fieldInput}
-                type="number"
-                value={fee}
-                placeholder="—"
-                onChange={(e) => setFee(e.target.value)}
-                onBlur={() =>
-                  onUpdateCandidate(candidate.id, {
-                    estimatedDailyFee: fee ? parseFloat(fee) : null,
-                  })
-                }
-              />
-            </div>
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.fieldLabel}>Note sopralluogo</label>
-            <textarea
-              className={styles.fieldTextarea}
-              value={notes}
-              placeholder="Impressioni, luce, rumore, accessibilità…"
-              rows={3}
-              onChange={(e) => setNotes(e.target.value)}
-              onBlur={() =>
-                onUpdateCandidate(candidate.id, { notes: notes || null })
-              }
+      <div className={styles.candidateCardInner}>
+        <div className={styles.candidateThumbnail} aria-hidden="true">
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className={styles.candidateThumbnailImg}
             />
-          </div>
-
-          <div className={styles.candidateActions}>
+          ) : (
+            <span className={styles.candidateThumbnailPlaceholder}>📍</span>
+          )}
+        </div>
+        <div className={styles.candidateCardContent}>
+          <div className={styles.candidateHeadRow}>
             <button
               type="button"
-              data-testid={`remove-candidate-btn-${candidate.id}`}
-              className={styles.btnGhost}
-              onClick={() => onRemoveCandidate(candidate.id)}
+              className={styles.candidateHead}
+              onClick={() => {
+                setExpanded((v) => !v);
+                onCandidateSelect(candidate.id);
+              }}
             >
-              Scarta
+              <span
+                className={styles.candidateStar}
+                style={{ color: isConfirmed ? "#d97706" : "transparent" }}
+                aria-hidden="true"
+              >
+                ★
+              </span>
+              <span className={styles.candidateName}>{candidate.name}</span>
+              <span
+                className={`${styles.candidateStatusBadge} ${styles[`badge_${candidate.status}`]}`}
+              >
+                {CANDIDATE_STATUS_LABEL[candidate.status]}
+              </span>
+              <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
             </button>
-            {candidate.status !== "visited" && (
-              <button
-                type="button"
-                data-testid={`mark-visited-btn-${candidate.id}`}
-                className={styles.btnGhost}
-                onClick={() =>
-                  onUpdateCandidate(candidate.id, { status: "visited" })
-                }
-              >
-                Segna visitata
-              </button>
-            )}
-            {!isConfirmed && (
-              <button
-                type="button"
-                data-testid={`confirm-candidate-btn-${candidate.id}`}
-                className={styles.btnGreen}
-                onClick={() => onConfirm(requirementId, candidate.id)}
-              >
-                ✓ Conferma
-              </button>
-            )}
+            <button
+              type="button"
+              className={styles.openInMapsHeader}
+              title="Centra sulla mappa"
+              aria-label={`Centra ${candidate.name} sulla mappa`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCandidateSelect(candidate.id);
+              }}
+            >
+              📍
+            </button>
           </div>
+
+          {expanded && (
+            <div className={styles.candidateBody}>
+              {(candidate.address || (candidate.lat && candidate.lng)) && (
+                <div className={styles.candidateRow}>
+                  <span>📍</span>
+                  <span className={styles.candidateAddressText}>
+                    {candidate.address ?? `${candidate.lat}, ${candidate.lng}`}
+                  </span>
+                </div>
+              )}
+              {candidate.aiSuggested && candidate.aiReasoning && (
+                <div className={styles.aiReasoning}>
+                  <span className={styles.aiTag}>✦ Cesare</span>
+                  {candidate.aiReasoning}
+                </div>
+              )}
+
+              <div className={styles.candidateForm}>
+                <div className={styles.formField}>
+                  <label className={styles.fieldLabel}>Contatto</label>
+                  <input
+                    className={styles.fieldInput}
+                    value={contact}
+                    placeholder="Nome, email, telefono…"
+                    onChange={(e) => setContact(e.target.value)}
+                    onBlur={() =>
+                      onUpdateCandidate(candidate.id, {
+                        contactName: contact || null,
+                      })
+                    }
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label className={styles.fieldLabel}>€ / giorno</label>
+                  <input
+                    className={styles.fieldInput}
+                    type="number"
+                    value={fee}
+                    placeholder="—"
+                    onChange={(e) => setFee(e.target.value)}
+                    onBlur={() =>
+                      onUpdateCandidate(candidate.id, {
+                        estimatedDailyFee: fee ? parseFloat(fee) : null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Note sopralluogo</label>
+                <textarea
+                  className={styles.fieldTextarea}
+                  value={notes}
+                  placeholder="Impressioni, luce, rumore, accessibilità…"
+                  rows={3}
+                  onChange={(e) => setNotes(e.target.value)}
+                  onBlur={() =>
+                    onUpdateCandidate(candidate.id, { notes: notes || null })
+                  }
+                />
+              </div>
+
+              <div className={styles.candidateActions}>
+                <button
+                  type="button"
+                  data-testid={`remove-candidate-btn-${candidate.id}`}
+                  className={styles.btnGhost}
+                  onClick={() => onRemoveCandidate(candidate.id)}
+                >
+                  Scarta
+                </button>
+                {candidate.status !== "visited" && (
+                  <button
+                    type="button"
+                    data-testid={`mark-visited-btn-${candidate.id}`}
+                    className={styles.btnGhost}
+                    onClick={() =>
+                      onUpdateCandidate(candidate.id, { status: "visited" })
+                    }
+                  >
+                    Segna visitata
+                  </button>
+                )}
+                {!isConfirmed && (
+                  <button
+                    type="button"
+                    data-testid={`confirm-candidate-btn-${candidate.id}`}
+                    className={styles.btnGreen}
+                    onClick={() => onConfirm(requirementId, candidate.id)}
+                  >
+                    ✓ Conferma
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+        {/* candidateCardContent */}
+      </div>
+      {/* candidateCardInner */}
     </div>
   );
 }
@@ -286,6 +335,7 @@ export function LocationPanel({
   onSelect,
   selectedCandidateId,
   onCandidateSelect,
+  onCandidateHover,
   onAddCandidate,
   onUpdateCandidate,
   onConfirm,
@@ -293,11 +343,31 @@ export function LocationPanel({
   onAskCesare,
 }: LocationPanelProps) {
   const [addingFor, setAddingFor] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<RequirementFilter>("all");
   const selectedReq = requirements.find((r) => r.id === selectedId) ?? null;
-  const confirmedCount = requirements.filter((r) => r.status === "confirmed").length;
+  const confirmedCount = requirements.filter(
+    (r) => r.status === "confirmed",
+  ).length;
+
+  const filteredRequirements =
+    activeFilter === "all"
+      ? requirements
+      : requirements.filter((r) => r.status === activeFilter);
 
   return (
     <aside className={styles.panel} data-testid="locations-panel">
+      <div className={styles.filterBar}>
+        {(Object.keys(FILTER_LABELS) as RequirementFilter[]).map((f) => (
+          <button
+            key={f}
+            type="button"
+            className={`${styles.filterChip} ${activeFilter === f ? styles.filterChipActive : ""}`}
+            onClick={() => setActiveFilter(f)}
+          >
+            {FILTER_LABELS[f]}
+          </button>
+        ))}
+      </div>
       <div className={styles.panelHead}>
         <div className={styles.panelTitle} data-testid="locations-panel-title">
           LOCATION ({requirements.length})
@@ -319,11 +389,15 @@ export function LocationPanel({
 
       <div className={styles.panelList}>
         {requirements.length === 0 && (
-          <div className={styles.emptyState} data-testid="locations-empty-state">
-            Nessuna location trovata. Sincronizza dal breakdown o aggiungi manualmente.
+          <div
+            className={styles.emptyState}
+            data-testid="locations-empty-state"
+          >
+            Nessuna location trovata. Sincronizza dal breakdown o aggiungi
+            manualmente.
           </div>
         )}
-        {requirements.map((req) => {
+        {filteredRequirements.map((req) => {
           const confirmedCand = req.candidates.find(
             (c) => c.id === req.confirmedCandidateId,
           );
@@ -346,9 +420,7 @@ export function LocationPanel({
                 style={{
                   background: STATUS_DOT[req.status] ?? "#d8d6cd",
                   border:
-                    req.status === "pending"
-                      ? "1.5px solid #88867e"
-                      : "none",
+                    req.status === "pending" ? "1.5px solid #88867e" : "none",
                 }}
               />
               <span className={styles.reqBody}>
@@ -387,7 +459,9 @@ export function LocationPanel({
         <div className={styles.detail} data-testid="requirement-detail">
           <div className={styles.detailDivider} />
           <div className={styles.detailHead}>
-            <span className={styles.detailTitle} data-testid="detail-title">{selectedReq.name}</span>
+            <span className={styles.detailTitle} data-testid="detail-title">
+              {selectedReq.name}
+            </span>
             <button
               type="button"
               className={styles.btnAgent}
@@ -407,6 +481,7 @@ export function LocationPanel({
                 isConfirmed={c.id === selectedReq.confirmedCandidateId}
                 isSelected={c.id === selectedCandidateId}
                 onCandidateSelect={onCandidateSelect}
+                onCandidateHover={onCandidateHover}
                 onUpdateCandidate={onUpdateCandidate}
                 onConfirm={onConfirm}
                 onRemoveCandidate={onRemoveCandidate}

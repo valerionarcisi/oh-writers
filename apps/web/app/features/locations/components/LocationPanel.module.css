@@ -1,9 +1,88 @@
 .panel {
   background: var(--ds-surface);
-  border-inline-start: 1px solid var(--ds-line);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* list column handles scroll; panel fills full height */
+  flex: 1;
+  min-block-size: 0;
+}
+
+/* ── Filter bar ── */
+.filterBar {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-block-end: 1px solid var(--ds-line);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.filterChip {
+  padding: 4px 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-pill);
+  background: var(--ds-surface-alt);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--ds-text-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 100ms ease,
+    color 100ms ease,
+    border-color 100ms ease;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+}
+
+.filterChipActive {
+  background: #8b3a1a;
+  border-color: #8b3a1a;
+  color: #fff;
+
+  &:hover {
+    background: #75301a;
+  }
+}
+
+/* ── Candidate card immobiliare.it-style ── */
+.candidateCardInner {
+  display: flex;
+  gap: 0;
+}
+
+.candidateThumbnail {
+  flex-shrink: 0;
+  inline-size: 64px;
+  block-size: 64px;
+  border-inline-end: 1px solid var(--ds-line);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-surface-deep);
+}
+
+.candidateThumbnailImg {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.candidateThumbnailPlaceholder {
+  font-size: 1.4rem;
+  opacity: 0.4;
+}
+
+.candidateCardContent {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Head ── */
@@ -239,10 +318,22 @@
   flex-shrink: 0;
 }
 
-.badge_confirmed { background: #d8f3dc; color: #2d6a4f; }
-.badge_visited { background: #dbeafe; color: #1d4ed8; }
-.badge_candidate { background: var(--ds-surface-deep); color: var(--ds-text-mute); }
-.badge_rejected { background: #fee2e2; color: #b91c1c; }
+.badge_confirmed {
+  background: #d8f3dc;
+  color: #2d6a4f;
+}
+.badge_visited {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.badge_candidate {
+  background: var(--ds-surface-deep);
+  color: var(--ds-text-mute);
+}
+.badge_rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
 .candidateBody {
   padding: 0 var(--space-3) var(--space-3);
@@ -451,7 +542,9 @@
   color: var(--ds-text-mute);
   cursor: pointer;
   width: 100%;
-  transition: border-color 150ms ease, color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
 
   &:hover {
     border-color: #8b3a1a;
@@ -485,8 +578,13 @@
   color: #fff;
   cursor: pointer;
 
-  &:hover { background: #75301a; }
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
+  &:hover {
+    background: #75301a;
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
 
 .btnGreen {
@@ -499,7 +597,9 @@
   color: #fff;
   cursor: pointer;
 
-  &:hover { background: #1f4f3a; }
+  &:hover {
+    background: #1f4f3a;
+  }
 }
 
 .btnAgent {
@@ -513,5 +613,7 @@
   cursor: pointer;
   flex-shrink: 0;
 
-  &:hover { background: #dcd5f3; }
+  &:hover {
+    background: #dcd5f3;
+  }
 }

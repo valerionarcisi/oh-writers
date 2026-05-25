@@ -14,6 +14,8 @@ interface LocationMapProps {
   requirements: LocationRequirement[];
   selectedId: string | null;
   selectedCandidateId: string | null;
+  /** Candidate being hovered in the list — pin is rendered larger/brighter. */
+  hoveredCandidateId?: string | null;
   onSelect: (id: string) => void;
   onCandidateSelect?: (candidateId: string) => void;
   onOpenDetailModal?: (candidateId: string) => void;
@@ -87,6 +89,7 @@ export function LocationMap({
   requirements,
   selectedId,
   selectedCandidateId,
+  hoveredCandidateId = null,
   onSelect,
   onCandidateSelect,
   onOpenDetailModal,
@@ -304,18 +307,26 @@ export function LocationMap({
       if (candidate.lat == null || candidate.lng == null) continue;
 
       const isCandidateSelected = candidate.id === selectedCandidateId;
+      const isCandidateHovered = candidate.id === hoveredCandidateId;
       const isReqSelected = req.id === selectedId;
       const color = PIN_COLORS[candidate.status] ?? PIN_COLORS.candidate;
 
-      // Selected candidate gets the strongest emphasis; otherwise the marker
-      // belongs to the active requirement → mild emphasis; otherwise default.
-      const radius = isCandidateSelected ? 11 : isReqSelected ? 8 : 6;
-      const strokeColor = isCandidateSelected
-        ? "#8b3a1a"
-        : isReqSelected
+      // Selected > hovered > belongs-to-active-req > default
+      const radius = isCandidateSelected
+        ? 11
+        : isCandidateHovered
+          ? 10
+          : isReqSelected
+            ? 8
+            : 6;
+      const strokeColor =
+        isCandidateSelected || isCandidateHovered
           ? "#8b3a1a"
-          : "white";
-      const weight = isCandidateSelected ? 3 : isReqSelected ? 2 : 2;
+          : isReqSelected
+            ? "#8b3a1a"
+            : "white";
+      const weight =
+        isCandidateSelected || isCandidateHovered ? 3 : isReqSelected ? 2 : 2;
 
       const existing = markersRef.current.get(candidate.id);
       if (existing) {
@@ -364,7 +375,13 @@ export function LocationMap({
       marker.addTo(map);
       markersRef.current.set(candidate.id, marker);
     }
-  }, [allCandidates, selectedId, selectedCandidateId, leafletReady]);
+  }, [
+    allCandidates,
+    selectedId,
+    selectedCandidateId,
+    hoveredCandidateId,
+    leafletReady,
+  ]);
 
   // Fly to selected requirement (when no specific candidate is selected)
   useEffect(() => {

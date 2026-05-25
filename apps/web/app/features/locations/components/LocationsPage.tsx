@@ -48,6 +48,9 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const [detailCandidateId, setDetailCandidateId] = useState<string | null>(
     null,
   );
+  const [hoveredCandidateId, setHoveredCandidateId] = useState<string | null>(
+    null,
+  );
   const [drawnCircle, setDrawnCircle] = useState<DrawnCircle | null>(null);
   const [foundPlaces, setFoundPlaces] = useState<PlaceSuggestion[]>([]);
   const [lightbox, setLightbox] = useState<{
@@ -233,11 +236,35 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   return (
     <div className={styles.page} data-testid="locations-page">
       <div className={styles.layout}>
+        <div className={styles.listColumn}>
+          <LocationPanel
+            requirements={requirements}
+            selectedId={selectedId}
+            onSelect={handleSelectRequirement}
+            selectedCandidateId={selectedCandidateId}
+            onCandidateSelect={setSelectedCandidateId}
+            onCandidateHover={setHoveredCandidateId}
+            onAddCandidate={(requirementId, candidate) =>
+              addCandidateMutation.mutate({ requirementId, candidate })
+            }
+            onUpdateCandidate={(candidateId, patch) =>
+              updateCandidateMutation.mutate({ candidateId, patch })
+            }
+            onConfirm={(requirementId, candidateId) =>
+              confirmMutation.mutate({ requirementId, candidateId })
+            }
+            onRemoveCandidate={(candidateId) =>
+              removeCandidateMutation.mutate(candidateId)
+            }
+            onAskCesare={(requirementId) => openCesare({ requirementId })}
+          />
+        </div>
         <div className={styles.mapColumn}>
           <LocationMap
             requirements={requirements}
             selectedId={selectedId}
             selectedCandidateId={selectedCandidateId}
+            hoveredCandidateId={hoveredCandidateId}
             onSelect={handleSelectRequirement}
             onCandidateSelect={handleMapCandidateSelect}
             onOpenDetailModal={handleOpenDetailModal}
@@ -263,26 +290,6 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             />
           ) : null}
         </div>
-        <LocationPanel
-          requirements={requirements}
-          selectedId={selectedId}
-          onSelect={handleSelectRequirement}
-          selectedCandidateId={selectedCandidateId}
-          onCandidateSelect={setSelectedCandidateId}
-          onAddCandidate={(requirementId, candidate) =>
-            addCandidateMutation.mutate({ requirementId, candidate })
-          }
-          onUpdateCandidate={(candidateId, patch) =>
-            updateCandidateMutation.mutate({ candidateId, patch })
-          }
-          onConfirm={(requirementId, candidateId) =>
-            confirmMutation.mutate({ requirementId, candidateId })
-          }
-          onRemoveCandidate={(candidateId) =>
-            removeCandidateMutation.mutate(candidateId)
-          }
-          onAskCesare={(requirementId) => openCesare({ requirementId })}
-        />
       </div>
 
       <LocationDetailModal

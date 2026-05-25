@@ -9,16 +9,27 @@
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr var(--panel-width, 380px);
+  /* list left, map right — immobiliare.it-style split */
+  grid-template-columns: var(--list-width, 420px) 1fr;
   overflow: hidden;
   /* Reserve space for the FloatingDock (28px pill + 20px bottom + 20px gap) */
   padding-block-end: 68px;
 }
 
+.listColumn {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border-inline-end: 1px solid var(--ds-line);
+  min-inline-size: 0;
+}
+
 .mapColumn {
-  position: relative;
+  position: sticky;
+  top: 0;
   min-inline-size: 0;
   display: flex;
+  flex-direction: column;
 }
 
 .mapColumn > :first-child {
