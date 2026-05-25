@@ -15,11 +15,16 @@ import { Route as RegisterImport } from "./routes/register";
 import { Route as LoginImport } from "./routes/login";
 import { Route as AppImport } from "./routes/_app";
 import { Route as IndexImport } from "./routes/index";
+import { Route as InviteTokenImport } from "./routes/invite.$token";
 import { Route as DevTokensImport } from "./routes/dev/tokens";
 import { Route as AppSettingsImport } from "./routes/_app.settings";
 import { Route as AppDashboardImport } from "./routes/_app.dashboard";
+import { Route as AppTeamsNewImport } from "./routes/_app.teams.new";
+import { Route as AppTeamsSlugImport } from "./routes/_app.teams.$slug";
 import { Route as AppProjectsNewImport } from "./routes/_app.projects.new";
 import { Route as AppProjectsIdImport } from "./routes/_app.projects.$id";
+import { Route as AppTeamsSlugSettingsImport } from "./routes/_app.teams.$slug_.settings";
+import { Route as AppTeamsSlugMembersImport } from "./routes/_app.teams.$slug_.members";
 import { Route as AppProjectsIdTreatmentImport } from "./routes/_app.projects.$id_.treatment";
 import { Route as AppProjectsIdTitlePageImport } from "./routes/_app.projects.$id_.title-page";
 import { Route as AppProjectsIdSynopsisImport } from "./routes/_app.projects.$id_.synopsis";
@@ -37,11 +42,6 @@ import { Route as AppProjectsIdShootingPlanBlockingEditorImport } from "./routes
 import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
 import { Route as AppProjectsIdScreenplayDiffV1V2Import } from "./routes/_app.projects.$id_.screenplay.diff.$v1.$v2";
-import { Route as InviteTokenImport } from "./routes/invite.$token";
-import { Route as AppTeamsNewImport } from "./routes/_app.teams.new";
-import { Route as AppTeamsSlugImport } from "./routes/_app.teams.$slug";
-import { Route as AppTeamsSlugMembersImport } from "./routes/_app.teams.$slug_.members";
-import { Route as AppTeamsSlugSettingsImport } from "./routes/_app.teams.$slug_.settings";
 
 // Create/Update Routes
 
@@ -68,6 +68,12 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
+const InviteTokenRoute = InviteTokenImport.update({
+  id: "/invite/$token",
+  path: "/invite/$token",
+  getParentRoute: () => rootRoute,
+} as any);
+
 const DevTokensRoute = DevTokensImport.update({
   id: "/dev/tokens",
   path: "/dev/tokens",
@@ -86,6 +92,18 @@ const AppDashboardRoute = AppDashboardImport.update({
   getParentRoute: () => AppRoute,
 } as any);
 
+const AppTeamsNewRoute = AppTeamsNewImport.update({
+  id: "/teams/new",
+  path: "/teams/new",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppTeamsSlugRoute = AppTeamsSlugImport.update({
+  id: "/teams/$slug",
+  path: "/teams/$slug",
+  getParentRoute: () => AppRoute,
+} as any);
+
 const AppProjectsNewRoute = AppProjectsNewImport.update({
   id: "/projects/new",
   path: "/projects/new",
@@ -95,6 +113,18 @@ const AppProjectsNewRoute = AppProjectsNewImport.update({
 const AppProjectsIdRoute = AppProjectsIdImport.update({
   id: "/projects/$id",
   path: "/projects/$id",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppTeamsSlugSettingsRoute = AppTeamsSlugSettingsImport.update({
+  id: "/teams/$slug_/settings",
+  path: "/teams/$slug/settings",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppTeamsSlugMembersRoute = AppTeamsSlugMembersImport.update({
+  id: "/teams/$slug_/members",
+  path: "/teams/$slug/members",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -205,36 +235,6 @@ const AppProjectsIdScreenplayDiffV1V2Route =
     getParentRoute: () => AppProjectsIdScreenplayRoute,
   } as any);
 
-const InviteTokenRoute = InviteTokenImport.update({
-  id: "/invite/$token",
-  path: "/invite/$token",
-  getParentRoute: () => rootRoute,
-} as any);
-
-const AppTeamsNewRoute = AppTeamsNewImport.update({
-  id: "/teams/new",
-  path: "/teams/new",
-  getParentRoute: () => AppRoute,
-} as any);
-
-const AppTeamsSlugRoute = AppTeamsSlugImport.update({
-  id: "/teams/$slug",
-  path: "/teams/$slug",
-  getParentRoute: () => AppRoute,
-} as any);
-
-const AppTeamsSlugMembersRoute = AppTeamsSlugMembersImport.update({
-  id: "/teams/$slug_/members",
-  path: "/teams/$slug/members",
-  getParentRoute: () => AppRoute,
-} as any);
-
-const AppTeamsSlugSettingsRoute = AppTeamsSlugSettingsImport.update({
-  id: "/teams/$slug_/settings",
-  path: "/teams/$slug/settings",
-  getParentRoute: () => AppRoute,
-} as any);
-
 // Populate the FileRoutesByPath interface
 
 declare module "@tanstack/react-router" {
@@ -288,6 +288,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof DevTokensImport;
       parentRoute: typeof rootRoute;
     };
+    "/invite/$token": {
+      id: "/invite/$token";
+      path: "/invite/$token";
+      fullPath: "/invite/$token";
+      preLoaderRoute: typeof InviteTokenImport;
+      parentRoute: typeof rootRoute;
+    };
     "/_app/projects/$id": {
       id: "/_app/projects/$id";
       path: "/projects/$id";
@@ -300,6 +307,20 @@ declare module "@tanstack/react-router" {
       path: "/projects/new";
       fullPath: "/projects/new";
       preLoaderRoute: typeof AppProjectsNewImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/teams/$slug": {
+      id: "/_app/teams/$slug";
+      path: "/teams/$slug";
+      fullPath: "/teams/$slug";
+      preLoaderRoute: typeof AppTeamsSlugImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/teams/new": {
+      id: "/_app/teams/new";
+      path: "/teams/new";
+      fullPath: "/teams/new";
+      preLoaderRoute: typeof AppTeamsNewImport;
       parentRoute: typeof AppImport;
     };
     "/_app/projects/$id_/breakdown": {
@@ -386,6 +407,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdTreatmentImport;
       parentRoute: typeof AppImport;
     };
+    "/_app/teams/$slug_/members": {
+      id: "/_app/teams/$slug_/members";
+      path: "/teams/$slug/members";
+      fullPath: "/teams/$slug/members";
+      preLoaderRoute: typeof AppTeamsSlugMembersImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/teams/$slug_/settings": {
+      id: "/_app/teams/$slug_/settings";
+      path: "/teams/$slug/settings";
+      fullPath: "/teams/$slug/settings";
+      preLoaderRoute: typeof AppTeamsSlugSettingsImport;
+      parentRoute: typeof AppImport;
+    };
     "/_app/projects/$id_/screenplay/versions": {
       id: "/_app/projects/$id_/screenplay/versions";
       path: "/versions";
@@ -420,41 +455,6 @@ declare module "@tanstack/react-router" {
       fullPath: "/projects/$id/screenplay/diff/$v1/$v2";
       preLoaderRoute: typeof AppProjectsIdScreenplayDiffV1V2Import;
       parentRoute: typeof AppProjectsIdScreenplayImport;
-    };
-    "/invite/$token": {
-      id: "/invite/$token";
-      path: "/invite/$token";
-      fullPath: "/invite/$token";
-      preLoaderRoute: typeof InviteTokenImport;
-      parentRoute: typeof rootRoute;
-    };
-    "/_app/teams/new": {
-      id: "/_app/teams/new";
-      path: "/teams/new";
-      fullPath: "/teams/new";
-      preLoaderRoute: typeof AppTeamsNewImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/teams/$slug": {
-      id: "/_app/teams/$slug";
-      path: "/teams/$slug";
-      fullPath: "/teams/$slug";
-      preLoaderRoute: typeof AppTeamsSlugImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/teams/$slug_/members": {
-      id: "/_app/teams/$slug_/members";
-      path: "/teams/$slug/members";
-      fullPath: "/teams/$slug/members";
-      preLoaderRoute: typeof AppTeamsSlugMembersImport;
-      parentRoute: typeof AppImport;
-    };
-    "/_app/teams/$slug_/settings": {
-      id: "/_app/teams/$slug_/settings";
-      path: "/teams/$slug/settings";
-      fullPath: "/teams/$slug/settings";
-      preLoaderRoute: typeof AppTeamsSlugSettingsImport;
-      parentRoute: typeof AppImport;
     };
   }
 }
@@ -500,6 +500,8 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute;
   AppProjectsIdRoute: typeof AppProjectsIdRoute;
   AppProjectsNewRoute: typeof AppProjectsNewRoute;
+  AppTeamsSlugRoute: typeof AppTeamsSlugRoute;
+  AppTeamsNewRoute: typeof AppTeamsNewRoute;
   AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute;
   AppProjectsIdBudgetRoute: typeof AppProjectsIdBudgetRoute;
   AppProjectsIdLocationsRoute: typeof AppProjectsIdLocationsRoute;
@@ -512,11 +514,9 @@ interface AppRouteChildren {
   AppProjectsIdSynopsisRoute: typeof AppProjectsIdSynopsisRoute;
   AppProjectsIdTitlePageRoute: typeof AppProjectsIdTitlePageRoute;
   AppProjectsIdTreatmentRoute: typeof AppProjectsIdTreatmentRoute;
-  AppProjectsIdShootingPlanBlockingEditorRoute: typeof AppProjectsIdShootingPlanBlockingEditorRoute;
-  AppTeamsNewRoute: typeof AppTeamsNewRoute;
-  AppTeamsSlugRoute: typeof AppTeamsSlugRoute;
   AppTeamsSlugMembersRoute: typeof AppTeamsSlugMembersRoute;
   AppTeamsSlugSettingsRoute: typeof AppTeamsSlugSettingsRoute;
+  AppProjectsIdShootingPlanBlockingEditorRoute: typeof AppProjectsIdShootingPlanBlockingEditorRoute;
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -524,6 +524,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppProjectsIdRoute: AppProjectsIdRoute,
   AppProjectsNewRoute: AppProjectsNewRoute,
+  AppTeamsSlugRoute: AppTeamsSlugRoute,
+  AppTeamsNewRoute: AppTeamsNewRoute,
   AppProjectsIdBreakdownRoute: AppProjectsIdBreakdownRoute,
   AppProjectsIdBudgetRoute: AppProjectsIdBudgetRoute,
   AppProjectsIdLocationsRoute: AppProjectsIdLocationsRoute,
@@ -536,12 +538,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsIdSynopsisRoute: AppProjectsIdSynopsisRoute,
   AppProjectsIdTitlePageRoute: AppProjectsIdTitlePageRoute,
   AppProjectsIdTreatmentRoute: AppProjectsIdTreatmentRoute,
-  AppProjectsIdShootingPlanBlockingEditorRoute:
-    AppProjectsIdShootingPlanBlockingEditorRoute,
-  AppTeamsNewRoute: AppTeamsNewRoute,
-  AppTeamsSlugRoute: AppTeamsSlugRoute,
   AppTeamsSlugMembersRoute: AppTeamsSlugMembersRoute,
   AppTeamsSlugSettingsRoute: AppTeamsSlugSettingsRoute,
+  AppProjectsIdShootingPlanBlockingEditorRoute:
+    AppProjectsIdShootingPlanBlockingEditorRoute,
 };
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
@@ -554,8 +554,11 @@ export interface FileRoutesByFullPath {
   "/dashboard": typeof AppDashboardRoute;
   "/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
+  "/invite/$token": typeof InviteTokenRoute;
   "/projects/$id": typeof AppProjectsIdRoute;
   "/projects/new": typeof AppProjectsNewRoute;
+  "/teams/$slug": typeof AppTeamsSlugRoute;
+  "/teams/new": typeof AppTeamsNewRoute;
   "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
   "/projects/$id/locations": typeof AppProjectsIdLocationsRoute;
@@ -568,16 +571,13 @@ export interface FileRoutesByFullPath {
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
+  "/teams/$slug/members": typeof AppTeamsSlugMembersRoute;
+  "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   "/projects/$id/shooting-plan/blocking-editor": typeof AppProjectsIdShootingPlanBlockingEditorRoute;
   "/projects/$id/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
   "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
-  "/invite/$token": typeof InviteTokenRoute;
-  "/teams/new": typeof AppTeamsNewRoute;
-  "/teams/$slug": typeof AppTeamsSlugRoute;
-  "/teams/$slug/members": typeof AppTeamsSlugMembersRoute;
-  "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
 }
 
 export interface FileRoutesByTo {
@@ -588,8 +588,11 @@ export interface FileRoutesByTo {
   "/dashboard": typeof AppDashboardRoute;
   "/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
+  "/invite/$token": typeof InviteTokenRoute;
   "/projects/$id": typeof AppProjectsIdRoute;
   "/projects/new": typeof AppProjectsNewRoute;
+  "/teams/$slug": typeof AppTeamsSlugRoute;
+  "/teams/new": typeof AppTeamsNewRoute;
   "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
   "/projects/$id/locations": typeof AppProjectsIdLocationsRoute;
@@ -601,16 +604,13 @@ export interface FileRoutesByTo {
   "/projects/$id/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/projects/$id/title-page": typeof AppProjectsIdTitlePageRoute;
   "/projects/$id/treatment": typeof AppProjectsIdTreatmentRoute;
+  "/teams/$slug/members": typeof AppTeamsSlugMembersRoute;
+  "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   "/projects/$id/shooting-plan/blocking-editor": typeof AppProjectsIdShootingPlanBlockingEditorRoute;
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
   "/projects/$id/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
-  "/invite/$token": typeof InviteTokenRoute;
-  "/teams/new": typeof AppTeamsNewRoute;
-  "/teams/$slug": typeof AppTeamsSlugRoute;
-  "/teams/$slug/members": typeof AppTeamsSlugMembersRoute;
-  "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
 }
 
 export interface FileRoutesById {
@@ -622,8 +622,11 @@ export interface FileRoutesById {
   "/_app/dashboard": typeof AppDashboardRoute;
   "/_app/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
+  "/invite/$token": typeof InviteTokenRoute;
   "/_app/projects/$id": typeof AppProjectsIdRoute;
   "/_app/projects/new": typeof AppProjectsNewRoute;
+  "/_app/teams/$slug": typeof AppTeamsSlugRoute;
+  "/_app/teams/new": typeof AppTeamsNewRoute;
   "/_app/projects/$id_/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/_app/projects/$id_/budget": typeof AppProjectsIdBudgetRoute;
   "/_app/projects/$id_/locations": typeof AppProjectsIdLocationsRoute;
@@ -636,16 +639,13 @@ export interface FileRoutesById {
   "/_app/projects/$id_/synopsis": typeof AppProjectsIdSynopsisRoute;
   "/_app/projects/$id_/title-page": typeof AppProjectsIdTitlePageRoute;
   "/_app/projects/$id_/treatment": typeof AppProjectsIdTreatmentRoute;
+  "/_app/teams/$slug_/members": typeof AppTeamsSlugMembersRoute;
+  "/_app/teams/$slug_/settings": typeof AppTeamsSlugSettingsRoute;
   "/_app/projects/$id_/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   "/_app/projects/$id_/shooting-plan_/blocking-editor": typeof AppProjectsIdShootingPlanBlockingEditorRoute;
   "/_app/projects/$id_/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/_app/projects/$id_/screenplay/versions/$vId": typeof AppProjectsIdScreenplayVersionsVIdRoute;
   "/_app/projects/$id_/screenplay/diff/$v1/$v2": typeof AppProjectsIdScreenplayDiffV1V2Route;
-  "/invite/$token": typeof InviteTokenRoute;
-  "/_app/teams/new": typeof AppTeamsNewRoute;
-  "/_app/teams/$slug": typeof AppTeamsSlugRoute;
-  "/_app/teams/$slug_/members": typeof AppTeamsSlugMembersRoute;
-  "/_app/teams/$slug_/settings": typeof AppTeamsSlugSettingsRoute;
 }
 
 export interface FileRouteTypes {
@@ -658,8 +658,11 @@ export interface FileRouteTypes {
     | "/dashboard"
     | "/settings"
     | "/dev/tokens"
+    | "/invite/$token"
     | "/projects/$id"
     | "/projects/new"
+    | "/teams/$slug"
+    | "/teams/new"
     | "/projects/$id/breakdown"
     | "/projects/$id/budget"
     | "/projects/$id/locations"
@@ -672,16 +675,13 @@ export interface FileRouteTypes {
     | "/projects/$id/synopsis"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
+    | "/teams/$slug/members"
+    | "/teams/$slug/settings"
     | "/projects/$id/screenplay/versions"
     | "/projects/$id/shooting-plan/blocking-editor"
     | "/projects/$id/screenplay/"
     | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/diff/$v1/$v2"
-    | "/invite/$token"
-    | "/teams/new"
-    | "/teams/$slug"
-    | "/teams/$slug/members"
-    | "/teams/$slug/settings";
+    | "/projects/$id/screenplay/diff/$v1/$v2";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
@@ -691,8 +691,11 @@ export interface FileRouteTypes {
     | "/dashboard"
     | "/settings"
     | "/dev/tokens"
+    | "/invite/$token"
     | "/projects/$id"
     | "/projects/new"
+    | "/teams/$slug"
+    | "/teams/new"
     | "/projects/$id/breakdown"
     | "/projects/$id/budget"
     | "/projects/$id/locations"
@@ -704,16 +707,13 @@ export interface FileRouteTypes {
     | "/projects/$id/synopsis"
     | "/projects/$id/title-page"
     | "/projects/$id/treatment"
+    | "/teams/$slug/members"
+    | "/teams/$slug/settings"
     | "/projects/$id/screenplay/versions"
     | "/projects/$id/shooting-plan/blocking-editor"
     | "/projects/$id/screenplay"
     | "/projects/$id/screenplay/versions/$vId"
-    | "/projects/$id/screenplay/diff/$v1/$v2"
-    | "/invite/$token"
-    | "/teams/new"
-    | "/teams/$slug"
-    | "/teams/$slug/members"
-    | "/teams/$slug/settings";
+    | "/projects/$id/screenplay/diff/$v1/$v2";
   id:
     | "__root__"
     | "/"
@@ -723,8 +723,11 @@ export interface FileRouteTypes {
     | "/_app/dashboard"
     | "/_app/settings"
     | "/dev/tokens"
+    | "/invite/$token"
     | "/_app/projects/$id"
     | "/_app/projects/new"
+    | "/_app/teams/$slug"
+    | "/_app/teams/new"
     | "/_app/projects/$id_/breakdown"
     | "/_app/projects/$id_/budget"
     | "/_app/projects/$id_/locations"
@@ -737,16 +740,13 @@ export interface FileRouteTypes {
     | "/_app/projects/$id_/synopsis"
     | "/_app/projects/$id_/title-page"
     | "/_app/projects/$id_/treatment"
+    | "/_app/teams/$slug_/members"
+    | "/_app/teams/$slug_/settings"
     | "/_app/projects/$id_/screenplay/versions"
     | "/_app/projects/$id_/shooting-plan_/blocking-editor"
     | "/_app/projects/$id_/screenplay/"
     | "/_app/projects/$id_/screenplay/versions/$vId"
-    | "/_app/projects/$id_/screenplay/diff/$v1/$v2"
-    | "/invite/$token"
-    | "/_app/teams/new"
-    | "/_app/teams/$slug"
-    | "/_app/teams/$slug_/members"
-    | "/_app/teams/$slug_/settings";
+    | "/_app/projects/$id_/screenplay/diff/$v1/$v2";
   fileRoutesById: FileRoutesById;
 }
 
@@ -796,6 +796,8 @@ export const routeTree = rootRoute
         "/_app/settings",
         "/_app/projects/$id",
         "/_app/projects/new",
+        "/_app/teams/$slug",
+        "/_app/teams/new",
         "/_app/projects/$id_/breakdown",
         "/_app/projects/$id_/budget",
         "/_app/projects/$id_/locations",
@@ -808,11 +810,9 @@ export const routeTree = rootRoute
         "/_app/projects/$id_/synopsis",
         "/_app/projects/$id_/title-page",
         "/_app/projects/$id_/treatment",
-        "/_app/projects/$id_/shooting-plan_/blocking-editor",
-        "/_app/teams/new",
-        "/_app/teams/$slug",
         "/_app/teams/$slug_/members",
-        "/_app/teams/$slug_/settings"
+        "/_app/teams/$slug_/settings",
+        "/_app/projects/$id_/shooting-plan_/blocking-editor"
       ]
     },
     "/login": {
@@ -832,12 +832,23 @@ export const routeTree = rootRoute
     "/dev/tokens": {
       "filePath": "dev/tokens.tsx"
     },
+    "/invite/$token": {
+      "filePath": "invite.$token.tsx"
+    },
     "/_app/projects/$id": {
       "filePath": "_app.projects.$id.tsx",
       "parent": "/_app"
     },
     "/_app/projects/new": {
       "filePath": "_app.projects.new.tsx",
+      "parent": "/_app"
+    },
+    "/_app/teams/$slug": {
+      "filePath": "_app.teams.$slug.tsx",
+      "parent": "/_app"
+    },
+    "/_app/teams/new": {
+      "filePath": "_app.teams.new.tsx",
       "parent": "/_app"
     },
     "/_app/projects/$id_/breakdown": {
@@ -893,6 +904,14 @@ export const routeTree = rootRoute
       "filePath": "_app.projects.$id_.treatment.tsx",
       "parent": "/_app"
     },
+    "/_app/teams/$slug_/members": {
+      "filePath": "_app.teams.$slug_.members.tsx",
+      "parent": "/_app"
+    },
+    "/_app/teams/$slug_/settings": {
+      "filePath": "_app.teams.$slug_.settings.tsx",
+      "parent": "/_app"
+    },
     "/_app/projects/$id_/screenplay/versions": {
       "filePath": "_app.projects.$id_.screenplay.versions.tsx",
       "parent": "/_app/projects/$id_/screenplay",
@@ -915,25 +934,6 @@ export const routeTree = rootRoute
     "/_app/projects/$id_/screenplay/diff/$v1/$v2": {
       "filePath": "_app.projects.$id_.screenplay.diff.$v1.$v2.tsx",
       "parent": "/_app/projects/$id_/screenplay"
-    },
-    "/invite/$token": {
-      "filePath": "invite.$token.tsx"
-    },
-    "/_app/teams/new": {
-      "filePath": "_app.teams.new.tsx",
-      "parent": "/_app"
-    },
-    "/_app/teams/$slug": {
-      "filePath": "_app.teams.$slug.tsx",
-      "parent": "/_app"
-    },
-    "/_app/teams/$slug_/members": {
-      "filePath": "_app.teams.$slug_.members.tsx",
-      "parent": "/_app"
-    },
-    "/_app/teams/$slug_/settings": {
-      "filePath": "_app.teams.$slug_.settings.tsx",
-      "parent": "/_app"
     }
   }
 }
