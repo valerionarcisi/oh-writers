@@ -145,6 +145,7 @@ function ProfileSection({
             placeholder="https://…"
             disabled={mut.isPending}
             hasError={!!fieldErrors.avatarUrl}
+            data-testid="profile-avatar-url-input"
           />
         </FormField>
       </div>
@@ -164,13 +165,23 @@ function ProfileSection({
 
         <div className={styles.emailField}>
           <span className={styles.fieldLabel}>Email</span>
-          <span className={styles.readOnly}>{email}</span>
+          <span className={styles.readOnly} data-testid="profile-email">
+            {email}
+          </span>
         </div>
       </div>
 
       <div className={styles.formActions}>
-        {success && <span className={styles.successMsg}>Salvato!</span>}
-        {apiError && <span className={styles.apiError}>{apiError}</span>}
+        {success && (
+          <span className={styles.successMsg} data-testid="profile-success-msg">
+            Salvato!
+          </span>
+        )}
+        {apiError && (
+          <span className={styles.apiError} data-testid="profile-api-error">
+            {apiError}
+          </span>
+        )}
         <Button
           variant="primary"
           size="sm"
@@ -309,9 +320,18 @@ function PasswordSection() {
 
       <div className={styles.formActions}>
         {success && (
-          <span className={styles.successMsg}>Password aggiornata!</span>
+          <span
+            className={styles.successMsg}
+            data-testid="password-success-msg"
+          >
+            Password aggiornata!
+          </span>
         )}
-        {apiError && <span className={styles.apiError}>{apiError}</span>}
+        {apiError && (
+          <span className={styles.apiError} data-testid="password-api-error">
+            {apiError}
+          </span>
+        )}
         <Button
           variant="primary"
           size="sm"
@@ -338,7 +358,9 @@ function TeamsSection() {
       <h2 className={styles.sectionTitle}>Team</h2>
 
       {teamsQuery.isLoading ? null : teamList.length === 0 ? (
-        <p className={styles.emptyState}>Non fai parte di nessun team.</p>
+        <p className={styles.emptyState} data-testid="teams-empty-state">
+          Non fai parte di nessun team.
+        </p>
       ) : (
         <div className={styles.teamList} data-testid="teams-list">
           {teamList.map((team) => (
