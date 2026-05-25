@@ -239,6 +239,13 @@
       "when": 1748217800000,
       "tag": "0023_shooting_day_times",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1779000000000,
+      "tag": "0028_fundraising",
+      "breakpoints": true
     }
   ]
 }

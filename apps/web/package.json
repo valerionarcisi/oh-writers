@@ -46,6 +46,7 @@
     "react-aria": "3.48.0",
     "react-dom": "19.2.4",
     "react-stately": "3.46.0",
+    "rss-parser": "3.13.0",
     "ts-pattern": "5.5.0",
     "y-prosemirror": "1.2.6",
     "zod": "3.24.4"
