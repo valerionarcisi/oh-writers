@@ -81,11 +81,33 @@ interface NominatimRawResult {
   type?: string;
   class?: string;
   addresstype?: string;
+  place_rank?: number;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+  };
 }
+
+/** Returns a rank used to prefer settlement-level results (comune) over province/region ones. Higher = better. */
+const settlementRank = (r: NominatimRawResult): number => {
+  const addr = r.address;
+  if (!addr) return 0;
+  // city/town/village present → this is a commune-level result
+  if (addr.city ?? addr.town ?? addr.village ?? addr.municipality) return 2;
+  // only county/state → province or region
+  if (addr.county ?? addr.state) return 1;
+  return 0;
+};
 
 /**
  * Fetch autocomplete suggestions from Nominatim for a given query.
  * Uses the `/search` endpoint with `format=jsonv2&addressdetails=1`.
+ * Results are sorted to prefer commune-level (admin_level=8) over province-level
+ * entries — so "Ancona" returns the city boundary, not the province.
  */
 export const searchNominatim = async (
   query: string,
@@ -97,7 +119,7 @@ export const searchNominatim = async (
   url.searchParams.set("q", query.trim());
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("limit", "8");
-  url.searchParams.set("addressdetails", "0");
+  url.searchParams.set("addressdetails", "1");
   url.searchParams.set("dedupe", "1");
 
   const response = await fetch(url.toString(), {
@@ -114,6 +136,7 @@ export const searchNominatim = async (
       (r): r is NominatimRawResult & { osm_id: number } =>
         typeof r.osm_id === "number",
     )
+    .sort((a, b) => settlementRank(b) - settlementRank(a))
     .map((r) => {
       const rawOsmType = r.osm_type ?? "node";
       const osmType: "N" | "W" | "R" = OSM_TYPE_MAP[rawOsmType] ?? "N";
