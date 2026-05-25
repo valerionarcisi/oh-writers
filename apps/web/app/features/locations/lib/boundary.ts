@@ -5,8 +5,7 @@
  * draw it on the map and run a point-in-polygon hit-test against candidates.
  */
 
-const NOMINATIM_DETAILS_BASE =
-  "https://nominatim.openstreetmap.org/details.json";
+const NOMINATIM_DETAILS_BASE = "https://nominatim.openstreetmap.org/details";
 
 /**
  * Fetch the GeoJSON polygon for an OSM element from Nominatim.
