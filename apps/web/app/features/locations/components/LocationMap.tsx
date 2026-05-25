@@ -246,9 +246,11 @@ export function LocationMap({
           // handler can remain synchronous overall.
           void (async () => {
             const { default: turfCircle } = await import("@turf/circle");
-            const { point: turfPoint } = await import("@turf/helpers");
+            // Pass the raw [lng, lat] coordinate — turfCircle's getCoord()
+            // accepts a position array, so we avoid @turf/helpers (its ESM
+            // barrel re-exports a type that breaks Vite's strict analysis).
             const circleFeature = turfCircle(
-              turfPoint([parsed.lng, parsed.lat]),
+              [parsed.lng, parsed.lat],
               parsed.radius_m / 1000, // km
               { steps: 64, units: "kilometers" },
             );

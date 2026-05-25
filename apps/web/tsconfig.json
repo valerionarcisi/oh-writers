@@ -8,12 +8,7 @@
       "@oh-writers/db/schema": ["../../packages/db/src/schema/index.ts"],
       "@oh-writers/domain": ["../../packages/domain/src/index.ts"],
       "@oh-writers/utils": ["../../packages/utils/src/index.ts"],
-      "@oh-writers/ui": ["../../packages/ui/src/index.ts"],
-      "@turf/boolean-point-in-polygon": [
-        "./node_modules/@turf/boolean-point-in-polygon/dist/js/index.d.ts"
-      ],
-      "@turf/helpers": ["./node_modules/@turf/helpers/dist/js/index.d.ts"],
-      "@turf/circle": ["./node_modules/@turf/circle/dist/js/index.d.ts"]
+      "@oh-writers/ui": ["../../packages/ui/src/index.ts"]
     }
   },
   "include": ["app", "app.config.ts"]

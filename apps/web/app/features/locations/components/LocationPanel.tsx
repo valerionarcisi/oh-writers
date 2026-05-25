@@ -7,6 +7,7 @@ import type {
 import { PlacesCombobox } from "./PlacesCombobox";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import type { AreaFilterResult } from "../lib/area-filter";
+import type { CrossMatchMap, CandidateCrossMatch } from "../lib/cross-match";
 import styles from "./LocationPanel.module.css";
 
 interface AddCandidatePayload {
@@ -61,6 +62,8 @@ interface LocationPanelProps {
   onDismissAreaFilter?: () => void;
   /** IDs to visually highlight in the candidate list. */
   highlightedCandidateIds?: ReadonlyArray<string>;
+  /** candidateId → other requirements it could also serve (affinity chips). */
+  crossMatches?: CrossMatchMap;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -82,6 +85,7 @@ function CandidateRow({
   requirementId,
   isConfirmed,
   isSelected,
+  crossMatches,
   onCandidateSelect,
   onCandidateHover,
   onUpdateCandidate,
@@ -92,6 +96,7 @@ function CandidateRow({
   requirementId: string;
   isConfirmed: boolean;
   isSelected: boolean;
+  crossMatches?: readonly CandidateCrossMatch[];
   onCandidateSelect: (candidateId: string) => void;
   onCandidateHover?: (candidateId: string | null) => void;
   onUpdateCandidate: (
@@ -166,6 +171,23 @@ function CandidateRow({
               📍
             </button>
           </div>
+
+          {crossMatches && crossMatches.length > 0 && (
+            <div
+              className={styles.affinityChips}
+              data-testid={`affinity-${candidate.id}`}
+            >
+              <span className={styles.affinityLead}>Va bene anche per:</span>
+              {crossMatches.map((m) => (
+                <span key={m.requirementId} className={styles.affinityChip}>
+                  {m.requirementName}
+                  <span className={styles.affinityScenes}>
+                    {m.sceneCount} {m.sceneCount === 1 ? "scena" : "scene"}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
 
           {expanded && (
             <div className={styles.candidateBody}>
@@ -349,6 +371,7 @@ export function LocationPanel({
   onAskCesare,
   areaFilter,
   onDismissAreaFilter,
+  crossMatches,
 }: LocationPanelProps) {
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<RequirementFilter>("all");
@@ -521,6 +544,7 @@ export function LocationPanel({
                 requirementId={selectedReq.id}
                 isConfirmed={c.id === selectedReq.confirmedCandidateId}
                 isSelected={c.id === selectedCandidateId}
+                crossMatches={crossMatches?.get(c.id)}
                 onCandidateSelect={onCandidateSelect}
                 onCandidateHover={onCandidateHover}
                 onUpdateCandidate={onUpdateCandidate}

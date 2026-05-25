@@ -7,7 +7,6 @@
  */
 
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
-import { point as turfPoint } from "@turf/helpers";
 import type { LocationCandidate } from "@oh-writers/domain";
 
 export type AreaFilterResult =
@@ -48,13 +47,18 @@ export const filterCandidatesInPolygon = (
     properties: {},
   };
 
-  return candidates
-    .filter(
-      (c): c is CandidateWithCoords & { lat: number; lng: number } =>
-        c.lat != null && c.lng != null,
-    )
-    .filter((c) => booleanPointInPolygon(turfPoint([c.lng, c.lat]), feature))
-    .map((c) => c.id);
+  return (
+    candidates
+      .filter(
+        (c): c is CandidateWithCoords & { lat: number; lng: number } =>
+          c.lat != null && c.lng != null,
+      )
+      // Pass the raw [lng, lat] coordinate directly — booleanPointInPolygon's
+      // getCoord() accepts a position array, so we avoid importing @turf/helpers
+      // (its ESM barrel re-exports a type, which breaks Vite's strict analysis).
+      .filter((c) => booleanPointInPolygon([c.lng, c.lat], feature))
+      .map((c) => c.id)
+  );
 };
 
 /**

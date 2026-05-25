@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useSuspenseQuery,
   useMutation,
@@ -22,6 +22,7 @@ import {
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import type { DrawnCircle } from "../lib/area-search";
 import type { AreaFilterResult } from "../lib/area-filter";
+import { buildCrossMatches } from "../lib/cross-match";
 import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
 import { LocationPanel } from "./LocationPanel";
@@ -60,6 +61,13 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     index: number;
   } | null>(null);
   const setActiveRequirementId = useSetActiveRequirementId();
+
+  // Affinity chips: which OTHER requirements each saved candidate could serve.
+  // Recomputed only when the requirements change (resolved types are stable).
+  const crossMatches = useMemo(
+    () => buildCrossMatches(requirements),
+    [requirements],
+  );
 
   // Broadcast the selected requirement to Cesare so opening the chat from
   // anywhere on this page carries the location context implicitly.
@@ -262,6 +270,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             areaFilter={areaFilter}
             onDismissAreaFilter={() => setAreaFilter(null)}
             highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
+            crossMatches={crossMatches}
           />
         </div>
         <div className={styles.mapColumn}>
