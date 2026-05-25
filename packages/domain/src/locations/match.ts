@@ -66,7 +66,11 @@ export const LOCATION_CATEGORIES: Readonly<
     placeTypes: ["park", "natural_feature", "campground"],
   },
   interno_generico: {
-    keywords: ["interno", "stanza", "sala", "corridoio", "cucina"],
+    // No dictionary keywords: generic interiors ("Sala", "Cucina", "Stanza")
+    // are ambiguous out of context (a restaurant's vs a home's) — they always
+    // go to Haiku, which sees the linked scene headings. This stays a valid
+    // Haiku output type, just never a dictionary shortcut.
+    keywords: [],
     placeTypes: [],
   },
   altro: {
@@ -86,12 +90,22 @@ const fold = (value: string): string =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+/**
+ * Whole-word keyword match: tokenise on non-letters and compare folded tokens.
+ * Word-level (not substring) so "pub" does not match "pubblico" and "via" does
+ * not match "ovviamente".
+ */
 const containsKeyword = (
   haystack: string,
   keywords: readonly string[],
 ): boolean => {
-  const folded = fold(haystack);
-  return keywords.some((kw) => folded.includes(kw));
+  if (keywords.length === 0) return false;
+  const tokens = new Set(
+    fold(haystack)
+      .split(/[^a-z]+/)
+      .filter(Boolean),
+  );
+  return keywords.some((kw) => tokens.has(kw));
 };
 
 /**

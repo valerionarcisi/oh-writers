@@ -27,6 +27,15 @@ describe("resolveTypeByKeyword", () => {
   it("returns null for a non-physical requirement", () => {
     expect(resolveTypeByKeyword("Montage di Filippo che lavora")).toBeNull();
   });
+
+  it("does not substring-match a keyword inside a longer word (pub vs pubblico)", () => {
+    expect(resolveTypeByKeyword("Pubblico che ride")).toBeNull();
+  });
+
+  it("does not resolve ambiguous generic interiors — they go to Haiku", () => {
+    expect(resolveTypeByKeyword("Sala")).toBeNull();
+    expect(resolveTypeByKeyword("Cucina")).toBeNull();
+  });
 });
 
 describe("matchPlaceToRequirement", () => {

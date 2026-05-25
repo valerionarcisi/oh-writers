@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
-import { ResultAsync, ok, err } from "neverthrow";
+import { ResultAsync, ok, err, okAsync } from "neverthrow";
 import {
   locationRequirements,
   locationCandidates,
@@ -27,12 +27,13 @@ import {
   LocationRequirementNotFoundError,
   LocationCandidateNotFoundError,
 } from "../locations.errors";
+import { normaliseRequirements } from "./normalise.server";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const parseCandidate = (
   row: typeof locationCandidates.$inferSelect,
-  photos: typeof locationPhotos.$inferSelect[],
+  photos: (typeof locationPhotos.$inferSelect)[],
 ): LocationCandidate =>
   LocationCandidateSchema.parse({
     ...row,
@@ -174,27 +175,24 @@ export const addLocationRequirement = createServerFn({ method: "POST" })
       description: z.string().nullable().optional(),
     }),
   )
-  .handler(
-    async ({ data }) =>
-      toShape(
-        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-          ResultAsync.fromPromise(
-            db
-              .insert(locationRequirements)
-              .values({
-                projectId: access.project.id,
-                name: data.name,
-                intExt: data.intExt ?? null,
-                timeOfDay: data.timeOfDay ?? [],
-                description: data.description ?? null,
-              })
-              .returning(),
-            (e) => new DbError("addLocationRequirement", e),
-          ).andThen(() =>
-            loadRequirementsForProject(db, access.project.id),
-          ),
-        ),
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        ResultAsync.fromPromise(
+          db
+            .insert(locationRequirements)
+            .values({
+              projectId: access.project.id,
+              name: data.name,
+              intExt: data.intExt ?? null,
+              timeOfDay: data.timeOfDay ?? [],
+              description: data.description ?? null,
+            })
+            .returning(),
+          (e) => new DbError("addLocationRequirement", e),
+        ).andThen(() => loadRequirementsForProject(db, access.project.id)),
       ),
+    ),
   );
 
 const MAX_PHOTOS_PER_CANDIDATE = 3;
@@ -231,59 +229,58 @@ export const addLocationCandidate = createServerFn({ method: "POST" })
       }),
     }),
   )
-  .handler(
-    async ({ data }) =>
-      toShape(
-        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-          ResultAsync.fromPromise(
-            db
-              .insert(locationCandidates)
-              .values({
-                requirementId: data.requirementId,
-                name: data.candidate.name,
-                address: data.candidate.address ?? null,
-                lat: data.candidate.lat ?? null,
-                lng: data.candidate.lng ?? null,
-                contactName: data.candidate.contactName ?? null,
-                contactEmail: data.candidate.contactEmail ?? null,
-                contactPhone: data.candidate.contactPhone ?? null,
-                estimatedDailyFee: data.candidate.estimatedDailyFee ?? null,
-                permitRequired: data.candidate.permitRequired ?? null,
-                permitNotes: data.candidate.permitNotes ?? null,
-                availableFrom: data.candidate.availableFrom ?? null,
-                availableTo: data.candidate.availableTo ?? null,
-                notes: data.candidate.notes ?? null,
-                aiSuggested: data.candidate.aiSuggested ?? false,
-                aiReasoning: data.candidate.aiReasoning ?? null,
-              })
-              .returning({ id: locationCandidates.id }),
-            (e) => new DbError("addLocationCandidate", e),
-          )
-            .andThen((inserted) => {
-              const candidateId = inserted[0]?.id;
-              const photoNames = (data.candidate.photoNames ?? [])
-                .filter((n) => typeof n === "string" && n.startsWith("places/"))
-                .slice(0, MAX_PHOTOS_PER_CANDIDATE);
-              const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
-
-              if (!candidateId || photoNames.length === 0 || !apiKey) {
-                return ResultAsync.fromSafePromise(Promise.resolve());
-              }
-
-              return ResultAsync.fromPromise(
-                db.insert(locationPhotos).values(
-                  photoNames.map((photoName) => ({
-                    candidateId,
-                    url: buildPlacePhotoUrl(photoName, apiKey),
-                    caption: null,
-                  })),
-                ),
-                (e) => new DbError("addLocationCandidate/photos", e),
-              ).map(() => undefined);
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        ResultAsync.fromPromise(
+          db
+            .insert(locationCandidates)
+            .values({
+              requirementId: data.requirementId,
+              name: data.candidate.name,
+              address: data.candidate.address ?? null,
+              lat: data.candidate.lat ?? null,
+              lng: data.candidate.lng ?? null,
+              contactName: data.candidate.contactName ?? null,
+              contactEmail: data.candidate.contactEmail ?? null,
+              contactPhone: data.candidate.contactPhone ?? null,
+              estimatedDailyFee: data.candidate.estimatedDailyFee ?? null,
+              permitRequired: data.candidate.permitRequired ?? null,
+              permitNotes: data.candidate.permitNotes ?? null,
+              availableFrom: data.candidate.availableFrom ?? null,
+              availableTo: data.candidate.availableTo ?? null,
+              notes: data.candidate.notes ?? null,
+              aiSuggested: data.candidate.aiSuggested ?? false,
+              aiReasoning: data.candidate.aiReasoning ?? null,
             })
-            .andThen(() => loadRequirementsForProject(db, access.project.id)),
-        ),
+            .returning({ id: locationCandidates.id }),
+          (e) => new DbError("addLocationCandidate", e),
+        )
+          .andThen((inserted) => {
+            const candidateId = inserted[0]?.id;
+            const photoNames = (data.candidate.photoNames ?? [])
+              .filter((n) => typeof n === "string" && n.startsWith("places/"))
+              .slice(0, MAX_PHOTOS_PER_CANDIDATE);
+            const apiKey = process.env["GOOGLE_PLACES_API_KEY"];
+
+            if (!candidateId || photoNames.length === 0 || !apiKey) {
+              return ResultAsync.fromSafePromise(Promise.resolve());
+            }
+
+            return ResultAsync.fromPromise(
+              db.insert(locationPhotos).values(
+                photoNames.map((photoName) => ({
+                  candidateId,
+                  url: buildPlacePhotoUrl(photoName, apiKey),
+                  caption: null,
+                })),
+              ),
+              (e) => new DbError("addLocationCandidate/photos", e),
+            ).map(() => undefined);
+          })
+          .andThen(() => loadRequirementsForProject(db, access.project.id)),
       ),
+    ),
   );
 
 export const updateLocationCandidate = createServerFn({ method: "POST" })
@@ -294,41 +291,58 @@ export const updateLocationCandidate = createServerFn({ method: "POST" })
       patch: PatchLocationCandidateSchema,
     }),
   )
-  .handler(
-    async ({ data }) =>
-      toShape(
-        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-          findCandidateRow(db, data.candidateId).andThen((candidate) => {
-            const patch = {
-              ...(data.patch.name !== undefined && { name: data.patch.name }),
-              ...(data.patch.address !== undefined && { address: data.patch.address }),
-              ...(data.patch.lat !== undefined && { lat: data.patch.lat }),
-              ...(data.patch.lng !== undefined && { lng: data.patch.lng }),
-              ...(data.patch.contactName !== undefined && { contactName: data.patch.contactName }),
-              ...(data.patch.contactEmail !== undefined && { contactEmail: data.patch.contactEmail }),
-              ...(data.patch.contactPhone !== undefined && { contactPhone: data.patch.contactPhone }),
-              ...(data.patch.estimatedDailyFee !== undefined && { estimatedDailyFee: data.patch.estimatedDailyFee }),
-              ...(data.patch.permitRequired !== undefined && { permitRequired: data.patch.permitRequired }),
-              ...(data.patch.permitNotes !== undefined && { permitNotes: data.patch.permitNotes }),
-              ...(data.patch.availableFrom !== undefined && { availableFrom: data.patch.availableFrom }),
-              ...(data.patch.availableTo !== undefined && { availableTo: data.patch.availableTo }),
-              ...(data.patch.notes !== undefined && { notes: data.patch.notes }),
-              ...(data.patch.status !== undefined && { status: data.patch.status }),
-              updatedAt: new Date(),
-            };
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        findCandidateRow(db, data.candidateId).andThen((candidate) => {
+          const patch = {
+            ...(data.patch.name !== undefined && { name: data.patch.name }),
+            ...(data.patch.address !== undefined && {
+              address: data.patch.address,
+            }),
+            ...(data.patch.lat !== undefined && { lat: data.patch.lat }),
+            ...(data.patch.lng !== undefined && { lng: data.patch.lng }),
+            ...(data.patch.contactName !== undefined && {
+              contactName: data.patch.contactName,
+            }),
+            ...(data.patch.contactEmail !== undefined && {
+              contactEmail: data.patch.contactEmail,
+            }),
+            ...(data.patch.contactPhone !== undefined && {
+              contactPhone: data.patch.contactPhone,
+            }),
+            ...(data.patch.estimatedDailyFee !== undefined && {
+              estimatedDailyFee: data.patch.estimatedDailyFee,
+            }),
+            ...(data.patch.permitRequired !== undefined && {
+              permitRequired: data.patch.permitRequired,
+            }),
+            ...(data.patch.permitNotes !== undefined && {
+              permitNotes: data.patch.permitNotes,
+            }),
+            ...(data.patch.availableFrom !== undefined && {
+              availableFrom: data.patch.availableFrom,
+            }),
+            ...(data.patch.availableTo !== undefined && {
+              availableTo: data.patch.availableTo,
+            }),
+            ...(data.patch.notes !== undefined && { notes: data.patch.notes }),
+            ...(data.patch.status !== undefined && {
+              status: data.patch.status,
+            }),
+            updatedAt: new Date(),
+          };
 
-            return ResultAsync.fromPromise(
-              db
-                .update(locationCandidates)
-                .set(patch)
-                .where(eq(locationCandidates.id, data.candidateId)),
-              (e) => new DbError("updateLocationCandidate", e),
-            ).andThen(() =>
-              loadRequirementsForProject(db, access.project.id),
-            );
-          }),
-        ),
+          return ResultAsync.fromPromise(
+            db
+              .update(locationCandidates)
+              .set(patch)
+              .where(eq(locationCandidates.id, data.candidateId)),
+            (e) => new DbError("updateLocationCandidate", e),
+          ).andThen(() => loadRequirementsForProject(db, access.project.id));
+        }),
       ),
+    ),
   );
 
 export const confirmLocationCandidate = createServerFn({ method: "POST" })
@@ -339,31 +353,28 @@ export const confirmLocationCandidate = createServerFn({ method: "POST" })
       projectId: z.string().uuid(),
     }),
   )
-  .handler(
-    async ({ data }) =>
-      toShape(
-        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-          ResultAsync.fromPromise(
-            Promise.all([
-              db
-                .update(locationRequirements)
-                .set({
-                  confirmedCandidateId: data.candidateId,
-                  status: "confirmed",
-                  updatedAt: new Date(),
-                })
-                .where(eq(locationRequirements.id, data.requirementId)),
-              db
-                .update(locationCandidates)
-                .set({ status: "confirmed", updatedAt: new Date() })
-                .where(eq(locationCandidates.id, data.candidateId)),
-            ]),
-            (e) => new DbError("confirmLocationCandidate", e),
-          ).andThen(() =>
-            loadRequirementsForProject(db, access.project.id),
-          ),
-        ),
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        ResultAsync.fromPromise(
+          Promise.all([
+            db
+              .update(locationRequirements)
+              .set({
+                confirmedCandidateId: data.candidateId,
+                status: "confirmed",
+                updatedAt: new Date(),
+              })
+              .where(eq(locationRequirements.id, data.requirementId)),
+            db
+              .update(locationCandidates)
+              .set({ status: "confirmed", updatedAt: new Date() })
+              .where(eq(locationCandidates.id, data.candidateId)),
+          ]),
+          (e) => new DbError("confirmLocationCandidate", e),
+        ).andThen(() => loadRequirementsForProject(db, access.project.id)),
       ),
+    ),
   );
 
 export const removeLocationCandidate = createServerFn({ method: "POST" })
@@ -373,132 +384,149 @@ export const removeLocationCandidate = createServerFn({ method: "POST" })
       projectId: z.string().uuid(),
     }),
   )
-  .handler(
-    async ({ data }) =>
-      toShape(
-        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-          ResultAsync.fromPromise(
-            db
-              .delete(locationCandidates)
-              .where(eq(locationCandidates.id, data.candidateId)),
-            (e) => new DbError("removeLocationCandidate", e),
-          ).andThen(() =>
-            loadRequirementsForProject(db, access.project.id),
-          ),
-        ),
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        ResultAsync.fromPromise(
+          db
+            .delete(locationCandidates)
+            .where(eq(locationCandidates.id, data.candidateId)),
+          (e) => new DbError("removeLocationCandidate", e),
+        ).andThen(() => loadRequirementsForProject(db, access.project.id)),
       ),
+    ),
   );
 
 export const syncRequirementsFromBreakdown = createServerFn({ method: "POST" })
   .validator(z.object({ projectId: z.string().uuid() }))
-  .handler(
-    async ({ data }) =>
-      toShape(
-        await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
-          ResultAsync.fromPromise(
-            db
-              .select()
-              .from(breakdownElements)
-              .where(
-                and(
-                  eq(breakdownElements.projectId, access.project.id),
-                  eq(breakdownElements.category, "locations"),
-                ),
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        ResultAsync.fromPromise(
+          db
+            .select()
+            .from(breakdownElements)
+            .where(
+              and(
+                eq(breakdownElements.projectId, access.project.id),
+                eq(breakdownElements.category, "locations"),
               ),
-            (e) => new DbError("syncRequirements/loadElements", e),
-          ).andThen((elements) => {
-            if (elements.length === 0) {
+            ),
+          (e) => new DbError("syncRequirements/loadElements", e),
+        ).andThen((elements) => {
+          if (elements.length === 0) {
+            return loadRequirementsForProject(db, access.project.id);
+          }
+
+          return ResultAsync.fromPromise(
+            db
+              .select({ name: locationRequirements.name })
+              .from(locationRequirements)
+              .where(eq(locationRequirements.projectId, access.project.id)),
+            (e) => new DbError("syncRequirements/loadExisting", e),
+          ).andThen((existing) => {
+            const existingNames = new Set(
+              existing.map((r) => r.name.toLowerCase()),
+            );
+            const newElements = elements.filter(
+              (el) => !existingNames.has(el.name.toLowerCase()),
+            );
+
+            if (newElements.length === 0) {
               return loadRequirementsForProject(db, access.project.id);
             }
 
             return ResultAsync.fromPromise(
               db
-                .select({ name: locationRequirements.name })
-                .from(locationRequirements)
-                .where(eq(locationRequirements.projectId, access.project.id)),
-              (e) => new DbError("syncRequirements/loadExisting", e),
-            ).andThen((existing) => {
-              const existingNames = new Set(existing.map((r) => r.name.toLowerCase()));
-              const newElements = elements.filter(
-                (el) => !existingNames.has(el.name.toLowerCase()),
-              );
-
-              if (newElements.length === 0) {
-                return loadRequirementsForProject(db, access.project.id);
-              }
-
-              return ResultAsync.fromPromise(
-                db
-                  .insert(locationRequirements)
-                  .values(
-                    newElements.map((el) => ({
-                      projectId: access.project.id,
-                      breakdownElementId: el.id,
-                      name: el.name,
-                    })),
-                  )
-                  .returning({
-                    id: locationRequirements.id,
-                    breakdownElementId: locationRequirements.breakdownElementId,
-                  }),
-                (e) => new DbError("syncRequirements/insert", e),
-              )
-                .andThen((insertedReqs) => {
-                  // Populate location_requirement_scenes from breakdown occurrences:
-                  // every scene where the breakdown element appears is a candidate
-                  // scene for that requirement. Without this Cesare can't tell
-                  // which scenes a location belongs to.
-                  const elementIds = insertedReqs
-                    .map((r) => r.breakdownElementId)
-                    .filter((id): id is string => id !== null);
-                  if (elementIds.length === 0) {
+                .insert(locationRequirements)
+                .values(
+                  newElements.map((el) => ({
+                    projectId: access.project.id,
+                    breakdownElementId: el.id,
+                    name: el.name,
+                  })),
+                )
+                .returning({
+                  id: locationRequirements.id,
+                  breakdownElementId: locationRequirements.breakdownElementId,
+                }),
+              (e) => new DbError("syncRequirements/insert", e),
+            )
+              .andThen((insertedReqs) => {
+                // Populate location_requirement_scenes from breakdown occurrences:
+                // every scene where the breakdown element appears is a candidate
+                // scene for that requirement. Without this Cesare can't tell
+                // which scenes a location belongs to.
+                const elementIds = insertedReqs
+                  .map((r) => r.breakdownElementId)
+                  .filter((id): id is string => id !== null);
+                if (elementIds.length === 0) {
+                  return ResultAsync.fromSafePromise(Promise.resolve());
+                }
+                return ResultAsync.fromPromise(
+                  db
+                    .select({
+                      elementId: breakdownOccurrences.elementId,
+                      sceneId: breakdownOccurrences.sceneId,
+                    })
+                    .from(breakdownOccurrences)
+                    .where(inArray(breakdownOccurrences.elementId, elementIds)),
+                  (e) => new DbError("syncRequirements/loadOccurrences", e),
+                ).andThen((occs) => {
+                  const reqByElementId = new Map(
+                    insertedReqs
+                      .filter((r) => r.breakdownElementId)
+                      .map((r) => [r.breakdownElementId as string, r.id]),
+                  );
+                  const links = occs
+                    .filter((o) => o.sceneId !== null)
+                    .map((o) => ({
+                      requirementId: reqByElementId.get(o.elementId),
+                      sceneId: o.sceneId as string,
+                    }))
+                    .filter(
+                      (l): l is { requirementId: string; sceneId: string } =>
+                        l.requirementId !== undefined,
+                    );
+                  if (links.length === 0) {
                     return ResultAsync.fromSafePromise(Promise.resolve());
                   }
                   return ResultAsync.fromPromise(
                     db
-                      .select({
-                        elementId: breakdownOccurrences.elementId,
-                        sceneId: breakdownOccurrences.sceneId,
-                      })
-                      .from(breakdownOccurrences)
-                      .where(inArray(breakdownOccurrences.elementId, elementIds)),
-                    (e) => new DbError("syncRequirements/loadOccurrences", e),
-                  ).andThen((occs) => {
-                    const reqByElementId = new Map(
-                      insertedReqs
-                        .filter((r) => r.breakdownElementId)
-                        .map((r) => [r.breakdownElementId as string, r.id]),
-                    );
-                    const links = occs
-                      .filter((o) => o.sceneId !== null)
-                      .map((o) => ({
-                        requirementId: reqByElementId.get(o.elementId),
-                        sceneId: o.sceneId as string,
-                      }))
-                      .filter(
-                        (l): l is { requirementId: string; sceneId: string } =>
-                          l.requirementId !== undefined,
-                      );
-                    if (links.length === 0) {
-                      return ResultAsync.fromSafePromise(Promise.resolve());
-                    }
-                    return ResultAsync.fromPromise(
-                      db
-                        .insert(locationRequirementScenes)
-                        .values(links)
-                        .onConflictDoNothing(),
-                      (e) =>
-                        new DbError("syncRequirements/insertScenes", e),
-                    ).map(() => undefined);
-                  });
-                })
-                .andThen(() =>
-                  loadRequirementsForProject(db, access.project.id),
-                );
-            });
-          }),
-        ),
+                      .insert(locationRequirementScenes)
+                      .values(links)
+                      .onConflictDoNothing(),
+                    (e) => new DbError("syncRequirements/insertScenes", e),
+                  ).map(() => undefined);
+                });
+              })
+              .andThen(() =>
+                // Best-effort: a failed Haiku normalisation must not break
+                // sync — the requirements still load, chips just stay absent
+                // until the next sync retries the null location_type rows.
+                normaliseRequirements(db, access.project.id).orElse(() =>
+                  okAsync(0),
+                ),
+              )
+              .andThen(() => loadRequirementsForProject(db, access.project.id));
+          });
+        }),
       ),
+    ),
+  );
+
+/**
+ * Manually (re)normalise a project's requirements to canonical location types.
+ * Only touches rows whose location_type is still null.
+ */
+export const normaliseProjectLocations = createServerFn({ method: "POST" })
+  .validator(z.object({ projectId: z.string().uuid() }))
+  .handler(async ({ data }) =>
+    toShape(
+      await withProjectAccess(data.projectId, "edit", ({ db, access }) =>
+        normaliseRequirements(db, access.project.id),
+      ),
+    ),
   );
 
 export const locationsQueryOptions = (projectId: string) => ({
