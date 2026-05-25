@@ -6,9 +6,16 @@ import type {
 } from "@oh-writers/domain";
 import { useLeaflet } from "../hooks/useLeaflet";
 import { parseDrawnCircle, type DrawnCircle } from "../lib/area-search";
+import { fetchOsmBoundary, type NominatimSuggestion } from "../lib/boundary";
+import {
+  filterCandidatesInPolygon,
+  type AreaFilterResult,
+} from "../lib/area-filter";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
-import { PlacesCombobox } from "./PlacesCombobox";
+import { NominatimCombobox } from "./NominatimCombobox";
 import styles from "./LocationMap.module.css";
+
+export type { AreaFilterResult };
 
 interface LocationMapProps {
   requirements: LocationRequirement[];
@@ -23,6 +30,13 @@ interface LocationMapProps {
   /** External pins for area-search results (rendered with a distinct style). */
   foundPlaces?: ReadonlyArray<PlaceSuggestion>;
   onFoundPlaceAdd?: (suggestion: PlaceSuggestion) => void;
+  /**
+   * Called when the user selects an administrative area from the map search
+   * (boundary filter) or draws a shape (drawn filter). Passes null to clear.
+   */
+  onAreaFilter?: (result: AreaFilterResult | null) => void;
+  /** IDs of candidates that match the active area filter — rendered brighter. */
+  highlightedCandidateIds?: ReadonlyArray<string>;
 }
 
 const PIN_COLORS: Record<string, string> = {
@@ -96,6 +110,8 @@ export function LocationMap({
   onCircleDrawn,
   foundPlaces,
   onFoundPlaceAdd,
+  onAreaFilter,
+  highlightedCandidateIds,
 }: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -103,6 +119,7 @@ export function LocationMap({
   const foundMarkersRef = useRef<Map<string, any>>(new Map());
   const drawLayerRef = useRef<any>(null);
   const searchRingRef = useRef<any>(null);
+  const boundaryLayerRef = useRef<any>(null);
   const leafletReady = useLeaflet();
 
   // Stable refs for handlers so the popup button callback always sees fresh
@@ -112,18 +129,24 @@ export function LocationMap({
   const onOpenDetailModalRef = useRef(onOpenDetailModal);
   const onCircleDrawnRef = useRef(onCircleDrawn);
   const onFoundPlaceAddRef = useRef(onFoundPlaceAdd);
+  const onAreaFilterRef = useRef(onAreaFilter);
+  const requirementsRef = useRef(requirements);
   useEffect(() => {
     onSelectRef.current = onSelect;
     onCandidateSelectRef.current = onCandidateSelect;
     onOpenDetailModalRef.current = onOpenDetailModal;
     onCircleDrawnRef.current = onCircleDrawn;
     onFoundPlaceAddRef.current = onFoundPlaceAdd;
+    onAreaFilterRef.current = onAreaFilter;
+    requirementsRef.current = requirements;
   }, [
     onSelect,
     onCandidateSelect,
     onOpenDetailModal,
     onCircleDrawn,
     onFoundPlaceAdd,
+    onAreaFilter,
+    requirements,
   ]);
 
   const allCandidates = requirements.flatMap((r) =>
@@ -205,18 +228,57 @@ export function LocationMap({
         drawnItems.clearLayers();
         drawnItems.addLayer(e.layer);
 
-        // Publish the parsed circle so the parent can render the area-search
-        // panel. Non-circle shapes (e.g. polygon) leave the panel closed —
-        // the panel is intentionally scoped to "draw a circle" UX for now.
         const parsed = parseDrawnCircle({
           layerType: e.layerType,
           layer: e.layer,
         });
+        // Backward-compat: keep the circle-only callback working.
         onCircleDrawnRef.current?.(parsed);
+
+        // Area-filter: hit-test candidates against the drawn shape.
+        const allCandidates = requirementsRef.current.flatMap((r) =>
+          r.candidates.map((c) => ({ id: c.id, lat: c.lat, lng: c.lng })),
+        );
+
+        if (e.layerType === "circle" && parsed) {
+          // Convert the circle to a 64-point GeoJSON polygon via @turf/circle,
+          // then hit-test candidates. We use a void async IIFE so the event
+          // handler can remain synchronous overall.
+          void (async () => {
+            const { default: turfCircle } = await import("@turf/circle");
+            const { point: turfPoint } = await import("@turf/helpers");
+            const circleFeature = turfCircle(
+              turfPoint([parsed.lng, parsed.lat]),
+              parsed.radius_m / 1000, // km
+              { steps: 64, units: "kilometers" },
+            );
+            const matchingCandidateIds = filterCandidatesInPolygon(
+              allCandidates,
+              circleFeature.geometry,
+            );
+            onAreaFilterRef.current?.({
+              kind: "drawn",
+              label: "Area disegnata",
+              matchingCandidateIds,
+            });
+          })();
+        } else if (e.layerType === "polygon") {
+          const geojson = e.layer.toGeoJSON().geometry as GeoJSON.Geometry;
+          const matchingCandidateIds = filterCandidatesInPolygon(
+            allCandidates,
+            geojson,
+          );
+          onAreaFilterRef.current?.({
+            kind: "drawn",
+            label: "Area disegnata",
+            matchingCandidateIds,
+          });
+        }
       });
 
       map.on("draw:deleted", () => {
         onCircleDrawnRef.current?.(null);
+        onAreaFilterRef.current?.(null);
       });
     } catch {
       // Leaflet.draw not loaded — skip draw controls gracefully
@@ -288,6 +350,9 @@ export function LocationMap({
     const map = mapRef.current;
     if (!L || !map || !leafletReady) return;
 
+    const highlightedIds = new Set(highlightedCandidateIds ?? []);
+    const hasAreaFilter = highlightedIds.size > 0;
+
     const liveIds = new Set<string>();
     for (const { candidate } of allCandidates) {
       if (candidate.lat != null && candidate.lng != null) {
@@ -309,24 +374,31 @@ export function LocationMap({
       const isCandidateSelected = candidate.id === selectedCandidateId;
       const isCandidateHovered = candidate.id === hoveredCandidateId;
       const isReqSelected = req.id === selectedId;
+      const isHighlighted = highlightedIds.has(candidate.id);
+      const isDimmed = hasAreaFilter && !isHighlighted;
       const color = PIN_COLORS[candidate.status] ?? PIN_COLORS.candidate;
 
-      // Selected > hovered > belongs-to-active-req > default
+      // Selected > hovered > highlighted > belongs-to-active-req > default
       const radius = isCandidateSelected
         ? 11
         : isCandidateHovered
           ? 10
-          : isReqSelected
-            ? 8
-            : 6;
+          : isHighlighted
+            ? 9
+            : isReqSelected
+              ? 8
+              : 6;
       const strokeColor =
         isCandidateSelected || isCandidateHovered
           ? "#8b3a1a"
-          : isReqSelected
-            ? "#8b3a1a"
-            : "white";
+          : isHighlighted
+            ? "#f97316"
+            : isReqSelected
+              ? "#8b3a1a"
+              : "white";
       const weight =
-        isCandidateSelected || isCandidateHovered ? 3 : isReqSelected ? 2 : 2;
+        isCandidateSelected || isCandidateHovered || isHighlighted ? 3 : 2;
+      const opacity = isDimmed ? 0.35 : 1;
 
       const existing = markersRef.current.get(candidate.id);
       if (existing) {
@@ -335,6 +407,8 @@ export function LocationMap({
           fillColor: color,
           radius,
           weight,
+          opacity,
+          fillOpacity: isDimmed ? 0.35 : 1,
         });
         existing.setPopupContent(buildPopupHtml(candidate, req.name));
         existing.setTooltipContent(
@@ -347,7 +421,8 @@ export function LocationMap({
         radius,
         color: strokeColor,
         fillColor: color,
-        fillOpacity: 1,
+        fillOpacity: isDimmed ? 0.35 : 1,
+        opacity,
         weight,
       });
 
@@ -380,6 +455,7 @@ export function LocationMap({
     selectedId,
     selectedCandidateId,
     hoveredCandidateId,
+    highlightedCandidateIds,
     leafletReady,
   ]);
 
@@ -515,36 +591,113 @@ export function LocationMap({
     <div className={styles.mapWrap}>
       <div ref={containerRef} className={styles.map} />
       <MapSearchOverlay
-        onSelect={(s) => {
-          const map = mapRef.current;
-          if (!map) return;
-          map.setView([s.lat, s.lng], 16, { animate: true });
-        }}
+        mapRef={mapRef}
+        boundaryLayerRef={boundaryLayerRef}
+        requirements={requirements}
+        onAreaFilter={onAreaFilter}
       />
     </div>
   );
 }
 
 // ── Map search overlay ──────────────────────────────────────────────────────
-// A small PlacesCombobox anchored top-left of the map. Picking a result
-// re-centres the map on the chosen place; no candidate is added — the user
-// can then open the popup and decide what to do (add candidate from the
-// AreaSearchPanel, drop a marker manually, etc).
+// A NominatimCombobox anchored top-left of the map.
+// - Non-administrative result: fly to the location, clear any boundary filter.
+// - Administrative result: fetch the OSM boundary polygon, draw it on the map,
+//   run a point-in-polygon hit-test against all candidates, emit onAreaFilter.
 function MapSearchOverlay({
-  onSelect,
+  mapRef,
+  boundaryLayerRef,
+  requirements,
+  onAreaFilter,
 }: {
-  readonly onSelect: (s: PlaceSuggestion) => void;
+  readonly mapRef: React.MutableRefObject<any>;
+  readonly boundaryLayerRef: React.MutableRefObject<any>;
+  readonly requirements: LocationRequirement[];
+  readonly onAreaFilter?: (result: AreaFilterResult | null) => void;
 }) {
   const [query, setQuery] = useState("");
+
+  const clearBoundaryLayer = () => {
+    const map = mapRef.current;
+    if (map && boundaryLayerRef.current) {
+      map.removeLayer(boundaryLayerRef.current);
+      boundaryLayerRef.current = null;
+    }
+  };
+
+  const handleSelect = async (suggestion: NominatimSuggestion) => {
+    setQuery(suggestion.name);
+    const map = mapRef.current;
+    if (!map) return;
+
+    clearBoundaryLayer();
+
+    if (!suggestion.isAdministrative) {
+      map.setView([suggestion.lat, suggestion.lng], 16, { animate: true });
+      onAreaFilter?.(null);
+      return;
+    }
+
+    // Fetch the boundary polygon from Nominatim
+    const geometry = await fetchOsmBoundary(
+      suggestion.osmId,
+      suggestion.osmType,
+    );
+
+    if (!geometry) {
+      // Nominatim has no polygon — just fly to the point and clear filter
+      map.setView([suggestion.lat, suggestion.lng], 14, { animate: true });
+      onAreaFilter?.(null);
+      return;
+    }
+
+    // Draw the boundary on the map
+    const L = (window as any).L;
+    if (L) {
+      const layer = L.geoJSON(geometry, {
+        style: {
+          color: "#8b3a1a",
+          fillColor: "rgba(139,58,26,0.12)",
+          fillOpacity: 1,
+          weight: 2,
+          dashArray: "6 4",
+          opacity: 0.8,
+        },
+      });
+      layer.addTo(map);
+      boundaryLayerRef.current = layer;
+
+      const bounds = layer.getBounds();
+      if (bounds.isValid()) {
+        map.flyToBounds(bounds, { padding: [24, 24], duration: 0.8 });
+      }
+    }
+
+    // Hit-test all candidates
+    const allCandidates = requirements.flatMap((r) =>
+      r.candidates.map((c) => ({ id: c.id, lat: c.lat, lng: c.lng })),
+    );
+
+    const matchingCandidateIds = filterCandidatesInPolygon(
+      allCandidates,
+      geometry,
+    );
+
+    onAreaFilter?.({
+      kind: "boundary",
+      label: suggestion.name,
+      matchingCandidateIds,
+      geojson: geometry,
+    });
+  };
+
   return (
     <div className={styles.searchOverlay}>
-      <PlacesCombobox
+      <NominatimCombobox
         value={query}
         onChange={setQuery}
-        onSelect={(s) => {
-          onSelect(s);
-          setQuery(s.name);
-        }}
+        onSelect={handleSelect}
         placeholder="Cerca un luogo sulla mappa…"
         inputTestId="map-search-input"
       />

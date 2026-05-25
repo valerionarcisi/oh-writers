@@ -1,0 +1,135 @@
+.root {
+  position: relative;
+  inline-size: 100%;
+}
+
+.input {
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  box-shadow: 0 2px 8px rgba(28, 26, 23, 0.1);
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--ds-accent);
+    box-shadow: 0 0 0 3px rgba(var(--ds-accent-rgb, 139, 58, 26), 0.12);
+  }
+
+  &::placeholder {
+    color: var(--ds-text-3);
+  }
+}
+
+.listbox {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-start: 0;
+  inline-size: 100%;
+  max-block-size: 320px;
+  overflow-y: auto;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(28, 26, 23, 0.14);
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1) 0;
+  z-index: 700;
+}
+
+.loading,
+.empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ds-text-3);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid var(--ds-line);
+  border-block-start-color: var(--ds-text-2);
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background 100ms ease;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+  }
+}
+
+.optionActive {
+  background: var(--ds-surface-alt);
+}
+
+.icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-block-start: 1px;
+}
+
+.optionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.optionName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ds-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionAddress {
+  font-size: var(--text-xs);
+  color: var(--ds-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminChip {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(139, 58, 26, 0.1);
+  color: #8b3a1a;
+  border: 1px solid rgba(139, 58, 26, 0.2);
+  align-self: center;
+}

@@ -6,6 +6,7 @@ import type {
 } from "@oh-writers/domain";
 import { PlacesCombobox } from "./PlacesCombobox";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
+import type { AreaFilterResult } from "../lib/area-filter";
 import styles from "./LocationPanel.module.css";
 
 interface AddCandidatePayload {
@@ -55,6 +56,11 @@ interface LocationPanelProps {
   onAskCesare: (requirementId: string) => void;
   /** Bias passed to Google Places — e.g. project region or "Italia". */
   defaultLocationBias?: string;
+  /** Active area filter from the map (boundary or drawn shape). */
+  areaFilter?: AreaFilterResult | null;
+  onDismissAreaFilter?: () => void;
+  /** IDs to visually highlight in the candidate list. */
+  highlightedCandidateIds?: ReadonlyArray<string>;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -341,6 +347,8 @@ export function LocationPanel({
   onConfirm,
   onRemoveCandidate,
   onAskCesare,
+  areaFilter,
+  onDismissAreaFilter,
 }: LocationPanelProps) {
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<RequirementFilter>("all");
@@ -386,6 +394,39 @@ export function LocationPanel({
           {confirmedCount} / {requirements.length} confermate
         </div>
       </div>
+
+      {areaFilter && (
+        <div
+          className={styles.areaFilterBanner}
+          data-testid="area-filter-banner"
+        >
+          <span className={styles.areaFilterLabel}>
+            {areaFilter.matchingCandidateIds.length > 0
+              ? `Filtrando per: ${areaFilter.label} — ${areaFilter.matchingCandidateIds.length} ${areaFilter.matchingCandidateIds.length === 1 ? "candidato" : "candidati"} in quest'area`
+              : `Nessun candidato in: ${areaFilter.label}`}
+          </span>
+          <div className={styles.areaFilterActions}>
+            {areaFilter.matchingCandidateIds.length === 0 && (
+              <button
+                type="button"
+                className={styles.areaFilterCesare}
+                onClick={() => selectedId && onAskCesare(selectedId)}
+                disabled={!selectedId}
+              >
+                ✦ Chiedi a Cesare
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.areaFilterDismiss}
+              aria-label="Rimuovi filtro area"
+              onClick={onDismissAreaFilter}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={styles.panelList}>
         {requirements.length === 0 && (

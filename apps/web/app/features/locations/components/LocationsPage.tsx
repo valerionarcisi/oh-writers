@@ -21,6 +21,7 @@ import {
 } from "../server/locations.server";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import type { DrawnCircle } from "../lib/area-search";
+import type { AreaFilterResult } from "../lib/area-filter";
 import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
 import { LocationPanel } from "./LocationPanel";
@@ -53,6 +54,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   );
   const [drawnCircle, setDrawnCircle] = useState<DrawnCircle | null>(null);
   const [foundPlaces, setFoundPlaces] = useState<PlaceSuggestion[]>([]);
+  const [areaFilter, setAreaFilter] = useState<AreaFilterResult | null>(null);
   const [lightbox, setLightbox] = useState<{
     photos: ReadonlyArray<LightboxPhoto>;
     index: number;
@@ -257,6 +259,9 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
               removeCandidateMutation.mutate(candidateId)
             }
             onAskCesare={(requirementId) => openCesare({ requirementId })}
+            areaFilter={areaFilter}
+            onDismissAreaFilter={() => setAreaFilter(null)}
+            highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
           />
         </div>
         <div className={styles.mapColumn}>
@@ -276,6 +281,8 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             onFoundPlaceAdd={(suggestion) => {
               if (selectedId) handleAreaAddCandidate(selectedId, suggestion);
             }}
+            onAreaFilter={setAreaFilter}
+            highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
           />
           {drawnCircle ? (
             <AreaSearchPanel

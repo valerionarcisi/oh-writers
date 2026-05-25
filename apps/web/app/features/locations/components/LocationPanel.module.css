@@ -617,3 +617,76 @@
     background: #dcd5f3;
   }
 }
+
+/* ── Area filter banner ─────────────────────────────────────────────────── */
+.areaFilterBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(251, 191, 36, 0.12);
+  border-block-end: 1px solid var(--ds-line);
+  border-inline-start: 3px solid var(--color-warning, #f59e0b);
+  flex-shrink: 0;
+}
+
+.areaFilterLabel {
+  flex: 1;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--ds-text-2);
+  line-height: 1.4;
+}
+
+.areaFilterActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.areaFilterCesare {
+  padding: 3px 8px;
+  border: 1px solid rgba(139, 58, 26, 0.3);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: #8b3a1a;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 100ms ease;
+
+  &:hover {
+    background: rgba(139, 58, 26, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.areaFilterDismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ds-text-3);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-sans);
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+
+  &:hover {
+    background: rgba(28, 26, 23, 0.08);
+    color: var(--ds-text);
+  }
+}
