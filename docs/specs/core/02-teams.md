@@ -44,23 +44,30 @@ type TeamRole = "owner" | "editor" | "viewer";
 /invite/:token          → invitation acceptance page
 ```
 
-## tRPC Procedures
+## Server Functions
+
+All client→server calls go through `createServerFn` (located in `features/teams/server/teams.server.ts`). No tRPC.
 
 ```ts
-// teams.create(name, slug) → Team
-// teams.update(teamId, data) → Team
-// teams.delete(teamId) → void
-// teams.getById(teamId) → Team
-// teams.listForUser() → Team[]
+// createTeam({ name }) → ResultShape<Team, SlugConflictError | DbError>
+// updateTeam({ teamId, name?, avatarUrl? }) → ResultShape<Team, TeamNotFoundError | ForbiddenError | DbError>
+// deleteTeam({ teamId }) → ResultShape<void, TeamNotFoundError | ForbiddenError | DbError>
+// getTeam({ slug }) → ResultShape<TeamWithMembers, TeamNotFoundError | ForbiddenError | DbError>
+// listMyTeams() → Team[]
 
-// members.invite(teamId, email, role) → Invitation
-// members.resendInvite(invitationId) → void
-// members.revokeInvite(invitationId) → void
-// members.accept(token) → TeamMember
-// members.updateRole(teamId, userId, role) → TeamMember
-// members.remove(teamId, userId) → void
-// members.leave(teamId) → void
+// inviteMember({ teamId, email, role }) → ResultShape<TeamInvitation, AlreadyMemberError | ForbiddenError | DbError>
+// resendInvite({ invitationId }) → ResultShape<TeamInvitation, InvitationNotFoundError | ForbiddenError | DbError>
+// revokeInvite({ invitationId }) → ResultShape<void, InvitationNotFoundError | ForbiddenError | DbError>
+// acceptInvite({ token }) → ResultShape<TeamMember, InvitationNotFoundError | InvitationExpiredError | InvitationAlreadyAcceptedError | AlreadyMemberError | DbError>
+// getInviteByToken({ token }) → ResultShape<{ invitation, team }, InvitationNotFoundError | TeamNotFoundError | DbError>
+// updateMemberRole({ teamId, userId, role }) → ResultShape<TeamMember, TeamMemberNotFoundError | LastOwnerError | ForbiddenError | DbError>
+// removeMember({ teamId, userId }) → ResultShape<void, TeamMemberNotFoundError | LastOwnerError | ForbiddenError | DbError>
+// leaveTeam({ teamId }) → ResultShape<void, TeamMemberNotFoundError | LastOwnerError | ForbiddenError | DbError>
 ```
+
+> **Billing dependency**: team creation does not yet require a subscription check.
+> When Spec 16 billing is implemented, `createTeam` must gate on the Team plan.
+> All callsites are marked with `// TODO(spec-16): gate on Team plan subscription`.
 
 ## Business Rules
 

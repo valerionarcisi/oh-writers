@@ -122,8 +122,8 @@ Decision: **start with join-based policies, denormalize only when measured perfo
 ```sql
 CREATE TABLE plans (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        text NOT NULL UNIQUE,       -- 'free', 'pro', 'enterprise'
-  display_name text NOT NULL,             -- 'Free', 'Pro', 'Enterprise'
+  name        text NOT NULL UNIQUE,       -- 'free', 'solo', 'team', 'scuola'
+  display_name text NOT NULL,             -- 'Free', 'Solo', 'Team', 'Scuola'
   stripe_price_id text,                   -- null for free, Stripe price ID for paid
   max_projects    integer,                -- null = unlimited
   max_members     integer,                -- null = unlimited
@@ -179,10 +179,12 @@ CREATE INDEX idx_usage_team_metric_month
 ### Seed Plans
 
 ```sql
+-- Plans match the public pricing tiers (see pitch deck)
 INSERT INTO plans (name, display_name, max_projects, max_members, max_ai_calls_month, features) VALUES
-('free', 'Free', 1, 1, 5, '["logline", "synopsis", "pdf_export_watermark"]'),
-('pro', 'Pro', 10, 5, 100, '["logline", "synopsis", "outline", "treatment", "screenplay", "ai_assist", "breakdown", "pdf_export", "collaboration"]'),
-('enterprise', 'Enterprise', NULL, NULL, NULL, '["logline", "synopsis", "outline", "treatment", "screenplay", "ai_assist", "breakdown", "budget", "schedule", "storyboard", "locations", "calendar", "pdf_export", "collaboration", "custom_domain", "dedicated_instance"]');
+('free',   'Free',   NULL, 2,    0,   '["logline", "synopsis", "pdf_export_watermark"]'),
+('solo',   'Solo',   NULL, 1,    300, '["logline", "synopsis", "outline", "treatment", "screenplay", "ai_assist", "breakdown", "pdf_export"]'),
+('team',   'Team',   NULL, NULL, NULL,'["logline", "synopsis", "outline", "treatment", "screenplay", "ai_assist", "breakdown", "budget", "schedule", "pdf_export", "collaboration", "export_branding"]'),
+('scuola', 'Scuola', NULL, NULL, NULL,'["logline", "synopsis", "outline", "treatment", "screenplay", "ai_assist", "breakdown", "budget", "schedule", "pdf_export", "collaboration", "export_branding", "custom_domain", "dedicated_instance"]');
 ```
 
 ---

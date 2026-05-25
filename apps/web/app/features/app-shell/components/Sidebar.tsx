@@ -14,6 +14,7 @@ import {
   Clapperboard,
   Euro,
   MapPin,
+  Users,
   PanelLeftClose,
   PanelLeftOpen,
   type LucideIcon,
@@ -272,6 +273,17 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
                 <span className={styles.navLabel}>Projects</span>
               )}
             </Link>
+            <Link
+              to="/teams/new"
+              className={styles.navLink}
+              activeProps={{ className: `${styles.navLink} ${styles.active}` }}
+              title="I miei team"
+            >
+              <Users size={ICON_SIZE} strokeWidth={ICON_STROKE} />
+              {!isCollapsed && (
+                <span className={styles.navLabel}>I miei team</span>
+              )}
+            </Link>
           </div>
         )}
       </nav>
@@ -279,7 +291,10 @@ export function Sidebar({ user, isCollapsed, onToggle }: SidebarProps) {
       {/* User */}
       <DropdownMenu
         trigger={
-          <div className={styles.user} title={isCollapsed ? user.name : undefined}>
+          <div
+            className={styles.user}
+            title={isCollapsed ? user.name : undefined}
+          >
             <div className={styles.userAvatar}>{initials}</div>
             {!isCollapsed && (
               <div className={styles.userInfo}>
