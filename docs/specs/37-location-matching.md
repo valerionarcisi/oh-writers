@@ -1,6 +1,6 @@
 # Spec 37 — Location Matching & Area Discovery
 
-> **Status:** Phase 1 built (2026-05-25) — Phases 2–3 pending
+> **Status:** Phases 1–2 built (2026-05-26) — Phase 3 (clustering) pending
 > **Owner:** locations feature
 > **Depends on:** boundary search (`lib/boundary.ts`), area-search (`lib/area-search.ts`, `server/places-autocomplete.server.ts`), breakdown → requirement sync (`syncRequirementsFromBreakdown`)
 
@@ -290,6 +290,26 @@ chips would appear on only ~2 of 9 real requirements.
 
 **Test:** OHW-372 (E2E with mocked Places: select area → hollow pins appear, "Aggiungi" persists a candidate under the right requirement). MOCK path reuses the existing `searchPlacesInArea` mock fixtures.
 
+> **Built 2026-05-26.** Shipped as specified except:
+>
+> - Reused the existing `foundPlaces` hollow-pin layer in `LocationMap` (blue
+>   ring markers + "Aggiungi" popup) rather than a new layer. The popup now
+>   shows "→ adatto a: [Requirement]" from the server-computed affinity.
+> - Extracted `fetchNearbyPlaces` from `searchPlacesInArea` so `discoverPlacesInArea`
+>   reuses it (no duplication). `geometryToCircle` turns a boundary into a covering
+>   circle for the nearby query.
+> - **Category bias caveat:** biasing the nearby search to the project's
+>   `placeTypes` makes Google `searchNearby` 400 on structural types (`route`,
+>   `lodging`). Implemented a fallback to an unbiased search so discovery still
+>   returns results. A proper Google-valid `includedTypes` allowlist is deferred
+>   (open question §10).
+> - Discovery fires automatically when an area filter is set (boundary or drawn),
+>   not behind a manual "Cerca" button. The manual `AreaSearchPanel` (text query)
+>   still coexists for the draw-circle flow.
+> - Verified live on Fermo: 12 real places discovered, popup shows match,
+>   "Aggiungi" persisted a candidate. Dedup (40 m + name) + affinity unit-tested
+>   (`lib/discovery.ts`, 7 Vitest). OHW-372 Playwright E2E green.
+
 ### Phase 3 — Pin clustering for feature-length projects
 
 **Scope:** keep the map readable when discovery returns hundreds of pins (see §9).
@@ -298,8 +318,6 @@ chips would appear on only ~2 of 9 real requirements.
 - Limit Places category fan-out to the project's resolved types (already in Phase 2) and cluster the rest.
 
 **Test:** OHW-374 (E2E: dense area renders clusters, expanding a cluster shows pins). Not Cesare-related; no cost smoke.
-
-**Test:** OHW-373 (Vitest classify mock), OHW-374 (E2E mock-ui), cost smoke (not in CI).
 
 ---
 
