@@ -37,6 +37,10 @@ interface LocationMapProps {
    * (boundary filter) or draws a shape (drawn filter). Passes null to clear.
    */
   onAreaFilter?: (result: AreaFilterResult | null) => void;
+  /** Active area filter — drives the on-map "clear area" pill. */
+  areaFilter?: AreaFilterResult | null;
+  /** Clears the active area filter (boundary layer + discovery pins + state). */
+  onClearArea?: () => void;
   /** IDs of candidates that match the active area filter — rendered brighter. */
   highlightedCandidateIds?: ReadonlyArray<string>;
 }
@@ -114,6 +118,8 @@ export function LocationMap({
   foundPlaceLabels,
   onFoundPlaceAdd,
   onAreaFilter,
+  areaFilter,
+  onClearArea,
   highlightedCandidateIds,
 }: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -623,9 +629,14 @@ export function LocationMap({
       const matchLine = matchLabel
         ? `<div style="font-size:11px;color:#1d4ed8;margin-top:6px;font-weight:600">→ adatto a: ${escapeHtml(matchLabel)}</div>`
         : "";
+      const photoUrl = place.photos[0]?.thumbnailUrl ?? null;
+      const photoBlock = photoUrl
+        ? `<img src="${escapeHtml(photoUrl)}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block" />`
+        : "";
       marker.bindPopup(
         `
         <div style="font-family:system-ui,sans-serif;min-width:200px;max-width:280px">
+          ${photoBlock}
           <strong style="font-size:13px;color:#1c1a17">${escapeHtml(place.name)}</strong>
           <div style="font-size:11px;color:#6e6c66;margin-top:4px">${escapeHtml(place.address)}</div>
           ${matchLine}
@@ -665,6 +676,23 @@ export function LocationMap({
         requirements={requirements}
         onAreaFilter={onAreaFilter}
       />
+      {areaFilter ? (
+        <button
+          type="button"
+          className={styles.clearAreaPill}
+          data-testid="clear-area-pill"
+          onClick={() => {
+            const map = mapRef.current;
+            if (map && boundaryLayerRef.current) {
+              map.removeLayer(boundaryLayerRef.current);
+              boundaryLayerRef.current = null;
+            }
+            onClearArea?.();
+          }}
+        >
+          ✕ Rimuovi area: {areaFilter.label}
+        </button>
+      ) : null}
     </div>
   );
 }

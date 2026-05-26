@@ -13,13 +13,20 @@ import { LOCATION_TYPES, type LocationType } from "./location-types.js";
  * Maps a canonical `LocationType` to the signals used to recognise it:
  * - `keywords`: Italian stems matched against a requirement name (Step 1 free
  *   path) and against a place name/address (Step 2 fallback).
- * - `placeTypes`: Google Places `types` matched against a discovered place.
+ * - `matchTypes`: arbitrary strings compared against a place's `types` for the
+ *   Step-2 MATCH (intersection only — any value is fine).
+ * - `searchTypes`: **valid** Google `searchNearby` `includedTypes` used to
+ *   DISCOVER places of this category. Empty = not searchable by type (e.g. a
+ *   street or a generic interior). Validated against the live Places API
+ *   (2026-05-26) — invalid types like `route`/`town_square` are excluded so the
+ *   query never 400s.
  *
  * This is data, not logic — extend it without touching the functions below.
  */
 export interface LocationCategory {
   readonly keywords: readonly string[];
-  readonly placeTypes: readonly string[];
+  readonly matchTypes: readonly string[];
+  readonly searchTypes: readonly string[];
 }
 
 export const LOCATION_CATEGORIES: Readonly<
@@ -27,43 +34,60 @@ export const LOCATION_CATEGORIES: Readonly<
 > = {
   ristorante: {
     keywords: ["ristorante", "trattoria", "osteria", "locanda", "forno"],
-    placeTypes: ["restaurant", "meal_takeaway", "meal_delivery"],
+    matchTypes: ["restaurant", "meal_takeaway", "meal_delivery", "bakery"],
+    searchTypes: ["restaurant", "meal_takeaway", "bakery"],
   },
   bar: {
     keywords: ["bar", "caffe", "caffetteria", "bancone", "pub", "birreria"],
-    placeTypes: ["bar", "cafe", "night_club"],
+    matchTypes: ["bar", "cafe", "night_club", "pub"],
+    searchTypes: ["bar", "pub", "night_club", "cafe"],
   },
   appartamento: {
     keywords: ["appartamento", "monolocale", "bilocale", "attico"],
-    placeTypes: ["lodging"],
+    matchTypes: ["lodging"],
+    searchTypes: ["lodging"],
   },
   casa: {
     keywords: ["casa", "villa", "abitazione", "cascina", "casolare"],
-    placeTypes: ["lodging"],
+    matchTypes: ["lodging"],
+    searchTypes: ["lodging"],
   },
   strada: {
     keywords: ["strada", "via", "viale", "corso", "vicolo", "incrocio"],
-    placeTypes: ["route"],
+    matchTypes: ["route"],
+    // Streets/exteriors aren't a searchable POI type — discovery skips them.
+    searchTypes: [],
   },
   piazza: {
     keywords: ["piazza", "largo", "piazzale"],
-    placeTypes: ["town_square", "plaza"],
+    matchTypes: ["town_square", "plaza"],
+    // `town_square` is not a valid searchNearby type — skip type-discovery.
+    searchTypes: [],
   },
   spiaggia: {
     keywords: ["spiaggia", "lido", "stabilimento", "litorale", "molo"],
-    placeTypes: ["beach", "natural_feature"],
+    matchTypes: ["beach", "natural_feature"],
+    searchTypes: ["beach"],
   },
   ufficio: {
     keywords: ["ufficio", "studio", "agenzia", "redazione"],
-    placeTypes: ["accounting", "lawyer", "real_estate_agency"],
+    matchTypes: [
+      "accounting",
+      "lawyer",
+      "real_estate_agency",
+      "corporate_office",
+    ],
+    searchTypes: ["corporate_office"],
   },
   negozio: {
     keywords: ["negozio", "bottega", "boutique", "mercato", "supermercato"],
-    placeTypes: ["store", "supermarket", "shopping_mall"],
+    matchTypes: ["store", "supermarket", "shopping_mall", "clothing_store"],
+    searchTypes: ["store", "supermarket", "shopping_mall", "clothing_store"],
   },
   esterno_natura: {
     keywords: ["bosco", "campagna", "montagna", "lago", "fiume", "campo"],
-    placeTypes: ["park", "natural_feature", "campground"],
+    matchTypes: ["park", "natural_feature", "campground"],
+    searchTypes: ["park", "campground", "hiking_area"],
   },
   interno_generico: {
     // No dictionary keywords: generic interiors ("Sala", "Cucina", "Stanza")
@@ -71,13 +95,19 @@ export const LOCATION_CATEGORIES: Readonly<
     // go to Haiku, which sees the linked scene headings. This stays a valid
     // Haiku output type, just never a dictionary shortcut.
     keywords: [],
-    placeTypes: [],
+    matchTypes: [],
+    searchTypes: [],
   },
   altro: {
     keywords: [],
-    placeTypes: [],
+    matchTypes: [],
+    searchTypes: [],
   },
 };
+
+/** Valid Google searchNearby types for a category. Empty = not searchable by type. */
+export const searchTypesForType = (type: LocationType): readonly string[] =>
+  LOCATION_CATEGORIES[type].searchTypes;
 
 /** Score weights, ordered by signal strength. */
 const SCORE_PLACE_TYPE = 0.9;
@@ -150,7 +180,7 @@ export const matchPlaceToRequirement = (input: MatchInput): MatchVerdict => {
 
   if (
     input.placeTypes.length > 0 &&
-    input.placeTypes.some((t) => category.placeTypes.includes(t))
+    input.placeTypes.some((t) => category.matchTypes.includes(t))
   ) {
     return { score: SCORE_PLACE_TYPE, source: "placeType" };
   }

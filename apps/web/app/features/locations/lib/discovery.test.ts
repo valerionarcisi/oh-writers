@@ -1,14 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   buildDiscoveredPlaces,
-  placeTypesForRequirements,
   type DiscoveryPlace,
   type SavedPoint,
 } from "./discovery";
 import {
-  LOCATION_CATEGORIES,
+  searchTypesForType,
   type RequirementForMatch,
-  type LocationType,
 } from "@oh-writers/domain";
 
 const place = (over: Partial<DiscoveryPlace> = {}): DiscoveryPlace => ({
@@ -62,21 +60,45 @@ describe("buildDiscoveredPlaces", () => {
   });
 });
 
-describe("placeTypesForRequirements", () => {
-  it("unions the Google types of all resolved requirement types", () => {
-    const types = placeTypesForRequirements(
-      [{ locationType: "ristorante" }, { locationType: "bar" }],
-      (t: LocationType) => LOCATION_CATEGORIES[t].placeTypes,
-    );
-    expect(types).toContain("restaurant");
-    expect(types).toContain("bar");
+// OHW-376 — search types are valid Google sets; non-searchable categories empty.
+describe("searchTypesForType", () => {
+  it("returns a rich set for a searchable category", () => {
+    const t = searchTypesForType("bar");
+    expect(t).toContain("bar");
+    expect(t).toContain("pub");
+    expect(t).toContain("night_club");
   });
 
-  it("dedupes overlapping types", () => {
-    const types = placeTypesForRequirements(
-      [{ locationType: "ristorante" }, { locationType: "ristorante" }],
-      (t: LocationType) => LOCATION_CATEGORIES[t].placeTypes,
-    );
-    expect(new Set(types).size).toBe(types.length);
+  it("includes restaurant-family types for ristorante", () => {
+    expect(searchTypesForType("ristorante")).toContain("restaurant");
+  });
+
+  it("is empty for a street (not searchable by type)", () => {
+    expect(searchTypesForType("strada")).toEqual([]);
+  });
+
+  it("is empty for a generic interior", () => {
+    expect(searchTypesForType("interno_generico")).toEqual([]);
+  });
+
+  it("never includes the invalid 'route' type", () => {
+    const all = (
+      [
+        "ristorante",
+        "bar",
+        "appartamento",
+        "casa",
+        "strada",
+        "piazza",
+        "spiaggia",
+        "ufficio",
+        "negozio",
+        "esterno_natura",
+        "interno_generico",
+        "altro",
+      ] as const
+    ).flatMap((t) => searchTypesForType(t));
+    expect(all).not.toContain("route");
+    expect(all).not.toContain("town_square");
   });
 });

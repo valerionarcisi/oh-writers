@@ -1,16 +1,58 @@
 import { test, expect } from "../fixtures";
-import { navigateToLocations, LOCATIONS_PROJECT_ID } from "./helpers";
+import {
+  navigateToLocations,
+  LOCATIONS_PROJECT_ID,
+  SEEDED_LOCATION_REQ_1_ID,
+  SEEDED_LOCATION_REQ_2_ID,
+} from "./helpers";
 
 /**
- * [Spec 37 — Location Matching & Area Discovery, Phase 2]
+ * [Spec 37 + 37b — Location Matching, Area Discovery, scene-aware]
  *
  * Selecting an area auto-discovers real places (Google Places) inside it and
- * renders them as hollow pins. Under MOCK_AI the discovery returns two fixed
- * fixtures (Trattoria del Cerchio = restaurant, Bar Centrale = bar). These
- * tests verify:
+ * renders them as hollow pins, scoped to the SELECTED requirement's type.
+ * Under MOCK_AI the discovery returns type-aware fixtures. These tests verify:
  *   - Drawing a circle (area filter) triggers discovery → hollow pins appear.
  *   - Adding a discovered hollow pin persists a new candidate.
+ *   - A non-searchable scene (a street) yields no pins (skipped).
+ *   - The clear-area pill removes the boundary + pins.
+ *   - Dense results collapse into a cluster icon.
+ *
+ * Seeded project 11: REQ_1 = appartamento (searchable), REQ_2 = strada (skipped).
  */
+
+const setAreaView = async (
+  page: import("@playwright/test").Page,
+  lat: number,
+  lng: number,
+  zoom: number,
+) => {
+  await page.evaluate(
+    ([la, ln, z]) => {
+      (
+        window as unknown as {
+          __ohwLeafletMap?: {
+            setView(c: [number, number], z: number): void;
+          };
+        }
+      ).__ohwLeafletMap?.setView([la, ln], z);
+    },
+    [lat, lng, zoom] as const,
+  );
+};
+
+const drawCircle = async (
+  page: import("@playwright/test").Page,
+  radius = 2000,
+) => {
+  await page.evaluate((r) => {
+    window.dispatchEvent(
+      new CustomEvent("ohw:test-draw-circle", {
+        detail: { lat: 45.46, lng: 9.19, radius_m: r },
+      }),
+    );
+  }, radius);
+};
 
 // Discovery pins are divIcon markers. Below the cluster threshold (the common
 // case, and the 2 mock fixtures) they render individually as .ohw-discovery-pin;
@@ -116,5 +158,58 @@ test.describe("[Spec 37] Location area discovery", () => {
         { timeout: 15_000 },
       )
       .toBeGreaterThan(0);
+  });
+
+  test("[OHW-377] A non-searchable scene (a street) yields no discovery pins", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToLocations(page, LOCATIONS_PROJECT_ID);
+
+    // REQ_2 = "Strada del paese" (type strada) — not searchable by place type.
+    await page
+      .getByTestId(`requirement-row-${SEEDED_LOCATION_REQ_2_ID}`)
+      .click();
+    await drawCircle(page);
+
+    // Give discovery time, nudge the view, and confirm no pins appear.
+    await setAreaView(page, 45.46, 9.19, 14);
+    await page.waitForTimeout(4000);
+    await setAreaView(page, 45.46, 9.19, 14);
+    expect(await page.locator(DISCOVERY_PIN_SELECTOR).count()).toBe(0);
+    expect(await page.locator(CLUSTER_SELECTOR).count()).toBe(0);
+  });
+
+  test("[OHW-379] The clear-area pill removes the boundary and the pins", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToLocations(page, LOCATIONS_PROJECT_ID);
+
+    // REQ_1 = appartamento (searchable) → pins appear.
+    await page
+      .getByTestId(`requirement-row-${SEEDED_LOCATION_REQ_1_ID}`)
+      .click();
+    await drawCircle(page);
+    await expect
+      .poll(
+        async () => {
+          await setAreaView(page, 45.46, 9.19, 14);
+          return page.locator(DISCOVERY_PIN_SELECTOR).count();
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+
+    const pill = page.getByTestId("clear-area-pill");
+    await expect(pill).toBeVisible();
+    await pill.click();
+
+    await expect(pill).toBeHidden();
+    await expect
+      .poll(async () => page.locator(DISCOVERY_PIN_SELECTOR).count(), {
+        timeout: 5_000,
+      })
+      .toBe(0);
   });
 });

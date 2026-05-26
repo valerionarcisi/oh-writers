@@ -88,13 +88,15 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     [discoveryTargets],
   );
 
-  // Discovery (spec 37 Phase 2): when an area is selected, fetch real places
-  // inside it from Google Places and render them as hollow pins. Cleared when
-  // the area filter is dismissed.
+  // Discovery (spec 37 Phase 2 + 37b scene-aware): when an area is selected,
+  // fetch real places of the SELECTED requirement's type and render them as
+  // hollow pins. Re-runs when the selected scene changes. Cleared on dismiss.
+  const [discoverySkipped, setDiscoverySkipped] = useState<string | null>(null);
   useEffect(() => {
     if (!areaFilter) {
       setFoundPlaces([]);
       setDiscoveryTargets(new Map());
+      setDiscoverySkipped(null);
       return;
     }
     const circle =
@@ -111,14 +113,16 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           lat: circle.lat,
           lng: circle.lng,
           radius_m: circle.radius_m,
+          requirementId: selectedId ?? undefined,
         },
       });
       if (cancelled || !response.isOk) return;
-      const results = response.value;
-      setFoundPlaces(results.map((r) => r.suggestion));
+      const { places, skipped } = response.value;
+      setFoundPlaces(places.map((r) => r.suggestion));
+      setDiscoverySkipped(skipped ? skipped.type : null);
       setDiscoveryTargets(
         new Map(
-          results
+          places
             .filter((r) => r.discovered.matches.length > 0)
             .map((r) => [
               r.suggestion.placeId,
@@ -133,7 +137,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [areaFilter, drawnCircle, projectId]);
+  }, [areaFilter, drawnCircle, projectId, selectedId]);
 
   // Broadcast the selected requirement to Cesare so opening the chat from
   // anywhere on this page carries the location context implicitly.
@@ -370,6 +374,11 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
               if (target) handleAreaAddCandidate(target, suggestion);
             }}
             onAreaFilter={setAreaFilter}
+            areaFilter={areaFilter}
+            onClearArea={() => {
+              setAreaFilter(null);
+              setDrawnCircle(null);
+            }}
             highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
           />
           {drawnCircle ? (

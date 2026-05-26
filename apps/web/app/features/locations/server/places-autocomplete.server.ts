@@ -166,6 +166,7 @@ const buildMockNearbySuggestions = (
   lat: number,
   lng: number,
   radius_m?: number,
+  includedTypes?: readonly string[],
 ): PlaceSuggestion[] => {
   // Dense set (sentinel radius) — 25 nearby restaurants to force clustering.
   if (radius_m === MOCK_DENSE_RADIUS_M) {
@@ -179,6 +180,32 @@ const buildMockNearbySuggestions = (
       photos: [],
     }));
   }
+  // Type-aware fixtures (spec 37b): scene-scoped discovery passes includedTypes,
+  // so the mock returns places tagged with the requested type. Switching scene
+  // → different includedTypes → different place names (testable).
+  const types = includedTypes ?? [];
+  if (types.includes("bar") || types.includes("pub")) {
+    return [
+      {
+        placeId: "place_bar_1",
+        name: "Bar Centrale",
+        address: "Via del Test 2, Milano",
+        lat,
+        lng,
+        types: ["bar"],
+        photos: [],
+      },
+      {
+        placeId: "place_bar_2",
+        name: "Pub del Mock",
+        address: "Via del Test 3, Milano",
+        lat: lat + 0.001,
+        lng: lng + 0.001,
+        types: ["pub", "bar"],
+        photos: [],
+      },
+    ];
+  }
   return [
     {
       placeId: "place_mock_1",
@@ -191,11 +218,11 @@ const buildMockNearbySuggestions = (
     },
     {
       placeId: "place_mock_2",
-      name: "Bar Centrale",
+      name: "Ristorante Mock",
       address: "Via del Test 2, Milano",
       lat: lat + 0.001,
       lng: lng + 0.001,
-      types: ["bar"],
+      types: ["restaurant"],
       photos: [],
     },
   ];
@@ -221,7 +248,12 @@ export const fetchNearbyPlaces = (
 ): ResultAsync<PlaceSuggestion[], PlacesAutocompleteError> => {
   if (process.env["MOCK_AI"] === "true") {
     return okAsync(
-      buildMockNearbySuggestions(params.lat, params.lng, params.radius_m),
+      buildMockNearbySuggestions(
+        params.lat,
+        params.lng,
+        params.radius_m,
+        params.includedTypes,
+      ),
     );
   }
 

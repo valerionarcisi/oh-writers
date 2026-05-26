@@ -6,11 +6,7 @@
  * a saved candidate) and which saved requirement each best fits.
  */
 
-import {
-  buildAffinities,
-  type LocationType,
-  type RequirementForMatch,
-} from "@oh-writers/domain";
+import { buildAffinities, type RequirementForMatch } from "@oh-writers/domain";
 
 export interface DiscoveryPlace {
   readonly placeId: string;
@@ -116,16 +112,4 @@ export const buildDiscoveredPlaces = (
     }));
     return { place, matches };
   });
-};
-
-/** Collect the Google Places `types` to bias an area query, from resolved requirement types. */
-export const placeTypesForRequirements = (
-  requirements: readonly { locationType: LocationType }[],
-  categoryPlaceTypes: (type: LocationType) => readonly string[],
-): string[] => {
-  const set = new Set<string>();
-  for (const req of requirements) {
-    for (const t of categoryPlaceTypes(req.locationType)) set.add(t);
-  }
-  return [...set];
 };

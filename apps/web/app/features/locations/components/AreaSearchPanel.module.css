@@ -1,10 +1,11 @@
 .panel {
   position: absolute;
-  inset-block-start: var(--space-3);
+  /* Offset below the search overlay (top-left) so the two don't collide. */
+  inset-block-start: calc(var(--space-3) + 52px);
   inset-inline-start: var(--space-3);
   inline-size: 380px;
   max-inline-size: calc(100% - var(--space-6));
-  max-block-size: calc(100% - var(--space-6));
+  max-block-size: calc(100% - var(--space-6) - 52px);
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
   border-radius: var(--radius-md);
@@ -131,7 +132,10 @@
   flex-direction: column;
   gap: var(--space-1);
   overflow-y: auto;
-  max-block-size: 360px;
+  /* Flex-grow within the panel's max height instead of a fixed cap, so the
+     header/query/select stay put and only the results scroll. */
+  flex: 1 1 auto;
+  min-block-size: 0;
   padding-block-start: var(--space-1);
   border-block-start: 1px solid var(--ds-line);
 }

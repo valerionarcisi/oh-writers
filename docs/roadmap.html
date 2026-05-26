@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oh Writers — Roadmap</title>
+    <style>
+      :root {
+        --bg: #1a1916;
+        --surface: #24221d;
+        --surface-2: #2c2a24;
+        --line: #383530;
+        --text: #efebe3;
+        --text-2: #b6b0a4;
+        --mute: #847e74;
+        /* status palette */
+        --done: #3fb98f;
+        --done-bg: rgba(63, 185, 143, 0.13);
+        --done-bd: rgba(63, 185, 143, 0.32);
+        --partial: #d9a441;
+        --partial-bg: rgba(217, 164, 65, 0.13);
+        --partial-bd: rgba(217, 164, 65, 0.32);
+        --todo: #6b6660;
+        --todo-bg: rgba(120, 114, 105, 0.12);
+        --todo-bd: rgba(120, 114, 105, 0.3);
+        --accent: #14b8a6;
+        --radius: 12px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 1080px;
+        margin-inline: auto;
+        padding: 44px 24px 100px;
+      }
+      header.hero {
+        margin-block-end: 32px;
+      }
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent);
+        margin: 0 0 6px;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 0 0 6px;
+      }
+      .sub {
+        color: var(--text-2);
+        margin: 0;
+      }
+
+      /* progress bar */
+      .progress {
+        margin-block: 24px 8px;
+        display: flex;
+        block-size: 14px;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .progress span {
+        display: block;
+      }
+      .progress .pdone {
+        background: var(--done);
+      }
+      .progress .ppartial {
+        background: var(--partial);
+      }
+      .progress .ptodo {
+        background: var(--todo);
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        font-size: 13px;
+        color: var(--text-2);
+        margin-block-end: 8px;
+      }
+      .legend .dot {
+        display: inline-block;
+        inline-size: 11px;
+        block-size: 11px;
+        border-radius: 50%;
+        margin-inline-end: 6px;
+        vertical-align: 0;
+      }
+      .legend .done {
+        background: var(--done);
+      }
+      .legend .partial {
+        background: var(--partial);
+      }
+      .legend .todo {
+        background: var(--todo);
+      }
+
+      /* pipeline columns */
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+        margin-block-start: 28px;
+      }
+      .col {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 18px 18px 8px;
+      }
+      .col h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--mute);
+        margin: 0 0 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .col .stage {
+        font-size: 22px;
+      }
+      .col .blurb {
+        font-size: 12px;
+        color: var(--mute);
+        margin: 0 0 14px;
+      }
+      ul.items {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      ul.items li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 0;
+        border-block-start: 1px solid var(--line);
+      }
+      ul.items li:first-child {
+        border-block-start: none;
+      }
+      .pill {
+        flex: none;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 3px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .pill.done {
+        color: var(--done);
+        background: var(--done-bg);
+        border: 1px solid var(--done-bd);
+      }
+      .pill.partial {
+        color: var(--partial);
+        background: var(--partial-bg);
+        border: 1px solid var(--partial-bd);
+      }
+      .pill.todo {
+        color: var(--text-2);
+        background: var(--todo-bg);
+        border: 1px solid var(--todo-bd);
+      }
+      .item-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .item-name small {
+        display: block;
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--mute);
+      }
+
+      /* highlight band for "in evidenza" */
+      .spotlight {
+        margin-block-start: 30px;
+        background: linear-gradient(
+          135deg,
+          rgba(20, 184, 166, 0.1),
+          rgba(63, 185, 143, 0.05)
+        );
+        border: 1px solid var(--done-bd);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+      }
+      .spotlight h2 {
+        margin: 0 0 12px;
+        font-size: 15px;
+        color: var(--done);
+      }
+      .spot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .spot-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .spot-card .t {
+        font-weight: 700;
+        font-size: 14px;
+        margin-block-end: 2px;
+      }
+      .spot-card .d {
+        font-size: 12px;
+        color: var(--text-2);
+      }
+
+      .next {
+        margin-block-start: 30px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-inline-start: 3px solid var(--partial);
+        border-radius: var(--radius);
+        padding: 18px 22px;
+      }
+      .next h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        color: var(--partial);
+      }
+      .next ul {
+        margin: 0;
+        padding-inline-start: 18px;
+        color: var(--text-2);
+        font-size: 14px;
+      }
+      .next ul li {
+        margin-block-end: 5px;
+      }
+      footer {
+        margin-block-start: 40px;
+        color: var(--mute);
+        font-size: 12px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <p class="eyebrow">Oh Writers · stato del prodotto</p>
+        <h1>Roadmap</h1>
+        <p class="sub">
+          Tutto il prodotto in un colpo d’occhio, seguendo il flusso di una
+          produzione: dalla scrittura alle riprese. Un pallino, uno stato.
+        </p>
+
+        <div class="legend">
+          <span><span class="dot done"></span>Fatto &amp; funzionante</span>
+          <span><span class="dot partial"></span>Parziale (c’è la base, mancano pezzi)</span>
+          <span><span class="dot todo"></span>Da fare / solo idea</span>
+        </div>
+        <div class="progress" title="Quota approssimativa per stato">
+          <span class="pdone" style="flex: 60"></span>
+          <span class="ppartial" style="flex: 24"></span>
+          <span class="ptodo" style="flex: 16"></span>
+        </div>
+        <p class="sub" style="font-size: 12px; color: var(--mute)">
+          ~60% fatto · ~24% parziale · ~16% da fare (stima sulle aree principali)
+        </p>
+      </header>
+
+      <!-- ───────── PIPELINE ───────── -->
+      <div class="pipeline">
+        <!-- 1 IDEA / SCRITTURA -->
+        <section class="col">
+          <h2><span class="stage">✍️</span> 1 · Scrittura</h2>
+          <p class="blurb">Dall’idea alla sceneggiatura</p>
+          <ul class="items">
+            <li><span class="pill done">Fatto</span><span class="item-name">Soggetto <small>editor libero + export SIAE</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Logline · Synopsis · Treatment</span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Scaletta / Outline <small>drag-drop sì, timeline verticale no</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Editor sceneggiatura <small>ProseMirror, autocomplete, numerazione</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Import PDF / Fountain</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Export PDF sceneggiatura</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Front page / title page</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Versioning + revisioni</span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Revision coloring <small>dato sì, decoration nel testo no</small></span></li>
+          </ul>
+        </section>
+
+        <!-- 2 PRE-PRODUZIONE -->
+        <section class="col">
+          <h2><span class="stage">📋</span> 2 · Pre-produzione</h2>
+          <p class="blurb">Spoglio, budget, piano</p>
+          <ul class="items">
+            <li><span class="pill done">Fatto</span><span class="item-name">Scene Breakdown / Spoglio</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Auto-spoglio <small>regex + LLM all’import</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Cast tier · tagging inline</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Budget <small>rule-based, categorie, day cost</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Shooting Schedule <small>strip board, calendario</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Shooting Plan <small>piano shot-level, multitraccia</small></span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">2D Scene Blocking <small>render base, frecce/layer deferred</small></span></li>
+          </ul>
+        </section>
+
+        <!-- 3 LOCATION -->
+        <section class="col">
+          <h2><span class="stage">📍</span> 3 · Location</h2>
+          <p class="blurb">Scouting &amp; matching</p>
+          <ul class="items">
+            <li><span class="pill done">Fatto</span><span class="item-name">Location Manager <small>mappa, candidati, requisiti</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Ricerca confine comune <small>fix capoluogo</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Matching luogo↔scena <small>tipo normalizzato + chip</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Discovery posti reali <small>Google Places, pin vuoti</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Clustering pin <small>aree dense</small></span></li>
+          </ul>
+        </section>
+
+        <!-- 4 AI / CESARE -->
+        <section class="col">
+          <h2><span class="stage">🤖</span> 4 · Cesare (AI)</h2>
+          <p class="blurb">L’assistente di produzione</p>
+          <ul class="items">
+            <li><span class="pill done">Fatto</span><span class="item-name">Chat Cesare <small>panel, dati produzione</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Cesare agentico ovunque <small>tool read-only on-demand</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">RAG lazy <small>corpo scene nel contesto</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Cesare sidebar sceneggiatura</span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Story Doctor / marker mode <small>solo panel, no marker in pagina</small></span></li>
+            <li><span class="pill todo">Da fare</span><span class="item-name">Logline → Scaletta auto</span></li>
+            <li><span class="pill todo">Da fare</span><span class="item-name">Auto-logline/synopsis da sceneggiatura</span></li>
+            <li><span class="pill todo">Da fare</span><span class="item-name">pgvector <small>RAG semantico per lungometraggi</small></span></li>
+          </ul>
+        </section>
+
+        <!-- 5 FINANZIAMENTI -->
+        <section class="col">
+          <h2><span class="stage">💰</span> 5 · Finanziamenti</h2>
+          <p class="blurb">Bandi &amp; opportunità</p>
+          <ul class="items">
+            <li><span class="pill done">Fatto</span><span class="item-name">Ingestion RSS bandi</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Classificazione Cesare <small>structured output</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">UI Opportunità <small>filtri, lista, dettaglio</small></span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Sorgenti RSS custom · centro notifiche</span></li>
+            <li><span class="pill todo">Da fare</span><span class="item-name">Multi-tenancy · billing · feature gating</span></li>
+          </ul>
+        </section>
+
+        <!-- 6 PIATTAFORMA -->
+        <section class="col">
+          <h2><span class="stage">🧱</span> 6 · Piattaforma</h2>
+          <p class="blurb">Fondamenta &amp; collaborazione</p>
+          <ul class="items">
+            <li><span class="pill done">Fatto</span><span class="item-name">Auth <small>login, sessioni, social</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Progetti <small>CRUD, dashboard, overview</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">User settings</span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Design system <small>token, react-aria components</small></span></li>
+            <li><span class="pill done">Fatto</span><span class="item-name">Infra <small>Docker, Postgres, server pipeline</small></span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Teams <small>permessi sì, UI gestione no</small></span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Real-time Yjs <small>server c’è, sync non wired</small></span></li>
+            <li><span class="pill partial">Parziale</span><span class="item-name">Export audit <small>alcuni bottoni stub</small></span></li>
+            <li><span class="pill todo">Da fare</span><span class="item-name">i18n · CI/CD · cloud deploy</span></li>
+            <li><span class="pill todo">Da fare</span><span class="item-name">App mobile companion (Expo)</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- ───────── IN EVIDENZA ───────── -->
+      <section class="spotlight">
+        <h2>✨ Ultimo lavorato — Spec 37: Location Matching &amp; Discovery</h2>
+        <div class="spot-grid">
+          <div class="spot-card">
+            <div class="t">Fase 1 · Matching</div>
+            <div class="d">
+              Ogni set normalizzato a un tipo (dizionario + Haiku una tantum).
+              Chip “va bene anche per” tra scene.
+            </div>
+          </div>
+          <div class="spot-card">
+            <div class="t">Fase 2 · Discovery</div>
+            <div class="d">
+              Selezioni un’area → posti reali da Google Places come pin vuoti →
+              “Aggiungi come candidato”. Stile immobiliare.it.
+            </div>
+          </div>
+          <div class="spot-card">
+            <div class="t">Fase 3 · Clustering</div>
+            <div class="d">
+              Sopra 20 pin si raggruppano in cluster: mappa leggibile anche per
+              lungometraggi in città.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── PROSSIMI PASSI ───────── -->
+      <section class="next">
+        <h2>🎯 Candidati per il prossimo giro</h2>
+        <ul>
+          <li><strong>Teams UI</strong> — invita membri, gestisci ruoli (i permessi già ci sono).</li>
+          <li><strong>Cesare AI generativo</strong> — Logline→Scaletta, auto-synopsis da sceneggiatura.</li>
+          <li><strong>Real-time Yjs</strong> — collegare il sync collaborativo (il server esiste).</li>
+          <li><strong>Export audit</strong> — completare i bottoni “Esporta” stub (schedule, budget, piano).</li>
+          <li><strong>Editor UX (5e)</strong> — shortcut ⌘1-7, picker inline, toolbar a icone stile StudioBinder.</li>
+        </ul>
+      </section>
+
+      <footer>
+        Generato dallo stato delle spec in <code>docs/specs/</code> ·
+        riferimento completo: <code>docs/specs/STATUS.md</code>
+      </footer>
+    </div>
+  </body>
+</html>

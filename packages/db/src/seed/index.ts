@@ -992,6 +992,10 @@ async function seedLocations() {
         intExt: "INT",
         timeOfDay: ["GIORNO"],
         status: "scouting",
+        // Pre-resolved so scene-aware discovery (spec 37b) has a type to search.
+        // Searchable (lodging) → drives discovery pins in E2E.
+        locationType: "appartamento",
+        locationTypeSource: "dictionary",
       },
       {
         id: SEEDED_LOCATION_REQ_2_ID,
@@ -1000,6 +1004,9 @@ async function seedLocations() {
         intExt: "EXT",
         timeOfDay: ["NOTTE"],
         status: "pending",
+        // A street isn't searchable by type → discovery returns `skipped`.
+        locationType: "strada",
+        locationTypeSource: "dictionary",
       },
     ])
     .onConflictDoNothing();
