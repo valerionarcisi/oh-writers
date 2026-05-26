@@ -29,3 +29,15 @@ export class LocationNormalisationError {
     this.message = `Location normalisation failed for project ${projectId}: ${reason}`;
   }
 }
+
+export class LocationRankError {
+  readonly _tag = "LocationRankError" as const;
+  readonly message: string;
+  constructor(
+    readonly requirementId: string,
+    cause: unknown,
+  ) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    this.message = `Atmosphere ranking failed for requirement ${requirementId}: ${reason}`;
+  }
+}

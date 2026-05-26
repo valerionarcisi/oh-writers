@@ -41,6 +41,12 @@ interface LocationMapProps {
   areaFilter?: AreaFilterResult | null;
   /** Clears the active area filter (boundary layer + discovery pins + state). */
   onClearArea?: () => void;
+  /** Whether the "Ordina per scena" (atmosphere rank) action is available. */
+  canRankByScene?: boolean;
+  /** True while the atmosphere ranking call is in flight. */
+  rankPending?: boolean;
+  /** Triggers the on-demand atmosphere ranking (spec 37c). */
+  onRankByScene?: () => void;
   /** IDs of candidates that match the active area filter — rendered brighter. */
   highlightedCandidateIds?: ReadonlyArray<string>;
 }
@@ -120,6 +126,9 @@ export function LocationMap({
   onAreaFilter,
   areaFilter,
   onClearArea,
+  canRankByScene,
+  rankPending,
+  onRankByScene,
   highlightedCandidateIds,
 }: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -691,6 +700,17 @@ export function LocationMap({
           }}
         >
           ✕ Rimuovi area: {areaFilter.label}
+        </button>
+      ) : null}
+      {areaFilter && canRankByScene ? (
+        <button
+          type="button"
+          className={styles.rankPill}
+          data-testid="rank-by-scene-pill"
+          disabled={rankPending}
+          onClick={() => onRankByScene?.()}
+        >
+          {rankPending ? "Ordino…" : "✦ Ordina per scena"}
         </button>
       ) : null}
     </div>

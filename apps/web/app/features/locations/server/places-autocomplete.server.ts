@@ -28,6 +28,10 @@ export interface PlaceSuggestion {
   lng: number;
   photos: PlacePhotoWithThumb[];
   types: string[];
+  /** Atmosphere signals for Cesare ranking (spec 37c). Null when unavailable. */
+  rating: number | null;
+  priceLevel: string | null;
+  editorialSummary: string | null;
 }
 
 export interface PlacesAutocompleteError {
@@ -57,6 +61,11 @@ const toSuggestion = (
     thumbnailUrl: buildThumbnailUrl(photo.name, apiKey),
   })),
   types: place.types,
+  // The text-search executor doesn't fetch atmosphere signals — null here.
+  // Nearby discovery (toNearbySuggestion) carries them for the 37c ranking.
+  rating: null,
+  priceLevel: null,
+  editorialSummary: null,
 });
 
 const PlacesAutocompleteInputSchema = z.object({
@@ -107,12 +116,15 @@ interface NearbyResponse {
     location?: { latitude?: number; longitude?: number };
     id?: string;
     types?: string[];
+    rating?: number;
+    priceLevel?: string;
+    editorialSummary?: { text?: string };
     photos?: Array<{ name?: string; widthPx?: number; heightPx?: number }>;
   }>;
 }
 
 const FIELD_MASK =
-  "places.displayName,places.formattedAddress,places.location,places.id,places.types,places.photos";
+  "places.displayName,places.formattedAddress,places.location,places.id,places.types,places.photos,places.rating,places.priceLevel,places.editorialSummary";
 
 const callNearbySearch = (
   apiKey: string,
@@ -162,6 +174,20 @@ const MOCK_DENSE_COUNT = 25;
 // by Google Places searchNearby so the UI can be exercised end-to-end without
 // an upstream API key. Place IDs are stable so Playwright can target rows via
 // `area-search-add-<placeId>` testids.
+/** Build a mock PlaceSuggestion with safe defaults for the new signal fields. */
+const mockPlace = (
+  p: Partial<PlaceSuggestion> &
+    Pick<PlaceSuggestion, "placeId" | "name" | "lat" | "lng">,
+): PlaceSuggestion => ({
+  address: "Via del Test, Milano",
+  types: [],
+  photos: [],
+  rating: null,
+  priceLevel: null,
+  editorialSummary: null,
+  ...p,
+});
+
 const buildMockNearbySuggestions = (
   lat: number,
   lng: number,
@@ -170,61 +196,70 @@ const buildMockNearbySuggestions = (
 ): PlaceSuggestion[] => {
   // Dense set (sentinel radius) — 25 nearby restaurants to force clustering.
   if (radius_m === MOCK_DENSE_RADIUS_M) {
-    return Array.from({ length: MOCK_DENSE_COUNT }, (_, i) => ({
-      placeId: `place_dense_${i}`,
-      name: `Trattoria ${i}`,
-      address: `Via Densa ${i}, Milano`,
-      lat: lat + i * 0.0002,
-      lng: lng + i * 0.0002,
-      types: ["restaurant"],
-      photos: [],
-    }));
+    return Array.from({ length: MOCK_DENSE_COUNT }, (_, i) =>
+      mockPlace({
+        placeId: `place_dense_${i}`,
+        name: `Trattoria ${i}`,
+        address: `Via Densa ${i}, Milano`,
+        lat: lat + i * 0.0002,
+        lng: lng + i * 0.0002,
+        types: ["restaurant"],
+      }),
+    );
   }
   // Type-aware fixtures (spec 37b): scene-scoped discovery passes includedTypes,
   // so the mock returns places tagged with the requested type. Switching scene
-  // → different includedTypes → different place names (testable).
+  // → different includedTypes → different place names (testable). Atmosphere
+  // signals (spec 37c) differ so ranking has something to sort by.
   const types = includedTypes ?? [];
   if (types.includes("bar") || types.includes("pub")) {
     return [
-      {
+      mockPlace({
         placeId: "place_bar_1",
         name: "Bar Centrale",
         address: "Via del Test 2, Milano",
         lat,
         lng,
         types: ["bar"],
-        photos: [],
-      },
-      {
+        rating: 3.8,
+        editorialSummary: "Bar tranquillo di quartiere",
+      }),
+      mockPlace({
         placeId: "place_bar_2",
-        name: "Pub del Mock",
+        name: "Pub Live del Mock",
         address: "Via del Test 3, Milano",
         lat: lat + 0.001,
         lng: lng + 0.001,
         types: ["pub", "bar"],
-        photos: [],
-      },
+        rating: 4.5,
+        editorialSummary: "Pub con palco e serate di musica dal vivo",
+      }),
     ];
   }
   return [
-    {
+    mockPlace({
       placeId: "place_mock_1",
       name: "Trattoria del Cerchio",
       address: "Via del Test 1, Milano",
       lat,
       lng,
       types: ["restaurant"],
-      photos: [],
-    },
-    {
+      rating: 3.9,
+      priceLevel: "PRICE_LEVEL_INEXPENSIVE",
+      editorialSummary: "Trattoria casalinga e informale",
+    }),
+    mockPlace({
       placeId: "place_mock_2",
-      name: "Ristorante Mock",
+      name: "Ristorante Stellato Mock",
       address: "Via del Test 2, Milano",
       lat: lat + 0.001,
       lng: lng + 0.001,
       types: ["restaurant"],
-      photos: [],
-    },
+      rating: 4.8,
+      priceLevel: "PRICE_LEVEL_EXPENSIVE",
+      editorialSummary:
+        "Ristorante elegante, atmosfera raffinata e luci soffuse",
+    }),
   ];
 };
 
@@ -279,18 +314,7 @@ export const fetchNearbyPlaces = (
       max_results: maxResults,
     })
       .map((places: PlaceResult[]) =>
-        places.map((place) => ({
-          placeId: place.placeId,
-          name: place.name,
-          address: place.address,
-          lat: place.lat,
-          lng: place.lng,
-          types: place.types,
-          photos: place.photos.map((photo) => ({
-            ...photo,
-            thumbnailUrl: buildThumbnailUrl(photo.name, apiKey),
-          })),
-        })),
+        places.map((place) => toSuggestion(place, apiKey)),
       )
       .mapErr<PlacesAutocompleteError>((e) => ({
         _tag: "PlacesNearbyError",

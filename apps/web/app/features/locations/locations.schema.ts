@@ -18,3 +18,20 @@ export const NormalisationOutputSchema = z.object({
   verdicts: z.array(NormalisationVerdictSchema),
 });
 export type NormalisationOutput = z.infer<typeof NormalisationOutputSchema>;
+
+/**
+ * Structured output of the atmosphere-ranking Haiku call (spec 37c). One verdict
+ * per discovered place, keyed by placeId, scoring how well it fits the scene's
+ * mood with a one-line Italian reason.
+ */
+export const RankVerdictSchema = z.object({
+  placeId: z.string(),
+  score: z.number().min(0).max(1),
+  reason: z.string(),
+});
+export type RankVerdict = z.infer<typeof RankVerdictSchema>;
+
+export const RankOutputSchema = z.object({
+  rankings: z.array(RankVerdictSchema),
+});
+export type RankOutput = z.infer<typeof RankOutputSchema>;

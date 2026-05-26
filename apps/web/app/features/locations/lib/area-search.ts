@@ -61,6 +61,9 @@ interface NearbyPlaceRaw {
   location?: { latitude?: number; longitude?: number };
   id?: string;
   types?: string[];
+  rating?: number;
+  priceLevel?: string;
+  editorialSummary?: { text?: string };
   photos?: Array<{ name?: string; widthPx?: number; heightPx?: number }>;
 }
 
@@ -86,6 +89,9 @@ export const toNearbySuggestion = (
   lat: raw.location?.latitude ?? 0,
   lng: raw.location?.longitude ?? 0,
   types: raw.types ?? [],
+  rating: raw.rating ?? null,
+  priceLevel: raw.priceLevel ?? null,
+  editorialSummary: raw.editorialSummary?.text ?? null,
   photos: (raw.photos ?? [])
     .filter((p): p is { name: string } => typeof p.name === "string")
     .slice(0, 3)

@@ -21,6 +21,7 @@ import {
 } from "../server/locations.server";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import { discoverPlacesInArea } from "../server/discovery.server";
+import { rankPlacesForScene } from "../server/rank.server";
 import type { DrawnCircle } from "../lib/area-search";
 import type { AreaFilterResult } from "../lib/area-filter";
 import { geometryToCircle } from "../lib/area-filter";
@@ -58,6 +59,11 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const [drawnCircle, setDrawnCircle] = useState<DrawnCircle | null>(null);
   const [foundPlaces, setFoundPlaces] = useState<PlaceSuggestion[]>([]);
   const [areaFilter, setAreaFilter] = useState<AreaFilterResult | null>(null);
+  // Atmosphere ranking (spec 37c): placeId → Cesare reason, set on demand.
+  const [rankReasons, setRankReasons] = useState<ReadonlyMap<string, string>>(
+    new Map(),
+  );
+  const [rankPending, setRankPending] = useState(false);
   // placeId → best-matching requirement for discovered places, so adding a
   // hollow pin assigns it to the right requirement without asking.
   const [discoveryTargets, setDiscoveryTargets] = useState<
@@ -76,23 +82,31 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     [requirements],
   );
 
-  // placeId → requirement name, for the hollow-pin popup label.
-  const foundPlaceLabels = useMemo(
-    () =>
-      new Map(
-        [...discoveryTargets].map(([placeId, t]) => [
-          placeId,
-          t.requirementName,
-        ]),
-      ),
-    [discoveryTargets],
-  );
+  // placeId → popup label. Base label is the matched requirement; once ranked,
+  // append Cesare's atmosphere reason (spec 37c).
+  const foundPlaceLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const [placeId, t] of discoveryTargets) {
+      const reason = rankReasons.get(placeId);
+      labels.set(
+        placeId,
+        reason ? `${t.requirementName} · ${reason}` : t.requirementName,
+      );
+    }
+    // A place may have a reason without a discovery target (no match) — still show it.
+    for (const [placeId, reason] of rankReasons) {
+      if (!labels.has(placeId)) labels.set(placeId, reason);
+    }
+    return labels;
+  }, [discoveryTargets, rankReasons]);
 
   // Discovery (spec 37 Phase 2 + 37b scene-aware): when an area is selected,
   // fetch real places of the SELECTED requirement's type and render them as
   // hollow pins. Re-runs when the selected scene changes. Cleared on dismiss.
   const [discoverySkipped, setDiscoverySkipped] = useState<string | null>(null);
   useEffect(() => {
+    // A new area/scene invalidates any prior atmosphere ranking.
+    setRankReasons(new Map());
     if (!areaFilter) {
       setFoundPlaces([]);
       setDiscoveryTargets(new Map());
@@ -315,6 +329,40 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
     });
   };
 
+  // Atmosphere ranking (spec 37c) — on-demand. Reorders foundPlaces by Cesare's
+  // mood-fit score and stores a one-line reason per place for the pin popup.
+  const handleRankByScene = async () => {
+    if (!selectedId || foundPlaces.length === 0 || rankPending) return;
+    setRankPending(true);
+    try {
+      const response = await rankPlacesForScene({
+        data: {
+          projectId,
+          requirementId: selectedId,
+          places: foundPlaces.map((p) => ({
+            placeId: p.placeId,
+            name: p.name,
+            types: p.types,
+            rating: p.rating,
+            priceLevel: p.priceLevel,
+            editorialSummary: p.editorialSummary,
+          })),
+        },
+      });
+      if (!response.isOk) return;
+      const order = new Map(response.value.map((r, i) => [r.placeId, i]));
+      setRankReasons(new Map(response.value.map((r) => [r.placeId, r.reason])));
+      setFoundPlaces((prev) =>
+        [...prev].sort(
+          (a, b) =>
+            (order.get(a.placeId) ?? 999) - (order.get(b.placeId) ?? 999),
+        ),
+      );
+    } finally {
+      setRankPending(false);
+    }
+  };
+
   const confirmedCount = requirements.filter(
     (r) => r.status === "confirmed",
   ).length;
@@ -379,6 +427,9 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
               setAreaFilter(null);
               setDrawnCircle(null);
             }}
+            canRankByScene={foundPlaces.length > 0 && selectedId !== null}
+            rankPending={rankPending}
+            onRankByScene={handleRankByScene}
             highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
           />
           {drawnCircle ? (

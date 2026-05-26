@@ -212,4 +212,35 @@ test.describe("[Spec 37] Location area discovery", () => {
       })
       .toBe(0);
   });
+
+  test("[OHW-381] 'Ordina per scena' ranks the discovered places (atmosphere)", async ({
+    authenticatedPage,
+  }) => {
+    const page = authenticatedPage;
+    await navigateToLocations(page, LOCATIONS_PROJECT_ID);
+
+    // REQ_1 = appartamento (searchable) → mock returns the restaurant set
+    // (Trattoria + Ristorante Stellato), each with atmosphere signals.
+    await page
+      .getByTestId(`requirement-row-${SEEDED_LOCATION_REQ_1_ID}`)
+      .click();
+    await drawCircle(page);
+    await expect
+      .poll(
+        async () => {
+          await setAreaView(page, 45.46, 9.19, 14);
+          return page.locator(DISCOVERY_PIN_SELECTOR).count();
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+
+    // The rank affordance appears once there are discovered places + a scene.
+    const rankPill = page.getByTestId("rank-by-scene-pill");
+    await expect(rankPill).toBeVisible();
+    await rankPill.click();
+
+    // Ranking completes (the button leaves its "Ordino…" pending state).
+    await expect(rankPill).toHaveText(/Ordina per scena/, { timeout: 15_000 });
+  });
 });

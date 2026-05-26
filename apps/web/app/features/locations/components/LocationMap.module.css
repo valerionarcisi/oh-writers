@@ -115,3 +115,32 @@
     background: var(--ds-surface-alt);
   }
 }
+
+/* "Ordina per scena" — Cesare atmosphere ranking, sits under the clear pill. */
+.rankPill {
+  position: absolute;
+  inset-block-start: calc(var(--ds-space-3) + 40px);
+  inset-inline-end: calc(var(--ds-space-3) + 48px);
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 6px 12px;
+  border: 1px solid var(--ds-accent, var(--ds-line));
+  border-radius: var(--radius-pill);
+  background: var(--ds-surface);
+  color: var(--ds-accent, var(--ds-text));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.18));
+
+  &:hover:not(:disabled) {
+    background: var(--ds-surface-alt);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
