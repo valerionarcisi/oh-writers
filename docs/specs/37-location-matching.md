@@ -1,6 +1,6 @@
 # Spec 37 — Location Matching & Area Discovery
 
-> **Status:** Phases 1–2 built (2026-05-26) — Phase 3 (clustering) pending
+> **Status:** Phases 1–3 built (2026-05-26)
 > **Owner:** locations feature
 > **Depends on:** boundary search (`lib/boundary.ts`), area-search (`lib/area-search.ts`, `server/places-autocomplete.server.ts`), breakdown → requirement sync (`syncRequirementsFromBreakdown`)
 
@@ -318,6 +318,26 @@ chips would appear on only ~2 of 9 real requirements.
 - Limit Places category fan-out to the project's resolved types (already in Phase 2) and cluster the rest.
 
 **Test:** OHW-374 (E2E: dense area renders clusters, expanding a cluster shows pins). Not Cesare-related; no cost smoke.
+
+> **Built 2026-05-26.** Shipped as specified except:
+>
+> - Clustering applies to the **discovery hollow pins** (the layer that goes
+>   dense); saved-candidate pins are bounded by project size and stay direct.
+> - **Density threshold (20):** ≤ 20 discovered places render as individual
+>   `divIcon` markers (viewport-independent, individually clickable); > 20 go
+>   into a `Leaflet.markercluster` group. This keeps the common case simple and
+>   testable, and only pays clustering cost when it's actually needed.
+> - Hollow pins switched from `circleMarker` to a `divIcon` (`.ohw-discovery-pin`)
+>   so MarkerCluster can manage them in the marker pane (circleMarkers live in
+>   the SVG overlay pane and aren't reliably clustered).
+> - `Leaflet.markercluster` CSS+JS loaded via `useLeaflet` from the CDN, same
+>   pattern as `leaflet-draw` (no npm dependency added).
+> - The Places category fan-out limit referenced here is the Phase-2 bias, which
+>   currently falls back to an unbiased search (see Phase 2 note) — clustering
+>   does not depend on it.
+> - The mock gains a sentinel dense result set (25 places at `radius_m=9999`) so
+>   OHW-374 can exercise clustering deterministically. OHW-374 + OHW-372 green;
+>   all 12 locations E2E + 48 locations unit tests green.
 
 ---
 
