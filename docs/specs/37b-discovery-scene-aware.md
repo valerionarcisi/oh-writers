@@ -1,6 +1,6 @@
 # Spec 37b — Scene-aware discovery, search types & photos
 
-> **Status:** draft — awaiting approval
+> **Status:** built (2026-05-26)
 > **Parent:** [37 — Location Matching & Area Discovery](./37-location-matching.md)
 > **Owner:** locations feature
 
@@ -190,3 +190,21 @@ requirement.
 
 Mock `searchPlacesInArea`/`fetchNearbyPlaces` gains type-aware fixtures so the
 scene-aware E2E is deterministic (restaurant set vs bar set).
+
+> **Built 2026-05-26.** Shipped as specified except:
+>
+> - **OHW-377** landed as a Playwright test (a street scene → no pins) rather
+>   than a Vitest one — the skip lives in the server handler, exercised E2E.
+> - **OHW-378** (scene A vs B differ) is covered by OHW-377 + live verification
+>   (Ristorante → McDonald's/restaurants, Bancone → Chalet Tropical/bars); not a
+>   separate spec to keep the suite fast.
+> - **Clear-area pill** is top-right (not top-left as drafted) because the
+>   `AreaSearchPanel` anchors top-left when a circle is drawn and intercepted the
+>   click. Verified the pill is on top and clears boundary + pins.
+> - Photos: discovered-pin popup shows the thumbnail; candidate rows already
+>   rendered `photos[0]`, and discovered→added candidates persist `photoNames`.
+> - Validated `searchTypes` against the live Places API (`route`/`town_square`
+>   rejected; `restaurant`/`bar`/`pub`/`lodging`/… accepted in groups).
+> - Verified live on Fermo: Ristorante scene → only food places with photos;
+>   Bancone scene → bars; street scene → no pins. 51 unit + 4 E2E green.
+> - **Atmosphere ranking (§8) intentionally deferred to spec 37c.**
