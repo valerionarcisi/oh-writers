@@ -187,6 +187,13 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           lng: detail.lng,
           radius_m: detail.radius_m,
         });
+        // Drawing a circle in production also sets the area filter (which drives
+        // discovery). Mirror that here so the test hook exercises the same flow.
+        setAreaFilter({
+          kind: "drawn",
+          label: "Area disegnata",
+          matchingCandidateIds: [],
+        });
       }
     };
     const onOpenLightbox = (e: Event) => {
