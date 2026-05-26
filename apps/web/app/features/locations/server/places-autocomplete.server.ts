@@ -153,6 +153,11 @@ const callNearbySearch = (
  * radius. For purely "what's around here" calls (no query), we hit
  * `searchNearby` and let it return whatever sits inside the circle.
  */
+// Sentinel radius (metres) that makes the mock return a DENSE result set so
+// E2E can exercise Phase-3 pin clustering deterministically.
+const MOCK_DENSE_RADIUS_M = 9999;
+const MOCK_DENSE_COUNT = 25;
+
 // Deterministic suggestions used when MOCK_AI=true. Mirrors the shape returned
 // by Google Places searchNearby so the UI can be exercised end-to-end without
 // an upstream API key. Place IDs are stable so Playwright can target rows via
@@ -160,26 +165,41 @@ const callNearbySearch = (
 const buildMockNearbySuggestions = (
   lat: number,
   lng: number,
-): PlaceSuggestion[] => [
-  {
-    placeId: "place_mock_1",
-    name: "Trattoria del Cerchio",
-    address: "Via del Test 1, Milano",
-    lat,
-    lng,
-    types: ["restaurant"],
-    photos: [],
-  },
-  {
-    placeId: "place_mock_2",
-    name: "Bar Centrale",
-    address: "Via del Test 2, Milano",
-    lat: lat + 0.001,
-    lng: lng + 0.001,
-    types: ["bar"],
-    photos: [],
-  },
-];
+  radius_m?: number,
+): PlaceSuggestion[] => {
+  // Dense set (sentinel radius) — 25 nearby restaurants to force clustering.
+  if (radius_m === MOCK_DENSE_RADIUS_M) {
+    return Array.from({ length: MOCK_DENSE_COUNT }, (_, i) => ({
+      placeId: `place_dense_${i}`,
+      name: `Trattoria ${i}`,
+      address: `Via Densa ${i}, Milano`,
+      lat: lat + i * 0.0002,
+      lng: lng + i * 0.0002,
+      types: ["restaurant"],
+      photos: [],
+    }));
+  }
+  return [
+    {
+      placeId: "place_mock_1",
+      name: "Trattoria del Cerchio",
+      address: "Via del Test 1, Milano",
+      lat,
+      lng,
+      types: ["restaurant"],
+      photos: [],
+    },
+    {
+      placeId: "place_mock_2",
+      name: "Bar Centrale",
+      address: "Via del Test 2, Milano",
+      lat: lat + 0.001,
+      lng: lng + 0.001,
+      types: ["bar"],
+      photos: [],
+    },
+  ];
+};
 
 interface NearbyParams {
   readonly lat: number;
@@ -200,7 +220,9 @@ export const fetchNearbyPlaces = (
   params: NearbyParams,
 ): ResultAsync<PlaceSuggestion[], PlacesAutocompleteError> => {
   if (process.env["MOCK_AI"] === "true") {
-    return okAsync(buildMockNearbySuggestions(params.lat, params.lng));
+    return okAsync(
+      buildMockNearbySuggestions(params.lat, params.lng, params.radius_m),
+    );
   }
 
   const apiKey = process.env["GOOGLE_PLACES_API_KEY"];

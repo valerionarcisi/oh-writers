@@ -12,6 +12,23 @@
   height: 100%;
 }
 
+/* Discovery hollow pin (spec 37) — a divIcon marker so MarkerCluster can group
+   it. Mimics the blue ring style of the previous circleMarker. */
+:global(.ohw-discovery-pin) {
+  background: transparent;
+  border: none;
+}
+
+:global(.ohw-discovery-dot) {
+  display: block;
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: var(--radius-pill);
+  background: #dbeafe;
+  border: 3px solid #1d4ed8;
+  box-sizing: border-box;
+}
+
 /* Override Leaflet defaults to match app style */
 :global(.leaflet-control-zoom) {
   border: 1px solid var(--ds-line) !important;

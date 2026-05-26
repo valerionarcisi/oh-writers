@@ -120,6 +120,10 @@ export function LocationMap({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
   const foundMarkersRef = useRef<Map<string, any>>(new Map());
+  // Cluster group that holds discovery hollow pins so dense areas stay readable.
+  const foundClusterRef = useRef<any>(null);
+  // Tracks whether discovery pins are currently clustered, to detect layout flips.
+  const foundLayoutRef = useRef<"direct" | "cluster">("direct");
   const drawLayerRef = useRef<any>(null);
   const searchRingRef = useRef<any>(null);
   const boundaryLayerRef = useRef<any>(null);
@@ -341,11 +345,15 @@ export function LocationMap({
     containerEl.addEventListener("click", onMapContainerClick);
 
     mapRef.current = map;
+    // Test-only handle so E2E can drive zoom (e.g. to force pin clustering).
+    (window as unknown as { __ohwLeafletMap?: unknown }).__ohwLeafletMap = map;
 
     return () => {
       containerEl.removeEventListener("click", onMapContainerClick);
       map.remove();
       mapRef.current = null;
+      delete (window as unknown as { __ohwLeafletMap?: unknown })
+        .__ohwLeafletMap;
     };
   }, [leafletReady]);
 
@@ -527,17 +535,64 @@ export function LocationMap({
 
   // Sync the "found places" overlay layer — blue ring markers for area-search
   // results. Each carries an "Aggiungi come candidato" popup button.
+  //
+  // Phase 3: above a density threshold the markers go into a MarkerCluster group
+  // so dense areas stay readable; below it (the common case) they are added
+  // straight to the map so every pin is individually visible and clickable.
   useEffect(() => {
     const L = (window as any).L;
     const map = mapRef.current;
     if (!L || !map || !leafletReady) return;
 
     const places = foundPlaces ?? [];
+
+    // Decide layout: cluster only when dense AND markercluster is available.
+    const CLUSTER_THRESHOLD = 20;
+    const useCluster =
+      places.length > CLUSTER_THRESHOLD &&
+      typeof L.markerClusterGroup === "function";
+
+    if (useCluster && !foundClusterRef.current) {
+      foundClusterRef.current = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 50,
+        animate: false,
+        zoomToBoundsOnClick: true,
+      });
+      map.addLayer(foundClusterRef.current);
+    }
+    // Tear down the cluster group when we drop back below the threshold.
+    if (!useCluster && foundClusterRef.current) {
+      map.removeLayer(foundClusterRef.current);
+      foundClusterRef.current = null;
+    }
+    const cluster = useCluster ? foundClusterRef.current : null;
+    const addLayer = (m: any) =>
+      cluster ? cluster.addLayer(m) : map.addLayer(m);
+
+    // On a layout flip (direct↔cluster), drop all existing markers from the old
+    // layer so they are re-added below to the new one.
+    const nextLayout = useCluster ? "cluster" : "direct";
+    if (foundLayoutRef.current !== nextLayout) {
+      foundMarkersRef.current.forEach((marker) => {
+        if (foundLayoutRef.current === "cluster" && foundClusterRef.current) {
+          foundClusterRef.current.removeLayer(marker);
+        } else {
+          map.removeLayer(marker);
+        }
+      });
+      foundMarkersRef.current.clear();
+      foundLayoutRef.current = nextLayout;
+    }
+
+    const removeLayer = (m: any) =>
+      cluster ? cluster.removeLayer(m) : map.removeLayer(m);
+
     const liveIds = new Set(places.map((p) => p.placeId));
 
     foundMarkersRef.current.forEach((marker, id) => {
       if (!liveIds.has(id)) {
-        map.removeLayer(marker);
+        removeLayer(marker);
         foundMarkersRef.current.delete(id);
       }
     });
@@ -546,12 +601,16 @@ export function LocationMap({
       if (!place.lat || !place.lng || !place.placeId) continue;
       if (foundMarkersRef.current.has(place.placeId)) continue;
 
-      const marker = L.circleMarker([place.lat, place.lng], {
-        radius: 8,
-        color: "#1d4ed8",
-        fillColor: "#dbeafe",
-        fillOpacity: 0.9,
-        weight: 3,
+      // Use a divIcon marker (not circleMarker) so MarkerCluster can manage it
+      // in the marker pane — circleMarkers live in the SVG overlay pane and are
+      // not reliably clustered. The icon mimics the blue ring style.
+      const marker = L.marker([place.lat, place.lng], {
+        icon: L.divIcon({
+          className: "ohw-discovery-pin",
+          html: '<span class="ohw-discovery-dot"></span>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        }),
       });
 
       marker.bindTooltip(
@@ -592,7 +651,7 @@ export function LocationMap({
         );
       });
 
-      marker.addTo(map);
+      addLayer(marker);
       foundMarkersRef.current.set(place.placeId, marker);
     }
   }, [foundPlaces, foundPlaceLabels, leafletReady]);
