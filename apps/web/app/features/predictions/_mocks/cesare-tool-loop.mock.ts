@@ -523,6 +523,29 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Spec 39 — verify read_scene skill is active on locations page [OHW-039e]
+  // When the user asks about a scene from the locations context, Cesare must
+  // call read_scene to fetch the body — confirming the read-scene skill is
+  // selected by the V2 registry for the locations page.
+  {
+    match: /dimmi cosa succede nella scena 1|cosa succede nella scena 1|racconta la scena 1/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "read_scene",
+            input: { scene_number: 1 },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Nella scena 1 si vede John che entra nel ristorante. È una scena di apertura con forte tensione emotiva.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Shooting plan — propose_blocking_for_scene (OHW-580).
   // The real executor loads scene + cast and (in MOCK_AI=true) short-circuits
   // to parseCesareBlockingResponse with an empty LLM response, falling back

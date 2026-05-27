@@ -34,7 +34,9 @@ import {
   type ProductionRates,
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
+import type { ProjectAccess } from "~/server/access";
 import { callHaiku, extractText } from "~/features/ai";
+import type { SkillExecutor } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import {
   CESARE_SCHEDULE_TOOLS,
@@ -2711,4 +2713,32 @@ export const runBudgetToolLoop = (
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
     executor: executeBudgetTool,
+  });
+
+// ─── Unified tool loop (spec 39) ──────────────────────────────────────────────
+// Parameterised on a SkillExecutor from the registry instead of a page-specific
+// executor. The SkillExecutor receives (block, db, projectId, access) — the
+// extra `access` arg is forwarded from the server function context.
+
+export const runUnifiedToolLoop = (
+  client: AnthropicClient,
+  systemPrompt: string | readonly unknown[],
+  messages: Message[],
+  tools: readonly unknown[],
+  executor: SkillExecutor,
+  db: Db,
+  projectId: string,
+  access: ProjectAccess,
+  model: string,
+): ResultAsync<string, CesareError> =>
+  runGenericToolLoop({
+    client,
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    tools,
+    executor: (block, dbArg, projectIdArg) =>
+      executor(block, dbArg, projectIdArg, access),
   });

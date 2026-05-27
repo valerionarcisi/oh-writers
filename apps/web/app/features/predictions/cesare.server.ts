@@ -49,6 +49,15 @@ import {
   formatBibleForLocations,
 } from "@oh-writers/domain";
 import type { FilmBible } from "@oh-writers/domain";
+import { runUnifiedToolLoop } from "./cesare-tools";
+import { buildSkillRegistry } from "./skills/registry";
+import { buildDocumentEditSkill } from "./skills/document-edit.skill";
+import type { SkillBuildContext } from "./skills/types";
+import {
+  buildGlobalContext,
+  assembleSystemPromptV2,
+} from "./context";
+import { buildLocalContext } from "./context/local-context.server";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
 
@@ -788,6 +797,7 @@ const loadShotPlansForScene = (
       ),
   );
 
+// legacy — replaced by buildGlobalContext + buildLocalContext (spec 39). Kept for reference only.
 const assembleContext = (
   db: Db,
   projectId: string,
@@ -1476,6 +1486,7 @@ const formatSceneWindowHeadings = (window: SceneBodyRow[]): string => {
   return `\nFINESTRA SCENE (solo heading — usa read_scene/read_scene_range per il corpo):\n${lines.join("\n")}`;
 };
 
+// legacy — replaced by assembleSystemPromptV2 (spec 39). Kept for reference only.
 const buildSystemPrompt = (
   ctx: CesareContext,
   page: PageContext["page"],
@@ -1910,6 +1921,7 @@ const AGENTIC_PAGES = new Set<string>([
   "treatment",
 ]);
 
+// legacy — replaced by handleAskCesareV2 (spec 39). Kept for reference only.
 const handleAskCesare = (
   data: CesareInput,
   db: Db,
@@ -2035,6 +2047,158 @@ const handleAskCesare = (
   );
 };
 
+// ─── Unified tool loop caller (spec 39) ──────────────────────────────────────
+
+const callCesareV2 = (
+  systemPrompt: SystemPromptBlock[],
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  projectId: string,
+  access: ProjectAccess,
+  executor: import("./skills/types").SkillExecutor,
+  tools: readonly import("./skills/types").AnthropicTool[],
+  model: string,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromPromise(
+    loadAnthropicNonStreaming(),
+    (e) =>
+      new CesareError(
+        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  ).andThen((client) => {
+    const messages = [
+      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: message },
+    ];
+    return runUnifiedToolLoop(
+      client,
+      systemPrompt,
+      messages,
+      tools as readonly unknown[],
+      executor,
+      db,
+      projectId,
+      access,
+      model,
+    );
+  });
+
+// ─── V2 handler — stratified context (spec 39) ────────────────────────────────
+
+const handleAskCesareV2 = (
+  data: CesareInput,
+  db: Db,
+  access: ProjectAccess,
+): ResultAsync<string, CesareError> => {
+  if (
+    process.env["MOCK_AI"] === "true" &&
+    !AGENTIC_PAGES.has(data.pageContext.page)
+  ) {
+    return mockResponse(data.pageContext);
+  }
+
+  const tier = routeModel({
+    userMessage: data.message,
+    page: data.pageContext.page,
+    conversationLength: data.conversationHistory.length,
+  });
+  const model = tierToModel(tier);
+
+  if (process.env["CESARE_DEBUG"] === "true") {
+    console.warn(
+      `[cesare-v2] tier=${tier} model=${model} page=${data.pageContext.page} convLen=${data.conversationHistory.length} msg="${data.message.slice(0, 60)}"`,
+    );
+  }
+
+  // Step 1: build global context (60s memo cache)
+  return buildGlobalContext(db, data.projectId)
+    .mapErr(
+      (e) =>
+        new CesareError(
+          `buildGlobalContext failed: ${"message" in e ? e.message : String(e)}`,
+        ),
+    )
+    .andThen((globalCtx) => {
+      const page = data.pageContext.page as import("./skills/types").PageType;
+
+      // Step 2: preliminary skill build context (no docCtx yet)
+      const prelimBuildCtx: SkillBuildContext = {
+        bible: globalCtx.bible,
+        activeSceneId: data.pageContext.sceneId ?? null,
+        activeDayNumber: data.pageContext.shootingDayNumber ?? null,
+        requirementId: data.pageContext.requirementId ?? null,
+      };
+
+      // Step 3: preliminary registry + skills (no document-edit override)
+      const prelimRegistry = buildSkillRegistry(prelimBuildCtx);
+      const prelimSkills = prelimRegistry.selectForPage(page, null);
+
+      // Step 4: lean local context — only loads data declared by active skills
+      const pageCtx = {
+        sceneId: data.pageContext.sceneId ?? null,
+        sceneNumber: data.pageContext.sceneNumber ?? null,
+        requirementId: data.pageContext.requirementId ?? null,
+        documentId: data.pageContext.documentId ?? null,
+        shootingDayId: data.pageContext.shootingDayId ?? null,
+        shootingDayNumber: data.pageContext.shootingDayNumber ?? null,
+      };
+
+      return buildLocalContext(db, data.projectId, pageCtx, prelimSkills)
+        .mapErr(
+          (e) =>
+            new CesareError(
+              `buildLocalContext failed: ${"message" in e ? e.message : String(e)}`,
+            ),
+        )
+        .andThen((localCtx) => {
+          // Step 5: for document pages, inject live document into document-edit skill
+          let finalSkills = prelimSkills;
+          let finalRegistry = prelimRegistry;
+
+          if (isDocumentPage(data.pageContext.page) && localCtx.activeDocument) {
+            const docCtx: DocumentContext = {
+              documentId: localCtx.activeDocument.id,
+              documentType: localCtx.activeDocument.type as DocumentType,
+              content: localCtx.activeDocument.content,
+            };
+            const docEditSkill = buildDocumentEditSkill(
+              prelimBuildCtx,
+              docCtx,
+              access.user.id,
+            );
+            finalRegistry = buildSkillRegistry(prelimBuildCtx, {
+              "document-edit": docEditSkill,
+            });
+            finalSkills = finalRegistry.selectForPage(page, null);
+          }
+
+          // Step 6: assemble stratified system prompt
+          const systemPrompt = assembleSystemPromptV2(
+            globalCtx,
+            finalSkills,
+            localCtx,
+          );
+
+          const tools = finalRegistry.allTools(finalSkills);
+          const executor = finalRegistry.combinedExecutor(finalSkills);
+
+          // Step 7: invoke the unified tool loop
+          return callCesareV2(
+            systemPrompt,
+            data.conversationHistory,
+            data.message,
+            db,
+            data.projectId,
+            access,
+            executor,
+            tools,
+            model,
+          );
+        });
+    });
+};
+
 // ─── Server function ──────────────────────────────────────────────────────────
 
 export const askCesare = createServerFn({ method: "POST" })
@@ -2042,7 +2206,7 @@ export const askCesare = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     toShape(
       await withProjectAccess(data.projectId, "view", ({ db, access }) =>
-        handleAskCesare(data, db, access),
+        handleAskCesareV2(data, db, access),
       ),
     ),
   );
