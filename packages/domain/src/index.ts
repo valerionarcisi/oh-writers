@@ -15,3 +15,4 @@ export * from "./fundraising/index.js";
 export * from "./scene-summary/index.js";
 export * from "./bible/index.js";
 export * from "./context-templates/index.js";
+export * from "./context/index.js";

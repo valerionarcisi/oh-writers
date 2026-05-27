@@ -1,0 +1,36 @@
+// Row shapes are plain objects — no Drizzle inference needed here.
+// The actual DB query lives in apps/web and produces these shapes.
+
+export interface SceneMetaRow {
+  readonly id: string;
+  readonly number: number;
+  readonly heading: string;
+}
+
+export interface SceneBodyRow {
+  readonly id: string;
+  readonly number: number;
+  readonly heading: string;
+  readonly body: string | null;
+  readonly characterNames: string[];
+  readonly isCurrent: boolean;
+}
+
+export interface ActiveDocumentRow {
+  readonly id: string;
+  readonly type: string;
+  readonly content: string;
+  readonly isActive: true;
+}
+
+export interface LocalContext {
+  readonly projectTitle: string;
+  readonly scenes: SceneMetaRow[];
+  readonly currentScene: SceneMetaRow | null;
+  readonly sceneWindow: SceneBodyRow[];
+  readonly characters: string[];
+  readonly activeDocument: ActiveDocumentRow | null;
+  // Loaded only when the active skill declares it in requiredData
+  readonly currentRequirement: unknown | null;
+  readonly activeShootingDay: unknown | null;
+}
