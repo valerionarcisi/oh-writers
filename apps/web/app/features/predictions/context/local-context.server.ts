@@ -810,6 +810,18 @@ const loadActiveShootingDay = (
 // active skills' requiredData, keeping the DB round-trips proportional to
 // the actual page and intent rather than always fetching everything.
 
+// Document pages require the documents loader so that localCtx.activeDocument
+// can be resolved from the live DB row. The document-edit skill (which declares
+// "documents" as requiredData) is injected AFTER buildLocalContext returns, so
+// it cannot influence the needed set at call time — forcing it here breaks the
+// chicken-and-egg dependency.
+const DOCUMENT_PAGES = new Set<PageType>([
+  "soggetto",
+  "synopsis",
+  "outline",
+  "treatment",
+]);
+
 export const buildLocalContext = (
   db: Db,
   projectId: string,
@@ -820,6 +832,12 @@ export const buildLocalContext = (
   const needed = new Set<DataRequirement>(
     skills.flatMap((s) => [...s.requiredData]),
   );
+  // Always load project documents for document pages so the document-edit
+  // skill override (injected by the caller after this function returns) can
+  // find the active document in localCtx.activeDocument.
+  if (DOCUMENT_PAGES.has(pageType)) {
+    needed.add("documents");
+  }
 
   return ResultAsync.fromPromise(
     (async (): Promise<LocalContextConcrete> => {

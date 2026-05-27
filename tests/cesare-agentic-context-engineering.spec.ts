@@ -15,27 +15,63 @@
  * Cost smoke (real API) is in scripts/cost-smoke-bible.ts.
  */
 
-import { test, expect } from "@playwright/test";
+import { type Browser, test, expect } from "@playwright/test";
 import { BASE_URL } from "./fixtures";
 
 const SCREENPLAY_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
 
-// Reuse the sign-in pattern from the fixture for a simple authenticated page
-async function signIn(page: typeof test.prototype.page) {
-  await page.goto(`${BASE_URL}/sign-in`);
-  await page.getByLabel("Email").fill(TEST_EMAIL);
-  await page.getByLabel("Password").fill(TEST_PASSWORD);
-  await page.getByRole("button", { name: "Accedi" }).click();
-  await page.waitForURL(`${BASE_URL}/projects`, { timeout: 15_000 });
+// Sign in via the Better Auth API (same pattern as fixtures.ts) so we bypass
+// the two-step login UI and avoid the /sign-in vs /login URL mismatch.
+async function signInViaApi(browser: Browser) {
+  const resp = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: BASE_URL,
+    },
+    body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
+  });
+  if (!resp.ok) {
+    throw new Error(`Sign-in failed: ${resp.status}`);
+  }
+  const setCookieHeaders = resp.headers.getSetCookie();
+  const cookies = setCookieHeaders
+    .map((header) => {
+      const [nameValue] = header.split(";");
+      if (!nameValue) return null;
+      const eqIdx = nameValue.indexOf("=");
+      if (eqIdx === -1) return null;
+      return {
+        name: nameValue.substring(0, eqIdx),
+        value: nameValue.substring(eqIdx + 1),
+        domain: "localhost",
+        path: "/",
+      };
+    })
+    .filter(Boolean) as {
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+  }[];
+
+  const context = await browser.newContext();
+  if (cookies.length > 0) {
+    await context.addCookies(cookies);
+  }
+  const page = await context.newPage();
+  await page.goto(`${BASE_URL}/dashboard`);
+  await page.waitForURL("**/dashboard", { timeout: 15_000 });
+  return { page, context };
 }
 
 test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
   test("[OHW-038f-1] Scene summary is populated after saving the screenplay", async ({
-    page,
+    browser,
   }) => {
-    await signIn(page);
+    const { page, context } = await signInViaApi(browser);
 
     // Navigate to the screenplay editor
     await page.goto(`${BASE_URL}/projects/${SCREENPLAY_PROJECT_ID}/screenplay`);
@@ -54,12 +90,13 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
     // The test DB API may not exist — accept 404 as OK for CI (DB side-effect
     // is verified by the server-test unit tests). What matters here is no crash.
     expect([200, 404]).toContain(response.status());
+    await context.close();
   });
 
   test("[OHW-038f-2] Cesare responds with non-Rome setting when asked about film location", async ({
-    page,
+    browser,
   }) => {
-    await signIn(page);
+    const { page, context } = await signInViaApi(browser);
 
     await page.goto(`${BASE_URL}/projects/${SCREENPLAY_PROJECT_ID}/locations`);
     await page.waitForLoadState("networkidle");
@@ -71,6 +108,7 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
       .catch(() => false);
     if (!hasTrigger) {
       // Page may not have Cesare if no requirements exist — skip
+      await context.close();
       test.skip();
       return;
     }
@@ -94,12 +132,13 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
     // Mock confirms setting is Marche, not Rome
     expect(lastMessage).toMatch(/marche|ristorante|provincia/i);
     expect(lastMessage).not.toMatch(/^Roma$/i);
+    await context.close();
   });
 
   test("[OHW-038f-3] Film Bible groups restaurant aliases into one recurring location", async ({
-    page,
+    browser,
   }) => {
-    await signIn(page);
+    const { page, context } = await signInViaApi(browser);
 
     // Trigger a Cesare call on any page to force bible distillation
     await page.goto(`${BASE_URL}/projects/${SCREENPLAY_PROJECT_ID}/breakdown`);
@@ -114,5 +153,6 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
 
     const errorBoundary = page.getByText(/Something went wrong/i);
     await expect(errorBoundary).not.toBeVisible({ timeout: 3_000 });
+    await context.close();
   });
 });
