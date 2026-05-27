@@ -46,6 +46,10 @@ export default defineConfig({
               find: "node:async_hooks",
               replacement: path.resolve("./src/shims/async-hooks.js"),
             },
+            {
+              find: "node:crypto",
+              replacement: path.resolve("./src/shims/node-crypto.js"),
+            },
             // Postgres driver pulls in `perf_hooks`/`net`/`tls` which Vite
             // externalises in browser mode and then fails at Rollup time
             // because the resulting stub does not export `performance`. The

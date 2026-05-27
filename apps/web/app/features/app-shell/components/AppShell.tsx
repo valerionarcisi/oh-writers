@@ -19,8 +19,8 @@ import type {
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import { CesareSheet, parseToolsExecuted } from "~/features/predictions";
-import { askCesare } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
+import { askCesare } from "~/features/predictions/cesare.server";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";

@@ -1,6 +1,3 @@
-export {
-  CesareSheet,
-  parseToolsExecuted,
-} from "./components/CesareSheet";
+export { CesareSheet, parseToolsExecuted } from "./components/CesareSheet";
 export type { CesarePage, AskCesareFn } from "./components/CesareSheet";
-export { askCesare } from "./cesare.server";
+// askCesare is a server function — import directly from ./cesare.server, never from this barrel

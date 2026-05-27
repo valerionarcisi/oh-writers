@@ -27,6 +27,12 @@ if (process.env["GITHUB_CLIENT_ID"] && process.env["GITHUB_CLIENT_SECRET"]) {
   };
 }
 
+// Collect all ports the dev server might bind to so Better Auth accepts
+// local sign-in requests regardless of which port Vinxi picks.
+const devOrigins = ["3000", "3001", "3002", "3003", "3004", "3005"].map(
+  (p) => `http://localhost:${p}`,
+);
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -42,4 +48,5 @@ export const auth = betterAuth({
     requireEmailVerification: false,
   },
   socialProviders,
+  trustedOrigins: devOrigins,
 });
