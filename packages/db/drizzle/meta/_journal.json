@@ -253,6 +253,13 @@
       "when": 1779000000001,
       "tag": "0030_location_type",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1779000000002,
+      "tag": "0031_scene_summary_bible",
+      "breakpoints": true
     }
   ]
 }

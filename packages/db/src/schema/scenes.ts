@@ -6,6 +6,7 @@ import {
   boolean,
   timestamp,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { screenplays } from "./screenplays";
 
@@ -29,6 +30,8 @@ export const scenes = pgTable(
     hasSpecialEffect: boolean("has_special_effect").notNull().default(false),
     notes: text("notes"),
     effort: integer("effort").notNull().default(2),
+    sceneSummary: jsonb("scene_summary"),
+    sceneSummaryFingerprint: text("scene_summary_fingerprint"),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [unique().on(t.screenplayId, t.number)],

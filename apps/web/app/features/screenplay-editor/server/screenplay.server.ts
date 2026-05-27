@@ -10,6 +10,7 @@ import { getDb } from "~/server/db";
 import { stripYjsState } from "~/server/helpers";
 import { ensureFirstVersion } from "./versions.server";
 import { syncScenesFromFountain } from "./scenes-sync";
+import { refreshStaleSceneSummaries } from "~/features/predictions/scene-summary.server";
 import { canEdit, isOwner } from "~/server/permissions";
 import { requireProjectAccess } from "~/server/access";
 import { GetScreenplayInput, SaveScreenplayInput } from "../screenplay.schema";
@@ -181,7 +182,12 @@ export const saveScreenplay = createServerFn({ method: "POST" })
             return updated;
           }),
           (e) => new DbError("saveScreenplay", e),
-        ).map(stripYjsState),
+        ).map((updated) => {
+          // Fire-and-forget: regenerate stale scene summaries after save.
+          // Errors are swallowed — save must remain instant.
+          void refreshStaleSceneSummaries(db, updated.id);
+          return stripYjsState(updated);
+        }),
       );
     },
   );

@@ -14,3 +14,4 @@ export * from "./blocking";
 export * from "./locations";
 export * from "./production-rates";
 export * from "./fundraising";
+export * from "./film-bible";

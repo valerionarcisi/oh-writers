@@ -43,6 +43,12 @@ import type {
 } from "./cesare-tools";
 import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
 import { routeModel, tierToModel } from "./cesare-model-router";
+import { loadFilmBible } from "./bible-distill.server";
+import {
+  formatGlobalContext,
+  formatBibleForLocations,
+} from "@oh-writers/domain";
+import type { FilmBible } from "@oh-writers/domain";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
 
@@ -232,6 +238,8 @@ interface CesareContext {
   projectDocuments: ProjectDocumentRow[];
   /** Existing shot-plans for the active scene (only populated on the shooting-plan page). */
   shotPlans: ShotPlanSummary[];
+  /** Distilled Film Bible — null when not yet available (first call). */
+  bible: FilmBible | null;
 }
 
 const loadScreenplayContext = (
@@ -869,7 +877,7 @@ const assembleContext = (
               ).andThen((sceneWindow) =>
                 loadProjectDocuments(db, projectId).andThen(
                   (projectDocuments) =>
-                    loadShotPlansForScene(db, shotPlanSceneId).map(
+                    loadShotPlansForScene(db, shotPlanSceneId).andThen(
                       (shotPlanSummaries) => {
                         const activeDocId = pageContext.documentId ?? null;
                         const activeDocument: ActiveDocumentRow | null =
@@ -883,21 +891,48 @@ const assembleContext = (
                                   : null;
                               })()
                             : null;
-                        return {
-                          projectTitle: screenplay.title,
-                          scenes: screenplay.scenes,
-                          currentScene,
-                          sceneWindow,
-                          characters: screenplay.characters,
-                          breakdownElements: elements,
-                          budget,
-                          schedule,
-                          locations,
-                          currentRequirement,
-                          activeDocument,
-                          projectDocuments,
-                          shotPlans: shotPlanSummaries,
-                        };
+                        // Load bible lazily — never block on errors (return null on failure)
+                        return loadFilmBible(db, projectId)
+                          .map((bible) => ({
+                            projectTitle: screenplay.title,
+                            scenes: screenplay.scenes,
+                            currentScene,
+                            sceneWindow,
+                            characters: screenplay.characters,
+                            breakdownElements: elements,
+                            budget,
+                            schedule,
+                            locations,
+                            currentRequirement,
+                            activeDocument,
+                            projectDocuments,
+                            shotPlans: shotPlanSummaries,
+                            bible,
+                          }))
+                          .orElse((bibleErr) => {
+                            console.warn(
+                              "[cesare] Film Bible unavailable, continuing without it:",
+                              bibleErr.message,
+                            );
+                            return ResultAsync.fromSafePromise(
+                              Promise.resolve({
+                                projectTitle: screenplay.title,
+                                scenes: screenplay.scenes,
+                                currentScene,
+                                sceneWindow,
+                                characters: screenplay.characters,
+                                breakdownElements: elements,
+                                budget,
+                                schedule,
+                                locations,
+                                currentRequirement,
+                                activeDocument,
+                                projectDocuments,
+                                shotPlans: shotPlanSummaries,
+                                bible: null,
+                              }),
+                            );
+                          });
                       },
                     ),
                 ),
@@ -1018,30 +1053,14 @@ const truncate = (text: string, max: number): string =>
   text.length > max ? text.slice(0, max) + "…" : text;
 
 const formatDocumentsContext = (ctx: CesareContext): string => {
-  const others = ctx.projectDocuments.filter(
-    (d) => d.id !== ctx.activeDocument?.id && d.content.trim().length > 0,
-  );
-
-  const sections: string[] = [];
-
-  if (ctx.activeDocument) {
-    sections.push(
-      `\nDOCUMENTO ATTIVO — ${DOCUMENT_LABELS[ctx.activeDocument.type]}:\n---\n${truncate(
-        ctx.activeDocument.content,
-        MAX_ACTIVE_DOC_CHARS,
-      )}\n---`,
-    );
-  }
-
-  if (others.length > 0) {
-    const lines = others.map(
-      (d) =>
-        `\n[${DOCUMENT_LABELS[d.type]}]\n${truncate(d.content, MAX_DOC_PREVIEW_CHARS)}`,
-    );
-    sections.push(`\nALTRI DOCUMENTI DEL PROGETTO:${lines.join("\n")}`);
-  }
-
-  return sections.join("\n");
+  if (!ctx.activeDocument) return "";
+  // Only inject the active document verbatim (needed for apply_text_edit to
+  // find exact strings). Cross-doc context is now handled by the Film Bible
+  // cached block — dumping all docs here was the root cause of the "Rome" bug.
+  return `\nDOCUMENTO ATTIVO — ${DOCUMENT_LABELS[ctx.activeDocument.type]}:\n---\n${truncate(
+    ctx.activeDocument.content,
+    MAX_ACTIVE_DOC_CHARS,
+  )}\n---`;
 };
 
 const isDocumentPage = (page: PageContext["page"]): boolean =>
@@ -1178,9 +1197,14 @@ const formatBudgetContext = (
 ${sections.join("\n")}${truncated}`;
 };
 
-const buildLocationsToolsGuidance = (page: PageContext["page"]): string => {
+const buildLocationsToolsGuidance = (
+  page: PageContext["page"],
+  bible: FilmBible | null,
+): string => {
   if (page !== "locations") return "";
-  return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare o aggiungere candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.
+  const settingPrior =
+    bible !== null ? `\n\n${formatBibleForLocations(bible)}` : "";
+  return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare o aggiungere candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.${settingPrior}
 
 STOP. Prima di scrivere QUALSIASI testo di risposta, devi prima chiamare i tools. Il testo arriva DOPO le chiamate tool, non al posto loro.
 
@@ -1386,6 +1410,7 @@ const buildToolGuidanceBlock = (
   const documentToolsGuidance = buildDocumentToolsGuidance(ctx);
   return `GUIDA AGLI STRUMENTI per la pagina "${page}":${buildLocationsToolsGuidance(
     page,
+    ctx.bible,
   )}${documentToolsGuidance}${buildBreakdownToolsGuidance(
     page,
   )}${buildScheduleToolsGuidance(
@@ -1456,28 +1481,40 @@ const buildSystemPrompt = (
   page: PageContext["page"],
   activeShootingDayNumber: number | null = null,
   activeSceneId: string | null = null,
-): SystemPromptBlock[] => [
-  { type: "text", text: ROLE_TEXT, cache_control: { type: "ephemeral" } },
-  {
-    type: "text",
-    text: buildProductionContextBlock(ctx),
-    cache_control: { type: "ephemeral" },
-  },
-  {
-    type: "text",
-    text: buildToolGuidanceBlock(
-      ctx,
-      page,
-      activeShootingDayNumber,
-      activeSceneId,
-    ),
-    cache_control: { type: "ephemeral" },
-  },
-  {
-    type: "text",
-    text: buildDynamicStateBlock(ctx, page, activeShootingDayNumber),
-  },
-];
+): SystemPromptBlock[] => {
+  // Block positions are fixed so Anthropic cache checkpoints never shift.
+  // Position 1 is always the bible block (empty sentinel when no bible yet).
+  const bibleText =
+    ctx.bible !== null
+      ? formatGlobalContext(ctx.bible)
+      : "[FILM BIBLE]\n(not yet distilled)";
+
+  const blocks: SystemPromptBlock[] = [
+    { type: "text", text: ROLE_TEXT, cache_control: { type: "ephemeral" } },
+    { type: "text", text: bibleText, cache_control: { type: "ephemeral" } },
+    {
+      type: "text",
+      text: buildProductionContextBlock(ctx),
+      cache_control: { type: "ephemeral" },
+    },
+    {
+      type: "text",
+      text: buildToolGuidanceBlock(
+        ctx,
+        page,
+        activeShootingDayNumber,
+        activeSceneId,
+      ),
+      cache_control: { type: "ephemeral" },
+    },
+    {
+      type: "text",
+      text: buildDynamicStateBlock(ctx, page, activeShootingDayNumber),
+    },
+  ];
+
+  return blocks;
+};
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
 

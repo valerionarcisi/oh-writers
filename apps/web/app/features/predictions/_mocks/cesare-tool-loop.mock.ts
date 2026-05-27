@@ -99,6 +99,18 @@ export interface MockScenario {
 // ─── Default scenario library (one per feature) ───────────────────────────────
 
 export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
+  // Context engineering (spec 38) — verify setting prior injected + no Rome
+  {
+    match:
+      /dove siamo ambientati|dove è ambientato il film|setting del film|film bible/i,
+    turns: [
+      {
+        text: "Il film è ambientato in un ristorante di provincia nelle Marche. Non si tratta di Roma né di una grande città.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Locations — search_places + add_candidate flow
   {
     match:
