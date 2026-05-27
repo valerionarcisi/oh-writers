@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oh Writers — Feature Reports</title>
+    <style>
+      :root {
+        --bg: #0d1017;
+        --surface: #151b26;
+        --surface-2: #1c2333;
+        --surface-3: #232d3f;
+        --border: #2c3850;
+        --text: #edf0f5;
+        --muted: #b0bcce;
+        --muted-2: #7d8fa6;
+        --accent: #4cc4b0;
+        --accent-2: #ff8a65;
+        --ok: #4cc4b0;
+        --warn: #ffb74d;
+        --err: #e57373;
+        --radius: 14px;
+        --text-xs: 12px;
+        --text-sm: 14px;
+        --text-base: 16px;
+        --text-lg: 18px;
+        --text-xl: 22px;
+        --text-2xl: 28px;
+        --text-3xl: 38px;
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--text); }
+      html { scroll-behavior: smooth; font-size: 16px; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      .topnav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(15, 17, 21, 0.92);
+        backdrop-filter: saturate(160%) blur(12px);
+        -webkit-backdrop-filter: saturate(160%) blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .topnav .inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 15px;
+      }
+      .topnav .brand {
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+      }
+      .topnav .brand .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background: var(--accent);
+        border-radius: 50%;
+        margin-inline-end: 8px;
+        vertical-align: middle;
+      }
+      .topnav .spacer { flex: 1; }
+      .topnav a.navlink {
+        color: var(--muted);
+        padding: 6px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+      .topnav a.navlink:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+      .topnav a.navlink.active {
+        color: var(--accent);
+        background: rgba(76, 196, 176, 0.10);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+      header {
+        padding-bottom: 28px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+      }
+      header .sub {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      h2 {
+        margin: 48px 0 16px;
+        font-size: 20px;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h2::before {
+        content: "";
+        display: inline-block;
+        width: 4px;
+        height: 20px;
+        background: var(--accent);
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      p { margin: 10px 0; font-size: 15px; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: border-color 150ms ease, background 150ms ease;
+        text-decoration: none;
+      }
+      .card:hover {
+        border-color: rgba(76, 196, 176, 0.35);
+        background: var(--surface-2);
+        text-decoration: none;
+      }
+      .card .tag {
+        font-size: 15px;
+        color: var(--muted-2);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .card .title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.01em;
+      }
+      .card .desc {
+        font-size: 15px;
+        color: var(--muted);
+        line-height: 1.7;
+        flex: 1;
+      }
+      .card .cta {
+        font-size: 15px;
+        color: var(--accent);
+        margin-top: 4px;
+      }
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topnav" aria-label="Wiki navigation">
+      <div class="inner">
+        <span class="brand"><span class="dot"></span>Oh Writers · Wiki</span>
+        <span class="spacer"></span>
+        <a class="navlink" href="../index.html">Hub</a>
+        <a class="navlink" href="../ai/architecture.html">AI &amp; Cesare</a>
+        <a class="navlink active" href="./index.html">Feature reports</a>
+        <a class="navlink" href="../tech/index.html">Tech docs</a>
+        <a class="navlink" href="../specs/index.html">Specs</a>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <header>
+        <h1>Feature Reports</h1>
+        <div class="sub">Vernissage report — verifica manuale, cost smoke, screenshot walk per ogni feature costruita.</div>
+      </header>
+
+      <h2>Report Markdown</h2>
+      <p style="color: var(--muted); font-size: 15px;">
+        Ogni report copre: verifica manuale (vernissage walk), test Vitest + Playwright, cost smoke Cesare, checklist di release.
+      </p>
+
+      <div class="grid">
+
+        <a class="card" href="../../vernissage/budget-intelligence.md">
+          <div class="tag">Feature report</div>
+          <div class="title">Budget Intelligence</div>
+          <div class="desc">Stima costi AI per scene e giornate di ripresa. Cesare tool-use per predizioni budget.</div>
+          <div class="cta">vernissage/budget-intelligence.md →</div>
+        </a>
+
+        <a class="card" href="../../vernissage/cost-foundation.md">
+          <div class="tag">Feature report · Cesare AI</div>
+          <div class="title">Cost Foundation</div>
+          <div class="desc">Infrastruttura di cost tracking per Cesare. Baseline token usage, caching effectiveness, router metrics.</div>
+          <div class="cta">vernissage/cost-foundation.md →</div>
+        </a>
+
+        <a class="card" href="../../vernissage/documents-auto-gen.md">
+          <div class="tag">Feature report · Cesare AI</div>
+          <div class="title">Documents Auto-generation</div>
+          <div class="desc">Generazione automatica di logline, sinossi, soggetto e scaletta tramite Cesare con DRAFT flow.</div>
+          <div class="cta">vernissage/documents-auto-gen.md →</div>
+        </a>
+
+        <a class="card" href="../../vernissage/locations-ux.md">
+          <div class="tag">Feature report · Locations</div>
+          <div class="title">Locations UX</div>
+          <div class="desc">UX del location scouting: mappa, candidati, requirements, Cesare scouting agentico.</div>
+          <div class="cta">vernissage/locations-ux.md →</div>
+        </a>
+
+        <a class="card" href="../../vernissage/screenplay-propose-accept.md">
+          <div class="tag">Feature report · Cesare AI</div>
+          <div class="title">Screenplay Propose &amp; Accept</div>
+          <div class="desc">Pattern propose/accept per modifiche alla sceneggiatura: micro-edit inline e macro-edit DRAFT version.</div>
+          <div class="cta">vernissage/screenplay-propose-accept.md →</div>
+        </a>
+
+        <a class="card" href="../../vernissage/shooting-schedule.md">
+          <div class="tag">Feature report · Schedule</div>
+          <div class="title">Shooting Schedule</div>
+          <div class="desc">Strip board, shooting days, scene ordering, Cesare assistance per la pianificazione delle riprese.</div>
+          <div class="cta">vernissage/shooting-schedule.md →</div>
+        </a>
+
+        <a class="card" href="../../vernissage/wave-4-composite.md">
+          <div class="tag">Feature report · Composite</div>
+          <div class="title">Wave 4 — Composite Report</div>
+          <div class="desc">Report composito dell'intera wave 4: tutte le feature rilasciate insieme con verifica integrazione.</div>
+          <div class="cta">vernissage/wave-4-composite.md →</div>
+        </a>
+
+      </div>
+
+      <h2>Recap HTML</h2>
+
+      <div class="grid">
+        <a class="card" href="../../vernissage/recap/index.html">
+          <div class="tag">Recap walkthrough</div>
+          <div class="title">Recap Index</div>
+          <div class="desc">Indice delle pagine di recap in formato presentazione dark SaaS.</div>
+          <div class="cta">vernissage/recap/index.html →</div>
+        </a>
+        <a class="card" href="../ai/architecture.html">
+          <div class="tag">Recap · AI architecture</div>
+          <div class="title">Architettura AI agentica</div>
+          <div class="desc">Documento completo sull'architettura AI di Cesare — 12 capitoli con codice, numeri e diagrammi.</div>
+          <div class="cta">wiki/ai/architecture.html →</div>
+        </a>
+      </div>
+
+      <footer>
+        Oh Writers · Feature Reports · Ultimo aggiornamento: 2026-05-27
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oh Writers — Specifiche tecniche</title>
+    <style>
+      :root {
+        --bg: #0d1017;
+        --surface: #151b26;
+        --surface-2: #1c2333;
+        --surface-3: #232d3f;
+        --border: #2c3850;
+        --text: #edf0f5;
+        --muted: #b0bcce;
+        --muted-2: #7d8fa6;
+        --accent: #4cc4b0;
+        --accent-2: #ff8a65;
+        --ok: #4cc4b0;
+        --warn: #ffb74d;
+        --err: #e57373;
+        --radius: 14px;
+        --text-xs: 12px;
+        --text-sm: 14px;
+        --text-base: 16px;
+        --text-lg: 18px;
+        --text-xl: 22px;
+        --text-2xl: 28px;
+        --text-3xl: 38px;
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--text); }
+      html { scroll-behavior: smooth; font-size: 16px; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      .topnav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(15, 17, 21, 0.92);
+        backdrop-filter: saturate(160%) blur(12px);
+        -webkit-backdrop-filter: saturate(160%) blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .topnav .inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 15px;
+      }
+      .topnav .brand {
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+      }
+      .topnav .brand .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background: var(--accent);
+        border-radius: 50%;
+        margin-inline-end: 8px;
+        vertical-align: middle;
+      }
+      .topnav .spacer { flex: 1; }
+      .topnav a.navlink {
+        color: var(--muted);
+        padding: 6px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+      .topnav a.navlink:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+      .topnav a.navlink.active {
+        color: var(--accent);
+        background: rgba(76, 196, 176, 0.10);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+      header {
+        padding-bottom: 28px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+      }
+      header .sub {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      h2 {
+        margin: 48px 0 16px;
+        font-size: 18px;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h2::before {
+        content: "";
+        display: inline-block;
+        width: 4px;
+        height: 18px;
+        background: var(--accent);
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      p { margin: 10px 0; font-size: 15px; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      /* Filter bar */
+      .filter-bar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 16px 0 20px;
+      }
+      .filter-btn {
+        padding: 5px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 100ms ease;
+        letter-spacing: 0.02em;
+      }
+      .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+      .filter-btn.active { background: rgba(76,196,176,0.12); border-color: rgba(76,196,176,0.4); color: var(--accent); }
+      /* Table */
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+      }
+      th, td {
+        padding: 11px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 15px;
+        vertical-align: top;
+      }
+      th {
+        background: var(--surface-2);
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 15px;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
+      }
+      tr:last-child td { border-bottom: none; }
+      tr:hover td { background: var(--surface-2); }
+      .spec-num {
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 15px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .spec-title a {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .spec-title a:hover { color: var(--accent); text-decoration: none; }
+      .spec-domain {
+        font-size: 15px;
+        color: var(--muted-2);
+        white-space: nowrap;
+      }
+      .spec-date {
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 15px;
+        color: var(--muted-2);
+        white-space: nowrap;
+      }
+      /* Pills */
+      .pill {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+      .pill.built   { background: rgba(76, 196, 176, 0.14); color: var(--ok); }
+      .pill.done    { background: rgba(76, 196, 176, 0.14); color: var(--ok); }
+      .pill.partial { background: rgba(255, 183, 77, 0.14); color: var(--warn); }
+      .pill.wip     { background: rgba(255, 183, 77, 0.14); color: var(--warn); }
+      .pill.planned { background: rgba(111, 122, 140, 0.14); color: var(--muted); }
+      /* Legend */
+      .legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin: 12px 0 24px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      .legend span { display: flex; align-items: center; gap: 6px; }
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topnav" aria-label="Wiki navigation">
+      <div class="inner">
+        <span class="brand"><span class="dot"></span>Oh Writers · Wiki</span>
+        <span class="spacer"></span>
+        <a class="navlink" href="../index.html">Hub</a>
+        <a class="navlink" href="../ai/architecture.html">AI &amp; Cesare</a>
+        <a class="navlink" href="../features/index.html">Feature reports</a>
+        <a class="navlink" href="../tech/index.html">Tech docs</a>
+        <a class="navlink active" href="./index.html">Specs</a>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <header>
+        <h1>Specifiche tecniche</h1>
+        <div class="sub">Tutte le spec di prodotto e tecniche, ordinate per numero. I link aprono il file Markdown sorgente.</div>
+      </header>
+
+      <div class="legend">
+        <span><span class="pill built">BUILT</span> Implementato e funzionante</span>
+        <span><span class="pill partial">PARTIAL</span> Parzialmente implementato</span>
+        <span><span class="pill wip">WIP</span> In lavorazione</span>
+        <span><span class="pill planned">PLANNED</span> Solo spec, nessun codice</span>
+      </div>
+
+      <h2>Specifiche principali (22–38)</h2>
+      <p style="color: var(--muted); font-size: 15px; margin-bottom: 16px;">
+        Le spec più recenti e attive. Coprono le wave 3–5: Cesare AI, Location Matching, Context Engineering.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Titolo</th>
+              <th>Dominio</th>
+              <th>Stato</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="spec-num">22c</td>
+              <td class="spec-title"><a href="../../docs/specs/22c-blocking-render.md">2D Scene Blocking Render</a></td>
+              <td class="spec-domain">Shooting Plan</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">29</td>
+              <td class="spec-title"><a href="../../docs/specs/29-cesare-ui.md">Cesare: Production-Aware Chat Panel</a></td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">31</td>
+              <td class="spec-title"><a href="../../docs/specs/31-cesare-agentic-scouting.md">Cesare: Location Scouting Agente</a></td>
+              <td class="spec-domain">AI · Locations</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">32</td>
+              <td class="spec-title"><a href="../../docs/specs/32-cesare-rag-context.md">Cesare: RAG Context (full scene body)</a></td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">33</td>
+              <td class="spec-title"><a href="../../docs/specs/33-cesare-screenplay-sidebar.md">Cesare: Screenplay Live Sidebar</a></td>
+              <td class="spec-domain">AI · Screenplay</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">34</td>
+              <td class="spec-title"><a href="../../docs/specs/34-cesare-agentic-everywhere.md">Cesare Agentic Everywhere</a></td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">35</td>
+              <td class="spec-title"><a href="../../docs/specs/35-fundraising-opportunities.md">Fundraising Opportunities</a></td>
+              <td class="spec-domain">AI · Fundraising</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+              <td class="spec-date">—</td>
+            </tr>
+            <tr>
+              <td class="spec-num">36</td>
+              <td class="spec-title"><a href="../../docs/specs/36-autospoglio-cesare-regression-test.md">autoSpoglio + Cesare Concurrent Regression Test</a></td>
+              <td class="spec-domain">QA · CI</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">2026-05-22</td>
+            </tr>
+            <tr>
+              <td class="spec-num">37</td>
+              <td class="spec-title"><a href="../../docs/specs/37-location-matching.md">Location Matching &amp; Area Discovery</a></td>
+              <td class="spec-domain">Locations</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">2026-05-26</td>
+            </tr>
+            <tr>
+              <td class="spec-num">37b</td>
+              <td class="spec-title"><a href="../../docs/specs/37b-discovery-scene-aware.md">Scene-aware Discovery, Search Types &amp; Photos</a></td>
+              <td class="spec-domain">Locations</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">2026-05-26</td>
+            </tr>
+            <tr>
+              <td class="spec-num">37c</td>
+              <td class="spec-title"><a href="../../docs/specs/37c-atmosphere-ranking.md">Atmosphere Ranking (Cesare reads the scene)</a></td>
+              <td class="spec-domain">AI · Locations</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">2026-05-26</td>
+            </tr>
+            <tr>
+              <td class="spec-num">38</td>
+              <td class="spec-title"><a href="../../docs/specs/38-context-engineering.md">Context Engineering: Scene Summary + Film Bible</a></td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill built">BUILT</span></td>
+              <td class="spec-date">2026-05-27</td>
+            </tr>
+            <tr style="background: rgba(76,196,176,0.06); border-left: 3px solid var(--accent);">
+              <td class="spec-num" style="font-weight:700; color: var(--accent);">39</td>
+              <td class="spec-title"><a href="../../docs/specs/39-context-stratification.md" style="font-weight:600;">Context Stratification: Global / Local / Skills</a>
+                <span style="display:inline-block;margin-left:8px;font-size:11px;background:rgba(255,138,101,0.15);color:var(--accent-2);padding:1px 7px;border-radius:999px;font-weight:700;letter-spacing:0.04em;">P0</span>
+              </td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill" style="background:rgba(255,183,77,0.15);color:var(--warn);">SPEC ONLY</span></td>
+              <td class="spec-date">2026-05-27</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Specifiche core (01–28)</h2>
+      <p style="color: var(--muted); font-size: 15px; margin-bottom: 16px;">
+        Fondamenta del prodotto: auth, editor, breakdown, budget, schedule, design system.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Titolo</th>
+              <th>Dominio</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="spec-num">01</td>
+              <td class="spec-title"><a href="../../docs/specs/core/01-auth.md">Auth (registrazione, login, sessioni)</a></td>
+              <td class="spec-domain">Auth</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">01b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/01b-auth-implementation.md">Auth — Implementation details</a></td>
+              <td class="spec-domain">Auth</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">02</td>
+              <td class="spec-title"><a href="../../docs/specs/core/02-teams.md">Teams</a></td>
+              <td class="spec-domain">Teams</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">03</td>
+              <td class="spec-title"><a href="../../docs/specs/core/03-projects.md">Projects (CRUD)</a></td>
+              <td class="spec-domain">Projects</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">04</td>
+              <td class="spec-title"><a href="../../docs/specs/core/04-narrative-editor.md">Narrative Editor</a></td>
+              <td class="spec-domain">Documents</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">04b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/04b-outline-drag-drop.md">Outline Drag-and-Drop</a></td>
+              <td class="spec-domain">Documents</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">04c</td>
+              <td class="spec-title"><a href="../../docs/specs/core/04c-narrative-export.md">Narrative Export PDF</a></td>
+              <td class="spec-domain">Documents</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">04f</td>
+              <td class="spec-title"><a href="../../docs/specs/core/04f-soggetto.md">Soggetto (free editor)</a></td>
+              <td class="spec-domain">Documents</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05-screenplay-editor.md">Screenplay Editor</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05b-writing-features.md">Writing Features (autocomplete, keybindings)</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05c</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05c-pdf-import.md">PDF Import</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05e</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05e-screenplay-editor-ux.md">Screenplay Editor UX</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05f</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05f-custom-editor.md">Custom Editor (ProseMirror)</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05g</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05g-scene-autocomplete-and-numbering.md">Scene Heading + Autocomplete + Numbering</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05j</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05j-screenplay-pdf-export.md">Screenplay PDF Export</a></td>
+              <td class="spec-domain">Editor · Export</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">05k</td>
+              <td class="spec-title"><a href="../../docs/specs/core/05k-production-export-formats.md">Production Export Formats</a></td>
+              <td class="spec-domain">Export</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">06</td>
+              <td class="spec-title"><a href="../../docs/specs/core/06-versioning.md">Versioning</a></td>
+              <td class="spec-domain">Versions</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">06b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/06b-universal-versioning.md">Universal Versioning</a></td>
+              <td class="spec-domain">Versions</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">06c</td>
+              <td class="spec-title"><a href="../../docs/specs/core/06c-versions-panel.md">Versions Panel (inline drawer)</a></td>
+              <td class="spec-domain">Versions</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">07b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/07b-screenplay-front-page.md">Screenplay Front Page</a></td>
+              <td class="spec-domain">Editor</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">09</td>
+              <td class="spec-title"><a href="../../docs/specs/core/09-save-indicator.md">Save Indicator</a></td>
+              <td class="spec-domain">UI</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">10</td>
+              <td class="spec-title"><a href="../../docs/specs/core/10-breakdown.md">Scene Breakdown</a></td>
+              <td class="spec-domain">Breakdown</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">10c</td>
+              <td class="spec-title"><a href="../../docs/specs/core/10c-inline-scene-tagging.md">Inline Scene Tagging</a></td>
+              <td class="spec-domain">Breakdown</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">10e</td>
+              <td class="spec-title"><a href="../../docs/specs/core/10e-auto-spoglio-regex.md">Auto-spoglio regex</a></td>
+              <td class="spec-domain">Breakdown</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">10g</td>
+              <td class="spec-title"><a href="../../docs/specs/core/10g-llm-at-import-breakdown.md">LLM at import (Sonnet + Haiku)</a></td>
+              <td class="spec-domain">Breakdown · AI</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">11</td>
+              <td class="spec-title"><a href="../../docs/specs/core/11-budget.md">Budget</a></td>
+              <td class="spec-domain">Budget</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">11b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/11b-budget-implementation.md">Budget Implementation</a></td>
+              <td class="spec-domain">Budget</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">12</td>
+              <td class="spec-title"><a href="../../docs/specs/core/12-schedule.md">Shooting Schedule</a></td>
+              <td class="spec-domain">Schedule</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">12b</td>
+              <td class="spec-title"><a href="../../docs/specs/core/12b-schedule-implementation.md">Schedule Implementation</a></td>
+              <td class="spec-domain">Schedule</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">12c</td>
+              <td class="spec-title"><a href="../../docs/specs/core/12c-scene-effort-day-drawer.md">Scene Effort &amp; Shooting Day Drawer</a></td>
+              <td class="spec-domain">Schedule</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">13</td>
+              <td class="spec-title"><a href="../../docs/specs/core/13-locations.md">Locations</a></td>
+              <td class="spec-domain">Locations</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">23</td>
+              <td class="spec-title"><a href="../../docs/specs/core/23-server-pipeline-refactor.md">Server Pipeline Refactor</a></td>
+              <td class="spec-domain">Infra</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">25</td>
+              <td class="spec-title"><a href="../../docs/specs/core/25-react-aria-adoption.md">React Aria Adoption</a></td>
+              <td class="spec-domain">UI · A11y</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">27</td>
+              <td class="spec-title"><a href="../../docs/specs/core/27-shooting-plan-ux-review.md">Shooting Plan UX Review</a></td>
+              <td class="spec-domain">Schedule</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">28</td>
+              <td class="spec-title"><a href="../../docs/specs/core/28-export-audit.md">Export Audit</a></td>
+              <td class="spec-domain">Export</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Specifiche AI</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Titolo</th>
+              <th>Dominio</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="spec-num">07</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/07-ai-predictions.md">AI Predictions</a></td>
+              <td class="spec-domain">AI</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">14</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/14-auto-logline-synopsis.md">Auto-generate Logline &amp; Synopsis</a></td>
+              <td class="spec-domain">AI · Documents</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">14b</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/14b-auto-outline.md">Auto-generate Outline</a></td>
+              <td class="spec-domain">AI · Documents</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">16</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/16-logline-to-scaletta.md">Logline → Scaletta automatica</a></td>
+              <td class="spec-domain">AI · Documents</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">17</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/17-cesare-assistant.md">Cesare — Assistente AI universale</a></td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">17b</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/17b-story-doctor.md">Story Doctor</a></td>
+              <td class="spec-domain">AI · Cesare</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">19</td>
+              <td class="spec-title"><a href="../../docs/specs/ai/19-moodboard-storyboard.md">Moodboard / Storyboard</a></td>
+              <td class="spec-domain">AI · Visual</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Specifiche infrastruttura</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Titolo</th>
+              <th>Dominio</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="spec-num">infra/07b</td>
+              <td class="spec-title"><a href="../../docs/specs/infra/07b-design-system-dialog-migration.md">Design System Dialog Migration</a></td>
+              <td class="spec-domain">Design System</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">infra/07b</td>
+              <td class="spec-title"><a href="../../docs/specs/infra/07b-design-system.md">Design System Refresh</a></td>
+              <td class="spec-domain">Design System</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">infra/07c</td>
+              <td class="spec-title"><a href="../../docs/specs/infra/07c-docker-e2e.md">Docker + E2E Test Infrastructure</a></td>
+              <td class="spec-domain">CI · Infra</td>
+              <td><span class="pill partial">PARTIAL</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">infra/08</td>
+              <td class="spec-title"><a href="../../docs/specs/infra/08-infrastructure.md">Infrastructure (Docker + DB)</a></td>
+              <td class="spec-domain">Infra</td>
+              <td><span class="pill built">BUILT</span></td>
+            </tr>
+            <tr>
+              <td class="spec-num">infra/08b</td>
+              <td class="spec-title"><a href="../../docs/specs/infra/08b-cloud-deploy.md">Cloud Deploy &amp; Environments</a></td>
+              <td class="spec-domain">Infra · Deploy</td>
+              <td><span class="pill planned">PLANNED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer>
+        Oh Writers · Specifiche · Ultimo aggiornamento: 2026-05-27 · Stato derivato da <a href="../../docs/specs/STATUS.md">docs/specs/STATUS.md</a>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oh Writers — Documentazione tecnica</title>
+    <style>
+      :root {
+        --bg: #0d1017;
+        --surface: #151b26;
+        --surface-2: #1c2333;
+        --surface-3: #232d3f;
+        --border: #2c3850;
+        --text: #edf0f5;
+        --muted: #b0bcce;
+        --muted-2: #7d8fa6;
+        --accent: #4cc4b0;
+        --accent-2: #ff8a65;
+        --ok: #4cc4b0;
+        --warn: #ffb74d;
+        --err: #e57373;
+        --radius: 14px;
+        --text-xs: 12px;
+        --text-sm: 14px;
+        --text-base: 16px;
+        --text-lg: 18px;
+        --text-xl: 22px;
+        --text-2xl: 28px;
+        --text-3xl: 38px;
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--text); }
+      html { scroll-behavior: smooth; font-size: 16px; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      .topnav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(15, 17, 21, 0.92);
+        backdrop-filter: saturate(160%) blur(12px);
+        -webkit-backdrop-filter: saturate(160%) blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .topnav .inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 15px;
+      }
+      .topnav .brand {
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+      }
+      .topnav .brand .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background: var(--accent);
+        border-radius: 50%;
+        margin-inline-end: 8px;
+        vertical-align: middle;
+      }
+      .topnav .spacer { flex: 1; }
+      .topnav a.navlink {
+        color: var(--muted);
+        padding: 6px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+      .topnav a.navlink:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+      .topnav a.navlink.active {
+        color: var(--accent);
+        background: rgba(76, 196, 176, 0.10);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+      header {
+        padding-bottom: 28px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+      }
+      header .sub {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      h2 {
+        margin: 48px 0 16px;
+        font-size: 20px;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h2::before {
+        content: "";
+        display: inline-block;
+        width: 4px;
+        height: 20px;
+        background: var(--accent);
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      p { margin: 10px 0; font-size: 15px; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: border-color 150ms ease, background 150ms ease;
+        text-decoration: none;
+      }
+      .card:hover {
+        border-color: rgba(76, 196, 176, 0.35);
+        background: var(--surface-2);
+        text-decoration: none;
+      }
+      .card .tag {
+        font-size: 15px;
+        color: var(--muted-2);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .card .title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.01em;
+      }
+      .card .desc {
+        font-size: 15px;
+        color: var(--muted);
+        line-height: 1.7;
+        flex: 1;
+      }
+      .card .cta {
+        font-size: 15px;
+        color: var(--accent);
+        margin-top: 4px;
+      }
+      .stack-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        margin: 16px 0;
+      }
+      .stack-table th, .stack-table td {
+        padding: 10px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 15px;
+      }
+      .stack-table th {
+        background: var(--surface-2);
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 15px;
+        letter-spacing: 0.08em;
+      }
+      .stack-table tr:last-child td { border-bottom: none; }
+      .stack-table code {
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 15px;
+        background: var(--surface-2);
+        padding: 1px 5px;
+        border-radius: 3px;
+        border: 1px solid var(--border);
+      }
+      footer {
+        margin-top: 72px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topnav" aria-label="Wiki navigation">
+      <div class="inner">
+        <span class="brand"><span class="dot"></span>Oh Writers · Wiki</span>
+        <span class="spacer"></span>
+        <a class="navlink" href="../index.html">Hub</a>
+        <a class="navlink" href="../ai/architecture.html">AI &amp; Cesare</a>
+        <a class="navlink" href="../features/index.html">Feature reports</a>
+        <a class="navlink active" href="./index.html">Tech docs</a>
+        <a class="navlink" href="../specs/index.html">Specs</a>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <header>
+        <h1>Documentazione tecnica</h1>
+        <div class="sub">Architettura, data model, Cesare internals, bug noti, CI — tutto in un posto.</div>
+      </header>
+
+      <h2>Documenti principali</h2>
+
+      <div class="grid">
+
+        <a class="card" href="../../docs/architecture.md">
+          <div class="tag">Architettura</div>
+          <div class="title">Architettura di sistema</div>
+          <div class="desc">Design del sistema, decisioni architetturali, pattern usati, bounded contexts, layer della applicazione.</div>
+          <div class="cta">docs/architecture.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/cesare-architecture.md">
+          <div class="tag">AI · Cesare</div>
+          <div class="title">Cesare — Architettura interna</div>
+          <div class="desc">Architettura interna di Cesare: tool executor pattern, system prompt structure, page context, model selection.</div>
+          <div class="cta">docs/cesare-architecture.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/data-model.md">
+          <div class="tag">Database</div>
+          <div class="title">Data Model</div>
+          <div class="desc">Schema PostgreSQL completo: tutte le tabelle, relazioni, indici. Aggiornato ad ogni migrazione significativa.</div>
+          <div class="cta">docs/data-model.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/BUGS.md">
+          <div class="tag">Bug tracking</div>
+          <div class="title">Bug noti</div>
+          <div class="desc">Registro dei bug noti e workaround attivi. Aggiornato durante lo sviluppo.</div>
+          <div class="cta">docs/BUGS.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/ci-troubleshooting.md">
+          <div class="tag">CI/CD</div>
+          <div class="title">CI Troubleshooting</div>
+          <div class="desc">Guide al troubleshooting della pipeline CI: Playwright flaky test, seed DB, timing issues.</div>
+          <div class="cta">docs/ci-troubleshooting.md →</div>
+        </a>
+
+      </div>
+
+      <h2>Documenti HTML</h2>
+
+      <div class="grid">
+
+        <a class="card" href="../../docs/roadmap.html">
+          <div class="tag">Planning</div>
+          <div class="title">Roadmap</div>
+          <div class="desc">Roadmap di prodotto interattiva con stato di ogni wave e feature pianificata.</div>
+          <div class="cta">docs/roadmap.html →</div>
+        </a>
+
+        <a class="card" href="../../docs/session-2026-05-25.html">
+          <div class="tag">Session recap</div>
+          <div class="title">Session Recap — 2026-05-25</div>
+          <div class="desc">Recap della sessione di sviluppo del 25 maggio 2026: feature completate, decisioni, next steps.</div>
+          <div class="cta">docs/session-2026-05-25.html →</div>
+        </a>
+
+        <a class="card" href="../../docs/qa-spec-37-location-matching.html">
+          <div class="tag">QA report</div>
+          <div class="title">QA — Spec 37 Location Matching</div>
+          <div class="desc">Report QA completo per Spec 37 (Location Matching &amp; Area Discovery): test eseguiti, risultati, copertura.</div>
+          <div class="cta">docs/qa-spec-37-location-matching.html →</div>
+        </a>
+
+      </div>
+
+      <h2>Code Audits (aprile 2026)</h2>
+
+      <div class="grid">
+
+        <a class="card" href="../../docs/audits/2026-04-24-clean-architecture-audit.md">
+          <div class="tag">Audit</div>
+          <div class="title">Clean Architecture Audit</div>
+          <div class="desc">Verifica dell'aderenza ai principi di clean architecture: layer separation, dependency direction, interface contracts.</div>
+          <div class="cta">docs/audits/2026-04-24-clean-architecture-audit.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/audits/2026-04-24-clean-code-audit.md">
+          <div class="tag">Audit</div>
+          <div class="title">Clean Code Audit</div>
+          <div class="desc">Audit naming, funzioni, SRP, commenti, test coverage. Principi da Clean Code applicati al codebase.</div>
+          <div class="cta">docs/audits/2026-04-24-clean-code-audit.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/audits/2026-04-24-ousterhout-audit.md">
+          <div class="tag">Audit</div>
+          <div class="title">Ousterhout Audit</div>
+          <div class="desc">Verifica secondo "A Philosophy of Software Design": deep modules, cognitive load, information hiding.</div>
+          <div class="cta">docs/audits/2026-04-24-ousterhout-audit.md →</div>
+        </a>
+
+        <a class="card" href="../../docs/audits/2026-04-24-pragmatic-audit.md">
+          <div class="tag">Audit</div>
+          <div class="title">Pragmatic Programmer Audit</div>
+          <div class="desc">Audit DRY, ortogonalità, tracer bullets, broken windows, reversibilità delle decisioni.</div>
+          <div class="cta">docs/audits/2026-04-24-pragmatic-audit.md →</div>
+        </a>
+
+      </div>
+
+      <h2>Stack tecnologico</h2>
+
+      <table class="stack-table">
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Tool</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Framework</td>
+            <td><code>TanStack Start</code> — SSR, file-based routing</td>
+          </tr>
+          <tr>
+            <td>Routing</td>
+            <td><code>TanStack Router</code></td>
+          </tr>
+          <tr>
+            <td>Server calls</td>
+            <td><code>createServerFn</code> — the only way to call server logic</td>
+          </tr>
+          <tr>
+            <td>Data fetching</td>
+            <td><code>TanStack Query</code> — queryOptions + useSuspenseQuery</td>
+          </tr>
+          <tr>
+            <td>ORM</td>
+            <td><code>Drizzle</code> + PostgreSQL</td>
+          </tr>
+          <tr>
+            <td>Auth</td>
+            <td><code>Better Auth</code> — team/org support</td>
+          </tr>
+          <tr>
+            <td>Editor</td>
+            <td><code>Monaco</code> — screenplay editing</td>
+          </tr>
+          <tr>
+            <td>Collaboration</td>
+            <td><code>Yjs</code> + y-websocket</td>
+          </tr>
+          <tr>
+            <td>Styling</td>
+            <td>CSS Modules — zero Tailwind, zero CSS-in-JS</td>
+          </tr>
+          <tr>
+            <td>Validation</td>
+            <td><code>Zod</code> — single source of truth for all types</td>
+          </tr>
+          <tr>
+            <td>Error handling</td>
+            <td><code>neverthrow</code> — Result and ResultAsync</td>
+          </tr>
+          <tr>
+            <td>Testing</td>
+            <td><code>Vitest</code> (unit) + <code>Playwright</code> (E2E)</td>
+          </tr>
+          <tr>
+            <td>AI</td>
+            <td>Anthropic Claude (Sonnet 4.6 + Haiku 4.5) via tool-use loop</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <footer>
+        Oh Writers · Tech Docs · Ultimo aggiornamento: 2026-05-27
+      </footer>
+    </div>
+  </body>
+</html>
