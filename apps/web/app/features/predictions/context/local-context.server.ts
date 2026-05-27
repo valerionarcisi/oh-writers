@@ -2,7 +2,7 @@
 // active skills' requiredData. The full assembleContext in cesare.server.ts
 // is kept intact; buildLocalContext is the new parallel path.
 
-import { ResultAsync, okAsync } from "neverthrow";
+import { ResultAsync } from "neverthrow";
 import { and, count, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import {
   breakdownElements,
@@ -22,7 +22,6 @@ import {
   shotPlanScenarios,
   shotPlans,
   shots,
-  strips,
 } from "@oh-writers/db/schema";
 import type {
   ActiveDocumentRow,
