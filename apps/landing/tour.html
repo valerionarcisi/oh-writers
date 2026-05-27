@@ -419,7 +419,7 @@
     <section class="section tour-index">
       <div class="container">
         <p class="section__eyebrow">Indice</p>
-        <h2 class="section__title">Nove tappe, dal foglio bianco al ciak.</h2>
+        <h2 class="section__title">Dieci tappe, dal foglio bianco al ciak.</h2>
         <div class="tour-index__inner">
           <a class="tour-index__item" href="#cap-01">
             <span class="tour-index__num">01</span>
@@ -482,6 +482,13 @@
             <span>
               <span class="tour-index__label">Calendarizzazione</span>
               <span class="tour-index__sub">strip board, giorni</span>
+            </span>
+          </a>
+          <a class="tour-index__item" href="#cap-10">
+            <span class="tour-index__num">10</span>
+            <span>
+              <span class="tour-index__label">Cesare, il contesto vero</span>
+              <span class="tour-index__sub">come funziona l'AI</span>
             </span>
           </a>
         </div>
@@ -739,7 +746,7 @@
           <div class="status-list">
             <div class="status status--ok">
               <p class="status__label">● Funziona</p>
-              <p class="status__text">Editor Monaco con grammatica Fountain, autocomplete dei personaggi, suggerimenti Cesare contestuali, export PDF/FDX/Fountain.</p>
+              <p class="status__text">Editor ProseMirror con grammatica Fountain, autocomplete dei personaggi, suggerimenti Cesare contestuali sulla scena aperta (Cesare legge il riassunto delle scene vicine — non solo quella corrente), export PDF/FDX/Fountain.</p>
             </div>
             <div class="status status--build">
               <p class="status__label">● Sto costruendo</p>
@@ -927,7 +934,7 @@
           <div class="status-list">
             <div class="status status--ok">
               <p class="status__label">● Funziona</p>
-              <p class="status__text">Mappa interattiva, ricerca Google Places, candidate suggerite da Cesare partendo da scena + zona, candidate multiple, foto, indirizzo, note, link scene→location.</p>
+              <p class="status__text">Mappa interattiva, ricerca Google Places, candidate suggerite da Cesare partendo da scena + zona. Cesare conosce già i riassunti delle scene collegate al requirement — sa che quella scena è di notte, che ci vuole un generatore, che ci sono stunt — senza che tu glielo dica. Candidate multiple, foto, indirizzo, note, link scene→location.</p>
             </div>
             <div class="status status--build">
               <p class="status__label">● Sto costruendo</p>
@@ -1059,7 +1066,7 @@
           <div class="status-list">
             <div class="status status--ok">
               <p class="status__label">● Funziona</p>
-              <p class="status__text">Drag-and-drop scene→giorno, raggruppamenti suggeriti da Cesare, conteggio pagine per giornata, vista timeline + day-by-day + calendario.</p>
+              <p class="status__text">Drag-and-drop scene→giorno, raggruppamenti suggeriti da Cesare (che legge i riassunti delle scene della giornata — sa già quali hanno stunt, quali richiedono luce naturale, quali si possono consolidare), conteggio pagine per giornata, vista timeline + day-by-day + calendario.</p>
             </div>
             <div class="status status--build">
               <p class="status__label">● Sto costruendo</p>
@@ -1068,6 +1075,63 @@
             <div class="status status--idea">
               <p class="status__label">○ Ancora idea</p>
               <p class="status__text">Convocazioni cast/troupe automatizzate (SMS / email il giorno prima).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cap 10 — Come funziona Cesare -->
+    <section class="chapter" id="cap-10">
+      <div class="container">
+        <header class="chapter__header">
+          <p class="chapter__eyebrow">
+            <span class="chapter__num">10</span>
+            Come funziona Cesare
+          </p>
+          <h2 class="chapter__title">Non un chatbot. <em>Un contesto.</em></h2>
+          <p class="chapter__lead">
+            Cesare non è un assistente generico a cui passi il testo. È un sistema
+            che accumula conoscenza sul tuo film — e la usa nel momento giusto,
+            sulla pagina giusta, con il ruolo giusto.
+          </p>
+        </header>
+
+        <div class="chapter__body">
+          <div class="chapter__text">
+            <p>
+              Ogni volta che salvi una scena, Oh Writers genera in automatico un
+              <strong>riassunto strutturato</strong>: chi c'è, cosa succede, che note di
+              produzione emergono (notte, esterno, stunt, luce artificiale). Questi
+              riassunti vengono distillati in un <strong>Film Bible</strong> — una mappa
+              narrativa e produttiva dell'intero progetto.
+            </p>
+            <p>
+              Quando apri la pagina locations, Cesare non sta leggendo tutto il copione
+              da zero. Sa già, dalla Bible, che film è. E carica in tempo reale i
+              riassunti delle scene collegate al requirement che stai guardando.
+              <strong>Quando apri lo schedule</strong>, carica le scene della giornata e di
+              quelle adiacenti. Quando apri il breakdown, guarda la scena aperta ± 3.
+            </p>
+            <p>
+              Il risultato: ogni pagina ha un Cesare <em>diverso</em> — lo stesso modello,
+              ma con gli occhi puntati su quello che serve in quel preciso momento.
+              Il location manager che propone una cascina sa che ci servono 10+ comparse
+              e un generatore. L'aiuto regia che suggerisce di spostare una scena sa
+              che quella scena ha uno stunt e non si può comprimere.
+            </p>
+            <p>
+              Tutto senza che tu scriva una riga di prompt. <strong>Il contesto è il prodotto.</strong>
+            </p>
+          </div>
+          <div class="status-list">
+            <div class="status status--ok">
+              <p class="status__label">● Funziona</p>
+              <p class="status__text">Film Bible distillata da Sonnet (cached, un costo fisso per progetto). Riassunti per scena generati da Haiku al salvataggio. Contesto locale costruito per page type: locations, breakdown, schedule, screenplay, soggetto. Ruoli professionali: Cesare è location manager su /locations, aiuto regia su /schedule, DOP su /shooting-plan.</p>
+            </div>
+            <div class="status status--build">
+              <p class="status__label">● Sto costruendo</p>
+              <p class="status__text">Companion mobile per usare Cesare sul campo durante il sopralluogo o sul set. Notifiche push quando Cesare segnala un problema sul piano di lavorazione.</p>
             </div>
           </div>
         </div>
