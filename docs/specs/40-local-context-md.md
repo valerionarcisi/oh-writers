@@ -2,13 +2,13 @@
 
 ## Status
 
-| Phase                                                                 | Status   |
-| --------------------------------------------------------------------- | -------- |
-| Phase 1 — Scene summaries injection in LocalContext                   | ⬜ To do |
-| Phase 2 — MD serialization (structured tables, not narrative text)    | ⬜ To do |
-| Phase 3 — Per-page summary slicing (relevance window, not full dump)  | ⬜ To do |
-| Phase 4 — Token caps per layer (discipline, not ad-hoc truncation)    | ⬜ To do |
-| Phase 5 — Skill guidance: professional roles (DOP, aiuto regia, etc.) | ⬜ To do |
+| Phase                                                                 | Status  |
+| --------------------------------------------------------------------- | ------- |
+| Phase 1 — Scene summaries injection in LocalContext                   | ✅ Done |
+| Phase 2 — MD serialization (structured tables, not narrative text)    | ✅ Done |
+| Phase 3 — Per-page summary slicing (relevance window, not full dump)  | ✅ Done |
+| Phase 4 — Token caps per layer (discipline, not ad-hoc truncation)    | ✅ Done |
+| Phase 5 — Skill guidance: professional roles (DOP, aiuto regia, etc.) | ✅ Done |
 
 ---
 
