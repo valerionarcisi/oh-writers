@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QA — Oh Writers · Cesare + Locations</title>
+    <style>
+      :root {
+        --bg: #111318;
+        --surface: #1e2129;
+        --surface-2: #272b36;
+        --surface-3: #2f3440;
+        --line: #3a4055;
+        --text: #f2f4f8;
+        --text-2: #c8d0de;
+        --mute: #8a96aa;
+        --accent: #3dd6bc;
+        --accent-soft: rgba(61,214,188,0.12);
+        --coral: #ff8a65;
+        --amber: #ffc04d;
+        --red: #ff6b6b;
+        --green: #5bcc7a;
+        --radius: 12px;
+        --radius-sm: 8px;
+        --sidebar: 240px;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { font-size: 16px; }
+      body {
+        background: var(--bg); color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        font-size: 1rem; line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── Layout ── */
+      .shell { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100dvh; }
+
+      /* ── Sidebar ── */
+      aside {
+        background: var(--surface);
+        border-inline-end: 1px solid var(--line);
+        padding: 20px 12px;
+        position: sticky; top: 0; height: 100dvh;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 2px;
+        scrollbar-width: none;
+      }
+      aside::-webkit-scrollbar { display: none; }
+      .sidebar-title {
+        font-size: 11px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.14em; color: var(--accent);
+        padding: 0 10px 14px; border-block-end: 1px solid var(--line);
+        margin-block-end: 10px;
+      }
+      .nav-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 12px; border-radius: 8px;
+        cursor: pointer; text-decoration: none; color: var(--text-2);
+        font-size: 14px; font-weight: 500;
+        transition: background 120ms, color 120ms;
+        border: none; background: none; width: 100%; text-align: left;
+      }
+      .nav-item:hover { background: var(--surface-2); color: var(--text); }
+      .nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+      .nav-item .dot {
+        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        background: var(--line); transition: background 200ms;
+      }
+      .nav-item.done .dot { background: var(--green); box-shadow: 0 0 6px rgba(91,204,122,0.5); }
+      .nav-item.fail .dot { background: var(--red); box-shadow: 0 0 6px rgba(255,107,107,0.5); }
+      .nav-item.active .dot { background: var(--accent); }
+      .sidebar-sep { height: 1px; background: var(--line); margin: 8px 4px; }
+      .sidebar-label {
+        font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--mute); padding: 6px 12px 2px;
+      }
+
+      /* ── Main ── */
+      main { overflow-y: auto; background: var(--bg); }
+      .page-panel { display: none; padding: 40px 52px 100px; max-width: 900px; }
+      .page-panel.active { display: block; }
+
+      /* ── Page header ── */
+      .page-header {
+        border-block-end: 2px solid var(--line);
+        padding-block-end: 28px; margin-block-end: 32px;
+      }
+      .page-eyebrow {
+        font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+        color: var(--accent); margin-block-end: 8px;
+      }
+      .page-title {
+        font-size: 30px; font-weight: 800; letter-spacing: -0.025em;
+        color: var(--text); margin-block-end: 10px; line-height: 1.1;
+      }
+      .page-desc { color: var(--text-2); max-width: 64ch; font-size: 15px; line-height: 1.7; }
+      .page-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 18px; }
+      .chip {
+        font-size: 12px; font-weight: 700;
+        padding: 4px 12px; border-radius: 999px; letter-spacing: 0.01em;
+      }
+      .chip.teal { background: rgba(61,214,188,0.15); border: 1.5px solid rgba(61,214,188,0.4); color: var(--accent); }
+      .chip.amber { background: rgba(255,192,77,0.13); border: 1.5px solid rgba(255,192,77,0.4); color: var(--amber); }
+      .chip.coral { background: rgba(255,138,101,0.13); border: 1.5px solid rgba(255,138,101,0.4); color: var(--coral); }
+      .chip.mute { background: var(--surface-2); border: 1.5px solid var(--line); color: var(--mute); }
+
+      /* ── Context map ── */
+      .context-map {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 14px; margin-block-end: 32px;
+      }
+      .context-box {
+        background: var(--surface); border: 1.5px solid var(--line);
+        border-radius: var(--radius); padding: 20px 22px;
+      }
+      .context-box h4 {
+        font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--mute); margin-block-end: 14px;
+      }
+      .tag-list { display: flex; flex-wrap: wrap; gap: 7px; }
+      .tag {
+        font-size: 13px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        padding: 4px 10px; border-radius: 6px;
+        background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2);
+        font-weight: 500;
+      }
+      .tag.on { background: rgba(61,214,188,0.1); border-color: rgba(61,214,188,0.35); color: var(--accent); font-weight: 600; }
+      .tag.off { opacity: 0.3; text-decoration: line-through; }
+      .tag.warn { background: rgba(255,192,77,0.1); border-color: rgba(255,192,77,0.35); color: var(--amber); }
+
+      /* ── Test card ── */
+      .test {
+        background: var(--surface); border: 1.5px solid var(--line);
+        border-radius: var(--radius); padding: 22px 24px; margin-block-end: 14px;
+        display: grid; grid-template-columns: 1fr 140px;
+        gap: 20px; align-items: start;
+        transition: border-color 200ms, background 200ms;
+      }
+      .test:hover { border-color: var(--surface-3); }
+      .test.pass { border-color: rgba(91,204,122,0.5); background: rgba(91,204,122,0.05); }
+      .test.fail { border-color: rgba(255,107,107,0.5); background: rgba(255,107,107,0.05); }
+      .test-id {
+        font-size: 11px; font-family: ui-monospace, monospace; font-weight: 700;
+        color: var(--amber); letter-spacing: 0.06em; margin-block-end: 6px;
+      }
+      .test-title { font-weight: 700; font-size: 16px; color: var(--text); margin-block-end: 10px; line-height: 1.3; }
+      .test-prompt {
+        font-size: 14px; font-style: italic; color: var(--accent);
+        background: rgba(61,214,188,0.08); border: 1.5px solid rgba(61,214,188,0.25);
+        border-radius: var(--radius-sm); padding: 10px 14px;
+        margin-block-end: 12px; line-height: 1.5;
+      }
+      .test-prompt::before {
+        content: "DIGITA → ";
+        font-style: normal; font-weight: 800; font-size: 10px;
+        color: var(--mute); letter-spacing: 0.08em;
+        display: block; margin-block-end: 3px;
+      }
+      .test-expect {
+        font-size: 14px; color: var(--text-2); line-height: 1.65;
+        padding-inline-start: 14px; border-inline-start: 3px solid var(--surface-3);
+      }
+      .test-expect strong { color: var(--text); font-weight: 600; }
+      .test-warn {
+        margin-block-start: 10px; font-size: 13px; color: var(--amber);
+        background: rgba(255,192,77,0.08); border: 1px solid rgba(255,192,77,0.25);
+        border-radius: 6px; padding: 8px 12px;
+        display: flex; gap: 8px; align-items: flex-start; line-height: 1.5;
+      }
+      .test-warn::before { content: "⚠"; flex-shrink: 0; font-size: 14px; }
+      .test-controls {
+        display: flex; flex-direction: column; gap: 8px; align-items: stretch; flex-shrink: 0;
+      }
+      .btn-pass, .btn-fail {
+        font-size: 14px; font-weight: 700; padding: 9px 0;
+        border-radius: 8px; border: none; cursor: pointer;
+        transition: all 120ms; text-align: center; width: 100%;
+      }
+      .btn-pass { background: rgba(91,204,122,0.15); border: 1.5px solid rgba(91,204,122,0.45); color: var(--green); }
+      .btn-fail { background: rgba(255,107,107,0.12); border: 1.5px solid rgba(255,107,107,0.4); color: var(--red); }
+      .btn-pass:hover { background: rgba(91,204,122,0.28); transform: translateY(-1px); }
+      .btn-fail:hover { background: rgba(255,107,107,0.25); transform: translateY(-1px); }
+      .test.pass .btn-pass { background: rgba(91,204,122,0.3); box-shadow: 0 0 0 2px rgba(91,204,122,0.4); }
+      .test.fail .btn-fail { background: rgba(255,107,107,0.28); box-shadow: 0 0 0 2px rgba(255,107,107,0.4); }
+      .test-note {
+        width: 100%; font-size: 13px; line-height: 1.5;
+        background: var(--surface-2); border: 1.5px solid var(--line);
+        border-radius: 7px; padding: 8px 10px; color: var(--text);
+        resize: vertical; font-family: inherit; min-height: 52px;
+        transition: border-color 150ms;
+      }
+      .test-note:focus { outline: none; border-color: var(--accent); }
+      .test-note::placeholder { color: var(--mute); }
+
+      /* ── Callout ── */
+      .callout {
+        border-radius: var(--radius); padding: 16px 20px;
+        margin-block-end: 24px; font-size: 15px; line-height: 1.65;
+      }
+      .callout.info { background: rgba(61,214,188,0.08); border: 1.5px solid rgba(61,214,188,0.25); }
+      .callout.warn { background: rgba(255,192,77,0.08); border: 1.5px solid rgba(255,192,77,0.3); color: var(--text-2); }
+      .callout strong { display: block; margin-block-end: 6px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+      .callout.info strong { color: var(--accent); }
+      .callout.warn strong { color: var(--amber); }
+
+      /* ── Setup grid ── */
+      .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-block-end: 28px; }
+      .setup-card {
+        background: var(--surface-2); border: 1.5px solid var(--line);
+        border-radius: var(--radius); padding: 20px 22px;
+      }
+      .setup-card h4 {
+        font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--accent); margin-block-end: 10px;
+      }
+      .setup-card p { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+
+      /* ── Code ── */
+      code, kbd {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.87em; font-weight: 500;
+        background: var(--surface-3); border: 1px solid var(--line);
+        border-radius: 5px; padding: 2px 7px; color: var(--text);
+      }
+      pre {
+        background: #0d0f14; border: 1px solid var(--line);
+        border-radius: var(--radius-sm); padding: 14px 16px;
+        overflow-x: auto; font-size: 13px; line-height: 1.5; margin-block-end: 16px;
+      }
+      pre code { background: none; border: none; padding: 0; }
+
+      /* ── Table ── */
+      table { width: 100%; border-collapse: collapse; margin-block-start: 12px; font-size: 14px; }
+      th, td { text-align: left; padding: 8px 10px; border-block-end: 1px solid var(--line); }
+      th { color: var(--mute); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+      td .src { font-size: 11px; color: var(--mute); margin-inline-start: 6px; }
+
+      /* ── Section heading ── */
+      .section-heading {
+        font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+        color: var(--text); margin: 36px 0 16px;
+        padding-block-end: 10px; border-block-end: 1px solid var(--line);
+      }
+      .section-heading .tag {
+        font-size: 11px; font-weight: 700; color: var(--bg);
+        background: var(--coral); padding: 2px 8px;
+        border-radius: 5px; vertical-align: middle; margin-inline-start: 8px;
+      }
+
+      /* ── Status bar ── */
+      .statusbar {
+        position: fixed; bottom: 0; left: var(--sidebar); right: 0;
+        background: rgba(17,19,24,0.96); backdrop-filter: blur(16px);
+        border-block-start: 1.5px solid var(--line);
+        padding: 12px 52px;
+        display: flex; align-items: center; gap: 28px; font-size: 14px; font-weight: 600;
+      }
+      .status-count { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+      .status-count .val { font-size: 18px; font-weight: 800; }
+      .status-count .val.green { color: var(--green); }
+      .status-count .val.red { color: var(--red); }
+      .status-count .val.mute { color: var(--mute); }
+      .statusbar .spacer { flex: 1; }
+      .progress-bar { width: 220px; height: 7px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+      .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 400ms ease; }
+    </style>
+  </head>
+  <body>
+  <div class="shell">
+
+    <!-- ── SIDEBAR ── -->
+    <aside>
+      <div class="sidebar-title">QA · Oh Writers</div>
+
+      <button class="nav-item active" onclick="show('setup')">
+        <span class="dot"></span> Setup
+      </button>
+
+      <div class="sidebar-sep"></div>
+      <div class="sidebar-label">Cesare · Pages</div>
+
+      <button class="nav-item" id="nav-locations" onclick="show('locations')">
+        <span class="dot"></span> Locations
+      </button>
+      <button class="nav-item" id="nav-breakdown" onclick="show('breakdown')">
+        <span class="dot"></span> Breakdown
+      </button>
+      <button class="nav-item" id="nav-budget" onclick="show('budget')">
+        <span class="dot"></span> Budget
+      </button>
+      <button class="nav-item" id="nav-schedule" onclick="show('schedule')">
+        <span class="dot"></span> Schedule
+      </button>
+      <button class="nav-item" id="nav-shooting-plan" onclick="show('shooting-plan')">
+        <span class="dot"></span> Shooting Plan
+      </button>
+      <button class="nav-item" id="nav-screenplay" onclick="show('screenplay')">
+        <span class="dot"></span> Screenplay
+      </button>
+      <button class="nav-item" id="nav-documenti" onclick="show('documenti')">
+        <span class="dot"></span> Documenti narrativi
+      </button>
+
+      <div class="sidebar-sep"></div>
+      <div class="sidebar-label">Cesare · Cross-cutting</div>
+
+      <button class="nav-item" id="nav-bible" onclick="show('bible')">
+        <span class="dot"></span> Film Bible + Cache
+      </button>
+      <button class="nav-item" id="nav-summaries" onclick="show('summaries')">
+        <span class="dot"></span> Scene Summaries
+      </button>
+
+      <div class="sidebar-sep"></div>
+      <div class="sidebar-label">Spec 37 · Location UI</div>
+
+      <button class="nav-item" id="nav-loc37-matching" onclick="show('loc37-matching')">
+        <span class="dot"></span> Matching &amp; Affinità
+      </button>
+      <button class="nav-item" id="nav-loc37-discovery" onclick="show('loc37-discovery')">
+        <span class="dot"></span> Discovery area
+      </button>
+      <button class="nav-item" id="nav-loc37-scene" onclick="show('loc37-scene')">
+        <span class="dot"></span> Discovery per scena
+      </button>
+      <button class="nav-item" id="nav-loc37-atmosfera" onclick="show('loc37-atmosfera')">
+        <span class="dot"></span> Ranking atmosfera
+      </button>
+    </aside>
+
+    <!-- ── MAIN ── -->
+    <main>
+
+      <!-- ═══════════════ SETUP ═══════════════ -->
+      <div class="page-panel active" id="panel-setup">
+        <div class="page-header">
+          <div class="page-eyebrow">Pre-requisiti</div>
+          <div class="page-title">Setup</div>
+          <div class="page-desc">Fai questo prima di ogni altra sezione. Una volta sola per sessione.</div>
+        </div>
+
+        <div class="callout info">
+          <strong>Cosa ti serve</strong>
+          Dev server <code>pnpm dev</code> su :3000 · Progetto con sceneggiatura (≥5 scene) · Almeno un personaggio ricorrente · Budget e schedule generati · DevTools console aperta
+        </div>
+
+        <div class="setup-grid">
+          <div class="setup-card">
+            <h4>Credenziali dev</h4>
+            <p>Email: <code>valerio@ohwriters.dev</code><br>Password: <code>valerio123</code><br><br>Progetto principale: <strong>Non fa ridere</strong></p>
+          </div>
+          <div class="setup-card">
+            <h4>URL locations (Non fa ridere)</h4>
+            <p><code>localhost:3000/projects/<br>00000000-0000-4000-a000-<br>000000000012/locations</code></p>
+          </div>
+          <div class="setup-card">
+            <h4>Debug Cesare</h4>
+            <p>Aggiungi nel <code>.env.local</code>:<br><code>CESARE_DEBUG=true</code><br><br>Nei log vedrai:<br><code>[cesare-v2] tier=... page=...</code></p>
+          </div>
+          <div class="setup-card">
+            <h4>Mock vs reale</h4>
+            <p>Discovery Google Places usa l'API reale. Per risultati deterministici:<br><code>MOCK_AI=true pnpm dev</code><br>→ 2 posti finti, no costi API.</p>
+          </div>
+        </div>
+
+        <div class="test" id="test-setup-1">
+          <div class="test-body">
+            <div class="test-id">SETUP-01</div>
+            <div class="test-title">Dev server risponde con cesare-v2</div>
+            <div class="test-prompt">Ciao Cesare, in una frase: di cosa parla questo film?</div>
+            <div class="test-expect">
+              Nei log server compare <strong>[cesare-v2]</strong>. La risposta arriva senza errori. Nessun crash React hydration.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('setup-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('setup-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ LOCATIONS (Cesare) ═══════════════ -->
+      <div class="page-panel" id="panel-locations">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Page</div>
+          <div class="page-title">Locations</div>
+          <div class="page-desc">Skill: <strong>locations + read-scene + read-document</strong>. LocalContext: scene summaries delle scene collegate al requirement aperto. NON carica: budget, schedule, breakdown.</div>
+          <div class="page-chips">
+            <span class="chip teal">search_places</span>
+            <span class="chip teal">add_candidate</span>
+            <span class="chip teal">update_candidate</span>
+            <span class="chip teal">delete_candidate</span>
+            <span class="chip teal">read_scene</span>
+            <span class="chip teal">read_scene_range</span>
+            <span class="chip teal">read_document</span>
+            <span class="chip coral">NO update_budget_line</span>
+            <span class="chip coral">NO move_scene_to_day</span>
+          </div>
+        </div>
+
+        <div class="context-map">
+          <div class="context-box">
+            <h4>Tool disponibili</h4>
+            <div class="tag-list">
+              <span class="tag on">search_places</span>
+              <span class="tag on">add_candidate</span>
+              <span class="tag on">update_candidate</span>
+              <span class="tag on">delete_candidate</span>
+              <span class="tag on">read_scene</span>
+              <span class="tag on">read_scene_range</span>
+              <span class="tag on">read_document</span>
+              <span class="tag off">update_budget_line</span>
+              <span class="tag off">move_scene_to_day</span>
+              <span class="tag off">add_element</span>
+            </div>
+          </div>
+          <div class="context-box">
+            <h4>Data caricata (LocalContext)</h4>
+            <div class="tag-list">
+              <span class="tag on">scenes list</span>
+              <span class="tag on">scene summaries (linked)</span>
+              <span class="tag on">location requirements</span>
+              <span class="tag on">location candidates</span>
+              <span class="tag on">film bible (cached)</span>
+              <span class="tag off">budget lines</span>
+              <span class="tag off">schedule days</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="test" id="test-loc-1">
+          <div class="test-body">
+            <div class="test-id">LOC-01 · Tool search attivo</div>
+            <div class="test-title">Cesare cerca location usando il tool</div>
+            <div class="test-prompt">Trova candidati per questa location</div>
+            <div class="test-expect">
+              Log: <strong>tool_use search_places</strong> → poi <strong>add_candidate</strong>. Non solo testo.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('loc-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('loc-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-loc-2">
+          <div class="test-body">
+            <div class="test-id">LOC-02 · Scene summaries nel contesto</div>
+            <div class="test-title">Cesare conosce le note di produzione della scena senza chiamare read_scene</div>
+            <div class="test-prompt">Questa location è adatta per la scena? Considera le esigenze tecniche</div>
+            <div class="test-expect">
+              Cesare cita dettagli produttivi (stunt, luce artificiale, numero comparse) presi dai summaries. <strong>Nessun tool_use read_scene</strong> — già nel contesto.
+            </div>
+            <div class="test-warn">Se chiama read_scene per info già nei summaries → spec 40 non sta funzionando.</div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('loc-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('loc-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-loc-3">
+          <div class="test-body">
+            <div class="test-id">LOC-03 · Tool isolation</div>
+            <div class="test-title">Non ha tool budget su questa pagina</div>
+            <div class="test-prompt">Quanto costa questa location? Puoi aggiornare il budget?</div>
+            <div class="test-expect">
+              Cesare risponde che non può aggiornare il budget da qui. <strong>Nessun tool_use budget</strong> nei log.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('loc-3','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('loc-3','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-loc-4">
+          <div class="test-body">
+            <div class="test-id">LOC-04 · Rome fix</div>
+            <div class="test-title">Cesare cerca nella città/regione corretta del film</div>
+            <div class="test-prompt">Trova candidati per una piazza principale del paese</div>
+            <div class="test-expect">
+              I candidati sono nella regione del film. <strong>Nessuna location di Roma</strong> per un film ambientato in provincia. Il SETTING PRIOR del Bible guida la ricerca geografica.
+            </div>
+            <div class="test-warn">Location di Roma/Milano per un film provinciale = regressione Rome bug.</div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('loc-4','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('loc-4','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ BREAKDOWN ═══════════════ -->
+      <div class="page-panel" id="panel-breakdown">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Page</div>
+          <div class="page-title">Breakdown</div>
+          <div class="page-desc">Skill: <strong>breakdown + read-scene</strong>. LocalContext: scene summaries scena aperta ± 3. NON carica: budget, locations, schedule.</div>
+          <div class="page-chips">
+            <span class="chip teal">add_element</span>
+            <span class="chip teal">update_element</span>
+            <span class="chip teal">delete_element</span>
+            <span class="chip teal">read_scene</span>
+            <span class="chip teal">read_scene_range</span>
+            <span class="chip coral">NO search_places</span>
+            <span class="chip coral">NO update_budget_line</span>
+          </div>
+        </div>
+
+        <div class="context-map">
+          <div class="context-box">
+            <h4>Tool disponibili</h4>
+            <div class="tag-list">
+              <span class="tag on">add_element</span>
+              <span class="tag on">update_element</span>
+              <span class="tag on">delete_element</span>
+              <span class="tag on">read_scene</span>
+              <span class="tag on">read_scene_range</span>
+              <span class="tag off">search_places</span>
+              <span class="tag off">update_budget_line</span>
+            </div>
+          </div>
+          <div class="context-box">
+            <h4>Data caricata (LocalContext)</h4>
+            <div class="tag-list">
+              <span class="tag on">breakdown elements</span>
+              <span class="tag on">scene summaries (±3)</span>
+              <span class="tag on">scenes list</span>
+              <span class="tag on">film bible (cached)</span>
+              <span class="tag off">budget lines</span>
+              <span class="tag off">location candidates</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="test" id="test-bkd-1">
+          <div class="test-body">
+            <div class="test-id">BKD-01 · Estrazione elementi</div>
+            <div class="test-title">Cesare estrae e aggiunge elementi dalla scena</div>
+            <div class="test-prompt">Analizza la scena corrente ed estrai tutti i props</div>
+            <div class="test-expect">
+              Log: <strong>tool_use read_scene</strong> → poi <strong>add_element</strong> per ogni prop trovato.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bkd-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bkd-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-bkd-2">
+          <div class="test-body">
+            <div class="test-id">BKD-02 · Summaries visibili nel contesto</div>
+            <div class="test-title">Cesare cita productionNotes della scena senza tool</div>
+            <div class="test-prompt">Questa scena ha esigenze di produzione particolari?</div>
+            <div class="test-expect">
+              Cesare risponde citando stunt, effetti, condizioni (notte, esterno) dal summary. <strong>Nessun read_scene</strong> — già nei summaries.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bkd-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bkd-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ BUDGET ═══════════════ -->
+      <div class="page-panel" id="panel-budget">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Page</div>
+          <div class="page-title">Budget</div>
+          <div class="page-desc">Skill: <strong>budget + read-scene</strong>. LocalContext: nessun summary (budget ragiona su categorie). NON carica: schedule, locations.</div>
+          <div class="page-chips">
+            <span class="chip teal">update_budget_line</span>
+            <span class="chip teal">add_budget_line</span>
+            <span class="chip teal">read_scene</span>
+            <span class="chip coral">NO search_places</span>
+            <span class="chip coral">NO move_scene_to_day</span>
+            <span class="chip amber">NO scene summaries (by design)</span>
+          </div>
+        </div>
+
+        <div class="test" id="test-bgt-1">
+          <div class="test-body">
+            <div class="test-id">BGT-01 · Lettura budget reale</div>
+            <div class="test-title">Cesare conosce i numeri del budget</div>
+            <div class="test-prompt">Qual è la categoria con il costo più alto?</div>
+            <div class="test-expect">
+              Risponde con dati reali del budget (categorie e cifre reali), non "non ho accesso al budget".
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bgt-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bgt-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-bgt-2">
+          <div class="test-body">
+            <div class="test-id">BGT-02 · Modifica budget con tool</div>
+            <div class="test-title">Cesare aggiorna una voce usando il tool</div>
+            <div class="test-prompt">Aggiorna la stima del Cast principale a 8000 euro</div>
+            <div class="test-expect">
+              Log: <strong>tool_use update_budget_line</strong>. Il valore cambia nell'UI.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bgt-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bgt-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SCHEDULE ═══════════════ -->
+      <div class="page-panel" id="panel-schedule">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Page</div>
+          <div class="page-title">Schedule</div>
+          <div class="page-desc">Skill: <strong>schedule + read-scene</strong>. LocalContext: scene summaries del giorno aperto (da strips); fallback a ±3 se giorno vuoto.</div>
+          <div class="page-chips">
+            <span class="chip teal">move_scene_to_day</span>
+            <span class="chip teal">merge_days</span>
+            <span class="chip teal">split_day</span>
+            <span class="chip teal">read_scene</span>
+            <span class="chip coral">NO update_budget_line</span>
+            <span class="chip coral">NO search_places</span>
+          </div>
+        </div>
+
+        <div class="test" id="test-sch-1">
+          <div class="test-body">
+            <div class="test-id">SCH-01 · Spostamento scena</div>
+            <div class="test-title">Cesare sposta una scena su un altro giorno</div>
+            <div class="test-prompt">Sposta la scena 4 al giorno 2</div>
+            <div class="test-expect">
+              Log: <strong>tool_use move_scene_to_day</strong> con scene_number=4, target_day_number=2. Schedule aggiornato nell'UI.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('sch-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('sch-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-sch-2">
+          <div class="test-body">
+            <div class="test-id">SCH-02 · Summaries giorno attivo</div>
+            <div class="test-title">Cesare sa cosa succede nelle scene del giorno aperto</div>
+            <div class="test-prompt">Ci sono scene complesse in questa giornata? Stunt o scene notturne?</div>
+            <div class="test-expect">
+              Cesare cita dettagli dalle scene del giorno (stunt, notte, cast) dai summaries. <strong>Nessun read_scene</strong> — già nel contesto.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('sch-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('sch-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SHOOTING PLAN ═══════════════ -->
+      <div class="page-panel" id="panel-shooting-plan">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Page</div>
+          <div class="page-title">Shooting Plan</div>
+          <div class="page-desc">Skill: <strong>shooting-plan + read-scene</strong>. LocalContext: summary solo della scena aperta.</div>
+          <div class="page-chips">
+            <span class="chip teal">add_shot</span>
+            <span class="chip teal">update_shot</span>
+            <span class="chip teal">read_scene</span>
+            <span class="chip coral">NO move_scene_to_day</span>
+            <span class="chip coral">NO update_budget_line</span>
+          </div>
+        </div>
+
+        <div class="test" id="test-sp-1">
+          <div class="test-body">
+            <div class="test-id">SP-01 · Shot plan sulla scena corrente</div>
+            <div class="test-title">Cesare propone uno shot plan usando tool</div>
+            <div class="test-prompt">Proponi uno shot plan per questa scena</div>
+            <div class="test-expect">
+              Cesare usa <strong>read_scene</strong> per i dettagli completi, poi chiama tool per aggiungere shot. Non lista di testo senza tool.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('sp-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('sp-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SCREENPLAY ═══════════════ -->
+      <div class="page-panel" id="panel-screenplay">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Page</div>
+          <div class="page-title">Screenplay</div>
+          <div class="page-desc">Skill: <strong>screenplay-edit + read-scene</strong>. LocalContext: scene summaries scena aperta ± 5. Tool: propose (non edit diretto).</div>
+          <div class="page-chips">
+            <span class="chip teal">propose_screenplay_edit</span>
+            <span class="chip teal">propose_screenplay_revision</span>
+            <span class="chip teal">propose_rename_entity</span>
+            <span class="chip teal">read_scene</span>
+            <span class="chip coral">NO update_budget_line</span>
+            <span class="chip coral">NO search_places</span>
+          </div>
+        </div>
+
+        <div class="test" id="test-scr-1">
+          <div class="test-body">
+            <div class="test-id">SCR-01 · Proposta modifica dialogo</div>
+            <div class="test-title">Cesare usa propose tool per riscrivere dialogo</div>
+            <div class="test-prompt">Riscrivi questo dialogo rendendolo più secco e diretto</div>
+            <div class="test-expect">
+              Log: <strong>tool_use propose_screenplay_edit</strong>. Proposta visibile nell'UI. NON solo testo.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('scr-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('scr-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-scr-2">
+          <div class="test-body">
+            <div class="test-id">SCR-02 · Analisi senza tool</div>
+            <div class="test-title">Domanda analitica → solo testo, nessun tool</div>
+            <div class="test-prompt">Cosa non funziona in questa scena?</div>
+            <div class="test-expect">
+              Risposta testuale, nessun tool_use. Analisi senza proporre modifiche finché non chiesto.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('scr-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('scr-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ DOCUMENTI NARRATIVI ═══════════════ -->
+      <div class="page-panel" id="panel-documenti">
+        <div class="page-header">
+          <div class="page-eyebrow">Cesare · Documenti</div>
+          <div class="page-title">Documenti narrativi</div>
+          <div class="page-desc">Soggetto, Synopsis, Outline, Treatment — stessa skill: <strong>document-edit + read-document</strong>. LocalContext: tutti i summaries (act-aggregate). DocumentContext live iniettato.</div>
+          <div class="page-chips">
+            <span class="chip teal">edit_document</span>
+            <span class="chip teal">generate_document</span>
+            <span class="chip teal">read_document</span>
+            <span class="chip amber">scene summaries full (act-aggregate)</span>
+            <span class="chip coral">NO tool screenplay</span>
+            <span class="chip coral">NO search_places</span>
+          </div>
+        </div>
+
+        <div class="test" id="test-doc-1">
+          <div class="test-body">
+            <div class="test-id">DOC-01 · Edit soggetto</div>
+            <div class="test-title">Cesare modifica il soggetto usando il tool</div>
+            <div class="test-prompt">Migliora la struttura del soggetto, rendilo più drammatico nel secondo atto</div>
+            <div class="test-expect">
+              Log: <strong>tool_use edit_document</strong> o <strong>generate_document</strong>. Il testo si aggiorna nell'UI.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('doc-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('doc-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-doc-2">
+          <div class="test-body">
+            <div class="test-id">DOC-02 · Coerenza Bible + summaries</div>
+            <div class="test-title">La revisione rispetta il tono e le scene del film</div>
+            <div class="test-prompt">Riscrivi l'apertura mantenendo il tono del film e i personaggi reali</div>
+            <div class="test-expect">
+              La riscrittura cita personaggi e ambientazione reali. Coerente con Bible + summaries — non generica.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('doc-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('doc-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-doc-3">
+          <div class="test-body">
+            <div class="test-id">DOC-03 · Synopsis / Outline / Treatment</div>
+            <div class="test-title">Stessa skill funziona su tutti i tipi documento</div>
+            <div class="test-prompt">Aggiungi un paragrafo sul conflitto principale alla synopsis</div>
+            <div class="test-expect">
+              Log: <strong>tool_use edit_document</strong>. Documento aggiornato. Identico su outline e treatment.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('doc-3','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('doc-3','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ FILM BIBLE ═══════════════ -->
+      <div class="page-panel" id="panel-bible">
+        <div class="page-header">
+          <div class="page-eyebrow">Cross-cutting · Spec 38+39</div>
+          <div class="page-title">Film Bible + Cache</div>
+          <div class="page-desc">Distillazione Sonnet, caching Anthropic (blocco 1), memo 60s GlobalContext.</div>
+        </div>
+
+        <div class="callout info">
+          <strong>Verifica Bible nel DB</strong>
+          <code>SELECT content, created_at FROM project_film_bible WHERE project_id = 'ID';</code>
+        </div>
+
+        <div class="test" id="test-bib-1">
+          <div class="test-body">
+            <div class="test-id">BIB-01 · Cold start senza Bible</div>
+            <div class="test-title">Prima call: nessun crash senza Bible distillato</div>
+            <div class="test-prompt">Ciao, di cosa parla questo film in una frase?</div>
+            <div class="test-expect">
+              Nessun errore. Risposta arriva (usa sentinel). Dopo ~30s il Bible compare nel DB.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bib-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bib-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-bib-2">
+          <div class="test-body">
+            <div class="test-id">BIB-02 · Contenuto Bible corretto</div>
+            <div class="test-title">Il Bible rispecchia l'ambientazione reale del film</div>
+            <div class="test-expect">
+              DB: <code>content</code> contiene SETTING corretto (non "Roma generica"), TONO coerente, personaggi chiave nominati correttamente.
+            </div>
+            <div class="test-warn">Setting generico o sbagliato = distillazione fallita.</div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bib-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bib-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-bib-3">
+          <div class="test-body">
+            <div class="test-id">BIB-03 · GlobalContext memo 60s</div>
+            <div class="test-title">5 call consecutive → 1 sola query DB</div>
+            <div class="test-expect">
+              Con log temporaneo in <code>global-context.server.ts</code>: 5 call vedono 1 solo "DB hit". Aspetta 61s → log riappare.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('bib-3','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('bib-3','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SCENE SUMMARIES ═══════════════ -->
+      <div class="page-panel" id="panel-summaries">
+        <div class="page-header">
+          <div class="page-eyebrow">Cross-cutting · Spec 38+40</div>
+          <div class="page-title">Scene Summaries</div>
+          <div class="page-desc">Generazione Haiku fingerprint-guarded. Finestre di rilevanza per page type (spec 40).</div>
+        </div>
+
+        <div class="callout info">
+          <strong>Verifica summaries nel DB</strong>
+          <code>SELECT number, scene_summary IS NOT NULL as has_summary FROM scenes WHERE screenplay_id = 'ID' ORDER BY number;</code>
+        </div>
+
+        <div class="test" id="test-sum-1">
+          <div class="test-body">
+            <div class="test-id">SUM-01 · Generazione al salvataggio</div>
+            <div class="test-title">Modificare e salvare una scena → summary si aggiorna</div>
+            <div class="test-expect">
+              Dopo il salvataggio (debounce ~2s), la colonna <code>scene_summary</code> nel DB si aggiorna. Un secondo salvataggio identico <strong>non</strong> genera una nuova call Haiku (fingerprint check).
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('sum-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('sum-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-sum-2">
+          <div class="test-body">
+            <div class="test-id">SUM-02 · Finestra rilevanza locations</div>
+            <div class="test-title">Locations: carica solo summaries scene collegate al requirement</div>
+            <div class="test-expect">
+              Con log in <code>buildLocalContext</code>: le scene caricate nei summaries sono solo quelle del <code>linkedSceneIds</code> del requirement aperto. NON tutte le scene del progetto.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('sum-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('sum-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-sum-3">
+          <div class="test-body">
+            <div class="test-id">SUM-03 · Budget nessun summary</div>
+            <div class="test-title">Budget page non carica summaries (by design)</div>
+            <div class="test-expect">
+              Con log: <code>sceneSummaries.length === 0</code> sulla pagina budget. Il budget non ha bisogno di contesto scena — è corretto.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('sum-3','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('sum-3','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SPEC 37 — MATCHING ═══════════════ -->
+      <div class="page-panel" id="panel-loc37-matching">
+        <div class="page-header">
+          <div class="page-eyebrow">Spec 37 · Location UI</div>
+          <div class="page-title">Matching &amp; chip di affinità</div>
+          <div class="page-desc">Normalizzazione fabbisogni a tipo canonico (dizionario + Haiku). Chip "va bene anche per" sui candidati compatibili.</div>
+        </div>
+
+        <div class="test" id="test-m37-1">
+          <div class="test-body">
+            <div class="test-id">M37-01 · Tipi normalizzati</div>
+            <div class="test-title">I fabbisogni di "Non fa ridere" hanno il tipo corretto</div>
+            <div class="test-expect">
+              <table>
+                <thead><tr><th>Fabbisogno</th><th>Tipo atteso</th><th>Via</th></tr></thead>
+                <tbody>
+                  <tr><td>Ristorante - Forno</td><td>ristorante</td><td><span class="src">dizionario</span></td></tr>
+                  <tr><td>Bancone</td><td>bar</td><td><span class="src">dizionario</span></td></tr>
+                  <tr><td>Sala</td><td>ristorante</td><td><span class="src">Haiku</span></td></tr>
+                  <tr><td>Cucina</td><td>ristorante</td><td><span class="src">Haiku</span></td></tr>
+                  <tr><td>Fuori Dalla Porta</td><td>strada</td><td><span class="src">Haiku</span></td></tr>
+                  <tr><td>Montage di Filippo…</td><td>altro</td><td><span class="src">Haiku</span></td></tr>
+                </tbody>
+              </table>
+              <pre style="margin-block-start:12px"><code>docker exec docker-postgres-1 psql -U oh-writers -d oh-writers_dev \
+  -c "SELECT name, location_type FROM location_requirements
+      WHERE project_id='00000000-0000-4000-a000-000000000012'
+      ORDER BY created_at;"</code></pre>
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('m37-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('m37-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-m37-2">
+          <div class="test-body">
+            <div class="test-id">M37-02 · Chip affinità incrociata</div>
+            <div class="test-title">Candidato bar/pizzeria mostra chip "Va bene anche per: Bancone"</div>
+            <div class="test-expect">
+              Apri <strong>Ristorante - Forno</strong> → candidato "Bar Pizzeria di Costantini Giorgio" → riga <em>"Va bene anche per: Bancone · 1 scena"</em>. Candidati incompatibili non mostrano chip.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('m37-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('m37-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SPEC 37 — DISCOVERY ═══════════════ -->
+      <div class="page-panel" id="panel-loc37-discovery">
+        <div class="page-header">
+          <div class="page-eyebrow">Spec 37 · Location UI</div>
+          <div class="page-title">Discovery area</div>
+          <div class="page-desc">Confine comune → pin scoperti (cerchio blu) via Google Places. Clustering automatico sopra soglia 20 pin.</div>
+        </div>
+
+        <div class="test" id="test-d37-1">
+          <div class="test-body">
+            <div class="test-id">D37-01 · Comune → confine + pin</div>
+            <div class="test-title">Cerca "Fermo" → confine del comune + pin scoperti</div>
+            <div class="test-expect">
+              Confine del <strong>comune</strong> di Fermo (non della provincia). Pin blu vuoti dentro il confine. Banner "Nessun candidato in: Fermo".
+            </div>
+            <div class="test-warn">Confine enorme (provincia intera) = bug tranello capoluogo.</div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('d37-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('d37-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-d37-2">
+          <div class="test-body">
+            <div class="test-id">D37-02 · Aggiungi pin come candidato</div>
+            <div class="test-title">Cliccando un pin scoperto → popup → "Aggiungi come candidato"</div>
+            <div class="test-expect">
+              Popup mostra nome, indirizzo, chip "→ adatto a: [fabbisogno]", bottone "+ Aggiungi". Cliccando: conteggio candidati +1, persiste al reload.
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('d37-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('d37-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-d37-3">
+          <div class="test-body">
+            <div class="test-id">D37-03 · Clustering città grande</div>
+            <div class="test-title">Milano/Roma → pin si raggruppano in cluster numerati</div>
+            <div class="test-expect">
+              Zoom indietro: pin collassano in cerchi con numero. Zoom avanti: si spezzano. Click su cluster: mappa zooma sui suoi pin.
+            </div>
+            <div class="test-warn">Con ≤20 scoperte nessun cluster — corretto.</div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('d37-3','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('d37-3','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SPEC 37b — SCENE AWARE ═══════════════ -->
+      <div class="page-panel" id="panel-loc37-scene">
+        <div class="page-header">
+          <div class="page-eyebrow">Spec 37b · Location UI</div>
+          <div class="page-title">Discovery per scena</div>
+          <div class="page-desc">I pin cambiano in base al tipo del fabbisogno selezionato. Foto nel popup, "Rimuovi area", ricerca manuale libera.</div>
+        </div>
+
+        <div class="test" id="test-s37-1">
+          <div class="test-body">
+            <div class="test-id">S37-01 · Pin cambiano con il fabbisogno</div>
+            <div class="test-title">Selezionare fabbisogno diverso → pin diversi</div>
+            <div class="test-expect">
+              Fabbisogno "Ristorante - Forno" → pin ristoranti. Fabbisogno "Bancone" → pin bar/pub. Fabbisogno "strada" → nessun pin (tipo non cercabile).
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('s37-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('s37-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+
+        <div class="test" id="test-s37-2">
+          <div class="test-body">
+            <div class="test-id">S37-02 · Foto, rimuovi area, ricerca libera</div>
+            <div class="test-title">Popup mostra foto · "Rimuovi area" pulisce · ricerca manuale funziona</div>
+            <div class="test-expect">
+              Foto nel popup. "✕ Rimuovi area" cancella confine + pin. Disegna cerchio → "Cerca in questa area" → digita "pasticceria" → risultati con miniatura + "Aggiungi".
+            </div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('s37-2','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('s37-2','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════ SPEC 37c — ATMOSFERA ═══════════════ -->
+      <div class="page-panel" id="panel-loc37-atmosfera">
+        <div class="page-header">
+          <div class="page-eyebrow">Spec 37c · Location UI</div>
+          <div class="page-title">Ranking atmosfera</div>
+          <div class="page-desc">Cesare ordina i pin scoperti per adattabilità all'atmosfera della scena selezionata. On-demand: una call AI per click.</div>
+        </div>
+
+        <div class="test" id="test-a37-1">
+          <div class="test-body">
+            <div class="test-id">A37-01 · "Ordina per scena" riordina i pin</div>
+            <div class="test-title">Il bottone appare con scena + pin attivi, riordina, aggiunge commento Cesare</div>
+            <div class="test-expect">
+              Bottone "✦ Ordina per scena" visibile solo se scena selezionata + pin scoperti presenti. Click → "Ordino…" → pin riordinati. Popup ogni pin: riga di Cesare con spiegazione atmosfera.
+            </div>
+            <div class="test-warn">Il bottone non appare senza scena selezionata o senza pin — corretto.</div>
+          </div>
+          <div class="test-controls">
+            <button class="btn-pass" onclick="mark('a37-1','pass')">✓ Pass</button>
+            <button class="btn-fail" onclick="mark('a37-1','fail')">✗ Fail</button>
+            <textarea class="test-note" placeholder="note..."></textarea>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Status bar ── -->
+  <div class="statusbar">
+    <div class="status-count"><span>Pass:</span><span class="val green" id="cnt-pass">0</span></div>
+    <div class="status-count"><span>Fail:</span><span class="val red" id="cnt-fail">0</span></div>
+    <div class="status-count"><span>Da fare:</span><span class="val mute" id="cnt-todo">—</span></div>
+    <div class="spacer"></div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <script>
+    function show(id) {
+      document.querySelectorAll('.page-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const panel = document.getElementById('panel-' + id);
+      const nav = document.getElementById('nav-' + id);
+      if (panel) panel.classList.add('active');
+      if (nav) nav.classList.add('active');
+    }
+
+    const results = {};
+
+    function mark(id, state) {
+      results[id] = state;
+      const card = document.getElementById('test-' + id);
+      if (card) { card.classList.remove('pass', 'fail'); card.classList.add(state); }
+      updateNav();
+      updateStatusBar();
+      persist();
+    }
+
+    function updateNav() {
+      document.querySelectorAll('.page-panel').forEach(panel => {
+        const panelId = panel.id.replace('panel-', '');
+        const navBtn = document.getElementById('nav-' + panelId);
+        if (!navBtn) return;
+        const tests = panel.querySelectorAll('.test');
+        if (tests.length === 0) return;
+        const ids = Array.from(tests).map(t => t.id.replace('test-', ''));
+        const states = ids.map(i => results[i]);
+        const allDone = states.every(s => s);
+        const anyFail = states.some(s => s === 'fail');
+        navBtn.classList.remove('done', 'fail');
+        if (allDone && anyFail) navBtn.classList.add('fail');
+        else if (allDone) navBtn.classList.add('done');
+      });
+    }
+
+    function updateStatusBar() {
+      const total = document.querySelectorAll('.test').length;
+      const pass = Object.values(results).filter(v => v === 'pass').length;
+      const fail = Object.values(results).filter(v => v === 'fail').length;
+      const done = pass + fail;
+      document.getElementById('cnt-pass').textContent = pass;
+      document.getElementById('cnt-fail').textContent = fail;
+      document.getElementById('cnt-todo').textContent = total - done;
+      document.getElementById('prog-fill').style.width = (done / total * 100) + '%';
+    }
+
+    function persist() {
+      try { localStorage.setItem('qa-cesare-results', JSON.stringify(results)); } catch(e) {}
+    }
+
+    function restore() {
+      try {
+        const saved = localStorage.getItem('qa-cesare-results');
+        if (!saved) return;
+        const data = JSON.parse(saved);
+        Object.entries(data).forEach(([id, state]) => {
+          results[id] = state;
+          const card = document.getElementById('test-' + id);
+          if (card) { card.classList.remove('pass','fail'); card.classList.add(state); }
+        });
+        updateNav(); updateStatusBar();
+      } catch(e) {}
+    }
+
+    restore();
+    updateStatusBar();
+  </script>
+  </body>
+</html>
