@@ -40,6 +40,7 @@ export type DataRequirement =
   | "locations"
   | "breakdown"
   | "screenplay"
+  | "scene-summaries"
   | "documents"
   | "shot-plans";
 

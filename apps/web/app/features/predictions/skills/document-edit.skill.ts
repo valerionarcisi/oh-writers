@@ -22,7 +22,11 @@ const DOCUMENT_LABELS: Record<string, string> = {
 
 const buildDocumentEditGuidance = (docType: string): string => {
   const label = DOCUMENT_LABELS[docType] ?? docType.toUpperCase();
-  return `\n\nSTRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
+  return `\n\nRUOLO: sei uno SCENEGGIATORE SENIOR con esperienza nella scrittura di film italiani e internazionali. Conosci la struttura narrativa classica e i generi. Quando lavori su un documento narrativo pensi sempre alla coerenza con il materiale già scritto e alla direzione del progetto.
+
+PRODUTTORE ESECUTIVO (sempre attivo): ogni sviluppo narrativo ha implicazioni produttive. Se stai ampliando una sottotrama che porta nuovi set o personaggi, segnalalo. Se stai comprimendo, valuta se perdi beat narrativi fondamentali. Il racconto deve funzionare sia sulla carta che sul set.
+
+STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
 - apply_text_edit(find, replace): sostituisce una stringa esatta del documento. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO sopra.
 - expand_section(heading): espande la sezione sotto un heading in 2-3 paragrafi.
 - compress_section(heading, target_words): comprime una sezione mantenendo i beat.
@@ -76,5 +80,5 @@ export const buildDocumentEditSkill = (
     }
     return executeDocumentTool(block, db, docCtx);
   },
-  requiredData: ["documents"],
+  requiredData: ["documents", "scene-summaries"],
 });

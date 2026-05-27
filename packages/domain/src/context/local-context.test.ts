@@ -4,6 +4,7 @@ import type {
   SceneMetaRow,
   SceneBodyRow,
   ActiveDocumentRow,
+  SceneSummaryRow,
 } from "./local-context.js";
 
 // [OHW-039b] — LocalContext type contract tests
@@ -15,12 +16,38 @@ describe("LocalContext", () => {
       scenes: [],
       currentScene: null,
       sceneWindow: [],
+      sceneSummaries: [],
       characters: [],
       activeDocument: null,
       currentRequirement: null,
       activeShootingDay: null,
     };
     expectTypeOf(ctx).toMatchTypeOf<LocalContext>();
+  });
+
+  it("accepts LocalContext with populated sceneSummaries", () => {
+    const summary: SceneSummaryRow = {
+      sceneId: "scene-1",
+      sceneNumber: 1,
+      sceneHeading: "INT. UFFICIO - GIORNO",
+      settingDescription: "Un ufficio moderno",
+      timeOfDay: "GIORNO",
+      presentCharacters: ["Marco", "Giulia"],
+      keyActions: ["Marco entra", "Giulia si alza"],
+      productionNotes: [],
+    };
+    const ctx: LocalContext = {
+      projectTitle: "Film Test",
+      scenes: [],
+      currentScene: null,
+      sceneWindow: [],
+      sceneSummaries: [summary],
+      characters: [],
+      activeDocument: null,
+      currentRequirement: null,
+      activeShootingDay: null,
+    };
+    expectTypeOf(ctx.sceneSummaries).toEqualTypeOf<SceneSummaryRow[]>();
   });
 
   it("accepts an empty sceneWindow array", () => {

@@ -12,7 +12,11 @@ const buildShootingPlanGuidance = (activeSceneId: string | null): string => {
   const sceneHint = activeSceneId
     ? `\nScena attiva (selezionata dall'utente): ${activeSceneId}. Usala come default per scene_id nei tool quando l'utente non specifica una scena diversa.`
     : "\nNessuna scena attiva — se l'utente non passa un scene_id, chiedigli di selezionarne una prima di operare.";
-  return `\n\nRUOLO: in questa pagina sei un DIRETTORE DELLA FOTOGRAFIA. Quando l'utente ti chiede di costruire o salvare un piano, USA I TOOLS per farlo davvero — non descrivere soltanto.
+  return `\n\nRUOLO: sei un DIRETTORE DELLA FOTOGRAFIA (DOP) con esperienza su produzioni italiane. Ragioni in termini di luce, movimento camera, e racconto visivo. Quando costruisci un piano inquadrature pensi a: tono del film (dalla Bible), ambientazione della scena (INT/EXT, giorno/notte), numero di attori, disponibilità di luce naturale, e tempo di setup realistico.
+
+PRODUTTORE ESECUTIVO (sempre attivo): ogni shot ha un costo di setup. Un ECU o un POV complesso richiedono più tempo di un WS. Quando proponi un piano, stima duration_min in modo realistico e segnala se il totale giornaliero supera le ore disponibili. Usa i SCENE SUMMARIES nel contesto per capire il tono e le note di produzione della scena prima di costruire il piano.
+
+Quando l'utente ti chiede di costruire o salvare un piano, USA I TOOLS per farlo davvero — non descrivere soltanto.
 
 TOOLS DISPONIBILI SUL PIANO INQUADRATURE:
 - add_parallel_plan(scene_id, name): crea un piano parallelo (es. "Piano B"). Il primo piano (Piano A) esiste già — non ricrearlo.
@@ -57,5 +61,5 @@ export const buildShootingPlanSkill = (ctx: SkillBuildContext): Skill => ({
     };
     return executeShootingPlanTool(block, db, shootingPlanCtx);
   },
-  requiredData: ["shot-plans", "screenplay"],
+  requiredData: ["shot-plans", "screenplay", "scene-summaries"],
 });

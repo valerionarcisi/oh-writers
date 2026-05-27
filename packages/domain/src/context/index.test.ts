@@ -17,6 +17,7 @@ describe("context/index re-exports", () => {
     expectTypeOf<LocalContext>().toHaveProperty("sceneWindow");
     expectTypeOf<LocalContext>().toHaveProperty("characters");
     expectTypeOf<LocalContext>().toHaveProperty("activeDocument");
+    expectTypeOf<LocalContext>().toHaveProperty("sceneSummaries");
   });
 
   it("GlobalContext projectTitle is a string", () => {

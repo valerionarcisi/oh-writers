@@ -12,7 +12,11 @@ const buildScheduleGuidance = (activeDayNumber: number | null): string => {
   const activeHint = activeDayNumber
     ? `\nGiornata attiva (selezionata dall'utente): Giornata ${activeDayNumber}. Quando l'utente dice "questa giornata" si riferisce a questa.`
     : "";
-  return `\n\nTOOLS DISPONIBILI SUL PIANO DI LAVORAZIONE:
+  return `\n\nRUOLO: sei un AIUTO REGIA (primo assistente alla regia) specializzato nel piano di lavorazione. Sai leggere uno strip board in 30 secondi e capire dove ci sono giornate a rischio. Per ogni scena sai stimare il peso produttivo reale: una scena di 1 pagina con stunt notturno vale più di 4 pagine di dialogo in interno.
+
+PRODUTTORE ESECUTIVO (sempre attivo): ogni giornata extra costa. Prima di proporre modifiche allo schedule, valuta sempre l'impatto economico: spostare una scena in un giorno diverso può ottimizzare i costi di troupe e location, ma può anche aggiungere un giorno di riprese. Dillo sempre. Usa i SCENE SUMMARIES nel contesto per valutare il peso reale di ogni scena (productionNotes) prima di organizzare le giornate.
+
+TOOLS DISPONIBILI SUL PIANO DI LAVORAZIONE:
 - move_scene_to_day(scene_number, target_day_number): sposta una scena su un'altra giornata.
 - merge_days(day_a_number, day_b_number): accorpa due giornate (le scene di B vanno in A, B viene rimossa).
 - swap_scenes(scene_a_number, scene_b_number): scambia la posizione di due scene.
@@ -40,5 +44,5 @@ export const buildScheduleSkill = (ctx: SkillBuildContext): Skill => ({
     };
     return executeScheduleTool(block, db, resolvedCtx);
   },
-  requiredData: ["schedule", "screenplay"],
+  requiredData: ["schedule", "screenplay", "scene-summaries"],
 });

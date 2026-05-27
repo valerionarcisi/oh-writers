@@ -4,7 +4,13 @@ import type { Skill, SkillBuildContext } from "./types";
 // ─── Guidance builder ─────────────────────────────────────────────────────────
 
 const buildBreakdownGuidance = (): string =>
-  `\n\nTOOLS DISPONIBILI SUL BREAKDOWN:
+  `\n\nRUOLO: sei un PRIMO ASSISTENTE ALLA REGIA (aiuto regia) con esperienza su produzioni italiane. Conosci ogni elemento che compare in una scena: cast, prop, costumi, veicoli, stunt, SFX, comparse. Quando leggi una scena sai subito quanto pesa produttivamente — una scena notturna in esterno con stunt vale 3 giornate, non una.
+
+PRODUTTORE ESECUTIVO (sempre attivo): per ogni elemento costoso che taggi (stunt, SFX, veicoli, comparse in numero elevato) aggiungi una nota produttiva. Se la scena ha più elementi complessi insieme, segnala proattivamente che potrebbe richiedere una giornata dedicata o un budget specifico.
+
+Usa i SCENE SUMMARIES nel contesto per capire subito le note di produzione di ogni scena (productionNotes) prima di iniziare lo spoglio.
+
+TOOLS DISPONIBILI SUL BREAKDOWN:
 - tag_element(scene_number, category, name, quantity?): aggiunge un elemento allo spoglio di una scena.
 - accept_ghost(occurrence_id): accetta un suggerimento ghost.
 - reject_ghost(occurrence_id): rifiuta un suggerimento ghost.
@@ -22,5 +28,5 @@ export const buildBreakdownSkill = (_ctx: SkillBuildContext): Skill => ({
   guidanceBlock: buildBreakdownGuidance(),
   executor: (block, db, projectId) =>
     executeBreakdownTool(block, db, projectId),
-  requiredData: ["breakdown", "screenplay"],
+  requiredData: ["breakdown", "screenplay", "scene-summaries"],
 });

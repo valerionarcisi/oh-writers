@@ -86,9 +86,9 @@ Legenda della classificazione:
 
 ## P0 — In implementazione
 
-| Spec | Titolo                                          | Note                                                                                                                                                                                                                                                                       |
-| ---- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 39   | Context Stratification: Global / Local / Skills | Implementazione partita 2026-05-27. Agent A completato (commit af8d475): tipi `GlobalContext`, `LocalContext`, `Skill`, `SkillId`, `SkillRegistry` definiti. Agent B (skill modules), C (assembler), D (LocalContext lean) in parallelo. Agent E (wiring + E2E) in attesa. |
+| Spec | Titolo                                            | Note                                                                                                                                                                                        |
+| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 40   | Local Context MD: Scene Summaries + Smart Slicing | Implementato 2026-05-27. Phase 1-5 complete: `computeSummaryWindow`, `loadSceneSummaries`, MD strutturato, token caps, ruoli professionali in tutti i skill guidanceBlock. 1217 test verdi. |
 
 ---
 

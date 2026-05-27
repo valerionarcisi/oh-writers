@@ -53,10 +53,7 @@ import { runUnifiedToolLoop } from "./cesare-tools";
 import { buildSkillRegistry } from "./skills/registry";
 import { buildDocumentEditSkill } from "./skills/document-edit.skill";
 import type { SkillBuildContext } from "./skills/types";
-import {
-  buildGlobalContext,
-  assembleSystemPromptV2,
-} from "./context";
+import { buildGlobalContext, assembleSystemPromptV2 } from "./context";
 import { buildLocalContext } from "./context/local-context.server";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
@@ -2144,7 +2141,7 @@ const handleAskCesareV2 = (
         shootingDayNumber: data.pageContext.shootingDayNumber ?? null,
       };
 
-      return buildLocalContext(db, data.projectId, pageCtx, prelimSkills)
+      return buildLocalContext(db, data.projectId, pageCtx, prelimSkills, page)
         .mapErr(
           (e) =>
             new CesareError(
@@ -2156,7 +2153,10 @@ const handleAskCesareV2 = (
           let finalSkills = prelimSkills;
           let finalRegistry = prelimRegistry;
 
-          if (isDocumentPage(data.pageContext.page) && localCtx.activeDocument) {
+          if (
+            isDocumentPage(data.pageContext.page) &&
+            localCtx.activeDocument
+          ) {
             const docCtx: DocumentContext = {
               documentId: localCtx.activeDocument.id,
               documentType: localCtx.activeDocument.type as DocumentType,
