@@ -1,6 +1,6 @@
 # Oh Writers — Stato delle Spec
 
-Aggiornato: 2026-05-27
+Aggiornato: 2026-05-27 (Spec 38, 39, 40 aggiunte)
 
 Legenda della classificazione:
 
@@ -53,6 +53,11 @@ Legenda della classificazione:
 | 25                         | React Aria adoption                                      | `useButton` in `Button.tsx` (components), `useTabList`/`useTab` in `Tabs`, `useDialog`/`useOverlay` in `Dialog`, `useMenu` in `ContextMenu`/`DropdownMenu`. Spec "active". Primitivi (`packages/ui/src/primitives/`) non ancora migrati a react-aria. |
 | 26                         | Scalability Patterns                                     | Breakdown matrix virtualizzata (26a shipped). Act collapse/expand in outline implementato.                                                                                                                                                            |
 | 29                         | Cesare: Production-Aware Chat Panel                      | `CesareSheet` in `features/predictions/`, `askCesare` server fn wired, integrato in `AppShell`.                                                                                                                                                       |
+| 35                         | Fundraising                                              | Phase 1 done: tabelle DB, server fn, UI base. Spec Phase 2 (Cesare classification) non ancora iniziata.                                                                                                                                               |
+| 37 + 37b + 37c             | Location Discovery (Places API, scene-aware, atmosphere) | Phase 1-3 complete: ricerca geo, discovery contestuale per scena, atmosphere ranking Cesare. Spec marcate done.                                                                                                                                       |
+| 38                         | Scene Summaries + Film Bible (Haiku/Sonnet)              | Completo: `scene_summary` jsonb in DB, generazione Haiku fingerprint-guarded, Film Bible distillato da Sonnet, `SceneSummarySchema` in domain, `buildBible` server fn.                                                                                |
+| 39                         | Context Stratification (GlobalContext + LocalContext)    | Completo: `buildGlobalContext` (Bible cached), `buildLocalContext` (lean dynamic), `SkillRegistry` con 6 skill autonome, `assembleSystemPromptV2`, `handleAskCesareV2` pipeline.                                                                      |
+| 40                         | Local Context MD: Scene Summaries + Smart Slicing        | Completo 2026-05-27. Phase 1-5: `computeSummaryWindow`, `loadSceneSummaries`, MD strutturato con tabelle, token caps per layer, ruoli professionali in tutti i skill guidanceBlock. 1218 test verdi.                                                  |
 | infra/07b                  | Design System Dialog Migration                           | Spec marcata done (2026-04-22). `packages/ui` con Dialog, DropdownMenu, ContextMenu, Tabs, Button react-aria based.                                                                                                                                   |
 | infra/08                   | Infrastructure (Docker + DB)                             | `docker/` con Dockerfile, docker-compose, postgres-init, redis. Drizzle config, migration scripts.                                                                                                                                                    |
 
@@ -86,9 +91,7 @@ Legenda della classificazione:
 
 ## P0 — In implementazione
 
-| Spec | Titolo                                            | Note                                                                                                                                                                                        |
-| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 40   | Local Context MD: Scene Summaries + Smart Slicing | Implementato 2026-05-27. Phase 1-5 complete: `computeSummaryWindow`, `loadSceneSummaries`, MD strutturato, token caps, ruoli professionali in tutti i skill guidanceBlock. 1217 test verdi. |
+Nessuna spec in corso al momento.
 
 ---
 
