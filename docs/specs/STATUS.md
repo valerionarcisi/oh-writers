@@ -84,11 +84,11 @@ Legenda della classificazione:
 
 ---
 
-## P0 — In definizione
+## P0 — In implementazione
 
-| Spec | Titolo                                          | Note                                                                                                                                                                                                        |
-| ---- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 39   | Context Stratification: Global / Local / Skills | Sostituisce il lazy RAG incompleto. Tre layer espliciti: GlobalContext (Film Bible cached), LocalContext (lean, no full load), Skills (tool+guidance per page type). P0 — blocca ogni nuova feature Cesare. |
+| Spec | Titolo                                          | Note                                                                                                                                                                                                                                                                       |
+| ---- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 39   | Context Stratification: Global / Local / Skills | Implementazione partita 2026-05-27. Agent A completato (commit af8d475): tipi `GlobalContext`, `LocalContext`, `Skill`, `SkillId`, `SkillRegistry` definiti. Agent B (skill modules), C (assembler), D (LocalContext lean) in parallelo. Agent E (wiring + E2E) in attesa. |
 
 ---
 

@@ -2043,7 +2043,212 @@ When proposing a location, explain how it matches the film's setting.</code></pr
       </div>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="doc-authority">9. Document Authority — conflitti tra documenti</h2>
+      <h2 id="context-stratification">9. Context Stratification — Global / Local / Skills (Spec 39)</h2>
+
+      <div class="callout warn">
+        <h4>In implementazione</h4>
+        <p>
+          Questa sezione documenta l'architettura target di Spec 39 — partita il
+          2026-05-27. Il codice viene scritto in parallelo da 5 agenti su worktree
+          separati. Agent A ha completato i tipi (commit af8d475); B, C, D sono in
+          corso; E è in attesa.
+        </p>
+      </div>
+
+      <p>
+        Spec 38 ha introdotto il Film Bible come blocco cached in posizione fissa.
+        Ma il sistema di assemblea del contesto è ancora monolitico:
+        <code>assembleContext</code> carica tutto, <code>buildSystemPrompt</code>
+        impila i blocchi in sequenza, e aggiungere una nuova page richiede modifiche
+        in quattro punti. Spec 39 sostituisce quel monolite con tre layer espliciti
+        e ortogonali.
+      </p>
+
+      <h3>I tre layer</h3>
+
+      <pre class="diagram">
+   ┌─────────────────────────────────────────────────────────────┐
+   │  LAYER 1 — GLOBAL CONTEXT                                   │
+   │  Film Bible, project title, genre, format                   │
+   │  Stabilità: cambia solo a fingerprint change                 │
+   │  Cache: sempre cached (ephemeral, posizione 0+1)            │
+   ├─────────────────────────────────────────────────────────────┤
+   │  LAYER 2 — LOCAL CONTEXT                                     │
+   │  Scena corrente, finestra ±2 scene, documento attivo,        │
+   │  requirement attivo, shooting day attivo                     │
+   │  Stabilità: cambia per user action (scroll, click, navigate) │
+   │  Cache: NO — è il blocco dinamico                            │
+   ├─────────────────────────────────────────────────────────────┤
+   │  LAYER 3 — SKILLS                                            │
+   │  Tool definitions + guidance block per page type             │
+   │  Stabilità: cambia solo per page type (locations/breakdown/…)│
+   │  Cache: cached per page type (posizione fissa per skill)     │
+   └─────────────────────────────────────────────────────────────┘</pre>
+
+      <p>
+        Ogni layer ha un'interfaccia chiara, è testabile in isolamento, e può essere
+        aggiornato senza toccare gli altri. Aggiungere una nuova page significa
+        scrivere un file <code>skills/&lt;page&gt;.skill.ts</code> — zero modifiche
+        al loop o all'assembler.
+      </p>
+
+      <h3>Il system prompt risultante a 5 blocchi</h3>
+
+      <pre class="diagram">
+   Block 0: ROLE_TEXT                    cache_control: ephemeral  ← invariante
+   Block 1: [FILM BIBLE] (GlobalContext) cache_control: ephemeral  ← cambia a fp change
+   Block 2: [SKILL: locations]           cache_control: ephemeral  ← cached per page type
+            (tool guidance locations)
+   Block 3: [SKILL: read-scene]          cache_control: ephemeral  ← sempre cached
+            (lazy RAG guidance)
+   Block 4: [LOCAL CONTEXT]              (no cache)                ← cambia ogni call
+            scena corrente, doc attivo, ecc.</pre>
+
+      <p>
+        Regola fondamentale: i blocchi cached sono sempre in posizione fissa.
+        La sequenza è sempre <strong>Global → Skills → Local</strong>. Il blocco
+        Local è sempre l'ultimo e non ha mai <code>cache_control</code>.
+      </p>
+
+      <h3>Risparmio token atteso</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Oggi (Spec 38)</th>
+            <th>Spec 39</th>
+            <th>Delta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chat semplice "cosa pensi?"</td>
+            <td class="num">~3500 token input</td>
+            <td class="num">~1200 token input</td>
+            <td class="delta-good">−66 %</td>
+          </tr>
+          <tr>
+            <td>Agentic locations (3 tool)</td>
+            <td class="num">~4200 token input</td>
+            <td class="num">~1800 + 2×300 read</td>
+            <td class="delta-good">−40 %</td>
+          </tr>
+          <tr>
+            <td>Doc edit (read + write)</td>
+            <td class="num">~3800 token input</td>
+            <td class="num">~1500 + 1×600 read</td>
+            <td class="delta-good">−45 %</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Il Film Bible è già cached — non conta nei token input effettivi dalla
+        seconda call in poi.
+      </p>
+
+      <h3>Skill — il modulo autonomo per page type</h3>
+
+      <p>
+        Ogni skill è un oggetto con quattro campi:
+      </p>
+
+      <pre><code><span class="com">// apps/web/app/features/predictions/skills/types.ts</span>
+<span class="kw">export interface</span> Skill {
+  <span class="kw">readonly</span> id: SkillId;
+  <span class="kw">readonly</span> tools: <span class="kw">readonly</span> AnthropicTool[];
+  <span class="kw">readonly</span> guidanceBlock: <span class="kw">string</span>; <span class="com">// stringa statica — deterministica per la cache</span>
+  <span class="kw">readonly</span> executor: SkillExecutor;
+  <span class="kw">readonly</span> requiredData: <span class="kw">readonly</span> DataRequirement[];
+}
+
+<span class="com">// SkillExecutor: firma DEFINITIVA (D2) — il ToolUseBlock completo</span>
+<span class="com">// è necessario per costruire ToolResult con il corretto tool_use_id.</span>
+<span class="kw">export type</span> SkillExecutor = (
+  block: ToolUseBlock,
+  db: Db,
+  projectId: <span class="kw">string</span>,
+  access: ProjectAccess,
+) =&gt; ResultAsync&lt;ToolResult, CesareError&gt;;
+
+<span class="kw">export type</span> DataRequirement =
+  | <span class="str">"budget"</span>
+  | <span class="str">"schedule"</span>
+  | <span class="str">"locations"</span>
+  | <span class="str">"breakdown"</span>
+  | <span class="str">"screenplay"</span>
+  | <span class="str">"documents"</span>
+  | <span class="str">"shot-plans"</span>;</code></pre>
+
+      <p>
+        <code>buildLocalContext</code> riceve l'unione dei <code>requiredData</code>
+        di tutte le skill selezionate per la call e carica <em>solo</em> quei loader.
+        Budget non viene caricato se nessuna skill lo dichiara.
+      </p>
+
+      <h3>Lazy RAG completato</h3>
+
+      <p>
+        I read-tools di <code>cesare-read-tools.ts</code> esistevano già (§3) ma non
+        erano wired come skill nel loop principale. Con Spec 39 diventano una skill
+        first-class (<code>"read-scene"</code>, <code>"read-document"</code>)
+        iniettata in ogni page come tool always-on. Il LocalContext smette di
+        caricare scene bodies, budget lines e document contents: li carica Cesare
+        su richiesta tramite i read-tools.
+      </p>
+
+      <h3>Stato implementazione</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>Compito</th>
+            <th>Stato</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>A</strong></td>
+            <td>Domain types (<code>GlobalContext</code>, <code>LocalContext</code>, <code>Skill</code>…)</td>
+            <td><span class="pill ok">DONE af8d475</span></td>
+          </tr>
+          <tr>
+            <td><strong>B</strong></td>
+            <td>Skill modules extraction (<code>skills/*.skill.ts</code>)</td>
+            <td><span class="pill warn">IN PROGRESS</span></td>
+          </tr>
+          <tr>
+            <td><strong>C</strong></td>
+            <td><code>assembleSystemPromptV2</code> + <code>buildGlobalContext</code></td>
+            <td><span class="pill warn">IN PROGRESS</span></td>
+          </tr>
+          <tr>
+            <td><strong>D</strong></td>
+            <td><code>buildLocalContext</code> lean</td>
+            <td><span class="pill warn">IN PROGRESS</span></td>
+          </tr>
+          <tr>
+            <td><strong>E</strong></td>
+            <td>SkillRegistry + wiring + E2E (OHW-039a/b/c/d/e)</td>
+            <td><span class="pill">PENDING</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <h4>La regola in una frase</h4>
+        <p>
+          Un layer per stabilità: Global per il contesto stabile del progetto,
+          Skills per le capability della page, Local per lo stato momentaneo
+          dell'utente. I confini non si incrociano — ogni layer è modificabile
+          senza toccare gli altri.
+        </p>
+      </div>
+
+      <!-- ─────────────────────────────────────────────────────── -->
+      <h2 id="doc-authority">10. Document Authority — conflitti tra documenti</h2>
 
       <p>
         La bible distilla da più documenti narrativi: logline, soggetto,
@@ -2192,7 +2397,7 @@ When proposing a location, explain how it matches the film's setting.</code></pr
       </div>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="non-fatto">10. Cosa abbiamo deciso di NON fare</h2>
+      <h2 id="non-fatto">11. Cosa abbiamo deciso di NON fare</h2>
 
       <p>
         Una buona architettura è anche un elenco di no. Questi sono i
@@ -2269,7 +2474,7 @@ When proposing a location, explain how it matches the film's setting.</code></pr
       </table>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="letture">11. Letture consigliate</h2>
+      <h2 id="letture">12. Letture consigliate</h2>
 
       <p>
         Tutti questi sono nomi di concetti / pattern, non URL. Cerca
@@ -2309,7 +2514,7 @@ When proposing a location, explain how it matches the film's setting.</code></pr
       </ul>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="manutenzione">12. Come tenere viva questa pagina</h2>
+      <h2 id="manutenzione">13. Come tenere viva questa pagina</h2>
 
       <p>
         Questa è una <strong>zona di learning persistente</strong>, non un
@@ -2346,9 +2551,9 @@ When proposing a location, explain how it matches the film's setting.</code></pr
           aggiorna anche §4.
         </li>
         <li>
-          <strong>Decidiamo di fare qualcosa che era nel "NO" di §10</strong>
+          <strong>Decidiamo di fare qualcosa che era nel "NO" di §11</strong>
           (es. accendiamo lo streaming, o adottiamo MCP) → sposta la riga
-          dalla §10 alla §11 e spiega il <em>perché del cambio</em>: la
+          dalla §11 alla §12 e spiega il <em>perché del cambio</em>: la
           decisione di non fare è documentata, la decisione di tornarci
           sopra anche.
         </li>
@@ -2372,7 +2577,7 @@ When proposing a location, explain how it matches the film's setting.</code></pr
           pagina") — 30 secondi, capisci l'architettura per la pitch deck.
         </li>
         <li>
-          <strong>Lettura sequenziale</strong> §1 → §11 — 40 minuti, esci
+          <strong>Lettura sequenziale</strong> §1 → §12 — 40 minuti, esci
           con un mental model completo dei pattern.
         </li>
         <li>
@@ -2390,7 +2595,8 @@ When proposing a location, explain how it matches the film's setting.</code></pr
         Per un <em>designer / product</em>: §6 (propose/accept) è la
         sezione UX. Per un <em>CFO</em>: §4 + §5 (caching e router) sono
         sui costi. Per chi vuole capire il "bug di Roma" e come è stato
-        risolto: §8 (context engineering) + §9 (document authority).
+        risolto: §8 (context engineering) + §10 (document authority).
+        Per l'architettura in costruzione: §9 (context stratification).
       </p>
 
       <hr class="sep" />
@@ -2436,10 +2642,11 @@ When proposing a location, explain how it matches the film's setting.</code></pr
           <li><a href="#propose"><span class="num">6.</span>Propose / Accept</a></li>
           <li><a href="#errors"><span class="num">7.</span>Errori come valori</a></li>
           <li><a href="#context-engineering"><span class="num">8.</span>Context Engineering — Film Bible</a></li>
-          <li><a href="#doc-authority"><span class="num">9.</span>Document Authority</a></li>
-          <li><a href="#non-fatto"><span class="num">10.</span>Cosa NON facciamo</a></li>
-          <li><a href="#letture"><span class="num">11.</span>Letture consigliate</a></li>
-          <li><a href="#manutenzione"><span class="num">12.</span>Tenere viva la pagina</a></li>
+          <li><a href="#context-stratification"><span class="num">9.</span>Context Stratification (Spec 39)</a></li>
+          <li><a href="#doc-authority"><span class="num">10.</span>Document Authority</a></li>
+          <li><a href="#non-fatto"><span class="num">11.</span>Cosa NON facciamo</a></li>
+          <li><a href="#letture"><span class="num">12.</span>Letture consigliate</a></li>
+          <li><a href="#manutenzione"><span class="num">13.</span>Tenere viva la pagina</a></li>
         </ol>
       </aside>
     </div>
