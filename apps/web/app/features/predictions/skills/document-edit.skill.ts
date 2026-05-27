@@ -1,13 +1,10 @@
-import {
-  CESARE_DOCUMENT_TOOLS,
-  executeDocumentTool,
-} from "../cesare-tools";
+import { CESARE_DOCUMENT_TOOLS, executeDocumentTool } from "../cesare-tools";
 import {
   CESARE_DOCUMENT_GEN_TOOLS,
   executeDocumentGenTool,
   isDocumentGenToolName,
 } from "../cesare-document-tools";
-import { CESARE_READ_TOOLS, tryExecuteReadTool } from "../cesare-read-tools";
+import { tryExecuteReadTool } from "../cesare-read-tools";
 import type { DocumentContext } from "../cesare-tools";
 import type { Skill, SkillBuildContext } from "./types";
 
@@ -65,10 +62,10 @@ export const buildDocumentEditSkill = (
   userIdFallback: string | null = null,
 ): Skill => ({
   id: "document-edit",
+  // Read tools are provided by the companion read-document skill in PAGE_SKILL_MAP.
   tools: [
     ...CESARE_DOCUMENT_TOOLS,
     ...CESARE_DOCUMENT_GEN_TOOLS,
-    ...CESARE_READ_TOOLS,
   ] as Skill["tools"],
   guidanceBlock: buildDocumentEditGuidance(docCtx.documentType),
   executor: (block, db, projectId) => {

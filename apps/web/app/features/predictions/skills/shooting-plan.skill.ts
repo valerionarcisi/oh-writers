@@ -3,7 +3,7 @@ import {
   executeShootingPlanTool,
   type ShootingPlanToolContext,
 } from "../cesare-shooting-plan-tools";
-import { CESARE_READ_TOOLS, tryExecuteReadTool } from "../cesare-read-tools";
+import { tryExecuteReadTool } from "../cesare-read-tools";
 import type { Skill, SkillBuildContext } from "./types";
 
 // ─── Guidance builder ─────────────────────────────────────────────────────────
@@ -44,10 +44,8 @@ REGOLE FERREE:
 
 export const buildShootingPlanSkill = (ctx: SkillBuildContext): Skill => ({
   id: "shooting-plan",
-  tools: [
-    ...CESARE_SHOOTING_PLAN_TOOLS,
-    ...CESARE_READ_TOOLS,
-  ] as Skill["tools"],
+  // Read tools are provided by the companion read-scene skill in PAGE_SKILL_MAP.
+  tools: [...CESARE_SHOOTING_PLAN_TOOLS] as Skill["tools"],
   guidanceBlock: buildShootingPlanGuidance(ctx.activeSceneId),
   executor: (block, db, projectId) => {
     const readResult = tryExecuteReadTool(block, db, projectId);

@@ -3,7 +3,7 @@ import {
   executeScheduleTool,
   type ScheduleToolContext,
 } from "../cesare-schedule-tools";
-import { CESARE_READ_TOOLS, tryExecuteReadTool } from "../cesare-read-tools";
+import { tryExecuteReadTool } from "../cesare-read-tools";
 import type { Skill, SkillBuildContext } from "./types";
 
 // ─── Guidance builder ─────────────────────────────────────────────────────────
@@ -27,7 +27,8 @@ Quando l'utente chiede di riorganizzare lo schedule, USA i tools — non limitar
 
 export const buildScheduleSkill = (ctx: SkillBuildContext): Skill => ({
   id: "schedule",
-  tools: [...CESARE_SCHEDULE_TOOLS, ...CESARE_READ_TOOLS] as Skill["tools"],
+  // Read tools are provided by the companion read-scene skill in PAGE_SKILL_MAP.
+  tools: [...CESARE_SCHEDULE_TOOLS] as Skill["tools"],
   guidanceBlock: buildScheduleGuidance(ctx.activeDayNumber),
   executor: (block, db, projectId) => {
     const readResult = tryExecuteReadTool(block, db, projectId);

@@ -2,7 +2,7 @@ import {
   CESARE_SCREENPLAY_TOOLS,
   executeScreenplayTool,
 } from "../cesare-screenplay-tools";
-import { CESARE_READ_TOOLS, tryExecuteReadTool } from "../cesare-read-tools";
+import { tryExecuteReadTool } from "../cesare-read-tools";
 import type { Skill, SkillBuildContext } from "./types";
 
 // ─── Guidance builder ─────────────────────────────────────────────────────────
@@ -35,7 +35,8 @@ Quando l'utente chiede una modifica ambigua, fai PRIMA una domanda di chiariment
 
 export const buildScreenplayEditSkill = (_ctx: SkillBuildContext): Skill => ({
   id: "screenplay-edit",
-  tools: [...CESARE_SCREENPLAY_TOOLS, ...CESARE_READ_TOOLS] as Skill["tools"],
+  // Read tools are provided by the companion read-scene skill in PAGE_SKILL_MAP.
+  tools: [...CESARE_SCREENPLAY_TOOLS] as Skill["tools"],
   guidanceBlock: buildScreenplayEditGuidance(),
   executor: (block, db, projectId) => {
     const readResult = tryExecuteReadTool(block, db, projectId);

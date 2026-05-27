@@ -1,5 +1,4 @@
 import { CESARE_BUDGET_TOOLS, executeBudgetTool } from "../cesare-tools";
-import { CESARE_READ_TOOLS } from "../cesare-read-tools";
 import type { Skill, SkillBuildContext } from "./types";
 
 // ─── Guidance builder ─────────────────────────────────────────────────────────
@@ -30,9 +29,9 @@ Linee guida:
 
 export const buildBudgetSkill = (_ctx: SkillBuildContext): Skill => ({
   id: "budget",
-  tools: [...CESARE_BUDGET_TOOLS, ...CESARE_READ_TOOLS] as Skill["tools"],
+  // Read tools are provided by the companion read-scene skill in PAGE_SKILL_MAP.
+  tools: [...CESARE_BUDGET_TOOLS] as Skill["tools"],
   guidanceBlock: buildBudgetGuidance(),
-  executor: (block, db, projectId) =>
-    executeBudgetTool(block, db, projectId),
+  executor: (block, db, projectId) => executeBudgetTool(block, db, projectId),
   requiredData: ["budget", "breakdown"],
 });

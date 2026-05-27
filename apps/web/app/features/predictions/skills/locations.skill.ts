@@ -1,17 +1,15 @@
 import type { FilmBible } from "@oh-writers/domain";
 import { formatBibleForLocations } from "@oh-writers/domain";
-import {
-  CESARE_LOCATION_TOOLS,
-  executeTool,
-} from "../cesare-tools";
-import { CESARE_READ_TOOLS, tryExecuteReadTool } from "../cesare-read-tools";
+import { CESARE_LOCATION_TOOLS, executeTool } from "../cesare-tools";
+import { tryExecuteReadTool } from "../cesare-read-tools";
 import type { Skill, SkillBuildContext } from "./types";
 
 // ─── Guidance builder ─────────────────────────────────────────────────────────
 // Returns a deterministic string for the same bible input — cache-stable.
 
 const buildLocationsGuidance = (bible: FilmBible | null): string => {
-  const settingPrior = bible !== null ? `\n\n${formatBibleForLocations(bible)}` : "";
+  const settingPrior =
+    bible !== null ? `\n\n${formatBibleForLocations(bible)}` : "";
   return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare o aggiungere candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.${settingPrior}
 
 STOP. Prima di scrivere QUALSIASI testo di risposta, devi prima chiamare i tools. Il testo arriva DOPO le chiamate tool, non al posto loro.
@@ -52,7 +50,10 @@ REGOLE FERREE:
 
 export const buildLocationsSkill = (ctx: SkillBuildContext): Skill => ({
   id: "locations",
-  tools: [...CESARE_LOCATION_TOOLS, ...CESARE_READ_TOOLS] as Skill["tools"],
+  // Read tools (read_scene, read_document, etc.) are provided by the companion
+  // read-scene and read-document skills in PAGE_SKILL_MAP. Including them here
+  // would create duplicate tool names in the Anthropic API call.
+  tools: [...CESARE_LOCATION_TOOLS] as Skill["tools"],
   guidanceBlock: buildLocationsGuidance(ctx.bible),
   executor: (block, db, projectId) => {
     const readResult = tryExecuteReadTool(block, db, projectId);
