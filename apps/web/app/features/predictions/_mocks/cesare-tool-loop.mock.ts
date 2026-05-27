@@ -528,7 +528,8 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
   // call read_scene to fetch the body — confirming the read-scene skill is
   // selected by the V2 registry for the locations page.
   {
-    match: /dimmi cosa succede nella scena 1|cosa succede nella scena 1|racconta la scena 1/i,
+    match:
+      /dimmi cosa succede nella scena 1|cosa succede nella scena 1|racconta la scena 1/i,
     turns: [
       {
         tool_uses: [
@@ -541,6 +542,35 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       },
       {
         text: "Nella scena 1 si vede John che entra nel ristorante. È una scena di apertura con forte tensione emotiva.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Screenplay — rewrite_scene (OHW-041).
+  // "Riscrivi la scena 1." → inline typewriter rewrite of scene 1.
+  // The new_content is a self-contained Fountain scene starting with INT.
+  // The executor embeds the content in a <!--ohw:rewrite-scene-b64:...--> marker
+  // that the CesareSheet detects and fans out as a DOM event to the editor.
+  {
+    match:
+      /riscrivi la scena|riscrivi scena|opzione b|dammi una versione alternativa della scena/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "rewrite_scene",
+            input: {
+              scene_number: 1,
+              new_content:
+                "INT. MAGAZZINO - NOTTE\n\nRICK entra lentamente, il respiro trattenuto.\n\nUna figura emerge dall'ombra.\n\nRICK\nNon mi aspettavo di trovarti qui.\n\nSilenzio. La tensione si taglia con un coltello.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho riscritto la scena 1 con un tono più teso. Guarda il risultato nell'editor: accetta o rifiuta con i pulsanti ✓/✗.",
         stop_reason: "end_turn",
       },
     ],

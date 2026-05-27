@@ -95,6 +95,36 @@ export const CESARE_SCREENPLAY_TOOLS = [
       required: ["kind", "from", "to"],
     },
   },
+  {
+    name: "rewrite_scene",
+    description:
+      "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
+      "L'utente vede il testo arrivare carattere per carattere come overlay verde " +
+      "sulla scena originale. Al termine può accettare (la modifica entra nel doc) " +
+      "o rifiutare (il testo originale rimane). " +
+      "Usa quando l'utente chiede 'riscrivi questa scena', 'opzione B', " +
+      "'rendi più intensa la scena N', 'dammi una versione alternativa di sc.N'. " +
+      "NON usare per modifiche puntuali (< 3 righe) — usa propose_screenplay_edit. " +
+      "NON usare per l'intera sceneggiatura — usa propose_screenplay_revision.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_number: {
+          type: "integer",
+          minimum: 1,
+          description: "Numero della scena da riscrivere (1-based)",
+        },
+        new_content: {
+          type: "string",
+          description:
+            "Il testo Fountain completo della scena riscritta. " +
+            "Deve iniziare con uno slugline (INT./EXT. ...) e " +
+            "includere tutto il corpo della scena.",
+        },
+      },
+      required: ["scene_number", "new_content"],
+    },
+  },
 ] as const;
 
 // ─── Proposed-edit payload ────────────────────────────────────────────────────
@@ -617,6 +647,44 @@ const executeProposeScreenplayRevision = (
     });
   });
 
+// ─── rewrite_scene executor ───────────────────────────────────────────────────
+
+interface RewriteSceneInput {
+  scene_number: number;
+  new_content: string;
+}
+
+const REWRITE_CONTENT_LIMIT = 8000;
+
+const executeRewriteScene = (
+  input: RewriteSceneInput,
+): ResultAsync<
+  { scene_number: number; accepted: false; marker: string },
+  CesareError
+> => {
+  if (typeof input.scene_number !== "number" || input.scene_number < 1) {
+    return errAsync(
+      new CesareError("rewrite_scene: scene_number must be a positive integer"),
+    );
+  }
+  if (!input.new_content || input.new_content.trim().length === 0) {
+    return errAsync(new CesareError("rewrite_scene: new_content is empty"));
+  }
+  const content = input.new_content.slice(0, REWRITE_CONTENT_LIMIT);
+  // The marker is embedded in the tool result text. The client side-channel
+  // (`parseRewriteSceneMarker`) extracts it and dispatches the pending-edit
+  // plugin with the scene number and new content.
+  const payload = Buffer.from(
+    JSON.stringify({ scene_number: input.scene_number, new_content: content }),
+    "utf8",
+  ).toString("base64");
+  // Base64 encoding prevents Fountain syntax (e.g. `--> CUT TO:`) inside
+  // new_content from containing `-->`, which would terminate the HTML comment
+  // marker early and break `parseRewriteSceneMarker`.
+  const marker = `<!--ohw:rewrite-scene-b64:${payload}-->`;
+  return okAsync({ scene_number: input.scene_number, accepted: false, marker });
+};
+
 // ─── Public router ────────────────────────────────────────────────────────────
 
 interface ToolUseBlock {
@@ -663,6 +731,11 @@ export const executeScreenplayTool = (
       db,
       projectId,
     ).map((r) => toResult(block.id, r));
+  }
+  if (block.name === "rewrite_scene") {
+    return executeRewriteScene(block.input as RewriteSceneInput).map((r) =>
+      toResult(block.id, r),
+    );
   }
   return okAsync(
     toResult(block.id, { error: `Unknown screenplay tool: ${block.name}` }),

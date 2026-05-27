@@ -1596,6 +1596,28 @@ const runGenericToolLoop = (
                 // ignore malformed payloads — the marker is best-effort
               }
             }
+            // Side-channel: rewrite_scene embeds its marker inside the tool
+            // result JSON (field `marker`). Extract it here and push it to
+            // the text accumulator so the CesareSheet can parse it and fire
+            // the `ohw:cesare:rewrite-scene` DOM event to the editor.
+            if (block.name === "rewrite_scene") {
+              try {
+                const payload = JSON.parse(result.value.content) as unknown;
+                if (
+                  payload &&
+                  typeof payload === "object" &&
+                  "marker" in (payload as Record<string, unknown>) &&
+                  typeof (payload as Record<string, unknown>)["marker"] ===
+                    "string"
+                ) {
+                  textAccumulator.push(
+                    (payload as Record<string, unknown>)["marker"] as string,
+                  );
+                }
+              } catch {
+                // ignore malformed payloads — the marker is best-effort
+              }
+            }
           }
         }
 

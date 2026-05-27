@@ -1,0 +1,91 @@
+.toolbar {
+  position: absolute;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1, 4px);
+  padding: var(--ds-space-1, 4px);
+  background: var(--ds-surface, #fff);
+  border: 1px solid
+    color-mix(in srgb, var(--ds-agent, #3a8a5a) 40%, transparent);
+  border-radius: var(--ds-radius-md, 8px);
+  box-shadow: var(--ds-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.12));
+  animation: toolbar-appear 120ms var(--ds-ease, ease) both;
+}
+
+@keyframes toolbar-appear {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar {
+    animation: none;
+  }
+}
+
+.acceptBtn,
+.rejectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1, 4px);
+  padding: 4px var(--ds-space-2, 8px);
+  border-radius: var(--ds-radius-sm, 4px);
+  border: 1px solid transparent;
+  font-family: var(--ds-font-sans, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.acceptBtn {
+  background: color-mix(in srgb, var(--ds-agent, #3a8a5a) 12%, transparent);
+  color: color-mix(in srgb, var(--ds-agent, #3a8a5a) 90%, var(--ds-text, #111));
+
+  &:hover {
+    background: color-mix(in srgb, var(--ds-agent, #3a8a5a) 20%, transparent);
+    border-color: color-mix(in srgb, var(--ds-agent, #3a8a5a) 40%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent, #3a8a5a);
+    outline-offset: 2px;
+  }
+}
+
+.rejectBtn {
+  background: transparent;
+  color: var(--ds-text-2, #666);
+
+  &:hover {
+    background: color-mix(in srgb, var(--ds-danger, #b3261e) 8%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--ds-danger, #b3261e) 30%,
+      transparent
+    );
+    color: var(--ds-danger, #b3261e);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-danger, #b3261e);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acceptBtn,
+  .rejectBtn {
+    transition: none;
+  }
+}

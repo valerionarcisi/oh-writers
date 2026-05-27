@@ -33,6 +33,18 @@ import {
   type ProposedEdit as PmProposedEdit,
 } from "../lib/plugins/proposed-edit-decoration";
 import {
+  buildCesarePendingEditPlugin,
+  cesarePendingEditKey,
+  startPendingEdit,
+  appendStreamChunk,
+  finishStreaming,
+  dispatchAcceptPendingEdit,
+  dispatchRejectPendingEdit,
+  findSceneRange,
+  hasPendingEdit,
+} from "../lib/plugins/cesare-pending-edit";
+import { HoverToolbar } from "./HoverToolbar";
+import {
   useScreenplayProposals,
   useRemoveScreenplayProposal,
   usePromoteDraftToActive,
@@ -248,12 +260,36 @@ export const ScreenplayEditor = forwardRef<
     onReject: (id: string) => removeProposal.mutate(id),
   };
 
+  // ─── Cesare inline pending-edit state ────────────────────────────────
+  const [pendingStatus, setPendingStatus] = useState<
+    false | "streaming" | "done"
+  >(false);
+  const pendingEditCallbacksRef = useRef<{
+    onAccept: () => void;
+    onReject: () => void;
+  }>({
+    onAccept: () => setPendingStatus(false),
+    onReject: () => setPendingStatus(false),
+  });
+  pendingEditCallbacksRef.current = {
+    onAccept: () => setPendingStatus(false),
+    onReject: () => setPendingStatus(false),
+  };
+
+  const typewriterIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+
   const pluginsExtraRef = useRef<Plugin[] | null>(null);
   if (pluginsExtraRef.current === null) {
     pluginsExtraRef.current = [
       buildProposedEditPlugin({
         onAccept: (id) => proposalCallbacksRef.current.onAccept(id),
         onReject: (id) => proposalCallbacksRef.current.onReject(id),
+      }),
+      buildCesarePendingEditPlugin({
+        onAccept: () => pendingEditCallbacksRef.current.onAccept(),
+        onReject: () => pendingEditCallbacksRef.current.onReject(),
       }),
     ];
   }
@@ -729,6 +765,102 @@ export const ScreenplayEditor = forwardRef<
       window.removeEventListener("screenplay:toggleFocusMode", handleToggle);
   }, []);
 
+  // Listen for Cesare's rewrite_scene event. When the event fires, the sheet
+  // is already closed. We find the target scene in the PM doc, start the
+  // pending-edit plugin, and run a typewriter animation over the new content.
+  useEffect(() => {
+    const TYPEWRITER_CHAR_DELAY_MS = 8;
+
+    const handleRewriteScene = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ scene_number: number; new_content: string }>
+      ).detail;
+      if (
+        !detail ||
+        typeof detail.scene_number !== "number" ||
+        !detail.new_content
+      )
+        return;
+
+      // Guard against concurrent events: stop any in-flight typewriter before
+      // starting a new one to prevent two intervals pumping characters at once.
+      if (typewriterIntervalRef.current !== null) {
+        clearInterval(typewriterIntervalRef.current);
+        typewriterIntervalRef.current = null;
+      }
+
+      const view = viewRef.current;
+      if (!view) return;
+
+      // Find the scene range in the current doc.
+      const range = findSceneRange(view.state.doc, detail.scene_number);
+      if (!range) return;
+
+      // Start the pending edit.
+      view.dispatch(
+        view.state.tr.setMeta(
+          cesarePendingEditKey,
+          startPendingEdit(detail.scene_number, range.from, range.to),
+        ),
+      );
+      setPendingStatus("streaming");
+
+      // Scroll the scene into view.
+      const sceneEl = document.querySelector<HTMLElement>(
+        `[data-scene-number="${detail.scene_number}"]`,
+      );
+      sceneEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Typewriter animation: feed one character at a time.
+      const text = detail.new_content;
+      let charIndex = 0;
+      let stopped = false;
+
+      typewriterIntervalRef.current = setInterval(() => {
+        if (stopped) return;
+        const currentView = viewRef.current;
+        if (!currentView || !hasPendingEdit(currentView)) {
+          clearInterval(typewriterIntervalRef.current!);
+          typewriterIntervalRef.current = null;
+          setPendingStatus(false);
+          return;
+        }
+        if (charIndex < text.length) {
+          currentView.dispatch(
+            currentView.state.tr.setMeta(
+              cesarePendingEditKey,
+              appendStreamChunk(text[charIndex]!),
+            ),
+          );
+          charIndex += 1;
+        } else {
+          clearInterval(typewriterIntervalRef.current!);
+          typewriterIntervalRef.current = null;
+          currentView.dispatch(
+            currentView.state.tr.setMeta(
+              cesarePendingEditKey,
+              finishStreaming(),
+            ),
+          );
+          setPendingStatus("done");
+        }
+      }, TYPEWRITER_CHAR_DELAY_MS);
+
+      return () => {
+        stopped = true;
+        clearInterval(typewriterIntervalRef.current!);
+        typewriterIntervalRef.current = null;
+      };
+    };
+
+    window.addEventListener("ohw:cesare:rewrite-scene", handleRewriteScene);
+    return () =>
+      window.removeEventListener(
+        "ohw:cesare:rewrite-scene",
+        handleRewriteScene,
+      );
+  }, []);
+
   const toggleVersionsDrawer = useCallback(() => {
     if (isVersionsPanelOpen) {
       closeDrawer();
@@ -917,6 +1049,21 @@ export const ScreenplayEditor = forwardRef<
           onCancel={() => setPendingTitlePage(null)}
         />
       ) : null}
+      <HoverToolbar
+        status={pendingStatus}
+        onAccept={() => {
+          const view = viewRef.current;
+          if (!view) return;
+          dispatchAcceptPendingEdit(view);
+          setPendingStatus(false);
+        }}
+        onReject={() => {
+          const view = viewRef.current;
+          if (!view) return;
+          dispatchRejectPendingEdit(view);
+          setPendingStatus(false);
+        }}
+      />
       {!isFocusMode && (
         <FloatingDock
           primaryAction={{
@@ -954,6 +1101,7 @@ export const ScreenplayEditor = forwardRef<
           }
           cesareNoteCount={0}
           cesareIsOn={isCesareOn}
+          cesareIsThinking={pendingStatus === "streaming"}
           onCesareClick={openCesare}
           toast={toast}
         />

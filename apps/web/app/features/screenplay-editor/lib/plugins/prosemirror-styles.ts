@@ -406,6 +406,60 @@ export const injectProseMirrorStyles = (): void => {
         background: color-mix(in srgb, var(--ds-accent, #b07a3a) 22%, transparent);
       }
     }
+
+    /* ─── Cesare inline pending edit ──────────────────────────
+     * The node decoration dims the original scene. The widget overlay
+     * renders the streamed text as a green typewriter block above it.
+     * Both are cleared on accept/reject. */
+    .cesare-pending-edit-block {
+      position: relative;
+      background-color: color-mix(in srgb, var(--ds-agent, #3a8a5a) 8%, transparent);
+      border-inline-start: 3px solid color-mix(in srgb, var(--ds-agent, #3a8a5a) 50%, transparent);
+      opacity: 0.35;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .cesare-pending-edit {
+      display: block;
+      margin-block-end: 4px;
+      padding: 12px 16px;
+      background-color: color-mix(in srgb, var(--ds-agent, #3a8a5a) 10%, var(--ds-surface, #fff));
+      border: 1.5px solid color-mix(in srgb, var(--ds-agent, #3a8a5a) 55%, transparent);
+      border-radius: 4px;
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-agent, #3a8a5a) 12%, transparent);
+      pointer-events: auto;
+    }
+
+    .cesare-pending-edit-text {
+      margin: 0;
+      font-family: "Courier Prime", "Courier New", Courier, monospace;
+      font-size: 12pt;
+      line-height: 1.6;
+      color: color-mix(in srgb, var(--ds-agent, #3a8a5a) 80%, var(--ds-text, #111));
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .cesare-pending-edit[data-pending-status="streaming"] .cesare-pending-edit-text::after {
+      content: "▋";
+      display: inline-block;
+      animation: cesare-cursor-blink 0.7s step-end infinite;
+      color: var(--ds-agent, #3a8a5a);
+      margin-inline-start: 1px;
+    }
+
+    @keyframes cesare-cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cesare-pending-edit[data-pending-status="streaming"] .cesare-pending-edit-text::after {
+        animation: none;
+        opacity: 1;
+      }
+    }
   `;
 
   document.head.appendChild(style);

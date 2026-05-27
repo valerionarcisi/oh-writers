@@ -424,6 +424,39 @@ export function parseBlockingProposalMarker(content: string): unknown | null {
   }
 }
 
+/**
+ * Parses the rewrite_scene side-channel marker embedded in the assistant reply.
+ * Returns `{ scene_number, new_content }` when present, null otherwise.
+ */
+export function parseRewriteSceneMarker(
+  content: string,
+): { scene_number: number; new_content: string } | null {
+  const m = content.match(/<!--ohw:rewrite-scene-b64:([A-Za-z0-9+/=]+)-->/);
+  if (!m || !m[1]) return null;
+  try {
+    const decoded = atob(m[1]);
+    const parsed = JSON.parse(decoded) as unknown;
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      typeof (parsed as Record<string, unknown>)["scene_number"] === "number" &&
+      typeof (parsed as Record<string, unknown>)["new_content"] === "string"
+    ) {
+      return {
+        scene_number: (parsed as Record<string, unknown>)[
+          "scene_number"
+        ] as number,
+        new_content: (parsed as Record<string, unknown>)[
+          "new_content"
+        ] as string,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 interface TableState {
   header: string[];
   rows: string[][];
@@ -803,6 +836,19 @@ export function CesareSheet({
               window.dispatchEvent(
                 new CustomEvent("ohw:cesare:blocking-proposal", {
                   detail: proposal,
+                }),
+              );
+            }
+            // Side-channel: if Cesare called rewrite_scene, close the sheet
+            // immediately and dispatch the event so the editor can start the
+            // typewriter animation. The sheet closes BEFORE the state update so
+            // the user sees the editor take over instantly.
+            const rewrite = parseRewriteSceneMarker(content);
+            if (rewrite && typeof window !== "undefined") {
+              onClose();
+              window.dispatchEvent(
+                new CustomEvent("ohw:cesare:rewrite-scene", {
+                  detail: rewrite,
                 }),
               );
             }
