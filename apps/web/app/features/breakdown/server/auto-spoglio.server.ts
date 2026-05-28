@@ -24,6 +24,7 @@ import {
   breakdownOccurrences,
   breakdownSceneState,
   scenes,
+  screenplays,
   projects,
 } from "@oh-writers/db/schema";
 import {
@@ -423,6 +424,12 @@ export const runAutoSpoglioForVersion = createServerFn({ method: "POST" })
         totalElementsAdded += persisted.value.added;
         totalOccurrencesAdded += persisted.value.occurrencesAdded;
       }
+
+      // Clear breakdown stale flag — the breakdown is now in sync.
+      await db
+        .update(screenplays)
+        .set({ breakdownStale: false })
+        .where(eq(screenplays.projectId, projectId));
 
       return toShape(
         ok({

@@ -21,6 +21,7 @@ import {
   breakdownOccurrences,
   breakdownVersionState,
   scenes,
+  screenplays,
   screenplayVersions,
   BREAKDOWN_CATEGORIES,
   type BreakdownCategoryDb,
@@ -341,6 +342,13 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
           updatedAt: new Date(),
         })
         .where(eq(breakdownVersionState.versionId, data.screenplayVersionId));
+
+      // Clear breakdown stale flag — the breakdown is now in sync with the
+      // active screenplay version.
+      await db
+        .update(screenplays)
+        .set({ breakdownStale: false })
+        .where(eq(screenplays.projectId, projectId));
 
       return toShape(
         ok({

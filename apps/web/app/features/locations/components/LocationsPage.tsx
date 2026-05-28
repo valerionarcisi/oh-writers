@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   useSuspenseQuery,
+  useQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import {
   removeLocationCandidate,
   syncRequirementsFromBreakdown,
 } from "../server/locations.server";
+import { syncStateQueryOptions } from "~/features/screenplay-editor/server/screenplay.server";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import { discoverPlacesInArea } from "../server/discovery.server";
 import { rankPlacesForScene } from "../server/rank.server";
@@ -42,6 +44,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   const qc = useQueryClient();
   const openCesare = useCesareOpen();
   const { data } = useSuspenseQuery(locationsQueryOptions(projectId));
+  const { data: syncState } = useQuery(syncStateQueryOptions(projectId));
   const requirements: LocationRequirement[] = data?.isOk ? data.value : [];
 
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -491,10 +494,16 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
         ]}
         secondaryActions={[
           {
-            label: syncMutation.isPending ? "Sincronizzazione…" : "Sincronizza",
+            label: syncMutation.isPending
+              ? "Sincronizzazione…"
+              : syncState?.locationsStale
+                ? "⚠ Sincronizza"
+                : "Sincronizza",
             hotkey: "⌘⇧S",
             onClick: () => syncMutation.mutate(),
-            ariaLabel: "Sincronizza da breakdown",
+            ariaLabel: syncState?.locationsStale
+              ? "Location non sincronizzate con la versione attiva"
+              : "Sincronizza da breakdown",
           },
           {
             label: exportMutation.isPending ? "Esportazione…" : "Esporta",

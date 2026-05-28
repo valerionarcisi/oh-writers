@@ -35,6 +35,10 @@ export const screenplays = pgTable("screenplays", {
   pmDoc: jsonb("pm_doc").$type<Record<string, any> | null>(),
   content: text("content").notNull().default(""),
   currentVersionId: uuid("current_version_id"),
+  breakdownStale: boolean("breakdown_stale").notNull().default(false),
+  locationsStale: boolean("locations_stale").notNull().default(false),
+  budgetStale: boolean("budget_stale").notNull().default(false),
+  scheduleStale: boolean("schedule_stale").notNull().default(false),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),

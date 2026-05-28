@@ -37,6 +37,7 @@ import {
   useAddBreakdownElement,
   useRemoveBreakdownOccurrence,
 } from "../hooks/useBreakdown";
+import { syncStateQueryOptions } from "~/features/screenplay-editor/server/screenplay.server";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import { ProjectBreakdownView } from "./ProjectBreakdownView";
@@ -170,6 +171,7 @@ export function BreakdownPage({ projectId }: Props) {
 function BreakdownPageContent({ projectId }: Props) {
   const { data: ctx } = useSuspenseQuery(breakdownContextOptions(projectId));
   const versionId = ctx.screenplayVersionId;
+  const { data: syncState } = useQuery(syncStateQueryOptions(projectId));
   const canEdit = ctx.canEdit;
   const scenes = ctx.scenes;
   const { open: openVersionsDrawer } = useVersionsDrawer();
@@ -867,6 +869,17 @@ function BreakdownPageContent({ projectId }: Props) {
           </div>
         </Viewbar>
       </div>
+
+      {syncState?.breakdownStale && !autoSpoglio.isPending && (
+        <div
+          className={styles.statusBanner}
+          role="alert"
+          data-testid="breakdown-stale-banner"
+        >
+          La versione attiva della sceneggiatura è cambiata — rigenera il
+          breakdown per allinearlo.
+        </div>
+      )}
 
       {autoSpoglio.isPending && (
         <div

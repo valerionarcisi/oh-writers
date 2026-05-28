@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray, isNotNull, not } from "drizzle-orm";
 import { ResultAsync, ok, err, okAsync } from "neverthrow";
 import {
   locationRequirements,
@@ -9,6 +9,7 @@ import {
   locationPhotos,
   breakdownElements,
   breakdownOccurrences,
+  screenplays,
 } from "@oh-writers/db/schema";
 import {
   LocationRequirementSchema,
@@ -89,6 +90,18 @@ const findCandidateRow = (
   ).andThen((row) =>
     row ? ok(row) : err(new LocationCandidateNotFoundError(candidateId)),
   );
+
+const clearLocationsStale = (
+  db: Db,
+  projectId: string,
+): ResultAsync<void, DbError> =>
+  ResultAsync.fromPromise(
+    db
+      .update(screenplays)
+      .set({ locationsStale: false })
+      .where(eq(screenplays.projectId, projectId)),
+    (e) => new DbError("clearLocationsStale", e),
+  ).map(() => undefined);
 
 const loadRequirementsForProject = (
   db: Db,
@@ -418,98 +431,138 @@ export const syncRequirementsFromBreakdown = createServerFn({ method: "POST" })
             return loadRequirementsForProject(db, access.project.id);
           }
 
-          return ResultAsync.fromPromise(
-            db
-              .select({ name: locationRequirements.name })
-              .from(locationRequirements)
-              .where(eq(locationRequirements.projectId, access.project.id)),
-            (e) => new DbError("syncRequirements/loadExisting", e),
-          ).andThen((existing) => {
-            const existingNames = new Set(
-              existing.map((r) => r.name.toLowerCase()),
-            );
-            const newElements = elements.filter(
-              (el) => !existingNames.has(el.name.toLowerCase()),
-            );
+          const currentElementIds = elements.map((el) => el.id);
 
-            if (newElements.length === 0) {
-              return loadRequirementsForProject(db, access.project.id);
-            }
-
-            return ResultAsync.fromPromise(
-              db
-                .insert(locationRequirements)
-                .values(
-                  newElements.map((el) => ({
-                    projectId: access.project.id,
-                    breakdownElementId: el.id,
-                    name: el.name,
-                  })),
-                )
-                .returning({
-                  id: locationRequirements.id,
-                  breakdownElementId: locationRequirements.breakdownElementId,
-                }),
-              (e) => new DbError("syncRequirements/insert", e),
-            )
-              .andThen((insertedReqs) => {
-                // Populate location_requirement_scenes from breakdown occurrences:
-                // every scene where the breakdown element appears is a candidate
-                // scene for that requirement. Without this Cesare can't tell
-                // which scenes a location belongs to.
-                const elementIds = insertedReqs
-                  .map((r) => r.breakdownElementId)
-                  .filter((id): id is string => id !== null);
-                if (elementIds.length === 0) {
-                  return ResultAsync.fromSafePromise(Promise.resolve());
-                }
-                return ResultAsync.fromPromise(
+          // Remove stale requirements: requirements that are linked to a
+          // breakdown element that no longer exists in the current breakdown.
+          // Only pending/scouting are pruned — confirmed/locked are preserved
+          // because the location may have been manually curated.
+          const pruneStale =
+            currentElementIds.length > 0
+              ? ResultAsync.fromPromise(
                   db
-                    .select({
-                      elementId: breakdownOccurrences.elementId,
-                      sceneId: breakdownOccurrences.sceneId,
-                    })
-                    .from(breakdownOccurrences)
-                    .where(inArray(breakdownOccurrences.elementId, elementIds)),
-                  (e) => new DbError("syncRequirements/loadOccurrences", e),
-                ).andThen((occs) => {
-                  const reqByElementId = new Map(
-                    insertedReqs
-                      .filter((r) => r.breakdownElementId)
-                      .map((r) => [r.breakdownElementId as string, r.id]),
-                  );
-                  const links = occs
-                    .filter((o) => o.sceneId !== null)
-                    .map((o) => ({
-                      requirementId: reqByElementId.get(o.elementId),
-                      sceneId: o.sceneId as string,
-                    }))
-                    .filter(
-                      (l): l is { requirementId: string; sceneId: string } =>
-                        l.requirementId !== undefined,
-                    );
-                  if (links.length === 0) {
+                    .delete(locationRequirements)
+                    .where(
+                      and(
+                        eq(locationRequirements.projectId, access.project.id),
+                        isNotNull(locationRequirements.breakdownElementId),
+                        notInArray(
+                          locationRequirements.breakdownElementId,
+                          currentElementIds,
+                        ),
+                        not(
+                          inArray(locationRequirements.status, [
+                            "confirmed",
+                            "locked",
+                          ]),
+                        ),
+                      ),
+                    ),
+                  (e) => new DbError("syncRequirements/pruneStale", e),
+                ).map(() => undefined)
+              : okAsync(undefined);
+
+          return pruneStale.andThen(() =>
+            ResultAsync.fromPromise(
+              db
+                .select({ name: locationRequirements.name })
+                .from(locationRequirements)
+                .where(eq(locationRequirements.projectId, access.project.id)),
+              (e) => new DbError("syncRequirements/loadExisting", e),
+            ).andThen((existing) => {
+              const existingNames = new Set(
+                existing.map((r) => r.name.toLowerCase()),
+              );
+              const newElements = elements.filter(
+                (el) => !existingNames.has(el.name.toLowerCase()),
+              );
+
+              if (newElements.length === 0) {
+                return clearLocationsStale(db, access.project.id).andThen(() =>
+                  loadRequirementsForProject(db, access.project.id),
+                );
+              }
+
+              return ResultAsync.fromPromise(
+                db
+                  .insert(locationRequirements)
+                  .values(
+                    newElements.map((el) => ({
+                      projectId: access.project.id,
+                      breakdownElementId: el.id,
+                      name: el.name,
+                    })),
+                  )
+                  .returning({
+                    id: locationRequirements.id,
+                    breakdownElementId: locationRequirements.breakdownElementId,
+                  }),
+                (e) => new DbError("syncRequirements/insert", e),
+              )
+                .andThen((insertedReqs) => {
+                  // Populate location_requirement_scenes from breakdown occurrences:
+                  // every scene where the breakdown element appears is a candidate
+                  // scene for that requirement. Without this Cesare can't tell
+                  // which scenes a location belongs to.
+                  const elementIds = insertedReqs
+                    .map((r) => r.breakdownElementId)
+                    .filter((id): id is string => id !== null);
+                  if (elementIds.length === 0) {
                     return ResultAsync.fromSafePromise(Promise.resolve());
                   }
                   return ResultAsync.fromPromise(
                     db
-                      .insert(locationRequirementScenes)
-                      .values(links)
-                      .onConflictDoNothing(),
-                    (e) => new DbError("syncRequirements/insertScenes", e),
-                  ).map(() => undefined);
-                });
-              })
-              .andThen(() =>
-                // Best-effort: a failed Haiku normalisation must not break
-                // sync — the requirements still load, chips just stay absent
-                // until the next sync retries the null location_type rows.
-                normaliseRequirements(db, access.project.id).orElse(() =>
-                  okAsync(0),
-                ),
-              )
-              .andThen(() => loadRequirementsForProject(db, access.project.id));
-          });
+                      .select({
+                        elementId: breakdownOccurrences.elementId,
+                        sceneId: breakdownOccurrences.sceneId,
+                      })
+                      .from(breakdownOccurrences)
+                      .where(
+                        inArray(breakdownOccurrences.elementId, elementIds),
+                      ),
+                    (e) => new DbError("syncRequirements/loadOccurrences", e),
+                  ).andThen((occs) => {
+                    const reqByElementId = new Map(
+                      insertedReqs
+                        .filter((r) => r.breakdownElementId)
+                        .map((r) => [r.breakdownElementId as string, r.id]),
+                    );
+                    const links = occs
+                      .filter((o) => o.sceneId !== null)
+                      .map((o) => ({
+                        requirementId: reqByElementId.get(o.elementId),
+                        sceneId: o.sceneId as string,
+                      }))
+                      .filter(
+                        (l): l is { requirementId: string; sceneId: string } =>
+                          l.requirementId !== undefined,
+                      );
+                    if (links.length === 0) {
+                      return ResultAsync.fromSafePromise(Promise.resolve());
+                    }
+                    return ResultAsync.fromPromise(
+                      db
+                        .insert(locationRequirementScenes)
+                        .values(links)
+                        .onConflictDoNothing(),
+                      (e) => new DbError("syncRequirements/insertScenes", e),
+                    ).map(() => undefined);
+                  });
+                })
+                .andThen(() =>
+                  // Best-effort: a failed Haiku normalisation must not break
+                  // sync — the requirements still load, chips just stay absent
+                  // until the next sync retries the null location_type rows.
+                  normaliseRequirements(db, access.project.id).orElse(() =>
+                    okAsync(0),
+                  ),
+                )
+                .andThen(() => clearLocationsStale(db, access.project.id))
+                .andThen(() =>
+                  loadRequirementsForProject(db, access.project.id),
+                );
+            }),
+          );
         }),
       ),
     ),

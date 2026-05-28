@@ -180,6 +180,10 @@ export const promoteDraftToActive = createServerFn({ method: "POST" })
               content: version.content,
               pageCount: version.pageCount,
               updatedAt: new Date(),
+              breakdownStale: true,
+              locationsStale: true,
+              budgetStale: true,
+              scheduleStale: true,
             })
             .where(eq(screenplays.id, version.screenplayId));
         }),

@@ -191,3 +191,75 @@ export const saveScreenplay = createServerFn({ method: "POST" })
       );
     },
   );
+
+// ─── Sync state ───────────────────────────────────────────────────────────────
+
+export type ScreenplaySyncState = {
+  breakdownStale: boolean;
+  locationsStale: boolean;
+  budgetStale: boolean;
+  scheduleStale: boolean;
+};
+
+export const getScreenplaySyncState = createServerFn({ method: "GET" })
+  .validator(GetScreenplayInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        ScreenplaySyncState,
+        DbError | ForbiddenError | ProjectNotFoundError
+      >
+    > => {
+      const db = await getDb();
+      const accessResult = await requireProjectAccess(
+        db,
+        data.projectId,
+        "view",
+      );
+      if (accessResult.isErr()) return toShape(err(accessResult.error));
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db
+            .select({
+              breakdownStale: screenplays.breakdownStale,
+              locationsStale: screenplays.locationsStale,
+              budgetStale: screenplays.budgetStale,
+              scheduleStale: screenplays.scheduleStale,
+            })
+            .from(screenplays)
+            .where(eq(screenplays.projectId, data.projectId))
+            .limit(1)
+            .then(
+              (rows) =>
+                rows[0] ?? {
+                  breakdownStale: false,
+                  locationsStale: false,
+                  budgetStale: false,
+                  scheduleStale: false,
+                },
+            ),
+          (e) => new DbError("getScreenplaySyncState", e),
+        ),
+      );
+    },
+  );
+
+export const syncStateQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: ["screenplay-sync-state", projectId],
+    queryFn: () =>
+      getScreenplaySyncState({ data: { projectId } }).then((r) => {
+        if (!r.isOk)
+          return {
+            breakdownStale: false,
+            locationsStale: false,
+            budgetStale: false,
+            scheduleStale: false,
+          };
+        return r.value;
+      }),
+    staleTime: 30_000,
+  });

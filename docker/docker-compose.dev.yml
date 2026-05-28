@@ -25,6 +25,9 @@ services:
       DATABASE_URL: postgresql://oh-writers:oh-writers@postgres:5432/oh-writers_dev
       REDIS_URL: redis://redis:6379
       NODE_ENV: development
+      # Inside Docker, localhost resolves to the container itself — use the
+      # service name so the OTEL exporter can reach the Langfuse web container.
+      LANGFUSE_BASE_URL: http://langfuse-web:3000
     depends_on:
       postgres:
         condition: service_healthy
