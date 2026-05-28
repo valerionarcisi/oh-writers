@@ -34,16 +34,15 @@ import {
   useSetOccurrenceStatus,
   useArchiveBreakdownElement,
   useUpdateBreakdownElement,
-  useAddBreakdownElement,
   useRemoveBreakdownOccurrence,
 } from "../hooks/useBreakdown";
-import { syncStateQueryOptions } from "~/features/screenplay-editor/server/screenplay.server";
+import { syncStateQueryOptions } from "~/features/screenplay-editor";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import { ProjectBreakdownView } from "./ProjectBreakdownView";
 import { BreakdownMatrix } from "./BreakdownMatrix";
-import { CesareAdPanel, useAdAlertStats } from "./CesareAdPanel";
-import { SceneCostPanel } from "./SceneCostPanel";
+import { useAdAlertStats } from "./CesareAdPanel";
+import { BreakdownRecapStrip } from "./BreakdownRecapStrip";
 import type { ElementForMatch } from "../lib/pm-plugins/find-occurrences";
 import type { CesareSuggestionLite } from "../lib/pm-plugins/map-suggestions";
 import type {
@@ -64,8 +63,6 @@ type UnderlineKey =
   | "costumes"
   | "photography"
   | "sound";
-
-type PanelTab = "categories" | "cesare";
 
 type ViewTab = "per-scene" | "per-project" | "matrice";
 
@@ -125,25 +122,6 @@ const initialUnderlineState = (): Record<UnderlineKey, boolean> =>
     (acc, c) => ({ ...acc, [c.key]: c.defaultOn }),
     {} as Record<UnderlineKey, boolean>,
   );
-
-// Visible category order for the right panel — mirrors the mockup.
-const PANEL_CATEGORY_ORDER: ReadonlyArray<BreakdownCategory> = [
-  "cast",
-  "locations",
-  "props",
-  "set_dress",
-  "wardrobe",
-  "makeup",
-  "vfx",
-  "sfx",
-  "sound",
-  "vehicles",
-  "extras",
-  "stunts",
-  "animals",
-  "atmosphere",
-  "equipment",
-];
 
 const formatHeading = (scene: BreakdownSceneSummary): string => {
   const tod = scene.timeOfDay ? ` — ${scene.timeOfDay.toUpperCase()}` : "";
@@ -210,7 +188,6 @@ function BreakdownPageContent({ projectId }: Props) {
     0,
   );
 
-  const [panelTab, setPanelTab] = useState<PanelTab>("categories");
   const [viewTab, setViewTab] = useState<ViewTab>("per-scene");
   const [exportOpen, setExportOpen] = useState(false);
   const [indiceOpen, setIndiceOpen] = useState(false);
@@ -275,43 +252,6 @@ function BreakdownPageContent({ projectId }: Props) {
     ctx.versionContent ?? "",
     activeScene?.id ?? null,
   );
-
-  const [panelScope, setPanelScope] = useState<"scene" | "project">("scene");
-
-  // Group occurrences by category for the panel — scene or project scope.
-  const groupedByCategory = useMemo(() => {
-    const map = new Map<BreakdownCategory, SceneOccurrenceWithElement[]>();
-    if (panelScope === "scene") {
-      for (const o of sceneOccurrences) {
-        const arr = map.get(o.element.category) ?? [];
-        arr.push(o);
-        map.set(o.element.category, arr);
-      }
-    } else {
-      // Project scope: one entry per element across all scenes
-      for (const row of allRows) {
-        const arr = map.get(row.element.category) ?? [];
-        arr.push({
-          element: row.element,
-          occurrence: {
-            id: row.element.id,
-            elementId: row.element.id,
-            sceneId: "",
-            screenplayVersionId: versionId,
-            quantity: row.totalQuantity,
-            note: null,
-            cesareStatus: "accepted" as const,
-            source: null,
-            isStale: row.hasStale,
-            createdAt: "",
-            updatedAt: "",
-          },
-        });
-        map.set(row.element.category, arr);
-      }
-    }
-    return map;
-  }, [panelScope, sceneOccurrences, allRows, versionId]);
 
   // Scene → element count for the Indice popover badges.
   const scenesWithCounts = useMemo(() => {
@@ -920,152 +860,49 @@ function BreakdownPageContent({ projectId }: Props) {
       )}
 
       {viewTab === "per-scene" && (
-        <div className={styles.layout}>
-          {/* Screenplay */}
-          <div
-            ref={screenplayContainerRef}
-            className={styles.screenplay}
-            onContextMenu={handleScreenplayContextMenu}
-            onMouseOver={handleScreenplayMouseOver}
-            onMouseLeave={handleScreenplayMouseLeave}
-            data-show-cast={underline.cast}
-            data-show-locations={underline.locations}
-            data-show-props={underline.props}
-            data-show-costumes={underline.costumes}
-            data-show-photography={underline.photography}
-            data-show-sound={underline.sound}
-            data-testid="breakdown-screenplay"
-          >
-            {ctx.versionContent ? (
-              <ScriptReader
-                ref={scriptReaderRef}
-                projectId={projectId}
-                versionId={versionId}
-                versionContent={ctx.versionContent}
-                scenes={scenes}
-                elements={elementsForHighlight}
-                suggestions={suggestions}
-                canEdit={canEdit}
-                activeSceneId={activeScene?.id ?? null}
-                onActiveSceneChange={setActiveSceneId}
-              />
-            ) : (
-              <p className={styles.empty}>
-                Nessuna versione disponibile per questa sceneggiatura.
-              </p>
-            )}
-          </div>
-
-          {/* Right panel */}
-          <aside className={styles.panel} aria-label="Pannello laterale">
-            <div className={styles.panelTabs} role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={panelTab === "categories"}
-                className={styles.panelTab}
-                onClick={() => setPanelTab("categories")}
-              >
-                Categorie
-                <span className="count" data-num>
-                  {groupedByCategory.size}
-                </span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={panelTab === "cesare"}
-                className={styles.panelTab}
-                onClick={() => setPanelTab("cesare")}
-                data-testid="breakdown-cesare-tab"
-                aria-label={
-                  adStats.critical > 0
-                    ? `Cesare: ${adStats.critical} critici su ${adStats.total} alert`
-                    : `Cesare: ${adStats.total} alert`
-                }
-              >
-                Cesare
-                <span
-                  className={`count ${adStats.critical > 0 ? styles.countCritical : ""}`}
-                  data-num
-                >
-                  {adStats.critical > 0 && (
-                    <span className={styles.criticalDot} aria-hidden="true" />
-                  )}
-                  {adStats.critical > 0 && `${adStats.critical} crit · `}
-                  {adStats.total} alert
-                </span>
-              </button>
-            </div>
-
-            <div className={styles.panelBody}>
-              {panelTab === "categories" && (
-                <>
-                  <div className={styles.panelScopeBar}>
-                    <button
-                      type="button"
-                      className={styles.panelScopeBtn}
-                      data-active={panelScope === "scene"}
-                      onClick={() => setPanelScope("scene")}
-                    >
-                      {activeScene
-                        ? formatHeading(activeScene).slice(0, 28)
-                        : "Scena"}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.panelScopeBtn}
-                      data-active={panelScope === "project"}
-                      onClick={() => setPanelScope("project")}
-                    >
-                      Progetto
-                    </button>
-                  </div>
-                  {panelScope === "scene" && activeScene && (
-                    <SceneCostPanel
-                      projectId={projectId}
-                      sceneNumber={activeSceneIdx}
-                      sceneLabel={formatHeading(activeScene)}
-                    />
-                  )}
-                  <CategoriesPanel
-                    grouped={groupedByCategory}
-                    allRows={allRows}
-                    canEdit={canEdit && panelScope === "scene"}
-                    projectId={projectId}
-                    sceneId={activeScene?.id ?? ""}
-                    versionId={versionId}
-                    onAccept={(occurrenceId) =>
-                      setStatus.mutate({
-                        occurrenceIds: [occurrenceId],
-                        status: "accepted",
-                      })
-                    }
-                    onIgnore={(occurrenceId) =>
-                      setStatus.mutate({
-                        occurrenceIds: [occurrenceId],
-                        status: "ignored",
-                      })
-                    }
-                    onRemove={(occurrenceId) =>
-                      removeOcc.mutate({ projectId, occurrenceId })
-                    }
-                  />
-                </>
-              )}
-              {panelTab === "cesare" && (
-                <CesareAdPanel
+        <>
+          <BreakdownRecapStrip
+            projectId={projectId}
+            scene={activeScene}
+            sceneNumber={activeSceneIdx}
+            versionId={versionId}
+          />
+          <div className={styles.layout}>
+            <div
+              ref={screenplayContainerRef}
+              className={styles.screenplay}
+              onContextMenu={handleScreenplayContextMenu}
+              onMouseOver={handleScreenplayMouseOver}
+              onMouseLeave={handleScreenplayMouseLeave}
+              data-show-cast={underline.cast}
+              data-show-locations={underline.locations}
+              data-show-props={underline.props}
+              data-show-costumes={underline.costumes}
+              data-show-photography={underline.photography}
+              data-show-sound={underline.sound}
+              data-testid="breakdown-screenplay"
+            >
+              {ctx.versionContent ? (
+                <ScriptReader
+                  ref={scriptReaderRef}
                   projectId={projectId}
+                  versionId={versionId}
+                  versionContent={ctx.versionContent}
                   scenes={scenes}
-                  rows={allRows}
-                  screenplayText={ctx.versionContent ?? ""}
+                  elements={elementsForHighlight}
+                  suggestions={suggestions}
+                  canEdit={canEdit}
                   activeSceneId={activeScene?.id ?? null}
-                  onOpenScene={handleSceneSelect}
+                  onActiveSceneChange={setActiveSceneId}
                 />
+              ) : (
+                <p className={styles.empty}>
+                  Nessuna versione disponibile per questa sceneggiatura.
+                </p>
               )}
             </div>
-          </aside>
-        </div>
+          </div>
+        </>
       )}
 
       {/* ─── HOVER TOOLTIP ─── */}
@@ -1281,304 +1118,6 @@ function BreakdownPageContent({ projectId }: Props) {
         </div>
       )}
     </main>
-  );
-}
-
-/* ────────────────────────── Categorie panel ──────────────────────────── */
-
-interface SuggestedPopover {
-  x: number;
-  y: number;
-  occurrenceId: string;
-  name: string;
-}
-
-interface CategoriesPanelProps {
-  grouped: Map<BreakdownCategory, SceneOccurrenceWithElement[]>;
-  allRows: ProjectBreakdownRow[];
-  canEdit: boolean;
-  projectId: string;
-  sceneId: string;
-  versionId: string;
-  onAccept: (occurrenceId: string) => void;
-  onIgnore: (occurrenceId: string) => void;
-  onRemove: (occurrenceId: string) => void;
-}
-
-function CategoriesPanel({
-  grouped,
-  allRows,
-  canEdit,
-  projectId,
-  sceneId,
-  versionId,
-  onAccept,
-  onIgnore,
-  onRemove,
-}: CategoriesPanelProps) {
-  const visibleCats = PANEL_CATEGORY_ORDER.filter((cat) => grouped.has(cat));
-  const [suggestedPopover, setSuggestedPopover] =
-    useState<SuggestedPopover | null>(null);
-  const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [addingCat, setAddingCat] = useState<BreakdownCategory | null>(null);
-  const [addName, setAddName] = useState("");
-  const addInputRef = useRef<HTMLInputElement>(null);
-  const addEl = useAddBreakdownElement(projectId, versionId);
-
-  const openAdd = (cat: BreakdownCategory) => {
-    setAddingCat(cat);
-    setAddName("");
-    setTimeout(() => addInputRef.current?.focus(), 0);
-  };
-
-  const closeAdd = () => {
-    setAddingCat(null);
-    setAddName("");
-  };
-
-  const commitAdd = (cat: BreakdownCategory) => {
-    const name = addName.trim();
-    if (!name || !sceneId) return;
-    addEl.mutate(
-      {
-        projectId,
-        category: cat,
-        name,
-        occurrence: { sceneId, screenplayVersionId: versionId, quantity: 1 },
-      },
-      { onSuccess: closeAdd },
-    );
-  };
-
-  const scenesByElement = useMemo(() => {
-    const map = new Map<string, number[]>();
-    for (const row of allRows) {
-      const nums = row.scenesPresent
-        .map((s) => s.sceneNumber)
-        .sort((a, b) => a - b);
-      map.set(row.element.id, nums);
-    }
-    return map;
-  }, [allRows]);
-
-  const handleSuggestedMouseEnter = (
-    e: React.MouseEvent<HTMLSpanElement>,
-    occurrenceId: string,
-    name: string,
-  ) => {
-    if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
-    const rect = e.currentTarget.getBoundingClientRect();
-    popoverTimerRef.current = setTimeout(() => {
-      setSuggestedPopover({
-        x: rect.left,
-        y: rect.bottom + 6,
-        occurrenceId,
-        name,
-      });
-    }, 160);
-  };
-
-  const handleSuggestedMouseLeave = () => {
-    if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
-    // small delay so the user can move into the popover itself
-    popoverTimerRef.current = setTimeout(() => setSuggestedPopover(null), 120);
-  };
-
-  if (visibleCats.length === 0) {
-    return (
-      <p className={styles.notesEmpty}>
-        Nessun elemento ancora in questa scena.
-      </p>
-    );
-  }
-
-  return (
-    <>
-      {visibleCats.map((cat) => {
-        const meta = CATEGORY_META[cat];
-        const items = grouped.get(cat) ?? [];
-        const colorVar = `var(${meta.colorToken})`;
-        return (
-          <div
-            key={cat}
-            className={styles.catGroup}
-            // @ts-expect-error CSS custom property
-            style={{ "--cat-color": colorVar }}
-          >
-            <div className={styles.catHead}>
-              <span className={styles.catDot} aria-hidden="true" />
-              <span className={styles.catName}>{meta.labelIt}</span>
-              <span className={styles.catCt} data-num>
-                {items.length}
-              </span>
-              {canEdit && (
-                <button
-                  type="button"
-                  className={styles.catAdd}
-                  onClick={() =>
-                    addingCat === cat ? closeAdd() : openAdd(cat)
-                  }
-                  aria-label={`Aggiungi ${meta.labelIt}`}
-                  title={`Aggiungi ${meta.labelIt}`}
-                >
-                  {addingCat === cat ? "×" : "+"}
-                </button>
-              )}
-            </div>
-            <div className={styles.catList}>
-              {items.map((it) => {
-                const isSuggested = it.occurrence.cesareStatus === "pending";
-                const sceneNums = scenesByElement.get(it.element.id) ?? [];
-                return (
-                  <span
-                    key={it.occurrence.id}
-                    className={[
-                      styles.catItem,
-                      isSuggested ? styles.catItemSuggested : "",
-                      sceneNums.length > 1 && !isSuggested
-                        ? styles.catItemWithScenes
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    data-scenes={
-                      !isSuggested && sceneNums.length > 1
-                        ? sceneNums.join(", ")
-                        : undefined
-                    }
-                    title={
-                      !isSuggested && sceneNums.length > 1
-                        ? `${it.element.name}${it.occurrence.quantity > 1 ? ` ×${it.occurrence.quantity}` : ""} — scene ${sceneNums.join(", ")}`
-                        : undefined
-                    }
-                    onMouseEnter={
-                      isSuggested
-                        ? (e) =>
-                            handleSuggestedMouseEnter(
-                              e,
-                              it.occurrence.id,
-                              it.element.name,
-                            )
-                        : undefined
-                    }
-                    onMouseLeave={
-                      isSuggested ? handleSuggestedMouseLeave : undefined
-                    }
-                  >
-                    {it.element.name}
-                    {it.occurrence.quantity > 1 && (
-                      <span className={styles.catItemX} data-num>
-                        ×{it.occurrence.quantity}
-                      </span>
-                    )}
-                    {!isSuggested && sceneNums.length > 1 && (
-                      <span className={styles.catItemScenes}>
-                        sc.{sceneNums.join(",")}
-                      </span>
-                    )}
-                    {canEdit && (
-                      <button
-                        type="button"
-                        className={styles.catItemRemove}
-                        onClick={() =>
-                          isSuggested
-                            ? onIgnore(it.occurrence.id)
-                            : onRemove(it.occurrence.id)
-                        }
-                        aria-label={`Rimuovi ${it.element.name}`}
-                        title={
-                          isSuggested
-                            ? "Ignora suggerimento"
-                            : "Rimuovi dalla scena"
-                        }
-                      >
-                        ×
-                      </button>
-                    )}
-                  </span>
-                );
-              })}
-              {canEdit && addingCat === cat && (
-                <span className={styles.catItemAddForm}>
-                  <input
-                    ref={addInputRef}
-                    type="text"
-                    className={styles.catItemAddInput}
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                    placeholder={`Nuovo ${meta.labelIt.toLowerCase()}…`}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitAdd(cat);
-                      if (e.key === "Escape") closeAdd();
-                    }}
-                    disabled={addEl.isPending}
-                  />
-                  <button
-                    type="button"
-                    className={styles.catItemAddConfirm}
-                    onClick={() => commitAdd(cat)}
-                    disabled={!addName.trim() || addEl.isPending}
-                    aria-label="Conferma"
-                  >
-                    ✓
-                  </button>
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Accept / ignore popover for Cesare-suggested tags */}
-      {suggestedPopover && (
-        <div
-          className={styles.suggestedPopover}
-          style={{ left: suggestedPopover.x, top: suggestedPopover.y }}
-          onMouseEnter={() => {
-            if (popoverTimerRef.current) clearTimeout(popoverTimerRef.current);
-          }}
-          onMouseLeave={() => setSuggestedPopover(null)}
-        >
-          <div className={styles.suggestedPopoverHeader}>
-            <span className={styles.suggestedPopoverIcon} aria-hidden>
-              ✦
-            </span>
-            <span className={styles.suggestedPopoverName}>
-              {suggestedPopover.name}
-            </span>
-          </div>
-          <p className={styles.suggestedPopoverHint}>Suggerito da Cesare</p>
-          <div className={styles.suggestedPopoverActions}>
-            <button
-              type="button"
-              className={[
-                styles.suggestedPopoverBtn,
-                styles.suggestedPopoverBtnAccept,
-              ].join(" ")}
-              onClick={() => {
-                onAccept(suggestedPopover.occurrenceId);
-                setSuggestedPopover(null);
-              }}
-            >
-              <span aria-hidden>✓</span> Conferma
-            </button>
-            <button
-              type="button"
-              className={[
-                styles.suggestedPopoverBtn,
-                styles.suggestedPopoverBtnIgnore,
-              ].join(" ")}
-              onClick={() => {
-                onIgnore(suggestedPopover.occurrenceId);
-                setSuggestedPopover(null);
-              }}
-            >
-              <span aria-hidden>✕</span> Ignora
-            </button>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
 

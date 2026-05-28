@@ -1,0 +1,115 @@
+/* packages/ui/src/composites/CollapsibleNote/CollapsibleNote.module.css */
+
+.note {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-1);
+  transition: box-shadow var(--ds-duration-2) var(--ds-ease);
+  font-family: var(--ds-font-sans);
+  color: var(--ds-text-2);
+}
+
+.note:hover {
+  box-shadow: var(--ds-shadow-2);
+}
+
+.kindCesare {
+  border-inline-start: 3px solid var(--ds-agent);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+    border-radius: var(--ds-radius-md);
+  }
+}
+
+.note.oneLine .header {
+  cursor: default;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.kindCesare .eyebrow {
+  color: var(--ds-agent);
+}
+
+.kindUser .eyebrow {
+  color: var(--ds-action);
+}
+
+.eyebrowKind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chev {
+  font-size: 9px;
+  color: var(--ds-text-3);
+  transition: transform var(--ds-duration-1) var(--ds-ease);
+}
+
+.note.isOpen .chev {
+  transform: rotate(180deg);
+}
+
+.title {
+  font-family: var(--ds-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ds-text);
+}
+
+.disclosed {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ds-text-2);
+  padding-top: 6px;
+  border-top: 1px solid var(--ds-line-soft, var(--ds-line));
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note,
+  .chev {
+    transition: none;
+  }
+}
