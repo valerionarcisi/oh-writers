@@ -42,6 +42,7 @@ playwright/.cache/
 *.png
 !apps/landing/assets/img/**/*.png
 !docs/specs/mockups/audit/*.png
+!docs/specs/mockups/audit/**/*.png
 .worktrees/
 .tokensave
 

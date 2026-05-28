@@ -21,13 +21,13 @@ test.describe("[OHW-044-D] Per-page chrome", () => {
       timeout: 15_000,
     });
 
-    // RecapStrip should sit above the screenplay reader. We accept either a
-    // dedicated testid (preferred) or its module class. The legacy panel
+    // RecapStrip should sit above the screenplay reader. The shared UI
+    // composite exposes `data-testid="recap-strip"`. The legacy panel
     // showed CATEGORIE 7 / CESARE 1 ALERT — those headings must NOT be on
     // the page anymore.
-    await expect(
-      page.locator('[data-testid="breakdown-recap-strip"]'),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="recap-strip"]')).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Legacy panel sentinels — these existed pre-Spec 44 and must NOT
     // be in the DOM anymore.
