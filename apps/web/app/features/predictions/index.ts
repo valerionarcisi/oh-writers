@@ -2,8 +2,13 @@ export {
   CesareSheet,
   parseToolsExecuted,
   parseRewriteSceneMarker,
+  useShowChangesInSplitDrawer,
 } from "./components/CesareSheet";
-export type { CesarePage, AskCesareFn } from "./components/CesareSheet";
+export type {
+  CesarePage,
+  AskCesareFn,
+  TraceForToolRunArgs,
+} from "./components/CesareSheet";
 export { RecapStrip } from "./components/RecapStrip";
 export type {
   RecapStripProps,

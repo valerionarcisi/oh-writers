@@ -348,9 +348,67 @@
   body[data-view="breakdown"]    .view-breakdown{display:contents}
   body[data-view="budget"]       .view-budget{display:contents}
   body[data-view="locations"]    .view-locations{display:contents}
+
+  /* ── SplitDrawer (Notion `»` pattern) ── */
+  /* Diff tokens used inside the trace overlay */
+  :root{
+    --diff-add-bg:rgba(90,107,60,.13);--diff-add-fg:var(--leaf-500);
+    --diff-remove-bg:rgba(179,58,40,.10);--diff-remove-fg:#b33a28;
+    --diff-change-bg:rgba(139,58,26,.10);--diff-intra:rgba(139,58,26,.28);
+  }
+  .split-drawer{position:fixed;inset-block:0;inset-inline-end:0;width:480px;background:var(--white);border-inline-start:1px solid var(--linen-300);box-shadow:var(--shadow-2);z-index:305;display:none;flex-direction:column;overflow:hidden;font-family:var(--font-sans);color:var(--linen-800);transition:width .25s cubic-bezier(.2,.7,.2,1)}
+  body[data-split-drawer="open"] .split-drawer{display:flex;animation:split-slide-in .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-split-drawer="full"] .split-drawer{display:flex;inset:0;width:100vw;background:var(--linen-50);border-inline-start:none;box-shadow:none;z-index:500;animation:split-scale-up .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-split-drawer="full"] .rail,body[data-split-drawer="full"] .topstrip,body[data-split-drawer="full"] .dock,body[data-split-drawer="full"] .shell-collapse{display:none}
+  /* When a SplitDrawer is open alongside full-page Cesare, Cesare narrows */
+  body[data-split-drawer="open"][data-cesare="full"] .cesare{width:calc(100vw - 480px);left:auto;right:480px;inset-inline-end:480px}
+  body[data-split-drawer="full"][data-cesare="full"] .cesare{display:none}
+  @keyframes split-slide-in{from{opacity:0;transform:translateX(8%)}to{opacity:1;transform:translateX(0)}}
+  @keyframes split-scale-up{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  .split-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-block-end:1px solid var(--linen-300);background:var(--linen-50);flex-shrink:0}
+  .split-head h2{margin:0;font-family:var(--font-display);font-size:14px;color:var(--linen-800);font-weight:600}
+  .split-head .badge{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-600);padding:2px 8px;background:var(--linen-100);border-radius:var(--radius-pill)}
+  .split-head-l{display:flex;align-items:center;gap:8px}
+  .split-head-r{display:flex;align-items:center;gap:2px}
+  .split-iconbtn{width:24px;height:24px;display:grid;place-items:center;color:var(--linen-600);border-radius:5px;cursor:pointer;font-size:13px;background:transparent;border:0}
+  .split-iconbtn:hover{background:var(--linen-100)}
+  .split-body{flex:1;overflow:hidden auto;background:var(--white);display:grid;grid-template-columns:152px 1fr;gap:12px}
+  .split-timeline{display:flex;flex-direction:column;gap:2px;padding:12px 8px;border-inline-end:1px solid var(--linen-200);overflow-y:auto;background:var(--linen-50)}
+  .split-timeline-lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--linen-500);padding:4px 8px}
+  .split-marker{display:flex;align-items:center;gap:6px;padding:5px 8px;border:0;background:transparent;border-radius:5px;color:var(--linen-700);font:inherit;font-size:12px;cursor:pointer;text-align:start}
+  .split-marker:hover{background:var(--linen-100);color:var(--linen-800)}
+  .split-marker .g{width:14px;text-align:center;color:var(--leaf-500)}
+  .split-marker.replace .g{color:var(--clay-500)}
+  .split-marker.delete .g{color:#b33a28}
+  .split-preview{padding:14px 16px 24px;overflow-y:auto}
+  .split-marker-block{padding:6px 10px;margin:10px 0;border-radius:var(--radius-sm);font-size:13px;line-height:1.55;scroll-margin-block-start:80px}
+  .split-marker-block.append{background:var(--diff-add-bg);border-inline-start:3px solid var(--diff-add-fg)}
+  .split-marker-block.delete{background:var(--diff-remove-bg);border-inline-start:3px solid var(--diff-remove-fg);text-decoration:line-through;color:var(--linen-700)}
+  .split-marker-block.replace,.split-marker-block.rename{background:var(--diff-change-bg);border-inline-start:3px solid var(--diff-intra);display:flex;flex-direction:column;gap:4px}
+  .split-marker-block .hd{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-500);display:flex;gap:6px;align-items:center}
+  .split-marker-block .before{text-decoration:line-through;color:var(--linen-600);opacity:.75}
+  .split-marker-block .after{color:var(--linen-800)}
+  .split-marker-block .actions{display:flex;gap:6px;margin-top:6px}
+  .split-marker-block .actions button{font-size:11.5px;padding:3px 10px;border-radius:5px;background:transparent;cursor:pointer}
+  .split-marker-block .actions .accept{border:1px solid var(--diff-add-fg);color:var(--leaf-500)}
+  .split-marker-block .actions .accept:hover{background:var(--diff-add-bg)}
+  .split-marker-block .actions .reject{border:1px solid var(--diff-remove-fg);color:#b33a28}
+  .split-marker-block .actions .reject:hover{background:var(--diff-remove-bg)}
+  .split-foot{flex-shrink:0;padding:10px 16px;border-block-start:1px solid var(--linen-300);background:var(--linen-50);display:flex;align-items:center;gap:10px}
+  .split-foot button{font-size:12px;padding:5px 12px;border-radius:5px;background:transparent;cursor:pointer}
+  .split-foot .accept-all{border:1px solid var(--diff-add-fg);color:var(--leaf-500)}
+  .split-foot .accept-all:hover{background:var(--diff-add-bg)}
+  .split-foot .reject-all{border:1px solid var(--linen-300);color:var(--linen-700)}
+  .split-foot .reject-all:hover{background:var(--linen-200)}
+  .split-foot .count{margin-inline-start:auto;color:var(--linen-500);font-size:11.5px}
+  .split-stub-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--linen-100);border-radius:5px;margin-block-end:12px;font-size:12px;color:var(--linen-600)}
+  .split-stub-header strong{color:var(--linen-800);font-family:var(--font-display)}
+  @media (prefers-reduced-motion: reduce){
+    .split-drawer{animation:none !important}
+  }
 </style>
 </head>
-<body data-cesare="expanded" data-view="breakdown" data-mode="column" data-shell="expanded">
+<body data-cesare="expanded" data-view="breakdown" data-mode="column" data-shell="expanded" data-split-drawer="closed">
 
 <!-- DEMO TOOLBAR -->
 <div class="demo-bar">
@@ -380,6 +438,13 @@
     <button data-shell="expanded" class="on">Full</button>
     <button data-shell="collapsed">Collapsed</button>
     <button data-shell="focus">Focus</button>
+  </div>
+  <div class="demo-row">
+    <span class="lbl">Split</span>
+    <button data-split-drawer="closed" class="on">Closed</button>
+    <button data-split-drawer="open">Open</button>
+    <button data-split-drawer="full">Full</button>
+    <button id="trace-flow-btn" style="margin-inline-start:6px">★ Trace flow</button>
   </div>
 </div>
 
@@ -791,6 +856,68 @@
 
 </div>
 
+<!-- ─── SPLIT DRAWER (Notion `»` pattern) ───────────────────────── -->
+<aside class="split-drawer" id="split-drawer" role="complementary" aria-label="Anteprima Soggetto - modalità trace">
+  <header class="split-head">
+    <div class="split-head-l">
+      <span class="badge">Soggetto · Atto II</span>
+      <h2>Anteprima Soggetto</h2>
+    </div>
+    <div class="split-head-r">
+      <button class="split-iconbtn" title="Espandi (↗)" id="split-cycle">&#8599;</button>
+      <button class="split-iconbtn" title="Step back (↙)" id="split-step">&#8601;</button>
+      <button class="split-iconbtn" title="Chiudi" data-split-drawer="closed">&times;</button>
+    </div>
+  </header>
+  <div class="split-body">
+    <aside class="split-timeline" aria-label="Trace timeline">
+      <span class="split-timeline-lbl">Modifiche</span>
+      <button class="split-marker replace" data-jump="m1"><span class="g">&#8634;</span>Atto II · §3</button>
+      <button class="split-marker append" data-jump="m2"><span class="g">+</span>Atto II · §5 (nuovo)</button>
+      <button class="split-marker rename" data-jump="m3"><span class="g">&#9998;</span>Personaggio · Tea</button>
+      <button class="split-marker delete" data-jump="m4"><span class="g">&minus;</span>Atto II · §7</button>
+    </aside>
+    <div class="split-preview" id="split-preview">
+      <div class="split-stub-header">
+        <span aria-hidden="true">&#10026;</span>
+        <strong>Soggetto · Atto II</strong>
+        <span>· modalità trace</span>
+      </div>
+
+      <div class="split-marker-block replace" id="trace-marker-m1">
+        <div class="hd"><span aria-hidden="true">&#8634;</span><span>replace</span><span>·</span><span>Atto II · §3</span></div>
+        <div class="before">Filippo guarda fuori, distratto. Pensa al nonno.</div>
+        <div class="after">Filippo guarda fuori, una mano appoggiata al vetro. Vede il riflesso del nonno alle sue spalle, sorride.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block append" id="trace-marker-m2">
+        <div class="hd"><span aria-hidden="true">+</span><span>append</span><span>·</span><span>Atto II · §5</span></div>
+        <div class="after">Tea entra, scuote la testa. "Stai parlando da solo, Filippo." Lui non risponde.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block rename" id="trace-marker-m3">
+        <div class="hd"><span aria-hidden="true">&#9998;</span><span>rename</span><span>·</span><span>Personaggio</span></div>
+        <div class="before">Teresa</div>
+        <div class="after">Tea</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block delete" id="trace-marker-m4">
+        <div class="hd"><span aria-hidden="true">&minus;</span><span>delete</span><span>·</span><span>Atto II · §7</span></div>
+        <div class="before">Giulio entra, lo guarda, esce. Pausa lunga.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+    </div>
+  </div>
+  <footer class="split-foot">
+    <button class="accept-all">Accetta tutto</button>
+    <button class="reject-all">Rifiuta tutto</button>
+    <span class="count">4 modifiche in sospeso</span>
+  </footer>
+</aside>
+
 <!-- ─── BOTTOM DOCK (bottom-right) ──────────────────────────────── -->
 <div class="dock">
   <button class="dock-btn bell" title="Notifiche">&#128276;<span class="dot"></span></button>
@@ -956,9 +1083,62 @@
     }
   });
 
+  // ── SplitDrawer ─────────────────────────────────────────────
+  function setSplit(s){
+    document.body.dataset.splitDrawer = s;
+    document.querySelectorAll('.demo-row [data-split-drawer]').forEach(b=>b.classList.toggle('on', b.dataset.splitDrawer===s));
+    // When SplitDrawer goes full, retreat Cesare to peek so the user keeps a single command surface.
+    if(s==='full' && document.body.dataset.cesare==='full'){ setCesare('peek'); }
+  }
+  document.querySelectorAll('.demo-row [data-split-drawer]').forEach(b=>b.addEventListener('click',()=>setSplit(b.dataset.splitDrawer)));
+  document.querySelectorAll('[data-split-drawer]:not(.demo-row [data-split-drawer])').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();setSplit(el.dataset.splitDrawer)});
+  });
+  const splitCycle = document.getElementById('split-cycle');
+  if(splitCycle){
+    splitCycle.addEventListener('click',e=>{
+      e.stopPropagation();
+      const cur = document.body.dataset.splitDrawer || 'closed';
+      const next = cur==='closed'?'open':cur==='open'?'full':'open';
+      setSplit(next);
+    });
+  }
+  const splitStep = document.getElementById('split-step');
+  if(splitStep){
+    splitStep.addEventListener('click',e=>{
+      e.stopPropagation();
+      const cur = document.body.dataset.splitDrawer || 'closed';
+      const next = cur==='full'?'open':cur==='open'?'closed':'closed';
+      setSplit(next);
+    });
+  }
+  // Timeline jump-to-marker
+  document.querySelectorAll('[data-jump]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = btn.dataset.jump;
+      const node = document.getElementById('trace-marker-'+id);
+      if(node) node.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  // ── Trace flow demo: open Cesare to full + SplitDrawer open with Soggetto trace ──
+  const traceBtn = document.getElementById('trace-flow-btn');
+  if(traceBtn){
+    traceBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      setView('soggetto');
+      setMode('float');
+      setCesare('full');
+      // Slight delay so the user sees the Cesare full-page transition before the split opens.
+      setTimeout(()=>setSplit('open'), 150);
+    });
+  }
+
   // initial sync
   setView(document.body.dataset.view);
   setCesare(document.body.dataset.cesare);
+  setSplit(document.body.dataset.splitDrawer || 'closed');
 </script>
 </body>
 </html>
