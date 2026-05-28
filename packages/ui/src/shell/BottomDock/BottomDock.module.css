@@ -25,7 +25,8 @@
    affordances for the same action competing for attention. */
 :global(body[data-cesare="expanded"]) .dock,
 :global(body[data-cesare="peek"]) .dock,
-:global(body[data-cesare="full"]) .dock {
+:global(body[data-cesare="full"]) .dock,
+:global(body[data-shell="focus"]) .dock {
   display: none;
 }
 
