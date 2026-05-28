@@ -472,6 +472,7 @@ export function VersionsList({
           isOpen
           onClose={() => setPendingColor(null)}
           title="Conferma cambio colore"
+          isDismissable={false}
           data-testid="version-color-confirm"
           actions={
             <>
@@ -520,6 +521,7 @@ export function VersionsList({
           isOpen
           onClose={() => setDeletingId(null)}
           title="Conferma eliminazione"
+          isDismissable={false}
           data-testid="version-delete-confirm"
           actions={
             <>

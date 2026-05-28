@@ -434,7 +434,8 @@ export function parseRewriteSceneMarker(
   const m = content.match(/<!--ohw:rewrite-scene-b64:([A-Za-z0-9+/=]+)-->/);
   if (!m || !m[1]) return null;
   try {
-    const decoded = atob(m[1]);
+    const bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+    const decoded = new TextDecoder("utf-8").decode(bytes);
     const parsed = JSON.parse(decoded) as unknown;
     if (
       typeof parsed === "object" &&

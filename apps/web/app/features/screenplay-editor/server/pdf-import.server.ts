@@ -56,7 +56,11 @@ export const importPdf = createServerFn({ method: "POST" })
       let rawText: string;
       try {
         const parsed = await pdfParse(buffer, { max: 0 });
-        rawText = parsed.text?.trim() ?? "";
+        // pdf-parse / pdfjs returns a string where each character is a raw byte
+        // (latin-1 code-unit). Re-encode as a Buffer using latin-1 then decode
+        // as UTF-8 to recover multi-byte Italian characters (è, à, ù, —, …).
+        const raw = parsed.text ?? "";
+        rawText = Buffer.from(raw, "latin1").toString("utf8").trim();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";
         if (msg.toLowerCase().includes("encrypt")) {

@@ -152,9 +152,7 @@ export function ToolbarMenu({
             </button>
           )}
 
-          {isOwner && (
-            <div className={styles.divider} aria-hidden="true" />
-          )}
+          {isOwner && <div className={styles.divider} aria-hidden="true" />}
           {isOwner && (
             <button
               type="button"
@@ -195,6 +193,7 @@ export function ToolbarMenu({
           isOpen
           onClose={imp.cancel}
           title="Importa PDF"
+          isDismissable={false}
           data-testid="import-confirm"
           actions={
             <>

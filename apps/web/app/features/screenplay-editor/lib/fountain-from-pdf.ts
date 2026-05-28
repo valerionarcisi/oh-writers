@@ -344,7 +344,10 @@ const renderLine = ({ type, text }: Classified): string => {
  *   3. Render — emit with the Oh Writers indent convention.
  */
 export const fountainFromPdf = (rawText: string): string => {
-  const rawLines = rawText.split("\n");
+  const rawLines = rawText
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n");
   const cleaned = cleanup(rawLines);
   const classified = classify(cleaned);
   // Don't use .trim() — it would eat the leading 6-space indent of a

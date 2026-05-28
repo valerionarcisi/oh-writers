@@ -393,6 +393,13 @@
         margin-top: 0;
         color: var(--accent);
       }
+      .callout.warn {
+        background: linear-gradient(135deg, rgba(255, 183, 77, 0.08), rgba(229, 115, 115, 0.04));
+        border-color: rgba(255, 183, 77, 0.25);
+      }
+      .callout.warn h4 {
+        color: var(--warn);
+      }
       .toc {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -450,7 +457,7 @@
         <h1>Architettura AI agentic di Cesare</h1>
         <div class="sub">
           Come funziona l'AI di Oh Writers, capitolo per capitolo · pattern,
-          numeri, trade-off, decisioni · <code>main</code> · 2026-05-19
+          numeri, trade-off, decisioni · <code>main</code> · 2026-05-27
         </div>
       </header>
 
@@ -1662,7 +1669,529 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
       </p>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="non-fatto">8. Cosa abbiamo deciso di NON fare</h2>
+      <h2 id="context-engineering">8. Context Engineering — Film Bible (Spec 38)</h2>
+
+      <p>
+        Questo capitolo racconta come abbiamo risolto quello che internamente
+        chiamiamo il <strong>"bug di Roma"</strong> — e perché risolverlo ha
+        richiesto di ripensare come il contesto narrativo entra nel prompt di
+        Cesare.
+      </p>
+
+      <h3>Il bug di Roma</h3>
+
+      <p>
+        Durante i test di location scouting, Cesare continuava a suggerire
+        location romane per film ambientati altrove — un ristorante di paese
+        nelle Marche, un interno di campagna in Emilia. Il problema non era
+        il modello: era il contesto che gli passavamo.
+      </p>
+
+      <p>
+        I documenti narrativi (logline, soggetto, sinossi, scaletta,
+        trattamento) venivano iniettati nel blocco <strong>non-cached</strong>
+        del prompt — frammentati, senza gerarchia, con frasi tipo "RISTORANTE
+        DA DANTE" che non spiegavano dove fosse il ristorante, in che tipo di
+        comune, con che atmosfera. Il modello non aveva abbastanza segnale
+        geografico e culturale per ancorare i suggerimenti al contesto reale
+        del film.
+      </p>
+
+      <div class="callout warn">
+        <h4>Root cause</h4>
+        <p>
+          Passi testi grezzi non distillati → il modello estrae il segnale
+          che riesce → il segnale geografico è debole o assente → il modello
+          usa il prior implicito (le grandi città italiane sono la default
+          location mentale per l'italiano medio) → Roma.
+        </p>
+      </div>
+
+      <h3>La soluzione: tre componenti</h3>
+
+      <p>
+        Spec 38 introduce tre componenti che lavorano insieme per portare
+        il contesto narrativo nel prompt in forma distillata, stabile e
+        cachabile:
+      </p>
+
+      <div class="threeCol">
+        <div class="card">
+          <h4 style="color: var(--accent); margin-top: 0;">1. Scene Summaries</h4>
+          <p class="small">
+            Ogni scena viene riassunta in un JSON strutturato da
+            <strong>Haiku 4.5</strong>. Generato lazy on-save con
+            fingerprint anti-stale. Stored in DB. Costo: ~$0.00003/scena.
+          </p>
+        </div>
+        <div class="card">
+          <h4 style="color: var(--accent); margin-top: 0;">2. Film Bible</h4>
+          <p class="small">
+            Distillazione a livello progetto che aggrega scene summaries +
+            documenti narrativi in un unico blocco JSON, tramite
+            <strong>Sonnet 4.6</strong>. Cachato. Costo: ~$0.003/distillazione.
+          </p>
+        </div>
+        <div class="card">
+          <h4 style="color: var(--accent); margin-top: 0;">3. Location Prior</h4>
+          <p class="small">
+            <code>formatBibleForLocations(bible)</code> inietta un blocco
+            <code>SETTING PRIOR</code> nel guidance delle locations:
+            dice a Cesare dove è ambientato il film e <em>proibisce
+            esplicitamente</em> suggerimenti fuori contesto.
+          </p>
+        </div>
+      </div>
+
+      <h3>Scene Summaries — Haiku distilla ogni scena</h3>
+
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/scene-summary.server.ts</code> ·
+        <code>refreshStaleSceneSummaries()</code> è chiamata on-save del
+        screenplay. Controlla le scene che hanno <code>scene_summary IS NULL</code>,
+        le processa in batch con Haiku 4.5, salva il JSON strutturato.
+      </p>
+
+      <p>
+        Il fingerprint anti-stale è <code>sha256(body).slice(0,16)</code>.
+        La guardia SQL usa <code>WHERE scene_summary IS NULL</code> per il
+        primo write: questo evita re-distillazioni su scene non cambiate
+        anche se la funzione viene chiamata più volte.
+      </p>
+
+      <pre><code><span class="com">// packages/domain/src/scene-summary/schema.ts</span>
+<span class="kw">export const</span> SceneSummarySchema = z.<span class="fn">object</span>({
+  heading:            z.<span class="fn">string</span>(),
+  settingDescription: z.<span class="fn">string</span>(),   <span class="com">// "small rural restaurant, Marche region"</span>
+  timeOfDay:          z.<span class="fn">string</span>(),
+  presentCharacters:  z.<span class="fn">array</span>(z.<span class="fn">string</span>()),
+  keyActions:         z.<span class="fn">array</span>(z.<span class="fn">string</span>()),
+  productionNotes:    z.<span class="fn">string</span>(),   <span class="com">// VFX, stunts, notes per il breakdown</span>
+});
+
+<span class="kw">export type</span> SceneSummary = z.<span class="fn">infer</span>&lt;<span class="kw">typeof</span> SceneSummarySchema&gt;;
+
+<span class="com">// Schema DB (packages/db/schema/scenes.ts)</span>
+scene_summary:            jsonb(<span class="str">"scene_summary"</span>),
+scene_summary_fingerprint: text(<span class="str">"scene_summary_fingerprint"</span>),</code></pre>
+
+      <h3>Film Bible — Sonnet aggrega tutto il contesto progetto</h3>
+
+      <p class="small">
+        File: <code>apps/web/app/features/predictions/bible-distill.server.ts</code> ·
+        <code>loadFilmBible(db, projectId)</code> è il punto di ingresso.
+        La logica è lazy: se non esiste la row → distilla sync; se il
+        fingerprint corrisponde → cache hit; se il fingerprint non corrisponde
+        → restituisce la versione stale e lancia una re-distillazione in
+        background.
+      </p>
+
+      <p>
+        Il fingerprint composto è:
+        <code>sha256(scene_fps + doc_version_ids + genre|format|logline)</code>
+        — cattura ogni fonte di dati che influenza la bible.
+      </p>
+
+      <pre><code><span class="com">// packages/domain/src/bible/schema.ts</span>
+<span class="kw">export const</span> FilmBibleSchema = z.<span class="fn">object</span>({
+  settingSummary:       z.<span class="fn">string</span>(),   <span class="com">// "small-town Marche, rural Italy, 1980s"</span>
+  genreAndTone:         z.<span class="fn">string</span>(),   <span class="com">// "neo-realist drama, slow-burn"</span>
+  centralConflict:      z.<span class="fn">string</span>(),
+  productionConstraints: z.<span class="fn">string</span>(), <span class="com">// "practical locations only, no VFX"</span>
+  recurringLocations:   z.<span class="fn">array</span>(z.<span class="fn">object</span>({
+    canonicalName: z.<span class="fn">string</span>(),        <span class="com">// "Ristorante da Dante"</span>
+    aliases:       z.<span class="fn">array</span>(z.<span class="fn">string</span>()), <span class="com">// ["Bancone", "Sala", "Cucina"]</span>
+    description:   z.<span class="fn">string</span>(),
+  })),
+  keyCharacters: z.<span class="fn">array</span>(z.<span class="fn">object</span>({
+    name:        z.<span class="fn">string</span>(),
+    role:        z.<span class="fn">string</span>(),
+    description: z.<span class="fn">string</span>(),
+  })),
+});
+
+<span class="kw">export type</span> FilmBible = z.<span class="fn">infer</span>&lt;<span class="kw">typeof</span> FilmBibleSchema&gt;;</code></pre>
+
+      <p>
+        Il campo <code>recurringLocations</code> risolve uno dei problemi
+        concreti del bug di Roma: il trattamento scrive "Bancone",
+        "Sala", "Cucina" come location separate — perché il soggettista
+        stava dettagliando gli ambienti interni. La bible li
+        ricollassa sotto l'alias <code>canonicalName: "Ristorante da Dante"</code>.
+        Cesare vede un ristorante di paese nelle Marche, non tre location
+        anonimi.
+      </p>
+
+      <h3>Location Prior — il fix del bug</h3>
+
+      <p class="small">
+        File: <code>packages/domain/src/context-templates/film-bible.ts</code> ·
+        <code>formatBibleForLocations(bible)</code> genera il blocco testo
+        che viene inserito nel <em>tool guidance</em> di Cesare quando
+        la pagina è <code>locations</code>.
+      </p>
+
+      <pre><code><span class="com">// Esempio di output di formatBibleForLocations(bible)</span>
+
+[SETTING PRIOR]
+Film setting: small-town restaurant, Marche region, rural Italy.
+Period: 1980s. Genre/tone: neo-realist drama, slow-burn.
+Production constraints: practical locations only, no VFX budget.
+
+Recurring locations in this project:
+- "Ristorante da Dante" (also: Bancone, Sala, Cucina)
+  Rural trattoria, 15 seats, exposed brick, wood-burning oven.
+
+IMPORTANT: Search for locations consistent with this setting.
+Do NOT suggest locations in Rome, Milan, or other major cities
+unless the script explicitly places scenes there.
+When proposing a location, explain how it matches the film's setting.</code></pre>
+
+      <p>
+        Il blocco è iniettato nel <strong>tool guidance</strong> — il
+        terzo blocco del system prompt, già cached. Il modello legge il
+        prior prima di eseguire qualsiasi tool di location scouting.
+        La proibizione esplicita su Roma non è perché il modello "non
+        sapesse" — è perché senza contesto usava il prior implicito.
+        Forniamo il prior giusto, e il comportamento si normalizza.
+      </p>
+
+      <h3>Strategia di caching con il Film Bible block</h3>
+
+      <p>
+        Con Spec 38, il system prompt di Cesare diventa 5 blocchi su
+        alcune pagine (locations, schedule, breakdown):
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Blocco</th>
+            <th>Contenuto</th>
+            <th>Cache</th>
+            <th>Cambia quando</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>0 — ROLE_TEXT</strong></td>
+            <td>Identità di Cesare, principi, lingua</td>
+            <td><span class="pill ok">ephemeral</span></td>
+            <td>Mai (in sessione)</td>
+          </tr>
+          <tr>
+            <td><strong>1 — [FILM BIBLE]</strong></td>
+            <td>settingSummary, genreAndTone, recurringLocations, keyCharacters…</td>
+            <td><span class="pill ok">ephemeral</span></td>
+            <td>Solo a fingerprint change (nuovo documento o scene editate)</td>
+          </tr>
+          <tr>
+            <td><strong>2 — Contesto produzione</strong></td>
+            <td>Titolo, indice scene, lista personaggi, lista documenti</td>
+            <td><span class="pill ok">ephemeral</span></td>
+            <td>Raramente — l'utente non aggiunge scene ogni 3 secondi</td>
+          </tr>
+          <tr>
+            <td><strong>3 — Tool guidance</strong></td>
+            <td>Istruzioni pagina + SETTING PRIOR per locations</td>
+            <td><span class="pill ok">ephemeral</span></td>
+            <td>Cambio di pagina</td>
+          </tr>
+          <tr>
+            <td><strong>4 — Stato dinamico</strong></td>
+            <td>Scena attiva, requirement attivo, finestra headings</td>
+            <td><span class="pill err">no-cache</span></td>
+            <td>Ogni scroll / cambio focus</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Il blocco <code>[FILM BIBLE]</code> è stabile per definizione:
+        cambia solo quando il filmmaker modifica il contenuto del progetto,
+        non ad ogni chiamata API. Questo porta il <strong>cache hit rate
+        stimato a ~85-90%</strong> sui token della bible — praticamente
+        si paga solo al cambio reale del contenuto.
+      </p>
+
+      <pre><code><span class="com">// apps/web/app/features/predictions/cesare.server.ts</span>
+<span class="com">// buildSystemPrompt — ora con bible block (blocco 1)</span>
+
+<span class="kw">const</span> <span class="fn">buildSystemPrompt</span> = (
+  ctx: CesareContext,
+  page: PageContext[<span class="str">"page"</span>],
+  bible: FilmBible | <span class="kw">null</span>,
+  activeShootingDayNumber: <span class="kw">number</span> | <span class="kw">null</span> = <span class="kw">null</span>,
+  activeSceneId: <span class="kw">string</span> | <span class="kw">null</span> = <span class="kw">null</span>,
+): SystemPromptBlock[] =&gt; {
+  <span class="kw">const</span> blocks: SystemPromptBlock[] = [
+    { type: <span class="str">"text"</span>, text: ROLE_TEXT, cache_control: { type: <span class="str">"ephemeral"</span> } },
+  ];
+
+  <span class="kw">if</span> (bible) {
+    blocks.<span class="fn">push</span>({
+      type: <span class="str">"text"</span>,
+      text: <span class="fn">formatGlobalContext</span>(bible),
+      cache_control: { type: <span class="str">"ephemeral"</span> },
+    });
+  }
+
+  blocks.<span class="fn">push</span>(
+    {
+      type: <span class="str">"text"</span>,
+      text: <span class="fn">buildProductionContextBlock</span>(ctx),
+      cache_control: { type: <span class="str">"ephemeral"</span> },
+    },
+    {
+      type: <span class="str">"text"</span>,
+      text: <span class="fn">buildToolGuidanceBlock</span>(ctx, page, activeShootingDayNumber, activeSceneId, bible),
+      cache_control: { type: <span class="str">"ephemeral"</span> },
+    },
+    {
+      type: <span class="str">"text"</span>,
+      text: <span class="fn">buildDynamicStateBlock</span>(ctx, page, activeShootingDayNumber),
+      <span class="com">// no cache_control — cambia ad ogni interazione</span>
+    },
+  );
+  <span class="kw">return</span> blocks;
+};</code></pre>
+
+      <h3>Costo stimato</h3>
+
+      <div class="grid">
+        <div class="card">
+          <div class="label">Scene summary (Haiku)</div>
+          <div class="value accent">~$0.00003</div>
+          <div class="hint">per scena · 1000 input + 200 output token @ Haiku $1/$5 per M</div>
+        </div>
+        <div class="card">
+          <div class="label">Bible distillation (Sonnet)</div>
+          <div class="value accent">~$0.003</div>
+          <div class="hint">per distillazione · 1000 input + 500 output @ $3/$15 per M</div>
+        </div>
+        <div class="card">
+          <div class="label">Costo amortised in sessione</div>
+          <div class="value accent">&lt;$0.001</div>
+          <div class="hint">bible letto da cache nel 90% delle chiamate</div>
+        </div>
+        <div class="card">
+          <div class="label">Film da 100 scene — total</div>
+          <div class="value warn">~$0.006</div>
+          <div class="hint">100 × $0.00003 + 1 × $0.003 = prima distillazione completa</div>
+        </div>
+      </div>
+
+      <h3>Diagramma ASCII — flusso end-to-end</h3>
+
+      <pre class="diagram">
+   ┌─────────────────────────────────────────────────────────────────┐
+   │  Utente salva screenplay (on-save hook)                         │
+   └─────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │  refreshStaleSceneSummaries(db, screenplayId)                   │
+   │    SELECT scenes WHERE scene_summary IS NULL                     │
+   │    per ogni scena stale:                                        │
+   │      fingerprint = sha256(body).slice(0,16)                     │
+   │      Haiku 4.5 → SceneSummarySchema JSON                        │
+   │      UPDATE scenes SET scene_summary, scene_summary_fingerprint │
+   └─────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │  Cesare riceve richiesta (es. location scouting)                │
+   │    loadFilmBible(db, projectId)                                 │
+   │      compute fingerprint composto:                              │
+   │        sha256(scene_fps + doc_version_ids + genre|format)       │
+   │      match project_film_bible:                                  │
+   │        no row    → distilla sync (Sonnet 4.6 → FilmBibleSchema) │
+   │        fp match  → cache hit → return stored bible              │
+   │        fp miss   → return stale + background re-distill         │
+   └─────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │  buildSystemPrompt(ctx, "locations", bible)                     │
+   │    Block 0: ROLE_TEXT               [cache: ephemeral]          │
+   │    Block 1: [FILM BIBLE] text       [cache: ephemeral] ← nuovo  │
+   │    Block 2: production context      [cache: ephemeral]          │
+   │    Block 3: tool guidance           [cache: ephemeral]          │
+   │              └─ include SETTING PRIOR da formatBibleForLocations│
+   │    Block 4: dynamic state           [no cache]                  │
+   └─────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │  Anthropic API                                                  │
+   │    Blocks 0-3: cache hit (ephemeral, TTL ~5min) → 10% del costo │
+   │    Block 4:    fresh input → full price                         │
+   │    Cesare suggerisce: "Trattoria di paese, Macerata" ✓          │
+   │    Non suggerisce più: "Ristorante a Trastevere, Roma" ✗        │
+   └─────────────────────────────────────────────────────────────────┘
+</pre>
+
+      <div class="callout">
+        <h4>La regola in una frase</h4>
+        <p>
+          Non iniettare testi grezzi nel prompt sperando che il modello
+          estragga il contesto rilevante. Distilla prima, struttura il
+          risultato, inietta la struttura. Il modello ragiona su dati
+          già interpretati, non su testi da interpretare.
+        </p>
+      </div>
+
+      <!-- ─────────────────────────────────────────────────────── -->
+      <h2 id="doc-authority">9. Document Authority — conflitti tra documenti</h2>
+
+      <p>
+        La bible distilla da più documenti narrativi: logline, soggetto,
+        sinossi, scaletta, trattamento. Su un progetto maturo questi
+        documenti <strong>si contraddicono</strong> — è normale nel
+        processo di sviluppo di un film.
+      </p>
+
+      <p>
+        Esempio concreto: la logline dice "Marco è un uomo di mezza età".
+        Il trattamento, scritto sei mesi dopo, dice "Marco ha 32 anni,
+        ex-militare". La bible deve sapere quale dei due "Marco" usare
+        — e la risposta non è "il più recente nel DB" né "l'ultimo
+        salvato". È il documento con la <strong>maggiore autorità</strong>.
+      </p>
+
+      <h3>DOC_AUTHORITY — la gerarchia</h3>
+
+      <p class="small">
+        File: <code>packages/domain/src/bible/authority.ts</code>
+      </p>
+
+      <pre><code><span class="com">// Higher index = higher authority.</span>
+<span class="com">// A tratment written last month beats a logline written a year ago:</span>
+<span class="com">// the project has evolved, the more detailed document wins.</span>
+<span class="kw">export const</span> DOC_AUTHORITY = [
+  <span class="str">"logline"</span>,
+  <span class="str">"soggetto"</span>,
+  <span class="str">"synopsis"</span>,
+  <span class="str">"outline"</span>,
+  <span class="str">"treatment"</span>,
+] <span class="kw">as const</span>;
+
+<span class="kw">export type</span> DocType = (<span class="kw">typeof</span> DOC_AUTHORITY)[<span class="kw">number</span>];</code></pre>
+
+      <p>
+        Il ragionamento è semplice: il trattamento è il documento più
+        elaborato e più tardivo nel processo di sviluppo. Se il trattamento
+        dice che Marco ha 32 anni, il progetto è già andato in quella
+        direzione — la logline è solo il germe originale. Il documento
+        più specifico e più avanzato nel workflow vince.
+      </p>
+
+      <h3>resolveFact() — risolvere il conflitto</h3>
+
+      <p class="small">
+        Stesso file. Riceve un array di <code>{ value, source }</code>
+        estratti da documenti diversi sulla stessa "fact" (es. l'età di
+        Marco). Ritorna <code>"resolved"</code> con il valore vincente, o
+        <code>"contested"</code> se due documenti alla stessa autorità
+        dicono cose diverse.
+      </p>
+
+      <pre><code><span class="kw">export type</span> FactEntry = {
+  <span class="kw">readonly</span> value:  <span class="kw">string</span>;
+  <span class="kw">readonly</span> source: DocType;
+};
+
+<span class="kw">export type</span> ResolvedFact =
+  | { status: <span class="str">"resolved"</span>;  value: <span class="kw">string</span>; winner: DocType }
+  | { status: <span class="str">"contested"</span>; values: FactEntry[] };
+
+<span class="kw">export const</span> <span class="fn">resolveFact</span> = (facts: FactEntry[]): ResolvedFact =&gt; {
+  <span class="kw">if</span> (facts.length === <span class="num">0</span>)
+    <span class="kw">return</span> { status: <span class="str">"contested"</span>, values: [] };
+
+  <span class="com">// Sort descending by authority index — highest authority first.</span>
+  <span class="kw">const</span> sorted = [...facts].<span class="fn">sort</span>(
+    (a, b) =&gt; DOC_AUTHORITY.<span class="fn">indexOf</span>(b.source) - DOC_AUTHORITY.<span class="fn">indexOf</span>(a.source),
+  );
+
+  <span class="kw">const</span> topAuthority = DOC_AUTHORITY.<span class="fn">indexOf</span>(sorted[<span class="num">0</span>].source);
+  <span class="kw">const</span> topFacts     = sorted.<span class="fn">filter</span>(
+    (f) =&gt; DOC_AUTHORITY.<span class="fn">indexOf</span>(f.source) === topAuthority,
+  );
+
+  <span class="com">// All top-authority documents agree → resolved.</span>
+  <span class="kw">const</span> uniqueValues = [...<span class="kw">new</span> <span class="fn">Set</span>(topFacts.<span class="fn">map</span>((f) =&gt; f.value))];
+  <span class="kw">if</span> (uniqueValues.length === <span class="num">1</span>)
+    <span class="kw">return</span> { status: <span class="str">"resolved"</span>, value: uniqueValues[<span class="num">0</span>], winner: sorted[<span class="num">0</span>].source };
+
+  <span class="com">// Same authority, different values → contested (needs human review).</span>
+  <span class="kw">return</span> { status: <span class="str">"contested"</span>, values: topFacts };
+};</code></pre>
+
+      <h3>I due stati: resolved vs contested</h3>
+
+      <div class="twoCol">
+        <div class="card">
+          <h4 style="color: var(--ok); margin-top: 0;">resolved</h4>
+          <p class="small">
+            Il documento con l'autorità più alta è univoco sul valore.
+            La bible usa quel valore e annota da quale documento viene.
+          </p>
+          <pre><code><span class="com">// treatment: "Marco, 32 anni, ex-militare"</span>
+<span class="com">// logline:   "Marco, uomo di mezza età"</span>
+{ status: <span class="str">"resolved"</span>,
+  value:  <span class="str">"32 anni, ex-militare"</span>,
+  winner: <span class="str">"treatment"</span> }</code></pre>
+        </div>
+        <div class="card">
+          <h4 style="color: var(--warn); margin-top: 0;">contested</h4>
+          <p class="small">
+            Due documenti alla stessa autorità danno valori diversi.
+            La bible segnala il conflitto. Cesare può indicarlo all'utente
+            invece di scegliere arbitrariamente.
+          </p>
+          <pre><code><span class="com">// outline v1:  "Marco, carabiniere"</span>
+<span class="com">// outline v2:  "Marco, ingegnere"</span>
+{ status:  <span class="str">"contested"</span>,
+  values: [
+    { value: <span class="str">"carabiniere"</span>, source: <span class="str">"outline"</span> },
+    { value: <span class="str">"ingegnere"</span>,   source: <span class="str">"outline"</span> },
+  ] }</code></pre>
+        </div>
+      </div>
+
+      <h3>Perché treatment batte logline</h3>
+
+      <p>
+        Il filmmaking è un processo iterativo. Una logline viene scritta
+        nelle prime ore di sviluppo del progetto — è un'idea, non un
+        vincolo. Il trattamento viene scritto dopo settimane o mesi di
+        revisioni, con i personaggi già sviluppati, i luoghi già scelti,
+        la struttura narrativa già definita.
+      </p>
+
+      <p>
+        Usare la logline per risolvere un conflitto significherebbe che
+        la prima bozza ha sempre ragione sulla versione finale. È il
+        contrario di come funziona lo sviluppo di un film. <code>DOC_AUTHORITY</code>
+        rispecchia la gerarchia reale del processo creativo: i documenti
+        più elaborati e più tardivi hanno più autorità.
+      </p>
+
+      <div class="callout">
+        <h4>Cosa si guadagna con l'authority order</h4>
+        <p>
+          Senza <code>resolveFact()</code>, Sonnet riceverebbe testi
+          contraddittori nel prompt della distillazione e produrrebbe una
+          bible incoerente — o peggio, ne mixerebbe i valori in modo
+          imprevedibile. Con l'authority order, la distillazione è
+          deterministica: stesso input → stessa bible. Questo è
+          fondamentale per il fingerprint e per la cache.
+        </p>
+      </div>
+
+      <!-- ─────────────────────────────────────────────────────── -->
+      <h2 id="non-fatto">10. Cosa abbiamo deciso di NON fare</h2>
 
       <p>
         Una buona architettura è anche un elenco di no. Questi sono i
@@ -1739,7 +2268,7 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
       </table>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="letture">9. Letture consigliate</h2>
+      <h2 id="letture">11. Letture consigliate</h2>
 
       <p>
         Tutti questi sono nomi di concetti / pattern, non URL. Cerca
@@ -1749,8 +2278,8 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
       <h3>Anthropic — first-party</h3>
       <ul>
         <li><strong>"Building effective agents"</strong> (blog Anthropic, dicembre 2024) — il manifesto su cui si basa l'approccio "augmented LLM + tools + loops" che usiamo. Distingue tra <em>workflows</em> (codice che usa LLM come step) e <em>agents</em> (LLM che pilota l'execution flow). Cesare è ibrido: lo loop è codice rigido, ma le decisioni dentro al loop sono dell'LLM.</li>
-        <li><strong>Anthropic Tool Use docs</strong> — la spec ufficiale del <code>tool_use</code> / <code>tool_result</code> block model. Da leggere prima di scrivere uno schema di tool.</li>
-        <li><strong>Prompt caching guide</strong> (Anthropic) — la documentazione del <code>cache_control: ephemeral</code>. Spiega il TTL, le condizioni di cache hit (prefisso esatto), e come misurare gli hit via <code>usage.cache_read_input_tokens</code>.</li>
+        <li><strong>Anthropic Tool Use docs</strong> — la spec ufficiale del <code>tool_use</code> / <code>tool_result</code> block model. Da leggere prima di scrivere uno schema di tool. Include la guida su come formattare <code>input_schema</code> (JSON Schema subset), come gestire <code>tool_result</code> con errori, e il flow <code>stop_reason: "tool_use"</code>.</li>
+        <li><strong>Prompt caching guide</strong> (Anthropic) — la documentazione del <code>cache_control: ephemeral</code>. Spiega il TTL (~5 minuti), le condizioni di cache hit (prefisso esatto dell'array di blocchi), come misurare gli hit via <code>usage.cache_read_input_tokens</code>, e i vincoli: il blocco cachato deve essere di almeno 1024 token per essere eligibile. Fondamentale per capire perché l'ordine dei blocchi nel system prompt è immutabile — spostare un blocco invalida tutto il prefisso.</li>
       </ul>
 
       <h3>Pattern agentici</h3>
@@ -1760,10 +2289,16 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
         <li><strong>Reflection / self-critique loops</strong> — non li usiamo (vorrebbe dire più iterazioni e quindi più costo) ma sono il prossimo step se mai vorremo "Cesare rilegge la propria proposta prima di mostrarla".</li>
       </ul>
 
+      <h3>Context Engineering</h3>
+      <ul>
+        <li><strong>"Prompt caching"</strong> (Anthropic docs) — sezione specifica su come strutturare il system prompt per massimizzare i cache hit. Include i casi edge: messaggi multiturno, tool definitions in cache, come il position dei blocchi <code>cache_control</code> determina il prefisso. Spec 38 implementa esattamente la strategia consigliata: blocchi stabili davanti, dinamici in coda.</li>
+        <li><strong>Lazy distillation pattern</strong> — il pattern che Spec 38 chiama "bible distillation" è una variante del "lazy RAG": invece di caricare tutti i documenti nel prompt e lasciare che il modello li interpreti on-the-fly, li pre-digerisci in una struttura stabile e usi quella struttura nel prompt. La differenza rispetto al RAG classico: non stai cercando chunks rilevanti per similarità — stai producendo una distillazione completa del progetto che viene aggiornata solo quando cambia il fingerprint. Cerca "pre-computed context" o "offline distillation" per pattern simili in letteratura. Oh Writers lo implementa con: (a) fingerprint composito multi-source, (b) lazy update (background re-distill invece di bloccare l'utente), (c) stale-while-revalidate semantics.</li>
+      </ul>
+
       <h3>RAG e dintorni</h3>
       <ul>
         <li><strong>"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"</strong> (Lewis et al., 2020) — il paper originale di Facebook AI che ha coniato il termine. Utile per capire <em>cosa stiamo NON facendo</em> e perché.</li>
-        <li><strong>"Lost in the middle"</strong> (Liu et al., 2023) — paper Stanford che mostra come gli LLM ignorino informazioni nel mezzo di context window lunghi. È un'altra ragione per cui il lazy-RAG batte il full-payload: meno tokens = più attenzione effettiva sui rilevanti.</li>
+        <li><strong>"Lost in the middle"</strong> (Liu et al., 2023) — paper Stanford che mostra come gli LLM ignorino informazioni nel mezzo di context window lunghi. È un'altra ragione per cui il lazy-RAG batte il full-payload: meno tokens = più attenzione effettiva sui rilevanti. La bible distillata è densa e strutturata — il modello "spende" la finestra di attenzione su dati già interpretati.</li>
       </ul>
 
       <h3>Engineering generale</h3>
@@ -1773,7 +2308,7 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
       </ul>
 
       <!-- ─────────────────────────────────────────────────────── -->
-      <h2 id="manutenzione">10. Come tenere viva questa pagina</h2>
+      <h2 id="manutenzione">12. Come tenere viva questa pagina</h2>
 
       <p>
         Questa è una <strong>zona di learning persistente</strong>, non un
@@ -1803,9 +2338,16 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
           spiegando trade-off rispetto alle altre due.
         </li>
         <li>
-          <strong>Decidiamo di fare qualcosa che era nel "NO" di §8</strong>
+          <strong>Cambia il Film Bible</strong> (nuovi campi in
+          <code>FilmBibleSchema</code>, nuova logica di distillazione) →
+          aggiorna §8 con lo schema aggiornato e il nuovo flusso. Se
+          cambia la strategia di caching (es. bible in blocco separato)
+          aggiorna anche §4.
+        </li>
+        <li>
+          <strong>Decidiamo di fare qualcosa che era nel "NO" di §10</strong>
           (es. accendiamo lo streaming, o adottiamo MCP) → sposta la riga
-          dalla §8 alla §9 e spiega il <em>perché del cambio</em>: la
+          dalla §10 alla §11 e spiega il <em>perché del cambio</em>: la
           decisione di non fare è documentata, la decisione di tornarci
           sopra anche.
         </li>
@@ -1829,7 +2371,7 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
           pagina") — 30 secondi, capisci l'architettura per la pitch deck.
         </li>
         <li>
-          <strong>Lettura sequenziale</strong> §1 → §9 — 30 minuti, esci
+          <strong>Lettura sequenziale</strong> §1 → §11 — 40 minuti, esci
           con un mental model completo dei pattern.
         </li>
         <li>
@@ -1846,7 +2388,8 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
         §1. Per un <em>tecnico</em>: §2 (tool loop) + §3 (lazy RAG) bastano.
         Per un <em>designer / product</em>: §6 (propose/accept) è la
         sezione UX. Per un <em>CFO</em>: §4 + §5 (caching e router) sono
-        sui costi.
+        sui costi. Per chi vuole capire il "bug di Roma" e come è stato
+        risolto: §8 (context engineering) + §9 (document authority).
       </p>
 
       <hr class="sep" />
@@ -1858,11 +2401,15 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
           Il contesto è <strong>lazy</strong>: il system prompt è un
           indice, i dettagli arrivano via <code>read_*</code> tools. Il
           prompt è <strong>cachato</strong> sui blocchi statici
-          (ruolo, contesto produzione, tool guidance) e dinamico solo
-          sull'ultimo blocco. Un <strong>router puro</strong> sceglie
-          Haiku per le domande brevi e Sonnet per le mutazioni. Le
-          modifiche al testo passano sempre per <strong>propose /
-          accept</strong>, mai auto-apply. Gli errori sono
+          (ruolo, <strong>film bible</strong>, contesto produzione, tool guidance)
+          e dinamico solo sull'ultimo blocco. La <strong>Film Bible</strong>
+          distilla scene summaries + documenti narrativi in un blocco strutturato
+          stabile, risolvendo i conflitti tra documenti via
+          <strong>DOC_AUTHORITY</strong> e iniettando un
+          <strong>SETTING PRIOR</strong> per le locations (fix del "bug di Roma").
+          Un <strong>router puro</strong> sceglie Haiku per le domande brevi
+          e Sonnet per le mutazioni. Le modifiche al testo passano sempre per
+          <strong>propose / accept</strong>, mai auto-apply. Gli errori sono
           <strong>valori</strong> (neverthrow), non eccezioni. Niente
           vector store, niente Effect-TS, niente fine-tuning, niente
           streaming default.
@@ -1887,9 +2434,11 @@ saving %: (0.0276 - 0.0046) / 0.0276 = -83 %</code></pre>
           <li><a href="#router"><span class="num">5.</span>Model tier router</a></li>
           <li><a href="#propose"><span class="num">6.</span>Propose / Accept</a></li>
           <li><a href="#errors"><span class="num">7.</span>Errori come valori</a></li>
-          <li><a href="#non-fatto"><span class="num">8.</span>Cosa NON facciamo</a></li>
-          <li><a href="#letture"><span class="num">9.</span>Letture consigliate</a></li>
-          <li><a href="#manutenzione"><span class="num">10.</span>Tenere viva la pagina</a></li>
+          <li><a href="#context-engineering"><span class="num">8.</span>Context Engineering — Film Bible</a></li>
+          <li><a href="#doc-authority"><span class="num">9.</span>Document Authority</a></li>
+          <li><a href="#non-fatto"><span class="num">10.</span>Cosa NON facciamo</a></li>
+          <li><a href="#letture"><span class="num">11.</span>Letture consigliate</a></li>
+          <li><a href="#manutenzione"><span class="num">12.</span>Tenere viva la pagina</a></li>
         </ol>
       </aside>
     </div>

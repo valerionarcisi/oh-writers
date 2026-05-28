@@ -22,6 +22,7 @@ export function ImportedTitlePageConfirm({
       isOpen
       onClose={onCancel}
       title="Frontespizio importato dal PDF"
+      isDismissable={false}
       actions={
         <>
           <Button

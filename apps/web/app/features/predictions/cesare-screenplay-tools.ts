@@ -241,7 +241,9 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
         .describe(
           "Il testo Fountain completo della scena riscritta. " +
             "Deve iniziare con uno slugline (INT./EXT. ...) e " +
-            "includere tutto il corpo della scena.",
+            "includere tutto il corpo della scena. " +
+            "IMPORTANTE: ogni paragrafo di azione deve essere separato da una riga vuota. " +
+            "Esempio corretto:\nEXT. LUOGO - NOTTE\n\nPrima azione.\n\nSeconda azione.\n\n      PERSONAGGIO\n          Dialogo.",
         ),
     }),
     execute: async (input, _opts) => {
@@ -539,7 +541,13 @@ const REVISION_MODEL = "claude-haiku-4-5";
 
 const reviseSystemPrompt = `Sei uno sceneggiatore italiano esperto, specializzato nella riscrittura strutturale di sceneggiature in formato Fountain.
 Output: SOLO il nuovo testo Fountain, senza meta-commenti, senza intestazioni esterne, senza markdown.
-Mantieni la struttura Fountain (slugline INT./EXT., personaggi maiuscoli, parentetiche fra parentesi).`;
+Mantieni la struttura Fountain:
+- Slugline: INT./EXT. LUOGO - MOMENTO (tutto maiuscolo)
+- Azione: testo normale, ogni paragrafo separato da una RIGA VUOTA
+- Personaggio: tutto maiuscolo, centrato (6 spazi), preceduto da riga vuota
+- Dialogo: testo normale con 10 spazi di rientro
+- Parentetica: (testo) con 10 spazi di rientro
+CRITICO: ogni blocco di azione distinto deve essere separato da una riga completamente vuota. Non concatenare più azioni senza riga vuota tra loro.`;
 
 const reviseUserPrompt = (
   instruction: string,

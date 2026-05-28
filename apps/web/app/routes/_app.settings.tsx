@@ -1,17 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { UserSettingsPage } from "~/features/user-settings";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
 });
 
-function SettingsPage() {
-  const { user } = Route.useRouteContext() as { user: { name: string; email: string } };
+const appRoute = getRouteApi("/_app");
 
-  return (
-    <UserSettingsPage
-      userName={user.name}
-      userEmail={user.email}
-    />
-  );
+function SettingsPage() {
+  const { user } = appRoute.useLoaderData();
+
+  return <UserSettingsPage userName={user.name} userEmail={user.email} />;
 }
