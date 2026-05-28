@@ -337,6 +337,16 @@ function AppShellInner({
       if (e.ctrlKey && e.altKey && !e.metaKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
         setShellState((prev) => (prev === "focus" ? "full" : "focus"));
+        return;
+      }
+      // Notion-style sidebar toggle: Cmd/Ctrl + \\ — cycles full ↔ collapsed.
+      // Leaves focus alone (user exits focus via ⌃⌥F).
+      if (isMod && e.key === "\\") {
+        e.preventDefault();
+        setShellState((prev) => {
+          if (prev === "focus") return prev;
+          return prev === "full" ? "collapsed" : "full";
+        });
       }
     };
     document.addEventListener("keydown", onKey);
