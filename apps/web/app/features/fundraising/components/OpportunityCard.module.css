@@ -61,37 +61,41 @@
   flex-shrink: 0;
 
   &[data-kind="bando_pubblico"] {
-    background: color-mix(in srgb, #3b82f6 15%, transparent);
-    color: #2563eb;
+    background: color-mix(in srgb, var(--ds-info) 15%, transparent);
+    color: var(--ds-info);
   }
 
   &[data-kind="call_festival"] {
-    background: color-mix(in srgb, #a855f7 15%, transparent);
-    color: #7c3aed;
+    background: color-mix(in srgb, var(--ds-agent) 15%, transparent);
+    color: var(--ds-agent);
   }
 
   &[data-kind="residenza"] {
-    background: color-mix(in srgb, var(--color-teal, #14b8a6) 15%, transparent);
-    color: #0f766e;
+    background: color-mix(
+      in srgb,
+      var(--color-teal, var(--ds-action)) 15%,
+      transparent
+    );
+    color: var(--ds-action);
   }
 
   &[data-kind="grant_privato"] {
-    background: color-mix(in srgb, #22c55e 15%, transparent);
-    color: #15803d;
+    background: color-mix(in srgb, var(--ds-success) 15%, transparent);
+    color: var(--ds-success);
   }
 
   &[data-kind="workshop"] {
-    background: color-mix(in srgb, #f97316 15%, transparent);
-    color: #c2410c;
+    background: color-mix(in srgb, var(--ds-warning) 15%, transparent);
+    color: var(--ds-warning);
   }
 
   &[data-kind="pitch_forum"] {
     background: color-mix(
       in srgb,
-      var(--color-coral, #f87171) 15%,
+      var(--color-coral, var(--ds-danger)) 15%,
       transparent
     );
-    color: #dc2626;
+    color: var(--ds-danger);
   }
 
   &[data-kind="other"] {
@@ -105,7 +109,7 @@
   color: var(--ds-text-2);
 
   &[data-urgent="true"] {
-    color: #d97706;
+    color: var(--ds-warning);
     font-weight: var(--weight-medium);
   }
 

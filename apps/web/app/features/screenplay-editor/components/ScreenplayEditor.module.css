@@ -113,7 +113,7 @@
 .pageShell {
   inline-size: 100%;
   max-inline-size: 816px;
-  background: #fff;
+  background: var(--ds-surface);
   position: relative;
   flex-shrink: 0;
   box-shadow: var(--shadow-md);
