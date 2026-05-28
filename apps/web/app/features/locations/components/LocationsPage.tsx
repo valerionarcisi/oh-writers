@@ -20,7 +20,7 @@ import {
   removeLocationCandidate,
   syncRequirementsFromBreakdown,
 } from "../server/locations.server";
-import { syncStateQueryOptions } from "~/features/screenplay-editor/server/screenplay.server";
+import { syncStateQueryOptions } from "~/features/screenplay-editor";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import { discoverPlacesInArea } from "../server/discovery.server";
 import { rankPlacesForScene } from "../server/rank.server";

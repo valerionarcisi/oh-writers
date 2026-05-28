@@ -11,10 +11,7 @@ import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
-import {
-  useProject,
-  personalProjectsQueryOptions,
-} from "~/features/projects";
+import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
 
@@ -187,7 +184,9 @@ function AppLayout() {
   const userMenuItems: DropdownMenuItem[] = [
     {
       label: "Impostazioni account",
-      onClick: () => { window.location.href = "/settings"; },
+      onClick: () => {
+        window.location.href = "/settings";
+      },
     },
     {
       label: "Presentazione",
@@ -207,6 +206,7 @@ function AppLayout() {
       user={user}
       projectName={projectName}
       sectionName={sectionName}
+      activeSegment={activeSegment}
       sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
       projects={projectsList}
       currentProjectId={projectId}
