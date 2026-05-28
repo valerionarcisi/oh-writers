@@ -10,7 +10,7 @@ import {
   ExportPdfModal,
   ExportSiaeModal,
   FreeNarrativeEditor,
-  NarrativeCesarePanel,
+  MarginNotesColumn,
   NarrativeDocsShell,
   useAutoSave,
   useDocument,
@@ -219,7 +219,7 @@ function SoggettoPageReady({
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
         rightAside={
-          <NarrativeCesarePanel
+          <MarginNotesColumn
             projectId={projectId}
             docType={DocumentTypes.SOGGETTO}
             content={soggettoContent}

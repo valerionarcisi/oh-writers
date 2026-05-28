@@ -21,7 +21,7 @@ import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
 import { NarrativeDocsShell } from "./NarrativeDocsShell";
-import { NarrativeCesarePanel } from "./NarrativeCesarePanel";
+import { MarginNotesColumn } from "./MarginNotesColumn";
 import { TreatmentToc } from "./TreatmentToc";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
@@ -452,7 +452,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   const layout = layoutForType(type);
   const rightAside = (
-    <NarrativeCesarePanel
+    <MarginNotesColumn
       projectId={document.projectId}
       docType={type}
       content={plainContent}
