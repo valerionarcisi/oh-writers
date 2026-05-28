@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useButton } from "react-aria";
 import type { PressEvent } from "react-aria";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, MouseEventHandler, ReactNode } from "react";
 import styles from "./Button.module.css";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost";
@@ -28,6 +28,9 @@ export function Button({
   onPressStart,
   onPressEnd,
   onPressChange,
+  // onClick must be extracted here and forwarded to useButton so react-aria
+  // chains it through usePress rather than having buttonProps.onClick overwrite it.
+  onClick,
   type = "button",
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledby,
@@ -47,6 +50,9 @@ export function Button({
       onPressStart,
       onPressEnd,
       onPressChange,
+      // Passing onClick to useButton lets react-aria chain it through usePress,
+      // so the handler fires reliably when buttonProps.onClick is spread last.
+      onClick: onClick as MouseEventHandler<Element> | undefined,
       type,
       "aria-label": ariaLabel,
       "aria-labelledby": ariaLabelledby,
