@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { generateText, jsonSchema, tool } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { ResultAsync, okAsync, errAsync } from "neverthrow";
 import { eq, inArray } from "drizzle-orm";
 import {
@@ -119,44 +121,35 @@ The settingPrior must be specific enough to guide a location scout: include city
 
 Be concise. The bible is injected into every AI call as a cached block.`;
 
-// ─── Anthropic Sonnet call ────────────────────────────────────────────────────
+// ─── AI SDK Sonnet call ───────────────────────────────────────────────────────
+
+const EMIT_SDK_TOOL = tool({
+  description: EMIT_TOOL.description,
+  inputSchema: jsonSchema(
+    EMIT_TOOL.input_schema as unknown as Parameters<typeof jsonSchema>[0],
+  ),
+});
 
 const callSonnetForcedTool = async (
   systemPrompt: string,
   userMessage: string,
 ): Promise<unknown> => {
-  const sdkModule = "@anthropic-ai/sdk";
-  const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
-    default?: new (cfg: { apiKey: string }) => {
-      messages: {
-        create(args: Record<string, unknown>): Promise<{ content: unknown[] }>;
-      };
-    };
-  };
-  const Ctor = sdk.default ?? (sdk as never);
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-  const client = new (Ctor as new (cfg: { apiKey: string }) => {
-    messages: {
-      create(
-        args: Record<string, unknown>,
-      ): Promise<{
-        content: Array<{ type: string; name?: string; input?: unknown }>;
-      }>;
-    };
-  })({ apiKey });
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2048,
+  const result = await generateText({
+    model: anthropic("claude-sonnet-4-6"),
     system: systemPrompt,
-    tools: [EMIT_TOOL],
-    tool_choice: { type: "tool", name: EMIT_TOOL_NAME },
     messages: [{ role: "user", content: userMessage }],
+    tools: { [EMIT_TOOL_NAME]: EMIT_SDK_TOOL },
+    toolChoice: { type: "tool", toolName: EMIT_TOOL_NAME },
+    maxOutputTokens: 2048,
+    experimental_telemetry: {
+      isEnabled: true,
+      functionId: "bible-distill",
+    },
   });
-  const toolBlock = response.content.find(
-    (b) => b.type === "tool_use" && b.name === EMIT_TOOL_NAME,
+  const emitCall = result.toolCalls.find(
+    (tc) => tc.toolName === EMIT_TOOL_NAME,
   );
-  return toolBlock && "input" in toolBlock ? toolBlock.input : null;
+  return emitCall ? emitCall.input : null;
 };
 
 // ─── Input assembly ───────────────────────────────────────────────────────────

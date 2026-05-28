@@ -26,7 +26,8 @@ import { toShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
-import { loadAnthropicStreamingClient } from "~/features/ai";
+import { generateText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import {
   runToolLoop,
   runDocumentToolLoop,
@@ -1560,57 +1561,40 @@ const mockResponse = (
     ),
   );
 
-// ─── Anthropic streaming call ─────────────────────────────────────────────────
+// ─── Text-only call (no tools) ────────────────────────────────────────────────
+// Used by the legacy V1 handler (handleAskCesare). Kept for reference; the
+// active V2 path goes through runUnifiedToolLoop / callCesareV2.
 
 const callCesare = (
   systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
   message: string,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    (async () => {
-      const client = await loadAnthropicStreamingClient();
-
-      const messages = [
-        ...conversationHistory.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        { role: "user" as const, content: message },
-      ];
-
-      const stream = client.messages.stream({
-        model,
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages,
-      });
-
-      // Collect all text chunks from the stream
-      const chunks: string[] = [];
-      stream.on("inputJson", (delta: string) => {
-        chunks.push(delta);
-      });
-
-      // Wait for the stream to complete; then gather the final text content
-      const finalMsg = (await stream.finalMessage()) as {
-        content: Array<{ type: string; text?: string }>;
-      };
-
-      // finalMessage() gives the fully assembled message with text blocks
-      const textContent = finalMsg.content
-        .filter((b) => b.type === "text" && typeof b.text === "string")
-        .map((b) => b.text as string)
-        .join("");
-
-      return textContent;
-    })(),
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content as string,
+    })),
+    { role: "user" as const, content: message },
+  ];
+  return ResultAsync.fromPromise(
+    generateText({
+      model: anthropic(model),
+      system: systemPrompt.map((b) => b.text).join("\n\n"),
+      messages,
+      maxOutputTokens: 1024,
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: "cesare-text-only",
+      },
+    }).then((r) => r.text),
     (e) =>
       new CesareError(
-        `Anthropic streaming failed: ${e instanceof Error ? e.message : String(e)}`,
+        `Cesare text call failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
   );
+};
 
 // ─── Agentic tool loop callers ────────────────────────────────────────────────
 // Client construction is now handled inside cesare-tools.ts (via generateText

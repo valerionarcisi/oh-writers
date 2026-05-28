@@ -1,6 +1,6 @@
 # Spec 42 — Migrazione a Vercel AI SDK v5 + Langfuse OTEL
 
-**Status:** 🔄 In corso (Fase 1 ✅, Fase 2 ✅)  
+**Status:** ✅ Completata (tutte le fasi)  
 **Scope:** `features/predictions/` — tutto il layer AI di Cesare  
 **Depends on:** nessuna dipendenza di feature
 
@@ -434,11 +434,20 @@ Pacchetto da rimuovere dopo la migrazione:
 1. Adatta `cesare-tool-loop.mock.ts` a `MockLanguageModelV1`
 2. Suite Playwright mock-ui: tutti i test passano
 
-### Fase 5 — Pulizia
+### Fase 5 — Pulizia ✅ Completata
 
-1. Rimuovi `@anthropic-ai/sdk` se non più necessario
-2. Aggiorna `anthropic-client.ts` → `ai-client.ts`
-3. Commit + push
+1. ✅ Migra `runUnifiedToolLoop` al path AI SDK via `bridgeLegacyTools` + `runGenericToolLoop`
+2. ✅ Migra `bible-distill.server.ts` `callSonnetForcedTool` al path AI SDK (`generateText`)
+3. ✅ Migra `callCesare` in `cesare.server.ts` al path AI SDK (`generateText`)
+4. ⏳ `@anthropic-ai/sdk` non rimosso — ancora usato da `features/breakdown/server/llm-spoglio.server.ts` via `loadAnthropicStreamingClient`. Migrazione `llm-spoglio` fuori scope.
+5. ⏳ `anthropic-client.ts` non rinominato — `loadAnthropicStreamingClient` ancora esportata e usata da `llm-spoglio.server.ts`.
+
+**Deviazioni:**
+
+- `bridgeLegacyTools` adottato al posto della migrazione skill-by-skill: converte `AnthropicTool[]` in AI SDK `Tool` objects con `execute` inline che delega al `SkillExecutor`. Questo evita di modificare tutti i `*.skill.ts` e i loro tool arrays legacy.
+- `CESARE_*_TOOLS` arrays (legacy) mantenuti — ancora referenziati dai `*.skill.ts` e dai tool loop specifici per pagina (`runToolLoop`, `runBreakdownToolLoop`, ecc.). Rimozione possibile quando anche quei loop vengono migrati.
+- `runLegacyToolLoop`, `resolveMockClient`, `createMockAnthropicClient`, `LegacyAnthropicClient` mantenuti — usati dai tool loop specifici di pagina (non dal `runUnifiedToolLoop`). Dead code de-facto quando `MOCK_AI=true` perché `mockModel` ha priorità, ma non rimossi per non rompere i loop legacy.
+- `callCesare` in `cesare.server.ts` era dead code (V1 handler non più chiamato) ma migrato comunque per coerenza e rimozione del import `loadAnthropicStreamingClient`.
 
 ---
 

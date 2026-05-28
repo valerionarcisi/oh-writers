@@ -1,4 +1,4 @@
-import { type Tool, tool, generateText, stepCountIs } from "ai";
+import { type Tool, tool, generateText, stepCountIs, jsonSchema } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
@@ -40,7 +40,7 @@ import {
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
 import { callHaiku, extractText } from "~/features/ai";
-import type { SkillExecutor } from "./skills/types";
+import type { SkillExecutor, AnthropicTool } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import {
   CESARE_SCHEDULE_TOOLS,
@@ -3439,15 +3439,51 @@ export const runBudgetToolLoop = (
     executor: executeBudgetTool,
   });
 
+// ─── Legacy-to-AI-SDK tool bridge ─────────────────────────────────────────────
+// Converts AnthropicTool[] (input_schema format) to AI SDK Tool objects with
+// inline execute callbacks that delegate to a SkillExecutor. This lets
+// runUnifiedToolLoop use generateText (the AI SDK path) without requiring every
+// skill to migrate its tool definitions to the Zod factory format first.
+
+const bridgeLegacyTools = (
+  legacyTools: readonly AnthropicTool[],
+  executor: SkillExecutor,
+  db: Db,
+  projectId: string,
+  access: ProjectAccess,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Record<string, Tool<any, any>> =>
+  Object.fromEntries(
+    legacyTools.map((t) => [
+      t.name,
+      tool({
+        description: t.description,
+        inputSchema: jsonSchema(
+          t.input_schema as Parameters<typeof jsonSchema>[0],
+        ),
+        execute: async (input, opts) => {
+          const block: ToolUseBlock = {
+            type: "tool_use",
+            id: opts.toolCallId,
+            name: t.name,
+            input,
+          };
+          const result = await executor(block, db, projectId, access);
+          if (result.isErr()) return { error: result.error.message };
+          try {
+            return JSON.parse(result.value.content) as unknown;
+          } catch {
+            return { raw: result.value.content };
+          }
+        },
+      }),
+    ]),
+  );
+
 // ─── Unified tool loop (spec 39) ──────────────────────────────────────────────
 // Parameterised on a SkillExecutor from the registry instead of a page-specific
-// executor. The SkillExecutor receives (block, db, projectId, access) — the
-// extra `access` arg is forwarded from the server function context.
-//
-// The skills still use the AnthropicTool[] wire format (legacy JSON schema).
-// For production calls we use the legacy path since the skills haven't been
-// migrated to AI SDK tool factories yet — that is Fase 5 scope. The mock path
-// is identical: the mock client doesn't inspect tool definitions.
+// executor. Bridges the legacy AnthropicTool[] wire format to AI SDK Tool
+// objects so generateText can drive the loop — same path as runGenericToolLoop.
 
 export const runUnifiedToolLoop = (
   systemPrompt: string | readonly unknown[],
@@ -3459,34 +3495,21 @@ export const runUnifiedToolLoop = (
   access: ProjectAccess,
   model: string,
 ): ResultAsync<string, CesareError> => {
-  const mockClient = resolveMockClient();
-  // For the unified loop the legacy path covers both MOCK_AI and production
-  // until Fase 5 migrates the skill tool definitions to AI SDK format.
-  const legacyClient: LegacyAnthropicClient = mockClient ?? {
-    messages: {
-      create: async (args) => {
-        const sdkModule = "@anthropic-ai/sdk";
-        const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
-          default?: new (cfg: { apiKey: string }) => LegacyAnthropicClient;
-        } & { new (cfg: { apiKey: string }): LegacyAnthropicClient };
-        const Ctor = sdk.default ?? sdk;
-        const apiKey = process.env["ANTHROPIC_API_KEY"];
-        if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-        const client = new Ctor({ apiKey });
-        return client.messages.create(args);
-      },
-    },
-  };
-
-  return runLegacyToolLoop({
+  const sdkTools = bridgeLegacyTools(
+    tools as readonly AnthropicTool[],
+    executor,
+    db,
+    projectId,
+    access,
+  );
+  return runGenericToolLoop({
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    sdkTools: {},
-    legacyTools: tools,
-    legacyMockClient: legacyClient,
+    sdkTools,
+    mockModel: resolveMockModel(),
     executor: (block, dbArg, projectIdArg) =>
       executor(block, dbArg, projectIdArg, access),
   });
