@@ -1,6 +1,56 @@
 import { describe, it, expect } from "vitest";
-import { findSection } from "./cesare-tools";
+import { findSection, parseHeading } from "./cesare-tools";
 import { parsePlanDescription } from "./cesare-shooting-plan-tools";
+
+describe("parseHeading", () => {
+  it("parses a standard INT slugline", () => {
+    expect(parseHeading("INT. CUCINA - GIORNO")).toEqual({
+      name: "CUCINA",
+      intExt: "INT",
+      timeOfDay: ["GIORNO"],
+    });
+  });
+
+  it("parses EXT with multi-segment time-of-day", () => {
+    expect(parseHeading("EXT. STRADA - SESTO SAN GIOVANNI - NOTTE")).toEqual({
+      name: "STRADA",
+      intExt: "EXT",
+      timeOfDay: ["SESTO SAN GIOVANNI", "NOTTE"],
+    });
+  });
+
+  it("recognises INT./EXT. compound prefix", () => {
+    const r = parseHeading("INT./EXT. RADICE - NOTTE");
+    expect(r.intExt).toBe("INT/EXT");
+    expect(r.name).toBe("RADICE");
+  });
+
+  it("folds EST. into EXT (schema doesn't model EST separately)", () => {
+    expect(parseHeading("EST. PIAZZA - ALBA").intExt).toBe("EXT");
+  });
+
+  it("recognises I/E shorthand as INT", () => {
+    expect(parseHeading("I/E AUTO - GIORNO").intExt).toBe("INT");
+  });
+
+  it("returns null intExt when no prefix is present", () => {
+    expect(parseHeading("UNA STRADA QUALSIASI").intExt).toBeNull();
+  });
+
+  it("handles a heading with no time-of-day", () => {
+    expect(parseHeading("INT. STUDIO")).toEqual({
+      name: "STUDIO",
+      intExt: "INT",
+      timeOfDay: [],
+    });
+  });
+
+  it("trims surrounding whitespace", () => {
+    const r = parseHeading("   EXT. BAR - GIORNO   ");
+    expect(r.name).toBe("BAR");
+    expect(r.intExt).toBe("EXT");
+  });
+});
 
 describe("findSection", () => {
   it("finds a markdown section and bounds the body at the next heading", () => {
@@ -70,7 +120,9 @@ describe("parsePlanDescription", () => {
   });
 
   it("falls back to a single WS when no keyword is recognized", () => {
-    const shots = parsePlanDescription("qualcosa di completamente non descritto");
+    const shots = parsePlanDescription(
+      "qualcosa di completamente non descritto",
+    );
     expect(shots).toHaveLength(1);
     expect(shots[0]?.shotSize).toBe("WS");
   });

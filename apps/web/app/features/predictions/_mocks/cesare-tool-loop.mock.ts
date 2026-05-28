@@ -603,6 +603,88 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
       },
     ],
   },
+
+  // ── Spec 43 — universal tool layer ─────────────────────────────────────────
+
+  // OHW-043-A: from any page, Cesare resolves the requirement_id himself via
+  // list/create tools instead of asking the user. The test pre-seeds
+  // setMockContext({ REQ_ID: <existing-seeded-req> }) so the chained
+  // add_candidate lands on the right row even though the mock has no way to
+  // pipe the real find_or_create result into the next turn.
+  {
+    match:
+      /aggiungi candidat[io] per la scena 1|aggiungimi candidati per la scena 1|aggiungi questi candidati per la scena 1/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "find_or_create_requirement_for_scene",
+            input: { scene_number: 1 },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        tool_uses: [
+          {
+            name: "add_candidate",
+            input: {
+              requirement_id: "{{REQ_ID}}",
+              name: "Vesuviosesto",
+              address: "Via Pisa 4, Sesto San Giovanni",
+              notes:
+                "Pizzeria con forno a legna, soffitto basso, atmosfera provinciale.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiunto Vesuviosesto al requirement della scena 1.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // OHW-043-B: from the locations page, Cesare can call rewrite_scene
+  // (cross-feature). The marker should land in sessionStorage so the editor
+  // picks it up on next mount.
+  {
+    match:
+      /riscrivi la scena 1|rifai la scena 1|rewrite scena 1|opzione b per la scena 1/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "rewrite_scene",
+            input: {
+              scene_number: 1,
+              new_content:
+                "EXT. SESTO SAN GIOVANNI - NOTTE\n\nFilippo arriva di corsa dalla strada. Respira affannosamente. Si ferma davanti alla porta del Radice e si sistema la cravatta con le mani che tremano.\n\nDa dentro: risate, il suono sordo di qualcuno che parla in un microfono.",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho riscritto la Scena 1 mettendo Filippo in primo piano. Vai sulla pagina Sceneggiatura per vedere l'overlay e accettarlo.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // OHW-043-C: from any page, when asked "what tools do you have", Cesare
+  // should list tools across multiple domains (universal layer), not just the
+  // page-bound ones.
+  {
+    match: /che tool hai|quali tool hai|quali strumenti hai|cosa puoi fare/i,
+    turns: [
+      {
+        text: "Posso lavorare in tutte le aree del progetto:\n\n📜 SCENEGGIATURA — propose_screenplay_edit, rewrite_scene, merge_scenes, delete_scene\n💰 BUDGET — update_budget_line, add_budget_line, set_budget_cap\n📍 LOCATION — search_places, add_candidate, find_or_create_requirement_for_scene\n📅 SCHEDULE — move_scene_to_day, swap_scenes\n🎬 PIANO INQUADRATURE — add_parallel_plan, add_shot_to_plan\n📄 DOCUMENTI — apply_text_edit, expand_section\n\nSono un layer sopra il prodotto: dimmi cosa serve e lo faccio.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
 ];
 
 // ─── Internal: placeholder substitution ───────────────────────────────────────

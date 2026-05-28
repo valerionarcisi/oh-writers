@@ -36,6 +36,7 @@ import {
   runBudgetToolLoop,
   runShootingPlanToolLoop,
   runScreenplayToolLoop,
+  runUniversalToolLoop,
 } from "./cesare-tools";
 import { classifyIntent } from "./cesare-intent-classifier";
 import type {
@@ -1078,16 +1079,21 @@ const isDocumentPage = (page: PageContext["page"]): boolean =>
   page === "treatment";
 
 const buildDocumentToolsGuidance = (ctx: CesareContext): string => {
-  if (!ctx.activeDocument) return "";
-  const label = DOCUMENT_LABELS[ctx.activeDocument.type];
+  const activeType = ctx.activeDocument?.type ?? null;
+  const label = activeType ? DOCUMENT_LABELS[activeType] : "documento";
+  const targetHint = ctx.activeDocument
+    ? `Il documento attivo è ${label.toUpperCase()}.`
+    : "Nessun documento attivo nel contesto. Gli edit testuali (apply_text_edit, expand_section, compress_section) richiedono che l'utente apra prima un documento — se servono, chiediglielo. Gli strumenti di GENERAZIONE qui sotto restano comunque utilizzabili.";
   return `
 
-STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
-- apply_text_edit(find, replace): sostituisce una stringa esatta del documento. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO sopra.
+STRUMENTI DISPONIBILI SUI DOCUMENTI (logline, sinossi, soggetto, scaletta, trattamento):
+- apply_text_edit(find, replace): sostituisce una stringa esatta del documento attivo. Usa SEMPRE testo letterale presente nel DOCUMENTO ATTIVO.
 - expand_section(heading): espande la sezione sotto un heading in 2-3 paragrafi.
 - compress_section(heading, target_words): comprime una sezione mantenendo i beat.
 
-Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.${buildDocumentGenToolsGuidance(ctx.activeDocument.type)}`;
+${targetHint}
+
+Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.${buildDocumentGenToolsGuidance(activeType ?? "logline")}`;
 };
 
 const buildDocumentGenToolsGuidance = (activeDocType: DocumentType): string => {
@@ -1116,8 +1122,7 @@ WORKFLOW:
 REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
 };
 
-const buildBreakdownToolsGuidance = (page: PageContext["page"]): string => {
-  if (page !== "breakdown") return "";
+const buildBreakdownToolsGuidance = (_page: PageContext["page"]): string => {
   return `\n\nTOOLS DISPONIBILI SUL BREAKDOWN:
 - tag_element(scene_number, category, name, quantity?): aggiunge un elemento allo spoglio di una scena.
 - accept_ghost(occurrence_id): accetta un suggerimento ghost.
@@ -1129,10 +1134,9 @@ Quando l'utente chiede di taggare un elemento ('spoglia X', 'aggiungi X come pro
 };
 
 const buildScheduleToolsGuidance = (
-  page: PageContext["page"],
+  _page: PageContext["page"],
   activeDayNumber: number | null,
 ): string => {
-  if (page !== "schedule") return "";
   const activeHint = activeDayNumber
     ? `\nGiornata attiva (selezionata dall'utente): Giornata ${activeDayNumber}. Quando l'utente dice "questa giornata" si riferisce a questa.`
     : "";
@@ -1206,46 +1210,38 @@ ${sections.join("\n")}${truncated}`;
 };
 
 const buildLocationsToolsGuidance = (
-  page: PageContext["page"],
+  _page: PageContext["page"],
   bible: FilmBible | null,
 ): string => {
-  if (page !== "locations") return "";
   const settingPrior =
     bible !== null ? `\n\n${formatBibleForLocations(bible)}` : "";
-  return `\n\nRUOLO: in questa pagina sei un LOCATION SCOUTER esperto. Quando l'utente ti chiede di trovare o aggiungere candidati, DEVI usare i tools — non descrivere cosa faresti, FAI.${settingPrior}
-
-STOP. Prima di scrivere QUALSIASI testo di risposta, devi prima chiamare i tools. Il testo arriva DOPO le chiamate tool, non al posto loro.
+  return `\n\nTOOLS DISPONIBILI SULLE LOCATION:
+- search_places(query, location_bias?, max_results?): cerca luoghi reali su Google Places.
+- list_location_requirements(scene_number?): elenca i requirement esistenti (con scene collegate + candidate_count). Usa PRIMA di add_candidate per scoprire il requirement_id senza chiederlo all'utente.
+- create_location_requirement(scene_number, brief?): crea un nuovo requirement collegato a una scena (deriva nome/int_ext/time_of_day dallo slugline).
+- find_or_create_requirement_for_scene(scene_number): IDEMPOTENTE. Entry point canonico — restituisce il requirement della scena (lo crea se manca). Preferisci questo quando aggiungi candidati per "scena N".
+- add_candidate(requirement_id, name, address?, lat?, lng?, notes?, photo_names?): salva un candidato. Per ogni risultato di search_places passa SEMPRE i photo_names (max 3).${settingPrior}
 
 WORKFLOW OBBLIGATORIO:
-- L'utente chiede "trova candidati" o "cerca [posto]" → chiama search_places PRIMA, poi add_candidate per ogni risultato rilevante, poi scrivi il messaggio di riepilogo.
-- L'utente chiede "aggiungi [nome specifico]" → chiama search_places con quel nome specifico, prendi il primo risultato, chiama add_candidate, poi scrivi "Ho aggiunto [nome]".
-- L'utente chiede informazioni o opinioni (es. "quale visitare per primo?") → solo testo, niente tools.
+- L'utente chiede "trova candidati per la scena N" → find_or_create_requirement_for_scene({scene_number: N}) → search_places → add_candidate per ogni risultato.
+- L'utente chiede "aggiungi questi candidati" (con risultati già in chat) → find_or_create_requirement_for_scene(scena rilevante) → add_candidate per ognuno. MAI chiedere UUID all'utente.
+- L'utente chiede "aggiungi [nome specifico]" → find_or_create_requirement_for_scene → search_places(nome) → add_candidate sul primo risultato.
 
-ESEMPI DI COMPORTAMENTO:
-
-❌ SBAGLIATO:
-"Cerco subito l'Oasi del Gusto per trovare i dettagli precisi da salvare."
-(Solo testo, nessun tool chiamato. NON FARE COSÌ.)
-
-✅ CORRETTO:
-[chiama search_places({ query: "Oasi del Gusto", location_bias: "Falerone FM" })]
-[chiama add_candidate({ requirement_id: "...", name: "Oasi del Gusto", lat: 43.x, lng: 13.y, notes: "...", photo_names: [...] })]
-"Ho aggiunto Oasi del Gusto ai candidati di Ristorante - Forno."
+ESEMPI:
 
 ❌ SBAGLIATO:
-"Ora salvo i 3 candidati più rilevanti."
-(Promette senza fare. NON FARE COSÌ.)
+"Mi mancano i location requirement IDs per poter salvare i candidati. Apri la sezione Locations e copiami gli UUID."
+(NON chiedere mai UUID. Sei tu che li scopri/crei.)
 
 ✅ CORRETTO:
-[chiama add_candidate per il candidato 1]
-[chiama add_candidate per il candidato 2]
-[chiama add_candidate per il candidato 3]
-"Ho aggiunto 3 candidati: Nome 1, Nome 2, Nome 3."
+[chiama find_or_create_requirement_for_scene({scene_number: 1}) → {requirement_id: "abc"}]
+[chiama search_places({query: "pizzeria forno a legna", location_bias: "Sesto San Giovanni"})]
+[chiama add_candidate({requirement_id: "abc", name: "Vesuviosesto", lat:..., lng:..., notes: "...", photo_names: [...]})]
+"Ho aggiunto Vesuviosesto al requirement della scena 1."
 
 REGOLE FERREE:
-- Per ogni add_candidate inoltra il 'requirement_id' della LOCATION SELEZIONATA (vedilo nel system context come "requirement_id: ...").
-- Inoltra SEMPRE 'photo_names' (i 'name' da photos[] del risultato search_places, max 3).
-- Aggiungi 2-3 candidati per ricerca quando l'utente chiede "trova candidati"; aggiungi SOLO quello richiesto quando l'utente specifica un nome.`;
+- Inoltra SEMPRE 'photo_names' (max 3) quando il candidato viene da search_places.
+- Mai chiedere requirement_id all'utente. Sempre risolverlo via list_location_requirements o find_or_create_requirement_for_scene.`;
 };
 
 const formatShotPlansContext = (
@@ -1276,16 +1272,13 @@ const formatShotPlansContext = (
 };
 
 const buildShootingPlanToolsGuidance = (
-  page: PageContext["page"],
+  _page: PageContext["page"],
   activeSceneId: string | null,
 ): string => {
-  if (page !== "shooting-plan") return "";
   const sceneHint = activeSceneId
     ? `\nScena attiva (selezionata dall'utente): ${activeSceneId}. Usala come default per scene_id nei tool quando l'utente non specifica una scena diversa.`
     : "\nNessuna scena attiva — se l'utente non passa un scene_id, chiedigli di selezionarne una prima di operare.";
-  return `\n\nRUOLO: in questa pagina sei un DIRETTORE DELLA FOTOGRAFIA. Quando l'utente ti chiede di costruire o salvare un piano, USA I TOOLS per farlo davvero — non descrivere soltanto.
-
-TOOLS DISPONIBILI SUL PIANO INQUADRATURE:
+  return `\n\nTOOLS DISPONIBILI SUL PIANO INQUADRATURE (usali sempre, non descrivere soltanto):
 - add_parallel_plan(scene_id, name): crea un piano parallelo (es. "Piano B"). Il primo piano (Piano A) esiste già — non ricrearlo.
 - add_shot_to_plan(plan_id, shot_type, description?, duration_min?): aggiunge uno shot in coda al piano. shot_type ∈ {WS, EWS, MS, MCU, CU, ECU, INSERT, OTS, TWO_SHOT, POV}.
 - set_active_plan(plan_id): rende un piano attivo (in modo atomico, disattiva gli altri della stessa scena).
@@ -1311,11 +1304,8 @@ REGOLE FERREE:
 - Non duplicare la struttura di Piano A se stai costruendo Piano B — guarda i PIANI ESISTENTI per variare angoli e approccio.${sceneHint}`;
 };
 
-const buildBudgetToolsGuidance = (page: PageContext["page"]): string => {
-  if (page !== "budget") return "";
-  return `\n\nRUOLO: in questa pagina sei un LINE PRODUCER esperto del cinema italiano. Quando l'utente ti chiede di aggiustare il budget, USA I TOOLS per farlo direttamente — non limitarti a descrivere come si potrebbe fare. Conferma SEMPRE in italiano l'azione eseguita nel messaggio finale ('Ho aggiornato…', 'Ho aggiunto…', 'Ho ridistribuito…').
-
-TOOLS DISPONIBILI SUL BUDGET:
+const buildBudgetToolsGuidance = (_page: PageContext["page"]): string => {
+  return `\n\nTOOLS DISPONIBILI SUL BUDGET (usali sempre per modificare voci/cap/spese; conferma in italiano 'Ho aggiornato…', 'Ho aggiunto…', 'Ho ridistribuito…'):
 - update_budget_line(line_id, field, value): aggiorna rate, quantity, actual o notes di una riga. Usa gli id "id:..." che vedi nel BUDGET COMPLETO.
 - add_budget_line(top_sheet, description, rate, quantity?, linked_category?): aggiunge una nuova voce di costo a un top sheet esistente.
 - redistribute_topsheet(from_top_sheet, to_top_sheet, amount): sposta fondi tra top sheet riducendo la riga piu grande del primo e creando/incrementando una riga "Contingenza riallocata da X" nel secondo. Se l'amount supera la riga piu grande, il tool ritorna errore e proponi un piano multi-step.
@@ -1335,9 +1325,8 @@ Linee guida:
 - Per i tool che iniziano con propose_* o evaluate_*: ritorna sempre il riepilogo numerico all'utente in chiaro. Sono read-only e non scrivono nel DB.`;
 };
 
-const buildScreenplayToolsGuidance = (page: PageContext["page"]): string => {
-  if (page !== "screenplay") return "";
-  return `\n\nRUOLO: in questa pagina sei un DRAMATURG. Ogni richiesta di modifica al testo della sceneggiatura DEVE passare per un tool propose_*, MAI scrivere il testo nuovo direttamente nel chat.
+const buildScreenplayToolsGuidance = (_page: PageContext["page"]): string => {
+  return `\n\nTOOLS DISPONIBILI SULLA SCENEGGIATURA — ogni modifica al testo DEVE passare per un tool propose_/rewrite_/merge_/delete_, MAI scrivere il testo nuovo nel chat.
 
 TOOLS DISPONIBILI SULLA SCENEGGIATURA:
 - propose_screenplay_edit({ scene_number, find, replace, reason }): micro-edit di una stringa esatta. Usa per cambiare una battuta, una parola, una direzione di scena puntuale. La 'find' DEVE essere una stringa letterale presente nella scena.
@@ -1373,7 +1362,9 @@ Quando l'utente chiede una modifica ambigua, fai PRIMA una domanda di chiariment
 };
 
 const ROLE_TEXT = `Sei Cesare, l'assistente AI di Oh Writers, ispirato a Cesare Zavattini.
-Non sei un chatbot generico. Conosci l'intera produzione del film su cui stai lavorando.
+Non sei un chatbot generico. Sei un LAYER SOPRA il prodotto: vedi e modifichi tutta la produzione — sceneggiatura, soggetto, breakdown, schedule, budget, piano inquadrature, location. Conosci l'intera produzione del film su cui stai lavorando.
+
+Indossi più cappelli a seconda della richiesta: DRAMATURG (sceneggiatura, soggetto), LINE PRODUCER (budget), 1st AD (schedule), LOCATION SCOUTER (location), DIRETTORE DELLA FOTOGRAFIA (piano inquadrature). Quando l'utente chiede qualcosa, usa il cappello giusto per QUELLA richiesta — non quello della pagina in cui si trova. Esempi: sulla pagina BUDGET può chiederti di riscrivere una scena (cappello dramaturg → rewrite_scene); sulla pagina LOCATIONS può chiederti una modifica al soggetto (cappello dramaturg → apply_text_edit). MAI rispondere "non ho tool per questo" se esiste un tool in qualsiasi area: il prodotto è uno solo.
 
 Rispondi in italiano. Sii concreto e specifico — non generare testo generico.
 Quando suggerisci modifiche alla sceneggiatura, usa il formato Fountain.
@@ -1427,7 +1418,13 @@ const buildToolGuidanceBlock = (
   activeSceneId: string | null,
 ): string => {
   const documentToolsGuidance = buildDocumentToolsGuidance(ctx);
-  return `GUIDA AGLI STRUMENTI per la pagina "${page}":${buildLocationsToolsGuidance(
+  // Spec 43: every tool is always callable regardless of page. The page
+  // value here is *contextual hint*, not a gate. The user being on page X
+  // shifts the default subject ("the user is on Locations looking at SC.1")
+  // but never restricts which tools you can invoke.
+  return `GUIDA AGLI STRUMENTI — sei un layer SOPRA il SaaS: vedi e modifichi tutto, anche cross-pagina.
+L'utente si trova attualmente sulla pagina "${page}" (informazione di contesto, NON un filtro sui tool).
+Quando ha senso, usa tool di un'altra area (es. dalle Locations puoi modificare una scena con propose_screenplay_edit, o leggere il soggetto con read_document) — il prodotto è un unico spazio di lavoro.${buildLocationsToolsGuidance(
     page,
     ctx.bible,
   )}${documentToolsGuidance}${buildBreakdownToolsGuidance(
@@ -1789,6 +1786,81 @@ const callCesareWithBudgetTools = (
   return runBudgetToolLoop(systemPrompt, messages, db, projectId, model);
 };
 
+// ─── Universal dispatch (spec 43) ───────────────────────────────────────────
+// Cesare is a layer above the SaaS: every tool always available, page is
+// just where the user is, not a gate. This replaces the seven page-specific
+// callCesareWith* functions above. They stay registered for now to avoid
+// touching MOCK-AI scenario tests that may import the named symbols, but
+// handleAskCesare always routes here.
+
+const callCesareUniversal = (
+  systemPrompt: SystemPromptBlock[],
+  conversationHistory: ConversationMessage[],
+  message: string,
+  db: Db,
+  ctx: {
+    projectId: string;
+    documentContext: DocumentContext | null;
+    activeSceneId: string | null;
+    activeDayNumber: number | null;
+    userIdFallback: string | null;
+    page: string;
+  },
+  model: string,
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+
+  // Intent classifier hint (only on screenplay page where the tool surface
+  // is dense enough to benefit). On other pages we skip the cheap-but-not-
+  // free Haiku call and let `tool_choice: auto` work.
+  if (ctx.page === "screenplay") {
+    return classifyIntent({
+      userMessage: message,
+      page: "screenplay",
+      availableTools: SCREENPLAY_PROPOSE_TOOLS,
+    })
+      .map((intent) => intent.suggestedTool)
+      .orElse(() =>
+        ResultAsync.fromSafePromise(
+          Promise.resolve<string | undefined>(undefined),
+        ),
+      )
+      .andThen((forcedFirstTool) =>
+        runUniversalToolLoop(
+          systemPrompt,
+          messages,
+          db,
+          {
+            projectId: ctx.projectId,
+            documentContext: ctx.documentContext,
+            activeSceneId: ctx.activeSceneId,
+            activeDayNumber: ctx.activeDayNumber,
+            userIdFallback: ctx.userIdFallback,
+          },
+          model,
+          forcedFirstTool,
+        ),
+      );
+  }
+
+  return runUniversalToolLoop(
+    systemPrompt,
+    messages,
+    db,
+    {
+      projectId: ctx.projectId,
+      documentContext: ctx.documentContext,
+      activeSceneId: ctx.activeSceneId,
+      activeDayNumber: ctx.activeDayNumber,
+      userIdFallback: ctx.userIdFallback,
+    },
+    model,
+  );
+};
+
 // ─── Handler body ─────────────────────────────────────────────────────────────
 
 // Pages that have agentic tools — when MOCK_AI=true these still run through
@@ -1850,90 +1922,44 @@ const handleAskCesare = (
         data.pageContext.shootingDayNumber ?? null,
         activeSceneIdForPrompt,
       );
-      if (data.pageContext.page === "locations") {
-        return callCesareWithTools(
+      // Spec 43: universal dispatch — every tool always available, page is
+      // just contextual prompting. The classifier still fires on screenplay
+      // page to nudge tool_choice toward the right propose_* tool when the
+      // user intent is unambiguous.
+      const documentContext: DocumentContext | null =
+        isDocumentPage(data.pageContext.page) && ctx.activeDocument
+          ? {
+              documentId: ctx.activeDocument.id,
+              documentType: ctx.activeDocument.type,
+              content: ctx.activeDocument.content,
+            }
+          : null;
+
+      // Pages that have no agentic tooling at all (rare leftover) still get
+      // the cheap text-only fallback. Today this branch is only hit when no
+      // page context was provided.
+      if (!AGENTIC_PAGES.has(data.pageContext.page)) {
+        return callCesare(
           systemPrompt,
           data.conversationHistory,
           data.message,
-          db,
-          data.projectId,
-          data.pageContext.requirementId,
           model,
         );
       }
-      if (data.pageContext.page === "breakdown") {
-        return callCesareWithBreakdownTools(
-          systemPrompt,
-          data.conversationHistory,
-          data.message,
-          db,
-          data.projectId,
-          model,
-        );
-      }
-      if (data.pageContext.page === "schedule") {
-        return callCesareWithScheduleTools(
-          systemPrompt,
-          data.conversationHistory,
-          data.message,
-          db,
-          data.projectId,
-          data.pageContext.shootingDayNumber ?? null,
-          model,
-        );
-      }
-      if (data.pageContext.page === "budget") {
-        return callCesareWithBudgetTools(
-          systemPrompt,
-          data.conversationHistory,
-          data.message,
-          db,
-          data.projectId,
-          model,
-        );
-      }
-      if (data.pageContext.page === "shooting-plan") {
-        return callCesareWithShootingPlanTools(
-          systemPrompt,
-          data.conversationHistory,
-          data.message,
-          db,
-          data.projectId,
-          activeSceneIdForPrompt,
-          model,
-        );
-      }
-      if (data.pageContext.page === "screenplay") {
-        return callCesareWithScreenplayTools(
-          systemPrompt,
-          data.conversationHistory,
-          data.message,
-          db,
-          data.projectId,
-          model,
-        );
-      }
-      if (isDocumentPage(data.pageContext.page) && ctx.activeDocument) {
-        const docContext: DocumentContext = {
-          documentId: ctx.activeDocument.id,
-          documentType: ctx.activeDocument.type,
-          content: ctx.activeDocument.content,
-        };
-        return callCesareWithDocumentTools(
-          systemPrompt,
-          data.conversationHistory,
-          data.message,
-          db,
-          data.projectId,
-          docContext,
-          model,
-          access.user.id,
-        );
-      }
-      return callCesare(
+
+      return callCesareUniversal(
         systemPrompt,
         data.conversationHistory,
         data.message,
+        db,
+        {
+          projectId: data.projectId,
+          documentContext,
+          activeSceneId: activeSceneIdForPrompt,
+          activeDayNumber: data.pageContext.shootingDayNumber ?? null,
+          userIdFallback: access.user.id,
+          page: data.pageContext.page,
+        },
         model,
       );
     },

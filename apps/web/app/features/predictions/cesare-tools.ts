@@ -9,6 +9,7 @@ import {
   locationCandidates,
   locationPhotos,
   locationRequirements,
+  locationRequirementScenes,
   budgets,
   budgetLines,
   budgetCaps,
@@ -120,7 +121,9 @@ export const CESARE_LOCATION_TOOLS = [
       "Aggiunge un candidato reale alla location requirement corrente. " +
       "Usa questo tool dopo search_places per salvare i risultati rilevanti. " +
       "IMPORTANTE: se il candidato viene da un risultato di search_places, passa SEMPRE " +
-      "i `photo_names` ricevuti per quel place (fino a 3) così le foto vengono salvate.",
+      "i `photo_names` ricevuti per quel place (fino a 3) così le foto vengono salvate. " +
+      "Per ottenere il requirement_id senza chiederlo all'utente, usa " +
+      "find_or_create_requirement_for_scene oppure list_location_requirements.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -147,6 +150,69 @@ export const CESARE_LOCATION_TOOLS = [
         },
       },
       required: ["requirement_id", "name"],
+    },
+  },
+  {
+    name: "list_location_requirements",
+    description:
+      "Elenca i location requirement esistenti per il progetto, con scene collegate e " +
+      "numero di candidati salvati. Usa questo tool PRIMA di add_candidate per scoprire " +
+      "il requirement_id giusto invece di chiederlo all'utente.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_number: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "Filtro opzionale: restituisci solo i requirement collegati a questa scena.",
+        },
+      },
+    },
+  },
+  {
+    name: "create_location_requirement",
+    description:
+      "Crea un nuovo location requirement collegato a una scena specifica. " +
+      "Deriva nome / int_ext / time_of_day dallo slugline della scena. " +
+      "Usa quando l'utente vuole aggiungere candidati per una scena che non ha " +
+      "ancora un requirement aperto. Per il caso comune preferisci " +
+      "find_or_create_requirement_for_scene (idempotente).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_number: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "Numero ordinale (1-based) della scena per cui creare il requirement.",
+        },
+        brief: {
+          type: "string",
+          description:
+            "Descrizione sintetica (1-2 frasi) di cosa serve dalla location, da salvare in `description`.",
+        },
+      },
+      required: ["scene_number"],
+    },
+  },
+  {
+    name: "find_or_create_requirement_for_scene",
+    description:
+      "Restituisce il requirement collegato alla scena indicata. Se non esiste, " +
+      "lo crea automaticamente derivando i campi dallo slugline. Tool idempotente: " +
+      "chiamarlo due volte sulla stessa scena restituisce lo stesso requirement_id. " +
+      "È l'entry point canonico per 'aggiungo candidati per la scena N'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        scene_number: {
+          type: "integer",
+          minimum: 1,
+          description: "Numero ordinale (1-based) della scena.",
+        },
+      },
+      required: ["scene_number"],
     },
   },
 ] as const;
@@ -214,6 +280,78 @@ export const createLocationTools = (db: Db, projectId: string) => ({
     execute: async (input, _opts) => {
       const result = await executeAddCandidate(
         input as AddCandidateInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  list_location_requirements: tool({
+    description:
+      "Elenca i location requirement esistenti per il progetto. Usa PRIMA di " +
+      "add_candidate per scoprire il requirement_id giusto senza chiederlo all'utente.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe(
+          "Filtro opzionale: restituisci solo i requirement collegati a questa scena.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeListLocationRequirements(
+        input as ListLocationRequirementsInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  create_location_requirement: tool({
+    description:
+      "Crea un nuovo location requirement collegato a una scena. " +
+      "Deriva nome / int_ext / time_of_day dallo slugline della scena.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero ordinale (1-based) della scena."),
+      brief: z
+        .string()
+        .optional()
+        .describe(
+          "Descrizione sintetica di cosa serve dalla location, salvata in `description`.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeCreateLocationRequirement(
+        input as CreateLocationRequirementInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  find_or_create_requirement_for_scene: tool({
+    description:
+      "Restituisce il requirement collegato alla scena (lo crea se manca). " +
+      "Idempotente. Entry point canonico per 'aggiungo candidati per la scena N'.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero ordinale (1-based) della scena."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeFindOrCreateRequirementForScene(
+        input as { scene_number: number },
         db,
         projectId,
       );
@@ -790,6 +928,302 @@ export const executeAddCandidate = (
     (e) =>
       new CesareError(
         `executeAddCandidate failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+// ─── list_location_requirements ───────────────────────────────────────────────
+
+interface ListLocationRequirementsInput {
+  scene_number?: number;
+}
+
+interface RequirementSummary {
+  id: string;
+  name: string;
+  int_ext: string | null;
+  time_of_day: string[];
+  status: string;
+  scene_numbers: number[];
+  candidate_count: number;
+}
+
+const executeListLocationRequirements = (
+  input: ListLocationRequirementsInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<{ requirements: RequirementSummary[] }, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const reqs = await db
+        .select({
+          id: locationRequirements.id,
+          name: locationRequirements.name,
+          intExt: locationRequirements.intExt,
+          timeOfDay: locationRequirements.timeOfDay,
+          status: locationRequirements.status,
+        })
+        .from(locationRequirements)
+        .where(eq(locationRequirements.projectId, projectId));
+
+      if (reqs.length === 0) return { requirements: [] };
+
+      const ids = reqs.map((r) => r.id);
+
+      const links = await db
+        .select({
+          requirementId: locationRequirementScenes.requirementId,
+          sceneNumber: scenes.number,
+        })
+        .from(locationRequirementScenes)
+        .innerJoin(scenes, eq(locationRequirementScenes.sceneId, scenes.id))
+        .where(inArray(locationRequirementScenes.requirementId, ids));
+
+      const counts = await db
+        .select({
+          requirementId: locationCandidates.requirementId,
+          count: sql<number>`count(*)`.as("count"),
+        })
+        .from(locationCandidates)
+        .where(inArray(locationCandidates.requirementId, ids))
+        .groupBy(locationCandidates.requirementId);
+
+      const scenesByReq = new Map<string, number[]>();
+      for (const link of links) {
+        const arr = scenesByReq.get(link.requirementId) ?? [];
+        arr.push(link.sceneNumber);
+        scenesByReq.set(link.requirementId, arr);
+      }
+
+      const countsByReq = new Map<string, number>();
+      for (const c of counts) {
+        countsByReq.set(c.requirementId, Number(c.count));
+      }
+
+      const summaries: RequirementSummary[] = reqs.map((r) => ({
+        id: r.id,
+        name: r.name,
+        int_ext: r.intExt ?? null,
+        time_of_day: r.timeOfDay ?? [],
+        status: r.status,
+        scene_numbers: (scenesByReq.get(r.id) ?? []).sort((a, b) => a - b),
+        candidate_count: countsByReq.get(r.id) ?? 0,
+      }));
+
+      if (typeof input.scene_number === "number") {
+        const filtered = summaries.filter((s) =>
+          s.scene_numbers.includes(input.scene_number!),
+        );
+        return { requirements: filtered };
+      }
+
+      return { requirements: summaries };
+    })(),
+    (e) =>
+      new CesareError(
+        `executeListLocationRequirements failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+// ─── create_location_requirement + find_or_create ───────────────────────────
+
+interface CreateLocationRequirementInput {
+  scene_number: number;
+  brief?: string;
+}
+
+interface RequirementCreated {
+  requirement_id: string;
+  name: string;
+  int_ext: string | null;
+  time_of_day: string[];
+  created: boolean;
+}
+
+// Derive sensible defaults from a scene heading. Slugline shape:
+//   "INT./EXT. LOCATION NAME - TIME OF DAY"
+// We split on " - " to peel off the time-of-day suffix, then split the prefix
+// to peel off INT./EXT. Whatever remains is the location label.
+export type RequirementIntExt = "INT" | "EXT" | "INT/EXT";
+
+export const parseHeading = (
+  heading: string,
+): { name: string; intExt: RequirementIntExt | null; timeOfDay: string[] } => {
+  const trimmed = heading.trim();
+  const intExtMatch =
+    /^(INT\.\/EXT\.|EXT\.\/INT\.|INT\.|EXT\.|EST\.|I\/E)\s+/i.exec(trimmed);
+  const intExtRaw = intExtMatch ? intExtMatch[1]!.toUpperCase() : null;
+  const rest = intExtMatch ? trimmed.slice(intExtMatch[0].length) : trimmed;
+  const parts = rest
+    .split(" - ")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const name = parts.length > 0 ? parts[0]! : rest;
+  const timeOfDay = parts.length > 1 ? parts.slice(1) : [];
+
+  // Schema accepts only INT / EXT / INT/EXT. EST. is rare and not yet
+  // modelled — fold it into EXT (closest semantic).
+  const normalisedIntExt: RequirementIntExt | null = intExtRaw
+    ? intExtRaw.includes("INT") && intExtRaw.includes("EXT")
+      ? "INT/EXT"
+      : intExtRaw.startsWith("INT") || intExtRaw === "I/E"
+        ? "INT"
+        : intExtRaw.startsWith("EXT") || intExtRaw.startsWith("EST")
+          ? "EXT"
+          : null
+    : null;
+
+  return { name, intExt: normalisedIntExt, timeOfDay };
+};
+
+const findSceneByNumber = async (
+  db: Db,
+  projectId: string,
+  sceneNumber: number,
+): Promise<{ id: string; heading: string } | null> => {
+  const [scene] = await db
+    .select({
+      id: scenes.id,
+      heading: scenes.heading,
+    })
+    .from(scenes)
+    .innerJoin(screenplays, eq(scenes.screenplayId, screenplays.id))
+    .where(
+      and(eq(screenplays.projectId, projectId), eq(scenes.number, sceneNumber)),
+    )
+    .limit(1);
+  return scene ?? null;
+};
+
+const executeCreateLocationRequirement = (
+  input: CreateLocationRequirementInput,
+  db: Db,
+  projectId: string,
+): ResultAsync<RequirementCreated, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const scene = await findSceneByNumber(db, projectId, input.scene_number);
+      if (!scene) {
+        throw new Error(
+          `Scena ${input.scene_number} non trovata nel progetto.`,
+        );
+      }
+
+      const { name, intExt, timeOfDay } = parseHeading(scene.heading);
+
+      const [inserted] = await db
+        .insert(locationRequirements)
+        .values({
+          projectId,
+          name,
+          description: input.brief ?? null,
+          intExt,
+          timeOfDay,
+        })
+        .returning({
+          id: locationRequirements.id,
+          name: locationRequirements.name,
+          intExt: locationRequirements.intExt,
+          timeOfDay: locationRequirements.timeOfDay,
+        });
+      if (!inserted) throw new Error("Insert returned no rows");
+
+      await db.insert(locationRequirementScenes).values({
+        requirementId: inserted.id,
+        sceneId: scene.id,
+      });
+
+      return {
+        requirement_id: inserted.id,
+        name: inserted.name,
+        int_ext: inserted.intExt ?? null,
+        time_of_day: inserted.timeOfDay ?? [],
+        created: true,
+      };
+    })(),
+    (e) =>
+      new CesareError(
+        `executeCreateLocationRequirement failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+
+const executeFindOrCreateRequirementForScene = (
+  input: { scene_number: number },
+  db: Db,
+  projectId: string,
+): ResultAsync<RequirementCreated, CesareError> =>
+  ResultAsync.fromPromise(
+    (async () => {
+      const scene = await findSceneByNumber(db, projectId, input.scene_number);
+      if (!scene) {
+        throw new Error(
+          `Scena ${input.scene_number} non trovata nel progetto.`,
+        );
+      }
+
+      const [existing] = await db
+        .select({
+          id: locationRequirements.id,
+          name: locationRequirements.name,
+          intExt: locationRequirements.intExt,
+          timeOfDay: locationRequirements.timeOfDay,
+        })
+        .from(locationRequirementScenes)
+        .innerJoin(
+          locationRequirements,
+          eq(locationRequirementScenes.requirementId, locationRequirements.id),
+        )
+        .where(
+          and(
+            eq(locationRequirementScenes.sceneId, scene.id),
+            eq(locationRequirements.projectId, projectId),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        return {
+          requirement_id: existing.id,
+          name: existing.name,
+          int_ext: existing.intExt ?? null,
+          time_of_day: existing.timeOfDay ?? [],
+          created: false,
+        };
+      }
+
+      // Same body as executeCreateLocationRequirement without the scene lookup.
+      const { name, intExt, timeOfDay } = parseHeading(scene.heading);
+      const [inserted] = await db
+        .insert(locationRequirements)
+        .values({
+          projectId,
+          name,
+          intExt,
+          timeOfDay,
+        })
+        .returning({
+          id: locationRequirements.id,
+          name: locationRequirements.name,
+          intExt: locationRequirements.intExt,
+          timeOfDay: locationRequirements.timeOfDay,
+        });
+      if (!inserted) throw new Error("Insert returned no rows");
+
+      await db.insert(locationRequirementScenes).values({
+        requirementId: inserted.id,
+        sceneId: scene.id,
+      });
+
+      return {
+        requirement_id: inserted.id,
+        name: inserted.name,
+        int_ext: inserted.intExt ?? null,
+        time_of_day: inserted.timeOfDay ?? [],
+        created: true,
+      };
+    })(),
+    (e) =>
+      new CesareError(
+        `executeFindOrCreateRequirementForScene failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
   );
 
@@ -1599,6 +2033,27 @@ export const executeTool = (
     );
   }
 
+  if (block.name === "list_location_requirements") {
+    const input = block.input as ListLocationRequirementsInput;
+    return executeListLocationRequirements(input, db, projectId).map((result) =>
+      successResult(block.id, JSON.stringify(result)),
+    );
+  }
+
+  if (block.name === "create_location_requirement") {
+    const input = block.input as CreateLocationRequirementInput;
+    return executeCreateLocationRequirement(input, db, projectId).map(
+      (result) => successResult(block.id, JSON.stringify(result)),
+    );
+  }
+
+  if (block.name === "find_or_create_requirement_for_scene") {
+    const input = block.input as { scene_number: number };
+    return executeFindOrCreateRequirementForScene(input, db, projectId).map(
+      (result) => successResult(block.id, JSON.stringify(result)),
+    );
+  }
+
   const readFallthrough = tryExecuteReadTool(block, db, projectId);
   if (readFallthrough) return readFallthrough;
 
@@ -1827,6 +2282,124 @@ export const runShootingPlanToolLoop = (
       return executeShootingPlanTool(block, dbArg, shootingPlanContext);
     },
   });
+
+// ─── Universal dispatch ─────────────────────────────────────────────────────
+// Spec 43: one tool loop, every tool always available, page is just context.
+
+import { createUniversalCesareTools } from "./cesare-universal-tools";
+import type { UniversalToolContext } from "./cesare-universal-tools";
+
+export const runUniversalToolLoop = (
+  systemPrompt: string | readonly unknown[],
+  messages: Message[],
+  db: Db,
+  ctx: UniversalToolContext,
+  model: string,
+  forcedFirstTool?: string,
+): ResultAsync<string, CesareError> => {
+  const docContext = ctx.documentContext;
+  return runGenericToolLoop({
+    systemPrompt,
+    messages,
+    db,
+    projectId: ctx.projectId,
+    model,
+    forcedFirstTool,
+    sdkTools: createUniversalCesareTools(db, ctx),
+    legacyTools: [
+      ...CESARE_LOCATION_TOOLS,
+      ...CESARE_SCREENPLAY_TOOLS,
+      ...CESARE_DOCUMENT_TOOLS,
+      ...CESARE_DOCUMENT_GEN_TOOLS,
+      ...CESARE_BREAKDOWN_TOOLS,
+      ...CESARE_BUDGET_TOOLS,
+      ...CESARE_SCHEDULE_TOOLS,
+      ...CESARE_SHOOTING_PLAN_TOOLS,
+      ...CESARE_READ_TOOLS,
+    ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
+    legacyMockClient: resolveMockClient(),
+    // Universal executor: try each domain executor in cascade. Read tools
+    // first (zero-cost lookup), then per-domain. The fallthrough at the end
+    // covers tools whose executor is the cross-domain `executeTool`
+    // (location + a few utility tools) by delegating to it. Unknown tools
+    // surface a friendly error from `executeTool` itself.
+    executor: (block, dbArg, projectIdArg) => {
+      const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
+      if (readFallthrough) return readFallthrough;
+
+      // Screenplay tools (propose_*, rewrite_scene, merge_scenes, …)
+      const screenplayNames = new Set(
+        CESARE_SCREENPLAY_TOOLS.map((t) => t.name),
+      );
+      if (screenplayNames.has(block.name as never)) {
+        return executeScreenplayTool(block, dbArg, projectIdArg);
+      }
+
+      // Document edit tools (apply_text_edit, …)
+      const docNames = new Set(CESARE_DOCUMENT_TOOLS.map((t) => t.name));
+      if (docNames.has(block.name as never)) {
+        return executeDocumentTool(
+          block,
+          dbArg,
+          docContext ?? {
+            documentId: "",
+            documentType: "logline",
+            content: "",
+          },
+        );
+      }
+
+      // Document generation tools (propose_logline, …)
+      if (isDocumentGenToolName(block.name)) {
+        return executeDocumentGenTool(
+          block,
+          dbArg,
+          projectIdArg,
+          ctx.userIdFallback,
+        );
+      }
+
+      // Breakdown tools
+      const breakdownNames = new Set(CESARE_BREAKDOWN_TOOLS.map((t) => t.name));
+      if (breakdownNames.has(block.name as never)) {
+        return executeBreakdownTool(block, dbArg, projectIdArg);
+      }
+
+      // Budget tools
+      const budgetNames = new Set(CESARE_BUDGET_TOOLS.map((t) => t.name));
+      if (budgetNames.has(block.name as never)) {
+        return executeBudgetTool(block, dbArg, projectIdArg);
+      }
+
+      // Schedule tools
+      const scheduleNames = new Set(CESARE_SCHEDULE_TOOLS.map((t) => t.name));
+      if (scheduleNames.has(block.name as never)) {
+        return executeScheduleTool(block, dbArg, {
+          projectId: projectIdArg,
+          activeDayNumber: ctx.activeDayNumber,
+        });
+      }
+
+      // Shooting-plan tools
+      const shootingPlanNames = new Set(
+        CESARE_SHOOTING_PLAN_TOOLS.map((t) => t.name),
+      );
+      if (shootingPlanNames.has(block.name as never)) {
+        return executeShootingPlanTool(block, dbArg, {
+          projectId: projectIdArg,
+          activeSceneId: ctx.activeSceneId,
+        });
+      }
+
+      // Default: location + utility tools (search_places, add_candidate,
+      // list_location_requirements, create_location_requirement,
+      // find_or_create_requirement_for_scene). Also surfaces "Unknown tool"
+      // for anything that didn't match above.
+      return executeTool(block, dbArg, projectIdArg, null);
+    },
+  });
+};
 
 interface RunToolLoopArgs {
   systemPrompt: string | readonly unknown[];
