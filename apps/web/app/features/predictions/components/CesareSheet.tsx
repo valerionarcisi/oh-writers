@@ -46,6 +46,34 @@ import {
 } from "~/features/predictions/sessions";
 import styles from "./CesareSheet.module.css";
 
+/**
+ * Cross-component flow (Spec 44): consumers — currently the inline
+ * `[Mostra modifiche]` affordance inside a Step Block — invoke the returned
+ * function to surface the affected page inside the SplitDrawer with a trace
+ * overlay. SplitDrawer + TargetPagePreview wiring lives in AppShell.
+ */
+export interface TraceForToolRunArgs {
+  pageRef: TargetPageRef;
+  traceMarkers: ReadonlyArray<TraceMarker>;
+  onAccept: (markerId: string) => void;
+  onReject: (markerId: string) => void;
+  onAcceptAll: () => void;
+  onRejectAll: () => void;
+  title?: string;
+}
+
+export function useShowChangesInSplitDrawer(): (
+  args: TraceForToolRunArgs,
+) => void {
+  const splitDrawer = useSplitDrawer();
+  return useCallback(
+    (args: TraceForToolRunArgs) => {
+      splitDrawer.open({ kind: "trace", ...args });
+    },
+    [splitDrawer],
+  );
+}
+
 // ─── Public types preserved for AppShell + Cesare server callers ───────────
 
 export type CesarePage =
@@ -59,34 +87,6 @@ export type CesarePage =
   | "schedule"
   | "shooting-plan"
   | "locations";
-
-export interface TraceForToolRunArgs {
-  pageRef: TargetPageRef;
-  traceMarkers: ReadonlyArray<TraceMarker>;
-  onAccept: (markerId: string) => void;
-  onReject: (markerId: string) => void;
-  onAcceptAll: () => void;
-  onRejectAll: () => void;
-  title?: string;
-}
-
-/**
- * Cross-component flow (Spec 44): consumers — currently the inline
- * `[Mostra modifiche]` affordance inside a Step Block — invoke the returned
- * function to surface the affected page inside the SplitDrawer with a trace
- * overlay. SplitDrawer + TargetPagePreview wiring lives in AppShell.
- */
-export function useShowChangesInSplitDrawer(): (
-  args: TraceForToolRunArgs,
-) => void {
-  const splitDrawer = useSplitDrawer();
-  return useCallback(
-    (args: TraceForToolRunArgs) => {
-      splitDrawer.open(args);
-    },
-    [splitDrawer],
-  );
-}
 
 // ─── Server-side surface ───────────────────────────────────────────────────
 

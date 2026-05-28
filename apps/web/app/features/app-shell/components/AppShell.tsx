@@ -55,8 +55,15 @@ import {
 import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
-import { NotificationCenterDrawer } from "./NotificationCenterDrawer";
-import { SplitDrawerProvider, useSplitDrawer } from "../split-drawer-context";
+import {
+  NotificationCenterDrawerHeader,
+  NotificationCenterDrawerContent,
+} from "./NotificationCenterDrawer";
+import {
+  SplitDrawerProvider,
+  useSplitDrawer,
+  useBellOpener,
+} from "../split-drawer-context";
 import { ensurePageTraceRegistry } from "../page-trace-registry";
 import styles from "./AppShell.module.css";
 
@@ -183,13 +190,13 @@ function AppShellInner({
   const { showToast } = useToast();
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [cesareOpen, setCesareOpen] = useState(false);
-  const [isNotifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const [shellState, setShellState] = useState<ShellState>("full");
   const [cesareState, setCesareState] = useState<CesareState>("closed");
   const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(
     null,
   );
   const splitDrawer = useSplitDrawer();
+  const openBellDrawer = useBellOpener();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
   const {
     notifications,
@@ -743,7 +750,7 @@ function AppShellInner({
           <BottomDock
             user={{ initials: deriveInitials(user.name) }}
             hasUnseen={hasUnseen}
-            onBell={() => setNotifDrawerOpen(true)}
+            onBell={openBellDrawer}
             onSettings={handleSettings}
             onCesareToggle={toggleCesare}
             userMenuItems={userMenuItems}
@@ -785,108 +792,155 @@ function AppShellInner({
               onAssistantResponse={handleCesareAssistantResponse}
             />
           )}
-          <NotificationCenterDrawer
-            isOpen={isNotifDrawerOpen}
-            onClose={() => setNotifDrawerOpen(false)}
-            onActivate={handleActivateNotification}
+          <SplitDrawerHost
+            splitDrawer={splitDrawer}
+            splitDrawerWidth={splitDrawerWidth}
+            setSplitDrawerWidth={setSplitDrawerWidth}
+            onNotificationActivate={(notification) => {
+              handleActivateNotification(notification);
+              splitDrawer.close();
+            }}
           />
-          {splitDrawer.payload && (
-            <SplitDrawer
-              state={splitDrawer.state}
-              onStateChange={splitDrawer.setState}
-              onCycle={() => {
-                if (splitDrawer.state === "open") {
-                  splitDrawer.setState("full");
-                } else if (splitDrawer.state === "full") {
-                  splitDrawer.setState("open");
-                }
-              }}
-              onStepBack={() => {
-                if (splitDrawer.state === "full") {
-                  splitDrawer.setState("open");
-                } else if (splitDrawer.state === "open") {
-                  splitDrawer.close();
-                }
-              }}
-              onClose={splitDrawer.close}
-              header={
-                <h2
-                  style={{
-                    margin: 0,
-                    fontFamily: "var(--ds-font-display)",
-                    fontSize: 14,
-                    color: "var(--ds-text)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {splitDrawer.payload.title ??
-                    splitDrawer.payload.pageRef.title ??
-                    "Anteprima"}
-                </h2>
-              }
-              footer={
-                <>
-                  <button
-                    type="button"
-                    onClick={splitDrawer.payload.onAcceptAll}
-                    style={{
-                      border: "1px solid var(--ds-diff-add-fg)",
-                      background: "transparent",
-                      color: "var(--ds-agent)",
-                      padding: "5px 12px",
-                      borderRadius: "var(--ds-radius-sm)",
-                      cursor: "pointer",
-                      fontSize: 12,
-                    }}
-                  >
-                    Accetta tutto
-                  </button>
-                  <button
-                    type="button"
-                    onClick={splitDrawer.payload.onRejectAll}
-                    style={{
-                      border: "1px solid var(--ds-line)",
-                      background: "transparent",
-                      color: "var(--ds-text-2)",
-                      padding: "5px 12px",
-                      borderRadius: "var(--ds-radius-sm)",
-                      cursor: "pointer",
-                      fontSize: 12,
-                    }}
-                  >
-                    Rifiuta tutto
-                  </button>
-                  <span
-                    style={{
-                      marginInlineStart: "auto",
-                      color: "var(--ds-text-faint)",
-                      fontSize: 11.5,
-                    }}
-                  >
-                    {splitDrawer.payload.traceMarkers.length} modifich
-                    {splitDrawer.payload.traceMarkers.length === 1
-                      ? "a"
-                      : "e"}{" "}
-                    in sospeso
-                  </span>
-                </>
-              }
-              size={{ width: splitDrawerWidth }}
-              onSizeChange={({ width }) => setSplitDrawerWidth(width)}
-            >
-              <TargetPagePreview
-                pageRef={splitDrawer.payload.pageRef}
-                traceMarkers={splitDrawer.payload.traceMarkers}
-                onAccept={splitDrawer.payload.onAccept}
-                onReject={splitDrawer.payload.onReject}
-                onAcceptAll={splitDrawer.payload.onAcceptAll}
-                onRejectAll={splitDrawer.payload.onRejectAll}
-              />
-            </SplitDrawer>
-          )}
         </div>
       </CesareProvider>
     </VersionsDrawerProvider>
+  );
+}
+
+// ─── SplitDrawerHost ─────────────────────────────────────────────────────
+// Owns the rendering decision for the shared SplitDrawer: branches on
+// `payload.kind` to render either the Cesare trace flow or the bell
+// notification centre. Kept here (rather than inlined) so each branch can
+// declare its own header / footer / body without bloating AppShellInner.
+
+interface SplitDrawerHostProps {
+  splitDrawer: ReturnType<typeof useSplitDrawer>;
+  splitDrawerWidth: number;
+  setSplitDrawerWidth: (next: number) => void;
+  onNotificationActivate: (notification: CesareNotification) => void;
+}
+
+function SplitDrawerHost({
+  splitDrawer,
+  splitDrawerWidth,
+  setSplitDrawerWidth,
+  onNotificationActivate,
+}: SplitDrawerHostProps) {
+  if (!splitDrawer.payload) return null;
+
+  const payload = splitDrawer.payload;
+
+  const onCycle = () => {
+    if (splitDrawer.state === "open") {
+      splitDrawer.setState("full");
+    } else if (splitDrawer.state === "full") {
+      splitDrawer.setState("open");
+    }
+  };
+  const onStepBack = () => {
+    if (splitDrawer.state === "full") {
+      splitDrawer.setState("open");
+    } else if (splitDrawer.state === "open") {
+      splitDrawer.close();
+    }
+  };
+
+  if (payload.kind === "notifications") {
+    return (
+      <SplitDrawer
+        state={splitDrawer.state}
+        onStateChange={splitDrawer.setState}
+        onCycle={onCycle}
+        onStepBack={onStepBack}
+        onClose={splitDrawer.close}
+        header={<NotificationCenterDrawerHeader />}
+        size={{ width: splitDrawerWidth }}
+        onSizeChange={({ width }) => setSplitDrawerWidth(width)}
+        ariaLabel="Centro notifiche"
+        testId="notification-center-drawer"
+      >
+        <NotificationCenterDrawerContent onActivate={onNotificationActivate} />
+      </SplitDrawer>
+    );
+  }
+
+  // payload.kind === "trace"
+  return (
+    <SplitDrawer
+      state={splitDrawer.state}
+      onStateChange={splitDrawer.setState}
+      onCycle={onCycle}
+      onStepBack={onStepBack}
+      onClose={splitDrawer.close}
+      header={
+        <h2
+          style={{
+            margin: 0,
+            fontFamily: "var(--ds-font-display)",
+            fontSize: 14,
+            color: "var(--ds-text)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {payload.title ?? payload.pageRef.title ?? "Anteprima"}
+        </h2>
+      }
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={payload.onAcceptAll}
+            style={{
+              border: "1px solid var(--ds-diff-add-fg)",
+              background: "transparent",
+              color: "var(--ds-agent)",
+              padding: "5px 12px",
+              borderRadius: "var(--ds-radius-sm)",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Accetta tutto
+          </button>
+          <button
+            type="button"
+            onClick={payload.onRejectAll}
+            style={{
+              border: "1px solid var(--ds-line)",
+              background: "transparent",
+              color: "var(--ds-text-2)",
+              padding: "5px 12px",
+              borderRadius: "var(--ds-radius-sm)",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Rifiuta tutto
+          </button>
+          <span
+            style={{
+              marginInlineStart: "auto",
+              color: "var(--ds-text-faint)",
+              fontSize: 11.5,
+            }}
+          >
+            {payload.traceMarkers.length} modifich
+            {payload.traceMarkers.length === 1 ? "a" : "e"} in sospeso
+          </span>
+        </>
+      }
+      size={{ width: splitDrawerWidth }}
+      onSizeChange={({ width }) => setSplitDrawerWidth(width)}
+    >
+      <TargetPagePreview
+        pageRef={payload.pageRef}
+        traceMarkers={payload.traceMarkers}
+        onAccept={payload.onAccept}
+        onReject={payload.onReject}
+        onAcceptAll={payload.onAcceptAll}
+        onRejectAll={payload.onRejectAll}
+      />
+    </SplitDrawer>
   );
 }
