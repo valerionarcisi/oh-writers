@@ -1,5 +1,7 @@
 # Spec 29 — Cesare: Production-Aware Chat Panel
 
+> **Note**: shell-level UX is now governed by [Spec 44](./44-shell-refactor-notion-style.md). This spec's recommendations remain authoritative for Cesare chat behaviour and production-graph awareness but defer to Spec 44 for AppShell layout decisions.
+
 > **This spec extends Spec 17** (Cesare assistente AI universale — inline markers, logline/outline/screenplay scopes). Spec 17 defines the read-and-annotate mode of Cesare (marker overlays, popovers, status bar). Spec 29 defines a complementary mode: a **persistent chat drawer** that gives Cesare awareness of the full production graph — screenplay, breakdown, budget, and schedule — and supports free-form conversational queries that cross domain boundaries.
 >
 > The two modes coexist. Spec 17 Cesare stays in-page and focused. Spec 29 Cesare opens as a right-side drawer and handles cross-domain questions that neither a marker nor a quick action can answer.

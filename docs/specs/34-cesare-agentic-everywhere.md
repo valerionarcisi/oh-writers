@@ -1,5 +1,7 @@
 # Spec 34 — Cesare Agentic Everywhere
 
+> **Note**: shell-level UX is now governed by [Spec 44](./44-shell-refactor-notion-style.md). This spec's recommendations remain authoritative for agentic Cesare behaviour and tool routing but defer to Spec 44 for AppShell layout decisions.
+
 ## Vision
 
 Un solo Cesare. Una sola chat. Capisce dove sei e cosa stai facendo. Quando puoi agire, agisce — non solo risponde.
@@ -13,17 +15,20 @@ Modello: **AI ragiona + tools deterministici**. Cesare spiega, contestualizza, s
 **Cesare: Scrittore.** Legge il documento corrente + la sceneggiatura collegata via RAG. Propone riscritture mirate.
 
 **Tools:**
+
 - `apply_text_edit(find, replace)` — sostituzione testuale puntuale nel doc corrente (riusa lo stesso pattern di `handleApplyEdit` dello screenplay)
 - `expand_section(heading)` — espande la sezione sotto un heading (es. atto II di un treatment) generando 2-3 paragrafi coerenti col resto
 - `compress_section(heading, target_words)` — riassume mantenendo i beat chiave
 - `suggest_logline_variants()` — non agentico (read-only), ma esposto come quick prompt
 
 **RAG context:**
+
 - Doc corrente completo (logline / synopsis / outline / treatment)
 - Tutti i doc del progetto (perché un treatment riusa la synopsis)
 - Headings + prime righe di ogni scena della sceneggiatura
 
 **UX:**
+
 - Chat Cesare aperta in pagina, suggerimenti propongono "Applica" come nello screenplay
 - Toast "✦ Cesare ha riscritto: [Atto II]" dopo ogni apply
 
@@ -55,11 +60,13 @@ Note: dialogo statico, no SFX, no esterni.
 ```
 
 I numeri vengono da `estimateSceneCost(scene, breakdown, rates)` — funzione pura in `packages/domain` che usa:
+
 - Conteggi dal breakdown (cast occurrences, location count, props/sfx flags)
 - Tabella `production_rates` (DB, modificabile via Settings)
 - Heuristics su INT/EXT, day/night, presenza di SFX, ecc.
 
 **Tools agentici:**
+
 - `tag_element(scene_number, category, name, quantity?)` — aggiunge un breakdown element + occurrence
 - `accept_ghost(occurrence_id)` — accetta un suggerimento ghost (verde tratteggiato)
 - `reject_ghost(occurrence_id)` — rifiuta
@@ -67,6 +74,7 @@ I numeri vengono da `estimateSceneCost(scene, breakdown, rates)` — funzione pu
 - `add_to_budget(scene_number)` — converte la stima in righe budget reali
 
 **RAG context:**
+
 - Sceneggiatura completa (RAG window ±2 attorno alla scena attiva)
 - Tutti i breakdown elements del progetto raggruppati per categoria
 - Rates correnti dalla tabella `production_rates`
@@ -89,11 +97,13 @@ Riuscita stimata: 72% ☀️ → 48% ⛈️
 ```
 
 I numeri vengono da:
+
 - `estimateDayDifficulty(day)` — funzione pura: somma di difficoltà delle scene + fattori (cambi location intra-day, cast distinto, esterni notturni)
 - `weatherForecast(location, date)` — chiamata Open-Meteo API (gratis, no key) → restituisce `{ rain_probability, temp_min, temp_max, conditions }`
 - `estimateSuccessProbability(day, weather)` — formula: base 95% − difficoltà − weather_penalty (se esterni)
 
 **Tools agentici:**
+
 - `move_scene_to_day(scene_number, target_day)` — sposta una strip
 - `merge_days(day_a, day_b)` — accorpa due giornate
 - `swap_scenes(scene_a, scene_b)` — scambia
@@ -102,6 +112,7 @@ I numeri vengono da:
 - `suggest_reorder()` — Cesare propone una nuova sequenza ottimizzata, l'utente può accettare o rifiutare
 
 **RAG context:**
+
 - Schedule corrente completo (tutte le giornate + strip)
 - Sceneggiatura per ogni scena schedulata (heading + cast + INT/EXT + time_of_day)
 - Location requirement linkati con coordinate
@@ -114,12 +125,14 @@ I numeri vengono da:
 **Cesare: Line Producer.** Aggiusta righe budget, propone redistribuzioni, alza/abbassa importi con motivazione.
 
 **Tools agentici:**
+
 - `update_budget_line(line_id, field, value)` — aggiorna `rate`, `quantity`, `actual`, ecc.
 - `add_budget_line(top_sheet, description, rate, quantity)` — nuova riga
 - `redistribute_topsheet(from_top_sheet, to_top_sheet, amount)` — sposta budget tra categorie
 - `analyze_variance()` — non agentico, restituisce un report
 
 **RAG context:**
+
 - Budget completo (top sheets, lines, residui)
 - Schedule (giornate previste → costi crew/cast)
 - Breakdown (oggetti scena, location, ecc.)
@@ -137,7 +150,10 @@ Estraggo `runToolLoop` da `cesare-tools.ts` (oggi locations-specific) in un modu
 // cesare/tools/index.ts
 export interface ToolSet {
   definitions: ToolDefinition[];
-  executor: (block: ToolUseBlock, ctx: ToolContext) => ResultAsync<ToolResult, CesareError>;
+  executor: (
+    block: ToolUseBlock,
+    ctx: ToolContext,
+  ) => ResultAsync<ToolResult, CesareError>;
 }
 
 export const TOOL_SETS_BY_PAGE: Record<CesarePage, ToolSet> = {
@@ -176,6 +192,7 @@ Default rates seed per progetto al momento della creazione (italiano, IT market)
 ## Tests
 
 Per ogni pagina:
+
 - Vitest: la funzione pura di stima (es. `estimateSceneCost`, `estimateDayDifficulty`)
 - Playwright `[OHW-540..570]`: l'utente chiede a Cesare, Cesare esegue tool, UI si aggiorna, toast appare
 

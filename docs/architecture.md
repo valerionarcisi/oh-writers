@@ -241,6 +241,12 @@ Every Yjs message → room access checked against team membership
 
 ## CSS Architecture
 
+### Shell Model
+
+The AppShell is a Canva-style left rail + slim Top Strip + bottom-right Bottom Dock, with Cesare as a **floating** Notion-style sub-window that NEVER reserves a column. The editor area is pixel-stable when Cesare opens, closes, or resizes. The shell carries three states (`full` / `collapsed` / `focus`) driving rail width and chrome visibility; Cesare carries four (`closed` / `expanded` / `peek` / `full`). The Bottom Dock (`bell · avatar · gear · ✦ Cesare`) hides while Cesare is non-closed and its icons merge into the Cesare header — there is only ever one command surface visible. The Left Rail owns project identity, Document Type / Production View nav, Cesare Sessions (when Cesare is expanded), Recents, and tool icons.
+
+State is exposed on `body` via four data attributes — `data-view`, `data-cesare`, `data-shell`, `data-cesare-thinking` — and is the only mechanism shell-aware CSS may key off. See [Spec 44](./specs/44-shell-refactor-notion-style.md) for the authoritative state model.
+
 ### Design Philosophy — Dark Modern SaaS
 
 Clean, warm dark aesthetic with depth and polish. Content-first — the editor area is the hero.

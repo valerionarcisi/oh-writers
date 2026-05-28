@@ -1,5 +1,7 @@
 # Spec 41 — Cesare Inline Edits
 
+> **Note**: shell-level UX is now governed by [Spec 44](./44-shell-refactor-notion-style.md). This spec's recommendations remain authoritative for inline edit proposals and diff overlay behaviour but defer to Spec 44 for AppShell layout decisions.
+
 **Status:** ⬜ To do  
 **Scope:** Screenplay editor only  
 **Depends on:** Spec 38 (scene summaries), Spec 40 (local context)
