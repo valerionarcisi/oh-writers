@@ -777,16 +777,44 @@ import { describe, it, expect } from "vitest";
 
 ### Dev (Postgres + Redis only)
 
+Local dev keeps Docker minimal: only **Postgres + Redis** run in containers.
+The web app and ws-server run **natively** via `pnpm dev` — lighter on Mac
+RAM/CPU than running them inside Docker.
+
 ```bash
-# Start
+# Recommended: scripted flow (start infra + migrations + seed)
+pnpm dev:up
+pnpm dev          # in a separate terminal — runs app natively
+
+# Stop infra (data preserved)
+pnpm dev:down
+
+# Or raw compose
 docker compose -f docker/docker-compose.dev.yml up -d
-
-# Stop
 docker compose -f docker/docker-compose.dev.yml down
-
-# Wipe volumes (full reset of DB and Redis)
-docker compose -f docker/docker-compose.dev.yml down -v
+docker compose -f docker/docker-compose.dev.yml down -v   # wipe volumes
 ```
+
+### Langfuse (AI tracing) — opt-in, off by default
+
+The Langfuse stack (web + worker + ClickHouse + MinIO + Redis + Postgres) is
+heavy (~6 containers, RAM-hungry). It lives in a **separate compose file**
+and is **not started by `pnpm dev:up`**. Containers use `restart: 'no'` so
+they do **not** auto-start when Docker Desktop boots — keeps the Mac quiet
+until you actually need traces.
+
+```bash
+# Start Langfuse only when debugging AI calls
+pnpm dev:up:langfuse        # dashboard → http://localhost:3001
+
+# Stop it again
+pnpm dev:down:langfuse
+pnpm dev:down:langfuse --clean   # also wipes Langfuse volumes
+```
+
+If `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` are unset in
+`apps/web/.env`, the app silently no-ops telemetry — you can develop without
+Langfuse running.
 
 ### Production (full stack)
 

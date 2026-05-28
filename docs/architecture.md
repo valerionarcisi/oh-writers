@@ -38,7 +38,9 @@
 
 ### Infrastructure
 
-- **Docker Compose** — PostgreSQL, Redis, app, ws-server
+- **Docker Compose** — PostgreSQL + Redis only in local dev (`docker-compose.dev.yml`). App + ws-server run natively via `pnpm dev` to keep Mac resources free.
+- **Langfuse** (opt-in) — separate compose file `docker-compose.langfuse.yml`, started with `pnpm dev:up:langfuse`. `restart: 'no'` so containers do not auto-start on Docker / Mac boot.
+- **Production** — `docker-compose.yml` ships the full containerised stack (app, ws-server, postgres, redis).
 - **Node.js 22** — runtime
 - **pnpm workspaces** — monorepo
 
@@ -118,8 +120,9 @@ oh-writers/
 │       ├── components/
 │       └── styles/
 ├── docker/
-│   ├── docker-compose.yml
-│   ├── docker-compose.dev.yml
+│   ├── docker-compose.yml               # production stack
+│   ├── docker-compose.dev.yml           # dev core: postgres + redis only
+│   ├── docker-compose.langfuse.yml      # opt-in AI tracing stack
 │   └── Dockerfile
 ├── scripts/
 │   ├── seed.ts

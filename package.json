@@ -6,6 +6,8 @@
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "dev:up": "bash scripts/dev-up.sh",
     "dev:down": "bash scripts/dev-down.sh",
+    "dev:up:langfuse": "bash scripts/dev-up-langfuse.sh",
+    "dev:down:langfuse": "bash scripts/dev-down-langfuse.sh",
     "dev:reset": "bash scripts/dev-reset.sh",
     "dev:nuke": "bash scripts/dev-nuke.sh",
     "dev:check": "bash scripts/dev-check.sh",

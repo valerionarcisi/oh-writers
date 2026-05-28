@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
-# dev-up.sh — Start the full local dev environment (fully containerised)
-# Usage: pnpm dev:up
+# dev-up.sh — Start core dev infrastructure (postgres + redis only)
+#
+# App + ws-server run NATIVELY on the host via `pnpm dev` (lighter on Mac
+# resources than running them inside Docker). Langfuse is opt-in via
+# `pnpm dev:up:langfuse` — kept off by default to save RAM/CPU.
+#
+# Usage:
+#   pnpm dev:up           # start postgres + redis, apply migrations + seed
+#   pnpm dev              # then run the app natively (separate terminal)
 set -euo pipefail
 
 BOLD='\033[1m'
@@ -40,16 +47,10 @@ ok "Prerequisites OK"
 
 git config core.hooksPath .githooks 2>/dev/null && ok "Git hooks configured" || true
 
-# ── 1. Build images (if needed) ───────────────────────────────────────────────
+# ── 1. Start infra (postgres + redis only) ───────────────────────────────────
 
-step "Building dev images"
-$COMPOSE build --quiet app ws-server
-ok "Images ready"
-
-# ── 2. Start infra (postgres, redis, langfuse stack) ─────────────────────────
-
-step "Starting infrastructure"
-$COMPOSE up -d postgres redis langfuse-postgres langfuse-redis langfuse-clickhouse langfuse-minio
+step "Starting core infrastructure (postgres + redis)"
+$COMPOSE up -d postgres redis
 
 # Wait for Postgres
 echo -e "${DIM}  Waiting for postgres...${RESET}"
@@ -71,15 +72,10 @@ until $COMPOSE exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do
 done
 ok "Redis ready"
 
-# ── 3. Migrations + seed ─────────────────────────────────────────────────────
+# ── 2. Migrations + seed ─────────────────────────────────────────────────────
 
 step "Applying database migrations"
-
-# Run migrations from inside the app container so DATABASE_URL resolves
-# to the Docker network hostname (postgres:5432), not localhost.
-$COMPOSE run --rm --no-deps \
-  -e DATABASE_URL=postgresql://oh-writers:oh-writers@postgres:5432/oh-writers_dev \
-  app pnpm db:migrate
+pnpm db:migrate
 ok "Migrations applied"
 
 # Seed only on first run (check if the users table is empty).
@@ -91,42 +87,26 @@ USER_COUNT=$($COMPOSE exec -T postgres \
 USER_COUNT=$(echo "$USER_COUNT" | tr -d '[:space:]')
 if [[ "$USER_COUNT" == "0" ]]; then
   echo -e "${DIM}  No users found — running seed...${RESET}"
-  $COMPOSE run --rm --no-deps \
-    -e DATABASE_URL=postgresql://oh-writers:oh-writers@postgres:5432/oh-writers_dev \
-    app pnpm db:seed
+  pnpm db:seed
   ok "Seed complete (valerio@ohwriters.it / La casa...)"
 else
   ok "Seed data already present ($USER_COUNT user(s))"
 fi
 
-# ── 4. Start Langfuse ─────────────────────────────────────────────────────────
-
-step "Starting Langfuse"
-$COMPOSE up -d langfuse-worker langfuse-web
-echo -e "${DIM}  Waiting for Langfuse web...${RESET}"
-retries=30
-until curl -s -o /dev/null -w "%{http_code}" http://localhost:3001 2>/dev/null | grep -q "200\|302"; do
-  retries=$((retries - 1))
-  [[ $retries -le 0 ]] && warn "Langfuse did not start in time — traces will buffer and retry." && break
-  sleep 2
-done
-ok "Langfuse ready → http://localhost:3001"
-
-# ── 5. Start apps ─────────────────────────────────────────────────────────────
-
-step "Starting app + ws-server"
-$COMPOSE up -d app ws-server
+# ── 3. Done ──────────────────────────────────────────────────────────────────
 
 echo -e "\n${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "${GREEN}${BOLD}  Oh Writers — full dev stack running${RESET}"
+echo -e "${GREEN}${BOLD}  Oh Writers — core infra running${RESET}"
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "  ${BOLD}Web app${RESET}      →  http://localhost:3000"
-echo -e "  ${BOLD}WS server${RESET}    →  http://localhost:1234"
-echo -e "  ${BOLD}Langfuse${RESET}     →  http://localhost:3001"
+echo -e "  ${BOLD}Postgres${RESET}  →  localhost:5432"
+echo -e "  ${BOLD}Redis${RESET}     →  localhost:6379"
 echo -e ""
-echo -e "  ${DIM}Tailing logs... Press Ctrl+C to detach (containers keep running).${RESET}"
-echo -e "  ${DIM}Run 'pnpm dev:down' to stop everything.${RESET}"
+echo -e "  Next: run the app natively (lighter than Docker):"
+echo -e "    ${BOLD}pnpm dev${RESET}            ${DIM}# web (3000) + ws-server (1234)${RESET}"
+echo -e ""
+echo -e "  Optional — AI trace dashboard (heavy, opt-in):"
+echo -e "    ${BOLD}pnpm dev:up:langfuse${RESET}    ${DIM}# start Langfuse stack${RESET}"
+echo -e "    ${BOLD}pnpm dev:down:langfuse${RESET}  ${DIM}# stop it again${RESET}"
+echo -e ""
+echo -e "  Stop infra: ${BOLD}pnpm dev:down${RESET}"
 echo ""
-
-# Tail app + ws-server logs — Ctrl+C detaches without stopping containers
-$COMPOSE logs -f app ws-server
