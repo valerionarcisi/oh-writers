@@ -841,18 +841,38 @@ export function CesareSheet({
                 }),
               );
             }
-            // Side-channel: if Cesare called rewrite_scene, close the sheet
-            // immediately and dispatch the event so the editor can start the
-            // typewriter animation. The sheet closes BEFORE the state update so
-            // the user sees the editor take over instantly.
+            // Side-channel: if Cesare called rewrite_scene, dispatch the event
+            // so the editor (when mounted on the screenplay page) can start
+            // the typewriter animation. We also buffer the rewrite in
+            // sessionStorage so that if Cesare was triggered from a different
+            // page (locations, budget, …) the editor can pick it up on its
+            // next mount via the dock pill or via direct navigation. The
+            // sheet only closes when we're actually on the screenplay page —
+            // elsewhere we keep it open so the user can hit "Vai alla scena
+            // N per accettare".
             const rewrite = parseRewriteSceneMarker(content);
             if (rewrite && typeof window !== "undefined") {
-              onClose();
+              try {
+                window.sessionStorage.setItem(
+                  "ohw:cesare:pending-rewrite",
+                  JSON.stringify({
+                    ...rewrite,
+                    projectId,
+                    ts: Date.now(),
+                  }),
+                );
+              } catch {
+                // sessionStorage may be unavailable (private mode, iframe);
+                // the event below still works when the editor is mounted.
+              }
               window.dispatchEvent(
                 new CustomEvent("ohw:cesare:rewrite-scene", {
                   detail: rewrite,
                 }),
               );
+              if (page === "screenplay") {
+                onClose();
+              }
             }
           })
           .finally(() => {

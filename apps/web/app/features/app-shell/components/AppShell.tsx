@@ -163,6 +163,31 @@ function AppShellInner({
       document.body.removeAttribute("data-cesare-thinking");
     }
   }, [isCesareThinking]);
+
+  // Auto-clear the unread badge while the user is actively reading: drawer
+  // open + tab visible. We mark seen on every new completed notification that
+  // arrives in that state, so the counter never accumulates "1, 2, 3" while
+  // the user is staring at the chat.
+  useEffect(() => {
+    if (!cesareOpen) return;
+    if (typeof document === "undefined") return;
+    if (document.visibilityState !== "visible") return;
+    if (unseenCount === 0) return;
+    markAllSeen();
+  }, [cesareOpen, unseenCount, markAllSeen]);
+
+  // Re-clear when the tab becomes visible again with the drawer open
+  // (user switched tabs and came back).
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && cesareOpen) {
+        markAllSeen();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [cesareOpen, markAllSeen]);
   const {
     permission: pushPermission,
     requestPermission,
@@ -183,6 +208,14 @@ function AppShellInner({
       const page = params.data.pageContext.page as CesarePage;
       const pid = params.data.projectId;
       const agentic = isAgenticPage(page);
+
+      // Sending a new message means the user has read whatever Cesare already
+      // produced — clear the unseen badge for prior completed notifications
+      // before we register the new in-flight one. Otherwise the avatar shows
+      // a stale "1" from the previous reply while the next one is still
+      // loading, which reads as "Cesare has finished" before the user has
+      // actually got anything.
+      markAllSeen();
 
       if (agentic) {
         const id = startNotification({

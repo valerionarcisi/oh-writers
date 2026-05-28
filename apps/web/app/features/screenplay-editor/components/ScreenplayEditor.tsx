@@ -854,11 +854,42 @@ export const ScreenplayEditor = forwardRef<
     };
 
     window.addEventListener("ohw:cesare:rewrite-scene", handleRewriteScene);
-    return () =>
+
+    // Replay any pending rewrite buffered while the editor was unmounted
+    // (e.g. Cesare fired rewrite_scene from the locations page). We consume
+    // the entry so it doesn't replay again on next mount.
+    const replayPending = () => {
+      try {
+        const raw = window.sessionStorage.getItem("ohw:cesare:pending-rewrite");
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as {
+          scene_number: number;
+          new_content: string;
+          ts?: number;
+        };
+        // Drop entries older than 5 minutes — stale by then.
+        if (parsed.ts && Date.now() - parsed.ts > 5 * 60 * 1000) {
+          window.sessionStorage.removeItem("ohw:cesare:pending-rewrite");
+          return;
+        }
+        window.sessionStorage.removeItem("ohw:cesare:pending-rewrite");
+        handleRewriteScene(
+          new CustomEvent("ohw:cesare:rewrite-scene", { detail: parsed }),
+        );
+      } catch {
+        // Ignore malformed entries.
+      }
+    };
+    // Defer one tick so the editor view has finished initialising.
+    const replayTimer = window.setTimeout(replayPending, 0);
+
+    return () => {
+      window.clearTimeout(replayTimer);
       window.removeEventListener(
         "ohw:cesare:rewrite-scene",
         handleRewriteScene,
       );
+    };
   }, []);
 
   const toggleVersionsDrawer = useCallback(() => {
