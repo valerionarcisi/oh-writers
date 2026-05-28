@@ -121,4 +121,122 @@ describe("LeftRail", () => {
     fireEvent.click(getByTitle("Cerca"));
     expect(onSearch).toHaveBeenCalledTimes(1);
   });
+
+  it("does not render the sessions section when sessions is empty", () => {
+    const { queryByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={[]}
+        onSessionSelect={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByText("Sessioni Cesare")).toBeNull();
+  });
+
+  it("renders the + Nuova affordance only when onSessionNew is supplied", () => {
+    const { queryByLabelText, rerender } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={SESSIONS}
+        onSessionSelect={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByLabelText("Nuova sessione Cesare")).toBeNull();
+    rerender(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={SESSIONS}
+        onSessionSelect={vi.fn()}
+        onSessionNew={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByLabelText("Nuova sessione Cesare")).toBeTruthy();
+  });
+
+  it("invokes onSessionNew when the + Nuova affordance is clicked", () => {
+    const onSessionNew = vi.fn();
+    const { getByLabelText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={SESSIONS}
+        onSessionSelect={vi.fn()}
+        onSessionNew={onSessionNew}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByLabelText("Nuova sessione Cesare"));
+    expect(onSessionNew).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the active session with aria-current=page", () => {
+    const { getByRole } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={SESSIONS}
+        onSessionSelect={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(
+      getByRole("button", { name: /Sessione Cesare: Breakdown Sc.2/ }),
+    ).toHaveProperty("ariaCurrent", "page");
+  });
+
+  it("invokes brand.onPress when the brand button is clicked", () => {
+    const onBrand = vi.fn();
+    const { getByLabelText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: onBrand }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByLabelText("Oh Writers"));
+    expect(onBrand).toHaveBeenCalledTimes(1);
+  });
+
+  it("invokes project.onPress when supplied", () => {
+    const onProject = vi.fn();
+    const { getByLabelText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        project={{ title: "Non fa ridere", onPress: onProject }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByLabelText(/Progetto: Non fa ridere/));
+    expect(onProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the ariaLabel override on the rail landmark", () => {
+    const { getByLabelText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+        ariaLabel="Nav Custom"
+      />,
+    );
+    expect(getByLabelText("Nav Custom")).toBeTruthy();
+  });
+
+  it("renders the rail with a data-testid hook", () => {
+    const { getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(getByTestId("left-rail")).toBeTruthy();
+  });
 });

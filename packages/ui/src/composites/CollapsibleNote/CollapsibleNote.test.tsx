@@ -98,4 +98,65 @@ describe("CollapsibleNote", () => {
       document.querySelector('[data-testid="collapsible-note-1"]'),
     ).toBeTruthy();
   });
+
+  it("defaults the eyebrow to 'Tu' when kind=user", () => {
+    render(<CollapsibleNote kind="user" title="Nota" body="Corpo" />);
+    expect(screen.getByText("Tu")).toBeTruthy();
+  });
+
+  it("emits data-kind reflecting the kind prop for CSS targeting", () => {
+    const { container } = render(
+      <CollapsibleNote kind="cesare" title="Nota" body="Corpo" />,
+    );
+    expect(container.querySelector('[data-kind="cesare"]')).toBeTruthy();
+  });
+
+  it("emits data-open when opened", () => {
+    const { container } = render(
+      <CollapsibleNote kind="cesare" title="Nota" body="Corpo" defaultOpen />,
+    );
+    expect(container.querySelector('[data-open="true"]')).toBeTruthy();
+  });
+
+  it("renders actions even when no body is provided (only when defaultOpen)", () => {
+    render(
+      <CollapsibleNote
+        kind="cesare"
+        title="Step"
+        actions={<button type="button">Mostra modifiche</button>}
+        defaultOpen
+      />,
+    );
+    expect(screen.getByText("Mostra modifiche")).toBeTruthy();
+  });
+
+  it("does NOT show the chevron when one-line (no body, no actions)", () => {
+    const { container } = render(
+      <CollapsibleNote kind="cesare" title="Senza corpo" />,
+    );
+    // No chev character ▾ should be present
+    expect(container.querySelector('[class*="chev"]')).toBeNull();
+  });
+
+  it("toggles closed when defaultOpen=true and the user clicks the header", () => {
+    render(
+      <CollapsibleNote kind="cesare" title="Nota" body="Corpo" defaultOpen />,
+    );
+    const header = screen.getByRole("button");
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(header);
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("merges a user-supplied className into the root", () => {
+    const { container } = render(
+      <CollapsibleNote
+        kind="cesare"
+        title="Nota"
+        body="Corpo"
+        className="custom-classname-x"
+      />,
+    );
+    expect(container.querySelector(".custom-classname-x")).toBeTruthy();
+  });
 });

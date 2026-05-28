@@ -237,7 +237,7 @@ export type {
   UseRailRevealResult,
 } from "./shell/LeftRail/use-rail-reveal";
 
-// ─── CollapsibleNote ────────────────────────────────────────
+// ─── CollapsibleNote (shared margin notes + Step Blocks) ─────
 export { CollapsibleNote } from "./composites/CollapsibleNote/CollapsibleNote";
 export type {
   CollapsibleNoteProps,
