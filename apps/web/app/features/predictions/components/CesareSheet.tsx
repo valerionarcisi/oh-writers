@@ -46,39 +46,6 @@ import {
 } from "~/features/predictions/sessions";
 import styles from "./CesareSheet.module.css";
 
-/**
- * Cross-component flow (Spec 44): when the user clicks the inline
- * `[Mostra modifiche]` affordance inside a Step Block, open the
- * SplitDrawer with the target page in `mode="trace"`. WP-B owns the
- * actual Step Block rendering inside the chat body — this helper is the
- * call site they should wire into their `Mostra modifiche` button.
- *
- * Until WP-B's branch lands, callers can invoke `openTraceForToolRun` as
- * a placeholder by passing the target page reference + the markers
- * derived from the assistant message.
- */
-export interface TraceForToolRunArgs {
-  pageRef: TargetPageRef;
-  traceMarkers: ReadonlyArray<TraceMarker>;
-  onAccept: (markerId: string) => void;
-  onReject: (markerId: string) => void;
-  onAcceptAll: () => void;
-  onRejectAll: () => void;
-  title?: string;
-}
-
-export function useShowChangesInSplitDrawer(): (
-  args: TraceForToolRunArgs,
-) => void {
-  const splitDrawer = useSplitDrawer();
-  return useCallback(
-    (args: TraceForToolRunArgs) => {
-      splitDrawer.open({ kind: "trace", ...args });
-    },
-    [splitDrawer],
-  );
-}
-
 // ─── Public types preserved for AppShell + Cesare server callers ───────────
 
 export type CesarePage =
@@ -115,7 +82,7 @@ export function useShowChangesInSplitDrawer(): (
   const splitDrawer = useSplitDrawer();
   return useCallback(
     (args: TraceForToolRunArgs) => {
-      splitDrawer.open(args);
+      splitDrawer.open({ kind: "trace", ...args });
     },
     [splitDrawer],
   );
