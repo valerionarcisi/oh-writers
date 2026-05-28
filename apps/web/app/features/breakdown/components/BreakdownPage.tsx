@@ -18,7 +18,10 @@ import {
   ViewbarSep,
 } from "@oh-writers/ui";
 import { useVersionsDrawer } from "~/features/versions";
-import { useVersions } from "~/features/screenplay-editor";
+import {
+  useVersions,
+  syncStateQueryOptions,
+} from "~/features/screenplay-editor";
 import { DraftMetaBadge } from "~/features/projects";
 import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import {
@@ -37,7 +40,6 @@ import {
   useAddBreakdownElement,
   useRemoveBreakdownOccurrence,
 } from "../hooks/useBreakdown";
-import { syncStateQueryOptions } from "~/features/screenplay-editor/server/screenplay.server";
 import { ScriptReader, type ScriptReaderHandle } from "./ScriptReader";
 import { ExportBreakdownModal } from "./ExportBreakdownModal";
 import { ProjectBreakdownView } from "./ProjectBreakdownView";
