@@ -82,3 +82,64 @@ describe("CesareSessionsSchema — defaults", () => {
     expect(DEFAULT_NEW_SESSION_TITLE.length).toBeGreaterThan(0);
   });
 });
+
+describe("CesareSessionsSchema — boundaries", () => {
+  it("accepts a title at exactly SESSION_TITLE_MAX characters", () => {
+    const boundary = "a".repeat(SESSION_TITLE_MAX);
+    const r = CreateSessionInput.safeParse({
+      projectId: A_UUID,
+      title: boundary,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("trims surrounding whitespace on create", () => {
+    const r = CreateSessionInput.safeParse({
+      projectId: A_UUID,
+      title: "   Idea  ",
+    });
+    if (r.success) {
+      expect(r.data.title).toBe("Idea");
+    } else {
+      throw new Error("Expected the trimmed value to parse");
+    }
+  });
+
+  it("trims surrounding whitespace on rename and rejects all-whitespace", () => {
+    const ok = RenameSessionInput.safeParse({
+      id: A_UUID,
+      title: "  Riscrivi atto II  ",
+    });
+    expect(ok.success).toBe(true);
+    if (ok.success) {
+      expect(ok.data.title).toBe("Riscrivi atto II");
+    }
+    const empty = RenameSessionInput.safeParse({ id: A_UUID, title: "    " });
+    expect(empty.success).toBe(false);
+  });
+
+  it("rejects rename when title exceeds SESSION_TITLE_MAX", () => {
+    const tooLong = "x".repeat(SESSION_TITLE_MAX + 1);
+    const r = RenameSessionInput.safeParse({ id: A_UUID, title: tooLong });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects rename when id is missing", () => {
+    const r = RenameSessionInput.safeParse({ title: "x" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects list when projectId is missing entirely", () => {
+    const r = ListSessionsInput.safeParse({});
+    expect(r.success).toBe(false);
+  });
+
+  it("tolerates extra fields by stripping them (zod default behaviour)", () => {
+    // Zod by default strips unknown keys; confirm the schema still accepts.
+    const r = ListSessionsInput.safeParse({
+      projectId: A_UUID,
+      foo: "bar",
+    });
+    expect(r.success).toBe(true);
+  });
+});

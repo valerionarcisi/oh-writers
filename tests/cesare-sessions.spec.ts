@@ -1,0 +1,101 @@
+// tests/cesare-sessions.spec.ts
+//
+// [OHW-044-C] Cesare sessions CRUD + cross-page thread persistence.
+//
+// One project can hold many Cesare sessions; the active session is the one
+// whose thread shows in the drawer. Switching sessions hot-swaps the message
+// history. Navigation between Sceneggiatura / Breakdown / Budget must NOT
+// drop the active session — the selector survives every navigation.
+import { test, expect } from "./fixtures";
+import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { BASE_URL } from "./fixtures";
+
+test.describe("[OHW-044-C] Cesare sessions", () => {
+  test("opens the session selector inside the drawer header", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
+    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Open Cesare from the dock
+    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    const drawer = page.getByTestId("cesare-drawer");
+    await expect(drawer).toBeVisible({ timeout: 5_000 });
+
+    // The session selector inside the drawer header. If sessions data hasn't
+    // loaded yet, the selector may render with a placeholder — we just check
+    // the aria-label is present.
+    const selector = drawer.getByLabel("Seleziona sessione Cesare");
+    await expect(selector).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("persists the active session across navigation between pages", async ({
+    authenticatedPage: page,
+  }) => {
+    // Open Cesare on Breakdown
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
+    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await expect(page.getByTestId("cesare-drawer")).toBeVisible();
+
+    // Snapshot the active session title (from the drawer's session selector)
+    const drawer = page.getByTestId("cesare-drawer");
+    const selector = drawer.getByLabel("Seleziona sessione Cesare");
+    await expect(selector).toBeVisible({ timeout: 5_000 });
+    const initialTitle = (await selector.textContent()) ?? "";
+    expect(initialTitle.length).toBeGreaterThan(0);
+
+    // Navigate to Sceneggiatura — Cesare state should persist via localStorage
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/screenplay`);
+    await page.waitForLoadState("networkidle");
+    await expect
+      .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
+      .toBe("expanded");
+    const drawer2 = page.getByTestId("cesare-drawer");
+    await expect(drawer2).toBeVisible({ timeout: 5_000 });
+    const titleAfterNav = (await drawer2
+      .getByLabel("Seleziona sessione Cesare")
+      .textContent()) ?? "";
+    expect(
+      titleAfterNav,
+      "session selector should retain its label across page navigation",
+    ).toBe(initialTitle);
+  });
+
+  test("closing Cesare and reopening it restores the same session", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
+    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    const drawer = page.getByTestId("cesare-drawer");
+    await expect(drawer).toBeVisible({ timeout: 5_000 });
+
+    const initialTitle = (await drawer
+      .getByLabel("Seleziona sessione Cesare")
+      .textContent()) ?? "";
+
+    // Close
+    await drawer.getByRole("button", { name: "Chiudi" }).click();
+    await expect
+      .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
+      .toBe("closed");
+
+    // Reopen
+    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await expect(page.getByTestId("cesare-drawer")).toBeVisible({
+      timeout: 5_000,
+    });
+    const reopenedTitle = (await page
+      .getByTestId("cesare-drawer")
+      .getByLabel("Seleziona sessione Cesare")
+      .textContent()) ?? "";
+    expect(reopenedTitle).toBe(initialTitle);
+  });
+});

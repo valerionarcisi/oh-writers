@@ -45,14 +45,18 @@ describe("FloatingDock", () => {
   });
 
   it("shows cesare note count when > 0", () => {
-    const { getByText } = render(
+    const { getByRole } = render(
       <FloatingDock
         label="BUDGET"
         primaryAction={primary}
         cesareNoteCount={3}
+        onCesareClick={vi.fn()}
       />
     );
-    expect(getByText("3")).toBeTruthy();
+    // The numeric badge is aria-hidden — the count is announced via the
+    // Cesare button's aria-label instead.
+    const cesareBtn = getByRole("button", { name: /3 note su questa pagina/i });
+    expect(cesareBtn).toBeTruthy();
   });
 
   it("calls onCesareClick when Cesare pill clicked", () => {
