@@ -166,6 +166,21 @@ export type {
   DockAction,
 } from "./shell/FloatingDock/FloatingDock";
 
+export { LeftRail } from "./shell/LeftRail/LeftRail";
+export type {
+  LeftRailProps,
+  RailNavItem,
+  RailSection,
+  RailToolItem,
+  CesareSessionItem,
+} from "./shell/LeftRail/LeftRail";
+
+export { BottomDock } from "./shell/BottomDock/BottomDock";
+export type {
+  BottomDockProps,
+  BottomDockUser,
+} from "./shell/BottomDock/BottomDock";
+
 export { CommandPalette } from "./shell/CommandPalette/CommandPalette";
 export type {
   CommandPaletteProps,

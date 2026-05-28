@@ -43,6 +43,7 @@ export {
   saveScreenplay,
   screenplayQueryOptions,
 } from "./hooks/useScreenplay";
+export { syncStateQueryOptions } from "./server/screenplay.server";
 export {
   listVersions,
   getVersion,
