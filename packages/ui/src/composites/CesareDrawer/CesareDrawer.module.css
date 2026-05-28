@@ -673,3 +673,17 @@
     animation: none;
   }
 }
+
+/* ── SplitDrawer integration (Spec 44 cross-component flow) ────────────
+ * When a SplitDrawer is open alongside a full-page Cesare, the chat
+ * narrows to make room for the right-anchored panel. The shell sets
+ * `body[data-split-drawer]` and exposes `--split-width` as the live
+ * width of the SplitDrawer. The full-page Cesare keys off both to slide
+ * its right edge inward without the JS having to recompute anything.
+ */
+:global(body[data-split-drawer="open"]) .root[data-state="full"] {
+  inline-size: calc(100vw - var(--split-width, 480px));
+}
+:global(body[data-split-drawer="full"]) .root[data-state="full"] {
+  display: none;
+}
