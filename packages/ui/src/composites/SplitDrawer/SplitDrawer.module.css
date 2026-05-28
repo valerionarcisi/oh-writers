@@ -1,0 +1,249 @@
+/* packages/ui/src/composites/SplitDrawer/SplitDrawer.module.css
+ *
+ * Right-anchored SplitDrawer (Notion `»` pattern). Completely separate from
+ * the Cesare drawer. The DOM is identical across every state; only the
+ * wrapper attribute `data-state` flips. Width comes from an inline custom
+ * property the resize hook writes to.
+ *
+ * DOM order:
+ *   .root  ← positioned fixed; carries data-state + custom props
+ *     .handleLeft    ← drag handle, only painted in `open`
+ *     .frame
+ *       .header (sticky)
+ *       .body   (scrollable)
+ *       .footer (sticky, optional)
+ */
+
+.root {
+  --split-inline-size: 480px;
+  --split-bg: var(--ds-surface);
+  --split-border: var(--ds-line);
+  --split-shadow: var(--ds-shadow-2);
+  --split-z: 305;
+
+  position: fixed;
+  inset-inline-end: 0;
+  inset-block: 0;
+  inline-size: var(--split-inline-size);
+  block-size: 100vh;
+  background: var(--split-bg);
+  border-inline-start: 1px solid var(--split-border);
+  box-shadow: var(--split-shadow);
+  z-index: var(--split-z);
+  display: none;
+  overflow: hidden;
+  contain: layout style;
+  font-family: var(--ds-font-sans);
+  color: var(--ds-text);
+  transition:
+    inline-size var(--ds-duration-3) var(--ds-ease),
+    inset-inline-end var(--ds-duration-3) var(--ds-ease),
+    box-shadow var(--ds-duration-3) var(--ds-ease),
+    opacity var(--ds-duration-3) var(--ds-ease),
+    transform var(--ds-duration-3) var(--ds-ease);
+
+  &.isResizing {
+    transition: none;
+  }
+}
+
+/* ── State: closed ─────────────────────────────────────────────────────── */
+.root[data-state="closed"] {
+  display: none;
+}
+
+/* ── State: open (right-anchored ~50% column, drag-resize left edge) ──── */
+.root[data-state="open"] {
+  display: flex;
+  flex-direction: column;
+  inline-size: clamp(360px, var(--split-inline-size), 60vw);
+  animation: split-slide-from-right var(--ds-duration-3) var(--ds-ease) both;
+}
+
+/* ── State: full ──────────────────────────────────────────────────────── */
+.root[data-state="full"] {
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  inline-size: 100vw;
+  block-size: 100vh;
+  border-inline-start: none;
+  box-shadow: none;
+  background: var(--ds-bg);
+  z-index: 500;
+  animation: split-scale-up var(--ds-duration-3) var(--ds-ease) both;
+}
+
+.root[data-state="full"] .frame {
+  max-inline-size: 1200px;
+  margin-inline: auto;
+  inline-size: 100%;
+}
+
+/* ── Frame (header + body + footer) ───────────────────────────────────── */
+.frame {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  inline-size: 100%;
+  min-block-size: 0;
+}
+
+/* ── Sticky header ────────────────────────────────────────────────────── */
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: 10px var(--ds-space-4);
+  border-block-end: 1px solid var(--ds-line);
+  background: var(--ds-bg);
+}
+
+.root[data-state="full"] .header {
+  padding: 14px var(--ds-space-8);
+}
+
+.headerSlot {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  inline-size: 24px;
+  block-size: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-3);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.iconBtnDanger:hover {
+  color: var(--ds-danger);
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: hidden auto;
+  padding: var(--ds-space-4);
+  background: var(--ds-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  scroll-behavior: smooth;
+}
+
+.root[data-state="full"] .body {
+  padding: var(--ds-space-6) var(--ds-space-8);
+}
+
+/* ── Sticky footer ────────────────────────────────────────────────────── */
+.footer {
+  flex-shrink: 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-block-start: 1px solid var(--ds-line);
+  background: var(--ds-bg);
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+/* ── Resize handle (left edge, only painted in `open`) ────────────────── */
+.handleLeft {
+  position: absolute;
+  inset-inline-start: -2px;
+  inset-block: 0;
+  inline-size: 6px;
+  cursor: ew-resize;
+  z-index: 2;
+  background: transparent;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 2px;
+    transform: translateY(-50%);
+    block-size: 36px;
+    inline-size: 3px;
+    border-radius: 2px;
+    background: var(--ds-line);
+    opacity: 0;
+    transition: opacity var(--ds-duration-1) var(--ds-ease);
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.root:not([data-state="open"]) .handleLeft {
+  display: none;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────── */
+@keyframes split-slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(8%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes split-scale-up {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+    animation: none !important;
+  }
+}

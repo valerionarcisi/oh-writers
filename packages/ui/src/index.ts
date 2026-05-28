@@ -237,8 +237,50 @@ export type {
   UseRailRevealResult,
 } from "./shell/LeftRail/use-rail-reveal";
 
+// ─── CollapsibleNote ────────────────────────────────────────
 export { CollapsibleNote } from "./composites/CollapsibleNote/CollapsibleNote";
 export type {
   CollapsibleNoteProps,
   CollapsibleNoteKind,
 } from "./composites/CollapsibleNote/CollapsibleNote";
+
+// ─── SplitDrawer (Notion `»` pattern) ───────────────────────
+export { SplitDrawer } from "./composites/SplitDrawer/SplitDrawer";
+export type {
+  SplitDrawerProps,
+  SplitDrawerSize,
+} from "./composites/SplitDrawer/SplitDrawer";
+export {
+  useSplitDrawerState,
+  splitDrawerReducer,
+} from "./composites/SplitDrawer/use-split-drawer-state";
+export type {
+  SplitDrawerState,
+  UseSplitDrawerStateOptions,
+  UseSplitDrawerStateResult,
+} from "./composites/SplitDrawer/use-split-drawer-state";
+export {
+  useSplitDrawerResize,
+  readPersistedSplitSize,
+  SPLIT_DRAWER_STORAGE_KEYS,
+} from "./composites/SplitDrawer/use-split-drawer-resize";
+export type {
+  UseSplitDrawerResizeOptions,
+  UseSplitDrawerResizeResult,
+} from "./composites/SplitDrawer/use-split-drawer-resize";
+
+// ─── TargetPagePreview (trace overlay inside SplitDrawer) ───
+export {
+  TargetPagePreview,
+  registerPageTraceView,
+  getPageTraceView,
+} from "./composites/TargetPagePreview/TargetPagePreview";
+export type {
+  TargetPagePreviewProps,
+  TargetPageRef,
+  TargetPageKind,
+  TraceMarker,
+  TraceMarkerKind,
+  PageTraceViewProps,
+  PageTraceViewComponent,
+} from "./composites/TargetPagePreview/TargetPagePreview";

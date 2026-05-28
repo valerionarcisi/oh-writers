@@ -2,7 +2,42 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type React from "react";
 import { useButton } from "react-aria";
 import type { ResultShape } from "@oh-writers/utils";
+import { useSplitDrawer } from "~/features/app-shell";
+import type { TargetPageRef, TraceMarker } from "@oh-writers/ui";
 import styles from "./CesareSheet.module.css";
+
+/**
+ * Cross-component flow (Spec 44): when the user clicks the inline
+ * `[Mostra modifiche]` affordance inside a Step Block, open the
+ * SplitDrawer with the target page in `mode="trace"`. WP-B owns the
+ * actual Step Block rendering inside the chat body — this helper is the
+ * call site they should wire into their `Mostra modifiche` button.
+ *
+ * Until WP-B's branch lands, callers can invoke `openTraceForToolRun` as
+ * a placeholder by passing the target page reference + the markers
+ * derived from the assistant message.
+ */
+export interface TraceForToolRunArgs {
+  pageRef: TargetPageRef;
+  traceMarkers: ReadonlyArray<TraceMarker>;
+  onAccept: (markerId: string) => void;
+  onReject: (markerId: string) => void;
+  onAcceptAll: () => void;
+  onRejectAll: () => void;
+  title?: string;
+}
+
+export function useShowChangesInSplitDrawer(): (
+  args: TraceForToolRunArgs,
+) => void {
+  const splitDrawer = useSplitDrawer();
+  return useCallback(
+    (args: TraceForToolRunArgs) => {
+      splitDrawer.open(args);
+    },
+    [splitDrawer],
+  );
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -964,6 +999,11 @@ export function CesareSheet({
         </header>
 
         {/* Conversation */}
+        {/* TODO(WP-B / Spec 44): inside each Step Block's `[Mostra modifiche]`
+            button, call `useShowChangesInSplitDrawer()(args)` with the
+            target page reference and the trace markers derived from the
+            tool run. The SplitDrawer + TargetPagePreview wiring is already
+            done at the shell level — only the call site is missing. */}
         <div
           className={styles.conversation}
           ref={conversationRef}

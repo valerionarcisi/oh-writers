@@ -28,6 +28,11 @@ const STATES = [
   ["09-screenplay-expanded.png", { cesare: "expanded", mode: "float", shell: "expanded", view: "screenplay" }],
   ["10-soggetto-expanded.png", { cesare: "expanded", mode: "float", shell: "expanded", view: "soggetto" }],
   ["11-locations-expanded-split.png", { cesare: "expanded-split", mode: "float", shell: "expanded", view: "locations" }],
+  [
+    "split-drawer-trace.png",
+    { cesare: "full", mode: "float", shell: "expanded", view: "soggetto" },
+    "if(typeof setSplit==='function') setSplit('open');",
+  ],
 ];
 
 const browser = await chromium.launch();

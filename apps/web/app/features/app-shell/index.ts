@@ -6,6 +6,8 @@ export {
   useSaveStateValue,
 } from "./save-state-context";
 export { useCesareOpen } from "./cesare-context";
+export { SplitDrawerProvider, useSplitDrawer } from "./split-drawer-context";
+export type { SplitDrawerPayload } from "./split-drawer-context";
 export {
   ActiveSceneProvider,
   useActiveScene,

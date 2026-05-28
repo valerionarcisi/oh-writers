@@ -14,6 +14,8 @@ import {
   CommandPalette,
   LeftRail,
   BottomDock,
+  SplitDrawer,
+  TargetPagePreview,
   useToast,
 } from "@oh-writers/ui";
 import type {
@@ -54,7 +56,11 @@ import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
 import { NotificationCenterDrawer } from "./NotificationCenterDrawer";
+import { SplitDrawerProvider, useSplitDrawer } from "../split-drawer-context";
+import { ensurePageTraceRegistry } from "../page-trace-registry";
 import styles from "./AppShell.module.css";
+
+ensurePageTraceRegistry();
 
 // ─── Shell state model ────────────────────────────────────────
 // Three shell modes drive the body[data-shell] flag (read by CSS in the
@@ -140,7 +146,9 @@ export function AppShell(props: AppShellProps) {
     <SaveStateProvider>
       <ActiveSceneProvider>
         <CesareNotificationProvider>
-          <AppShellInner {...props} />
+          <SplitDrawerProvider>
+            <AppShellInner {...props} />
+          </SplitDrawerProvider>
         </CesareNotificationProvider>
       </ActiveSceneProvider>
     </SaveStateProvider>
@@ -181,6 +189,8 @@ function AppShellInner({
   const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(
     null,
   );
+  const splitDrawer = useSplitDrawer();
+  const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
   const {
     notifications,
     startNotification,
@@ -228,6 +238,32 @@ function AppShellInner({
       window.localStorage.setItem(CESARE_STORAGE_KEY, cesareState);
     }
   }, [cesareState]);
+
+  // Broadcast SplitDrawer state and live width on <body> so the Cesare drawer
+  // (and any other consumer) can react via CSS without prop-drilling.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (splitDrawer.state === "closed") {
+      document.body.removeAttribute("data-split-drawer");
+    } else {
+      document.body.setAttribute("data-split-drawer", splitDrawer.state);
+    }
+  }, [splitDrawer.state]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.setProperty("--split-width", `${splitDrawerWidth}px`);
+  }, [splitDrawerWidth]);
+
+  // When the SplitDrawer becomes `full`, Cesare retreats to peek so the
+  // user keeps a single command surface visible. When the SplitDrawer is
+  // open alongside Cesare full-page, we leave Cesare in full and let the
+  // CSS rule narrow its width via --split-width.
+  useEffect(() => {
+    if (splitDrawer.state === "full" && cesareState === "full") {
+      setCesareState("peek");
+    }
+  }, [splitDrawer.state, cesareState]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -743,6 +779,101 @@ function AppShellInner({
             onClose={() => setNotifDrawerOpen(false)}
             onActivate={handleActivateNotification}
           />
+          {splitDrawer.payload && (
+            <SplitDrawer
+              state={splitDrawer.state}
+              onStateChange={splitDrawer.setState}
+              onCycle={() => {
+                if (splitDrawer.state === "open") {
+                  splitDrawer.setState("full");
+                } else if (splitDrawer.state === "full") {
+                  splitDrawer.setState("open");
+                }
+              }}
+              onStepBack={() => {
+                if (splitDrawer.state === "full") {
+                  splitDrawer.setState("open");
+                } else if (splitDrawer.state === "open") {
+                  splitDrawer.close();
+                }
+              }}
+              onClose={splitDrawer.close}
+              header={
+                <h2
+                  style={{
+                    margin: 0,
+                    fontFamily: "var(--ds-font-display)",
+                    fontSize: 14,
+                    color: "var(--ds-text)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {splitDrawer.payload.title ??
+                    splitDrawer.payload.pageRef.title ??
+                    "Anteprima"}
+                </h2>
+              }
+              footer={
+                <>
+                  <button
+                    type="button"
+                    onClick={splitDrawer.payload.onAcceptAll}
+                    style={{
+                      border: "1px solid var(--ds-diff-add-fg)",
+                      background: "transparent",
+                      color: "var(--ds-agent)",
+                      padding: "5px 12px",
+                      borderRadius: "var(--ds-radius-sm)",
+                      cursor: "pointer",
+                      fontSize: 12,
+                    }}
+                  >
+                    Accetta tutto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={splitDrawer.payload.onRejectAll}
+                    style={{
+                      border: "1px solid var(--ds-line)",
+                      background: "transparent",
+                      color: "var(--ds-text-2)",
+                      padding: "5px 12px",
+                      borderRadius: "var(--ds-radius-sm)",
+                      cursor: "pointer",
+                      fontSize: 12,
+                    }}
+                  >
+                    Rifiuta tutto
+                  </button>
+                  <span
+                    style={{
+                      marginInlineStart: "auto",
+                      color: "var(--ds-text-faint)",
+                      fontSize: 11.5,
+                    }}
+                  >
+                    {splitDrawer.payload.traceMarkers.length} modifich
+                    {splitDrawer.payload.traceMarkers.length === 1
+                      ? "a"
+                      : "e"}{" "}
+                    in sospeso
+                  </span>
+                </>
+              }
+              size={{ width: splitDrawerWidth }}
+              onSizeChange={({ width }) => setSplitDrawerWidth(width)}
+            >
+              <TargetPagePreview
+                pageRef={splitDrawer.payload.pageRef}
+                traceMarkers={splitDrawer.payload.traceMarkers}
+                onAccept={splitDrawer.payload.onAccept}
+                onReject={splitDrawer.payload.onReject}
+                onAcceptAll={splitDrawer.payload.onAcceptAll}
+                onRejectAll={splitDrawer.payload.onRejectAll}
+              />
+            </SplitDrawer>
+          )}
         </div>
       </CesareProvider>
     </VersionsDrawerProvider>
