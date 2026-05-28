@@ -42,7 +42,6 @@ import type {
   ScheduleToolContext,
   ShootingPlanToolContext,
 } from "./cesare-tools";
-import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
 import { routeModel, tierToModel } from "./cesare-model-router";
 import { loadFilmBible } from "./bible-distill.server";
 import {
@@ -1613,46 +1612,11 @@ const callCesare = (
       ),
   );
 
-// ─── Agentic tool loop (locations) ───────────────────────────────────────────
-
-const loadAnthropicNonStreaming = async () => {
-  // MOCK_AI escape hatch: return a scripted client so the tool loop runs end-to-end
-  // (including the real tool executors against the test DB) without any HTTP call.
-  if (process.env["MOCK_AI"] === "true") {
-    return createMockAnthropicClient() as unknown as {
-      messages: {
-        create(args: Record<string, unknown>): Promise<{
-          content: unknown[];
-          stop_reason?: string | null;
-        }>;
-      };
-    };
-  }
-  const sdkModule = "@anthropic-ai/sdk";
-  const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
-    default?: new (cfg: { apiKey: string }) => {
-      messages: {
-        create(args: Record<string, unknown>): Promise<{
-          content: unknown[];
-          stop_reason?: string | null;
-        }>;
-      };
-    };
-  } & {
-    new (cfg: { apiKey: string }): {
-      messages: {
-        create(args: Record<string, unknown>): Promise<{
-          content: unknown[];
-          stop_reason?: string | null;
-        }>;
-      };
-    };
-  };
-  const Ctor = sdk.default ?? sdk;
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-  return new Ctor({ apiKey });
-};
+// ─── Agentic tool loop callers ────────────────────────────────────────────────
+// Client construction is now handled inside cesare-tools.ts (via generateText
+// from @ai-sdk/anthropic for production, or the mock legacy client for MOCK_AI).
+// These callCesare* functions are thin wrappers that assemble the messages array
+// and delegate to the appropriate run*ToolLoop.
 
 const callCesareWithTools = (
   systemPrompt: SystemPromptBlock[],
@@ -1662,28 +1626,20 @@ const callCesareWithTools = (
   projectId: string,
   requirementId: string | null | undefined,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    return runToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      db,
-      projectId,
-      model,
-      requirementId ?? null,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  return runToolLoop(
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    requirementId ?? null,
+  );
+};
 
 const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
   "propose_screenplay_edit",
@@ -1698,47 +1654,36 @@ const callCesareWithScreenplayTools = (
   db: Db,
   projectId: string,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  // Run the semantic intent classifier first (cheap Haiku call). On any
+  // error or low confidence, the classifier returns a no-op intent and we
+  // fall back to `tool_choice: auto`.
+  return classifyIntent({
+    userMessage: message,
+    page: "screenplay",
+    availableTools: SCREENPLAY_PROPOSE_TOOLS,
+  })
+    .map((intent) => intent.suggestedTool)
+    .orElse(() =>
+      ResultAsync.fromSafePromise(
+        Promise.resolve<string | undefined>(undefined),
       ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    // Run the semantic intent classifier first (cheap Haiku call). On any
-    // error or low confidence, the classifier returns a no-op intent and we
-    // fall back to `tool_choice: auto`.
-    return classifyIntent({
-      client: client as unknown as Parameters<
-        typeof classifyIntent
-      >[0]["client"],
-      userMessage: message,
-      page: "screenplay",
-      availableTools: SCREENPLAY_PROPOSE_TOOLS,
-    })
-      .map((intent) => intent.suggestedTool)
-      .orElse(() =>
-        ResultAsync.fromSafePromise(
-          Promise.resolve<string | undefined>(undefined),
-        ),
-      )
-      .andThen((forcedFirstTool) =>
-        runScreenplayToolLoop(
-          client,
-          systemPrompt,
-          messages,
-          db,
-          projectId,
-          model,
-          forcedFirstTool,
-        ),
-      );
-  });
+    )
+    .andThen((forcedFirstTool) =>
+      runScreenplayToolLoop(
+        systemPrompt,
+        messages,
+        db,
+        projectId,
+        model,
+        forcedFirstTool,
+      ),
+    );
+};
 
 const callCesareWithDocumentTools = (
   systemPrompt: SystemPromptBlock[],
@@ -1749,29 +1694,21 @@ const callCesareWithDocumentTools = (
   docContext: DocumentContext,
   model: string,
   userIdFallback: string | null,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    return runDocumentToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      db,
-      projectId,
-      model,
-      docContext,
-      userIdFallback,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  return runDocumentToolLoop(
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    docContext,
+    userIdFallback,
+  );
+};
 
 const callCesareWithBreakdownTools = (
   systemPrompt: SystemPromptBlock[],
@@ -1780,27 +1717,13 @@ const callCesareWithBreakdownTools = (
   db: Db,
   projectId: string,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    return runBreakdownToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      db,
-      projectId,
-      model,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  return runBreakdownToolLoop(systemPrompt, messages, db, projectId, model);
+};
 
 const callCesareWithScheduleTools = (
   systemPrompt: SystemPromptBlock[],
@@ -1810,32 +1733,21 @@ const callCesareWithScheduleTools = (
   projectId: string,
   activeDayNumber: number | null,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    const scheduleContext: ScheduleToolContext = {
-      projectId,
-      activeDayNumber,
-    };
-    return runScheduleToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      db,
-      projectId,
-      model,
-      scheduleContext,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  const scheduleContext: ScheduleToolContext = { projectId, activeDayNumber };
+  return runScheduleToolLoop(
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    scheduleContext,
+  );
+};
 
 const callCesareWithShootingPlanTools = (
   systemPrompt: SystemPromptBlock[],
@@ -1845,32 +1757,24 @@ const callCesareWithShootingPlanTools = (
   projectId: string,
   activeSceneId: string | null,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    const shootingPlanContext: ShootingPlanToolContext = {
-      projectId,
-      activeSceneId,
-    };
-    return runShootingPlanToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      db,
-      projectId,
-      model,
-      shootingPlanContext,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  const shootingPlanContext: ShootingPlanToolContext = {
+    projectId,
+    activeSceneId,
+  };
+  return runShootingPlanToolLoop(
+    systemPrompt,
+    messages,
+    db,
+    projectId,
+    model,
+    shootingPlanContext,
+  );
+};
 
 const callCesareWithBudgetTools = (
   systemPrompt: SystemPromptBlock[],
@@ -1879,27 +1783,13 @@ const callCesareWithBudgetTools = (
   db: Db,
   projectId: string,
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    return runBudgetToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      db,
-      projectId,
-      model,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  return runBudgetToolLoop(systemPrompt, messages, db, projectId, model);
+};
 
 // ─── Handler body ─────────────────────────────────────────────────────────────
 
@@ -2064,30 +1954,22 @@ const callCesareV2 = (
   executor: import("./skills/types").SkillExecutor,
   tools: readonly import("./skills/types").AnthropicTool[],
   model: string,
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    loadAnthropicNonStreaming(),
-    (e) =>
-      new CesareError(
-        `Failed to load Anthropic client: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  ).andThen((client) => {
-    const messages = [
-      ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: message },
-    ];
-    return runUnifiedToolLoop(
-      client,
-      systemPrompt,
-      messages,
-      tools as readonly unknown[],
-      executor,
-      db,
-      projectId,
-      access,
-      model,
-    );
-  });
+): ResultAsync<string, CesareError> => {
+  const messages = [
+    ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: message },
+  ];
+  return runUnifiedToolLoop(
+    systemPrompt,
+    messages,
+    tools as readonly unknown[],
+    executor,
+    db,
+    projectId,
+    access,
+    model,
+  );
+};
 
 // ─── V2 handler — stratified context (spec 39) ────────────────────────────────
 

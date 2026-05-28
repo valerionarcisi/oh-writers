@@ -1,4 +1,5 @@
-import { tool } from "ai";
+import { type Tool, tool, generateText, stepCountIs } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
@@ -43,24 +44,33 @@ import type { SkillExecutor } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import {
   CESARE_SCHEDULE_TOOLS,
+  createScheduleTools,
   executeScheduleTool,
   type ScheduleToolContext,
 } from "./cesare-schedule-tools";
 import {
   CESARE_SHOOTING_PLAN_TOOLS,
+  createShootingPlanTools,
   executeShootingPlanTool,
   type ShootingPlanToolContext,
 } from "./cesare-shooting-plan-tools";
-import { CESARE_READ_TOOLS, tryExecuteReadTool } from "./cesare-read-tools";
+import {
+  CESARE_READ_TOOLS,
+  createReadTools,
+  tryExecuteReadTool,
+} from "./cesare-read-tools";
 import {
   CESARE_SCREENPLAY_TOOLS,
+  createScreenplayTools,
   executeScreenplayTool,
 } from "./cesare-screenplay-tools";
 import {
   CESARE_DOCUMENT_GEN_TOOLS,
+  createDocumentGenTools,
   executeDocumentGenTool,
   isDocumentGenToolName,
 } from "./cesare-document-tools";
+import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
 
 export { CESARE_SCHEDULE_TOOLS } from "./cesare-schedule-tools";
 export type { ScheduleToolContext } from "./cesare-schedule-tools";
@@ -1603,19 +1613,19 @@ interface Message {
   content: string | unknown[];
 }
 
-interface AnthropicResponse {
-  content: unknown[];
-  stop_reason?: string | null;
-}
+// ─── Specific tool loop entry points ─────────────────────────────────────────
+// Each function selects the right set of AI SDK tools (for the production path)
+// and the matching legacy executor (for the MOCK_AI path). The `client`
+// parameter has been removed — `generateText` resolves the connection via the
+// `@ai-sdk/anthropic` provider. For MOCK_AI, a `legacyMockClient` is injected
+// automatically by each function below.
 
-interface AnthropicClient {
-  messages: {
-    create(args: Record<string, unknown>): Promise<AnthropicResponse>;
-  };
-}
+const resolveMockClient = (): LegacyAnthropicClient | undefined => {
+  if (process.env["MOCK_AI"] !== "true") return undefined;
+  return createMockAnthropicClient() as unknown as LegacyAnthropicClient;
+};
 
 export const runToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
@@ -1624,51 +1634,56 @@ export const runToolLoop = (
   fallbackRequirementId: string | null = null,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
-    client,
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools: [
+    sdkTools: {
+      ...createLocationTools(db, projectId),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_LOCATION_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) =>
       executeTool(block, dbArg, projectIdArg, fallbackRequirementId),
   });
 
 export const runScreenplayToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
   projectId: string,
   model: string,
   forcedFirstTool?: string,
-): ResultAsync<string, CesareError> => {
-  return runGenericToolLoop({
-    client,
+): ResultAsync<string, CesareError> =>
+  runGenericToolLoop({
     systemPrompt,
     messages,
     db,
     projectId,
     model,
     forcedFirstTool,
-    tools: [
+    sdkTools: {
+      ...createScreenplayTools(db, projectId),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_SCREENPLAY_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
       if (readFallthrough) return readFallthrough;
       return executeScreenplayTool(block, dbArg, projectIdArg);
     },
   });
-};
 
 export const runDocumentToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
@@ -1678,17 +1693,22 @@ export const runDocumentToolLoop = (
   userIdFallback: string | null = null,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
-    client,
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools: [
+    sdkTools: {
+      ...createDocumentTools(db, docContext),
+      ...createDocumentGenTools(db, projectId, userIdFallback),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_DOCUMENT_TOOLS,
       ...CESARE_DOCUMENT_GEN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
       if (readFallthrough) return readFallthrough;
@@ -1705,7 +1725,6 @@ export const runDocumentToolLoop = (
   });
 
 export const runBreakdownToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
@@ -1713,22 +1732,25 @@ export const runBreakdownToolLoop = (
   model: string,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
-    client,
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools: [
+    sdkTools: {
+      ...createBreakdownTools(db, projectId),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_BREAKDOWN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) =>
       executeBreakdownTool(block, dbArg, projectIdArg),
   });
 
 export const runScheduleToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
@@ -1737,16 +1759,20 @@ export const runScheduleToolLoop = (
   scheduleContext: ScheduleToolContext,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
-    client,
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools: [
+    sdkTools: {
+      ...createScheduleTools(db, scheduleContext),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_SCHEDULE_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
       if (readFallthrough) return readFallthrough;
@@ -1755,7 +1781,6 @@ export const runScheduleToolLoop = (
   });
 
 export const runShootingPlanToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
@@ -1764,16 +1789,20 @@ export const runShootingPlanToolLoop = (
   shootingPlanContext: ShootingPlanToolContext,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
-    client,
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools: [
+    sdkTools: {
+      ...createShootingPlanTools(db, shootingPlanContext),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_SHOOTING_PLAN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
       if (readFallthrough) return readFallthrough;
@@ -1782,13 +1811,13 @@ export const runShootingPlanToolLoop = (
   });
 
 interface RunToolLoopArgs {
-  client: AnthropicClient;
   systemPrompt: string | readonly unknown[];
   messages: Message[];
   db: Db;
   projectId: string;
   model: string;
-  tools: readonly unknown[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sdkTools: Record<string, Tool<any, any>>;
   executor: (
     block: ToolUseBlock,
     db: Db,
@@ -1799,10 +1828,74 @@ interface RunToolLoopArgs {
    *  (e.g. a read_* after the mandated propose_*). Used by the semantic
    *  intent classifier to make propose_* deterministic. */
   forcedFirstTool?: string;
+  /**
+   * Legacy Anthropic SDK client — used only when MOCK_AI=true so Playwright
+   * tests can run end-to-end against the scripted mock client without needing
+   * a real API key or a mock LanguageModel provider.
+   */
+  legacyMockClient?: LegacyAnthropicClient;
+  /** Legacy tool definitions array — required only alongside legacyMockClient. */
+  legacyTools?: readonly unknown[];
 }
 
-const runGenericToolLoop = (
-  args: RunToolLoopArgs,
+// ─── Legacy client interface (MOCK_AI=true only) ──────────────────────────────
+
+interface LegacyAnthropicClient {
+  messages: {
+    create(args: Record<string, unknown>): Promise<{
+      content: unknown[];
+      stop_reason?: string | null;
+    }>;
+  };
+}
+
+// ─── Side-channel marker extraction ──────────────────────────────────────────
+// Both the legacy and AI-SDK paths need to inspect certain tool results for
+// embedded HTML markers that the CesareSheet parses on the client.
+
+const extractSideChannelMarkers = (
+  toolName: string,
+  toolResultContent: string,
+  accumulator: string[],
+): void => {
+  if (toolName === "propose_blocking_for_scene") {
+    try {
+      const payload = JSON.parse(toolResultContent);
+      if (payload && typeof payload === "object" && !("error" in payload)) {
+        accumulator.push(
+          `<!--ohw:blocking-proposal:${JSON.stringify(payload)}-->`,
+        );
+      }
+    } catch {
+      // ignore malformed payloads — the marker is best-effort
+    }
+  }
+  if (toolName === "rewrite_scene") {
+    try {
+      const payload = JSON.parse(toolResultContent) as unknown;
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "marker" in (payload as Record<string, unknown>) &&
+        typeof (payload as Record<string, unknown>)["marker"] === "string"
+      ) {
+        accumulator.push(
+          (payload as Record<string, unknown>)["marker"] as string,
+        );
+      }
+    } catch {
+      // ignore malformed payloads — the marker is best-effort
+    }
+  }
+};
+
+// ─── Legacy manual tool loop (MOCK_AI=true) ───────────────────────────────────
+// Keeps the Playwright test suite working: the mock client emits Anthropic-style
+// `tool_use` blocks, and the real executors run against the test DB. Once we
+// have a mock LanguageModel provider, this path can be removed.
+
+const runLegacyToolLoop = (
+  args: RunToolLoopArgs & { legacyMockClient: LegacyAnthropicClient },
 ): ResultAsync<string, CesareError> =>
   ResultAsync.fromPromise(
     (async (): Promise<string> => {
@@ -1813,23 +1906,16 @@ const runGenericToolLoop = (
       let maxStepsHit = false;
 
       for (let i = 0; i < MAX_ITERATIONS; i++) {
-        // First iteration honours `forcedFirstTool` from the semantic
-        // intent classifier: when the user's request is unambiguously a
-        // macro rewrite / rename / micro-edit, the classifier mandates the
-        // exact tool the model MUST call. Without forcing, the model often
-        // produces the rewrite inline in chat and silently skips the tool.
-        // After the first turn we relax to "auto" so follow-up reads /
-        // confirmations can flow normally.
         const toolChoice =
           i === 0 && args.forcedFirstTool
             ? ({ type: "tool", name: args.forcedFirstTool } as const)
             : ({ type: "auto" } as const);
-        const response = await args.client.messages.create({
+        const response = await args.legacyMockClient.messages.create({
           model: args.model,
           max_tokens: 1500,
           system: args.systemPrompt,
           messages: currentMessages,
-          tools: args.tools,
+          tools: args.legacyTools ?? [],
           tool_choice: toolChoice,
         });
 
@@ -1841,23 +1927,16 @@ const runGenericToolLoop = (
             (b as { type: string }).type === "text",
         );
 
-        // Collect any text in this turn
         for (const tb of textBlocks) {
-          if (tb.text.trim()) {
-            textAccumulator.push(tb.text.trim());
-          }
+          if (tb.text.trim()) textAccumulator.push(tb.text.trim());
         }
 
-        // If no tool use, we're done
         if (response.stop_reason !== "tool_use" || toolBlocks.length === 0) {
           break;
         }
 
-        if (i === MAX_ITERATIONS - 1) {
-          maxStepsHit = true;
-        }
+        if (i === MAX_ITERATIONS - 1) maxStepsHit = true;
 
-        // Execute all tools in this turn
         const toolResults: ToolResult[] = [];
         for (const block of toolBlocks) {
           const result = await args.executor(block, args.db, args.projectId);
@@ -1870,59 +1949,16 @@ const runGenericToolLoop = (
           } else {
             toolsExecuted += 1;
             toolResults.push(result.value);
-            // Side-channel: surface blocking proposals to the client by
-            // emitting an invisible HTML marker. CesareSheet parses these and
-            // dispatches a DOM event the canvas listens to.
-            if (block.name === "propose_blocking_for_scene") {
-              try {
-                const payload = JSON.parse(result.value.content);
-                if (
-                  payload &&
-                  typeof payload === "object" &&
-                  !("error" in payload)
-                ) {
-                  textAccumulator.push(
-                    `<!--ohw:blocking-proposal:${JSON.stringify(payload)}-->`,
-                  );
-                }
-              } catch {
-                // ignore malformed payloads — the marker is best-effort
-              }
-            }
-            // Side-channel: rewrite_scene embeds its marker inside the tool
-            // result JSON (field `marker`). Extract it here and push it to
-            // the text accumulator so the CesareSheet can parse it and fire
-            // the `ohw:cesare:rewrite-scene` DOM event to the editor.
-            if (block.name === "rewrite_scene") {
-              try {
-                const payload = JSON.parse(result.value.content) as unknown;
-                if (
-                  payload &&
-                  typeof payload === "object" &&
-                  "marker" in (payload as Record<string, unknown>) &&
-                  typeof (payload as Record<string, unknown>)["marker"] ===
-                    "string"
-                ) {
-                  textAccumulator.push(
-                    (payload as Record<string, unknown>)["marker"] as string,
-                  );
-                }
-              } catch {
-                // ignore malformed payloads — the marker is best-effort
-              }
-            }
+            extractSideChannelMarkers(
+              block.name,
+              result.value.content,
+              textAccumulator,
+            );
           }
         }
 
-        // Append assistant message with tool_use blocks, then user message with tool_results
-        currentMessages.push({
-          role: "assistant",
-          content: response.content,
-        });
-        currentMessages.push({
-          role: "user",
-          content: toolResults,
-        });
+        currentMessages.push({ role: "assistant", content: response.content });
+        currentMessages.push({ role: "user", content: toolResults });
       }
 
       if (maxStepsHit) {
@@ -1936,9 +1972,6 @@ const runGenericToolLoop = (
         );
       }
 
-      // Append an invisible marker so the client can tell whether real
-      // mutations happened. The MessageBubble's stripToolCalls + comment
-      // stripping hides this from the rendered text.
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;
       return `${textAccumulator.join("\n\n")}\n${marker}`;
     })(),
@@ -1947,6 +1980,126 @@ const runGenericToolLoop = (
         `Tool loop failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
   );
+
+// ─── AI SDK generateText tool loop (production) ───────────────────────────────
+// Converts the SystemPromptBlock[] (with cache_control) to the AI SDK
+// SystemModelMessage[] format by mapping cache_control → providerOptions.
+
+interface SystemPromptBlock {
+  readonly type: "text";
+  readonly text: string;
+  readonly cache_control?: { readonly type: "ephemeral" };
+}
+
+const toSystemMessages = (
+  systemPrompt: string | readonly unknown[],
+):
+  | string
+  | Array<{
+      role: "system";
+      content: string;
+      providerOptions?: Record<string, unknown>;
+    }> => {
+  if (typeof systemPrompt === "string") return systemPrompt;
+  return (systemPrompt as readonly SystemPromptBlock[]).map((block) => ({
+    role: "system" as const,
+    content: block.text,
+    ...(block.cache_control
+      ? {
+          providerOptions: {
+            anthropic: { cacheControl: { type: block.cache_control.type } },
+          },
+        }
+      : {}),
+  }));
+};
+
+const runGenericToolLoop = (
+  args: RunToolLoopArgs,
+): ResultAsync<string, CesareError> => {
+  // MOCK_AI path: use the legacy manual loop so Playwright tests continue to
+  // work end-to-end with the scripted mock client.
+  if (args.legacyMockClient) {
+    return runLegacyToolLoop(
+      args as RunToolLoopArgs & { legacyMockClient: LegacyAnthropicClient },
+    );
+  }
+
+  // Production path: delegate to generateText which manages the multi-step
+  // tool loop internally. The `executor` is called via tool.execute() in
+  // each AI SDK tool definition — we don't need to wire it manually.
+  return ResultAsync.fromPromise(
+    (async (): Promise<string> => {
+      const textAccumulator: string[] = [];
+      let toolsExecuted = 0;
+
+      const result = await generateText({
+        model: anthropic(args.model),
+        system: toSystemMessages(args.systemPrompt) as Parameters<
+          typeof generateText
+        >[0]["system"],
+        messages: args.messages as Parameters<
+          typeof generateText
+        >[0]["messages"] &
+          [],
+        // Cast needed: ToolSet constrains Tool<any,any> to Tool<never,never> union;
+        // the runtime values are correct Tool instances, the variance is nominal.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        tools: args.sdkTools as any,
+        toolChoice: args.forcedFirstTool
+          ? { type: "tool" as const, toolName: args.forcedFirstTool }
+          : "auto",
+        stopWhen: stepCountIs(5),
+        maxOutputTokens: 1500,
+        experimental_telemetry: {
+          isEnabled: true,
+          functionId: "cesare-tool-loop",
+        },
+        onStepFinish: (stepResult) => {
+          // Collect text produced in each step
+          for (const part of stepResult.text
+            ? [{ text: stepResult.text }]
+            : []) {
+            if (part.text.trim()) textAccumulator.push(part.text.trim());
+          }
+          // Count tool invocations and extract side-channel markers
+          for (const toolCall of stepResult.toolCalls ?? []) {
+            const toolResult = (stepResult.toolResults ?? []).find(
+              (r) => r.toolCallId === toolCall.toolCallId,
+            );
+            if (toolResult) {
+              toolsExecuted += 1;
+              extractSideChannelMarkers(
+                toolCall.toolName,
+                JSON.stringify(toolResult.output),
+                textAccumulator,
+              );
+            }
+          }
+        },
+      });
+
+      // Collect final text if not already captured in onStepFinish
+      if (result.text.trim() && !textAccumulator.includes(result.text.trim())) {
+        textAccumulator.push(result.text.trim());
+      }
+
+      if (result.finishReason === "length") {
+        logger.warn(
+          { model: args.model, projectId: args.projectId },
+          "cesare.tool_loop.max_steps_hit",
+        );
+      }
+
+      const marker = `<!--ohw:tools=${toolsExecuted}-->`;
+      return `${textAccumulator.join("\n\n")}\n${marker}`;
+    })(),
+    (e) =>
+      new CesareError(
+        `Tool loop failed: ${e instanceof Error ? e.message : String(e)}`,
+      ),
+  );
+};
 
 // ─── Budget tool definitions ──────────────────────────────────────────────────
 
@@ -3233,7 +3386,6 @@ export const executeBudgetTool = (
 // ─── Budget tool loop ─────────────────────────────────────────────────────────
 
 export const runBudgetToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   db: Db,
@@ -3241,16 +3393,20 @@ export const runBudgetToolLoop = (
   model: string,
 ): ResultAsync<string, CesareError> =>
   runGenericToolLoop({
-    client,
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools: [
+    sdkTools: {
+      ...createBudgetTools(db, projectId),
+      ...createReadTools(db, projectId),
+    },
+    legacyTools: [
       ...CESARE_BUDGET_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    legacyMockClient: resolveMockClient(),
     executor: executeBudgetTool,
   });
 
@@ -3258,9 +3414,13 @@ export const runBudgetToolLoop = (
 // Parameterised on a SkillExecutor from the registry instead of a page-specific
 // executor. The SkillExecutor receives (block, db, projectId, access) — the
 // extra `access` arg is forwarded from the server function context.
+//
+// The skills still use the AnthropicTool[] wire format (legacy JSON schema).
+// For production calls we use the legacy path since the skills haven't been
+// migrated to AI SDK tool factories yet — that is Fase 5 scope. The mock path
+// is identical: the mock client doesn't inspect tool definitions.
 
 export const runUnifiedToolLoop = (
-  client: AnthropicClient,
   systemPrompt: string | readonly unknown[],
   messages: Message[],
   tools: readonly unknown[],
@@ -3269,15 +3429,36 @@ export const runUnifiedToolLoop = (
   projectId: string,
   access: ProjectAccess,
   model: string,
-): ResultAsync<string, CesareError> =>
-  runGenericToolLoop({
-    client,
+): ResultAsync<string, CesareError> => {
+  const mockClient = resolveMockClient();
+  // For the unified loop the legacy path covers both MOCK_AI and production
+  // until Fase 5 migrates the skill tool definitions to AI SDK format.
+  const legacyClient: LegacyAnthropicClient = mockClient ?? {
+    messages: {
+      create: async (args) => {
+        const sdkModule = "@anthropic-ai/sdk";
+        const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
+          default?: new (cfg: { apiKey: string }) => LegacyAnthropicClient;
+        } & { new (cfg: { apiKey: string }): LegacyAnthropicClient };
+        const Ctor = sdk.default ?? sdk;
+        const apiKey = process.env["ANTHROPIC_API_KEY"];
+        if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+        const client = new Ctor({ apiKey });
+        return client.messages.create(args);
+      },
+    },
+  };
+
+  return runLegacyToolLoop({
     systemPrompt,
     messages,
     db,
     projectId,
     model,
-    tools,
+    sdkTools: {},
+    legacyTools: tools,
+    legacyMockClient: legacyClient,
     executor: (block, dbArg, projectIdArg) =>
       executor(block, dbArg, projectIdArg, access),
   });
+};

@@ -1,10 +1,6 @@
+import { generateText, jsonSchema, tool as sdkTool } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { ResultAsync } from "neverthrow";
-
-// Minimal local types mirroring the slice of `@anthropic-ai/sdk` we use.
-// The SDK is lazy-imported via a string identifier so it stays optional in
-// MOCK_AI environments (CI, local dev without a key). Centralising the
-// import here means callers never reach for `@anthropic-ai/sdk` directly
-// and never need an `: any` escape hatch.
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 
@@ -61,27 +57,11 @@ export class AnthropicError {
   }
 }
 
-interface AnthropicMessagesClient {
-  readonly messages: {
-    create(args: Record<string, unknown>): Promise<{
-      content: ReadonlyArray<ContentBlock>;
-      stop_reason?: string | null;
-    }>;
-  };
-}
-
-interface AnthropicConstructor {
-  new (config: { apiKey: string }): AnthropicMessagesClient;
-}
-
 // Minimal typing for the streaming slice of the SDK used by llm-spoglio.
 // The SDK's MessageStream.on("inputJson", ...) fires for each partial JSON
 // delta from a tool_use block. finalMessage() resolves when the stream ends.
 export interface MessageStream {
-  on(
-    event: "inputJson",
-    listener: (delta: string) => void,
-  ): this;
+  on(event: "inputJson", listener: (delta: string) => void): this;
   finalMessage(): Promise<unknown>;
 }
 
@@ -95,20 +75,10 @@ interface AnthropicStreamingConstructor {
   new (config: { apiKey: string }): AnthropicStreamingMessagesClient;
 }
 
-const loadAnthropic = async (): Promise<AnthropicConstructor> => {
-  const sdkModule = "@anthropic-ai/sdk";
-  const sdk = (await import(/* @vite-ignore */ sdkModule)) as {
-    default?: AnthropicConstructor;
-  } & AnthropicConstructor;
-  return (sdk.default ?? sdk) as AnthropicConstructor;
-};
-
 export const loadAnthropicStreamingClient =
   async (): Promise<AnthropicStreamingMessagesClient> => {
     if (process.env["MOCK_AI"] === "true") {
-      const mock = await import(
-        "../predictions/_mocks/cesare-tool-loop.mock"
-      );
+      const mock = await import("../predictions/_mocks/cesare-tool-loop.mock");
       return mock.createMockStreamingClient() as unknown as AnthropicStreamingMessagesClient;
     }
     const sdkModule = "@anthropic-ai/sdk";
@@ -125,41 +95,76 @@ export const loadAnthropicStreamingClient =
     return new Ctor({ apiKey });
   };
 
+const buildSdkTools = (
+  defs: ReadonlyArray<ToolDefinition>,
+): Record<string, ReturnType<typeof sdkTool>> =>
+  Object.fromEntries(
+    defs.map((t) => [
+      t.name,
+      sdkTool({
+        description: t.description,
+        inputSchema: jsonSchema(
+          t.input_schema as Parameters<typeof jsonSchema>[0],
+        ),
+      }),
+    ]),
+  );
+
 export const callHaiku = (
   params: CallHaikuParams,
   operation: string,
 ): ResultAsync<HaikuResult, AnthropicError> =>
   ResultAsync.fromPromise(
-    (async (): Promise<HaikuResult> => {
-      const apiKey = process.env["ANTHROPIC_API_KEY"];
-      if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-      const Anthropic = await loadAnthropic();
-      const client = new Anthropic({ apiKey });
-      const request: Record<string, unknown> = {
-        model: params.model ?? DEFAULT_MODEL,
-        max_tokens: params.maxTokens,
-        system: [
-          {
-            type: "text",
-            text: params.system,
-            cache_control: { type: "ephemeral" },
+    generateText({
+      model: anthropic(params.model ?? DEFAULT_MODEL),
+      system: [
+        {
+          role: "system" as const,
+          content: params.system,
+          providerOptions: {
+            anthropic: { cacheControl: { type: "ephemeral" } },
           },
-          {
-            type: "text",
-            text: JSON.stringify(params.fewShot),
-            cache_control: { type: "ephemeral" },
+        },
+        {
+          role: "system" as const,
+          content: JSON.stringify(params.fewShot),
+          providerOptions: {
+            anthropic: { cacheControl: { type: "ephemeral" } },
           },
-        ],
-        messages: [{ role: "user", content: params.user }],
-      };
-      if (params.tools) request["tools"] = params.tools;
-      if (params.toolChoice) request["tool_choice"] = params.toolChoice;
-      const response = await client.messages.create(request);
+        },
+      ],
+      messages: [{ role: "user", content: params.user }],
+      maxOutputTokens: params.maxTokens,
+      ...(params.tools && params.tools.length > 0
+        ? {
+            tools: buildSdkTools(params.tools),
+            toolChoice: params.toolChoice
+              ? { type: "tool" as const, toolName: params.toolChoice.name }
+              : ("auto" as const),
+          }
+        : {}),
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: `call-haiku:${operation}`,
+      },
+    }).then((result) => {
+      const toolUseBlocks: ToolUseBlock[] = result.toolCalls.map((tc) => ({
+        type: "tool_use" as const,
+        name: tc.toolName,
+        input: tc.input,
+      }));
+      const textBlock: TextBlock | null = result.text
+        ? { type: "text" as const, text: result.text }
+        : null;
+      const content: ContentBlock[] = [
+        ...(textBlock ? [textBlock] : []),
+        ...toolUseBlocks,
+      ];
       return {
-        content: response.content,
-        stopReason: response.stop_reason ?? null,
+        content,
+        stopReason: result.finishReason ?? null,
       };
-    })(),
+    }),
     (e) => new AnthropicError(operation, e),
   );
 

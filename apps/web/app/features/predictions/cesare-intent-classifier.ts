@@ -22,7 +22,7 @@
 //   user-visible behaviour is "best effort", never blocking.
 
 import { ResultAsync } from "neverthrow";
-import type Anthropic from "@anthropic-ai/sdk";
+import { callHaiku, extractText } from "~/features/ai";
 import { HAIKU_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 
@@ -85,6 +85,8 @@ Esempi:
 "chi è il protagonista?" → {"type":"question","confidence":0.98}
 "questa scena è piatta" → {"type":"comment","confidence":0.80}`;
 
+const NO_OP_INTENT: IntentResult = { type: "question", confidence: 0 };
+
 const parseJsonResponse = (text: string): IntentResult | null => {
   try {
     // Strip optional code-fence wrapping ("```json ... ```").
@@ -113,7 +115,6 @@ const parseJsonResponse = (text: string): IntentResult | null => {
 };
 
 export interface ClassifyOpts {
-  readonly client: Anthropic;
   readonly userMessage: string;
   readonly page: string;
   /** Names of the propose_* tools available on the current page. The
@@ -125,50 +126,45 @@ export interface ClassifyOpts {
  * Classify the user's last message into one of five intent buckets.
  * Returns `suggestedTool` only when the intent maps to a propose_* tool
  * registered for the current page and confidence clears the threshold.
+ *
+ * Uses callHaiku internally — no raw Anthropic SDK client needed.
  */
 export const classifyIntent = (
   opts: ClassifyOpts,
-): ResultAsync<IntentResult, CesareError> =>
-  ResultAsync.fromPromise(
-    (async (): Promise<IntentResult> => {
-      // Only run the classifier on the screenplay page for now — that's
-      // where the inline-instead-of-tool bug bites the most. Other pages
-      // (budget, schedule, locations) already have good tool adherence
-      // thanks to their narrower scope.
-      if (opts.page !== "screenplay") {
-        return { type: "question", confidence: 0 };
-      }
+): ResultAsync<IntentResult, CesareError> => {
+  // Only run the classifier on the screenplay page for now — that's
+  // where the inline-instead-of-tool bug bites the most. Other pages
+  // (budget, schedule, locations) already have good tool adherence
+  // thanks to their narrower scope.
+  if (opts.page !== "screenplay") {
+    return ResultAsync.fromSafePromise(Promise.resolve(NO_OP_INTENT));
+  }
 
-      // MOCK_AI escape hatch: the scripted client matches scenarios on the
-      // user text, so calling it for classification would consume the first
-      // scripted turn meant for the main tool loop. Skip the classifier and
-      // let the loop run with tool_choice: "auto".
-      if (process.env["MOCK_AI"] === "true") {
-        return { type: "question", confidence: 0 };
-      }
+  // MOCK_AI escape hatch: the scripted client matches scenarios on the
+  // user text, so calling it for classification would consume the first
+  // scripted turn meant for the main tool loop. Skip the classifier and
+  // let the loop run with tool_choice: "auto".
+  if (process.env["MOCK_AI"] === "true") {
+    return ResultAsync.fromSafePromise(Promise.resolve(NO_OP_INTENT));
+  }
 
-      const response = await opts.client.messages.create({
-        model: HAIKU_MODEL,
-        max_tokens: 100,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            content: opts.userMessage.slice(0, 800),
-          },
-        ],
-      });
+  return callHaiku(
+    {
+      system: SYSTEM_PROMPT,
+      fewShot: [],
+      user: opts.userMessage.slice(0, 800),
+      model: HAIKU_MODEL,
+      maxTokens: 100,
+    },
+    "cesare.intent-classifier",
+  )
+    .mapErr((e) => new CesareError(`intent classifier failed: ${e.message}`))
+    .map((result) => {
+      const text = extractText(result.content);
+      if (!text) return NO_OP_INTENT;
 
-      const textBlock = response.content.find(
-        (b) =>
-          typeof b === "object" &&
-          b !== null &&
-          (b as { type?: string }).type === "text",
-      ) as { type: "text"; text: string } | undefined;
-      if (!textBlock) return { type: "question", confidence: 0 };
-
-      const parsed = parseJsonResponse(textBlock.text);
-      if (!parsed) return { type: "question", confidence: 0 };
+      const parsed = parseJsonResponse(text);
+      if (!parsed) return NO_OP_INTENT;
 
       // Decorate with the tool name when intent is confident and the tool
       // is actually available on this page.
@@ -181,9 +177,5 @@ export const classifyIntent = (
         return { ...parsed, suggestedTool: candidate };
       }
       return parsed;
-    })(),
-    (e) =>
-      new CesareError(
-        `intent classifier failed: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  );
+    });
+};
