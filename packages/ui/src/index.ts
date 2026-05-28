@@ -236,3 +236,9 @@ export type {
   UseRailRevealOptions,
   UseRailRevealResult,
 } from "./shell/LeftRail/use-rail-reveal";
+
+export { CollapsibleNote } from "./composites/CollapsibleNote/CollapsibleNote";
+export type {
+  CollapsibleNoteProps,
+  CollapsibleNoteKind,
+} from "./composites/CollapsibleNote/CollapsibleNote";
