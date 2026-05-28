@@ -1,3 +1,4 @@
+import "./server/instrumentation";
 import {
   createStartHandler,
   defaultStreamHandler,

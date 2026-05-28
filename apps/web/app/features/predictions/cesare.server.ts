@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { eq, and, isNull, count, gte, lte, inArray } from "drizzle-orm";
+import { logger } from "~/server/logger";
 import { ResultAsync } from "neverthrow";
 import {
   screenplays,
@@ -917,9 +918,9 @@ const assembleContext = (
                             bible,
                           }))
                           .orElse((bibleErr) => {
-                            console.warn(
-                              "[cesare] Film Bible unavailable, continuing without it:",
-                              bibleErr.message,
+                            logger.warn(
+                              { err: bibleErr.message },
+                              "film bible unavailable, continuing without it",
                             );
                             return ResultAsync.fromSafePromise(
                               Promise.resolve({
@@ -1939,8 +1940,15 @@ const handleAskCesare = (
   const model = tierToModel(tier);
 
   if (process.env["CESARE_DEBUG"] === "true") {
-    console.warn(
-      `[cesare] tier=${tier} model=${model} page=${data.pageContext.page} convLen=${data.conversationHistory.length} msg="${data.message.slice(0, 60)}"`,
+    logger.debug(
+      {
+        tier,
+        model,
+        page: data.pageContext.page,
+        convLen: data.conversationHistory.length,
+        msg: data.message.slice(0, 60),
+      },
+      "cesare request routing",
     );
   }
 
@@ -2103,8 +2111,15 @@ const handleAskCesareV2 = (
   const model = tierToModel(tier);
 
   if (process.env["CESARE_DEBUG"] === "true") {
-    console.warn(
-      `[cesare-v2] tier=${tier} model=${model} page=${data.pageContext.page} convLen=${data.conversationHistory.length} msg="${data.message.slice(0, 60)}"`,
+    logger.debug(
+      {
+        tier,
+        model,
+        page: data.pageContext.page,
+        convLen: data.conversationHistory.length,
+        msg: data.message.slice(0, 60),
+      },
+      "cesare-v2 request routing",
     );
   }
 
@@ -2184,6 +2199,7 @@ const handleAskCesareV2 = (
           const executor = finalRegistry.combinedExecutor(finalSkills);
 
           // Step 7: invoke the unified tool loop
+          const startMs = Date.now();
           return callCesareV2(
             systemPrompt,
             data.conversationHistory,
@@ -2194,9 +2210,83 @@ const handleAskCesareV2 = (
             executor,
             tools,
             model,
-          );
+          ).map((reply) => {
+            emitCesareMetricEvent(
+              data.pageContext.page,
+              data.projectId,
+              model,
+              Date.now() - startMs,
+              reply,
+            );
+            return reply;
+          });
         });
     });
+};
+
+// ─── Metric events ────────────────────────────────────────────────────────────
+// Structured product events emitted as console.info JSON. These are the
+// "metrics" channel (how often, how costly, how slow) — distinct from OTEL
+// traces (Langfuse, per-call detail) and Pino logs (system anomalies).
+// A future PostHog integration will replace console.info with a real sink.
+
+const DOCUMENT_PAGE_TYPES = new Set<string>([
+  "soggetto",
+  "synopsis",
+  "outline",
+  "treatment",
+  "logline",
+]);
+
+const emitCesareMetricEvent = (
+  page: string,
+  projectId: string,
+  model: string,
+  durationMs: number,
+  reply: string,
+): void => {
+  if (DOCUMENT_PAGE_TYPES.has(page)) {
+    // Check if the reply contains a propose_* tool invocation marker — if the
+    // model called a document generation tool the reply embeds <!--ohw:tools=N-->
+    // with N > 0. We treat any completed document-page response as a generation.
+    console.info(
+      JSON.stringify({
+        event: "cesare.document.generated",
+        type: page,
+        projectId,
+        durationMs,
+      }),
+    );
+    return;
+  }
+
+  if (page === "screenplay") {
+    // Inline edits and macro revisions are both reported here. The reply
+    // always embeds <!--ohw:tools=N--> when a propose_* tool was called.
+    const toolCount = extractToolCountFromMarker(reply);
+    if (toolCount > 0) {
+      console.info(
+        JSON.stringify({
+          event: "cesare.inline_edit.proposed",
+          projectId,
+          durationMs,
+        }),
+      );
+    }
+    return;
+  }
+
+  if (page === "breakdown" || page === "schedule" || page === "budget") {
+    // No dedicated metric event for these pages in Phase 1. Covered by OTEL traces.
+    return;
+  }
+};
+
+// Parses the tool-execution count embedded by runGenericToolLoop in the reply.
+// Returns 0 when the marker is absent or malformed.
+const extractToolCountFromMarker = (reply: string): number => {
+  const match = /<!--ohw:tools=(\d+)-->/.exec(reply);
+  return match ? parseInt(match[1] ?? "0", 10) : 0;
 };
 
 // ─── Server function ──────────────────────────────────────────────────────────

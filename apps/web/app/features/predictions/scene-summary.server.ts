@@ -7,6 +7,7 @@ import { callHaiku, extractToolUse } from "~/features/ai";
 import type { Db } from "~/server/db";
 import { DbError } from "@oh-writers/utils";
 import { findSceneSummaryFixture } from "./_mocks/scene-summary.fixtures";
+import { logger } from "~/server/logger";
 
 // ─── Errors ───────────────────────────────────────────────────────────────────
 
@@ -110,10 +111,31 @@ export const generateSceneSummary = (
   sceneNumber: number,
   heading: string,
   body: string,
-): ResultAsync<SceneSummary, SceneSummaryError> =>
-  process.env["MOCK_AI"] === "true"
-    ? generateWithMock(sceneNumber, heading, body)
-    : generateWithAI(sceneNumber, heading, body);
+): ResultAsync<SceneSummary, SceneSummaryError> => {
+  const startMs = Date.now();
+  const result =
+    process.env["MOCK_AI"] === "true"
+      ? generateWithMock(sceneNumber, heading, body)
+      : generateWithAI(sceneNumber, heading, body);
+  return result
+    .map((summary) => {
+      console.info(
+        JSON.stringify({
+          event: "cesare.scene_summary.generated",
+          sceneNumber,
+          durationMs: Date.now() - startMs,
+        }),
+      );
+      return summary;
+    })
+    .mapErr((err) => {
+      logger.error(
+        { err: err.message, sceneNumber },
+        "scene summary generation failed",
+      );
+      return err;
+    });
+};
 
 // ─── Debounce guard ───────────────────────────────────────────────────────────
 

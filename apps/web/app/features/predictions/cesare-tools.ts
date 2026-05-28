@@ -1,5 +1,6 @@
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
+import { logger } from "~/server/logger";
 import {
   locationCandidates,
   locationPhotos,
@@ -1522,6 +1523,7 @@ const runGenericToolLoop = (
       const currentMessages: Message[] = [...args.messages];
       const textAccumulator: string[] = [];
       let toolsExecuted = 0;
+      let maxStepsHit = false;
 
       for (let i = 0; i < MAX_ITERATIONS; i++) {
         // First iteration honours `forcedFirstTool` from the semantic
@@ -1562,6 +1564,10 @@ const runGenericToolLoop = (
         // If no tool use, we're done
         if (response.stop_reason !== "tool_use" || toolBlocks.length === 0) {
           break;
+        }
+
+        if (i === MAX_ITERATIONS - 1) {
+          maxStepsHit = true;
         }
 
         // Execute all tools in this turn
@@ -1630,6 +1636,17 @@ const runGenericToolLoop = (
           role: "user",
           content: toolResults,
         });
+      }
+
+      if (maxStepsHit) {
+        logger.warn(
+          {
+            stepCount: MAX_ITERATIONS,
+            model: args.model,
+            projectId: args.projectId,
+          },
+          "cesare.tool_loop.max_steps_hit",
+        );
       }
 
       // Append an invisible marker so the client can tell whether real
