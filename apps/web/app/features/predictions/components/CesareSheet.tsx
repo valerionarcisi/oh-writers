@@ -395,6 +395,7 @@ function stripToolCalls(content: string): string {
       )
       .replace(/<!--ohw:tools=\d+-->/g, "")
       .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
+      .replace(/<!--ohw:rewrite-scene-b64:[A-Za-z0-9+/=]+-->/g, "")
       .trim()
   );
 }

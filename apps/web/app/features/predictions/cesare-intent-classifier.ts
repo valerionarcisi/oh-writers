@@ -29,6 +29,9 @@ import { CesareError } from "./cesare.errors";
 export type IntentType =
   | "macro_rewrite"
   | "micro_edit"
+  | "rewrite_one_scene"
+  | "merge_scenes"
+  | "delete_scene"
   | "rename"
   | "question"
   | "comment";
@@ -47,6 +50,9 @@ const CONFIDENCE_THRESHOLD = 0.6;
 const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   macro_rewrite: "propose_screenplay_revision",
   micro_edit: "propose_screenplay_edit",
+  rewrite_one_scene: "rewrite_scene",
+  merge_scenes: "merge_scenes",
+  delete_scene: "delete_scene",
   rename: "propose_rename_entity",
 };
 
@@ -54,17 +60,25 @@ const SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente 
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "macro_rewrite" | "micro_edit" | "rename" | "question" | "comment",
+  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 
 Definizioni dei type:
-- macro_rewrite: riscrittura ampia che produce >2-3 righe Fountain nuove. Include:
+- macro_rewrite: riscrittura ampia di un range di scene (>1) o intera sceneggiatura. Include:
     "scrivi v2", "fai una versione 2", "traduci tutto in inglese",
     "ambienta in un ristorante stellato", "tutto al femminile",
     "in italiano del '600", "in 5 atti", "rendi noir", "riscrivi l'Atto II",
-    "fai una versione più tesa", "tutto in una stanza", "porta in chiave western".
-- micro_edit: sostituzione puntuale di una battuta, una parola, una direzione di scena. Include:
+    "tutto in una stanza", "porta in chiave western".
+- rewrite_one_scene: riscrittura di UNA SOLA scena specifica (numero esplicito o riferimento "questa scena"). Include:
+    "riscrivi la scena 3", "opzione B per la 5", "dammi una versione alternativa di sc.7",
+    "rendi più intensa la scena corrente", "fai una variante di questa scena".
+- merge_scenes: UNIRE due o più scene consecutive in una sola. Include:
+    "unisci scena 1 e 2", "fondi le scene 3-4", "queste due scene sono la stessa",
+    "compatta sc.5 e sc.6 in una", "la 7 e la 8 sono lo stesso momento".
+- delete_scene: ELIMINARE una scena. Include:
+    "elimina sc.4", "togli questa scena", "rimuovi la scena 3", "cancella sc.7".
+- micro_edit: sostituzione puntuale di una battuta/parola/direzione di scena. Include:
     "cambia 'ciao' con 'salve' nella scena 3", "togli la pausa",
     "rendi più asciutta questa battuta".
 - rename: rinomina di personaggio o location attraverso tutta la sceneggiatura.
@@ -79,6 +93,9 @@ REGOLA: in caso di ambiguità tra question/comment e una mutation, scegli questi
 
 Esempi:
 "traduci tutta la sceneggiatura in inglese" → {"type":"macro_rewrite","confidence":0.95}
+"riscrivi la scena 3 più tesa" → {"type":"rewrite_one_scene","confidence":0.95}
+"unisci la 1 e la 2 in una sola scena" → {"type":"merge_scenes","confidence":0.97}
+"elimina la scena 5" → {"type":"delete_scene","confidence":0.98}
 "in 5 atti" → {"type":"macro_rewrite","confidence":0.85}
 "rinomina Marco in Luca" → {"type":"rename","confidence":0.99}
 "cambia 'ciao' con 'salve'" → {"type":"micro_edit","confidence":0.92}
@@ -100,6 +117,9 @@ const parseJsonResponse = (text: string): IntentResult | null => {
     const validTypes: IntentType[] = [
       "macro_rewrite",
       "micro_edit",
+      "rewrite_one_scene",
+      "merge_scenes",
+      "delete_scene",
       "rename",
       "question",
       "comment",

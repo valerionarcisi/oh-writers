@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
+import { sanitizeAiText } from "@oh-writers/utils";
 import { CesareError } from "./cesare.errors";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -220,6 +221,88 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
       return result.value;
     },
   }),
+  merge_scenes: tool({
+    description:
+      "Unisce due o più scene consecutive in UNA sola scena nuova. Crea " +
+      "una DRAFT version visibile in diff side-by-side che l'utente può " +
+      "accettare. Usa quando l'utente chiede 'unisci la scena N con M', " +
+      "'fondi le scene N-M', 'queste due scene sono in realtà una sola'. " +
+      "NON usare per riscrivere una singola scena — usa rewrite_scene.",
+    inputSchema: z.object({
+      from: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Prima scena del range da fondere"),
+      to: z.number().int().min(1).describe("Ultima scena del range da fondere"),
+      hint: z
+        .string()
+        .optional()
+        .describe(
+          "Indicazione opzionale su come fondere (es. 'mantieni dialogo di Marco, taglia ripetizioni')",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const typed = input as { from: number; to: number; hint?: string };
+      if (typed.to <= typed.from) {
+        return {
+          error:
+            "merge_scenes: 'to' deve essere maggiore di 'from'. Per riscrivere una sola scena usa rewrite_scene.",
+        };
+      }
+      const reviseInput: ReviseInput = {
+        scope: { kind: "scene_range", from: typed.from, to: typed.to },
+        instruction:
+          `Unisci le scene ${typed.from}-${typed.to} in UNA SOLA scena nuova. ` +
+          "Mantieni tutti gli elementi narrativi importanti (personaggi, beat, azioni chiave). " +
+          "Elimina ridondanze e ripetizioni. Scegli UN solo slugline (location + momento) che copra il blocco. " +
+          (typed.hint ? `Indicazione utente: ${typed.hint}` : ""),
+        label: `Unione sc.${typed.from}-${typed.to}`,
+      };
+      const result = await executeProposeScreenplayRevision(
+        reviseInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  delete_scene: tool({
+    description:
+      "Elimina una scena dalla sceneggiatura. Crea una DRAFT version " +
+      "visibile in diff side-by-side che l'utente può accettare. Usa quando " +
+      "l'utente chiede 'elimina la scena N', 'togli questa scena', 'rimuovi sc.N'. " +
+      "Le scene successive vengono rinumerate automaticamente.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero della scena da eliminare (1-based)"),
+    }),
+    execute: async (input, _opts) => {
+      const typed = input as { scene_number: number };
+      const reviseInput: ReviseInput = {
+        scope: {
+          kind: "scene_range",
+          from: typed.scene_number,
+          to: typed.scene_number,
+        },
+        instruction:
+          `Elimina completamente la scena ${typed.scene_number}. ` +
+          "Restituisci una stringa vuota o solo una riga vuota — la scena deve sparire dal documento.",
+        label: `Eliminazione sc.${typed.scene_number}`,
+      };
+      const result = await executeProposeScreenplayRevision(
+        reviseInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
   rewrite_scene: tool({
     description:
       "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
@@ -242,8 +325,9 @@ export const createScreenplayTools = (db: Db, projectId: string) => ({
           "Il testo Fountain completo della scena riscritta. " +
             "Deve iniziare con uno slugline (INT./EXT. ...) e " +
             "includere tutto il corpo della scena. " +
-            "IMPORTANTE: ogni paragrafo di azione deve essere separato da una riga vuota. " +
-            "Esempio corretto:\nEXT. LUOGO - NOTTE\n\nPrima azione.\n\nSeconda azione.\n\n      PERSONAGGIO\n          Dialogo.",
+            "IMPORTANTE: ogni paragrafo di azione su UNA SOLA RIGA, anche se lungo. " +
+            "Usa \\n\\n SOLO tra paragrafi narrativi distinti — MAI a metà frase, MAI ogni 50-60 caratteri. " +
+            "Esempio corretto:\nEXT. LUOGO - NOTTE\n\nUna villetta liberty stretta tra due palazzi di cemento anni Sessanta. Freddo di novembre. L'insegna del RADICE è al neon — metà lettere spente, le altre arancioni, sufficienti.\n\nSul marciapiede, qualcuno fuma e ride prima di rientrare.\n\n      PERSONAGGIO\n          Dialogo.",
         ),
     }),
     execute: async (input, _opts) => {
@@ -547,6 +631,14 @@ Mantieni la struttura Fountain:
 - Personaggio: tutto maiuscolo, centrato (6 spazi), preceduto da riga vuota
 - Dialogo: testo normale con 10 spazi di rientro
 - Parentetica: (testo) con 10 spazi di rientro
+
+REGOLE DI A CAPO (criticissime, non sgarrare):
+- Scrivi ogni paragrafo di azione su UNA SOLA RIGA, anche se lungo. NON spezzare frasi a metà.
+- Usa "\\n\\n" (riga vuota) SOLO per separare paragrafi DISTINTI con significato narrativo diverso (cambio di soggetto, beat narrativo, stacco temporale).
+- NON wrappare il testo a 50/60/80 caratteri. NON inserire newline a metà frase. NON aggiungere "\\n\\n" dopo ogni virgola o frase breve.
+- Esempio CORRETTO (una sola riga): "Una villetta liberty stretta tra due palazzi di cemento anni Sessanta. Freddo di novembre. L'insegna del RADICE è al neon — metà lettere spente, le altre arancioni, sufficienti."
+- Esempio SBAGLIATO (NON fare così): "Una villetta liberty stretta tra due palazzi di cemento\\n\\nanni Sessanta. Freddo di novembre. L'insegna del RADICE\\n\\nè al neon — metà lettere spente, le altre arancioni,\\n\\nsufficienti."
+
 CRITICO: ogni blocco di azione distinto deve essere separato da una riga completamente vuota. Non concatenare più azioni senza riga vuota tra loro.`;
 
 const reviseUserPrompt = (
@@ -710,7 +802,7 @@ const executeProposeScreenplayRevision = (
                   new CesareError("Revision call returned no text"),
                 );
               }
-              return okAsync(newText);
+              return okAsync(sanitizeAiText(newText));
             });
 
     return mockedRewrite.andThen((newText) => {
@@ -805,7 +897,28 @@ const executeRewriteScene = (
   if (!input.new_content || input.new_content.trim().length === 0) {
     return errAsync(new CesareError("rewrite_scene: new_content is empty"));
   }
-  const content = input.new_content.slice(0, REWRITE_CONTENT_LIMIT);
+  const content = sanitizeAiText(
+    input.new_content.slice(0, REWRITE_CONTENT_LIMIT),
+  );
+  // Reject multi-slugline payloads. rewrite_scene replaces ONE scene; if the
+  // model emits two sluglines we'd duplicate / shift downstream numbering.
+  // The model should use propose_screenplay_revision (range) or merge_scenes
+  // for multi-scene rewrites instead.
+  const sluglineCount = content
+    .split("\n")
+    .filter((line) =>
+      /^(INT|EXT|EST|I\/E|INT\.\/EXT|EXT\.\/INT)[. /]/i.test(line.trim()),
+    ).length;
+  if (sluglineCount > 1) {
+    return errAsync(
+      new CesareError(
+        "rewrite_scene: il new_content contiene più di uno slugline (INT./EXT.). " +
+          "Per riscrivere o unire più scene usa propose_screenplay_revision " +
+          "con scope { kind: 'scene_range', from, to }, oppure merge_scenes " +
+          "se vuoi fondere scene esistenti in una sola.",
+      ),
+    );
+  }
   // The marker is embedded in the tool result text. The client side-channel
   // (`parseRewriteSceneMarker`) extracts it and dispatches the pending-edit
   // plugin with the scene number and new content.

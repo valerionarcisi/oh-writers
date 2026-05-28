@@ -22,7 +22,7 @@ import {
   shots,
 } from "@oh-writers/db/schema";
 import type { DocumentType } from "@oh-writers/domain";
-import { toShape } from "@oh-writers/utils";
+import { toShape, repairMojibake } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
@@ -1341,10 +1341,21 @@ const buildScreenplayToolsGuidance = (page: PageContext["page"]): string => {
 
 TOOLS DISPONIBILI SULLA SCENEGGIATURA:
 - propose_screenplay_edit({ scene_number, find, replace, reason }): micro-edit di una stringa esatta. Usa per cambiare una battuta, una parola, una direzione di scena puntuale. La 'find' DEVE essere una stringa letterale presente nella scena.
-- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza", "rendi più tesa l'intera scena". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
+- rewrite_scene({ scene_number, new_content }): riscrive UNA SOLA scena con effetto typewriter. Il new_content DEVE contenere ESATTAMENTE UNO slugline (INT./EXT.) — mai due. Per riscritture multi-scena usa propose_screenplay_revision o merge_scenes.
+- merge_scenes({ from, to, hint? }): FONDE più scene consecutive in una sola. Usa quando l'utente dice "unisci le scene N-M", "queste due scene sono in realtà una", "compatta queste scene". Il numero finale di scene cala.
+- delete_scene({ scene_number }): ELIMINA una scena. Usa quando l'utente dice "togli questa scena", "elimina sc.N", "rimuovi". Le scene successive vengono rinumerate.
+- propose_screenplay_revision({ scope, instruction, label }): riscrittura macro libera. Usa quando l'utente chiede "scrivi una v2", "riscrivi l'Atto II", "ambienta in un ristorante stellato", "tutto in una stanza", "rendi più tesa l'intera scena". Crea una DRAFT version visibile nel drawer Versioni con diff side-by-side. Lo 'scope' può essere { kind: "scene_range", from, to } o { kind: "whole_screenplay" }.
 - propose_rename_entity({ kind: "character" | "location", from, to }): trova tutte le occorrenze di un personaggio o di una location nella sceneggiatura e propone il rename in una sola operazione. Usa per "rinomina X in Y".
 
-REGOLA TASSATIVA: per QUALSIASI richiesta che produca testo nuovo lungo (più di 2-3 righe Fountain), DEVI chiamare propose_screenplay_revision. Mai scrivere il Fountain risultante nel chat.
+ROUTING TOOL — REGOLE DI SCELTA:
+- "cambia/sostituisci [parola/battuta] in scena N" → propose_screenplay_edit
+- "riscrivi la scena N" / "opzione B per scena N" → rewrite_scene (UN solo slugline nel new_content!)
+- "unisci scene N e M" / "fondi sc.N-M" / "queste due scene sono una sola" → merge_scenes
+- "elimina/togli sc.N" → delete_scene
+- "riscrivi atto II" / "ambienta tutto in X" / range >1 scena con cambio strutturale → propose_screenplay_revision
+- "rinomina personaggio/location" → propose_rename_entity
+
+REGOLA TASSATIVA: per QUALSIASI richiesta che produca testo nuovo lungo (più di 2-3 righe Fountain), DEVI chiamare un tool propose_/rewrite_/merge_/delete_. Mai scrivere il Fountain risultante nel chat.
 
 ❌ SBAGLIATO:
 "Ecco la versione 2 ambientata in un ristorante stellato:
@@ -1588,7 +1599,7 @@ const callCesare = (
         isEnabled: true,
         functionId: "cesare-text-only",
       },
-    }).then((r) => r.text),
+    }).then((r) => repairMojibake(r.text)),
     (e) =>
       new CesareError(
         `Cesare text call failed: ${e instanceof Error ? e.message : String(e)}`,
@@ -1629,6 +1640,9 @@ const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
   "propose_screenplay_edit",
   "propose_screenplay_revision",
   "propose_rename_entity",
+  "rewrite_scene",
+  "merge_scenes",
+  "delete_scene",
 ]);
 
 const callCesareWithScreenplayTools = (

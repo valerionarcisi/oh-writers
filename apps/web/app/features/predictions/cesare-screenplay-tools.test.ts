@@ -121,8 +121,9 @@ describe("executeScreenplayTool — rewrite_scene marker transport", () => {
 
   it("base64 marker survives Fountain transition syntax inside new_content", async () => {
     // --> CUT TO: inside new_content previously terminated the HTML comment early.
+    // Only ONE slugline (rewrite_scene replaces a single scene).
     const newContent =
-      "INT. STUDIO - NOTTE\n\n--> CUT TO:\n\nEXT. STRADA - GIORNO";
+      "INT. STUDIO - NOTTE\n\nMario entra.\n\n--> CUT TO:\n\nMario esce.";
     const result = await executeScreenplayTool(
       {
         type: "tool_use",
@@ -175,6 +176,44 @@ describe("executeScreenplayTool — rewrite_scene marker transport", () => {
       "proj-1",
     );
     expect(result.isErr()).toBe(true);
+  });
+
+  it("rejects new_content with more than one slugline", async () => {
+    const result = await executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "test-id-6",
+        name: "rewrite_scene",
+        input: {
+          scene_number: 1,
+          new_content:
+            "EXT. STRADA - GIORNO\n\nMaria cammina.\n\nINT. CASA - NOTTE\n\nMaria entra.",
+        },
+      },
+      db,
+      "proj-1",
+    );
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error.message).toMatch(/più di uno slugline/i);
+    }
+  });
+
+  it("accepts new_content with exactly one slugline", async () => {
+    const result = await executeScreenplayTool(
+      {
+        type: "tool_use",
+        id: "test-id-7",
+        name: "rewrite_scene",
+        input: {
+          scene_number: 1,
+          new_content: "EXT. STRADA - GIORNO\n\nMaria cammina, è in ritardo.",
+        },
+      },
+      db,
+      "proj-1",
+    );
+    expect(result.isOk()).toBe(true);
   });
 });
 
