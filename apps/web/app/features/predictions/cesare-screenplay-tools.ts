@@ -1,3 +1,5 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, sql } from "drizzle-orm";
 import { screenplays, screenplayVersions } from "@oh-writers/db/schema";
@@ -126,6 +128,131 @@ export const CESARE_SCREENPLAY_TOOLS = [
     },
   },
 ] as const;
+
+// ─── Screenplay tools factory (AI SDK v5 format) ──────────────────────────────
+
+export const createScreenplayTools = (db: Db, projectId: string) => ({
+  propose_screenplay_edit: tool({
+    description:
+      "Propone una modifica puntuale al testo di una scena (find/replace verbatim). " +
+      "L'utente vedrà la proposta come overlay sul testo con bottoni ✓/✕. " +
+      "Usa quando la richiesta è una modifica circoscritta a una scena o a poche righe.",
+    inputSchema: z.object({
+      scene_number: z.number().int().min(1),
+      find: z
+        .string()
+        .describe(
+          "Sottostringa esatta da cercare nel doc (verbatim, max 400 char)",
+        ),
+      replace: z
+        .string()
+        .describe("Testo proposto come sostituzione (max 800 char)"),
+      reason: z
+        .string()
+        .describe(
+          "Motivazione breve (max 200 char) mostrata all'utente nell'overlay",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeScreenplayEdit(
+        input as ProposeEditInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_screenplay_revision: tool({
+    description:
+      "Propone una riscrittura strutturale (macro) di un range di scene o " +
+      "dell'intera sceneggiatura. Crea una DRAFT version visibile in diff " +
+      "side-by-side che l'utente può accettare. Usa quando la richiesta è " +
+      "'fammi una v2', 'più corta', 'tutto in una stanza', 'save the cat', ecc.",
+    inputSchema: z.object({
+      scope: z.union([
+        z.object({ kind: z.literal("whole_screenplay") }),
+        z.object({
+          kind: z.literal("scene_range"),
+          from: z.number().int(),
+          to: z.number().int(),
+        }),
+      ]),
+      instruction: z
+        .string()
+        .describe(
+          "Istruzione utente in linguaggio naturale (es. 'rendi più tesa', 'tutto in una stanza')",
+        ),
+      label: z
+        .string()
+        .describe(
+          "Etichetta breve per la versione draft (es. 'V2 — tutto in una stanza')",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeScreenplayRevision(
+        input as ReviseInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_rename_entity: tool({
+    description:
+      "Propone una rinomina globale di un personaggio o location nella " +
+      "sceneggiatura. L'utente vedrà la lista delle occorrenze e potrà " +
+      "accettare in blocco. Usa per richieste tipo 'rinomina Mario in Lucia', " +
+      "'inverti maschi/femmine' (componi N chiamate).",
+    inputSchema: z.object({
+      kind: z.enum(["character", "location"]),
+      from: z.string(),
+      to: z.string(),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeRenameEntity(
+        input as RenameInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  rewrite_scene: tool({
+    description:
+      "Riscrive una singola scena inline nell'editor con un effetto typewriter. " +
+      "L'utente vede il testo arrivare carattere per carattere come overlay verde " +
+      "sulla scena originale. Al termine può accettare (la modifica entra nel doc) " +
+      "o rifiutare (il testo originale rimane). " +
+      "Usa quando l'utente chiede 'riscrivi questa scena', 'opzione B', " +
+      "'rendi più intensa la scena N', 'dammi una versione alternativa di sc.N'. " +
+      "NON usare per modifiche puntuali (< 3 righe) — usa propose_screenplay_edit. " +
+      "NON usare per l'intera sceneggiatura — usa propose_screenplay_revision.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero della scena da riscrivere (1-based)"),
+      new_content: z
+        .string()
+        .describe(
+          "Il testo Fountain completo della scena riscritta. " +
+            "Deve iniziare con uno slugline (INT./EXT. ...) e " +
+            "includere tutto il corpo della scena.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeRewriteScene(input as RewriteSceneInput);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type ScreenplayTools = ReturnType<typeof createScreenplayTools>;
 
 // ─── Proposed-edit payload ────────────────────────────────────────────────────
 

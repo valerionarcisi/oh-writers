@@ -4,6 +4,8 @@
 // `withProjectAccess` already authorised the project, we re-assert here as
 // a defence-in-depth measure against id confusion in the LLM.
 
+import { tool } from "ai";
+import { z } from "zod";
 import { ResultAsync, okAsync } from "neverthrow";
 import { and, eq, gte, lte, inArray, asc, isNull } from "drizzle-orm";
 import {
@@ -56,8 +58,16 @@ export const CESARE_READ_TOOLS = [
     input_schema: {
       type: "object" as const,
       properties: {
-        from: { type: "integer", minimum: 1, description: "Numero scena di partenza" },
-        to: { type: "integer", minimum: 1, description: "Numero scena di arrivo (inclusivo)" },
+        from: {
+          type: "integer",
+          minimum: 1,
+          description: "Numero scena di partenza",
+        },
+        to: {
+          type: "integer",
+          minimum: 1,
+          description: "Numero scena di arrivo (inclusivo)",
+        },
       },
       required: ["from", "to"],
     },
@@ -242,7 +252,8 @@ const readSceneRange = (
         .from(screenplays)
         .where(eq(screenplays.projectId, projectId))
         .limit(1);
-      if (!screenplay) return errPayload(`No screenplay for project ${projectId}`);
+      if (!screenplay)
+        return errPayload(`No screenplay for project ${projectId}`);
       const rows = await db
         .select({
           id: scenes.id,
@@ -453,7 +464,8 @@ const readLocationRequirement = (
           ),
         )
         .limit(1);
-      if (!req) return errPayload(`Requirement ${input.requirement_id} not found`);
+      if (!req)
+        return errPayload(`Requirement ${input.requirement_id} not found`);
 
       const linked = await db
         .select({
@@ -572,9 +584,11 @@ export const tryExecuteReadTool = (
       );
     }
     case "read_scene_range":
-      return readSceneRange(db, projectId, block.input as ReadSceneRangeInput).map(
-        (r) => toResult(block.id, r),
-      );
+      return readSceneRange(
+        db,
+        projectId,
+        block.input as ReadSceneRangeInput,
+      ).map((r) => toResult(block.id, r));
     case "read_document":
       return readDocument(db, projectId, block.input as ReadDocumentInput).map(
         (r) => toResult(block.id, r),
@@ -620,3 +634,160 @@ export const executeReadToolOrError = (
   if (r) return r;
   return okAsync(toResult(block.id, errPayload(`Unknown tool: ${block.name}`)));
 };
+
+// ─── Read tools factory (AI SDK v5 format) ───────────────────────────────────
+
+const TOP_SHEET_ENUM_READ = [
+  "above_the_line",
+  "production",
+  "crew",
+  "post_production",
+  "contingency",
+] as const;
+
+export const createReadTools = (db: Db, projectId: string) => ({
+  read_scene: tool({
+    description:
+      "Leggi il corpo completo (heading, note, dialoghi) di una specifica scena della sceneggiatura, identificata dal suo numero ordinale. " +
+      "Usalo quando ti serve il testo letterale di una scena per analizzarla, citarla o ragionarci sopra.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero ordinale della scena (1-based)."),
+    }),
+    execute: async (input, _opts) => {
+      const i = input as ReadSceneInput;
+      const result = await readSceneByNumber(db, projectId, i.scene_number);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  read_scene_range: tool({
+    description:
+      "Leggi più scene consecutive in un colpo solo, inclusi gli estremi (da `from` a `to`). " +
+      "Usalo per leggere un blocco narrativo o quando devi confrontare scene adiacenti.",
+    inputSchema: z.object({
+      from: z.number().int().min(1).describe("Numero scena di partenza"),
+      to: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero scena di arrivo (inclusivo)"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await readSceneRange(
+        db,
+        projectId,
+        input as ReadSceneRangeInput,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  read_document: tool({
+    description:
+      "Leggi il contenuto completo di un documento del progetto (soggetto, sinossi, scaletta, trattamento). " +
+      "Usalo quando ti serve il testo letterale del documento per ragionarci o citarlo.",
+    inputSchema: z.object({
+      document_type: z
+        .enum(["soggetto", "synopsis", "outline", "treatment"])
+        .describe("Tipo di documento da leggere."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await readDocument(
+        db,
+        projectId,
+        input as ReadDocumentInput,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  read_budget_lines: tool({
+    description:
+      "Leggi le righe del budget del progetto. Senza filtri restituisce tutte le righe; passando `top_sheet` filtra per categoria. " +
+      "Usalo quando devi analizzare voci specifiche prima di proporre modifiche.",
+    inputSchema: z.object({
+      top_sheet: z
+        .enum(TOP_SHEET_ENUM_READ)
+        .optional()
+        .describe(
+          "Filtro opzionale per top sheet. Se omesso, restituisce tutte le righe.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await readBudgetLines(
+        db,
+        projectId,
+        input as ReadBudgetLinesInput,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  read_breakdown: tool({
+    description:
+      "Leggi gli elementi del breakdown del progetto (cast, props, locations, ecc.). " +
+      "Passando `scene_id` filtra agli elementi collegati a quella scena.",
+    inputSchema: z.object({
+      scene_id: z
+        .string()
+        .optional()
+        .describe(
+          "UUID della scena da filtrare. Se omesso, restituisce tutti gli elementi del progetto.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await readBreakdown(
+        db,
+        projectId,
+        input as ReadBreakdownInput,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  read_location_requirement: tool({
+    description:
+      "Leggi i dettagli di un requirement di location (nome, intExt, time of day) insieme alle scene collegate e ai candidati salvati.",
+    inputSchema: z.object({
+      requirement_id: z
+        .string()
+        .describe("UUID del location requirement da leggere."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await readLocationRequirement(
+        db,
+        projectId,
+        input as ReadLocationRequirementInput,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  read_shooting_day: tool({
+    description:
+      "Leggi le strip di una giornata di ripresa, identificata dal suo numero ordinale. " +
+      "Restituisce le scene assegnate alla giornata con il loro stato (locked, banner color).",
+    inputSchema: z.object({
+      day_number: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Numero ordinale della giornata (1-based)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await readShootingDay(
+        db,
+        projectId,
+        input as ReadShootingDayInput,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type ReadTools = ReturnType<typeof createReadTools>;

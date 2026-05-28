@@ -1,3 +1,5 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
@@ -135,6 +137,80 @@ export const CESARE_LOCATION_TOOLS = [
   },
 ] as const;
 
+// ─── Location tools factory (AI SDK v5 format) ────────────────────────────────
+
+export const createLocationTools = (db: Db, projectId: string) => ({
+  search_places: tool({
+    description:
+      "Cerca luoghi reali (locali, edifici, parchi, strade, etc.) tramite Google Places. " +
+      "Usa questo tool quando l'utente chiede di trovare location fisiche in una zona geografica.",
+    inputSchema: z.object({
+      query: z
+        .string()
+        .describe(
+          "Query di ricerca, es. 'trattoria Piane di Falerone' o 'edificio industriale Torino'",
+        ),
+      location_bias: z
+        .string()
+        .optional()
+        .describe(
+          "Città o zona geografica per restringere la ricerca, es. 'Piane di Falerone, FM'",
+        ),
+      max_results: z
+        .number()
+        .optional()
+        .describe("Numero massimo di risultati (default 5, max 10)"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSearchPlaces(input as SearchPlacesInput);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  add_candidate: tool({
+    description:
+      "Aggiunge un candidato reale alla location requirement corrente. " +
+      "Usa questo tool dopo search_places per salvare i risultati rilevanti. " +
+      "IMPORTANTE: se il candidato viene da un risultato di search_places, passa SEMPRE " +
+      "i `photo_names` ricevuti per quel place (fino a 3) così le foto vengono salvate.",
+    inputSchema: z.object({
+      requirement_id: z
+        .string()
+        .describe(
+          "UUID del location requirement a cui aggiungere il candidato",
+        ),
+      name: z.string().describe("Nome del luogo"),
+      address: z.string().optional().describe("Indirizzo completo"),
+      lat: z.number().optional().describe("Latitudine"),
+      lng: z.number().optional().describe("Longitudine"),
+      notes: z
+        .string()
+        .optional()
+        .describe(
+          "Note sintetiche su perché questo candidato è rilevante per la scena",
+        ),
+      photo_names: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "Nomi delle foto Google Places nel formato 'places/X/photos/Y' " +
+            "(prendili dal campo `photos[].name` del risultato di search_places, max 3).",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeAddCandidate(
+        input as AddCandidateInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type LocationTools = ReturnType<typeof createLocationTools>;
+
 // ─── Document tool definitions ────────────────────────────────────────────────
 
 export const CESARE_DOCUMENT_TOOLS = [
@@ -204,6 +280,107 @@ export const CESARE_DOCUMENT_TOOLS = [
     },
   },
 ] as const;
+
+// ─── Document tools factory (AI SDK v5 format) ────────────────────────────────
+
+export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
+  apply_text_edit: tool({
+    description:
+      "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
+      "Usa questo tool quando l'utente chiede una modifica testuale puntuale, come 'cambia X in Y' o 'riscrivi questa frase'. " +
+      "La stringa `find` deve essere un sottoesempio testuale ESATTO del documento, copia-incollalo letteralmente. " +
+      "Se `find` non viene trovato, l'edit fallisce: non inventare il testo originale.",
+    inputSchema: z.object({
+      find: z
+        .string()
+        .describe(
+          "Sottostringa esatta da cercare nel documento. Deve corrispondere carattere per carattere.",
+        ),
+      replace: z.string().describe("Nuovo testo che sostituirà `find`."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeApplyTextEdit(
+        input as ApplyTextEditInput,
+        db,
+        docContext,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  expand_section: tool({
+    description:
+      "Trova la sezione del documento sotto un certo heading e la espande in 2-3 paragrafi più ricchi, " +
+      "preservando voce narrativa, tono e beat principali. L'heading è identificato cercando una riga " +
+      "che inizia con `#`, `##`, `###` o che combacia esattamente col titolo. " +
+      "Usalo quando l'utente chiede 'espandi atto II', 'sviluppa la sezione X' o simili.",
+    inputSchema: z.object({
+      heading: z
+        .string()
+        .describe(
+          "Titolo della sezione da espandere (es. 'Atto II', 'Primo atto', 'Conclusione'). " +
+            "Confronto case-insensitive e tollerante a marker markdown.",
+        ),
+    }),
+    execute: async (rawInput, _opts) => {
+      const input = rawInput as { heading: string };
+      const range = findSection(docContext.content, input.heading);
+      const sectionText = range ? sliceSection(docContext.content, range) : "";
+      const result = await generateAndReplaceSection(
+        db,
+        docContext,
+        input.heading,
+        expandSectionPrompt(
+          docContext.documentType,
+          docContext.content,
+          sectionText,
+          input.heading,
+        ),
+        800,
+        "espanso",
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  compress_section: tool({
+    description:
+      "Trova la sezione del documento sotto un certo heading e la comprime al numero di parole indicato, " +
+      "mantenendo i beat chiave e la voce. Usalo quando l'utente chiede 'accorcia X', 'riassumi questa parte' " +
+      "o quando una sezione è troppo lunga.",
+    inputSchema: z.object({
+      heading: z.string().describe("Titolo della sezione da comprimere."),
+      target_words: z
+        .number()
+        .describe(
+          "Numero di parole target. Tipicamente tra 80 e 300 a seconda del tipo di documento.",
+        ),
+    }),
+    execute: async (rawInput, _opts) => {
+      const input = rawInput as { heading: string; target_words: number };
+      const range = findSection(docContext.content, input.heading);
+      const sectionText = range ? sliceSection(docContext.content, range) : "";
+      const result = await generateAndReplaceSection(
+        db,
+        docContext,
+        input.heading,
+        compressSectionPrompt(
+          docContext.documentType,
+          docContext.content,
+          sectionText,
+          input.heading,
+          input.target_words,
+        ),
+        600,
+        "compresso",
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type DocumentTools = ReturnType<typeof createDocumentTools>;
 
 // ─── Breakdown tools ──────────────────────────────────────────────────────────
 
@@ -302,6 +479,116 @@ export const CESARE_BREAKDOWN_TOOLS = [
     },
   },
 ] as const;
+
+// ─── Breakdown tools factory (AI SDK v5 format) ───────────────────────────────
+
+export const createBreakdownTools = (db: Db, projectId: string) => ({
+  tag_element: tool({
+    description:
+      "Aggiunge un elemento al breakdown della scena indicata (cast, prop, location, etc.). " +
+      "Crea l'elemento se non esiste già e collega l'occurrence alla scena. " +
+      "Usa questo tool quando l'utente chiede di 'spogliare X' o 'aggiungere X come oggetto'.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .describe("Numero ordinale della scena (1-based)."),
+      category: z
+        .string()
+        .describe(
+          "Categoria del breakdown: cast, extras, stunts, props, vehicles, wardrobe, makeup, sfx, vfx, sound, animals, atmosphere, set_dress, equipment, locations.",
+        ),
+      name: z
+        .string()
+        .describe("Nome dell'elemento (es. 'pistola', 'tavolo cucina')."),
+      quantity: z.number().optional().describe("Quantità (default 1)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeTagElement(
+        input as TagElementInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  accept_ghost: tool({
+    description:
+      "Accetta un suggerimento ghost (verde tratteggiato) e lo trasforma in elemento confermato del breakdown.",
+    inputSchema: z.object({
+      occurrence_id: z.string().describe("UUID dell'occurrence da accettare."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSetGhostStatus(
+        input as GhostInput,
+        db,
+        projectId,
+        "accepted",
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  reject_ghost: tool({
+    description:
+      "Rifiuta un suggerimento ghost rimuovendolo dalla lista delle proposte attive.",
+    inputSchema: z.object({
+      occurrence_id: z.string().describe("UUID dell'occurrence da rifiutare."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSetGhostStatus(
+        input as GhostInput,
+        db,
+        projectId,
+        "ignored",
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  estimate_scene_cost: tool({
+    description:
+      "Calcola il costo stimato e la difficoltà di una scena usando i dati del breakdown e le rate di produzione del progetto. " +
+      "Restituisce totale, righe per categoria, difficoltà 1-5 e note.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .describe("Numero ordinale della scena (1-based)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeEstimateSceneCost(
+        input as SceneNumberInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  add_to_budget: tool({
+    description:
+      "Converte la stima di costo di una scena in righe budget reali. " +
+      "Crea una riga per ciascuna voce della stima nel budget corrente del progetto.",
+    inputSchema: z.object({
+      scene_number: z
+        .number()
+        .describe(
+          "Numero ordinale della scena di cui aggiungere i costi al budget.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeAddSceneToBudget(
+        input as SceneNumberInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type BreakdownTools = ReturnType<typeof createBreakdownTools>;
 
 // ─── Google Places types ──────────────────────────────────────────────────────
 
@@ -1893,6 +2180,219 @@ export const CESARE_BUDGET_TOOLS = [
     },
   },
 ] as const;
+
+// ─── Budget tools factory (AI SDK v5 format) ──────────────────────────────────
+
+const TOP_SHEET_ENUM = [
+  "above_the_line",
+  "production",
+  "crew",
+  "post_production",
+  "contingency",
+] as const;
+
+export const createBudgetTools = (db: Db, projectId: string) => ({
+  update_budget_line: tool({
+    description:
+      "Aggiorna un singolo campo di una riga del budget esistente. " +
+      "Campi consentiti: 'rate' (importo unitario in euro), 'quantity' (numero di unita), " +
+      "'actual' (spesa effettiva consuntivata in euro), 'notes' (testo libero). " +
+      "Usa questo tool quando l'utente chiede di modificare una voce specifica. " +
+      "Il line_id deve essere quello di una riga esistente nel budget del progetto corrente.",
+    inputSchema: z.object({
+      line_id: z.string().describe("UUID della riga budget"),
+      field: z
+        .enum(["rate", "quantity", "actual", "notes"])
+        .describe("Campo da aggiornare"),
+      value: z
+        .unknown()
+        .describe(
+          "Nuovo valore. Numero per rate/quantity/actual, stringa per notes. " +
+            "Passa null per azzerare actual/rate/quantity.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeUpdateBudgetLine(
+        input as UpdateBudgetLineInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  add_budget_line: tool({
+    description:
+      "Aggiunge una nuova voce di costo a un top sheet esistente. " +
+      "I top sheet ammessi sono: 'above_the_line', 'production', 'crew', 'post_production', 'contingency'. " +
+      "Usa questo tool quando l'utente chiede di inserire una voce che manca (es. 'aggiungi catering').",
+    inputSchema: z.object({
+      top_sheet: z
+        .enum(TOP_SHEET_ENUM)
+        .describe("Categoria top sheet a cui appartiene la nuova voce"),
+      description: z.string().describe("Nome/descrizione della voce"),
+      rate: z.number().describe("Importo unitario in euro"),
+      quantity: z.number().optional().describe("Numero di unita (default 1)"),
+      linked_category: z
+        .string()
+        .optional()
+        .describe(
+          "Categoria di breakdown collegata (opzionale, es. 'props', 'vehicles', 'locations')",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeAddBudgetLine(
+        input as AddBudgetLineInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  redistribute_topsheet: tool({
+    description:
+      "Sposta un importo in euro da un top sheet a un altro. " +
+      "Strategia: abbassa il rate*quantity della riga piu costosa di 'from_top_sheet' " +
+      "fino a ridurre l'allocazione di 'amount' euro (riducendo il rate, mai sotto zero). " +
+      "Poi aggiunge una riga 'Contingenza riallocata da <from_top_sheet>' nel 'to_top_sheet' " +
+      "(o incrementa una riga simile preesistente). " +
+      "Limite: se la riga piu grande non basta a coprire 'amount', il tool ritorna un errore e Cesare deve proporre un piano in piu step. " +
+      "Non tocca righe 'cast' o 'crew' a livello di risorsa (budgetCast/budgetCrew): opera solo su budget_lines.",
+    inputSchema: z.object({
+      from_top_sheet: z.enum(TOP_SHEET_ENUM),
+      to_top_sheet: z.enum(TOP_SHEET_ENUM),
+      amount: z.number().describe("Importo in euro da spostare"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeRedistributeTopsheet(
+        input as RedistributeInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  analyze_variance: tool({
+    description:
+      "Report deterministico (read-only, niente inferenza AI) sullo stato del budget: " +
+      "top 3 righe piu sopra-budget (actual > rate*quantity), " +
+      "top 3 righe piu sotto-budget (actual < rate*quantity con consuntivo presente), " +
+      "top sheet con residuo negativo. " +
+      "Usa questo tool quando l'utente chiede 'analizza il budget', 'dove sto sforando', 'a che punto siamo'.",
+    inputSchema: z.object({}),
+    execute: async (_input, _opts) => {
+      const result = await executeAnalyzeVariance(db, projectId);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  mark_line_actual: tool({
+    description:
+      "Imposta l'importo effettivamente speso ('actual') su una riga budget per la riconciliazione. " +
+      "Usa questo tool quando l'utente comunica una spesa reale (es. 'la trattoria e costata 320 euro').",
+    inputSchema: z.object({
+      line_id: z.string().describe("UUID della riga budget"),
+      actual_amount: z.number().describe("Importo speso in euro (>= 0)"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeMarkLineActual(
+        input as MarkLineActualInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  set_budget_cap: tool({
+    description:
+      "Imposta un tetto di spesa (cap) per il progetto. " +
+      "Scope 'global' = tetto complessivo del budget. " +
+      "Scope 'topsheet' = tetto per uno specifico top sheet (es. cast, production, post_production). " +
+      "Usa questo tool quando l'utente chiede 'non superare X' o 'il cast non puo costare piu di Y'.",
+    inputSchema: z.object({
+      scope: z.union([
+        z.object({ kind: z.literal("global") }),
+        z.object({
+          kind: z.literal("topsheet"),
+          top_sheet: z.enum(TOP_SHEET_ENUM),
+        }),
+      ]),
+      amount_cents: z
+        .number()
+        .describe("Tetto in centesimi (es. 5000000 per €50.000)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSetBudgetCap(
+        input as SetBudgetCapInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  evaluate_against_cap: tool({
+    description:
+      "Legge i cap correnti (globale + per topsheet) e li confronta con l'allocazione di budget effettiva. " +
+      "Ritorna residuo e top sheet che sforano. Pure read — non muta nulla. " +
+      "Usa questo tool per 'siamo dentro budget?' o 'quanto rimane?'.",
+    inputSchema: z.object({}),
+    execute: async (_input, _opts) => {
+      const result = await executeEvaluateAgainstCap(db, projectId);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_excessive_lines_flags: tool({
+    description:
+      "Analizza le voci di budget e segnala quelle anomale: >150% della media della loro categoria. " +
+      "Ritorna la lista flaggata — NON muta nulla. L'utente decide se intervenire. " +
+      "Usa questo tool per 'ci sono voci eccessive?' o 'cosa costa troppo?'.",
+    inputSchema: z.object({
+      threshold_ratio: z
+        .number()
+        .optional()
+        .describe("Soglia opzionale (default 1.5 = 150% della media)"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeExcessiveLines(
+        input as ExcessiveLinesInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_missing_lines: tool({
+    description:
+      "Analizza il breakdown delle scene richieste e propone voci budget potenzialmente mancanti. " +
+      "Ritorna la lista delle categorie scoperte con nomi e stime di default — NON muta nulla. " +
+      "Usa questo tool quando l'utente chiede 'cosa manca nel budget?' o 'verifica copertura'.",
+    inputSchema: z.object({
+      scene_ids: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "UUID delle scene da analizzare. Omesso = analizza l'intero progetto.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeMissingLines(
+        input as MissingLinesInput,
+        db,
+        projectId,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type BudgetTools = ReturnType<typeof createBudgetTools>;
 
 // ─── Budget tool executors ────────────────────────────────────────────────────
 //

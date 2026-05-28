@@ -14,7 +14,7 @@
   "dependencies": {
     "compromise": "14.15.0",
     "neverthrow": "8.2.0",
-    "zod": "3.24.4"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "22.15.21",

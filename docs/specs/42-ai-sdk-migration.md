@@ -1,6 +1,6 @@
 # Spec 42 — Migrazione a Vercel AI SDK v5 + Langfuse OTEL
 
-**Status:** 🔄 In corso  
+**Status:** 🔄 In corso (Fase 1 ✅, Fase 2 ✅)  
 **Scope:** `features/predictions/` — tutto il layer AI di Cesare  
 **Depends on:** nessuna dipendenza di feature
 
@@ -409,11 +409,19 @@ Pacchetto da rimuovere dopo la migrazione:
 - `cesare.export.completed` e `cesare.inline_edit.resolved` NON aggiunti — eventi client-side, fuori scope server. Da fare separatamente.
 - `langfuse-vercel@3.38.20` installato invece di "latest" (versione pinnata al momento dell'install).
 
-### Fase 2 — Migrazione tool definitions
+### Fase 2 — Migrazione tool definitions ✅ Completata
 
-1. Converti tutti i `CESARE_*_TOOLS` da formato `input_schema` a Zod `parameters`
-2. Integra `execute` function inline in ogni tool
-3. Unit test: tutti i test Vitest sui tool passano
+1. ✅ Converti tutti i `CESARE_*_TOOLS` da formato `input_schema` a Zod `inputSchema` (6 file)
+2. ✅ Integra `execute` function inline in ogni tool — factory `create*Tools(db, ctx)` per ogni file
+3. ✅ Unit test: tutti i test Vitest passano (120 file, 1223 test)
+4. ✅ Upgrade zod da `3.24.4` a `3.25.76` (minimo richiesto da `ai@6.0.191` per subpath `zod/v4`)
+
+**Deviazioni:**
+
+- `parameters` → `inputSchema`: il spec usava `parameters` ma AI SDK v5 usa `inputSchema`. Implementazione usa `inputSchema`.
+- Old `CESARE_*_TOOLS` arrays mantenuti intatti — il loop `runGenericToolLoop` li usa ancora. Le nuove factory (`createLocationTools`, `createScreenplayTools`, ecc.) sono additive.
+- `execute` input è `unknown` per ogni tool senza `outputSchema` — richiede cast esplicito `input as XInput` a ogni call site (typing bug AI SDK, non nostro).
+- `z.enum()` richiede `readonly [string, ...string[]]`: usato cast `as unknown as [string, ...string[]] as readonly [ShotSize, ...ShotSize[]]` per `SHOT_SIZES` e `CAMERA_MOVEMENTS`.
 
 ### Fase 3 — Migrazione runGenericToolLoop
 

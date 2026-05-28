@@ -1,3 +1,5 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, sql } from "drizzle-orm";
 import {
@@ -808,3 +810,114 @@ export const isDocumentGenToolName = (name: string): boolean =>
   name === "propose_synopsis_from_screenplay" ||
   name === "propose_soggetto_v2" ||
   name === "propose_scaletta_from_soggetto";
+
+// ─── Document generation tools factory (AI SDK v5 format) ────────────────────
+
+export const createDocumentGenTools = (
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+) => ({
+  propose_logline_from_screenplay: tool({
+    description:
+      "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
+      "Crea una versione DRAFT del documento logline che l'utente può accettare o scartare " +
+      "tramite il banner che appare sopra l'editor. Usa SEMPRE questo tool quando l'utente " +
+      "chiede di 'generare la logline' o 'scrivimi una logline'.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .optional()
+        .describe(
+          "Istruzione opzionale che orienta lo stile (es. 'più commerciale', 'focus su personaggio', 'tono ironico')",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleProposeLogline(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
+  propose_synopsis_from_screenplay: tool({
+    description:
+      "Genera una sinossi (2-3 paragrafi, circa 400 parole) dalla sceneggiatura corrente del " +
+      "progetto. Crea una versione DRAFT del documento sinossi. Usa SEMPRE questo tool quando " +
+      "l'utente chiede 'scrivimi la sinossi' o 'genera la sinossi'.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .optional()
+        .describe(
+          "Istruzione opzionale per orientare tono/struttura della sinossi.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleProposeSynopsis(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
+  propose_soggetto_v2: tool({
+    description:
+      "Riscrive il soggetto del progetto in una nuova versione DRAFT seguendo l'istruzione " +
+      "fornita. Usa quando l'utente vuole una variante del soggetto (es. 'più asciutto', " +
+      "'più tematico', 'fammi un v2 con focus su X').",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .describe(
+          "Direzione della riscrittura in linguaggio naturale (es. 'più asciutto e tematico').",
+        ),
+      label: z
+        .string()
+        .describe(
+          "Etichetta breve per la nuova versione draft (es. 'v2 asciutto', 'focus tematico').",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleProposeSoggettoV2(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
+  propose_scaletta_from_soggetto: tool({
+    description:
+      "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
+      "Crea una versione DRAFT del documento scaletta. Usa quando l'utente chiede 'dato il " +
+      "soggetto fammi la scaletta' o simile.",
+    inputSchema: z.object({
+      target_scene_count: z
+        .number()
+        .int()
+        .optional()
+        .describe("Numero approssimativo di scene desiderate (default 40)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleProposeScalettaFromSoggetto(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
+});
+
+export type DocumentGenTools = ReturnType<typeof createDocumentGenTools>;

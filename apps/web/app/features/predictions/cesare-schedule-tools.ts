@@ -1,3 +1,5 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { and, eq, asc, isNull } from "drizzle-orm";
 import {
@@ -839,6 +841,141 @@ export const executeScheduleTool = (
     }),
   );
 };
+
+// ─── Schedule tools factory (AI SDK v5 format) ───────────────────────────────
+
+export const createScheduleTools = (db: Db, ctx: ScheduleToolContext) => ({
+  move_scene_to_day: tool({
+    description:
+      "Sposta una scena (identificata dal suo numero) su una giornata di ripresa specifica. " +
+      "Usa quando l'utente chiede di riorganizzare lo schedule.",
+    inputSchema: z.object({
+      scene_number: z.number().describe("Numero della scena da spostare"),
+      target_day_number: z
+        .number()
+        .describe("Numero della giornata di destinazione (1-based)"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeMoveSceneToDay(
+        input as MoveSceneToDayInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  merge_days: tool({
+    description:
+      "Accorpa tutte le scene di due giornate. Le scene della seconda giornata vengono spostate sulla prima, e la seconda viene rimossa (con renumber automatico).",
+    inputSchema: z.object({
+      day_a_number: z.number().describe("Numero della giornata che resta"),
+      day_b_number: z
+        .number()
+        .describe(
+          "Numero della giornata da assorbire (verrà rimossa dopo lo spostamento)",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeMergeDays(input as MergeDaysInput, db, ctx);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  swap_scenes: tool({
+    description:
+      "Scambia la posizione di due scene tra le rispettive giornate di ripresa.",
+    inputSchema: z.object({
+      scene_a_number: z.number(),
+      scene_b_number: z.number(),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSwapScenes(input as SwapScenesInput, db, ctx);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  lock_day: tool({
+    description:
+      "Blocca tutte le strip di una giornata (impedisce ulteriori spostamenti dell'AI o drag-and-drop).",
+    inputSchema: z.object({
+      day_number: z.number(),
+    }),
+    execute: async (input, _opts) => {
+      const result = await setLockForDay(
+        input as LockUnlockDayInput,
+        db,
+        ctx,
+        true,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  unlock_day: tool({
+    description: "Sblocca tutte le strip di una giornata.",
+    inputSchema: z.object({
+      day_number: z.number(),
+    }),
+    execute: async (input, _opts) => {
+      const result = await setLockForDay(
+        input as LockUnlockDayInput,
+        db,
+        ctx,
+        false,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  get_weather_forecast: tool({
+    description:
+      "Recupera le previsioni meteo per una location e una data tramite Open-Meteo. " +
+      "Restituisce probabilità pioggia, temperature, vento e condizioni. " +
+      "Usa per valutare l'impatto del meteo sulla probabilità di riuscita di una giornata con esterni.",
+    inputSchema: z.object({
+      lat: z.number().describe("Latitudine"),
+      lng: z.number().describe("Longitudine"),
+      date: z
+        .string()
+        .describe("Data ISO YYYY-MM-DD (entro 16 giorni dal presente)"),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeGetWeatherForecast(input as WeatherInput);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  suggest_reorder: tool({
+    description:
+      "Cesare propone una nuova sequenza ottimizzata dello schedule. Restituisce il piano proposto come testo, senza applicarlo. L'utente decide se accettarlo o meno.",
+    inputSchema: z.object({
+      strategy: z
+        .string()
+        .optional()
+        .describe(
+          "Strategia di ottimizzazione, es. 'minimize_location_changes', 'concentrate_night_exteriors', 'balance_workload'",
+        ),
+      respect_location_confirmed: z
+        .boolean()
+        .optional()
+        .describe(
+          "Se true, penalizza il riassegnare scene a giornate la cui location non è ancora confermata (status diverso da 'confirmed'/'locked'). Default false.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSuggestReorder(
+        input as SuggestReorderInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type ScheduleTools = ReturnType<typeof createScheduleTools>;
 
 // Silence unused imports kept for symmetry with sibling tool modules
 void isNull;

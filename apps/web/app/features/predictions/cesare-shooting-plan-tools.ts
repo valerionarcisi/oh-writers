@@ -1,3 +1,5 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { and, eq, asc, sql } from "drizzle-orm";
 import {
@@ -1269,3 +1271,235 @@ export const executeShootingPlanTool = (
     ok(block.id, { error: `Unknown shooting-plan tool: ${block.name}` }),
   );
 };
+
+// ─── Shooting plan tools factory (AI SDK v5 format) ──────────────────────────
+
+const SHOT_SIZE_ENUM = SHOT_SIZES as unknown as [
+  string,
+  ...string[],
+] as readonly [ShotSize, ...ShotSize[]];
+const CAMERA_MOVEMENT_ENUM = CAMERA_MOVEMENTS as unknown as [
+  string,
+  ...string[],
+] as readonly [CameraMovement, ...CameraMovement[]];
+
+export const createShootingPlanTools = (
+  db: Db,
+  ctx: ShootingPlanToolContext,
+) => ({
+  add_parallel_plan: tool({
+    description:
+      "Crea un nuovo piano inquadrature parallelo per una scena (es. Piano B, Piano C). " +
+      "Il primo piano (Piano A) viene creato automaticamente, quindi usa questo tool solo per piani aggiuntivi. " +
+      "Non attiva automaticamente il piano: l'utente o set_active_plan decide quale rendere attivo.",
+    inputSchema: z.object({
+      scene_id: z
+        .string()
+        .optional()
+        .describe(
+          "UUID della scena a cui collegare il piano. Se omesso, viene usata la scena attiva del contesto.",
+        ),
+      name: z
+        .string()
+        .describe(
+          "Nome del nuovo piano. Tipicamente 'Piano B', 'Piano C', 'Versione classica', 'Versione handheld'.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeAddParallelPlan(
+        input as AddParallelPlanInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  add_shot_to_plan: tool({
+    description:
+      "Aggiunge uno shot alla fine di un piano esistente. La posizione viene calcolata automaticamente. " +
+      "Usa questo tool dopo add_parallel_plan per popolare il piano.",
+    inputSchema: z.object({
+      plan_id: z
+        .string()
+        .describe("UUID dello shot plan scenario (NON del shot_plan)."),
+      shot_type: z
+        .enum(SHOT_SIZE_ENUM)
+        .describe(
+          "Tipo di inquadratura. EWS=campo lunghissimo, WS=campo lungo, MS=mezza figura, MCU=mezzo primo piano, CU=primo piano, ECU=primissimo piano, INSERT=dettaglio, OTS=su le spalle, TWO_SHOT=campo a due, POV=soggettiva.",
+        ),
+      camera_movement: z
+        .enum(CAMERA_MOVEMENT_ENUM)
+        .optional()
+        .describe("Movimento camera. Default STATIC se non specificato."),
+      description: z
+        .string()
+        .optional()
+        .describe("Note descrittive sull'inquadratura."),
+      duration_min: z
+        .number()
+        .optional()
+        .describe("Durata stimata in minuti (setup + take)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeAddShotToPlan(
+        input as AddShotToPlanInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  set_active_plan: tool({
+    description:
+      "Rende attivo un piano per la sua scena (tutti i piani fratelli vengono disattivati). Operazione atomica.",
+    inputSchema: z.object({
+      plan_id: z
+        .string()
+        .describe("UUID dello shot plan scenario da attivare."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeSetActivePlan(
+        input as SetActivePlanInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  update_shot: tool({
+    description:
+      "Modifica i campi di uno shot esistente. Campi consentiti: shot_type, camera_movement, description, duration_min, position.",
+    inputSchema: z.object({
+      shot_id: z.string().describe("UUID dello shot."),
+      patch: z.object({
+        shot_type: z.enum(SHOT_SIZE_ENUM).optional(),
+        camera_movement: z.enum(CAMERA_MOVEMENT_ENUM).optional(),
+        description: z.string().optional(),
+        duration_min: z.number().optional(),
+        position: z.number().optional(),
+      }),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeUpdateShot(input as UpdateShotInput, db, ctx);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  remove_shot: tool({
+    description:
+      "Rimuove uno shot dal piano. La scena/piano deve appartenere al progetto corrente.",
+    inputSchema: z.object({
+      shot_id: z.string().describe("UUID dello shot."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeRemoveShot(input as RemoveShotInput, db, ctx);
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  generate_plan_from_description: tool({
+    description:
+      "Crea un nuovo piano e lo popola di shot a partire da una descrizione testuale " +
+      "(es. 'classico: WS forno, due CU di Giulio, OTS Tea, insert delle foto'). " +
+      "Riconosce le keyword di tipo shot (WS/wide/campo lungo, CU/primo piano, OTS/su le spalle, INSERT/dettaglio, etc).",
+    inputSchema: z.object({
+      scene_id: z
+        .string()
+        .optional()
+        .describe("UUID della scena. Se omesso, viene usata la scena attiva."),
+      plan_name: z.string().describe("Nome del nuovo piano."),
+      description: z
+        .string()
+        .describe("Descrizione testuale del piano con gli shot."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeGeneratePlanFromDescription(
+        input as GeneratePlanFromDescriptionInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_blocking_for_scene: tool({
+    description:
+      "Propone una disposizione completa di blocking (attori + camere) per una scena, mostrata come ghost-pins sull'editor 2D che l'utente può accettare singolarmente o in blocco. Non scrive nulla a DB: restituisce solo il payload della proposta.",
+    inputSchema: z.object({
+      scene_id: z
+        .string()
+        .optional()
+        .describe(
+          "UUID della scena per cui proporre il blocking. Se omesso, viene usata la scena attiva del contesto.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeBlockingForScene(
+        input as ProposeBlockingForSceneInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_move_actor_position: tool({
+    description:
+      "Propone di spostare un attore a una nuova posizione (x, y) nello stage 2D. L'utente vede un'anteprima fantasma e può accettare. Non scrive a DB.",
+    inputSchema: z.object({
+      actor_position_id: z
+        .string()
+        .describe("Identificatore dell'attore (castId)."),
+      x: z.number().describe("Nuova coordinata x in cm."),
+      y: z.number().describe("Nuova coordinata y in cm."),
+      reason: z
+        .string()
+        .optional()
+        .describe("Motivo dello spostamento (mostrato all'utente)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeMoveActor(
+        input as ProposeMoveActorInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+  propose_move_camera_pin: tool({
+    description:
+      "Propone di spostare una camera a una nuova posizione (x, y, direction). Anteprima fantasma. Non scrive a DB.",
+    inputSchema: z.object({
+      camera_pin_id: z
+        .string()
+        .describe("Identificatore della camera (shotId)."),
+      x: z.number().describe("Nuova coordinata x in cm."),
+      y: z.number().describe("Nuova coordinata y in cm."),
+      direction_deg: z
+        .number()
+        .optional()
+        .describe(
+          "Nuova direzione del cono camera in gradi (0 = nord, in senso orario).",
+        ),
+      reason: z
+        .string()
+        .optional()
+        .describe("Motivo dello spostamento (mostrato all'utente)."),
+    }),
+    execute: async (input, _opts) => {
+      const result = await executeProposeMoveCamera(
+        input as ProposeMoveCameraInput,
+        db,
+        ctx,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return result.value;
+    },
+  }),
+});
+
+export type ShootingPlanTools = ReturnType<typeof createShootingPlanTools>;
