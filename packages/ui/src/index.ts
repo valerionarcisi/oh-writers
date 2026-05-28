@@ -184,3 +184,40 @@ export type {
   MarginNoteProps,
   MarginNoteKind,
 } from "./composites/MarginNote/MarginNote";
+
+// ─── CesareDrawer (Notion-class) ─────────────────────────────
+export { CesareDrawer } from "./composites/CesareDrawer/CesareDrawer";
+export type {
+  CesareDrawerProps,
+  CesareDrawerSession,
+  CesareDrawerScope,
+  CesareDrawerContextTag,
+  CesareDrawerDockIcons,
+  CesareDrawerComposerProps,
+} from "./composites/CesareDrawer/CesareDrawer";
+export {
+  useDrawerState,
+  drawerReducer,
+} from "./composites/CesareDrawer/use-drawer-state";
+export type {
+  CesareDrawerState,
+  UseDrawerStateOptions,
+  UseDrawerStateResult,
+} from "./composites/CesareDrawer/use-drawer-state";
+export {
+  useDrawerResize,
+  readPersistedSize,
+  DRAWER_SIZE_STORAGE_KEYS,
+} from "./composites/CesareDrawer/use-drawer-resize";
+export type {
+  ResizeAxis,
+  UseDrawerResizeOptions,
+  UseDrawerResizeResult,
+} from "./composites/CesareDrawer/use-drawer-resize";
+
+// ─── Rail hover-reveal ───────────────────────────────────────
+export { useRailReveal } from "./shell/LeftRail/use-rail-reveal";
+export type {
+  UseRailRevealOptions,
+  UseRailRevealResult,
+} from "./shell/LeftRail/use-rail-reveal";

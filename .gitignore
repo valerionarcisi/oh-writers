@@ -41,6 +41,7 @@ playwright/.cache/
 # Debug screenshots
 *.png
 !apps/landing/assets/img/**/*.png
+!docs/specs/mockups/audit/*.png
 .worktrees/
 .tokensave
 
