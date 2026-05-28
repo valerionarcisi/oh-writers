@@ -52,3 +52,6 @@ vernissage/*/failures.json
 
 # Local Netlify folder
 .netlify
+
+# Langfuse self-hosted secrets
+infra/langfuse/.env

@@ -1,0 +1,23 @@
+FROM node:22-alpine
+RUN corepack enable pnpm
+
+# Install watchman for reliable file-watching on Linux inside Docker
+RUN apk add --no-cache inotify-tools
+
+WORKDIR /app
+
+# Install deps from lockfile first — this layer is cached until lockfile changes.
+# node_modules are installed inside the container, NOT from the host volume,
+# so native binaries (esbuild, rollup) are always compiled for linux/amd64.
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages/db/package.json packages/db/
+COPY packages/domain/package.json packages/domain/
+COPY packages/utils/package.json packages/utils/
+COPY packages/ui/package.json packages/ui/
+COPY apps/web/package.json apps/web/
+COPY apps/ws-server/package.json apps/ws-server/
+RUN pnpm install --frozen-lockfile
+
+# Source code is mounted as a volume at runtime — no COPY needed here.
+# The node_modules installed above take precedence over the host volume
+# because of the anonymous volume trick in docker-compose.dev.yml.

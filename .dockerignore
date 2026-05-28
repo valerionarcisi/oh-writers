@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/.next
+**/.output
+**/dist
+.git
+.github
+.husky
+.githooks
+coverage
+*.log
+apps/web/.env
