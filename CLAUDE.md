@@ -111,6 +111,10 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never import browser-only or Monaco APIs** inside `packages/domain`, `packages/utils`, or any other shared package — those must stay framework-agnostic so the future mobile companion can consume them
 - **Never hard-couple auth to cookies** — Better Auth must remain able to issue bearer tokens for mobile clients
 - **Never write code in Italian** — every identifier (variables, functions, types, files), every comment, every log message, every internal error message MUST be in English. UI copy shown to the user is Italian (the product is IT-localised); everything else is English. A function named `caricaSceneggiatura` or a comment `// gestisce errore` is a hard NO. This rule is non-negotiable so that future contributors, AI tooling, and English-speaking collaborators can read the codebase.
+- **Never reintroduce a reserved-column Cesare** — Cesare is a floating Notion-style sub-window anchored bottom-right. The editor never reflows when Cesare opens, closes, or resizes. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md).
+- **Never duplicate the bell / avatar / gear icons** across both `BottomDock` and `CesareDrawer` header — they live in exactly one of the two surfaces depending on Cesare state (Dock when `closed`, Cesare header otherwise).
+- **Never read `body[data-cesare]` and expect 4 string values.** It only stores `closed` or `expanded`. Peek and full are runtime-only states inside the `CesareDrawer` reducer; `expanded-split` is internal to the SplitDrawer co-existence flow and is never persisted (it collapses to `expanded` for the body attribute and for the user-facing cycle).
+- **Never anchor a per-page action bar at bottom-right.** The shell-level `BottomDock` lives there. Use `<FloatingDock/>` (bottom-left by default) or migrate the CTAs into a TopBar action slot.
 
 ---
 

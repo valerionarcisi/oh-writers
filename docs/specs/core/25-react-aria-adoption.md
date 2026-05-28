@@ -1,5 +1,7 @@
 # Spec 25 — React Aria adoption
 
+> **Superseded for shell layout by [Spec 44](../44-shell-refactor-notion-style.md).** This spec remains authoritative for react-aria hook adoption across DS-v2 primitives; defer to Spec 44 for any AppShell layout, drawer, or BottomDock decisions.
+
 > Status: active · Date: 2026-05-16 · Owner: Valerio
 > Triggered by: user proposal during the 15 May UX polish round — "aggiungere react-aria e i suoi hook come base componenti full accessible".
 > Updated: 2026-05-16 — promoted to active, ALWAYS rule added, implementation started.
@@ -8,14 +10,16 @@
 
 ## 1. Decision summary
 
-**Adopt React Aria (from Adobe), but in a controlled migration.** Replace the *behavior* layer of our DS-v2 primitives with `react-aria` hooks (`useButton`, `useDialog`, `useListBox`, `useOverlay`, etc.) while keeping the existing CSS-Module styling and DS-v2 tokens intact. The goal is industrial-grade a11y semantics (focus management, keyboard nav, ARIA roles, screen-reader announcements) without redesigning the visual layer.
+**Adopt React Aria (from Adobe), but in a controlled migration.** Replace the _behavior_ layer of our DS-v2 primitives with `react-aria` hooks (`useButton`, `useDialog`, `useListBox`, `useOverlay`, etc.) while keeping the existing CSS-Module styling and DS-v2 tokens intact. The goal is industrial-grade a11y semantics (focus management, keyboard nav, ARIA roles, screen-reader announcements) without redesigning the visual layer.
 
 NOT adopting: `react-aria-components` (the higher-level styled components). Those bring opinionated styling that would fight our CSS Modules + DS-v2 stack. Stick to the hooks.
 
 ## 2. Why now (and why also: not yet)
 
 ### Why
+
 Current primitives roll their own ARIA semantics:
+
 - `Modal` — hand-written `<dialog>` + custom Esc handling, no focus trap from a tested library
 - `Drawer` — same pattern, focus management is minimal
 - `Popover` — no managed overlay layer; click-outside is per-page
@@ -26,7 +30,9 @@ Current primitives roll their own ARIA semantics:
 This sprawls quietly. A future iOS / Expo companion app, plus the screen-reader requirement in CLAUDE.md ("accessibilità requisito di progetto"), make a hand-rolled approach a liability.
 
 ### Why not yet
+
 The UI is still moving fast (typography just collapsed to 2 fonts, Tabs swapped to ViewSwitcher, V2 cleanup just landed). Migrating primitives mid-polish risks:
+
 - Visual regressions during the rewrite
 - Conflicts with in-flight CSS changes
 - Wasted effort if a primitive gets dropped/redesigned anyway
@@ -36,25 +42,26 @@ The migration starts **only after the current UX polish round settles** (audit-d
 ## 3. Scope
 
 ### In
+
 Migrate these primitives to use `react-aria` hooks underneath:
 
-| Primitive | Hook(s) | Why |
-|---|---|---|
-| `Modal` | `useOverlayTrigger`, `useDialog`, `FocusScope` | Real focus trap, restore-focus on close, scroll-lock |
-| `Drawer` | `useOverlayTrigger`, `useDialog`, `FocusScope` | Same |
-| `Popover` | `useOverlay`, `useOverlayPosition`, `DismissButton` | Flip/collision-aware positioning, managed dismiss |
-| `Tooltip` | `useTooltip`, `useTooltipTrigger` | Hover/focus delays per WAI-ARIA pattern |
-| `ViewSwitcher` | `useMenuTrigger`, `useMenu`, `useMenuItem` | Arrow-key nav, type-ahead, focus return |
-| `Tabs` (composed of) | `useTabList`, `useTab`, `useTabPanel` | Arrow nav, automatic vs manual activation |
-| `Button` (DsButton) | `useButton` | Cross-browser press handling, mobile tap delay |
-| `ToggleChip` | `useToggleButton` | Real `aria-pressed` semantics |
-| `Pill` | none — passive label, no behavior to migrate |
-| `DocStats` | none |
-| `SavePill` | none |
-| `Presence` | none |
-| `CommandPalette` | `useComboBox` or `useListBox` | Full keyboard nav for groups |
-| `ProjectSwitcherPopover` | `useMenu` | Same |
-| `VersionTrigger` | `useButton` + `useMenuTrigger` if it grows | Trivial |
+| Primitive                | Hook(s)                                             | Why                                                  |
+| ------------------------ | --------------------------------------------------- | ---------------------------------------------------- |
+| `Modal`                  | `useOverlayTrigger`, `useDialog`, `FocusScope`      | Real focus trap, restore-focus on close, scroll-lock |
+| `Drawer`                 | `useOverlayTrigger`, `useDialog`, `FocusScope`      | Same                                                 |
+| `Popover`                | `useOverlay`, `useOverlayPosition`, `DismissButton` | Flip/collision-aware positioning, managed dismiss    |
+| `Tooltip`                | `useTooltip`, `useTooltipTrigger`                   | Hover/focus delays per WAI-ARIA pattern              |
+| `ViewSwitcher`           | `useMenuTrigger`, `useMenu`, `useMenuItem`          | Arrow-key nav, type-ahead, focus return              |
+| `Tabs` (composed of)     | `useTabList`, `useTab`, `useTabPanel`               | Arrow nav, automatic vs manual activation            |
+| `Button` (DsButton)      | `useButton`                                         | Cross-browser press handling, mobile tap delay       |
+| `ToggleChip`             | `useToggleButton`                                   | Real `aria-pressed` semantics                        |
+| `Pill`                   | none — passive label, no behavior to migrate        |
+| `DocStats`               | none                                                |
+| `SavePill`               | none                                                |
+| `Presence`               | none                                                |
+| `CommandPalette`         | `useComboBox` or `useListBox`                       | Full keyboard nav for groups                         |
+| `ProjectSwitcherPopover` | `useMenu`                                           | Same                                                 |
+| `VersionTrigger`         | `useButton` + `useMenuTrigger` if it grows          | Trivial                                              |
 
 ### Out
 
@@ -72,7 +79,13 @@ Example for `Modal`:
 // Before
 import { useEffect, useRef } from "react";
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+}: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -80,27 +93,52 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
     else if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
   // ... hand-rolled Esc/click-outside/focus ...
-  return <dialog ref={dialogRef} className={styles.dialog}>...</dialog>;
+  return (
+    <dialog ref={dialogRef} className={styles.dialog}>
+      ...
+    </dialog>
+  );
 }
 
 // After
 import { useRef } from "react";
-import { useOverlay, useDialog, FocusScope, OverlayContainer } from "react-aria";
+import {
+  useOverlay,
+  useDialog,
+  FocusScope,
+  OverlayContainer,
+} from "react-aria";
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+}: ModalProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { overlayProps, underlayProps } = useOverlay(
     { isOpen, onClose, isDismissable: true, isKeyboardDismissDisabled: false },
     ref,
   );
-  const { dialogProps, titleProps } = useDialog({ "aria-labelledby": titleId }, ref);
+  const { dialogProps, titleProps } = useDialog(
+    { "aria-labelledby": titleId },
+    ref,
+  );
   if (!isOpen) return null;
   return (
     <OverlayContainer>
       <div className={styles.backdrop} {...underlayProps} />
       <FocusScope contain restoreFocus autoFocus>
-        <div ref={ref} className={styles.dialog} {...overlayProps} {...dialogProps}>
-          <h2 {...titleProps} id={titleId}>{title}</h2>
+        <div
+          ref={ref}
+          className={styles.dialog}
+          {...overlayProps}
+          {...dialogProps}
+        >
+          <h2 {...titleProps} id={titleId}>
+            {title}
+          </h2>
           <div className={styles.body}>{children}</div>
           {footer && <footer>{footer}</footer>}
         </div>
@@ -120,14 +158,14 @@ CSS unchanged. Props unchanged. Behavior strictly improved.
 
 ## 6. Phasing
 
-| Phase | What | Estimated effort |
-|---|---|---|
-| **0 — prep** | Install `react-aria` and `react-stately`; add `<OverlayContainer>` at the app root; quick a11y baseline audit | 2 hours |
-| **1 — overlays** | `Modal`, `Drawer`, `Popover`, `Tooltip` — these touch every page | 1 day |
-| **2 — menus** | `ViewSwitcher`, `CommandPalette`, `ProjectSwitcherPopover` — replace ad-hoc keyboard nav | 1 day |
-| **3 — interactive** | `Button` (DsButton), `ToggleChip` — small but pervasive | half day |
-| **4 — tabs** | If still in use anywhere after `ViewSwitcher` adoption | half day |
-| **5 — regression sweep** | Cross-browser keyboard + screen-reader (VoiceOver + NVDA) spot checks | half day |
+| Phase                    | What                                                                                                          | Estimated effort |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- | ---------------- |
+| **0 — prep**             | Install `react-aria` and `react-stately`; add `<OverlayContainer>` at the app root; quick a11y baseline audit | 2 hours          |
+| **1 — overlays**         | `Modal`, `Drawer`, `Popover`, `Tooltip` — these touch every page                                              | 1 day            |
+| **2 — menus**            | `ViewSwitcher`, `CommandPalette`, `ProjectSwitcherPopover` — replace ad-hoc keyboard nav                      | 1 day            |
+| **3 — interactive**      | `Button` (DsButton), `ToggleChip` — small but pervasive                                                       | half day         |
+| **4 — tabs**             | If still in use anywhere after `ViewSwitcher` adoption                                                        | half day         |
+| **5 — regression sweep** | Cross-browser keyboard + screen-reader (VoiceOver + NVDA) spot checks                                         | half day         |
 
 Total: **~3.5 dev-days**, sequenced to avoid disturbing other work.
 
@@ -147,11 +185,13 @@ This decision is permanent and non-negotiable going forward:
 > **Any new interactive primitive in `packages/ui/` — button, toggle, menu, dialog, popover, tooltip, tabs, combobox, listbox, datepicker — MUST use the appropriate `react-aria` hook for its semantics layer.** Writing custom ARIA attributes, custom focus traps, custom keyboard handlers, or custom overlay dismiss logic by hand is a hard NO. If a `react-aria` hook exists for the interaction pattern, use it.
 
 This applies to:
+
 - New components added to `packages/ui/src/components/`
 - Feature-level components in `apps/web/app/features/` that implement their own overlay/menu/dialog behavior
 - Any refactor of existing components (migrate to react-aria as part of the refactor)
 
 Exceptions (document in a comment if you skip):
+
 - ProseMirror / Monaco editor internals — those have their own a11y model
 - The `<html>` drag-and-drop timeline in shooting plan — custom pointer events for resize gestures are acceptable; reorder drag should use react-aria DnD when migrated
 - Simple `<button>` elements that are already correct HTML (`<button type="button">`) and don't need `aria-pressed`, `aria-haspopup`, or similar — `useButton` is recommended but not mandatory for trivially correct cases
