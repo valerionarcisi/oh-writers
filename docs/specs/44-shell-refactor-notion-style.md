@@ -43,7 +43,9 @@ Reference HTML mockup: [`docs/specs/mockups/shell-canva-notion.html`](./mockups/
 - **Bottom Dock** — floating pill bottom-RIGHT: `🔔 · 👤 · ⚙ · │ · ✦ Cesare`. Hidden when Cesare ≠ closed.
 - **Cesare Panel** — Notion-style floating sub-window bottom-right (max ~480×640px). Editor never reflows. States: `closed | expanded | peek | full`. Header order: agent name + context chip · sessions selector · | · bell · avatar · gear · `↗` · `↙` (only in full) · `−` · `×`.
 - **Full-page** — Cesare drawer state covering the whole viewport (Notion `»` pattern). Rail + Top Strip + Dock all hide; Cesare gets a centred max-780px column.
-- **Cesare Drawer** — the unified, Notion-class container that hosts the chat across all four states. Owns: header (agent + context tags + session selector + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). Supports drag-resize on its top edge (peek↔expanded) and on its left edge (in `expanded` split-view mode), expand-from-bottom-right animation when going closed→expanded, and a smooth morph closed↔expanded↔full. The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else.
+- **Cesare Drawer** — Cesare-only floating panel anchored bottom-right (Notion AI chat pattern). States: `closed | peek | expanded | full`. **Never** anchors as a side column — Cesare always lives bottom-right. `expanded` = floating 480×640 sub-window; `full` = whole viewport. Owns: header (agent + context tags + session selector + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else.
+
+- **SplitDrawer** — separate shared `packages/ui` primitive for **right-anchored auxiliary panels** (the Notion `»` chevron pattern from Image 20). Used by features that need to occupy half the viewport while keeping the page reachable on the left. Has nothing to do with Cesare. States: `closed | open | full`. `open` = right column ~50% viewport (drag-resize left edge, min 360 max 60vw); `full` = whole viewport. The page reflows narrower when `open`. Consumers: `VersionsDrawer` (versions list + diff side-by-side), `NotificationCenterDrawer` (bell cronologia with click-to-jump-and-pulse), `DocumentBrowserDrawer` (future), `DiffViewer` (future). Each consumer is a thin wrapper around `SplitDrawer` that supplies its own header / body / footer JSX.
 - **Peek** — minimal floating bar bottom-right showing agent name + last activity. Replaces the dock pill while peeking.
 - **AppShell Shell State** — `full` (rail 240px locked open + topstrip + dock) | `collapsed` (rail hidden, **hover top-left edge reveals it as a temporary overlay** that auto-hides on mouseleave, like Notion's collapsed sidebar) | `focus` (rail + topstrip + dock hidden, NO hover-reveal). Toggled via `⌘\` (Notion shortcut) for full↔collapsed and `⌃⌥F` for focus. Persisted per user.
 
@@ -183,7 +185,7 @@ Owner: **pages-agent** · Branch: `refactor/ux-notion-v3-pages`
 
 Owner: **notifications-agent** · Branch: `refactor/ux-notion-v3-notifications`
 
-- Bell drawer (in `BottomDock` when Cesare closed; in Cesare header when Cesare ≠ closed) — single notification centre.
+- Bell drawer (in `BottomDock` when Cesare closed; in Cesare header when Cesare ≠ closed) — single notification centre. Rendered via `SplitDrawer` (right-anchored, collapses the page).
 - Remove `CesareNotificationPill` (per-page floating pill).
 - Repurpose `cesare-notification-context.tsx` for the drawer only.
 - Delete the old per-page pill stack mention in `AppShell.tsx`.
@@ -233,13 +235,12 @@ The Cesare Drawer is upgraded from a "floating sub-window" to a **first-class No
 | `closed`         | — (dock pill at bottom-right) | n/a                                                      | rail+topstrip+dock visible               | dock pill spring-in                                  |
 | `peek`           | bottom-right                  | `auto × 44px` bar (pill-shaped)                          | dock hidden, peek visible                | slide-up from dock origin                            |
 | `expanded`       | bottom-right                  | `min(480, 40vw) × min(640, 76vh)` (user-resizable)       | dock hidden                              | expand-from-corner: scale + translate from dock pill |
-| `expanded-split` | right column                  | `min(640, 50vw) × 100vh` (user-resizable from left edge) | rail+topstrip still visible, dock hidden | slide-from-right                                     |
 | `full`           | viewport                      | `100vw × 100vh`                                          | rail+topstrip+dock all hidden            | scale-up + fade                                      |
 
-`expanded-split` is the **NEW** state added per Image 14 (Notion `»` chevron). User picks via header buttons:
+Cesare NEVER becomes a side column. The right-anchored `»` pattern belongs to `SplitDrawer` (separate primitive). Header buttons:
 
-- `↗` → cycles `expanded` → `expanded-split` → `full` → back to `expanded`
-- `↙` → step back one
+- `↗` → cycles `expanded` → `full` → back to `expanded`
+- `↙` → step back
 - `−` → peek
 - `×` → closed
 
@@ -283,12 +284,11 @@ All transitions use `--ds-ease` (250ms). View Transitions API (`document.startVi
 #### Drag-to-resize
 
 - `expanded`: top edge handle resizes height (min 320px, max 76vh); bottom-left corner resizes both. Position is sticky bottom-right.
-- `expanded-split`: left edge handle resizes width (min 360px, max 60vw).
-- Sizes persist in `localStorage` per user (`ohw.drawer.size.expanded` / `ohw.drawer.size.split`).
+- Size persists in `localStorage` per user (`ohw.cesare.size`).
 
 #### Visual rules (clean + minimal)
 
-- **Backgrounds**: use ONLY `--ds-bg` (`#f5f3ee` warm linen) on shell-level surfaces and `--ds-surface` (`#ffffff`) on raised cards. NO custom grays, NO `#fafafa` variants. Drawer surface = `--ds-surface`; drawer shadow `--ds-shadow-4` only on `expanded` and `peek`; `expanded-split` uses a left border + `--ds-shadow-2` (it's anchored, not floating).
+- **Backgrounds**: use ONLY `--ds-bg` (`#f5f3ee` warm linen) on shell-level surfaces and `--ds-surface` (`#ffffff`) on raised cards. NO custom grays, NO `#fafafa` variants. Cesare drawer surface = `--ds-surface`; drawer shadow `--ds-shadow-4` (`expanded` and `peek`). SplitDrawer in `open` state uses a left border + `--ds-shadow-2` (it's anchored, not floating).
 - **Borders**: `--ds-line` (linen-300) for static borders, `--ds-line-soft` for ghost dividers. No 2px borders anywhere except active session in selector.
 - **Typography**: drawer body uses `--ds-font-sans` (Inter). Agent name + session title in `--ds-font-display` (Fraunces) at 14px. Eyebrows in 10.5px caps `--ds-text-faint`.
 - **Spacing**: padding inside drawer = `var(--ds-space-4)` body, `var(--ds-space-3)` header/footer. Gap between messages = `var(--ds-space-4)`.
@@ -307,11 +307,50 @@ The agent runs `chrome-agent screenshot` on every view (Sceneggiatura / Soggetto
 
 Findings become inline PR comments on the WP-A/B/C/D branches; design-agent does NOT directly fix per-page bodies — it flags + provides token replacements.
 
+#### SplitDrawer (Notion `»` pattern — separate primitive)
+
+`SplitDrawer` is a SECOND, completely separate primitive from Cesare. It powers right-anchored auxiliary panels that occupy roughly half the viewport while the page reflows narrower on the left (Image 20 in the conversation).
+
+States: `closed | open | full`.
+- `closed`: not rendered.
+- `open`: right column, `min(640, 50vw) × 100vh`, drag-resize left edge (min 360px, max 60vw). Page reflows narrower. Left border + `--ds-shadow-2`.
+- `full`: viewport. Rail + Top Strip + Dock all hidden (same Focus behavior as Cesare `full`).
+
+Header buttons:
+- `↗` → `open` → `full`
+- `↙` → step back
+- `×` → closed
+
+Public API: `<SplitDrawer state, onStateChange, header, children, footer?, size?, onSizeChange? />`. WP-DESIGN ships it as a packages/ui composite. WP-D wires the bell `NotificationCenterDrawer` to it. Versions/Document Browser/Diff are future consumers.
+
+#### Cross-component flow: Cesare full-page → SplitDrawer with target page + trace
+
+The most important interaction the user wants to support (per Image 14 + Image 20):
+
+1. User opens Cesare to `full` (chat centred, max-780px column, rail/topstrip/dock hidden).
+2. While reading an assistant message that ran a write tool, the user clicks the inline `[Mostra modifiche]` affordance inside the Step Block.
+3. A `SplitDrawer` opens to the RIGHT (state `open`), containing:
+   - **Header**: target page name + scope (e.g. `Soggetto · Atto II`) + window controls (`↗` full · `↙` step back · `×` close).
+   - **Body**: the target page rendered in a read-only `mode="trace"` embedded view, with a **Trace overlay** highlighting Cesare's edits (additions `--ds-diff-add-*`, deletions `--ds-diff-remove-*`, intra-line `--ds-diff-intra`). A trace timeline pinned to the drawer's left edge: `│ ✓ replace · ✓ append · ✓ rename` — clicking a node scrolls the body to that edit.
+   - **Footer**: `[Accetta tutto] [Rifiuta tutto]` + pending-edits count.
+4. The Cesare full-page chat narrows automatically to make room — it stops being `100vw` and becomes the left column. Rail/topstrip/dock stay hidden (still `full` mode), but the viewport is now `[chat | SplitDrawer]`.
+5. User clicks the SplitDrawer's `↗` → SplitDrawer becomes `full`, Cesare chat retreats to `peek` bottom-right.
+6. User closes the SplitDrawer → Cesare returns to `full` chat.
+
+Same mechanism powers:
+- **VersionsDrawer** → pick a version → SplitDrawer renders the doc at that version + diff vs current.
+- **NotificationCenterDrawer** → click a Cesare notification → SplitDrawer renders the affected page with the same trace.
+
+Shared contract: `<TargetPagePreview pageRef, traceMarkers, onAccept, onReject />` — a thin wrapper around the route's component in `mode="trace"`. WP-C surfaces this mode in each per-page body.
+
 #### Deliverables
 
-- `packages/ui/src/composites/CesareDrawer/CesareDrawer.tsx` + `.module.css` — the Notion-class drawer (WP-B consumes it instead of building the chrome from scratch).
-- `packages/ui/src/composites/CesareDrawer/use-drawer-state.ts` — `ts-pattern` reducer for the 5 states + transitions.
-- `packages/ui/src/composites/CesareDrawer/use-drawer-resize.ts` — drag-to-resize hook (uses `react-aria` `useMove`).
+- `packages/ui/src/composites/CesareDrawer/CesareDrawer.tsx` + `.module.css` — the Cesare bottom-right drawer (WP-B consumes it).
+- `packages/ui/src/composites/CesareDrawer/use-drawer-state.ts` — `ts-pattern` reducer for the 4 Cesare states.
+- `packages/ui/src/composites/CesareDrawer/use-drawer-resize.ts` — drag-to-resize hook (top edge only; uses `react-aria` `useMove`).
+- `packages/ui/src/composites/SplitDrawer/SplitDrawer.tsx` + `.module.css` — the right-anchored panel primitive.
+- `packages/ui/src/composites/SplitDrawer/use-split-drawer-state.ts` — `ts-pattern` reducer for the 3 SplitDrawer states.
+- `packages/ui/src/composites/SplitDrawer/use-split-drawer-resize.ts` — drag-to-resize hook (left edge only).
 - A short `docs/specs/44-design-notes.md` companion documenting the token decisions + visual audit findings.
 
 ## Tests
