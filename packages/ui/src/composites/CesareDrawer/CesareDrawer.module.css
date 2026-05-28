@@ -1,0 +1,689 @@
+/* packages/ui/src/composites/CesareDrawer/CesareDrawer.module.css
+ *
+ * Notion-class Cesare Drawer. The DOM is identical across every state;
+ * only the wrapper attribute `data-state` flips and a couple of CSS variables
+ * change. This keeps animations smooth (no re-mount) and lets us drive
+ * height/width via inline custom properties from the resize hook.
+ *
+ * The DOM order is:
+ *   .root  ← positioned fixed; carries data-state + custom props
+ *     .handleTop    ← drag handle, only painted in expanded
+ *     .handleLeft   ← drag handle, only painted in expanded-split
+ *     .frame
+ *       .header (sticky)
+ *       .body   (scrollable)
+ *         .scrollNudge ← "Vai alle nuove risposte" pill
+ *       .footer (sticky)
+ */
+
+.root {
+  /* Inline custom properties — defaults match the spec's first-open sizes. */
+  --drawer-block-size: 480px;
+  --drawer-inline-size: 480px;
+  --drawer-radius: var(--ds-radius-lg);
+  --drawer-border: var(--ds-line);
+  --drawer-shadow: var(--ds-shadow-4);
+  --drawer-bg: var(--ds-surface);
+  --drawer-z: 310;
+
+  position: fixed;
+  inset-inline-end: 18px;
+  inset-block-end: 18px;
+  inline-size: var(--drawer-inline-size);
+  block-size: var(--drawer-block-size);
+  background: var(--drawer-bg);
+  border: 1px solid var(--drawer-border);
+  border-radius: var(--drawer-radius);
+  box-shadow: var(--drawer-shadow);
+  z-index: var(--drawer-z);
+  display: none;
+  overflow: hidden;
+  contain: layout style;
+  font-family: var(--ds-font-sans);
+  color: var(--ds-text);
+  transition:
+    inline-size var(--ds-duration-3) var(--ds-ease),
+    block-size var(--ds-duration-3) var(--ds-ease),
+    inset-inline-end var(--ds-duration-3) var(--ds-ease),
+    inset-block-end var(--ds-duration-3) var(--ds-ease),
+    border-radius var(--ds-duration-3) var(--ds-ease),
+    box-shadow var(--ds-duration-3) var(--ds-ease),
+    opacity var(--ds-duration-3) var(--ds-ease),
+    transform var(--ds-duration-3) var(--ds-ease);
+
+  &.isResizing {
+    transition: none;
+  }
+}
+
+/* ── State: closed ─────────────────────────────────────────────────────── */
+.root[data-state="closed"] {
+  display: none;
+}
+
+/* ── State: peek ───────────────────────────────────────────────────────── */
+.root[data-state="peek"] {
+  display: flex;
+  flex-direction: column;
+  inline-size: auto;
+  min-inline-size: 220px;
+  max-inline-size: 360px;
+  block-size: 44px;
+  border-radius: var(--ds-radius-pill);
+  box-shadow: var(--ds-shadow-3);
+  padding: 0 16px;
+  background: var(--ds-surface);
+}
+
+.root[data-state="peek"] .frame {
+  display: none;
+}
+
+.root[data-state="peek"] .peekRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  block-size: 100%;
+  inline-size: 100%;
+}
+
+/* ── State: expanded (floating bottom-right) ──────────────────────────── */
+.root[data-state="expanded"] {
+  display: flex;
+  flex-direction: column;
+  inline-size: clamp(360px, var(--drawer-inline-size), 40vw);
+  block-size: clamp(320px, var(--drawer-block-size), 76vh);
+  /* Spring-in animation when first opening: scale from bottom-right corner. */
+  transform-origin: bottom right;
+  animation: drawer-expand-in var(--ds-duration-3) var(--ds-ease) both;
+}
+
+/* ── State: expanded-split (anchored right column, full-height) ───────── */
+.root[data-state="expanded-split"] {
+  display: flex;
+  flex-direction: column;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: clamp(360px, var(--drawer-inline-size), 60vw);
+  block-size: 100vh;
+  border-radius: 0;
+  border-inline-start: 1px solid var(--drawer-border);
+  border-block: none;
+  border-inline-end: none;
+  box-shadow: var(--ds-shadow-2);
+  /* Slide in from the right. */
+  animation: drawer-slide-from-right var(--ds-duration-3) var(--ds-ease) both;
+}
+
+/* ── State: full ───────────────────────────────────────────────────────── */
+.root[data-state="full"] {
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  inline-size: 100vw;
+  block-size: 100vh;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: var(--ds-bg);
+  z-index: 500;
+  animation: drawer-scale-up var(--ds-duration-3) var(--ds-ease) both;
+}
+
+.root[data-state="full"] .frame {
+  max-inline-size: 780px;
+  margin-inline: auto;
+  inline-size: 100%;
+}
+
+/* ── Frame (header + body + footer) ────────────────────────────────────── */
+.frame {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  inline-size: 100%;
+  min-block-size: 0;
+}
+
+/* ── Sticky header ─────────────────────────────────────────────────────── */
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: 10px var(--ds-space-3);
+  border-block-end: 1px solid var(--ds-line);
+  background: var(--ds-bg);
+}
+
+.root[data-state="full"] .header {
+  padding: 14px var(--ds-space-8);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-inline-size: 0;
+}
+
+.agentBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ds-font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ds-agent);
+
+  &::before {
+    content: "✦";
+    font-size: 13px;
+  }
+}
+
+.sessionSelector {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ds-text-2);
+  padding: 2px 8px;
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  min-inline-size: 0;
+  max-inline-size: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.sessionSelectorChev {
+  font-size: 10px;
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+.contextChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+  padding: 2px 8px;
+  background: var(--ds-surface-alt);
+  border-radius: var(--ds-radius-pill);
+  white-space: nowrap;
+}
+
+.contextChipDismiss {
+  inline-size: 12px;
+  block-size: 12px;
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--ds-text-faint);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.headerDivider {
+  inline-size: 1px;
+  block-size: 16px;
+  background: var(--ds-line);
+  margin-inline: 4px;
+}
+
+.iconBtn {
+  inline-size: 24px;
+  block-size: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-3);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.iconBtnDanger:hover {
+  color: var(--ds-danger);
+}
+
+/* ── Body ──────────────────────────────────────────────────────────────── */
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: hidden auto;
+  padding: var(--ds-space-4) var(--ds-space-4);
+  background: var(--ds-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  scroll-behavior: smooth;
+  scroll-padding-block-end: 80px;
+}
+
+.root[data-state="full"] .body {
+  padding: var(--ds-space-6) var(--ds-space-8);
+}
+
+/* Scroll-anchor pill — shown when user scrolls up away from the bottom. */
+.scrollNudge {
+  position: sticky;
+  inset-block-end: var(--ds-space-2);
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border: none;
+  border-radius: var(--ds-radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--ds-shadow-2);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--ds-duration-2) var(--ds-ease),
+    transform var(--ds-duration-2) var(--ds-ease);
+  transform: translateY(4px);
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.scrollNudgeVisible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ── Footer (sticky composer) ──────────────────────────────────────────── */
+.footer {
+  flex-shrink: 0;
+  padding: var(--ds-space-2) var(--ds-space-3) var(--ds-space-3);
+  border-block-start: 1px solid var(--ds-line);
+  background: var(--ds-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scopeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-block-size: 24px;
+}
+
+.scopeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  background: var(--ds-action-soft);
+  color: var(--ds-text-2);
+  border: none;
+  border-radius: var(--ds-radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.scopeChipIcon {
+  font-size: 10px;
+}
+
+.scopeChipRemove {
+  inline-size: 12px;
+  block-size: 12px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: currentColor;
+  font-size: 10px;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  margin-inline-start: 2px;
+  border-radius: 50%;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.scopeChipAdd {
+  background: transparent;
+  border: 1px dashed var(--ds-line);
+  color: var(--ds-text-3);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--ds-radius-pill);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ds-text);
+    border-color: var(--ds-text-3);
+  }
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+
+  &:focus-within {
+    border-color: var(--ds-action);
+  }
+}
+
+.composerInput {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ds-text);
+  resize: none;
+  min-block-size: 18px;
+  max-block-size: 96px;
+  line-height: 1.5;
+
+  &::placeholder {
+    color: var(--ds-text-faint);
+  }
+}
+
+.composerActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.composerBtn {
+  inline-size: 24px;
+  block-size: 24px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-3);
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.composerSend {
+  inline-size: 28px;
+  block-size: 28px;
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+  border-radius: 7px;
+  border: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 13px;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+/* ── Resize handles ────────────────────────────────────────────────────── */
+.handleTop {
+  position: absolute;
+  inset-block-start: -2px;
+  inset-inline: 0;
+  block-size: 6px;
+  cursor: ns-resize;
+  z-index: 2;
+  background: transparent;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: 2px;
+    transform: translateX(-50%);
+    inline-size: 36px;
+    block-size: 3px;
+    border-radius: 2px;
+    background: var(--ds-line);
+    opacity: 0;
+    transition: opacity var(--ds-duration-1) var(--ds-ease);
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.handleLeft {
+  position: absolute;
+  inset-inline-start: -2px;
+  inset-block: 0;
+  inline-size: 6px;
+  cursor: ew-resize;
+  z-index: 2;
+  background: transparent;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 2px;
+    transform: translateY(-50%);
+    block-size: 36px;
+    inline-size: 3px;
+    border-radius: 2px;
+    background: var(--ds-line);
+    opacity: 0;
+    transition: opacity var(--ds-duration-1) var(--ds-ease);
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.root:not([data-state="expanded"]) .handleTop {
+  display: none;
+}
+
+.root:not([data-state="expanded-split"]) .handleLeft {
+  display: none;
+}
+
+/* ── Peek-state content ────────────────────────────────────────────────── */
+.peekGlow {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--ds-agent);
+  flex-shrink: 0;
+  animation: peek-pulse 2s ease-in-out infinite;
+}
+
+.peekLabel {
+  font-family: var(--ds-font-display);
+  font-weight: 600;
+  color: var(--ds-agent);
+}
+
+.peekSub {
+  color: var(--ds-text-3);
+  font-size: 12px;
+}
+
+.peekClose {
+  margin-inline-start: auto;
+  inline-size: 20px;
+  block-size: 20px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--ds-text-faint);
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 50%;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+}
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+@keyframes drawer-expand-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translate(8%, 12%);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+@keyframes drawer-slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(8%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawer-scale-up {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes peek-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+    animation: none !important;
+  }
+  .peekGlow {
+    animation: none;
+  }
+}
+
+/* ── SplitDrawer integration (Spec 44 cross-component flow) ────────────
+ * When a SplitDrawer is open alongside a full-page Cesare, the chat
+ * narrows to make room for the right-anchored panel. The shell sets
+ * `body[data-split-drawer]` and exposes `--split-width` as the live
+ * width of the SplitDrawer. The full-page Cesare keys off both to slide
+ * its right edge inward without the JS having to recompute anything.
+ */
+:global(body[data-split-drawer="open"]) .root[data-state="full"] {
+  inline-size: calc(100vw - var(--split-width, 480px));
+}
+:global(body[data-split-drawer="full"]) .root[data-state="full"] {
+  display: none;
+}

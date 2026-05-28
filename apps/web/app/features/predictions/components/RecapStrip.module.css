@@ -1,0 +1,122 @@
+/* RecapStrip — horizontal strip above the editor on Breakdown view. */
+
+.strip {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: 10px 14px;
+  margin: 14px 22px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12.5px;
+  box-shadow: var(--ds-shadow-1);
+  font-family: var(--ds-font-sans);
+  color: var(--ds-text-2);
+  flex-wrap: wrap;
+}
+
+.costBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+}
+
+.label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+}
+
+.cost {
+  font-family: var(--ds-font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ds-text);
+  line-height: 1.2;
+}
+
+.cost small {
+  font-family: var(--ds-font-sans);
+  font-size: 11px;
+  color: var(--ds-text-faint);
+  font-weight: 400;
+  margin-inline-start: 4px;
+}
+
+.cats {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-alt);
+  font-size: 11px;
+  color: var(--ds-text-2);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cat-color, var(--ds-text-3));
+  flex-shrink: 0;
+}
+
+.catLabel {
+  white-space: nowrap;
+}
+
+.catLabel [data-num] {
+  font-variant-numeric: tabular-nums;
+  margin-inline-start: 4px;
+}
+
+.spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.cta {
+  padding: 5px 11px;
+  border: 1px solid var(--ds-line);
+  background: transparent;
+  border-radius: var(--ds-radius-sm);
+  font-size: 11.5px;
+  color: var(--ds-text-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  transition: background var(--ds-duration-1) var(--ds-ease);
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--ds-surface-alt);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+.cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta {
+    transition: none;
+  }
+}

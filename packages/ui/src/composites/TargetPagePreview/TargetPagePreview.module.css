@@ -1,0 +1,229 @@
+/* packages/ui/src/composites/TargetPagePreview/TargetPagePreview.module.css
+ *
+ * Two-column layout: left timeline (trace markers) + right preview body.
+ * Used inside a SplitDrawer body when the user clicks "Mostra modifiche"
+ * inside a Cesare Step Block.
+ */
+
+.root {
+  display: grid;
+  grid-template-columns: 152px 1fr;
+  gap: var(--ds-space-3);
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+/* ── Timeline (left rail) ─────────────────────────────────────────────── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  padding-block: var(--ds-space-2);
+  border-inline-end: 1px solid var(--ds-line-soft);
+  block-size: 100%;
+  overflow-y: auto;
+}
+
+.timelineLabel {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  padding: 4px 8px;
+}
+
+.markerBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-2);
+  font-size: 12px;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.markerGlyph {
+  inline-size: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ds-agent);
+}
+
+.markerGlyphReplace {
+  color: var(--ds-action);
+}
+
+.markerGlyphRemove {
+  color: var(--ds-danger);
+}
+
+/* ── Preview body ─────────────────────────────────────────────────────── */
+.preview {
+  block-size: 100%;
+  overflow-y: auto;
+  padding: var(--ds-space-2) var(--ds-space-2) var(--ds-space-6);
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-2) var(--ds-space-3);
+  border-block-end: 1px solid var(--ds-line-soft);
+  margin-block-end: var(--ds-space-3);
+}
+
+.previewBadge {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  padding: 2px 8px;
+  background: var(--ds-surface-alt);
+  border-radius: var(--ds-radius-pill);
+}
+
+.previewTitle {
+  font-family: var(--ds-font-display);
+  font-size: 14px;
+  color: var(--ds-text);
+  margin: 0;
+}
+
+/* ── Marker overlays (inside the rendered page body) ──────────────────── */
+.markerBlock {
+  padding: 6px 10px;
+  border-radius: var(--ds-radius-sm);
+  margin-block: var(--ds-space-2);
+  font-size: 13px;
+  line-height: 1.55;
+  scroll-margin-block-start: 80px;
+}
+
+.markerBlockAdd {
+  background: var(--ds-diff-add-bg);
+  color: var(--ds-text);
+  border-inline-start: 3px solid var(--ds-diff-add-fg);
+}
+
+.markerBlockRemove {
+  background: var(--ds-diff-remove-bg);
+  color: var(--ds-text);
+  border-inline-start: 3px solid var(--ds-diff-remove-fg);
+  text-decoration: line-through;
+}
+
+.markerBlockReplace {
+  background: var(--ds-diff-change-bg);
+  border-inline-start: 3px solid var(--ds-diff-intra);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.markerHeader {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-block-end: 2px;
+}
+
+.markerBefore {
+  text-decoration: line-through;
+  color: var(--ds-text-2);
+  opacity: 0.7;
+}
+
+.markerAfter {
+  color: var(--ds-text);
+}
+
+.markerActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 6px;
+}
+
+.actionBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 11.5px;
+  padding: 3px 10px;
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  color: var(--ds-text-2);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.actionAccept {
+  color: var(--ds-agent);
+  border-color: var(--ds-diff-add-fg);
+
+  &:hover {
+    background: var(--ds-diff-add-bg);
+    color: var(--ds-agent);
+  }
+}
+
+.actionReject {
+  color: var(--ds-danger);
+  border-color: var(--ds-diff-remove-fg);
+
+  &:hover {
+    background: var(--ds-diff-remove-bg);
+    color: var(--ds-danger);
+  }
+}
+
+/* ── Stub when no concrete preview registered ─────────────────────────── */
+.stub {
+  padding: var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-text-3);
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.empty {
+  padding: var(--ds-space-4);
+  color: var(--ds-text-faint);
+  font-size: 12px;
+  text-align: center;
+}
