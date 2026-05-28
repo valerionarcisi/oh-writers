@@ -4,15 +4,19 @@
  * open the right-anchored `SplitDrawer` (Spec 44 cross-component flow).
  *
  * The shell mounts the actual `<SplitDrawer>` once and renders the active
- * payload's title/markers/children. Feature code only needs to call
- * `useSplitDrawer().open(payload)`.
+ * payload's title/body/footer based on the payload `kind`:
  *
- * Typical caller — the inline `[Mostra modifiche]` button inside a Cesare
- * Step Block:
+ *   - `trace` — Cesare's `[Mostra modifiche]` flow, hosts a
+ *     `<TargetPagePreview>` of the affected page.
+ *   - `notifications` — Bell drawer, hosts the Cesare notification list.
+ *
+ * Typical callers:
  *
  * ```ts
+ * // Cesare Step Block: open the trace flow.
  * const { open } = useSplitDrawer();
  * open({
+ *   kind: 'trace',
  *   pageRef: { kind: 'soggetto', scope: 'Atto II' },
  *   traceMarkers,
  *   onAccept,
@@ -21,6 +25,9 @@
  *   onRejectAll,
  *   title: 'Soggetto · Atto II',
  * });
+ *
+ * // BottomDock / Cesare header bell: open the notification centre.
+ * open({ kind: 'notifications' });
  * ```
  */
 
@@ -38,7 +45,12 @@ import type {
   SplitDrawerState,
 } from "@oh-writers/ui";
 
-export interface SplitDrawerPayload {
+/**
+ * Payload describing Cesare's `[Mostra modifiche]` trace flow — the
+ * SplitDrawer body renders a `<TargetPagePreview>` of the affected page.
+ */
+export interface SplitDrawerTracePayload {
+  kind: "trace";
   /** Reference to the target page rendered in the drawer body. */
   pageRef: TargetPageRef;
   /** Trace markers to overlay on the embedded page. */
@@ -54,6 +66,25 @@ export interface SplitDrawerPayload {
   /** Optional header title; defaults to `pageRef.title` or kind label. */
   title?: string;
 }
+
+/**
+ * Payload opening the bell notification centre. The drawer body lists
+ * every completed Cesare run; clicking a row pulses the affected entities
+ * and navigates to the originating page.
+ */
+export interface SplitDrawerNotificationsPayload {
+  kind: "notifications";
+  /** Optional override; defaults to "Notifiche". */
+  title?: string;
+}
+
+/**
+ * Discriminated union of every payload the shell-level SplitDrawer can
+ * host. New kinds (versions, document browser) get added here.
+ */
+export type SplitDrawerPayload =
+  | SplitDrawerTracePayload
+  | SplitDrawerNotificationsPayload;
 
 interface SplitDrawerContextValue {
   /** Open the drawer with a new payload. Resets state to `open`. */
@@ -120,4 +151,20 @@ export function useSplitDrawer(): SplitDrawerContextValue {
     setState: () => undefined,
     payload: null,
   };
+}
+
+/**
+ * Shared opener for the bell entry-points (BottomDock when Cesare is
+ * `closed`, Cesare header `dockIcons.onBell` when state ≠ closed). Keeping
+ * the helper here guarantees both call sites reach the same SplitDrawer
+ * instance.
+ *
+ * Returns a stable callback; safe to pass into `BottomDock`/`CesareDrawer`
+ * props or to memoise further with `useMemo`.
+ */
+export function useBellOpener(): () => void {
+  const { open } = useSplitDrawer();
+  return useCallback(() => {
+    open({ kind: "notifications" });
+  }, [open]);
 }

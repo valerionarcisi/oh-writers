@@ -27,11 +27,13 @@ export interface TraceForToolRunArgs {
   title?: string;
 }
 
-export function useShowChangesInSplitDrawer(): (args: TraceForToolRunArgs) => void {
+export function useShowChangesInSplitDrawer(): (
+  args: TraceForToolRunArgs,
+) => void {
   const splitDrawer = useSplitDrawer();
   return useCallback(
     (args: TraceForToolRunArgs) => {
-      splitDrawer.open(args);
+      splitDrawer.open({ kind: "trace", ...args });
     },
     [splitDrawer],
   );

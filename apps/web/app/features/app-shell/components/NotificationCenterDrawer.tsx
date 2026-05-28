@@ -1,4 +1,5 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
+import { useButton } from "react-aria";
 import { match } from "ts-pattern";
 import {
   useCesareNotifications,
@@ -9,10 +10,12 @@ import { ACTION_LABEL_BY_PAGE } from "../cesare-notification-labels";
 import type { CesarePage } from "~/features/predictions";
 import styles from "./NotificationCenterDrawer.module.css";
 
-interface NotificationCenterDrawerProps {
-  readonly isOpen: boolean;
-  readonly onClose: () => void;
+interface NotificationCenterDrawerContentProps {
   readonly onActivate: (notification: CesareNotification) => void;
+}
+
+interface NotificationCenterDrawerHeaderProps {
+  readonly children?: React.ReactNode;
 }
 
 type GroupKey = "today" | "yesterday" | "older";
@@ -24,20 +27,69 @@ interface Group {
 }
 
 /**
- * Side drawer that lists every Cesare notification of the current session
- * (sessionStorage-backed). Grouped by Oggi / Ieri / Più vecchie. Click on an
- * item dispatches `onActivate` which opens the Cesare sheet scoped to the
- * relevant page and marks the notification as seen.
- *
- * Slots for team invites / system messages live below the Cesare list — for
- * now they show empty states so the layout reflects the intended shape.
+ * Header content for the bell SplitDrawer — title row + the
+ * `Segna tutte come lette` action. The window controls (↗ ↙ ×) come from
+ * the SplitDrawer chrome.
  */
-export function NotificationCenterDrawer({
-  isOpen,
-  onClose,
+export function NotificationCenterDrawerHeader(
+  _: NotificationCenterDrawerHeaderProps = {},
+) {
+  const { notifications, markAllSeen } = useCesareNotifications();
+  const unseenCount = notifications.filter(
+    (n) => !n.seen && (n.status === "completed" || n.status === "failed"),
+  ).length;
+
+  return (
+    <div className={styles.header}>
+      <div>
+        <h2 className={styles.title}>Notifiche Cesare</h2>
+        <p className={styles.subtitle}>
+          {unseenCount > 0
+            ? `${unseenCount} ${unseenCount === 1 ? "non letta" : "non lette"}`
+            : "Tutto letto"}
+        </p>
+      </div>
+      <div className={styles.headerActions}>
+        {unseenCount > 0 && <MarkAllSeenButton onPress={markAllSeen} />}
+      </div>
+    </div>
+  );
+}
+
+function MarkAllSeenButton({ onPress }: { onPress: () => void }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps } = useButton(
+    {
+      onPress,
+      "aria-label": "Segna tutte come lette",
+    },
+    buttonRef,
+  );
+  return (
+    <button
+      ref={buttonRef}
+      {...buttonProps}
+      type="button"
+      className={styles.linkBtn}
+    >
+      Segna tutte come lette
+    </button>
+  );
+}
+
+/**
+ * Body content for the bell SplitDrawer — the chronological list of
+ * Cesare runs grouped by `Oggi / Ieri / Più vecchie`. Click on a row
+ * dispatches `onActivate`, marks the notification as seen, and the parent
+ * shell closes the drawer + handles navigation + pulse.
+ *
+ * This component intentionally has NO outer aside / scrim — those come
+ * from the SplitDrawer primitive that hosts it.
+ */
+export function NotificationCenterDrawerContent({
   onActivate,
-}: NotificationCenterDrawerProps) {
-  const { notifications, dismissNotification, clearCompleted, markAllSeen } =
+}: NotificationCenterDrawerContentProps) {
+  const { notifications, dismissNotification, clearCompleted } =
     useCesareNotifications();
 
   const groups = useMemo<Group[]>(() => {
@@ -67,127 +119,79 @@ export function NotificationCenterDrawer({
     return all.filter((g) => g.items.length > 0);
   }, [notifications]);
 
-  const unseenCount = notifications.filter(
-    (n) => !n.seen && n.status === "completed",
-  ).length;
-
   const handleClickItem = useCallback(
     (n: CesareNotification) => {
       onActivate(n);
-      onClose();
     },
-    [onActivate, onClose],
+    [onActivate],
   );
 
   return (
     <>
-      <div
-        className={styles.scrim}
-        data-open={isOpen}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <aside
-        className={styles.drawer}
-        data-open={isOpen}
-        role="complementary"
-        aria-label="Centro notifiche"
-      >
-        <header className={styles.header}>
-          <div>
-            <h2 className={styles.title}>Notifiche</h2>
-            <p className={styles.subtitle}>
-              {unseenCount > 0
-                ? `${unseenCount} ${unseenCount === 1 ? "non letta" : "non lette"}`
-                : "Tutto letto"}
-            </p>
-          </div>
-          <div className={styles.headerActions}>
-            {unseenCount > 0 && (
-              <button
-                type="button"
-                className={styles.linkBtn}
-                onClick={markAllSeen}
-              >
-                Segna tutte lette
-              </button>
-            )}
+      <section className={styles.section} aria-labelledby="cesare-section">
+        <header className={styles.sectionHeader}>
+          <h3 id="cesare-section" className={styles.sectionTitle}>
+            Cesare
+          </h3>
+          {notifications.length > 0 && (
             <button
               type="button"
-              className={styles.closeBtn}
-              onClick={onClose}
-              aria-label="Chiudi"
+              className={styles.linkBtn}
+              onClick={clearCompleted}
             >
-              ✕
+              Cancella completate
             </button>
-          </div>
+          )}
         </header>
 
-        <section className={styles.section} aria-labelledby="cesare-section">
-          <header className={styles.sectionHeader}>
-            <h3 id="cesare-section" className={styles.sectionTitle}>
-              Cesare
-            </h3>
-            {notifications.length > 0 && (
-              <button
-                type="button"
-                className={styles.linkBtn}
-                onClick={clearCompleted}
-              >
-                Cancella completate
-              </button>
-            )}
-          </header>
-
-          {groups.length === 0 ? (
-            <p className={styles.empty}>
-              Nessuna notifica. Cesare ti avviserà quando completa un'azione su
-              una pagina.
-            </p>
-          ) : (
-            groups.map((g) => (
-              <div key={g.key} className={styles.group}>
-                <span className={styles.groupLabel}>{g.label}</span>
-                <ul className={styles.list}>
-                  {g.items.map((n) => (
-                    <NotificationRow
-                      key={n.id}
-                      notification={n}
-                      onClick={() => handleClickItem(n)}
-                      onDismiss={() => dismissNotification(n.id)}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
-        </section>
-
-        <section className={styles.section} aria-labelledby="team-section">
-          <header className={styles.sectionHeader}>
-            <h3 id="team-section" className={styles.sectionTitle}>
-              Team & collaborazione
-            </h3>
-            <span className={styles.soon}>Presto</span>
-          </header>
+        {groups.length === 0 ? (
           <p className={styles.empty}>
-            Quando un collaboratore ti invita o commenta riceverai qui un
-            riepilogo.
+            Nessuna notifica. Cesare ti avviserà quando completa un&apos;azione
+            su una pagina.
           </p>
-        </section>
+        ) : (
+          groups.map((g) => (
+            <div key={g.key} className={styles.group}>
+              <span className={styles.groupLabel}>{g.label}</span>
+              <ul className={styles.list}>
+                {g.items.map((n) => (
+                  <NotificationRow
+                    key={n.id}
+                    notification={n}
+                    onClick={() => handleClickItem(n)}
+                    onDismiss={() => dismissNotification(n.id)}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))
+        )}
+      </section>
 
-        <section className={styles.section} aria-labelledby="system-section">
-          <header className={styles.sectionHeader}>
-            <h3 id="system-section" className={styles.sectionTitle}>
-              Sistema
-            </h3>
-            <span className={styles.soon}>Presto</span>
-          </header>
-          <p className={styles.empty}>
-            Release notes e annunci dell'app appariranno qui.
-          </p>
-        </section>
-      </aside>
+      <section className={styles.section} aria-labelledby="team-section">
+        <header className={styles.sectionHeader}>
+          <h3 id="team-section" className={styles.sectionTitle}>
+            Team &amp; collaborazione
+          </h3>
+          <span className={styles.soon}>Presto</span>
+        </header>
+        <p className={styles.empty}>
+          Quando un collaboratore ti invita o commenta riceverai qui un
+          riepilogo.
+        </p>
+      </section>
+
+      <section className={styles.section} aria-labelledby="system-section">
+        <header className={styles.sectionHeader}>
+          <h3 id="system-section" className={styles.sectionTitle}>
+            Sistema
+          </h3>
+          <span className={styles.soon}>Presto</span>
+        </header>
+        <p className={styles.empty}>
+          Release notes e annunci dell&apos;app appariranno qui.
+        </p>
+      </section>
     </>
   );
 }
@@ -210,7 +214,12 @@ function NotificationRow({ notification, onClick, onDismiss }: RowProps) {
     .exhaustive();
   return (
     <li className={styles.row} data-status={notification.status}>
-      <button type="button" className={styles.rowMain} onClick={onClick}>
+      <button
+        type="button"
+        className={styles.rowMain}
+        onClick={onClick}
+        data-testid={`notification-row-${notification.id}`}
+      >
         <span
           className={styles.dot}
           data-status={notification.status}
@@ -219,6 +228,9 @@ function NotificationRow({ notification, onClick, onDismiss }: RowProps) {
         />
         <span className={styles.rowBody}>
           <span className={styles.rowTitle}>
+            <span className={styles.rowSparkle} aria-hidden="true">
+              ✦
+            </span>{" "}
             {labelForPage(notification.page)}{" "}
             <span className={styles.rowAction}>·</span>{" "}
             <span className={styles.rowAction}>{notification.actionLabel}</span>
@@ -248,7 +260,7 @@ function NotificationRow({ notification, onClick, onDismiss }: RowProps) {
         aria-label="Rimuovi notifica"
         title="Rimuovi"
       >
-        ✕
+        ×
       </button>
     </li>
   );
@@ -284,10 +296,10 @@ const summariseEntities = (entities: AffectedEntity[]): string => {
 
 const entityLabel = (kind: string, n: number): string =>
   match(kind)
-    .with("location-candidate", () =>
+    .with("candidate", () =>
       n === 1 ? "candidato location" : "candidati location",
     )
-    .with("scene", () => (n === 1 ? "scena" : "scene"))
+    .with("breakdown", () => (n === 1 ? "scena" : "scene"))
     .with("budget-line", () => (n === 1 ? "voce budget" : "voci budget"))
     .with("schedule-day", () => (n === 1 ? "giornata" : "giornate"))
     .with("document", () => (n === 1 ? "documento" : "documenti"))

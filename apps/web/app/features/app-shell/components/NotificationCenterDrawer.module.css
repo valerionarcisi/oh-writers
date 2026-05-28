@@ -1,56 +1,21 @@
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: var(--ds-overlay);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 280;
-  transition: opacity 200ms var(--ds-ease);
-}
-.scrim[data-open="true"] {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.drawer {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  inset-inline-end: 0;
-  width: min(420px, 92vw);
-  background: var(--ds-surface);
-  border-inline-start: 1px solid var(--ds-line);
-  box-shadow: var(--ds-shadow-3);
-  display: flex;
-  flex-direction: column;
-  z-index: 281;
-  transform: translateX(100%);
-  transition: transform 240ms var(--ds-ease);
-}
-.drawer[data-open="true"] {
-  transform: translateX(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scrim,
-  .drawer {
-    transition: none;
-  }
-}
+/* NotificationCenterDrawer.module.css
+ *
+ * The notification centre body is hosted INSIDE the shared SplitDrawer
+ * primitive — there is no outer aside / scrim here. These rules only style
+ * the header content, sections, rows, and inline buttons.
+ */
 
 .header {
-  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--ds-space-3);
-  padding: var(--ds-space-4);
-  border-block-end: 1px solid var(--ds-line);
 }
 
 .title {
   margin: 0;
-  font-size: var(--text-lg, 1.0625rem);
+  font-family: var(--ds-font-display);
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ds-text);
@@ -83,28 +48,6 @@
   background: var(--ds-action-soft);
 }
 .linkBtn:focus-visible {
-  outline: 2px solid var(--ds-action);
-  outline-offset: 2px;
-}
-
-.closeBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: var(--ds-radius-sm);
-  color: var(--ds-text-mute);
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-.closeBtn:hover {
-  background: var(--ds-surface-alt);
-  color: var(--ds-text);
-}
-.closeBtn:focus-visible {
   outline: 2px solid var(--ds-action);
   outline-offset: 2px;
 }
@@ -190,7 +133,7 @@
 .row:hover {
   background: var(--ds-surface-deep);
 }
-.row[data-status="error"] {
+.row[data-status="failed"] {
   border-color: color-mix(in srgb, var(--ds-danger) 35%, transparent);
 }
 
@@ -222,14 +165,14 @@
   margin-top: 6px;
   background: var(--ds-action);
 }
-.dot[data-status="pending"] {
+.dot[data-status="in-progress"] {
   background: var(--ds-warning);
   animation: pulse 1.6s ease-in-out infinite;
 }
-.dot[data-status="complete"][data-seen="true"] {
+.dot[data-status="completed"][data-seen="true"] {
   background: var(--ds-line);
 }
-.dot[data-status="error"] {
+.dot[data-status="failed"] {
   background: var(--ds-danger);
 }
 
@@ -256,6 +199,10 @@
   letter-spacing: 0.04em;
   color: var(--ds-text-2);
   font-weight: 600;
+}
+
+.rowSparkle {
+  color: var(--ds-agent);
 }
 
 .rowAction {

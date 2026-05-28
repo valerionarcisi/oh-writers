@@ -9,8 +9,13 @@ export { useCesareOpen } from "./cesare-context";
 export {
   SplitDrawerProvider,
   useSplitDrawer,
+  useBellOpener,
 } from "./split-drawer-context";
-export type { SplitDrawerPayload } from "./split-drawer-context";
+export type {
+  SplitDrawerPayload,
+  SplitDrawerTracePayload,
+  SplitDrawerNotificationsPayload,
+} from "./split-drawer-context";
 export {
   ActiveSceneProvider,
   useActiveScene,
