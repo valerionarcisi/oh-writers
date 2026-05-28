@@ -1032,6 +1032,7 @@ Three orthogonal channels — do not mix them:
 
 Never log AI-generated text content in Pino — use Langfuse artifacts.
 Never use `console.log` or `console.warn` — use `logger` from `~/server/logger`.
+Never use `@anthropic-ai/sdk` directly in new code — use `generateText`/`streamText` from `"ai"` with `@ai-sdk/anthropic` provider. The raw SDK is still present for `llm-spoglio.server.ts` (breakdown) but is legacy.
 
 ---
 
