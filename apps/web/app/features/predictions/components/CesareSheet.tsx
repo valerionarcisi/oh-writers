@@ -477,7 +477,12 @@ export function CesareSheet({
     onChange: (next) => {
       onCesareStateChange?.(next);
       if (typeof document !== "undefined") {
-        document.body.setAttribute("data-cesare", next);
+        // Collapse `expanded-split` to `expanded` for the body attribute so
+        // CSS + tests can keep the 4-state contract `closed | expanded |
+        // peek | full` (Spec 44 glossary). The `expanded-split` Notion-`»`
+        // mode is internal to the drawer's resize machine.
+        const normalised = next === "expanded-split" ? "expanded" : next;
+        document.body.setAttribute("data-cesare", normalised);
       }
       if (next === "closed") onClose();
       if (next === "full") onOpenFullPage();
@@ -760,12 +765,37 @@ export function CesareSheet({
     </div>
   );
 
+  // Spec 44 defines 4 visible states (closed/peek/expanded/full). The
+  // underlying CesareDrawer machine adds `expanded-split` for the Notion-`»`
+  // SplitDrawer interplay; we hide it from the user-facing cycle so the
+  // visible "Espandi" affordance walks closed→expanded→full→expanded in one
+  // click each. Step-back handles the symmetric path.
+  const handleCycle = useCallback(() => {
+    if (drawer.state === "expanded") {
+      drawer.setState("full");
+      return;
+    }
+    if (drawer.state === "expanded-split") {
+      drawer.setState("full");
+      return;
+    }
+    drawer.cycle();
+  }, [drawer]);
+
+  const handleStepBack = useCallback(() => {
+    if (drawer.state === "full") {
+      drawer.setState("expanded");
+      return;
+    }
+    drawer.stepBack();
+  }, [drawer]);
+
   return (
     <CesareDrawer
       state={drawer.state}
       onStateChange={drawer.setState}
-      onCycle={drawer.cycle}
-      onStepBack={drawer.stepBack}
+      onCycle={handleCycle}
+      onStepBack={handleStepBack}
       onPeek={drawer.peek}
       onClose={drawer.close}
       sessions={drawerSessions}
