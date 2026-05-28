@@ -43,7 +43,7 @@ Reference HTML mockup: [`docs/specs/mockups/shell-canva-notion.html`](./mockups/
 - **Bottom Dock** — floating pill bottom-RIGHT: `🔔 · 👤 · ⚙ · │ · ✦ Cesare`. Hidden when Cesare ≠ closed.
 - **Cesare Panel** — Notion-style floating sub-window bottom-right (max ~480×640px). Editor never reflows. States: `closed | expanded | peek | full`. Header order: agent name + context chip · sessions selector · | · bell · avatar · gear · `↗` · `↙` (only in full) · `−` · `×`.
 - **Full-page** — Cesare drawer state covering the whole viewport (Notion `»` pattern). Rail + Top Strip + Dock all hide; Cesare gets a centred max-780px column.
-- **Cesare Drawer** — Cesare-only floating panel anchored bottom-right (Notion AI chat pattern). States: `closed | peek | expanded | full`. **Never** anchors as a side column — Cesare always lives bottom-right. `expanded` = floating 480×640 sub-window; `full` = whole viewport. Owns: header (agent + context tags + session selector + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else.
+- **Cesare Drawer** — Cesare-only floating panel anchored bottom-right (Notion AI chat pattern). States: `closed | peek | expanded | expanded-split | full`. **Never** anchors as a side column — Cesare always lives bottom-right. `expanded` = floating 480×640 sub-window; `expanded-split` = the transient state used in the SplitDrawer cross-flow (drawer narrows so the SplitDrawer can co-exist on the right); `full` = whole viewport. AppShell's `body[data-cesare]` flag persists only `closed` and `expanded` — the other three states are transient. Owns: header (agent + context tags + session selector + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else.
 
 - **SplitDrawer** — separate shared `packages/ui` primitive for **right-anchored auxiliary panels** (the Notion `»` chevron pattern from Image 20). Used by features that need to occupy half the viewport while keeping the page reachable on the left. Has nothing to do with Cesare. States: `closed | open | full`. `open` = right column ~50% viewport (drag-resize left edge, min 360 max 60vw); `full` = whole viewport. The page reflows narrower when `open`. Consumers: `VersionsDrawer` (versions list + diff side-by-side), `NotificationCenterDrawer` (bell cronologia with click-to-jump-and-pulse), `DocumentBrowserDrawer` (future), `DiffViewer` (future). Each consumer is a thin wrapper around `SplitDrawer` that supplies its own header / body / footer JSX.
 - **Peek** — minimal floating bar bottom-right showing agent name + last activity. Replaces the dock pill while peeking.
@@ -230,12 +230,12 @@ The Cesare Drawer is upgraded from a "floating sub-window" to a **first-class No
 
 #### Drawer states + transitions
 
-| State            | Anchor                        | Size                                                     | Shell visibility                         | Animation in                                         |
-| ---------------- | ----------------------------- | -------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
-| `closed`         | — (dock pill at bottom-right) | n/a                                                      | rail+topstrip+dock visible               | dock pill spring-in                                  |
-| `peek`           | bottom-right                  | `auto × 44px` bar (pill-shaped)                          | dock hidden, peek visible                | slide-up from dock origin                            |
-| `expanded`       | bottom-right                  | `min(480, 40vw) × min(640, 76vh)` (user-resizable)       | dock hidden                              | expand-from-corner: scale + translate from dock pill |
-| `full`           | viewport                      | `100vw × 100vh`                                          | rail+topstrip+dock all hidden            | scale-up + fade                                      |
+| State      | Anchor                        | Size                                               | Shell visibility              | Animation in                                         |
+| ---------- | ----------------------------- | -------------------------------------------------- | ----------------------------- | ---------------------------------------------------- |
+| `closed`   | — (dock pill at bottom-right) | n/a                                                | rail+topstrip+dock visible    | dock pill spring-in                                  |
+| `peek`     | bottom-right                  | `auto × 44px` bar (pill-shaped)                    | dock hidden, peek visible     | slide-up from dock origin                            |
+| `expanded` | bottom-right                  | `min(480, 40vw) × min(640, 76vh)` (user-resizable) | dock hidden                   | expand-from-corner: scale + translate from dock pill |
+| `full`     | viewport                      | `100vw × 100vh`                                    | rail+topstrip+dock all hidden | scale-up + fade                                      |
 
 Cesare NEVER becomes a side column. The right-anchored `»` pattern belongs to `SplitDrawer` (separate primitive). Header buttons:
 
@@ -312,11 +312,13 @@ Findings become inline PR comments on the WP-A/B/C/D branches; design-agent does
 `SplitDrawer` is a SECOND, completely separate primitive from Cesare. It powers right-anchored auxiliary panels that occupy roughly half the viewport while the page reflows narrower on the left (Image 20 in the conversation).
 
 States: `closed | open | full`.
+
 - `closed`: not rendered.
 - `open`: right column, `min(640, 50vw) × 100vh`, drag-resize left edge (min 360px, max 60vw). Page reflows narrower. Left border + `--ds-shadow-2`.
 - `full`: viewport. Rail + Top Strip + Dock all hidden (same Focus behavior as Cesare `full`).
 
 Header buttons:
+
 - `↗` → `open` → `full`
 - `↙` → step back
 - `×` → closed
@@ -338,6 +340,7 @@ The most important interaction the user wants to support (per Image 14 + Image 2
 6. User closes the SplitDrawer → Cesare returns to `full` chat.
 
 Same mechanism powers:
+
 - **VersionsDrawer** → pick a version → SplitDrawer renders the doc at that version + diff vs current.
 - **NotificationCenterDrawer** → click a Cesare notification → SplitDrawer renders the affected page with the same trace.
 

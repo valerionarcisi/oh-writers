@@ -56,10 +56,7 @@ import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
 import { NotificationCenterDrawer } from "./NotificationCenterDrawer";
-import {
-  SplitDrawerProvider,
-  useSplitDrawer,
-} from "../split-drawer-context";
+import { SplitDrawerProvider, useSplitDrawer } from "../split-drawer-context";
 import { ensurePageTraceRegistry } from "../page-trace-registry";
 import styles from "./AppShell.module.css";
 
@@ -771,7 +768,18 @@ function AppShellInner({
               isOpen={cesareOpen}
               onClose={() => setCesareOpen(false)}
               onOpenFullPage={() => {
-                setCesareOpen(false);
+                // Drawer manages full-page state itself; AppShell mirrors via
+                // onCesareStateChange below.
+              }}
+              onCesareStateChange={(next) => {
+                // Mirror the drawer's state into AppShell's body[data-cesare]
+                // driver. The drawer's `expanded-split` (Spec 44 cross-flow
+                // with SplitDrawer) collapses to AppShell's `expanded` for
+                // persistence purposes. `peek` and `full` are transient.
+                const normalised: CesareState =
+                  next === "expanded-split" ? "expanded" : next;
+                setCesareState(normalised);
+                setCesareOpen(next !== "closed");
               }}
               askCesare={wrappedAskCesare}
               onAssistantResponse={handleCesareAssistantResponse}
@@ -857,7 +865,9 @@ function AppShellInner({
                     }}
                   >
                     {splitDrawer.payload.traceMarkers.length} modifich
-                    {splitDrawer.payload.traceMarkers.length === 1 ? "a" : "e"}{" "}
+                    {splitDrawer.payload.traceMarkers.length === 1
+                      ? "a"
+                      : "e"}{" "}
                     in sospeso
                   </span>
                 </>

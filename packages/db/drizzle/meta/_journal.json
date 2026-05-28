@@ -267,6 +267,13 @@
       "when": 1779000000003,
       "tag": "0032_screenplay_stale_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1779000000004,
+      "tag": "0033_cesare_sessions",
+      "breakpoints": true
     }
   ]
 }
