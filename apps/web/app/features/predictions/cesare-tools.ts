@@ -70,7 +70,10 @@ import {
   executeDocumentGenTool,
   isDocumentGenToolName,
 } from "./cesare-document-tools";
-import { createMockAnthropicClient } from "./_mocks/cesare-tool-loop.mock";
+import {
+  createMockAnthropicClient,
+  createMockCesareModel,
+} from "./_mocks/cesare-tool-loop.mock";
 
 export { CESARE_SCHEDULE_TOOLS } from "./cesare-schedule-tools";
 export type { ScheduleToolContext } from "./cesare-schedule-tools";
@@ -1625,6 +1628,14 @@ const resolveMockClient = (): LegacyAnthropicClient | undefined => {
   return createMockAnthropicClient() as unknown as LegacyAnthropicClient;
 };
 
+// Returns a MockLanguageModelV3 when MOCK_AI=true, undefined otherwise.
+// The mock model intercepts generateText calls and emits scripted scenario
+// turns without hitting the Anthropic API — same code path as production.
+const resolveMockModel = () => {
+  if (process.env["MOCK_AI"] !== "true") return undefined;
+  return createMockCesareModel();
+};
+
 export const runToolLoop = (
   systemPrompt: string | readonly unknown[],
   messages: Message[],
@@ -1647,6 +1658,7 @@ export const runToolLoop = (
       ...CESARE_LOCATION_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) =>
       executeTool(block, dbArg, projectIdArg, fallbackRequirementId),
@@ -1675,6 +1687,7 @@ export const runScreenplayToolLoop = (
       ...CESARE_SCREENPLAY_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
@@ -1708,6 +1721,7 @@ export const runDocumentToolLoop = (
       ...CESARE_DOCUMENT_GEN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
@@ -1745,6 +1759,7 @@ export const runBreakdownToolLoop = (
       ...CESARE_BREAKDOWN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) =>
       executeBreakdownTool(block, dbArg, projectIdArg),
@@ -1772,6 +1787,7 @@ export const runScheduleToolLoop = (
       ...CESARE_SCHEDULE_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
@@ -1802,6 +1818,7 @@ export const runShootingPlanToolLoop = (
       ...CESARE_SHOOTING_PLAN_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: (block, dbArg, projectIdArg) => {
       const readFallthrough = tryExecuteReadTool(block, dbArg, projectIdArg);
@@ -1829,9 +1846,15 @@ interface RunToolLoopArgs {
    *  intent classifier to make propose_* deterministic. */
   forcedFirstTool?: string;
   /**
-   * Legacy Anthropic SDK client — used only when MOCK_AI=true so Playwright
-   * tests can run end-to-end against the scripted mock client without needing
-   * a real API key or a mock LanguageModel provider.
+   * Mock AI SDK language model — used only when MOCK_AI=true. When present,
+   * generateText uses this model instead of anthropic(args.model), so the
+   * entire production code path runs against the scripted mock.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockModel?: any;
+  /**
+   * Legacy Anthropic SDK client — kept for compatibility but superseded by
+   * mockModel. Only used as a fallback if mockModel is not provided.
    */
   legacyMockClient?: LegacyAnthropicClient;
   /** Legacy tool definitions array — required only alongside legacyMockClient. */
@@ -2017,24 +2040,29 @@ const toSystemMessages = (
 const runGenericToolLoop = (
   args: RunToolLoopArgs,
 ): ResultAsync<string, CesareError> => {
-  // MOCK_AI path: use the legacy manual loop so Playwright tests continue to
-  // work end-to-end with the scripted mock client.
-  if (args.legacyMockClient) {
+  // MOCK_AI path (legacy): fall back to the manual loop only when no mock
+  // model was provided. This branch will be removed once all callers pass
+  // mockModel.
+  if (!args.mockModel && args.legacyMockClient) {
     return runLegacyToolLoop(
       args as RunToolLoopArgs & { legacyMockClient: LegacyAnthropicClient },
     );
   }
 
-  // Production path: delegate to generateText which manages the multi-step
-  // tool loop internally. The `executor` is called via tool.execute() in
-  // each AI SDK tool definition — we don't need to wire it manually.
+  // Resolve the language model: mock model when MOCK_AI=true, real Anthropic
+  // model otherwise. Both paths go through the same generateText call.
+  const resolvedModel = args.mockModel ?? anthropic(args.model);
+
+  // Production path (and MOCK_AI-with-mockModel path): delegate to generateText
+  // which manages the multi-step tool loop internally. The `executor` is called
+  // via tool.execute() in each AI SDK tool definition — no manual wiring needed.
   return ResultAsync.fromPromise(
     (async (): Promise<string> => {
       const textAccumulator: string[] = [];
       let toolsExecuted = 0;
 
       const result = await generateText({
-        model: anthropic(args.model),
+        model: resolvedModel,
         system: toSystemMessages(args.systemPrompt) as Parameters<
           typeof generateText
         >[0]["system"],
@@ -3406,6 +3434,7 @@ export const runBudgetToolLoop = (
       ...CESARE_BUDGET_TOOLS,
       ...CESARE_READ_TOOLS,
     ] as unknown as readonly unknown[],
+    mockModel: resolveMockModel(),
     legacyMockClient: resolveMockClient(),
     executor: executeBudgetTool,
   });

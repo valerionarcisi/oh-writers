@@ -690,7 +690,171 @@ const findScenario = (text: string): MockScenario | null => {
   return null;
 };
 
-// ─── Mock client factory ──────────────────────────────────────────────────────
+// ─── AI SDK mock model ────────────────────────────────────────────────────────
+// Uses MockLanguageModelV3 from "ai/test" so the MOCK_AI path runs the same
+// generateText code path as production — only the LLM brain is faked.
+
+import { MockLanguageModelV3 } from "ai/test";
+
+// Type aliases derived from MockLanguageModelV3 so we avoid importing from
+// the transitive @ai-sdk/provider package directly.
+type MockDoGenerateOptions = Parameters<
+  InstanceType<typeof MockLanguageModelV3>["doGenerate"]
+>[0];
+type MockGenerateResult = Awaited<
+  ReturnType<InstanceType<typeof MockLanguageModelV3>["doGenerate"]>
+>;
+
+const FALLBACK_TEXT =
+  "Ho letto la tua richiesta ma non ho strumenti specifici da invocare per questo caso.";
+
+let TOOL_USE_COUNTER = 0;
+const nextToolUseId = (): string => {
+  TOOL_USE_COUNTER += 1;
+  return `mock_tool_use_${TOOL_USE_COUNTER}`;
+};
+
+// Extracts the last user text from an AI SDK LanguageModelV3Prompt. User
+// messages carry content as an array of text-part objects; we flatten them.
+const lastUserTextFromPrompt = (
+  prompt: MockDoGenerateOptions["prompt"],
+): string => {
+  for (let i = prompt.length - 1; i >= 0; i--) {
+    const msg = prompt[i];
+    if (!msg || msg.role !== "user") continue;
+    const parts = msg.content as Array<{ type: string; text?: string }>;
+    const text = parts
+      .filter((p) => p.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join(" ")
+      .trim();
+    if (text) return text;
+  }
+  return "";
+};
+
+// The conversation key uses the first user message so subsequent tool-result
+// turns within the same loop advance the turn index correctly.
+const conversationKeyFromPrompt = (
+  prompt: MockDoGenerateOptions["prompt"],
+): string => {
+  for (const msg of prompt) {
+    if (msg.role !== "user") continue;
+    const parts = msg.content as Array<{ type: string; text?: string }>;
+    const text = parts
+      .filter((p) => p.type === "text" && typeof p.text === "string")
+      .map((p) => p.text as string)
+      .join(" ")
+      .trim();
+    if (text) return text.toLowerCase();
+  }
+  return "<empty>";
+};
+
+const buildGenerateResult = (turn: MockTurn): MockGenerateResult => {
+  const content: MockGenerateResult["content"] = [];
+
+  if (turn.text && turn.text.length > 0) {
+    content.push({ type: "text", text: turn.text });
+  }
+
+  if (turn.tool_uses && turn.tool_uses.length > 0) {
+    for (const tu of turn.tool_uses) {
+      content.push({
+        type: "tool-call",
+        toolCallId: nextToolUseId(),
+        toolName: tu.name,
+        // LanguageModelV3ToolCall.input must be a stringified JSON string
+        input: JSON.stringify(substituteInput(tu.input)),
+      });
+    }
+  }
+
+  const unifiedFinishReason =
+    turn.stop_reason === "tool_use" ? "tool-calls" : "stop";
+
+  return {
+    content,
+    finishReason: { unified: unifiedFinishReason, raw: turn.stop_reason },
+    usage: {
+      inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+      outputTokens: { total: 20, text: 20, reasoning: 0 },
+    },
+    warnings: [],
+  };
+};
+
+export const createMockCesareModel = (): MockLanguageModelV3 =>
+  new MockLanguageModelV3({
+    provider: "mock-cesare",
+    modelId: "mock-cesare-model",
+    doGenerate: async (
+      options: MockDoGenerateOptions,
+    ): Promise<MockGenerateResult> => {
+      const userText = lastUserTextFromPrompt(options.prompt);
+      const key = conversationKeyFromPrompt(options.prompt);
+      const scenario = findScenario(userText);
+
+      if (!scenario) {
+        TURN_INDEX.delete(key);
+        return {
+          content: [{ type: "text", text: FALLBACK_TEXT }],
+          finishReason: { unified: "stop", raw: "end_turn" },
+          usage: {
+            inputTokens: {
+              total: 10,
+              noCache: 10,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: { total: 20, text: 20, reasoning: 0 },
+          },
+          warnings: [],
+        };
+      }
+
+      const idx = TURN_INDEX.get(key) ?? 0;
+      const turn = scenario.turns[idx];
+
+      if (!turn) {
+        TURN_INDEX.delete(key);
+        return {
+          content: [
+            {
+              type: "text",
+              text: scenario.turns.at(-1)?.text ?? FALLBACK_TEXT,
+            },
+          ],
+          finishReason: { unified: "stop", raw: "end_turn" },
+          usage: {
+            inputTokens: {
+              total: 10,
+              noCache: 10,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: { total: 20, text: 20, reasoning: 0 },
+          },
+          warnings: [],
+        };
+      }
+
+      TURN_INDEX.set(key, idx + 1);
+
+      // Reset so the scenario restarts cleanly on the next use.
+      if (idx + 1 >= scenario.turns.length) {
+        TURN_INDEX.delete(key);
+      }
+
+      return buildGenerateResult(turn);
+    },
+  });
+
+// ─── Legacy Anthropic-style client (kept for createMockStreamingClient) ───────
+// The streaming path (callCesare in cesare.server.ts) still uses the raw
+// messages.stream() interface via loadAnthropicStreamingClient. This client
+// is NOT used by the agentic tool loop any more — that path now goes through
+// createMockCesareModel + generateText.
 
 interface AnthropicResponse {
   content: MockContentBlock[];
@@ -702,15 +866,6 @@ interface MockAnthropicMessagesClient {
     create(args: Record<string, unknown>): Promise<AnthropicResponse>;
   };
 }
-
-const FALLBACK_TEXT =
-  "Ho letto la tua richiesta ma non ho strumenti specifici da invocare per questo caso.";
-
-let TOOL_USE_COUNTER = 0;
-const nextToolUseId = (): string => {
-  TOOL_USE_COUNTER += 1;
-  return `mock_tool_use_${TOOL_USE_COUNTER}`;
-};
 
 const turnToBlocks = (turn: MockTurn): MockContentBlock[] => {
   const blocks: MockContentBlock[] = [];
