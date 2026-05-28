@@ -1,53 +1,32 @@
 // packages/ui/src/shell/TopBar/TopBar.tsx
-import { useEffect, useRef, useState } from "react";
-import { Icon } from "../../icons/Icon";
-import type { IconName } from "../../icons/icon-names";
+//
+// Slim per-page top strip. Project identity and section navigation live in
+// the LeftRail now — this header is just the per-page breadcrumb + the
+// slots a page might want to surface (scope chip, version selector, save
+// state, search). On Sceneggiatura the optional `elementLegend` slot adds
+// a second row right under the main one (Fountain element legend).
+//
+// Existing callers (dev/tokens.tsx, legacy AppShell wiring) pass props like
+// `projects`, `sectionGroups`, `onBell`, `onAvatarClick` etc. — those are
+// kept in the type for backwards compatibility but no longer render UI.
+// The shell refactor moves those affordances into the LeftRail and
+// BottomDock.
+
+import type { ReactNode } from "react";
 import type { SaveState } from "../../primitives/SavePill/SavePill";
-import { Presence } from "../../primitives/Presence/Presence";
-import type { PresenceUser } from "../../primitives/Presence/Presence";
-import { ProjectSwitcherPopover } from "./ProjectSwitcherPopover";
+import { Icon } from "../../icons/Icon";
 import type { ProjectSwitcherItem } from "./ProjectSwitcherPopover";
-import { DropdownMenu } from "../../components/DropdownMenu";
 import type { DropdownMenuItem } from "../../components/DropdownMenu";
+import type { PresenceUser } from "../../primitives/Presence/Presence";
 import styles from "./TopBar.module.css";
 
-function SectionMenuItem({
-  section,
-  onPick,
-}: {
-  section: TopBarSection;
-  onPick: (href: string) => void;
-}) {
-  const cls = [
-    styles.sectionItem,
-    section.isActive ? styles.sectionItemActive : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      className={cls}
-      onClick={() => onPick(section.href)}
-    >
-      {section.icon && (
-        <Icon name={section.icon as IconName} size={14} aria-hidden={true} />
-      )}
-      <span>{section.label}</span>
-      {section.isActive && (
-        <span className={styles.sectionItemDot} aria-hidden="true" />
-      )}
-    </button>
-  );
-}
-
+// ─── Public types ──────────────────────────────────────────────
+// We keep the section types exported so consumers like _app.tsx can phase
+// out their use without a hard cut-over. The new `LeftRail` owns the data.
 export type TopBarSection = {
   label: string;
   href: string;
   isActive?: boolean;
-  /** Optional Icon name (from the DS icon sprite). When provided, renders a
-   *  small leading icon — matches the f-ambient mockup section dropdown. */
   icon?: string;
 };
 
@@ -57,406 +36,127 @@ export type TopBarSectionGroup = {
 };
 
 export type TopBarProps = {
-  projectName: string;
+  /** Section / page name shown as the breadcrumb crumb (the rail handles
+   *  navigation; this is purely an in-context label). */
   sectionName: string;
-  /** Whether the page has scrolled past 0 — controls border-bottom appearance */
+
+  /** Whether the page has scrolled past 0 — controls border-bottom appearance. */
   isScrolled?: boolean;
-  saveState?: SaveState;
-  saveSecondsAgo?: number;
-  /** Number of pending Cesare notes — controls the leaf dot animation */
-  cesareNoteCount?: number;
-  /** When true, render a red dot on the brand mark to signal an unseen
-   *  agentic result. Independent from `cesareNoteCount` (action-tracked vs
-   *  conversation-tracked). When count > 0 the count badge takes precedence. */
-  cesareHasUnseen?: boolean;
-  presenceUsers?: PresenceUser[];
-  notificationCount?: number;
-  userInitials: string;
-  /** When provided, clicking the section breadcrumb opens a popover with these
-   *  entries. Each entry navigates via onNavigate(href). */
-  sections?: ReadonlyArray<TopBarSection>;
-  /** Grouped variant of `sections` — when provided, the popover renders
-   *  group labels and dividers between them (e.g. Scrittura / Pre-produzione
-   *  / Produzione). Takes precedence over `sections`. */
-  sectionGroups?: ReadonlyArray<TopBarSectionGroup>;
-  /** When provided, clicking the project breadcrumb opens a popover listing
-   *  these projects. If omitted, the button falls back to onProjectClick. */
-  projects?: ReadonlyArray<ProjectSwitcherItem>;
-  currentProjectId?: string;
-  onProjectSelect?: (id: string) => void;
-  onAllProjects?: () => void;
-  onNavigate?: (href: string) => void;
-  onBrandClick?: () => void;
-  onProjectClick?: () => void;
-  onSectionClick?: () => void;
+
+  /** Optional inline scope chip (e.g. `SOTTOLINEA · 3` on Breakdown). */
+  scopeChip?: ReactNode;
+
+  /** Version selector slot — typically a `VersionTrigger` from the feature. */
+  versionSelector?: ReactNode;
+
+  /** Save state slot — typically a `SavePill` configured by the page. */
+  saveStateSlot?: ReactNode;
+
+  /** When provided, render a second row under the main top-strip. The
+   *  Sceneggiatura page surfaces the Fountain Element Legend here. */
+  elementLegend?: ReactNode;
+
+  /** Click handler for the search button (Command palette trigger). */
   onSearch?: () => void;
+
+  // ── Compatibility-only props (no longer rendered) ─────────────
+  // The shell refactor moves these into LeftRail (project, sections) and
+  // BottomDock (bell, avatar, settings). We still accept them so callers
+  // can phase out without a build break.
+  /** @deprecated Project switching lives in the LeftRail. */
+  projectName?: string;
+  /** @deprecated Section navigation lives in the LeftRail. */
+  sections?: ReadonlyArray<TopBarSection>;
+  /** @deprecated Section navigation lives in the LeftRail. */
+  sectionGroups?: ReadonlyArray<TopBarSectionGroup>;
+  /** @deprecated Project switching lives in the LeftRail. */
+  projects?: ReadonlyArray<ProjectSwitcherItem>;
+  /** @deprecated Project switching lives in the LeftRail. */
+  currentProjectId?: string;
+  /** @deprecated Project switching lives in the LeftRail. */
+  onProjectSelect?: (id: string) => void;
+  /** @deprecated Project switching lives in the LeftRail. */
+  onAllProjects?: () => void;
+  /** @deprecated Section navigation lives in the LeftRail. */
+  onNavigate?: (href: string) => void;
+  /** @deprecated Identity lives in the LeftRail. */
+  onBrandClick?: () => void;
+  /** @deprecated Identity lives in the LeftRail. */
+  onProjectClick?: () => void;
+  /** @deprecated Section navigation lives in the LeftRail. */
+  onSectionClick?: () => void;
+  /** @deprecated Notifications live in the BottomDock. */
   onBell?: () => void;
+  /** @deprecated Cesare entry lives in the BottomDock. */
   onAskCesare?: () => void;
+  /** @deprecated User menu lives in the BottomDock. */
   onAvatarClick?: () => void;
-  /** When provided, clicking the avatar opens a DropdownMenu with these items
-   *  (sign out, settings, etc.). Takes precedence over onAvatarClick. */
+  /** @deprecated User menu lives in the BottomDock. */
   userMenuItems?: DropdownMenuItem[];
+  /** @deprecated Avatar lives in the BottomDock. */
+  userInitials?: string;
+  /** @deprecated Notification count surfaces on the BottomDock bell. */
+  notificationCount?: number;
+  /** @deprecated Save state moved to the `saveStateSlot` slot. */
+  saveState?: SaveState;
+  /** @deprecated Save state moved to the `saveStateSlot` slot. */
+  saveSecondsAgo?: number;
+  /** @deprecated Cesare badging lives on the BottomDock pill. */
+  cesareNoteCount?: number;
+  /** @deprecated Cesare badging lives on the BottomDock pill. */
+  cesareHasUnseen?: boolean;
+  /** @deprecated Presence surfaces in the active page header now. */
+  presenceUsers?: PresenceUser[];
 };
 
 export function TopBar({
-  projectName,
   sectionName,
   isScrolled = false,
-  saveState: _saveState,
-  saveSecondsAgo: _saveSecondsAgo,
-  cesareNoteCount = 0,
-  cesareHasUnseen = false,
-  presenceUsers = [],
-  notificationCount = 0,
-  userInitials,
-  sections,
-  sectionGroups,
-  projects,
-  currentProjectId,
-  onProjectSelect,
-  onAllProjects,
-  onNavigate,
-  onBrandClick,
-  onProjectClick,
-  onSectionClick,
+  scopeChip,
+  versionSelector,
+  saveStateSlot,
+  elementLegend,
   onSearch,
-  onBell,
-  onAskCesare,
-  onAvatarClick,
-  userMenuItems,
 }: TopBarProps) {
-  const [sectionsOpen, setSectionsOpen] = useState(false);
-  const [projectsOpen, setProjectsOpen] = useState(false);
-  const sectionWrapRef = useRef<HTMLSpanElement>(null);
-  const projectWrapRef = useRef<HTMLSpanElement>(null);
-  const hasGroupedMenu =
-    sectionGroups !== undefined && sectionGroups.length > 0;
-  const hasFlatMenu = sections !== undefined && sections.length > 0;
-  const hasSectionMenu = hasGroupedMenu || hasFlatMenu;
-  const hasProjectMenu = projects !== undefined;
-
-  useEffect(() => {
-    if (!sectionsOpen) return;
-    const onDocPointerDown = (e: PointerEvent) => {
-      if (
-        sectionWrapRef.current &&
-        !sectionWrapRef.current.contains(e.target as Node)
-      ) {
-        setSectionsOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSectionsOpen(false);
-    };
-    document.addEventListener("pointerdown", onDocPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDocPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [sectionsOpen]);
-
-  useEffect(() => {
-    if (!projectsOpen) return;
-    const onDocPointerDown = (e: PointerEvent) => {
-      if (
-        projectWrapRef.current &&
-        !projectWrapRef.current.contains(e.target as Node)
-      ) {
-        setProjectsOpen(false);
-      }
-    };
-    document.addEventListener("pointerdown", onDocPointerDown);
-    return () => {
-      document.removeEventListener("pointerdown", onDocPointerDown);
-    };
-  }, [projectsOpen]);
-
-  const handleProjectTriggerClick = () => {
-    if (hasProjectMenu) {
-      setProjectsOpen((v) => !v);
-      return;
-    }
-    onProjectClick?.();
-  };
-
-  const handleProjectPick = (id: string) => {
-    setProjectsOpen(false);
-    onProjectSelect?.(id);
-  };
-
-  const handleAllProjects = () => {
-    setProjectsOpen(false);
-    onAllProjects?.();
-  };
-
-  const handleSectionTriggerClick = () => {
-    if (hasSectionMenu) {
-      setSectionsOpen((v) => !v);
-      return;
-    }
-    onSectionClick?.();
-  };
-
-  const handleSectionPick = (href: string) => {
-    setSectionsOpen(false);
-    onNavigate?.(href);
-  };
-
   return (
     <header
-      className={[styles.topbar, isScrolled ? styles.isScrolled : ""]
+      className={[styles.wrap, isScrolled ? styles.isScrolled : ""]
         .filter(Boolean)
         .join(" ")}
+      data-testid="topstrip"
     >
-      {/* Brand mark */}
-      <button
-        type="button"
-        className={styles.brandMark}
-        onClick={onBrandClick}
-        aria-label="Oh Writers — apri Cesare"
-        aria-expanded="false"
-        aria-haspopup="dialog"
-      >
-        <span className={styles.brandLetter} aria-hidden="true">
-          O
-        </span>
-        {cesareNoteCount > 0 ? (
-          <span
-            className={[styles.cesareDot, styles.cesareDotActive].join(" ")}
-            aria-hidden="true"
-          />
-        ) : cesareHasUnseen ? (
-          <span
-            className={[styles.cesareDot, styles.cesareDotUnseen].join(" ")}
-            aria-hidden="true"
-          />
-        ) : null}
-      </button>
+      <div className={styles.row}>
+        <div className={styles.left}>
+          <span className={styles.crumb}>{sectionName}</span>
+          {scopeChip && <span className={styles.scope}>{scopeChip}</span>}
+        </div>
 
-      {/* Project breadcrumb */}
-      <span className={styles.breadcrumbSep} aria-hidden="true">
-        /
-      </span>
-      <span className={styles.projectWrap} ref={projectWrapRef}>
-        <button
-          type="button"
-          className={styles.breadcrumbBtn}
-          onClick={handleProjectTriggerClick}
-          aria-label={`Progetto: ${projectName} — cambia progetto`}
-          aria-haspopup={hasProjectMenu ? "listbox" : undefined}
-          aria-expanded={hasProjectMenu ? projectsOpen : undefined}
-          data-testid="topbar-project-trigger"
-        >
-          <span className={styles.projectName}>{projectName}</span>
-          <Icon name="chevron-down" size={12} aria-hidden={true} />
-        </button>
-        {hasProjectMenu && projectsOpen && (
-          <ProjectSwitcherPopover
-            projects={projects!}
-            currentProjectId={currentProjectId}
-            onSelect={handleProjectPick}
-            onAllProjects={handleAllProjects}
-            onClose={() => setProjectsOpen(false)}
-          />
-        )}
-      </span>
-
-      <span className={styles.breadcrumbSep} aria-hidden="true">
-        /
-      </span>
-      <span className={styles.sectionWrap} ref={sectionWrapRef}>
-        <button
-          type="button"
-          className={styles.breadcrumbBtn}
-          onClick={handleSectionTriggerClick}
-          aria-label={`Sezione: ${sectionName} — cambia sezione`}
-          aria-haspopup={hasSectionMenu ? "menu" : "listbox"}
-          aria-expanded={sectionsOpen}
-          data-testid="topbar-section-trigger"
-        >
-          <span className={styles.sectionName}>{sectionName}</span>
-          <Icon name="chevron-down" size={12} aria-hidden={true} />
-        </button>
-        {hasSectionMenu && sectionsOpen && (
-          <div
-            role="menu"
-            className={styles.sectionPopover}
-            data-testid="topbar-section-popover"
-          >
-            {hasGroupedMenu
-              ? sectionGroups!.map((group, gIdx) => {
-                  const labelId = `section-group-${gIdx}`;
-                  return (
-                    <div
-                      key={group.label}
-                      className={styles.sectionGroup}
-                      role="group"
-                      aria-labelledby={labelId}
-                    >
-                      {gIdx > 0 && (
-                        <span
-                          className={styles.sectionDivider}
-                          aria-hidden="true"
-                        />
-                      )}
-                      <header id={labelId} className={styles.sectionGroupLabel}>
-                        {group.label}
-                      </header>
-                      {group.items.map((s) => (
-                        <SectionMenuItem
-                          key={s.href}
-                          section={s}
-                          onPick={handleSectionPick}
-                        />
-                      ))}
-                    </div>
-                  );
-                })
-              : sections!.map((s) => (
-                  <SectionMenuItem
-                    key={s.href}
-                    section={s}
-                    onPick={handleSectionPick}
-                  />
-                ))}
-          </div>
-        )}
-      </span>
-
-      <div className={styles.spacer} />
-
-      {/* Save state intentionally not rendered in the TopBar — feature panels
-          surface their own SavePill close to where the editing happens. */}
-
-      {/* Right cluster */}
-      <div className={styles.rightCluster}>
-        {onSearch !== undefined && (
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={onSearch}
-            aria-label="Cerca ⌘K"
-            title="Cerca (⌘K)"
-          >
-            <Icon name="search" size={16} aria-hidden={true} />
-          </button>
-        )}
-
-        {onBell !== undefined && (
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={onBell}
-            aria-label={
-              notificationCount > 0
-                ? `Notifiche — ${notificationCount} nuove`
-                : "Notifiche"
-            }
-            title="Notifiche"
-          >
-            <Icon name="bell" size={16} aria-hidden={true} />
-            {notificationCount > 0 && (
-              <span className={styles.bellBadge} aria-hidden="true" />
-            )}
-          </button>
-        )}
-
-        {onAskCesare !== undefined && (
-          <button
-            type="button"
-            className={styles.askBtn}
-            onClick={onAskCesare}
-            aria-label="Chiedi a Cesare (⌘.)"
-            title="Chiedi a Cesare (⌘.)"
-          >
-            Chiedi a Cesare
-            <span className={styles.askHotkey} aria-hidden="true">
-              ⌘.
-            </span>
-          </button>
-        )}
-
-        {presenceUsers.length > 0 && (
-          <Presence users={presenceUsers} maxVisible={3} />
-        )}
-
-        {(() => {
-          const badge =
-            notificationCount > 0 ? (
-              <span
-                className={styles.avatarBadge}
-                aria-label={`${notificationCount} notifiche non lette`}
-              >
-                {notificationCount > 9 ? "9+" : notificationCount}
-              </span>
-            ) : null;
-          // Avatar: clicking it opens the notification drawer (badge counts
-          // unseen completed actions). The settings/logout menu lives on a
-          // separate gear dropdown right next to it so the two affordances
-          // stop fighting for the same click target.
-          const avatar =
-            onAvatarClick !== undefined ? (
-              <button
-                type="button"
-                className={styles.avatarBtn}
-                onClick={onAvatarClick}
-                aria-label={`Notifiche${notificationCount > 0 ? ` — ${notificationCount} non lette` : ""} (${userInitials})`}
-                title={
-                  notificationCount > 0
-                    ? `${notificationCount} notifiche`
-                    : "Notifiche"
-                }
-              >
-                {userInitials}
-                {badge}
-              </button>
-            ) : (
-              <span
-                className={styles.avatarBtn}
-                aria-label={`Account utente (${userInitials})`}
-                title="Account"
-              >
-                {userInitials}
-                {badge}
-              </span>
-            );
-          return (
-            <>
-              {avatar}
-              {userMenuItems !== undefined && userMenuItems.length > 0 && (
-                <DropdownMenu
-                  trigger={
-                    <button
-                      type="button"
-                      className={styles.gearBtn}
-                      aria-label="Menu utente"
-                      title="Account, impostazioni e logout"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                      </svg>
-                    </button>
-                  }
-                  items={userMenuItems}
-                  align="end"
-                />
-              )}
-            </>
-          );
-        })()}
+        <div className={styles.right}>
+          {onSearch && (
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={onSearch}
+              aria-label="Cerca ⌘K"
+              title="Cerca (⌘K)"
+            >
+              <Icon name="search" size={14} aria-hidden={true} />
+            </button>
+          )}
+          {saveStateSlot && (
+            <span className={styles.saveState}>{saveStateSlot}</span>
+          )}
+          {versionSelector && (
+            <span className={styles.versionSlot}>{versionSelector}</span>
+          )}
+        </div>
       </div>
+
+      {elementLegend && (
+        <div className={styles.legendRow} data-testid="topstrip-legend">
+          {elementLegend}
+        </div>
+      )}
     </header>
   );
 }

@@ -1,0 +1,90 @@
+/* Margin notes column rendered to the right of the prose page.
+ * Width matches the mockup's .notes-col (300px) and falls back to a flex
+ * column with 8px gaps; each child is a CollapsibleNote.
+ */
+
+.column {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block-start: 8px;
+}
+
+/* "Compact" mode: when Cesare's floating sub-window is open the margin
+ * column should collapse every note back to a single-line header so the
+ * editor + Cesare have more breathing room. We hide the disclosed area
+ * inside this column; the note's chevron still rotates if the user opened
+ * it locally before Cesare popped, and the header remains hover-readable.
+ */
+:global(body[data-cesare]:not([data-cesare="closed"]))
+  .column
+  [data-open]
+  [class*="disclosed"] {
+  display: none;
+}
+
+/* ── Loading skeleton ───────────────────────────────────────── */
+
+.skeletonNote {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeletonLine {
+  display: block;
+  height: 8px;
+  border-radius: var(--ds-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--ds-surface-deep) 0%,
+    var(--ds-surface-alt) 50%,
+    var(--ds-surface-deep) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.skeletonShort {
+  width: 32%;
+}
+
+.skeletonMedium {
+  width: 70%;
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    background-position: 100% 50%;
+  }
+  50% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ── Empty / error states ───────────────────────────────────── */
+
+.emptyState {
+  padding: 12px;
+  text-align: center;
+  color: var(--ds-text-3);
+}
+
+.emptyText {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLine {
+    animation: none;
+  }
+}

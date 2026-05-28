@@ -1,11 +1,10 @@
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
   ScreenplayEditor,
   ScreenplayEditorShell,
   ScreenplayElementChips,
-  ScreenplayCesarePanel,
   useScreenplay,
   useVersions,
   type ScreenplayEditorHandle,
@@ -26,7 +25,6 @@ function ScreenplayEditorPage() {
   const screenplayId = result && result.isOk ? result.value.id : "";
   const { data: versionsResult } = useVersions(screenplayId || "");
   const [isCesareOn, setIsCesareOn] = useState(true);
-  const [isCesarePanelOpen, setIsCesarePanelOpen] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
   const [metrics, setMetrics] = useState({
     pageCurrent: 1,
@@ -57,12 +55,6 @@ function ScreenplayEditorPage() {
             },
           ],
     [rawScenes, metrics.sceneCurrent],
-  );
-
-  const handleApplyEdit = useCallback(
-    (find: string, replace: string): boolean =>
-      editorRef.current?.applyEdit(find, replace) ?? false,
-    [],
   );
 
   if (isLoading)
@@ -97,25 +89,14 @@ function ScreenplayEditorPage() {
               : []
           }
           viewbarCenter={
+            // TODO: spec-44 move into TopBar slot once WP-A merges the
+            // `elementLegend` prop. For now the legend lives inside the
+            // Viewbar's centre slot, matching the legacy chrome.
             <ScreenplayElementChips
               currentElement={currentElement}
               onSetElement={(el) => editorRef.current?.setElement(el)}
             />
           }
-          cesarePanel={
-            <ScreenplayCesarePanel
-              projectId={id}
-              screenplayId={value.id}
-              versionId={value.currentVersionId ?? null}
-              pageCurrent={metrics.pageCurrent}
-              pageTotal={metrics.pageTotal}
-              sceneCurrent={metrics.sceneCurrent}
-              sceneTotal={metrics.sceneTotal}
-              onApplyEdit={handleApplyEdit}
-            />
-          }
-          isCesarePanelOpen={isCesarePanelOpen}
-          onToggleCesarePanel={() => setIsCesarePanelOpen((v) => !v)}
         >
           <ScreenplayEditor
             ref={editorRef}

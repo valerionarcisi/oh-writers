@@ -166,6 +166,21 @@ export type {
   DockAction,
 } from "./shell/FloatingDock/FloatingDock";
 
+export { LeftRail } from "./shell/LeftRail/LeftRail";
+export type {
+  LeftRailProps,
+  RailNavItem,
+  RailSection,
+  RailToolItem,
+  CesareSessionItem,
+} from "./shell/LeftRail/LeftRail";
+
+export { BottomDock } from "./shell/BottomDock/BottomDock";
+export type {
+  BottomDockProps,
+  BottomDockUser,
+} from "./shell/BottomDock/BottomDock";
+
 export { CommandPalette } from "./shell/CommandPalette/CommandPalette";
 export type {
   CommandPaletteProps,
@@ -184,3 +199,88 @@ export type {
   MarginNoteProps,
   MarginNoteKind,
 } from "./composites/MarginNote/MarginNote";
+
+// ─── CesareDrawer (Notion-class) ─────────────────────────────
+export { CesareDrawer } from "./composites/CesareDrawer/CesareDrawer";
+export type {
+  CesareDrawerProps,
+  CesareDrawerSession,
+  CesareDrawerScope,
+  CesareDrawerContextTag,
+  CesareDrawerDockIcons,
+  CesareDrawerComposerProps,
+} from "./composites/CesareDrawer/CesareDrawer";
+export {
+  useDrawerState,
+  drawerReducer,
+} from "./composites/CesareDrawer/use-drawer-state";
+export type {
+  CesareDrawerState,
+  UseDrawerStateOptions,
+  UseDrawerStateResult,
+} from "./composites/CesareDrawer/use-drawer-state";
+export {
+  useDrawerResize,
+  readPersistedSize,
+  DRAWER_SIZE_STORAGE_KEYS,
+} from "./composites/CesareDrawer/use-drawer-resize";
+export type {
+  ResizeAxis,
+  UseDrawerResizeOptions,
+  UseDrawerResizeResult,
+} from "./composites/CesareDrawer/use-drawer-resize";
+
+// ─── Rail hover-reveal ───────────────────────────────────────
+export { useRailReveal } from "./shell/LeftRail/use-rail-reveal";
+export type {
+  UseRailRevealOptions,
+  UseRailRevealResult,
+} from "./shell/LeftRail/use-rail-reveal";
+
+// ─── CollapsibleNote ────────────────────────────────────────
+export { CollapsibleNote } from "./composites/CollapsibleNote/CollapsibleNote";
+export type {
+  CollapsibleNoteProps,
+  CollapsibleNoteKind,
+} from "./composites/CollapsibleNote/CollapsibleNote";
+
+// ─── SplitDrawer (Notion `»` pattern) ───────────────────────
+export { SplitDrawer } from "./composites/SplitDrawer/SplitDrawer";
+export type {
+  SplitDrawerProps,
+  SplitDrawerSize,
+} from "./composites/SplitDrawer/SplitDrawer";
+export {
+  useSplitDrawerState,
+  splitDrawerReducer,
+} from "./composites/SplitDrawer/use-split-drawer-state";
+export type {
+  SplitDrawerState,
+  UseSplitDrawerStateOptions,
+  UseSplitDrawerStateResult,
+} from "./composites/SplitDrawer/use-split-drawer-state";
+export {
+  useSplitDrawerResize,
+  readPersistedSplitSize,
+  SPLIT_DRAWER_STORAGE_KEYS,
+} from "./composites/SplitDrawer/use-split-drawer-resize";
+export type {
+  UseSplitDrawerResizeOptions,
+  UseSplitDrawerResizeResult,
+} from "./composites/SplitDrawer/use-split-drawer-resize";
+
+// ─── TargetPagePreview (trace overlay inside SplitDrawer) ───
+export {
+  TargetPagePreview,
+  registerPageTraceView,
+  getPageTraceView,
+} from "./composites/TargetPagePreview/TargetPagePreview";
+export type {
+  TargetPagePreviewProps,
+  TargetPageRef,
+  TargetPageKind,
+  TraceMarker,
+  TraceMarkerKind,
+  PageTraceViewProps,
+  PageTraceViewComponent,
+} from "./composites/TargetPagePreview/TargetPagePreview";

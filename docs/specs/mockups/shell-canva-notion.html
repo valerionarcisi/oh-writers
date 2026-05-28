@@ -35,12 +35,16 @@
   body[data-mode="column"][data-cesare="expanded"] .shell{grid-template-columns:240px 1fr 440px}
   /* Mode = float: Cesare floating sub-window — editor full-width always */
   body[data-mode="float"] .shell{grid-template-columns:240px 1fr 0}
-  /* AppShell collapse: rail to icons, topstrip slim */
-  body[data-shell="collapsed"] .shell{grid-template-columns:56px 1fr 0}
-  body[data-shell="collapsed"][data-mode="column"][data-cesare="expanded"] .shell{grid-template-columns:56px 1fr 440px}
+  /* expanded-split: Cesare anchored as a slim right column, full-height */
+  body[data-cesare="expanded-split"] .shell{grid-template-columns:240px 1fr 480px}
+  /* AppShell collapse: rail hidden (overlay on hover-reveal) */
+  body[data-shell="collapsed"] .shell{grid-template-columns:0 1fr 0}
+  body[data-shell="collapsed"][data-mode="column"][data-cesare="expanded"] .shell{grid-template-columns:0 1fr 440px}
+  body[data-shell="collapsed"][data-cesare="expanded-split"] .shell{grid-template-columns:0 1fr 480px}
+  body[data-shell="focus"] .shell{grid-template-columns:0 1fr 0}
 
   /* ── Left rail ── */
-  .rail{background:var(--linen-100);border-right:1px solid var(--linen-300);padding:14px 10px;display:flex;flex-direction:column;gap:16px;overflow:auto;height:100vh;position:sticky;top:0}
+  .rail{background:var(--linen-100);border-right:1px solid var(--linen-300);padding:14px 10px;display:flex;flex-direction:column;gap:16px;overflow:auto;height:100vh;position:sticky;top:0;grid-column:1}
   .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 8px}
   .brand-mark{width:26px;height:26px;border-radius:50%;background:var(--linen-800);color:var(--linen-50);font-family:var(--font-display);display:grid;place-items:center;font-weight:600}
   .brand-name{font-family:var(--font-display);font-size:15px}
@@ -59,19 +63,42 @@
   .rail-item .meta{margin-left:auto;font-size:11px;color:var(--linen-500)}
   .rail-spacer{flex:1;min-height:8px}
 
-  /* Collapsed rail — only icons visible */
-  body[data-shell="collapsed"] .rail{padding:14px 6px;gap:10px}
-  body[data-shell="collapsed"] .rail-brand .brand-name,
-  body[data-shell="collapsed"] .rail-project,
-  body[data-shell="collapsed"] .rail-section-label,
-  body[data-shell="collapsed"] .rail-item:not(.active) > :not(.glyph),
-  body[data-shell="collapsed"] .rail-item .meta,
-  body[data-shell="collapsed"] .rail-sessions{display:none}
-  body[data-shell="collapsed"] .rail-item{justify-content:center;padding:8px 0}
-  body[data-shell="collapsed"] .rail-item.active{background:transparent;box-shadow:none}
-  body[data-shell="collapsed"] .rail-item.active .glyph{color:var(--clay-500);background:var(--white);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;box-shadow:var(--shadow-1)}
-  body[data-shell="collapsed"] .rail-tools{grid-template-columns:1fr;gap:4px}
+  /* Collapsed rail — hidden by default (grid column is 0) and revealed
+     as a TEMPORARY overlay when data-rail-reveal="open" (set by the hover
+     sentinel at the left viewport edge). */
+  body[data-shell="collapsed"] .rail,
+  body[data-shell="focus"] .rail{display:none}
+  body[data-shell="collapsed"][data-rail-reveal="open"] .rail{
+    display:flex;position:fixed;top:0;left:0;height:100vh;width:240px;z-index:320;
+    box-shadow:var(--shadow-3);background:var(--linen-100);
+    border-right:1px solid var(--linen-300);padding:14px 10px;gap:16px;
+    animation:rail-slide-in .25s cubic-bezier(.2,.7,.2,1) both
+  }
+  @keyframes rail-slide-in{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
   body[data-shell="collapsed"] .topstrip{padding:8px 14px}
+
+  /* Hover sentinel — 4px-wide column on the left edge that captures pointer
+     events. Invisible to the user. Disabled (no pointer events) outside the
+     collapsed shell state. */
+  .rail-sentinel{position:fixed;top:0;left:0;width:4px;height:100vh;z-index:330;background:transparent;pointer-events:none}
+  body[data-shell="collapsed"]:not([data-shell="focus"]) .rail-sentinel{pointer-events:auto}
+  body[data-shell="full"] .rail-sentinel,
+  body[data-shell="focus"] .rail-sentinel{pointer-events:none}
+
+  /* Lock-open chip (» in the revealed rail header) — only visible when
+     hover-revealed. */
+  .rail-lock-open{position:absolute;top:14px;right:10px;width:24px;height:24px;
+    display:none;place-items:center;background:transparent;border:none;color:var(--linen-600);
+    cursor:pointer;border-radius:6px;font-size:14px;z-index:1}
+  .rail-lock-open:hover{background:var(--linen-200);color:var(--linen-800)}
+  body[data-shell="collapsed"][data-rail-reveal="open"] .rail-lock-open{display:grid}
+
+  /* Hamburger button — visible in collapsed but not in focus. */
+  .hamburger{position:fixed;top:14px;left:14px;width:28px;height:28px;display:none;place-items:center;
+    background:var(--white);border:1px solid var(--linen-300);border-radius:6px;color:var(--linen-700);
+    cursor:pointer;box-shadow:var(--shadow-1);z-index:340;font-size:14px}
+  body[data-shell="collapsed"] .hamburger{display:grid}
+  .hamburger:hover{background:var(--linen-100)}
   .rail-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 4px;border-top:1px solid var(--linen-300)}
   .tool-btn{aspect-ratio:1;display:grid;place-items:center;border-radius:6px;color:var(--linen-600);cursor:pointer;font-size:13px}
   .tool-btn:hover{background:var(--linen-200);color:var(--linen-800)}
@@ -85,7 +112,7 @@
   .rail-sessions .session .glyph{color:var(--leaf-500);font-size:11px}
 
   /* ── Main column ── */
-  .main{display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden}
+  .main{display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden;grid-column:2}
   .topstrip{display:flex;align-items:center;justify-content:space-between;padding:10px 22px;border-bottom:1px solid var(--linen-300);background:var(--linen-50);flex-shrink:0}
   .ts-left{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--linen-700)}
   .ts-left .crumb{font-family:var(--font-display);font-weight:500;font-size:15px}
@@ -175,13 +202,17 @@
 
   /* ── Cesare Panel ── */
   /* COLUMN mode — reserved right column */
-  .cesare{background:var(--linen-50);border-left:1px solid var(--linen-300);display:none;flex-direction:column;overflow:hidden;height:100vh;position:sticky;top:0}
+  .cesare{background:var(--linen-50);border-left:1px solid var(--linen-300);display:none;flex-direction:column;overflow:hidden;height:100vh;position:sticky;top:0;grid-column:3}
   body[data-mode="column"][data-cesare="expanded"] .cesare{display:flex}
   /* FLOAT mode — Notion-style floating sub-window bottom-right */
-  body[data-mode="float"][data-cesare="expanded"] .cesare{display:flex;position:fixed;right:18px;bottom:18px;top:auto;left:auto;width:min(480px,40vw);height:min(640px,76vh);border:1px solid var(--linen-300);border-radius:var(--radius-lg);box-shadow:var(--shadow-4);z-index:310;background:var(--white)}
+  body[data-mode="float"][data-cesare="expanded"] .cesare{display:flex;position:fixed;right:18px;bottom:18px;top:auto;left:auto;width:min(480px,40vw);height:min(640px,76vh);border:1px solid var(--linen-300);border-radius:var(--radius-lg);box-shadow:var(--shadow-4);z-index:310;background:var(--white);animation:drawer-expand-in .25s cubic-bezier(.2,.7,.2,1) both;transform-origin:bottom right}
   body[data-mode="float"] .cesare .ces-head{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+  /* EXPANDED-SPLIT — anchored right column with left-edge drag handle */
+  body[data-cesare="expanded-split"] .cesare{display:flex;position:sticky;top:0;height:100vh;background:var(--white);border-left:1px solid var(--linen-300);box-shadow:var(--shadow-2);width:100%;animation:drawer-slide-from-right .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-cesare="expanded-split"] .cesare .ces-head{border-radius:0}
+  body[data-cesare="expanded-split"] .dock{display:none}
   /* FULL-PAGE — Cesare drawer expands over the whole viewport (Notion ↗) */
-  body[data-cesare="full"] .cesare{display:flex;position:fixed;inset:0;width:auto;height:100vh;border:0;border-radius:0;box-shadow:none;background:var(--linen-50);z-index:500}
+  body[data-cesare="full"] .cesare{display:flex;position:fixed;inset:0;width:auto;height:100vh;border:0;border-radius:0;box-shadow:none;background:var(--linen-50);z-index:500;animation:drawer-scale-up .25s cubic-bezier(.2,.7,.2,1) both}
   body[data-cesare="full"] .cesare .ces-head{border-radius:0;padding:14px 28px}
   body[data-cesare="full"] .ces-body{max-width:780px;margin:0 auto;padding:28px 32px}
   body[data-cesare="full"] .ces-quick,
@@ -193,6 +224,28 @@
   body[data-cesare="full"] .cesare-min{display:none}
   /* The ↗ button in Cesare header triggers full-page */
   .ces-iconbtn.expand-fullpage:hover{background:var(--leaf-50);color:var(--leaf-500)}
+
+  /* ── Drawer animations ── */
+  @keyframes drawer-expand-in{from{opacity:0;transform:scale(.85) translate(8%,12%)}to{opacity:1;transform:scale(1) translate(0,0)}}
+  @keyframes drawer-slide-from-right{from{opacity:0;transform:translateX(8%)}to{opacity:1;transform:translateX(0)}}
+  @keyframes drawer-scale-up{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+  /* ── Drag handles ── */
+  /* Top edge — height resize in expanded */
+  .drag-handle-top{position:absolute;top:-3px;left:0;right:0;height:6px;cursor:ns-resize;z-index:2;background:transparent;display:none}
+  body[data-mode="float"][data-cesare="expanded"] .drag-handle-top{display:block}
+  .drag-handle-top::after{content:"";position:absolute;left:50%;top:2px;transform:translateX(-50%);width:36px;height:3px;border-radius:2px;background:var(--linen-300);opacity:0;transition:opacity .15s ease}
+  .drag-handle-top:hover::after{opacity:1}
+  /* Left edge — width resize in expanded-split */
+  .drag-handle-left{position:absolute;top:0;bottom:0;left:-3px;width:6px;cursor:ew-resize;z-index:2;background:transparent;display:none}
+  body[data-cesare="expanded-split"] .drag-handle-left{display:block}
+  .drag-handle-left::after{content:"";position:absolute;top:50%;left:2px;transform:translateY(-50%);height:36px;width:3px;border-radius:2px;background:var(--linen-300);opacity:0;transition:opacity .15s ease}
+  .drag-handle-left:hover::after{opacity:1}
+
+  @media (prefers-reduced-motion: reduce){
+    .cesare{animation:none !important}
+    body[data-shell="collapsed"][data-rail-reveal="open"] .rail{animation:none}
+  }
   .ces-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--linen-200);background:var(--linen-50);flex-shrink:0}
   .ces-head-l{display:flex;align-items:center;gap:8px}
   .ces-agent{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--leaf-500);font-weight:600}
@@ -295,9 +348,67 @@
   body[data-view="breakdown"]    .view-breakdown{display:contents}
   body[data-view="budget"]       .view-budget{display:contents}
   body[data-view="locations"]    .view-locations{display:contents}
+
+  /* ── SplitDrawer (Notion `»` pattern) ── */
+  /* Diff tokens used inside the trace overlay */
+  :root{
+    --diff-add-bg:rgba(90,107,60,.13);--diff-add-fg:var(--leaf-500);
+    --diff-remove-bg:rgba(179,58,40,.10);--diff-remove-fg:#b33a28;
+    --diff-change-bg:rgba(139,58,26,.10);--diff-intra:rgba(139,58,26,.28);
+  }
+  .split-drawer{position:fixed;inset-block:0;inset-inline-end:0;width:480px;background:var(--white);border-inline-start:1px solid var(--linen-300);box-shadow:var(--shadow-2);z-index:305;display:none;flex-direction:column;overflow:hidden;font-family:var(--font-sans);color:var(--linen-800);transition:width .25s cubic-bezier(.2,.7,.2,1)}
+  body[data-split-drawer="open"] .split-drawer{display:flex;animation:split-slide-in .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-split-drawer="full"] .split-drawer{display:flex;inset:0;width:100vw;background:var(--linen-50);border-inline-start:none;box-shadow:none;z-index:500;animation:split-scale-up .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-split-drawer="full"] .rail,body[data-split-drawer="full"] .topstrip,body[data-split-drawer="full"] .dock,body[data-split-drawer="full"] .shell-collapse{display:none}
+  /* When a SplitDrawer is open alongside full-page Cesare, Cesare narrows */
+  body[data-split-drawer="open"][data-cesare="full"] .cesare{width:calc(100vw - 480px);left:auto;right:480px;inset-inline-end:480px}
+  body[data-split-drawer="full"][data-cesare="full"] .cesare{display:none}
+  @keyframes split-slide-in{from{opacity:0;transform:translateX(8%)}to{opacity:1;transform:translateX(0)}}
+  @keyframes split-scale-up{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  .split-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-block-end:1px solid var(--linen-300);background:var(--linen-50);flex-shrink:0}
+  .split-head h2{margin:0;font-family:var(--font-display);font-size:14px;color:var(--linen-800);font-weight:600}
+  .split-head .badge{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-600);padding:2px 8px;background:var(--linen-100);border-radius:var(--radius-pill)}
+  .split-head-l{display:flex;align-items:center;gap:8px}
+  .split-head-r{display:flex;align-items:center;gap:2px}
+  .split-iconbtn{width:24px;height:24px;display:grid;place-items:center;color:var(--linen-600);border-radius:5px;cursor:pointer;font-size:13px;background:transparent;border:0}
+  .split-iconbtn:hover{background:var(--linen-100)}
+  .split-body{flex:1;overflow:hidden auto;background:var(--white);display:grid;grid-template-columns:152px 1fr;gap:12px}
+  .split-timeline{display:flex;flex-direction:column;gap:2px;padding:12px 8px;border-inline-end:1px solid var(--linen-200);overflow-y:auto;background:var(--linen-50)}
+  .split-timeline-lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--linen-500);padding:4px 8px}
+  .split-marker{display:flex;align-items:center;gap:6px;padding:5px 8px;border:0;background:transparent;border-radius:5px;color:var(--linen-700);font:inherit;font-size:12px;cursor:pointer;text-align:start}
+  .split-marker:hover{background:var(--linen-100);color:var(--linen-800)}
+  .split-marker .g{width:14px;text-align:center;color:var(--leaf-500)}
+  .split-marker.replace .g{color:var(--clay-500)}
+  .split-marker.delete .g{color:#b33a28}
+  .split-preview{padding:14px 16px 24px;overflow-y:auto}
+  .split-marker-block{padding:6px 10px;margin:10px 0;border-radius:var(--radius-sm);font-size:13px;line-height:1.55;scroll-margin-block-start:80px}
+  .split-marker-block.append{background:var(--diff-add-bg);border-inline-start:3px solid var(--diff-add-fg)}
+  .split-marker-block.delete{background:var(--diff-remove-bg);border-inline-start:3px solid var(--diff-remove-fg);text-decoration:line-through;color:var(--linen-700)}
+  .split-marker-block.replace,.split-marker-block.rename{background:var(--diff-change-bg);border-inline-start:3px solid var(--diff-intra);display:flex;flex-direction:column;gap:4px}
+  .split-marker-block .hd{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-500);display:flex;gap:6px;align-items:center}
+  .split-marker-block .before{text-decoration:line-through;color:var(--linen-600);opacity:.75}
+  .split-marker-block .after{color:var(--linen-800)}
+  .split-marker-block .actions{display:flex;gap:6px;margin-top:6px}
+  .split-marker-block .actions button{font-size:11.5px;padding:3px 10px;border-radius:5px;background:transparent;cursor:pointer}
+  .split-marker-block .actions .accept{border:1px solid var(--diff-add-fg);color:var(--leaf-500)}
+  .split-marker-block .actions .accept:hover{background:var(--diff-add-bg)}
+  .split-marker-block .actions .reject{border:1px solid var(--diff-remove-fg);color:#b33a28}
+  .split-marker-block .actions .reject:hover{background:var(--diff-remove-bg)}
+  .split-foot{flex-shrink:0;padding:10px 16px;border-block-start:1px solid var(--linen-300);background:var(--linen-50);display:flex;align-items:center;gap:10px}
+  .split-foot button{font-size:12px;padding:5px 12px;border-radius:5px;background:transparent;cursor:pointer}
+  .split-foot .accept-all{border:1px solid var(--diff-add-fg);color:var(--leaf-500)}
+  .split-foot .accept-all:hover{background:var(--diff-add-bg)}
+  .split-foot .reject-all{border:1px solid var(--linen-300);color:var(--linen-700)}
+  .split-foot .reject-all:hover{background:var(--linen-200)}
+  .split-foot .count{margin-inline-start:auto;color:var(--linen-500);font-size:11.5px}
+  .split-stub-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--linen-100);border-radius:5px;margin-block-end:12px;font-size:12px;color:var(--linen-600)}
+  .split-stub-header strong{color:var(--linen-800);font-family:var(--font-display)}
+  @media (prefers-reduced-motion: reduce){
+    .split-drawer{animation:none !important}
+  }
 </style>
 </head>
-<body data-cesare="expanded" data-view="breakdown" data-mode="column" data-shell="expanded">
+<body data-cesare="expanded" data-view="breakdown" data-mode="column" data-shell="expanded" data-split-drawer="closed">
 
 <!-- DEMO TOOLBAR -->
 <div class="demo-bar">
@@ -313,6 +424,7 @@
     <span class="lbl">Cesare</span>
     <button data-cesare="closed">Closed</button>
     <button data-cesare="expanded" class="on">Expanded</button>
+    <button data-cesare="expanded-split">Expanded-split</button>
     <button data-cesare="peek">Peek</button>
     <button data-cesare="full">Full-page</button>
   </div>
@@ -324,9 +436,21 @@
   <div class="demo-row">
     <span class="lbl">Shell</span>
     <button data-shell="expanded" class="on">Full</button>
-    <button data-shell="collapsed">Focus (collapsed)</button>
+    <button data-shell="collapsed">Collapsed</button>
+    <button data-shell="focus">Focus</button>
+  </div>
+  <div class="demo-row">
+    <span class="lbl">Split</span>
+    <button data-split-drawer="closed" class="on">Closed</button>
+    <button data-split-drawer="open">Open</button>
+    <button data-split-drawer="full">Full</button>
+    <button id="trace-flow-btn" style="margin-inline-start:6px">★ Trace flow</button>
   </div>
 </div>
+
+<!-- Hover sentinel + hamburger (visible only in collapsed mode) -->
+<div class="rail-sentinel" id="rail-sentinel"></div>
+<button class="hamburger" id="hamburger" title="Apri sidebar">&#9776;</button>
 
 <!-- Shell collapse button (always available) -->
 <button class="shell-collapse" id="shell-collapse-btn" title="Collassa AppShell (Focus)">&laquo;</button>
@@ -334,7 +458,8 @@
 <div class="shell">
 
   <!-- ─── LEFT RAIL ─────────────────────────────────────────────── -->
-  <aside class="rail">
+  <aside class="rail" id="rail">
+    <button class="rail-lock-open" id="rail-lock-open" title="Mantieni sidebar aperta">&raquo;</button>
     <div class="rail-brand">
       <div class="brand-mark">O</div>
       <div class="brand-name">Oh Writers</div>
@@ -658,14 +783,17 @@
 
   <!-- ─── CESARE PANEL ──────────────────────────────────────────── -->
   <aside class="cesare">
+    <!-- Drag handles (only painted in the relevant state via CSS) -->
+    <div class="drag-handle-top" title="Trascina per ridimensionare altezza"></div>
+    <div class="drag-handle-left" title="Trascina per ridimensionare larghezza"></div>
     <header class="ces-head">
       <div class="ces-head-l">
         <span class="ces-agent">Cesare</span>
         <span class="ces-context" id="ces-ctx">BREAKDOWN</span>
       </div>
       <div class="ces-head-r">
-        <button class="ces-iconbtn expand-fullpage" title="Espandi a pagina" data-cesare="full">&#8599;</button>
-        <button class="ces-iconbtn" title="Riduci a sub-window" data-cesare="expanded">&#8601;</button>
+        <button class="ces-iconbtn expand-fullpage" title="Cycle (↗)" data-cesare-cycle>&#8599;</button>
+        <button class="ces-iconbtn" title="Step back (↙)" data-cesare-step>&#8601;</button>
         <button class="ces-iconbtn" title="Minimizza" data-cesare="peek">&minus;</button>
         <button class="ces-iconbtn" title="Chiudi" data-cesare="closed">&times;</button>
       </div>
@@ -728,6 +856,68 @@
 
 </div>
 
+<!-- ─── SPLIT DRAWER (Notion `»` pattern) ───────────────────────── -->
+<aside class="split-drawer" id="split-drawer" role="complementary" aria-label="Anteprima Soggetto - modalità trace">
+  <header class="split-head">
+    <div class="split-head-l">
+      <span class="badge">Soggetto · Atto II</span>
+      <h2>Anteprima Soggetto</h2>
+    </div>
+    <div class="split-head-r">
+      <button class="split-iconbtn" title="Espandi (↗)" id="split-cycle">&#8599;</button>
+      <button class="split-iconbtn" title="Step back (↙)" id="split-step">&#8601;</button>
+      <button class="split-iconbtn" title="Chiudi" data-split-drawer="closed">&times;</button>
+    </div>
+  </header>
+  <div class="split-body">
+    <aside class="split-timeline" aria-label="Trace timeline">
+      <span class="split-timeline-lbl">Modifiche</span>
+      <button class="split-marker replace" data-jump="m1"><span class="g">&#8634;</span>Atto II · §3</button>
+      <button class="split-marker append" data-jump="m2"><span class="g">+</span>Atto II · §5 (nuovo)</button>
+      <button class="split-marker rename" data-jump="m3"><span class="g">&#9998;</span>Personaggio · Tea</button>
+      <button class="split-marker delete" data-jump="m4"><span class="g">&minus;</span>Atto II · §7</button>
+    </aside>
+    <div class="split-preview" id="split-preview">
+      <div class="split-stub-header">
+        <span aria-hidden="true">&#10026;</span>
+        <strong>Soggetto · Atto II</strong>
+        <span>· modalità trace</span>
+      </div>
+
+      <div class="split-marker-block replace" id="trace-marker-m1">
+        <div class="hd"><span aria-hidden="true">&#8634;</span><span>replace</span><span>·</span><span>Atto II · §3</span></div>
+        <div class="before">Filippo guarda fuori, distratto. Pensa al nonno.</div>
+        <div class="after">Filippo guarda fuori, una mano appoggiata al vetro. Vede il riflesso del nonno alle sue spalle, sorride.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block append" id="trace-marker-m2">
+        <div class="hd"><span aria-hidden="true">+</span><span>append</span><span>·</span><span>Atto II · §5</span></div>
+        <div class="after">Tea entra, scuote la testa. "Stai parlando da solo, Filippo." Lui non risponde.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block rename" id="trace-marker-m3">
+        <div class="hd"><span aria-hidden="true">&#9998;</span><span>rename</span><span>·</span><span>Personaggio</span></div>
+        <div class="before">Teresa</div>
+        <div class="after">Tea</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block delete" id="trace-marker-m4">
+        <div class="hd"><span aria-hidden="true">&minus;</span><span>delete</span><span>·</span><span>Atto II · §7</span></div>
+        <div class="before">Giulio entra, lo guarda, esce. Pausa lunga.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+    </div>
+  </div>
+  <footer class="split-foot">
+    <button class="accept-all">Accetta tutto</button>
+    <button class="reject-all">Rifiuta tutto</button>
+    <span class="count">4 modifiche in sospeso</span>
+  </footer>
+</aside>
+
 <!-- ─── BOTTOM DOCK (bottom-right) ──────────────────────────────── -->
 <div class="dock">
   <button class="dock-btn bell" title="Notifiche">&#128276;<span class="dot"></span></button>
@@ -761,7 +951,29 @@
   function setCesare(c){
     document.body.dataset.cesare = c;
     document.querySelectorAll('.demo-row [data-cesare]').forEach(b=>b.classList.toggle('on', b.dataset.cesare===c));
-    document.querySelector('.rail-sessions-label').style.display = c==='expanded'?'flex':'none';
+    const lbl = document.querySelector('.rail-sessions-label');
+    if(lbl) lbl.style.display = (c==='expanded'||c==='expanded-split'||c==='full')?'flex':'none';
+  }
+
+  /** Drawer state cycle: closed → expanded → expanded-split → full → expanded */
+  function cycleCesare(){
+    const cur = document.body.dataset.cesare;
+    const next = cur==='closed'?'expanded'
+               :cur==='peek'?'expanded'
+               :cur==='expanded'?'expanded-split'
+               :cur==='expanded-split'?'full'
+               :cur==='full'?'expanded'
+               :'expanded';
+    setCesare(next);
+  }
+  function stepBackCesare(){
+    const cur = document.body.dataset.cesare;
+    const prev = cur==='full'?'expanded-split'
+              :cur==='expanded-split'?'expanded'
+              :cur==='expanded'?'closed'
+              :cur==='peek'?'expanded'
+              :'closed';
+    setCesare(prev);
   }
 
   function setMode(m){
@@ -772,6 +984,8 @@
     document.body.dataset.shell = s;
     document.querySelectorAll('.demo-row [data-shell]').forEach(b=>b.classList.toggle('on', b.dataset.shell===s));
     const btn=document.getElementById('shell-collapse-btn'); if(btn) btn.innerHTML = s==='collapsed' ? '&raquo;' : '&laquo;';
+    // Clear any lingering hover-reveal when leaving collapsed.
+    if(s!=='collapsed') document.body.removeAttribute('data-rail-reveal');
   }
 
   // bind demo toggles
@@ -788,6 +1002,12 @@
   document.querySelectorAll('[data-cesare]:not(.demo-row [data-cesare])').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();setCesare(el.dataset.cesare)});
   });
+  document.querySelectorAll('[data-cesare-cycle]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();cycleCesare()});
+  });
+  document.querySelectorAll('[data-cesare-step]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();stepBackCesare()});
+  });
   document.querySelector('.dock-cesare').addEventListener('click',e=>{
     e.stopPropagation();
     setCesare(document.body.dataset.cesare==='expanded'?'closed':'expanded');
@@ -798,9 +1018,127 @@
     n.addEventListener('click',()=>n.classList.toggle('open'));
   });
 
+  // ── Hover-reveal sentinel (collapsed shell) ──
+  let hoverHideTimer = null;
+  function clearHoverHide(){ if(hoverHideTimer){ clearTimeout(hoverHideTimer); hoverHideTimer=null; } }
+  function revealRail(){
+    if(document.body.dataset.shell!=='collapsed') return;
+    clearHoverHide();
+    document.body.setAttribute('data-rail-reveal','open');
+  }
+  function scheduleHideRail(){
+    if(document.body.dataset.shell!=='collapsed') return;
+    clearHoverHide();
+    hoverHideTimer = setTimeout(()=>{
+      document.body.removeAttribute('data-rail-reveal');
+      hoverHideTimer = null;
+    }, 300);
+  }
+  const sentinel = document.getElementById('rail-sentinel');
+  const railEl = document.getElementById('rail');
+  if(sentinel){
+    sentinel.addEventListener('mouseenter', revealRail);
+    sentinel.addEventListener('mouseleave', scheduleHideRail);
+  }
+  if(railEl){
+    railEl.addEventListener('mouseenter', revealRail);
+    railEl.addEventListener('mouseleave', scheduleHideRail);
+  }
+
+  // ── Lock-open chip (» inside the revealed rail) ──
+  const lockBtn = document.getElementById('rail-lock-open');
+  if(lockBtn){
+    lockBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      clearHoverHide();
+      document.body.removeAttribute('data-rail-reveal');
+      setShell('expanded');
+    });
+  }
+
+  // ── Hamburger (collapsed mode) — toggles the rail reveal manually ──
+  const hamburger = document.getElementById('hamburger');
+  if(hamburger){
+    hamburger.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(document.body.getAttribute('data-rail-reveal')==='open'){
+        document.body.removeAttribute('data-rail-reveal');
+      } else {
+        document.body.setAttribute('data-rail-reveal','open');
+      }
+    });
+  }
+
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown',e=>{
+    // ⌘\ — toggle full / collapsed
+    if((e.metaKey||e.ctrlKey) && e.key==='\\'){
+      e.preventDefault();
+      setShell(document.body.dataset.shell==='full'||document.body.dataset.shell==='expanded'?'collapsed':'expanded');
+    }
+    // ⌃⌥F — focus mode
+    if(e.ctrlKey && e.altKey && (e.key==='f'||e.key==='F')){
+      e.preventDefault();
+      setShell(document.body.dataset.shell==='focus'?'expanded':'focus');
+    }
+  });
+
+  // ── SplitDrawer ─────────────────────────────────────────────
+  function setSplit(s){
+    document.body.dataset.splitDrawer = s;
+    document.querySelectorAll('.demo-row [data-split-drawer]').forEach(b=>b.classList.toggle('on', b.dataset.splitDrawer===s));
+    // When SplitDrawer goes full, retreat Cesare to peek so the user keeps a single command surface.
+    if(s==='full' && document.body.dataset.cesare==='full'){ setCesare('peek'); }
+  }
+  document.querySelectorAll('.demo-row [data-split-drawer]').forEach(b=>b.addEventListener('click',()=>setSplit(b.dataset.splitDrawer)));
+  document.querySelectorAll('[data-split-drawer]:not(.demo-row [data-split-drawer])').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();setSplit(el.dataset.splitDrawer)});
+  });
+  const splitCycle = document.getElementById('split-cycle');
+  if(splitCycle){
+    splitCycle.addEventListener('click',e=>{
+      e.stopPropagation();
+      const cur = document.body.dataset.splitDrawer || 'closed';
+      const next = cur==='closed'?'open':cur==='open'?'full':'open';
+      setSplit(next);
+    });
+  }
+  const splitStep = document.getElementById('split-step');
+  if(splitStep){
+    splitStep.addEventListener('click',e=>{
+      e.stopPropagation();
+      const cur = document.body.dataset.splitDrawer || 'closed';
+      const next = cur==='full'?'open':cur==='open'?'closed':'closed';
+      setSplit(next);
+    });
+  }
+  // Timeline jump-to-marker
+  document.querySelectorAll('[data-jump]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = btn.dataset.jump;
+      const node = document.getElementById('trace-marker-'+id);
+      if(node) node.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  // ── Trace flow demo: open Cesare to full + SplitDrawer open with Soggetto trace ──
+  const traceBtn = document.getElementById('trace-flow-btn');
+  if(traceBtn){
+    traceBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      setView('soggetto');
+      setMode('float');
+      setCesare('full');
+      // Slight delay so the user sees the Cesare full-page transition before the split opens.
+      setTimeout(()=>setSplit('open'), 150);
+    });
+  }
+
   // initial sync
   setView(document.body.dataset.view);
   setCesare(document.body.dataset.cesare);
+  setSplit(document.body.dataset.splitDrawer || 'closed');
 </script>
 </body>
 </html>

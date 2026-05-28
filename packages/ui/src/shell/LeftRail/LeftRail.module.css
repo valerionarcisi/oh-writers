@@ -1,0 +1,370 @@
+/* packages/ui/src/shell/LeftRail/LeftRail.module.css */
+
+/* Canva-style left rail. Width is driven from the AppShell grid, not from
+   here, so the column can transition between 240px (full) and 56px
+   (collapsed) without the rail itself needing to know its width. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  padding: 14px 10px;
+  background: var(--ds-surface-alt);
+  border-inline-end: 1px solid var(--ds-line);
+  block-size: 100vh;
+  inline-size: 100%;
+  overflow: hidden auto;
+  position: sticky;
+  inset-block-start: 0;
+  min-width: 0;
+}
+
+/* ── Brand + project header ───────────────────────────────── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ds-text);
+  text-align: start;
+  inline-size: 100%;
+
+  &:hover {
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.brandMark {
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  background: var(--ds-text);
+  color: var(--ds-text-on-dark);
+  font-family: var(--ds-font-display);
+  font-weight: 600;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.brandName {
+  font-family: var(--ds-font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding: 4px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+
+  &:hover {
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.projectTitle {
+  font-family: var(--ds-font-display);
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projectChev {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+/* ── Sections ──────────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 4px;
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ds-text-faint);
+}
+
+.newSession {
+  border: none;
+  background: transparent;
+  color: var(--ds-text-3);
+  font: inherit;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--ds-radius-sm);
+
+  &:hover {
+    color: var(--ds-action);
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.sectionItems {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* ── Nav item ──────────────────────────────────────────────── */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 13.5px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
+.itemActive {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-weight: 500;
+  box-shadow: var(--ds-shadow-1);
+}
+
+.itemLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  margin-inline-start: auto;
+  font-size: 11px;
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+.glyph {
+  inline-size: 14px;
+  text-align: center;
+  color: var(--ds-text-faint);
+  font-size: 12px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemActive .glyph {
+  color: var(--ds-action);
+}
+
+.spacer {
+  flex: 1;
+  min-block-size: var(--ds-space-2);
+}
+
+/* ── Sessions ──────────────────────────────────────────────── */
+/* The whole sessions slot is hidden by default; it appears only when the
+   user has Cesare open. We use display:none on the slot so it falls out of
+   the flex layout entirely and the rail gap between brand and Sviluppo
+   stays tight when Cesare is closed. */
+.sessionsSlot {
+  display: none;
+}
+:global(body[data-cesare="expanded"]) .sessionsSlot,
+:global(body[data-cesare="full"]) .sessionsSlot {
+  display: block;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 12.5px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+
+  > .glyph {
+    color: var(--ds-agent);
+    font-size: 11px;
+  }
+}
+
+.sessionActive {
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-weight: 500;
+}
+
+/* ── Tools row ─────────────────────────────────────────────── */
+.tools {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--ds-space-1);
+  padding: 6px var(--ds-space-1);
+  border-block-start: 1px solid var(--ds-line);
+}
+
+.tool {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
+/* ── Collapsed mode (data-shell="collapsed") ───────────────── */
+:global(body[data-shell="collapsed"]) .rail {
+  padding: 14px 6px;
+  gap: 10px;
+}
+
+:global(body[data-shell="collapsed"]) .brandName,
+:global(body[data-shell="collapsed"]) .project,
+:global(body[data-shell="collapsed"]) .sectionLabel,
+:global(body[data-shell="collapsed"]) .itemLabel,
+:global(body[data-shell="collapsed"]) .itemMeta,
+:global(body[data-shell="collapsed"]) .sessionsSlot {
+  display: none;
+}
+
+:global(body[data-shell="collapsed"]) .item {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+:global(body[data-shell="collapsed"]) .item:not(.itemActive) {
+  /* Active glyph is still visible — see below — and inactive ones are
+     reduced to glyph-only. The label hide above already covers them. */
+}
+
+:global(body[data-shell="collapsed"]) .itemActive {
+  background: transparent;
+  box-shadow: none;
+}
+
+:global(body[data-shell="collapsed"]) .itemActive .glyph {
+  color: var(--ds-action);
+  background: var(--ds-surface);
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--ds-shadow-1);
+}
+
+:global(body[data-shell="collapsed"]) .tools {
+  grid-template-columns: 1fr;
+  gap: var(--ds-space-1);
+}
+
+/* ── Reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .rail {
+    scroll-behavior: auto;
+  }
+}
