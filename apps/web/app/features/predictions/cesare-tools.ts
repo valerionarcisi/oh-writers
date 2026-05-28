@@ -1,5 +1,6 @@
 import { type Tool, tool, generateText, stepCountIs, jsonSchema } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { repairMojibake } from "@oh-writers/utils";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
@@ -1996,7 +1997,7 @@ const runLegacyToolLoop = (
       }
 
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;
-      return `${textAccumulator.join("\n\n")}\n${marker}`;
+      return `${repairMojibake(textAccumulator.join("\n\n"))}\n${marker}`;
     })(),
     (e) =>
       new CesareError(
@@ -2120,7 +2121,7 @@ const runGenericToolLoop = (
       }
 
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;
-      return `${textAccumulator.join("\n\n")}\n${marker}`;
+      return `${repairMojibake(textAccumulator.join("\n\n"))}\n${marker}`;
     })(),
     (e) =>
       new CesareError(

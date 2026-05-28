@@ -18,6 +18,7 @@ export default defineConfig({
       "app/**/*.test.tsx",
       "../../packages/domain/src/**/*.test.ts",
       "../../packages/ui/src/**/*.test.ts",
+      "../../packages/utils/src/**/*.test.ts",
     ],
     environment: "node",
   },

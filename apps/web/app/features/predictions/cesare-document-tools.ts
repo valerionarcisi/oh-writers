@@ -10,6 +10,7 @@ import {
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
+import { repairMojibake } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 
@@ -504,7 +505,7 @@ const runGeneration = (
     .andThen((res) => {
       const text = extractText(res.content);
       return text
-        ? okAsync(text)
+        ? okAsync(repairMojibake(text))
         : errAsync(new CesareError(`${operation}: model returned no text`));
     });
 };

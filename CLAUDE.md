@@ -1034,6 +1034,16 @@ Never log AI-generated text content in Pino — use Langfuse artifacts.
 Never use `console.log` or `console.warn` — use `logger` from `~/server/logger`.
 Never use `@anthropic-ai/sdk` directly in new code — use `generateText`/`streamText` from `"ai"` with `@ai-sdk/anthropic` provider. The raw SDK is still present for `llm-spoglio.server.ts` (breakdown) but is legacy.
 
+### Local Langfuse — opt-in
+
+The Langfuse stack is **not** part of the default dev infra. `pnpm dev:up`
+only starts Postgres + Redis. Start Langfuse explicitly with
+`pnpm dev:up:langfuse` when you actively need to inspect traces; stop it
+with `pnpm dev:down:langfuse`. Langfuse containers are declared with
+`restart: 'no'` so they do not auto-start on Docker Desktop / Mac boot —
+this is intentional, to keep local resources free. When Langfuse is down,
+the OTEL exporter silently no-ops; the app keeps working.
+
 ---
 
 ## Git

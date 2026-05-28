@@ -18,8 +18,21 @@ import {
   type SceneSummary,
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
-import { DbError } from "@oh-writers/utils";
+import { DbError, repairMojibake } from "@oh-writers/utils";
 import { findFilmBibleFixture } from "./_mocks/film-bible.fixtures";
+
+// Walk an arbitrary JSON value and run repairMojibake on every string leaf.
+// Used to clean Anthropic tool-call inputs before they hit the DB.
+const repairMojibakeDeep = (value: unknown): unknown => {
+  if (typeof value === "string") return repairMojibake(value);
+  if (Array.isArray(value)) return value.map(repairMojibakeDeep);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = repairMojibakeDeep(v);
+    return out;
+  }
+  return value;
+};
 
 // ─── Errors ───────────────────────────────────────────────────────────────────
 
@@ -149,7 +162,7 @@ const callSonnetForcedTool = async (
   const emitCall = result.toolCalls.find(
     (tc) => tc.toolName === EMIT_TOOL_NAME,
   );
-  return emitCall ? emitCall.input : null;
+  return emitCall ? repairMojibakeDeep(emitCall.input) : null;
 };
 
 // ─── Input assembly ───────────────────────────────────────────────────────────
