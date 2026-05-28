@@ -1018,6 +1018,23 @@ Three layers block bad code from reaching `main`:
 
 ---
 
+## Observability
+
+Three orthogonal channels — do not mix them:
+
+- **Traces → Langfuse** (via AI SDK `experimental_telemetry`): execution flow, tool call inputs/outputs, token counts, cache hits. AI-generated text (documents, rewrites) goes here as `generation.output` — never in logs.
+- **Metrics → structured JSON** (`console.info(JSON.stringify({event, ...}))`): product-level counters. Events: `cesare.document.generated`, `cesare.scene_summary.generated`, `cesare.inline_edit.proposed`, `cesare.inline_edit.resolved`, `cesare.export.completed`, `cesare.tool_loop.max_steps_hit`.
+- **Logs → Pino** (`~/server/logger`): system anomalies only. Four severity levels:
+  - `DEBUG`: dev only, never prod
+  - `INFO`: normal operations audit trail
+  - `WARN`: recoverable anomalies (maxSteps hit, slow Anthropic response)
+  - `ERROR`: failures requiring attention
+
+Never log AI-generated text content in Pino — use Langfuse artifacts.
+Never use `console.log` or `console.warn` — use `logger` from `~/server/logger`.
+
+---
+
 ## Git
 
 Commit format: `[OHW] type: description`

@@ -1,6 +1,6 @@
 # Spec 42 — Migrazione a Vercel AI SDK v5 + Langfuse OTEL
 
-**Status:** ⬜ To do  
+**Status:** 🔄 In corso  
 **Scope:** `features/predictions/` — tutto il layer AI di Cesare  
 **Depends on:** nessuna dipendenza di feature
 
@@ -352,12 +352,13 @@ I test Playwright `MOCK_AI=true` usano il mock model invece del mock streaming c
 ## Pacchetti da aggiungere
 
 ```
-ai@6.0.191                              (core AI SDK)
-@ai-sdk/anthropic@3.0.80               (provider Anthropic)
-langfuse-vercel@latest                  (exporter OTEL per AI SDK → Langfuse)
-@opentelemetry/sdk-node@latest          (OTEL NodeSDK)
-pino@9.x                               (structured logging, 4 severity standard)
-@types/pino                             (dev dep)
+ai@6.0.191                              (core AI SDK) ✅ installato
+@ai-sdk/anthropic@3.0.80               (provider Anthropic) ✅ installato
+langfuse-vercel@3.38.20                 (exporter OTEL per AI SDK → Langfuse) ✅ installato
+@opentelemetry/sdk-node@0.218.0         (OTEL NodeSDK) ✅ installato
+@opentelemetry/api@1.9.1               (OTEL API) ✅ installato
+pino@9.7.0                             (structured logging, 4 severity standard) ✅ installato
+@types/pino@7.0.5                       (dev dep) ✅ installato
 ```
 
 Versioni fisse al momento dell'installazione.
@@ -392,15 +393,21 @@ Pacchetto da rimuovere dopo la migrazione:
 
 ## Fasi di implementazione
 
-### Fase 1 — Osservabilità (nessun cambiamento funzionale)
+### Fase 1 — Osservabilità (nessun cambiamento funzionale) ✅ Completata
 
-1. Installa `pino` + `langfuse-vercel` + `@opentelemetry/sdk-node`
-2. Crea `apps/web/app/server/logger.ts` (Pino, 4 severity)
-3. Crea `apps/web/app/server/instrumentation.ts` (OTEL + Langfuse)
-4. Aggiunge env vars (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`)
-5. Aggiunge `logger.info` / `logger.warn` / `logger.error` nei punti chiave di `cesare.server.ts`
-6. Emette i metric events (`cesare.document.generated`, ecc.) come `console.info` JSON
-7. Verifica traces in Langfuse dashboard con una chiamata Cesare reale
+1. ✅ Installa `pino@9.7.0`, `@types/pino@7.0.5`, `langfuse-vercel@3.38.20`, `@opentelemetry/sdk-node@0.218.0`, `@opentelemetry/api@1.9.1`, `ai@6.0.191`, `@ai-sdk/anthropic@3.0.80`
+2. ✅ Crea `apps/web/app/server/logger.ts` (Pino, 4 severity)
+3. ✅ Crea `apps/web/app/server/instrumentation.ts` (OTEL + Langfuse)
+4. ✅ Aggiunge env vars (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`) in `.env.example`
+5. ✅ Aggiunge metric events + logger in `cesare.server.ts`
+6. ✅ Aggiunge `logger.warn` per maxSteps in `cesare-tools.ts`
+7. ✅ Aggiunge metric event + `logger.error` in `scene-summary.server.ts`
+8. ✅ Importa `instrumentation.ts` come primo import in `apps/web/app/ssr.tsx`
+
+**Deviazioni:**
+
+- `cesare.export.completed` e `cesare.inline_edit.resolved` NON aggiunti — eventi client-side, fuori scope server. Da fare separatamente.
+- `langfuse-vercel@3.38.20` installato invece di "latest" (versione pinnata al momento dell'install).
 
 ### Fase 2 — Migrazione tool definitions
 
