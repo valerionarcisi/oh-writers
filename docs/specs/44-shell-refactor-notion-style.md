@@ -43,6 +43,7 @@ Reference HTML mockup: [`docs/specs/mockups/shell-canva-notion.html`](./mockups/
 - **Bottom Dock** — floating pill bottom-RIGHT: `🔔 · 👤 · ⚙ · │ · ✦ Cesare`. Hidden when Cesare ≠ closed.
 - **Cesare Panel** — Notion-style floating sub-window bottom-right (max ~480×640px). Editor never reflows. States: `closed | expanded | peek | full`. Header order: agent name + context chip · sessions selector · | · bell · avatar · gear · `↗` · `↙` (only in full) · `−` · `×`.
 - **Full-page** — Cesare drawer state covering the whole viewport (Notion `»` pattern). Rail + Top Strip + Dock all hide; Cesare gets a centred max-780px column.
+- **Cesare Drawer** — the unified, Notion-class container that hosts the chat across all four states. Owns: header (agent + context tags + session selector + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). Supports drag-resize on its top edge (peek↔expanded) and on its left edge (in `expanded` split-view mode), expand-from-bottom-right animation when going closed→expanded, and a smooth morph closed↔expanded↔full. The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else.
 - **Peek** — minimal floating bar bottom-right showing agent name + last activity. Replaces the dock pill while peeking.
 - **AppShell Shell State** — `full` (rail 240px + topstrip + dock) | `collapsed` (rail 56px icons-only) | `focus` (rail + topstrip + dock hidden). Toggled via top-left chevron + `⌃⌥F`. Persisted per user.
 - **Cesare Session** — one resumable chat thread per project. Persisted (`cesare_sessions` table). User can hold many sessions per project.
@@ -156,7 +157,7 @@ Owner: **shell-agent** · Branch: `refactor/ux-notion-v3-shell`
 
 Owner: **cesare-agent** · Branch: `refactor/ux-notion-v3-cesare`
 
-- Refactor `CesareSheet.tsx` into the 4-state floating sub-window. Header includes embedded dock icons (bell/avatar/gear) when state ≠ closed.
+- Refactor `CesareSheet.tsx` to render the new `CesareDrawer` from WP-DESIGN. WP-B owns chat state (messages, streaming, tool calls); WP-DESIGN owns drawer chrome (header / footer / states / resize / animations). Header includes embedded dock icons (bell/avatar/gear) when state ≠ closed.
 - Implement Sessions dropdown (popover in header + selector in Left Rail).
 - New `cesare_sessions` Drizzle migration + server fns + `useSessions` hook.
 - Persist `sessionId` on every Cesare message (extend existing chat persistence).
@@ -216,6 +217,100 @@ Owner: **docs-agent** · Branch: `refactor/ux-notion-v3-docs`
 - Update `README.md` only if dev setup changes (it does not).
 - Add `docs/specs/44-shell-refactor-notion-style.md` cross-references inside related specs (25 react-aria, 29 cesare-ui, 34 cesare-agentic, 41 inline edits) — one-line "superseded by Spec 44 for shell concerns" pointer.
 - Sync `CLAUDE.md` "Never do" list if any new prohibitions emerged (e.g. "Never reintroduce reserved-column Cesare").
+
+### WP-DESIGN — Visual polish + Cesare Drawer (Notion-class)
+
+Owner: **design-agent** · Branch: `refactor/ux-notion-v3-design`
+
+The Cesare Drawer is upgraded from a "floating sub-window" to a **first-class Notion-style drawer component** with all the affordances users expect from Notion AI / ChatGPT Canvas. WP-DESIGN owns the drawer; WP-B consumes it.
+
+#### Drawer states + transitions
+
+| State            | Anchor                        | Size                                                     | Shell visibility                         | Animation in                                         |
+| ---------------- | ----------------------------- | -------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `closed`         | — (dock pill at bottom-right) | n/a                                                      | rail+topstrip+dock visible               | dock pill spring-in                                  |
+| `peek`           | bottom-right                  | `auto × 44px` bar (pill-shaped)                          | dock hidden, peek visible                | slide-up from dock origin                            |
+| `expanded`       | bottom-right                  | `min(480, 40vw) × min(640, 76vh)` (user-resizable)       | dock hidden                              | expand-from-corner: scale + translate from dock pill |
+| `expanded-split` | right column                  | `min(640, 50vw) × 100vh` (user-resizable from left edge) | rail+topstrip still visible, dock hidden | slide-from-right                                     |
+| `full`           | viewport                      | `100vw × 100vh`                                          | rail+topstrip+dock all hidden            | scale-up + fade                                      |
+
+`expanded-split` is the **NEW** state added per Image 14 (Notion `»` chevron). User picks via header buttons:
+
+- `↗` → cycles `expanded` → `expanded-split` → `full` → back to `expanded`
+- `↙` → step back one
+- `−` → peek
+- `×` → closed
+
+All transitions use `--ds-ease` (250ms). View Transitions API (`document.startViewTransition`) when available, CSS fallback otherwise.
+
+#### Drawer header (sticky)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ ✦ Cesare  ⌄ Sessione · BREAKDOWN          🔔 V ⚙  ↗ ↙ − × │
+└─────────────────────────────────────────────────────────┘
+```
+
+- Agent name + sparkle.
+- Session selector: dropdown popover listing the project's sessions; "+ Nuova" creates a new one. Active session title shown next to the agent name.
+- Context tags: chip showing current page scope (`BREAKDOWN · Sc.2` etc.) + any pinned context (`📌 Atto II`). Tags are dismissible.
+- Window-control icons rightmost: bell, avatar, gear (carried from Dock when state ≠ closed), then drawer-state controls (`↗ ↙ − ×`).
+
+#### Drawer body
+
+- Conversation: user bubbles (clay-50 background) right-aligned + assistant content (no bubble) left-aligned, max-width 92%.
+- Step Blocks via `CollapsibleNote` — sticky timeline left-rail (`│ · ✓ · ✓ · ✓`) for the run, header collapsible.
+- Inline action affordances: `[Mostra modifiche] [Annulla]` (leaf-themed buttons).
+- Scroll-anchor: stays pinned to bottom unless user scrolls up; once user scrolls up, anchor releases and a "Vai alle nuove risposte" floating pill appears.
+- Empty state: minimal "Chiedi qualunque cosa su [scope]" + 3 quick-prompt suggestions.
+
+#### Drawer footer (sticky composer)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📎 Soggetto · 🎬 Scena 2                       (chips)   │
+│ Chiedi a Cesare…                                  ↑ ↓ ✦ │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Scope chips** above input: shows the auto-attached context (current page, current scene). User can `×` a chip to drop that context, or `+` to attach more (file picker → other docs).
+- Input: single-line growing textarea, `cmd+enter` submits, `/` opens a slash-command menu (future).
+- Right side: voice (`↓`), submit (`↑`), magic (`✦` opens prompt enhancer).
+- When Cesare is thinking: input greyed, send button replaced by `⏸ Stop`.
+
+#### Drag-to-resize
+
+- `expanded`: top edge handle resizes height (min 320px, max 76vh); bottom-left corner resizes both. Position is sticky bottom-right.
+- `expanded-split`: left edge handle resizes width (min 360px, max 60vw).
+- Sizes persist in `localStorage` per user (`ohw.drawer.size.expanded` / `ohw.drawer.size.split`).
+
+#### Visual rules (clean + minimal)
+
+- **Backgrounds**: use ONLY `--ds-bg` (`#f5f3ee` warm linen) on shell-level surfaces and `--ds-surface` (`#ffffff`) on raised cards. NO custom grays, NO `#fafafa` variants. Drawer surface = `--ds-surface`; drawer shadow `--ds-shadow-4` only on `expanded` and `peek`; `expanded-split` uses a left border + `--ds-shadow-2` (it's anchored, not floating).
+- **Borders**: `--ds-line` (linen-300) for static borders, `--ds-line-soft` for ghost dividers. No 2px borders anywhere except active session in selector.
+- **Typography**: drawer body uses `--ds-font-sans` (Inter). Agent name + session title in `--ds-font-display` (Fraunces) at 14px. Eyebrows in 10.5px caps `--ds-text-faint`.
+- **Spacing**: padding inside drawer = `var(--ds-space-4)` body, `var(--ds-space-3)` header/footer. Gap between messages = `var(--ds-space-4)`.
+- **Radii**: drawer corner = `var(--ds-radius-lg)` (12px) in `expanded`; squared in `full`; full pill in `peek`. Buttons inside drawer = `var(--ds-radius-md)` or `var(--ds-radius-pill)` for chips.
+- **Motion**: every transition `var(--ds-duration-3) var(--ds-ease)`. No JS animation libraries. `prefers-reduced-motion` skips all transforms.
+
+#### Cross-page visual audit
+
+The agent runs `chrome-agent screenshot` on every view (Sceneggiatura / Soggetto / Sinossi / Scaletta / Trattamento / Breakdown / Budget / Calendario / Locations / Inquadrature) in the seed state and compares with the mockup. Reports a checklist of:
+
+- backgrounds match `--ds-bg` (no rogue `#xxx` shades)
+- text contrast ≥ WCAG AA on every surface
+- editor pixel-stable across `data-cesare` and `data-shell` toggles
+- no orphan borders, double dividers, or duplicate chrome
+- typography hierarchy intact
+
+Findings become inline PR comments on the WP-A/B/C/D branches; design-agent does NOT directly fix per-page bodies — it flags + provides token replacements.
+
+#### Deliverables
+
+- `packages/ui/src/composites/CesareDrawer/CesareDrawer.tsx` + `.module.css` — the Notion-class drawer (WP-B consumes it instead of building the chrome from scratch).
+- `packages/ui/src/composites/CesareDrawer/use-drawer-state.ts` — `ts-pattern` reducer for the 5 states + transitions.
+- `packages/ui/src/composites/CesareDrawer/use-drawer-resize.ts` — drag-to-resize hook (uses `react-aria` `useMove`).
+- A short `docs/specs/44-design-notes.md` companion documenting the token decisions + visual audit findings.
 
 ## Tests
 
