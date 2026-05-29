@@ -1,6 +1,6 @@
 // packages/ui/src/shell/LeftRail/LeftRail.tsx
 import { useRef } from "react";
-import { useButton, useOverlay } from "react-aria";
+import { useButton, useHover, useOverlay } from "react-aria";
 import type { ReactNode } from "react";
 import { Icon } from "../../icons/Icon";
 import type { IconName } from "../../icons/icon-names";
@@ -87,6 +87,12 @@ export type LeftRailProps = {
     /** Optional — when provided, the rail surfaces a `»` chip that locks
      *  the rail open (caller flips shell state back to `full`). */
     onLockOpen?: () => void;
+    /** Called when the pointer enters the rail panel — cancels a pending
+     *  scheduled close so the overlay stays open while the user browses. */
+    onHoverEnter?: () => void;
+    /** Called when the pointer leaves the rail panel — schedules the delayed
+     *  close so the overlay fades after CLOSE_DELAY_MS. */
+    onHoverLeave?: () => void;
   };
 };
 
@@ -239,6 +245,20 @@ export function LeftRail({
   // matching `useOverlay`'s `isOpen: false` contract.
   const overlayActive = overlay?.isOpen ?? false;
   const dismissOverlay = overlay?.onDismiss ?? (() => undefined);
+
+  // Anti-flicker bridge: keep the overlay open while the pointer is inside
+  // the rail panel (cancels the hamburger's scheduleClose); schedule a close
+  // when the pointer leaves (so it fades if not locked). No-op when not in
+  // overlay mode.
+  const { hoverProps: railHoverProps } = useHover({
+    onHoverStart: overlay?.onHoverEnter
+      ? () => overlay.onHoverEnter!()
+      : undefined,
+    onHoverEnd: overlay?.onHoverLeave
+      ? () => overlay.onHoverLeave!()
+      : undefined,
+  });
+
   const { overlayProps } = useOverlay(
     {
       isOpen: overlayActive,
@@ -305,6 +325,7 @@ export function LeftRail({
     <aside
       ref={railRef}
       {...overlayProps}
+      {...railHoverProps}
       className={styles.rail}
       aria-label={ariaLabel ?? "Navigazione progetto"}
       data-testid="left-rail"

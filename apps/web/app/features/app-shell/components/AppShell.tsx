@@ -800,6 +800,8 @@ function AppShellInner({
                       isOpen: railOverlay.isOpen,
                       onDismiss: railOverlay.close,
                       onLockOpen: lockRailOpen,
+                      onHoverEnter: railOverlay.cancelScheduledClose,
+                      onHoverLeave: railOverlay.scheduleClose,
                     }
                   : undefined
               }
@@ -807,10 +809,12 @@ function AppShellInner({
           </div>
 
           {/* Notion-style hamburger — always visible top-left while collapsed,
-              hidden otherwise via CSS (`data-shell` selector). Toggles the
-              rail overlay; never disappears on hover or scroll. */}
+              hidden otherwise via CSS (`data-shell` selector). Clicking toggles
+              the overlay; hovering opens it so the user can slide into the panel. */}
           <RailHamburger
             onPress={railOverlay.toggle}
+            onHoverStart={railOverlay.open}
+            onHoverEnd={railOverlay.scheduleClose}
             isOverlayOpen={railOverlay.isOpen}
           />
 

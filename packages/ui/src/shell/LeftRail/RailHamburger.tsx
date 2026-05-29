@@ -4,30 +4,33 @@
  *
  * Visible only while `body[data-shell="collapsed"]` is set; hidden in `full`
  * (rail already open) and `focus` (chrome hidden). Clicking it toggles the
- * rail overlay by flipping `body[data-rail-overlay]`. The button position
- * never changes — same coordinates whether the rail is shown or hidden, so
- * the affordance is always reachable.
+ * rail overlay; hovering it opens the overlay so the user can slide the
+ * pointer into the rail panel without clicking.
  *
- * Press behaviour goes through `react-aria`'s `useButton` so touch + keyboard
- * + screen-reader semantics match every other primitive in the shell.
+ * Press and hover go through react-aria (`useButton` + `useHover`) so
+ * touch, keyboard, and screen-reader semantics are handled correctly.
  */
 import { useRef } from "react";
-import { useButton } from "react-aria";
+import { useButton, useHover } from "react-aria";
 import styles from "./RailHamburger.module.css";
 
 export interface RailHamburgerProps {
-  /** Fires when the user activates the hamburger. The caller decides whether
-   *  to open the overlay, close it, or toggle. */
+  /** Fires when the user activates the hamburger (click / keyboard). */
   onPress: () => void;
+  /** Fires when the pointer enters the button — caller opens the overlay. */
+  onHoverStart?: () => void;
+  /** Fires when the pointer leaves the button — caller schedules a close. */
+  onHoverEnd?: () => void;
   /** Reflects the current overlay state for screen readers + visual styling. */
   isOverlayOpen: boolean;
-  /** Optional aria-label override (Italian copy by default to match the
-   *  rest of the shell). */
+  /** Optional aria-label override (Italian copy by default). */
   ariaLabel?: string;
 }
 
 export function RailHamburger({
   onPress,
+  onHoverStart,
+  onHoverEnd,
   isOverlayOpen,
   ariaLabel,
 }: RailHamburgerProps) {
@@ -42,18 +45,21 @@ export function RailHamburger({
     },
     ref,
   );
+  const { hoverProps } = useHover({
+    onHoverStart: onHoverStart ? () => onHoverStart() : undefined,
+    onHoverEnd: onHoverEnd ? () => onHoverEnd() : undefined,
+  });
 
   return (
     <button
       ref={ref}
       {...buttonProps}
+      {...hoverProps}
       className={styles.hamburger}
       data-testid="rail-hamburger"
       title={label}
     >
       <span aria-hidden="true" className={styles.glyph}>
-        {/* Hamburger glyph (three horizontal bars). Kept as inline SVG so we
-            don't need a sprite entry for a one-off icon. */}
         <svg
           width="16"
           height="16"
