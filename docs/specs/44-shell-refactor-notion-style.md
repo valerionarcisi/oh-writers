@@ -166,7 +166,7 @@ Owner: **cesare-agent** · Branch: `refactor/ux-notion-v3-cesare`
 - New `cesare_sessions` Drizzle migration + server fns + `useSessions` hook.
 - Persist `sessionId` on every Cesare message (extend existing chat persistence).
 - Render assistant tool runs as Step Blocks using `CollapsibleNote`.
-- Wire `Mostra modifiche` / `Annulla` to the existing proposal store.
+- Wire `Mostra modifiche` / `Annulla` on the Step Block. `Mostra modifiche` follows the canonical live-doc model: Cesare edits already land on the open document, so the control toggles an inline diff highlight on the live page (it sets `body[data-cesare-diff="on"]` and broadcasts `ohw:cesare:live-diff`; the shell paints a highlight ring on `<main>`), and `Nascondi modifiche` clears it. It is NOT a detached SplitDrawer. The toggle is wired for every ChangeTrace card, not only single-scene rewrites; when a rewrite is present the scene-preview path still fires alongside.
 - Remove the legacy bottom-sheet drawer styling.
 
 ### WP-C — Per-page mitigations & shared primitives
