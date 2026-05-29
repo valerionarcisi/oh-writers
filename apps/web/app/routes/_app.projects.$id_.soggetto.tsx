@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { DropdownMenu, Icon, Skeleton } from "@oh-writers/ui";
+import { ActionsMenu, Skeleton } from "@oh-writers/ui";
 import {
   DraftBanner,
   ExportPdfModal,
@@ -221,10 +221,8 @@ function SoggettoPageReady({
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
         topBarActions={
-          <DropdownMenu
-            trigger={<Icon name="upload" size={14} aria-hidden={true} />}
-            align="end"
-            triggerClassName={styles.exportTrigger}
+          <ActionsMenu
+            data-testid="soggetto-actions-menu"
             items={[
               {
                 label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
@@ -241,6 +239,7 @@ function SoggettoPageReady({
                   setIsSiaeOpen(true);
                 },
               },
+              { label: "Versioni", onClick: toggleVersions },
             ]}
           />
         }

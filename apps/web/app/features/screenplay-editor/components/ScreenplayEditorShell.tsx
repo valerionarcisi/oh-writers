@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ActionsMenu,
   Icon,
   Popover,
   VersionTrigger,
   Viewbar,
   ViewbarSep,
 } from "@oh-writers/ui";
+import type { DropdownMenuItem } from "@oh-writers/ui";
 import { DraftMetaBadge } from "~/features/projects";
 import {
   SaveStatusIndicator,
@@ -161,44 +163,33 @@ export function ScreenplayEditorShell({
       .filter((act) => act.scenes.length > 0);
   }, [actsWithDomIndex, indiceQuery]);
 
-  // Publish export + focus + ... into the TopBar actions slot (first row, right
-  // of the search lens). Only published when at least one action is wired.
+  // Publish the unified "…" actions menu into the TopBar actions slot (first
+  // row, right of the search lens). Esporta PDF + Focus + Versioni live here;
+  // the Indice + chips stay in the Viewbar second row. Only published when at
+  // least one action is wired.
   const topBarActionsNode = useMemo(() => {
-    if (!onExport && !onFocusToggle) return null;
-    return (
-      <div className={styles.viewbarRight}>
-        <SaveStatusIndicator />
-        {onExport && (
-          <button
-            type="button"
-            className={styles.topBarAction}
-            onClick={onExport}
-            disabled={isExporting}
-            aria-label={isExporting ? "Esportazione in corso…" : "Esporta PDF"}
-            title={isExporting ? "Esportazione in corso…" : "Esporta PDF (⌘E)"}
-          >
-            <Icon name="upload" size={14} aria-hidden />
-          </button>
-        )}
-        {onFocusToggle && (
-          <button
-            type="button"
-            className={[
-              styles.topBarAction,
-              isFocusMode ? styles.topBarActionActive : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={onFocusToggle}
-            aria-label={isFocusMode ? "Esci da Focus" : "Focus (⌃⌥F)"}
-            title={isFocusMode ? "Esci da Focus (⌃⌥F)" : "Focus (⌃⌥F)"}
-          >
-            <Icon name="eye" size={14} aria-hidden />
-          </button>
-        )}
-      </div>
-    );
-  }, [onExport, isExporting, onFocusToggle, isFocusMode]);
+    if (!onExport && !onFocusToggle && !onOpenVersions) return null;
+    const items: DropdownMenuItem[] = [];
+    if (onExport) {
+      items.push({
+        label: isExporting ? "Esportazione…" : "Esporta PDF",
+        description: "⌘E",
+        onClick: onExport,
+        disabled: isExporting,
+      });
+    }
+    if (onFocusToggle) {
+      items.push({
+        label: isFocusMode ? "Esci da Focus" : "Focus",
+        description: "⌃⌥F",
+        onClick: onFocusToggle,
+      });
+    }
+    if (onOpenVersions) {
+      items.push({ label: "Versioni", onClick: onOpenVersions });
+    }
+    return <ActionsMenu data-testid="screenplay-actions-menu" items={items} />;
+  }, [onExport, isExporting, onFocusToggle, isFocusMode, onOpenVersions]);
   useTopBarSlotPublisher("actions", topBarActionsNode);
 
   function scrollToScene(domIndex: number) {

@@ -44,6 +44,9 @@ export type {
   DropdownMenuItem,
   DropdownMenuAlign,
 } from "./components/DropdownMenu";
+
+export { ActionsMenu } from "./shell/TopBar/ActionsMenu";
+export type { ActionsMenuProps } from "./shell/TopBar/ActionsMenu";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";
 export { EditableCell } from "./components/EditableCell";
