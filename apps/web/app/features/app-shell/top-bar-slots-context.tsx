@@ -84,6 +84,15 @@ export function useTopBarSlots(): TopBarSlots {
  * caller is mounted. The slot clears automatically on unmount so a stale
  * legend cannot leak across routes.
  */
+/**
+ * Publish a node into one of the shell-level TopBar slots while the
+ * caller is mounted. The slot clears automatically on unmount so a stale
+ * legend cannot leak across routes.
+ *
+ * IMPORTANT: callers must stabilize `value` with `useMemo` before passing
+ * it here. A new ReactNode reference on every render would cause an infinite
+ * setState loop because ReactNode references are never reference-equal.
+ */
 export function useTopBarSlotPublisher<K extends keyof TopBarSlots>(
   key: K,
   value: TopBarSlots[K] | null,

@@ -70,7 +70,9 @@ function ScreenplayEditorPage() {
     ),
     [currentElement],
   );
-  useTopBarSlotPublisher("elementLegend", legendNode);
+  // Chips go into the TopBar center slot (same row as section crumb).
+  // elementLegend (second row) is no longer used for screenplay.
+  useTopBarSlotPublisher("center", legendNode);
 
   if (isLoading)
     return (
@@ -91,6 +93,7 @@ function ScreenplayEditorPage() {
           title={value.title}
           projectId={id}
           acts={acts}
+          topBarCenter={legendNode}
           onOpenVersions={() =>
             openVersionsDrawer({ kind: "screenplay", screenplayId: value.id })
           }

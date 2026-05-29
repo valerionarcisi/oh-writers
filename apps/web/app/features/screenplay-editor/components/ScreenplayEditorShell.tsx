@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  Viewbar,
-  ViewbarSep,
-  Icon,
-  Popover,
-  VersionTrigger,
-} from "@oh-writers/ui";
+import { Icon, Popover, VersionTrigger, Viewbar } from "@oh-writers/ui";
 import { DraftMetaBadge } from "~/features/projects";
-import { SaveStatusIndicator } from "~/features/app-shell";
+import {
+  SaveStatusIndicator,
+  useTopBarSlotPublisher,
+} from "~/features/app-shell";
 import styles from "./ScreenplayEditorShell.module.css";
 
 // ─── Editor shell ──────────────────────────────────────────────────────────
@@ -41,12 +38,16 @@ export type ScreenplayEditorShellProps = {
   children: ReactNode;
   /** Optional override for the TOC content; falls back to a single-scene stub */
   acts?: ActEntry[];
-  /** Optional slot rendered centered in the Viewbar — same position the
-   *  Breakdown V2 page uses for its 'Sottolinea' chips. The screenplay route
-   *  fills it with the element conversion chips (Scene/Action/Character/...). */
+  /** @deprecated Use topBarCenter — slot rendered centered in the Viewbar. */
   viewbarCenter?: ReactNode;
+  /** Published into the shell TopBar center slot (same row as section crumb).
+   *  The screenplay route passes the element-type chips here. */
+  topBarCenter?: ReactNode;
+  /** Published into the shell TopBar actions slot (right, before search).
+   *  Typically contains Indice + DraftMetaBadge + VersionTrigger. */
+  topBarActions?: ReactNode;
   /** Opens the Versions drawer. When provided, a `VersionTrigger` pill is
-   *  rendered in the Viewbar right slot. */
+   *  rendered in the Viewbar right slot (legacy) or topBarActions. */
   onOpenVersions?: () => void;
   /** Optional label shown inside the version pill (e.g. "v3 · 14 mag 2026"). */
   versionLabel?: string;
@@ -69,6 +70,8 @@ export function ScreenplayEditorShell({
   children,
   acts,
   viewbarCenter,
+  topBarCenter,
+  topBarActions,
   onOpenVersions,
   versionLabel,
   versions,
@@ -100,6 +103,9 @@ export function ScreenplayEditorShell({
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
+
+  // Promote chips into the shell TopBar center slot.
+  useTopBarSlotPublisher("center", topBarCenter ?? null);
 
   const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
   const hasRealToc = acts !== undefined && acts.length > 0;
@@ -146,137 +152,156 @@ export function ScreenplayEditorShell({
       .filter((act) => act.scenes.length > 0);
   }, [actsWithDomIndex, indiceQuery]);
 
-  const scrollToScene = (domIndex: number) => {
+  // Build the TopBar actions node (Indice + save + DraftBadge + versions).
+  // Callers that pass `topBarActions` externally skip this (topBarActions wins).
+  const builtActionsNode = useMemo(
+    () =>
+      topBarActions !== undefined ? null : (
+        <div className={styles.viewbarRight}>
+          <SaveStatusIndicator />
+          {hasRealToc && (
+            <div className={styles.indiceWrap}>
+              <button
+                type="button"
+                className={styles.indiceButton}
+                onClick={() => setIndiceOpen((v) => !v)}
+                aria-haspopup="dialog"
+                aria-expanded={isIndiceOpen}
+                aria-label="Apri indice scene"
+                data-testid="screenplay-indice-trigger"
+              >
+                <Icon name="book" size={14} aria-hidden />
+                <span>Indice</span>
+                <span className={styles.indiceBadge} data-num>
+                  {currentSceneIdx}/{totalScenes}
+                </span>
+                <span className={styles.indiceCaret} aria-hidden>
+                  ▾
+                </span>
+              </button>
+              <Popover
+                isOpen={isIndiceOpen}
+                onClose={() => setIndiceOpen(false)}
+                placement="bottom-end"
+                width={320}
+                className={styles.indicePopover}
+              >
+                <div className={styles.popSearch}>
+                  <Icon name="search" size={14} aria-hidden />
+                  <input
+                    type="text"
+                    value={indiceQuery}
+                    onChange={(e) => setIndiceQuery(e.target.value)}
+                    placeholder="Cerca scena o luogo…"
+                    aria-label="Cerca scena o luogo"
+                    className={styles.popSearchInput}
+                    autoFocus
+                  />
+                  <kbd className={styles.popKbd}>⌘K</kbd>
+                </div>
+                <div className={styles.popList}>
+                  {filteredActs.length === 0 ? (
+                    <p className={styles.popEmpty}>Nessuna scena trovata</p>
+                  ) : (
+                    filteredActs.map((act) => (
+                      <div key={act.name}>
+                        <p className={styles.popAct}>{act.name}</p>
+                        {act.scenes.map((scene) => (
+                          <button
+                            type="button"
+                            key={`${act.name}-${scene.number}`}
+                            className={[
+                              styles.popItem,
+                              scene.isCurrent ? styles.popItemCurrent : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            aria-current={scene.isCurrent ? "true" : undefined}
+                            onClick={() => scrollToScene(scene.domIndex)}
+                          >
+                            <span className={styles.popItemNum}>
+                              SC.{scene.number.replace(".", "")}
+                            </span>
+                            <span className={styles.popItemLabel}>
+                              {scene.title}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Popover>
+            </div>
+          )}
+          <DraftMetaBadge projectId={projectId} />
+          {onOpenVersions && (
+            <VersionTrigger
+              variant="pill"
+              versionLabel={versionLabel}
+              menuItems={[
+                ...(versions && versions.length > 0
+                  ? versions.map((v) => ({
+                      id: `version-${v.id}`,
+                      label: v.isCurrent ? `● ${v.label}` : v.label,
+                      onSelect: onOpenVersions,
+                      tone: v.isCurrent
+                        ? ("default" as const)
+                        : ("muted" as const),
+                    }))
+                  : []),
+                {
+                  id: "open-drawer",
+                  label: "Apri Versioni →",
+                  onSelect: onOpenVersions,
+                },
+              ]}
+            />
+          )}
+        </div>
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      topBarActions,
+      hasRealToc,
+      isIndiceOpen,
+      indiceQuery,
+      currentSceneIdx,
+      totalScenes,
+      filteredActs,
+      projectId,
+      onOpenVersions,
+      versionLabel,
+      versions,
+    ],
+  );
+  useTopBarSlotPublisher("actions", topBarActions ?? builtActionsNode);
+
+  function scrollToScene(domIndex: number) {
     const headings = document.querySelectorAll<HTMLElement>(".pm-heading");
     headings[domIndex]?.scrollIntoView({ behavior: "smooth", block: "start" });
     setIndiceOpen(false);
-  };
+  }
 
   return (
     <div className={styles.shell}>
-      <div
-        ref={viewbarWrapRef}
-        className={styles.viewbarWrap}
-        data-scrolled={isScrolled || undefined}
-      >
-        <Viewbar>
-          <div className={styles.viewbarGrid}>
-            <div className={styles.viewbarCenter}>{viewbarCenter}</div>
-
-            <div className={styles.viewbarRight}>
-              {/* The ✦ Cesare panel toggle used to live here. Removed because
-                the FloatingDock already exposes a "Cesare" pill (with glow
-                while thinking) and the right-side panel itself is a visible
-                affordance — three separate triggers were redundant. */}
-              <SaveStatusIndicator />
-              {hasRealToc && (
-                <div className={styles.indiceWrap}>
-                  <button
-                    type="button"
-                    className={styles.indiceButton}
-                    onClick={() => setIndiceOpen((v) => !v)}
-                    aria-haspopup="dialog"
-                    aria-expanded={isIndiceOpen}
-                    aria-label="Apri indice scene"
-                    data-testid="screenplay-indice-trigger"
-                  >
-                    <Icon name="book" size={14} aria-hidden />
-                    <span>Indice</span>
-                    <span className={styles.indiceBadge} data-num>
-                      {currentSceneIdx}/{totalScenes}
-                    </span>
-                    <span className={styles.indiceCaret} aria-hidden>
-                      ▾
-                    </span>
-                  </button>
-
-                  <Popover
-                    isOpen={isIndiceOpen}
-                    onClose={() => setIndiceOpen(false)}
-                    placement="bottom-end"
-                    width={320}
-                    className={styles.indicePopover}
-                  >
-                    <div className={styles.popSearch}>
-                      <Icon name="search" size={14} aria-hidden />
-                      <input
-                        type="text"
-                        value={indiceQuery}
-                        onChange={(e) => setIndiceQuery(e.target.value)}
-                        placeholder="Cerca scena o luogo…"
-                        aria-label="Cerca scena o luogo"
-                        className={styles.popSearchInput}
-                        autoFocus
-                      />
-                      <kbd className={styles.popKbd}>⌘K</kbd>
-                    </div>
-
-                    <div className={styles.popList}>
-                      {filteredActs.length === 0 ? (
-                        <p className={styles.popEmpty}>Nessuna scena trovata</p>
-                      ) : (
-                        filteredActs.map((act) => (
-                          <div key={act.name}>
-                            <p className={styles.popAct}>{act.name}</p>
-                            {act.scenes.map((scene) => (
-                              <button
-                                type="button"
-                                key={`${act.name}-${scene.number}`}
-                                className={[
-                                  styles.popItem,
-                                  scene.isCurrent ? styles.popItemCurrent : "",
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ")}
-                                aria-current={
-                                  scene.isCurrent ? "true" : undefined
-                                }
-                                onClick={() => scrollToScene(scene.domIndex)}
-                              >
-                                <span className={styles.popItemNum}>
-                                  SC.{scene.number.replace(".", "")}
-                                </span>
-                                <span className={styles.popItemLabel}>
-                                  {scene.title}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </Popover>
-                </div>
-              )}
-
-              <DraftMetaBadge projectId={projectId} />
-              {onOpenVersions && (
-                <VersionTrigger
-                  variant="pill"
-                  versionLabel={versionLabel}
-                  menuItems={[
-                    ...(versions && versions.length > 0
-                      ? versions.map((v) => ({
-                          id: `version-${v.id}`,
-                          label: v.isCurrent ? `● ${v.label}` : v.label,
-                          onSelect: onOpenVersions,
-                          tone: v.isCurrent
-                            ? ("default" as const)
-                            : ("muted" as const),
-                        }))
-                      : []),
-                    {
-                      id: "open-drawer",
-                      label: "Apri Versioni →",
-                      onSelect: onOpenVersions,
-                    },
-                  ]}
-                />
-              )}
+      {/* Legacy Viewbar — shown only when the caller passes viewbarCenter
+          and does not use the new TopBar slot system (topBarActions/topBarCenter).
+          New callers should pass topBarCenter + let the shell publish actions. */}
+      {viewbarCenter !== undefined && topBarCenter === undefined && (
+        <div
+          ref={viewbarWrapRef}
+          className={styles.viewbarWrap}
+          data-scrolled={isScrolled || undefined}
+        >
+          <Viewbar>
+            <div className={styles.viewbarGrid}>
+              <div className={styles.viewbarCenter}>{viewbarCenter}</div>
+              <div className={styles.viewbarRight} />
             </div>
-          </div>
-        </Viewbar>
-      </div>
+          </Viewbar>
+        </div>
+      )}
 
       <div
         className={
