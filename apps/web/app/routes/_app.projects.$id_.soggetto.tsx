@@ -221,10 +221,8 @@ function SoggettoPageReady({
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
         topBarActions={
-          <DropdownMenu
-            trigger={<Icon name="upload" size={14} aria-hidden={true} />}
-            align="end"
-            triggerClassName={styles.exportTrigger}
+          <ActionsMenu
+            data-testid="soggetto-actions-menu"
             items={[
               {
                 label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
@@ -241,6 +239,7 @@ function SoggettoPageReady({
                   setIsSiaeOpen(true);
                 },
               },
+              { label: "Versioni", onClick: toggleVersions },
             ]}
           />
         }

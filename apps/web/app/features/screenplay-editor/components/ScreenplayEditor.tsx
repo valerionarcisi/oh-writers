@@ -9,7 +9,7 @@ import {
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
-import { DocStats, FloatingDock } from "@oh-writers/ui";
+import { DocStats } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
 import {
@@ -1099,47 +1099,11 @@ export const ScreenplayEditor = forwardRef<
           setPendingStatus(false);
         }}
       />
-      {!isFocusMode && (
-        // Spec 44 TKT-LEAD-01: page-scoped CTAs anchor bottom-left so the
-        // shell-level BottomDock keeps its bottom-right monopoly. Cesare
-        // is reached via the dock's ✦ button; the local pill was removed.
-        <FloatingDock
-          primaryAction={{
-            label: exportPdf.isPending ? "Esportando…" : "Esporta PDF",
-            hotkey: "⌘E",
-            onClick: () => {
-              if (isVersionsPanelOpen) closeDrawer();
-              setExportFormat(defaultExportFormat);
-            },
-          }}
-          secondaryActions={[
-            {
-              label: "Focus",
-              hotkey: "⌃⇧F",
-              onClick: () => setFocusMode((prev) => !prev),
-            },
-          ]}
-          overflowSlot={
-            <ToolbarMenu
-              projectId={screenplay.projectId}
-              hasContent={hasContent}
-              onImport={setContent}
-              nextVersionLabel={nextVersionLabel}
-              onCreateVersionThenImport={
-                nextVersionLabel ? handleCreateVersionThenImport : undefined
-              }
-              onToggleVersions={toggleVersionsDrawer}
-              isVersionsPanelOpen={isVersionsPanelOpen}
-              currentVersionLabel={latestVersion?.label ?? null}
-              onResequenceAll={canEdit ? onResequenceAll : undefined}
-              isOwner={isOwner}
-              onTitlePageDetected={handleTitlePageDetected}
-              onExportFountain={hasContent ? handleExportFountain : undefined}
-            />
-          }
-          toast={toast}
-        />
-      )}
+      {/* Spec 44 / iter-5: page-scoped CTAs (Esporta PDF, Focus, Versioni) now
+          live in the shell TopBar "…" actions menu. The bottom-left
+          FloatingDock was removed. NOTE: its overflow hosted ToolbarMenu
+          (Import / resequence / export-fountain) — that surface needs a new
+          home in a follow-up (tracked: TopBar "…" Importa placeholder). */}
     </div>
   );
 });
