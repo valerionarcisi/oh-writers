@@ -155,7 +155,12 @@ function BreakdownPageContent({ projectId }: Props) {
   const canEdit = ctx.canEdit;
   const scenes = ctx.scenes;
   const { open: openVersionsDrawer } = useVersionsDrawer();
-  const openCesare = useCesareOpen();
+  // Cesare is now driven exclusively by the shell-level BottomDock — the
+  // local pill was removed (TKT-LEAD-01). Hook stays mounted so future
+  // page-scoped Cesare entry points (RecapStrip, inline affordances) can
+  // continue to call it without re-introducing the import.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
 
   const { data: versionsResult } = useVersions(ctx.screenplayId ?? "");
   const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
@@ -245,15 +250,18 @@ function BreakdownPageContent({ projectId }: Props) {
     (o) => o.occurrence.cesareStatus === "pending",
   ).length;
 
-  // AD alert stats — drive panel tab count and the floating dock counter so
-  // the user sees production-side concerns rather than writing suggestions.
-  const adStats = useAdAlertStats(
+  // AD alert stats — used to be wired into the FloatingDock badge (TKT-LEAD-01
+  // removed that pill). The hook stays so its side-effects (alert collection
+  // + invalidation) keep working; future surfaces (RecapStrip, Cesare badge)
+  // can re-attach the count without re-introducing the call site.
+  const _adStats = useAdAlertStats(
     projectId,
     scenes,
     allRows,
     ctx.versionContent ?? "",
     activeScene?.id ?? null,
   );
+  void _adStats;
 
   // Scene → element count for the Indice popover badges.
   const scenesWithCounts = useMemo(() => {
@@ -1082,7 +1090,11 @@ function BreakdownPageContent({ projectId }: Props) {
         </div>
       )}
 
-      {/* ─── FLOATING DOCK ─── */}
+      {/* ─── PAGE-SCOPED CTAs (bottom-left) ───
+       * Spec 44 TKT-LEAD-01: the BottomDock owns the bottom-right corner
+       * + the universal ✦ Cesare button. The per-page FloatingDock anchors
+       * bottom-LEFT (default) and no longer renders its own Cesare pill —
+       * one Cesare surface, one command centre. */}
       <FloatingDock
         primaryAction={{
           label: "Ri-spogliare con AI",
@@ -1098,8 +1110,6 @@ function BreakdownPageContent({ projectId }: Props) {
             onClick: () => setExportOpen(true),
           },
         ]}
-        cesareNoteCount={adStats.total}
-        onCesareClick={openCesare}
       />
 
       <ExportBreakdownModal

@@ -233,7 +233,11 @@ export const ScreenplayEditor = forwardRef<
     if (onToggleCesare) onToggleCesare(next);
     else setLocalCesareOn(next);
   };
-  const openCesare = useCesareOpen();
+  // Cesare is opened via the shell BottomDock (Spec 44 TKT-LEAD-01); the
+  // hook stays mounted so inline triggers (proposals, scene jumps) can keep
+  // surfacing it without re-importing.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveScene = useSetActiveScene();
   const viewRef = useRef<EditorView | null>(null);
 
@@ -1096,6 +1100,9 @@ export const ScreenplayEditor = forwardRef<
         }}
       />
       {!isFocusMode && (
+        // Spec 44 TKT-LEAD-01: page-scoped CTAs anchor bottom-left so the
+        // shell-level BottomDock keeps its bottom-right monopoly. Cesare
+        // is reached via the dock's ✦ button; the local pill was removed.
         <FloatingDock
           primaryAction={{
             label: exportPdf.isPending ? "Esportando…" : "Esporta PDF",
@@ -1130,10 +1137,6 @@ export const ScreenplayEditor = forwardRef<
               onExportFountain={hasContent ? handleExportFountain : undefined}
             />
           }
-          cesareNoteCount={0}
-          cesareIsOn={isCesareOn}
-          cesareIsThinking={pendingStatus === "streaming"}
-          onCesareClick={openCesare}
           toast={toast}
         />
       )}

@@ -1,20 +1,6 @@
 import { type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import {
-  SegmentedControl,
-  VersionTrigger,
-  Viewbar,
-  ViewbarSep,
-} from "@oh-writers/ui";
+import { VersionTrigger, Viewbar } from "@oh-writers/ui";
 import type { DocumentType } from "@oh-writers/domain";
-import {
-  NARRATIVE_TAB_OPTIONS,
-  type NarrativeTabId,
-  docTypeFromTabId,
-  routePathFromTabId,
-  tabIdFromDocType,
-} from "../lib/narrative-shell";
-import { DOCUMENT_LABELS } from "../lib/document-display";
 import { LoglinePill } from "./LoglinePill";
 import { SaveStatusIndicator } from "~/features/app-shell";
 import styles from "./NarrativeDocsShell.module.css";
@@ -43,7 +29,7 @@ export interface NarrativeDocsShellProps {
 
 export function NarrativeDocsShell({
   projectId,
-  docType,
+  docType: _docType,
   layout,
   logline,
   canEditLogline,
@@ -55,35 +41,18 @@ export function NarrativeDocsShell({
   rightAside,
   children,
 }: NarrativeDocsShellProps) {
-  const navigate = useNavigate();
-  const activeTab = tabIdFromDocType(docType) ?? "soggetto";
-
-  const handleSelectTab = (tab: NarrativeTabId) => {
-    if (tab === activeTab) return;
-    void navigate({
-      to: routePathFromTabId(tab, projectId),
-    });
-    // Silence unused-import warning when the docType helper is only used for
-    // type assertions in tests.
-    void docTypeFromTabId;
-  };
+  // Spec 44 TKT-LEAD-04 — the document-type subtabs row was removed: the
+  // LeftRail already navigates to the four narrative doc types, so the
+  // SegmentedControl + active-doc label duplicated the rail's selection
+  // and showed the active type's name twice in a row. The Viewbar now
+  // hosts only the doc-scoped affordances (logline, save state, versions).
+  void _docType;
 
   return (
     <div className={styles.shell} data-testid="narrative-docs-shell">
       <div className={styles.viewbarWrap}>
         <Viewbar>
           <div className={styles.viewbarRow}>
-            <SegmentedControl
-              options={[...NARRATIVE_TAB_OPTIONS]}
-              activeId={activeTab}
-              onSelect={handleSelectTab}
-              ariaLabel="Documenti narrativi"
-            />
-            <ViewbarSep />
-            <span className={styles.docTypeLabel} aria-current="page">
-              {DOCUMENT_LABELS[docType]}
-            </span>
-            <ViewbarSep />
             <LoglinePill
               projectId={projectId}
               logline={logline}

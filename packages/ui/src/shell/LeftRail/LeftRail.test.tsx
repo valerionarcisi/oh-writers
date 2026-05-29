@@ -239,4 +239,53 @@ describe("LeftRail", () => {
     );
     expect(getByTestId("left-rail")).toBeTruthy();
   });
+
+  it("does NOT render the overlay controls when overlay prop is omitted", () => {
+    const { queryByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByTestId("rail-close")).toBeNull();
+    expect(queryByTestId("rail-lock-open")).toBeNull();
+  });
+
+  it("renders the close button when overlay prop is supplied", () => {
+    const onDismiss = vi.fn();
+    const { getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+        overlay={{ isOpen: true, onDismiss }}
+      />,
+    );
+    fireEvent.click(getByTestId("rail-close"));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the lock-open button only when onLockOpen is supplied", () => {
+    const onLockOpen = vi.fn();
+    const { getByTestId, queryByTestId, rerender } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+        overlay={{ isOpen: true, onDismiss: vi.fn() }}
+      />,
+    );
+    expect(queryByTestId("rail-lock-open")).toBeNull();
+    rerender(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+        overlay={{ isOpen: true, onDismiss: vi.fn(), onLockOpen }}
+      />,
+    );
+    fireEvent.click(getByTestId("rail-lock-open"));
+    expect(onLockOpen).toHaveBeenCalledTimes(1);
+  });
 });

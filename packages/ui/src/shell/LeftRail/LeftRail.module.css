@@ -316,55 +316,95 @@
   }
 }
 
-/* ── Collapsed mode (data-shell="collapsed") ───────────────── */
+/* ── Collapsed mode (data-shell="collapsed") ─────────────────
+   The shell grid collapses to 0px on the left (see AppShell.module.css)
+   so the rail's natural width is 0. The rail is then promoted to a
+   fixed-position overlay only while `data-rail-overlay="open"`.
+
+   No hover-reveal sentinel: the rail appears solely on hamburger click,
+   outside-click / ESC / close-button dismiss it. */
 :global(body[data-shell="collapsed"]) .rail {
-  padding: 14px 6px;
-  gap: 10px;
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  block-size: 100vh;
+  inline-size: 260px;
+  padding: 14px 10px;
+  background: var(--ds-surface-alt);
+  box-shadow: var(--ds-shadow-3);
+  border-inline-end: 1px solid var(--ds-line);
+  z-index: 320;
+  /* Hidden by default — translateX(-100%) keeps the element mounted so the
+     react-aria overlay listeners stay wired. */
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform var(--ds-duration-3) var(--ds-ease),
+    visibility 0s linear var(--ds-duration-3);
 }
 
-:global(body[data-shell="collapsed"]) .brandName,
-:global(body[data-shell="collapsed"]) .project,
-:global(body[data-shell="collapsed"]) .sectionLabel,
-:global(body[data-shell="collapsed"]) .itemLabel,
-:global(body[data-shell="collapsed"]) .itemMeta,
-:global(body[data-shell="collapsed"]) .sessionsSlot {
+:global(body[data-shell="collapsed"][data-rail-overlay="open"]) .rail {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform var(--ds-duration-3) var(--ds-ease),
+    visibility 0s;
+}
+
+/* Hide the rail entirely (and all its descendants) in focus mode. The shell
+   grid already collapses the column to 0, but the overlay rules above
+   would otherwise still let the rail slide in if data-rail-overlay leaked. */
+:global(body[data-shell="focus"]) .rail {
   display: none;
 }
 
-:global(body[data-shell="collapsed"]) .item {
-  justify-content: center;
-  padding: 8px 0;
+/* ── Overlay controls (close + lock-open) ──────────────────── */
+.overlayControls {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 8px;
+  display: none;
+  align-items: center;
+  gap: 2px;
 }
 
-:global(body[data-shell="collapsed"]) .item:not(.itemActive) {
-  /* Active glyph is still visible — see below — and inactive ones are
-     reduced to glyph-only. The label hide above already covers them. */
+:global(body[data-shell="collapsed"][data-rail-overlay="open"])
+  .overlayControls {
+  display: inline-flex;
 }
 
-:global(body[data-shell="collapsed"]) .itemActive {
-  background: transparent;
-  box-shadow: none;
-}
-
-:global(body[data-shell="collapsed"]) .itemActive .glyph {
-  color: var(--ds-action);
-  background: var(--ds-surface);
-  inline-size: 28px;
-  block-size: 28px;
-  border-radius: 50%;
+.close,
+.lockOpen {
+  inline-size: 26px;
+  block-size: 26px;
   display: grid;
   place-items: center;
-  box-shadow: var(--ds-shadow-1);
-}
+  background: transparent;
+  border: none;
+  color: var(--ds-text-faint);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
 
-:global(body[data-shell="collapsed"]) .tools {
-  grid-template-columns: 1fr;
-  gap: var(--ds-space-1);
+  &:hover {
+    background: var(--ds-surface);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
 }
 
 /* ── Reduced motion ────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .rail {
     scroll-behavior: auto;
+  }
+
+  :global(body[data-shell="collapsed"]) .rail {
+    transition: none;
   }
 }

@@ -77,7 +77,9 @@ const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
   const editorViewRef = useRef<EditorView | null>(null);
-  const openCesare = useCesareOpen();
+  // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveDocument = useSetActiveDocument();
 
   // Publish the active document so Cesare's tool router knows which doc to
@@ -434,6 +436,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onGenerate={handleGenerate}
           />
         )}
+        {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left; Cesare → BottomDock. */}
         <FloatingDock
           primaryAction={{
             label:
@@ -444,7 +447,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onClick: handleExport,
           }}
           secondaryActions={[]}
-          onCesareClick={openCesare}
         />
       </div>
     );
@@ -488,6 +490,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onGenerate={handleGenerate}
         />
       )}
+      {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left; Cesare → BottomDock. */}
       <FloatingDock
         primaryAction={{
           label:
@@ -496,7 +499,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onClick: handleExport,
         }}
         secondaryActions={[]}
-        onCesareClick={openCesare}
       />
     </div>
   );

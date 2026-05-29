@@ -100,7 +100,9 @@ interface BudgetPageProps {
 
 export function BudgetPage({ projectId }: BudgetPageProps) {
   const qc = useQueryClient();
-  const openCesare = useCesareOpen();
+  // Spec 44 TKT-LEAD-01: Cesare is opened from the shell BottomDock.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveScene = useSetActiveScene();
   const { open: openVersionsDrawer } = useVersionsDrawer();
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
@@ -440,6 +442,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
         </div>
       </main>
 
+      {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left only; Cesare → BottomDock. */}
       <FloatingDock
         primaryAction={{
           label: generateMutation.isPending ? "Generando…" : "Rigenera",
@@ -453,8 +456,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             onClick: () => setIsExportOpen(true),
           },
         ]}
-        cesareNoteCount={0}
-        onCesareClick={openCesare}
       />
 
       {view === "category" && categoryTotal !== null && (

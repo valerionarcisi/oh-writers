@@ -122,28 +122,43 @@ const { handleProps, size, isResizing } = useDrawerResize({
 });
 ```
 
-### `useRailReveal`
+### `useRailOverlay` + `RailHamburger`
 
-```ts
-const { sentinelProps, railProps, lockOpenProps, isRevealed } = useRailReveal({
-  shellState,               // "full" | "collapsed" | "focus"
-  onLockOpen: () => setShellState("full"),
-  graceMs: 300,             // optional; default 300
-});
+Notion's actual collapsed-sidebar pattern is NOT hover-based. We expose two
+pieces that compose into the AppShell:
 
-// JSX
-<>
-  <div className={styles.sentinel} {...sentinelProps} />
-  <aside className={styles.rail} {...railProps}>
-    <button className={styles.lockOpen} {...lockOpenProps}>»</button>
-    {…}
-  </aside>
-</>
+```tsx
+const railOverlay = useRailOverlay({ shellState }); // "full" | "collapsed" | "focus"
+
+<RailHamburger
+  onPress={railOverlay.toggle}
+  isOverlayOpen={railOverlay.isOpen}
+/>
+
+<LeftRail
+  /* …other props… */
+  overlay={
+    shellState === "collapsed"
+      ? {
+          isOpen: railOverlay.isOpen,
+          onDismiss: railOverlay.close,
+          onLockOpen: () => {
+            railOverlay.close();
+            setShellState("full");
+          },
+        }
+      : undefined
+  }
+/>
 ```
 
-Side effect: while the rail is revealed, the hook sets
-`body[data-rail-reveal="open"]`. CSS keys off that attribute to slide the
-rail in. When `shellState !== "collapsed"` the hook is a no-op.
+Behaviour:
+
+- `RailHamburger` is a 32px button anchored `position: fixed; top: 12px; left: 12px; z-index: 340`. Visible only when `body[data-shell="collapsed"]`; hidden in `full` (rail is already open) and `focus` (chrome hidden).
+- Clicking the hamburger flips `body[data-rail-overlay]` between `open` and absent.
+- The rail CSS reads `data-shell="collapsed"` + `data-rail-overlay="open"` and slides the rail in from `translateX(-100%)` to `translateX(0)`. The rail is `position: fixed` while collapsed — it sits above the editor, the grid column stays at 0, the editor never reflows.
+- Dismiss paths: hamburger again, click outside the rail (`react-aria` `useOverlay` listener on the rail), `ESC`, or the `«` close button rendered in the rail's top-right (visible only while overlay is open). A `»` "lock open" chip is also available; clicking it dismisses the overlay and switches the shell back to `full`.
+- No hover sentinel, no mouseleave grace timer.
 
 ## 3. Cross-page visual audit
 
@@ -162,7 +177,7 @@ drawer + shell + view permutation are stored under
 | `04-peek.png`                     | Cesare peek (pill bottom-right)                                    |
 | `05-full.png`                     | Cesare full-page                                                   |
 | `06-shell-collapsed.png`          | Shell collapsed (rail hidden, hamburger top-left, dock visible)    |
-| `07-shell-collapsed-hover.png`    | Shell collapsed + rail revealed via hover sentinel                 |
+| `07-shell-collapsed-overlay.png`  | Shell collapsed + rail shown as overlay (hamburger clicked open)   |
 | `08-shell-focus.png`              | Focus mode (rail + topstrip + dock hidden)                         |
 | `09-screenplay-expanded.png`      | Sceneggiatura + expanded drawer                                    |
 | `10-soggetto-expanded.png`        | Soggetto + expanded drawer (margin notes column shrinks)           |

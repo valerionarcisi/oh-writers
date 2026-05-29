@@ -107,7 +107,9 @@ function SoggettoPageReady({
   loglineDoc,
 }: SoggettoPageReadyProps) {
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
-  const openCesare = useCesareOpen();
+  // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveDocument = useSetActiveDocument();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
 
@@ -244,6 +246,7 @@ function SoggettoPageReady({
         </div>
       </NarrativeDocsShell>
 
+      {/* Spec 44 TKT-LEAD-01: bottom-left page CTAs; Cesare → BottomDock. */}
       <FloatingDock
         primaryAction={{
           label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
@@ -262,7 +265,6 @@ function SoggettoPageReady({
             },
           },
         ]}
-        onCesareClick={openCesare}
       />
     </div>
   );

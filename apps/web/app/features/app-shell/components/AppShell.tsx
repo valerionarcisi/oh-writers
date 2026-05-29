@@ -13,6 +13,8 @@ import {
   SkipLink,
   CommandPalette,
   LeftRail,
+  RailHamburger,
+  useRailOverlay,
   BottomDock,
   SplitDrawer,
   TargetPagePreview,
@@ -34,6 +36,7 @@ import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
+import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
 import {
   ActiveSceneProvider,
@@ -151,13 +154,15 @@ const PAGE_TO_ROUTE_SEGMENT: Partial<Record<CesarePage, string>> = {
 export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
-      <ActiveSceneProvider>
-        <CesareNotificationProvider>
-          <SplitDrawerProvider>
-            <AppShellInner {...props} />
-          </SplitDrawerProvider>
-        </CesareNotificationProvider>
-      </ActiveSceneProvider>
+      <TopBarSlotsProvider>
+        <ActiveSceneProvider>
+          <CesareNotificationProvider>
+            <SplitDrawerProvider>
+              <AppShellInner {...props} />
+            </SplitDrawerProvider>
+          </CesareNotificationProvider>
+        </ActiveSceneProvider>
+      </TopBarSlotsProvider>
     </SaveStateProvider>
   );
 }
@@ -181,6 +186,8 @@ function AppShellInner({
   // Keep the call so the provider stays mounted and other consumers continue
   // to read the live state.
   useSaveStateValue();
+  // Per-page TopBar slots — currently only the Sceneggiatura element legend.
+  const topBarSlots = useTopBarSlots();
   const activeScene = useActiveScene();
   const activeRequirementId = useActiveRequirementId();
   const activeDocument = useActiveDocument();
@@ -198,6 +205,15 @@ function AppShellInner({
   const splitDrawer = useSplitDrawer();
   const openBellDrawer = useBellOpener();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
+  // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
+  // by default and a top-left hamburger toggles it as a sliding overlay.
+  // No hover-reveal sentinel — outside-click / ESC / hamburger again close
+  // it. The hook is a no-op outside `collapsed`.
+  const railOverlay = useRailOverlay({ shellState });
+  const lockRailOpen = useCallback(() => {
+    railOverlay.close();
+    setShellState("full");
+  }, [railOverlay]);
   const {
     notifications,
     startNotification,
@@ -729,11 +745,32 @@ function AppShellInner({
               onSessionNew={onCesareSessionNew}
               tools={railTools}
               onNavigate={handleNavigate}
+              overlay={
+                shellState === "collapsed"
+                  ? {
+                      isOpen: railOverlay.isOpen,
+                      onDismiss: railOverlay.close,
+                      onLockOpen: lockRailOpen,
+                    }
+                  : undefined
+              }
             />
           </div>
 
+          {/* Notion-style hamburger — always visible top-left while collapsed,
+              hidden otherwise via CSS (`data-shell` selector). Toggles the
+              rail overlay; never disappears on hover or scroll. */}
+          <RailHamburger
+            onPress={railOverlay.toggle}
+            isOverlayOpen={railOverlay.isOpen}
+          />
+
           <main id="main-content" className={styles.main}>
-            <TopBar sectionName={sectionName} onSearch={openPalette} />
+            <TopBar
+              sectionName={sectionName}
+              onSearch={openPalette}
+              elementLegend={topBarSlots.elementLegend ?? undefined}
+            />
             {children}
           </main>
 
@@ -800,6 +837,18 @@ function AppShellInner({
               }}
               askCesare={wrappedAskCesare}
               onAssistantResponse={handleCesareAssistantResponse}
+              dockIcons={{
+                onBell: openBellDrawer,
+                // While Cesare is open, the avatar routes to the account
+                // settings page — the most common destination from the
+                // BottomDock dropdown. A full dropdown popover from inside
+                // the drawer header would require expanding the chrome
+                // primitive (out of scope for this cleanup).
+                onAvatar: handleSettings,
+                onGear: handleSettings,
+                hasUnreadNotifications: hasUnseen,
+                avatarLabel: deriveInitials(user.name),
+              }}
             />
           )}
           <SplitDrawerHost

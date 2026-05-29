@@ -3,6 +3,13 @@
   flex-direction: column;
   block-size: 100%;
   min-block-size: 0;
+  /* Activate inline-size container queries so the `@container` rule below
+   * actually fires when the main column is narrow (e.g. a 240px rail + a
+   * 480px viewport leaves ~470px for the editor + margin-notes layout,
+   * far below the 900px breakpoint). Without this, the grid template
+   * stays at `minmax(0, 1fr) 320px` and the left prose column collapses
+   * to a few pixels, breaking text one character per line. */
+  container-type: inline-size;
 }
 
 .viewbarWrap {
@@ -17,16 +24,6 @@
   align-items: center;
   gap: var(--ds-space-3);
   inline-size: 100%;
-}
-
-.docTypeLabel {
-  font-size: var(--ds-text-xs, 0.75rem);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ds-text-secondary, var(--ds-text-muted));
-  white-space: nowrap;
-  user-select: none;
 }
 
 .viewbarRight {
