@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
-import { DropdownMenu, FloatingDock, Icon } from "@oh-writers/ui";
+import { ActionsMenu, FloatingDock } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -118,6 +118,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const isLogline = type === DocumentTypes.LOGLINE;
   const isSynopsis = type === DocumentTypes.SYNOPSIS;
   const isTreatment = type === DocumentTypes.TREATMENT;
+  // Pages that promote the logline to the TopBar center and host the unified
+  // "…" actions menu in the TopBar right slot (Soggetto parity for Scaletta).
+  const hasTopBarDocActions = isSynopsis || isTreatment || isOutline;
   const isReadOnly = !document.canEdit;
 
   // Track whether the user has actually edited (vs just loaded an empty doc).
@@ -464,6 +467,25 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     <TreatmentToc content={content} />
   ) : undefined;
 
+  // Unified "…" actions menu for narrative doc pages (Soggetto-style). PDF
+  // export is gated to the narrative export route (logline/synopsis/treatment);
+  // on Scaletta it stays present but disabled. Versioni is always actionable.
+  const docActionsMenu = hasTopBarDocActions ? (
+    <ActionsMenu
+      data-testid="narrative-actions-menu"
+      items={[
+        {
+          label: exportPdf.isPending ? "Esportazione…" : "Esporta PDF",
+          onClick: handleExport,
+          disabled: !isNarrative || exportPdf.isPending,
+        },
+        { label: "Versioni", onClick: openVersionsDrawer },
+        { label: "Importa", onClick: () => {}, disabled: true },
+        { label: "Frontespizio", onClick: () => {}, disabled: true },
+      ]}
+    />
+  ) : undefined;
+
   return (
     <div className={styles.page}>
       {readOnlyBadge}
@@ -478,22 +500,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         onOpenVersions={openVersionsDrawer}
         leftAside={leftAside}
         rightAside={rightAside}
-        topBarActions={
-          isNarrative ? (
-            <DropdownMenu
-              trigger={<Icon name="upload" size={14} aria-hidden={true} />}
-              align="end"
-              triggerClassName={styles.exportTrigger}
-              items={[
-                {
-                  label: exportPdf.isPending ? "Esportazione…" : "Esporta PDF",
-                  onClick: handleExport,
-                  disabled: exportPdf.isPending,
-                },
-              ]}
-            />
-          ) : undefined
-        }
+        topBarActions={docActionsMenu}
       >
         {draftBanner}
         {editorBody}
