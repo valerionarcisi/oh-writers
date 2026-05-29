@@ -369,10 +369,13 @@
   display: none;
 }
 
-/* ── Pin button (lock-open) on the brand row ──────────────── */
-/* Sits at the opposite edge of the brand label, hidden until the rail (or the
-   pin itself) is hovered/focused. */
-.lockOpen {
+/* ── Brand-row trailing buttons (pin / collapse) ──────────────
+   Both sit at the opposite edge of the brand label and stay hidden until the
+   rail (or the button itself) is hovered/focused. The pin (`«` → `»`) shows
+   only in the collapsed overlay; the collapse `«` shows only in full mode.
+   They never coexist, so they share the same visual slot. */
+.lockOpen,
+.collapse {
   flex: 0 0 auto;
   inline-size: 26px;
   block-size: 26px;
@@ -405,7 +408,9 @@
 }
 
 .rail:hover .lockOpen,
-.brandRow:hover .lockOpen {
+.brandRow:hover .lockOpen,
+.rail:hover .collapse,
+.brandRow:hover .collapse {
   opacity: 1;
 }
 

@@ -758,20 +758,6 @@ function AppShellInner({
     [railSections, recentsSection],
   );
 
-  // The chevron at the rail boundary toggles the sidebar collapse/expand
-  // (Notion ⌘\). In focus mode it doubles as the focus exit. In collapsed
-  // mode the top-left hamburger owns re-expand, so the chevron is hidden
-  // there (CSS) to avoid two competing affordances. Label describes the
-  // actual action — not "Focus" — see FU-44-03.
-  const collapseToggleLabel =
-    shellState === "focus"
-      ? "Esci da Focus (⌃⌥F)"
-      : shellState === "collapsed"
-        ? "Espandi la barra laterale (⌘\\)"
-        : "Comprimi la barra laterale (⌘\\)";
-  const collapseToggleGlyph =
-    shellState === "collapsed" ? "»" : shellState === "focus" ? "»" : "«";
-
   return (
     <VersionsDrawerProvider>
       <CesareProvider openCesare={openCesare}>
@@ -794,6 +780,11 @@ function AppShellInner({
               onSessionNew={onCesareSessionNew}
               tools={railTools}
               onNavigate={handleNavigate}
+              onCollapse={
+                shellState === "full"
+                  ? () => setShellState("collapsed")
+                  : undefined
+              }
               overlay={
                 shellState === "collapsed"
                   ? {
@@ -827,28 +818,9 @@ function AppShellInner({
             {children}
           </main>
 
-          {/* Collapse/expand toggle — sits at the rail boundary; ⌘\ also
-              fires the collapse cycle. Hidden when collapsed (the top-left
-              hamburger owns re-expand in the Notion model). Label matches the
-              action it performs (FU-44-03). */}
-          <button
-            type="button"
-            className={styles.focusToggle}
-            aria-label={collapseToggleLabel}
-            title={collapseToggleLabel}
-            onClick={() =>
-              setShellState((prev) =>
-                prev === "focus"
-                  ? "full"
-                  : prev === "collapsed"
-                    ? "full"
-                    : "collapsed",
-              )
-            }
-            data-testid="shell-collapse-toggle"
-          >
-            {collapseToggleGlyph}
-          </button>
+          {/* Collapse affordance now lives inside the LeftRail brand row
+              (hover-revealed `«`). ⌘\ still drives the full↔collapsed cycle
+              from the keydown handler above. */}
 
           <BottomDock
             user={{ initials: deriveInitials(user.name) }}
