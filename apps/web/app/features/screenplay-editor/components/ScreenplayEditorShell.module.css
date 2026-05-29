@@ -217,6 +217,47 @@
 }
 
 
+/* ─── TopBar action buttons (export / focus) ────────────── */
+
+.topBarAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text-2);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+  }
+}
+
+.topBarActionActive {
+  color: var(--ds-action);
+  background: var(--ds-action-soft);
+
+  &:hover {
+    background: var(--ds-action-soft);
+    color: var(--ds-action);
+  }
+}
+
 /* ─── Indice button + popover (in Viewbar) ─────────────── */
 
 .indiceWrap {

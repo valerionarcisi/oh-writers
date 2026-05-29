@@ -12,7 +12,6 @@ import {
 } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { useVersionsDrawer } from "~/features/versions";
-import { useTopBarSlotPublisher } from "~/features/app-shell";
 import { Skeleton } from "@oh-writers/ui";
 import styles from "./_app.projects.$id_.editor.module.css";
 
@@ -58,9 +57,7 @@ function ScreenplayEditorPage() {
     [rawScenes, metrics.sceneCurrent],
   );
 
-  // Spec 44 — surface the Sceneggiatura element legend in the shell TopBar
-  // (second row) for the duration of this route's mount. The legacy Viewbar
-  // legend row is removed below; the TopBar now owns the legend.
+  // Element-type chips go into the shell Viewbar (second row, below TopBar).
   const legendNode = useMemo(
     () => (
       <ScreenplayElementChips
@@ -70,9 +67,6 @@ function ScreenplayEditorPage() {
     ),
     [currentElement],
   );
-  // Chips go into the TopBar center slot (same row as section crumb).
-  // elementLegend (second row) is no longer used for screenplay.
-  useTopBarSlotPublisher("center", legendNode);
 
   if (isLoading)
     return (
@@ -93,7 +87,7 @@ function ScreenplayEditorPage() {
           title={value.title}
           projectId={id}
           acts={acts}
-          topBarCenter={legendNode}
+          viewbarCenter={legendNode}
           onOpenVersions={() =>
             openVersionsDrawer({ kind: "screenplay", screenplayId: value.id })
           }

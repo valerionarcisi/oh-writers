@@ -321,9 +321,9 @@
    outside-click / ESC / close-button dismiss it. */
 :global(body[data-shell="collapsed"]) .rail {
   position: fixed;
-  inset-block-start: 0;
+  inset-block-start: 48px;
   inset-inline-start: 0;
-  block-size: 100vh;
+  block-size: calc(100vh - 48px);
   inline-size: 260px;
   padding: 14px 10px;
   background: var(--ds-surface-alt);
@@ -354,26 +354,16 @@
   display: none;
 }
 
-/* ── Overlay controls (close + lock-open) ──────────────────── */
-.overlayControls {
+/* ── Pin button (lock-open) inside the overlay panel ──────── */
+/* The overlayControls wrapper is no longer used; .lockOpen is now
+   positioned directly inside the <aside> at top-right. */
+.lockOpen {
   position: absolute;
   inset-block-start: 10px;
   inset-inline-end: 8px;
-  display: none;
-  align-items: center;
-  gap: 2px;
-}
-
-:global(body[data-shell="collapsed"][data-rail-overlay="open"])
-  .overlayControls {
-  display: inline-flex;
-}
-
-.close,
-.lockOpen {
   inline-size: 26px;
   block-size: 26px;
-  display: grid;
+  display: none;
   place-items: center;
   background: transparent;
   border: none;
@@ -392,6 +382,10 @@
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
+}
+
+:global(body[data-shell="collapsed"][data-rail-overlay="open"]) .lockOpen {
+  display: grid;
 }
 
 /* ── Reduced motion ────────────────────────────────────────── */

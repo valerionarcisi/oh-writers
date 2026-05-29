@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
-import { FloatingDock } from "@oh-writers/ui";
+import { DropdownMenu, FloatingDock, Icon } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -478,6 +478,22 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         onOpenVersions={openVersionsDrawer}
         leftAside={leftAside}
         rightAside={rightAside}
+        topBarActions={
+          isNarrative ? (
+            <DropdownMenu
+              trigger={<Icon name="upload" size={14} aria-hidden={true} />}
+              align="end"
+              triggerClassName={styles.exportTrigger}
+              items={[
+                {
+                  label: exportPdf.isPending ? "Esportazione…" : "Esporta PDF",
+                  onClick: handleExport,
+                  disabled: exportPdf.isPending,
+                },
+              ]}
+            />
+          ) : undefined
+        }
       >
         {draftBanner}
         {editorBody}
@@ -490,16 +506,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onGenerate={handleGenerate}
         />
       )}
-      {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left; Cesare → BottomDock. */}
-      <FloatingDock
-        primaryAction={{
-          label:
-            isNarrative && exportPdf.isPending ? "Esportando…" : "Esporta PDF",
-          hotkey: "⌘E",
-          onClick: handleExport,
-        }}
-        secondaryActions={[]}
-      />
     </div>
   );
 }
