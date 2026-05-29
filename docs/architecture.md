@@ -243,7 +243,9 @@ Every Yjs message → room access checked against team membership
 
 ### Shell Model
 
-The AppShell is a Notion-class composition that ships exactly four top-level surfaces. The editor area is pixel-stable when Cesare opens, closes, or resizes — nothing in the shell reserves a column for the assistant. See [Spec 44](./specs/44-shell-refactor-notion-style.md) for the authoritative state model.
+The AppShell is a Notion-class composition that ships exactly four top-level surfaces. The editor area is pixel-stable when Cesare opens, closes, or resizes — nothing in the shell reserves a column for the assistant. See [Spec 44](./specs/44-shell-refactor-notion-style.md) for the authoritative state model and [the shipped screenshot matrix](./specs/44-shipped-screenshots.md) for visual proof.
+
+![](./specs/mockups/shipped/dashboard__closed-full.png)
 
 **Surfaces:**
 

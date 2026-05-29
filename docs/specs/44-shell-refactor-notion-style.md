@@ -56,6 +56,10 @@ Reference HTML mockup: [`docs/specs/mockups/shell-canva-notion.html`](./mockups/
 
 ## Architecture
 
+> Shipped visual proof: see [`docs/specs/44-shipped-screenshots.md`](./44-shipped-screenshots.md) for the full state matrix.
+>
+> ![](mockups/shipped/dashboard__closed-full.png)
+
 ### New components / files
 
 ```
@@ -137,10 +141,24 @@ Shell + Cesare states persist per user in `localStorage`; view comes from the ro
 ### Per-page mitigations
 
 - **Sceneggiatura**: Element Legend in the Top Strip second row. No right panel. Cesare reads scenes via sub-window.
+
+  ![](mockups/shipped/screenplay__closed-full.png)
+
 - **Soggetto / Sinossi / Trattamento**: margin notes column to the right of the page. Each note is a `CollapsibleNote`. When Cesare ≠ closed, notes remain single-line collapsed to keep readability.
+
+  ![](mockups/shipped/soggetto__closed-full.png)
+
 - **Breakdown**: `RecapStrip` (cost + category chips + "Aggiungi al budget") above the editor, always scene-aware. Deep cost breakdown lives in Cesare sub-window. Drop legacy `CATEGORIE 7 / CESARE 1 ALERT` panel.
+
+  ![](mockups/shipped/breakdown__closed-full.png)
+
 - **Budget**: table fills the editor area; no right column. Cesare provides line-producer analysis on demand.
+
+  ![](mockups/shipped/budget__closed-full.png)
+
 - **Locations**: split-pane (list left ~340px, map right). Cesare scouting tools update the list reactively.
+
+  ![](mockups/shipped/locations__closed-full.png)
 
 ## Implementation work-packages
 
