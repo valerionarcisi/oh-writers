@@ -53,7 +53,11 @@ export function FloatingDock({
   cesareIsThinking = false,
   onCesareClick,
   toast,
-  position = "bottom-right",
+  // Spec 44: per-page CTAs anchor BOTTOM-LEFT so they never collide with
+  // the shell-level BottomDock (bell · avatar · gear · Cesare) which owns
+  // bottom-right. Callers that genuinely need the historical bottom-right
+  // anchor opt in explicitly via `position="bottom-right"`.
+  position = "bottom-left",
   infoChips,
 }: FloatingDockProps) {
   return (

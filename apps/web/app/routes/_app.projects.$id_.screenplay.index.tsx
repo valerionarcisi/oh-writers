@@ -12,6 +12,7 @@ import {
 } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { useVersionsDrawer } from "~/features/versions";
+import { useTopBarSlotPublisher } from "~/features/app-shell";
 import { Skeleton } from "@oh-writers/ui";
 import styles from "./_app.projects.$id_.editor.module.css";
 
@@ -57,6 +58,20 @@ function ScreenplayEditorPage() {
     [rawScenes, metrics.sceneCurrent],
   );
 
+  // Spec 44 — surface the Sceneggiatura element legend in the shell TopBar
+  // (second row) for the duration of this route's mount. The legacy Viewbar
+  // legend row is removed below; the TopBar now owns the legend.
+  const legendNode = useMemo(
+    () => (
+      <ScreenplayElementChips
+        currentElement={currentElement}
+        onSetElement={(el) => editorRef.current?.setElement(el)}
+      />
+    ),
+    [currentElement],
+  );
+  useTopBarSlotPublisher("elementLegend", legendNode);
+
   if (isLoading)
     return (
       <div className={styles.status}>
@@ -87,15 +102,6 @@ function ScreenplayEditorPage() {
                   isCurrent: v.id === value.currentVersionId,
                 }))
               : []
-          }
-          viewbarCenter={
-            // TODO: spec-44 move into TopBar slot once WP-A merges the
-            // `elementLegend` prop. For now the legend lives inside the
-            // Viewbar's centre slot, matching the legacy chrome.
-            <ScreenplayElementChips
-              currentElement={currentElement}
-              onSetElement={(el) => editorRef.current?.setElement(el)}
-            />
           }
         >
           <ScreenplayEditor

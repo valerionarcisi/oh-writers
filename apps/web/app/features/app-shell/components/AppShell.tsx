@@ -36,6 +36,7 @@ import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
+import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
 import {
   ActiveSceneProvider,
@@ -153,13 +154,15 @@ const PAGE_TO_ROUTE_SEGMENT: Partial<Record<CesarePage, string>> = {
 export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
-      <ActiveSceneProvider>
-        <CesareNotificationProvider>
-          <SplitDrawerProvider>
-            <AppShellInner {...props} />
-          </SplitDrawerProvider>
-        </CesareNotificationProvider>
-      </ActiveSceneProvider>
+      <TopBarSlotsProvider>
+        <ActiveSceneProvider>
+          <CesareNotificationProvider>
+            <SplitDrawerProvider>
+              <AppShellInner {...props} />
+            </SplitDrawerProvider>
+          </CesareNotificationProvider>
+        </ActiveSceneProvider>
+      </TopBarSlotsProvider>
     </SaveStateProvider>
   );
 }
@@ -183,6 +186,8 @@ function AppShellInner({
   // Keep the call so the provider stays mounted and other consumers continue
   // to read the live state.
   useSaveStateValue();
+  // Per-page TopBar slots — currently only the Sceneggiatura element legend.
+  const topBarSlots = useTopBarSlots();
   const activeScene = useActiveScene();
   const activeRequirementId = useActiveRequirementId();
   const activeDocument = useActiveDocument();
@@ -761,7 +766,11 @@ function AppShellInner({
           />
 
           <main id="main-content" className={styles.main}>
-            <TopBar sectionName={sectionName} onSearch={openPalette} />
+            <TopBar
+              sectionName={sectionName}
+              onSearch={openPalette}
+              elementLegend={topBarSlots.elementLegend ?? undefined}
+            />
             {children}
           </main>
 
@@ -828,6 +837,18 @@ function AppShellInner({
               }}
               askCesare={wrappedAskCesare}
               onAssistantResponse={handleCesareAssistantResponse}
+              dockIcons={{
+                onBell: openBellDrawer,
+                // While Cesare is open, the avatar routes to the account
+                // settings page — the most common destination from the
+                // BottomDock dropdown. A full dropdown popover from inside
+                // the drawer header would require expanding the chrome
+                // primitive (out of scope for this cleanup).
+                onAvatar: handleSettings,
+                onGear: handleSettings,
+                hasUnreadNotifications: hasUnseen,
+                avatarLabel: deriveInitials(user.name),
+              }}
             />
           )}
           <SplitDrawerHost

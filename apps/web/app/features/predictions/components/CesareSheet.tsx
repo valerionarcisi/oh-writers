@@ -35,6 +35,7 @@ import {
   type CesareDrawerScope,
   type CesareDrawerSession,
   type CesareDrawerContextTag,
+  type CesareDrawerDockIcons,
   type CesareDrawerState,
   type TargetPageRef,
   type TraceMarker,
@@ -538,6 +539,10 @@ export interface CesareSheetProps {
   askCesare?: AskCesareFn | null;
   /** Called after each assistant response — used to invalidate queries. */
   onAssistantResponse?: (reply: string) => void;
+  /** Spec 44 — bell / avatar / gear icons migrated from the BottomDock when
+   *  Cesare state ≠ closed. AppShell supplies the same handlers it gives to
+   *  the BottomDock so the user keeps a single command surface visible. */
+  dockIcons?: CesareDrawerDockIcons;
 }
 
 export function CesareSheet({
@@ -555,6 +560,7 @@ export function CesareSheet({
   onCesareStateChange,
   askCesare = null,
   onAssistantResponse,
+  dockIcons,
 }: CesareSheetProps) {
   // ── Drawer state machine ────────────────────────────────────────────────
   const initialDrawerState: CesareDrawerState = isOpen ? "expanded" : "closed";
@@ -909,6 +915,7 @@ export function CesareSheet({
       activeSessionId={activeSessionId ?? undefined}
       onSessionSelectorClick={handleSessionSelectorClick}
       contextTags={contextTags}
+      dockIcons={dockIcons}
       scopes={scopes}
       composer={{
         value: input,
@@ -983,9 +990,7 @@ function MessageView({
         thoughts={parsed.thoughts}
         updates={parsed.updates}
         onShowChanges={
-          rewrite
-            ? () => onShowChangesForRewrite(rewrite)
-            : () => undefined
+          rewrite ? () => onShowChangesForRewrite(rewrite) : () => undefined
         }
         onUndo={
           rewrite && hasChanges ? () => onCancelRewrite(rewrite) : undefined
