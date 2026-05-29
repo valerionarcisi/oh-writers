@@ -72,6 +72,11 @@ export type LeftRailProps = {
   tools?: ReadonlyArray<RailToolItem>;
   /** Optional aria-label override for the rail nav landmark. */
   ariaLabel?: string;
+  /** Collapse the shell from inside the rail. When provided (full mode only),
+   *  the brand row surfaces a hover-revealed `«` button at its trailing edge.
+   *  Mutually exclusive with `overlay` — `overlay` is only supplied in the
+   *  collapsed state, where the `»` pin owns the same slot. */
+  onCollapse?: () => void;
   /** Overlay mode props — supplied by AppShell when `data-shell="collapsed"`.
    *  When provided, the rail behaves as a dismissible overlay: outside-click
    *  + ESC fire `onDismiss`; a top-right `«` button mirrors that dismiss;
@@ -223,6 +228,7 @@ export function LeftRail({
   tools,
   ariaLabel,
   overlay,
+  onCollapse,
 }: LeftRailProps) {
   const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
@@ -247,6 +253,15 @@ export function LeftRail({
       isDisabled: !overlay?.onLockOpen,
     },
     lockRef,
+  );
+  const collapseRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps: collapseBtnProps } = useButton(
+    {
+      onPress: onCollapse ?? (() => undefined),
+      "aria-label": "Comprimi la barra laterale (⌘\\)",
+      isDisabled: !onCollapse,
+    },
+    collapseRef,
   );
 
   // react-aria handles ESC + outside-click for the overlay case. When the
@@ -339,6 +354,17 @@ export function LeftRail({
             data-testid="rail-lock-open"
           >
             »
+          </button>
+        )}
+        {!overlay && onCollapse && (
+          <button
+            ref={collapseRef}
+            {...collapseBtnProps}
+            className={styles.collapse}
+            title="Comprimi la barra laterale (⌘\)"
+            data-testid="rail-collapse"
+          >
+            «
           </button>
         )}
       </div>

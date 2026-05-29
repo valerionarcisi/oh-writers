@@ -187,10 +187,31 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     type === DocumentTypes.TREATMENT;
   const { data: docVersionsResult } = useDocumentVersions(document.id);
   const loglineQuery = useDocument(document.projectId, DocumentTypes.LOGLINE);
-  const loglineContent =
+  const loglineDoc =
     loglineQuery.data && loglineQuery.data.isOk
-      ? loglineQuery.data.value.content
-      : "";
+      ? loglineQuery.data.value
+      : null;
+  const persistedLogline = loglineDoc?.content ?? "";
+  // The logline is the shared PROJECT logline (a sibling document), surfaced in
+  // the TopBar pill on every narrative page. Edits made from here apply LIVE to
+  // that logline document and autosave, so the pill stays editable+persistent on
+  // synopsis/outline/treatment (not just soggetto). canEdit mirrors the page's
+  // edit permission.
+  const canEditLogline = document.canEdit && !isReadOnly && loglineDoc !== null;
+  const [loglineDraft, setLoglineDraft] = useState(persistedLogline);
+  useEffect(() => {
+    setLoglineDraft(persistedLogline);
+  }, [persistedLogline]);
+  const saveLogline = useSaveDocument();
+  useAutoSave(
+    saveLogline,
+    loglineDoc?.id ?? "",
+    loglineDraft,
+    persistedLogline,
+  );
+  const handleLoglineChange = canEditLogline
+    ? (next: string) => setLoglineDraft(next)
+    : undefined;
   const exportPdf = useExportNarrativePdf();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const handleExport = () => {
@@ -493,8 +514,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         projectId={document.projectId}
         docType={type}
         layout={layout}
-        logline={loglineContent}
-        canEditLogline={false}
+        logline={loglineDraft}
+        canEditLogline={canEditLogline}
+        onLoglineChange={handleLoglineChange}
         versionLabel={currentVersionLabel ?? undefined}
         versionMenuItems={versionMenuItems}
         onOpenVersions={openVersionsDrawer}
