@@ -20,5 +20,7 @@ export {
   useRenameSession,
   useDeleteSession,
 } from "./useSessions";
+export { SessionsProvider, useSessionsContext } from "./sessions-context";
+export type { SessionsContextValue } from "./sessions-context";
 // server fns intentionally NOT re-exported here — import directly from
 // ./sessions.server in server-only code paths.

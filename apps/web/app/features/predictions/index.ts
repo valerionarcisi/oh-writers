@@ -22,6 +22,8 @@ export {
   useRenameSession,
   useDeleteSession,
   DEFAULT_NEW_SESSION_TITLE,
+  SessionsProvider,
+  useSessionsContext,
 } from "./sessions";
-export type { CesareSession } from "./sessions";
+export type { CesareSession, SessionsContextValue } from "./sessions";
 // askCesare is a server function — import directly from ./cesare.server, never from this barrel

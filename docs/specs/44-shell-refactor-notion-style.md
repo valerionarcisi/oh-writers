@@ -37,20 +37,20 @@ Reference HTML mockup: [`docs/specs/mockups/shell-canva-notion.html`](./mockups/
 
 ## Glossary (canonical)
 
-- **Left Rail** — fixed left column. Project identity + Document Type / Production View nav + Sessioni Cesare (visible only when Cesare expanded/full) + Recents + tool icons. Replaces old TopBar section tabs.
+- **Left Rail** — fixed left column. Project identity + Document Type / Production View nav + Sessioni Cesare (always visible when the project has at least one session — Notion-style "Recents" pattern) + Recents + tool icons. Replaces old TopBar section tabs.
 - **Top Strip** — slim per-page header above editor. Breadcrumb + scope chip + version pill + save state. NO project name, NO section tabs.
 - **Element Legend** — second row of the Top Strip, only on Sceneggiatura. Hosts `SCENE · ACTION · CHARACTER · DIALOGUE · PAREN · TRANSITION` legend + Indice + Focus + Esporta.
 - **Bottom Dock** — floating pill bottom-RIGHT: `🔔 · 👤 · ⚙ · │ · ✦ Cesare`. Hidden when Cesare ≠ closed.
-- **Cesare Panel** — Notion-style floating sub-window bottom-right (max ~480×640px). Editor never reflows. States: `closed | expanded | peek | full`. Header order: agent name + context chip · sessions selector · | · bell · avatar · gear · `↗` · `↙` (only in full) · `−` · `×`.
+- **Cesare Panel** — Notion-style floating sub-window bottom-right (max ~480×640px). Editor never reflows. States: `closed | expanded | peek | full`. Header order: agent name + context chip · | · bell · avatar · gear · `↗` · `↙` (only in full) · `−` · `×`. Sessions live in the LeftRail (see **Cesare Session**), not in the header.
 - **Full-page** — Cesare drawer state covering the whole viewport (Notion `»` pattern). Rail + Top Strip + Dock all hide; Cesare gets a centred max-780px column.
-- **Cesare Drawer** — Cesare-only floating panel anchored bottom-right (Notion AI chat pattern). States: `closed | peek | expanded | expanded-split | full`. **Never** anchors as a side column — Cesare always lives bottom-right. `expanded` = floating 480×640 sub-window; `expanded-split` = the transient state used in the SplitDrawer cross-flow (drawer narrows so the SplitDrawer can co-exist on the right); `full` = whole viewport. AppShell's `body[data-cesare]` flag persists only `closed` and `expanded` — the other three states are transient. Owns: header (agent + context tags + session selector + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else.
+- **Cesare Drawer** — Cesare-only floating panel anchored bottom-right (Notion AI chat pattern). States: `closed | peek | expanded | expanded-split | full`. **Never** anchors as a side column — Cesare always lives bottom-right. `expanded` = floating 480×640 sub-window; `expanded-split` = the transient state used in the SplitDrawer cross-flow (drawer narrows so the SplitDrawer can co-exist on the right); `full` = whole viewport. AppShell's `body[data-cesare]` flag persists only `closed` and `expanded` — the other three states are transient. Owns: header (agent + context tags + window-control icons), body (messages + Step Blocks), sticky footer (quick prompts + composer with file/scope chips). The Drawer is the **only** Cesare surface in the app — there is no second chat container anywhere else. Sessions are NOT part of the drawer chrome anymore — see **Cesare Session**.
 
 - **SplitDrawer** — separate shared `packages/ui` primitive for **right-anchored auxiliary panels** (the Notion `»` chevron pattern from Image 20). Used by features that need to occupy half the viewport while keeping the page reachable on the left. Has nothing to do with Cesare. States: `closed | open | full`. `open` = right column ~50% viewport (drag-resize left edge, min 360 max 60vw); `full` = whole viewport. The page reflows narrower when `open`. Consumers: `VersionsDrawer` (versions list + diff side-by-side), `NotificationCenterDrawer` (bell cronologia with click-to-jump-and-pulse), `DocumentBrowserDrawer` (future), `DiffViewer` (future). Each consumer is a thin wrapper around `SplitDrawer` that supplies its own header / body / footer JSX.
 - **Peek** — minimal floating bar bottom-right showing agent name + last activity. Replaces the dock pill while peeking.
 - **AppShell Shell State** — `full` (rail 240px locked open + topstrip + dock) | `collapsed` (rail hidden, **hover top-left edge reveals it as a temporary overlay** that auto-hides on mouseleave, like Notion's collapsed sidebar) | `focus` (rail + topstrip + dock hidden, NO hover-reveal). Toggled via `⌘\` (Notion shortcut) for full↔collapsed and `⌃⌥F` for focus. Persisted per user.
 
 - **Hover-reveal**: when `data-shell="collapsed"`, the rail is hidden but a 4px-wide hover sentinel sits at the left viewport edge. Mouse enters → rail slides in as a temporary overlay (z-index above editor, NOT a grid column). A `»` chip in the rail header lets the user "lock open" (returns shell to `full`). Mouse leaves the rail (and any of its menus) → rail slides out after a 300ms grace period. Touch/keyboard equivalents: hamburger icon top-left (always visible in `collapsed`, hidden in `focus`) + `⌘\` shortcut.
-- **Cesare Session** — one resumable chat thread per project. Persisted (`cesare_sessions` table). User can hold many sessions per project.
+- **Cesare Session** — one resumable chat thread per project. Persisted (`cesare_sessions` table). User can hold many sessions per project. Sessions are surfaced exclusively in the **LeftRail** under a "Sessioni Cesare" section (Notion-style "Recents" pattern): always visible when at least one session exists, with chat-bubble glyph + title + relative timestamp. Clicking a row opens Cesare to `full` AND opens the SplitDrawer on the right with the session context (page references, scope, last entities touched — initial payload is a placeholder with the session title; richer entity tracking is a follow-up). The active session id is owned by `SessionsProvider` (`apps/web/app/features/predictions/sessions/sessions-context.tsx`) and persisted in `localStorage` per `projectId × userId` so reloads land back on the same thread.
 - **Step Block** — inline collapsible primitive inside an assistant message when Cesare runs tools. Lists steps (`Thought / Read / Tag / Update`) and exposes `Mostra modifiche / Annulla` on completed write actions.
 - **CollapsibleNote** — shared `packages/ui` composite used by both margin notes and Step Blocks. `{ kind: 'cesare' | 'user', title, body?, actions?, defaultOpen? }`.
 
@@ -162,7 +162,7 @@ Owner: **shell-agent** · Branch: `refactor/ux-notion-v3-shell`
 Owner: **cesare-agent** · Branch: `refactor/ux-notion-v3-cesare`
 
 - Refactor `CesareSheet.tsx` to render the new `CesareDrawer` from WP-DESIGN. WP-B owns chat state (messages, streaming, tool calls); WP-DESIGN owns drawer chrome (header / footer / states / resize / animations). Header includes embedded dock icons (bell/avatar/gear) when state ≠ closed.
-- Implement Sessions dropdown (popover in header + selector in Left Rail).
+- Sessions surface lives in the LeftRail (Spec 44 sessions menu) — `SessionsProvider` owns the active id; CesareSheet just mirrors it and resets the conversation when it changes.
 - New `cesare_sessions` Drizzle migration + server fns + `useSessions` hook.
 - Persist `sessionId` on every Cesare message (extend existing chat persistence).
 - Render assistant tool runs as Step Blocks using `CollapsibleNote`.
@@ -250,14 +250,14 @@ All transitions use `--ds-ease` (250ms). View Transitions API (`document.startVi
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ ✦ Cesare  ⌄ Sessione · BREAKDOWN          🔔 V ⚙  ↗ ↙ − × │
+│ ✦ Cesare · BREAKDOWN                       🔔 V ⚙  ↗ ↙ − × │
 └─────────────────────────────────────────────────────────┘
 ```
 
 - Agent name + sparkle.
-- Session selector: dropdown popover listing the project's sessions; "+ Nuova" creates a new one. Active session title shown next to the agent name.
 - Context tags: chip showing current page scope (`BREAKDOWN · Sc.2` etc.) + any pinned context (`📌 Atto II`). Tags are dismissible.
 - Window-control icons rightmost: bell, avatar, gear (carried from Dock when state ≠ closed), then drawer-state controls (`↗ ↙ − ×`).
+- Sessions are NOT shown in the header — they live in the LeftRail (Spec 44 sessions menu). The drawer still accepts a `sessions` prop for legacy callers but in normal usage the rail owns that surface.
 
 #### Drawer body
 

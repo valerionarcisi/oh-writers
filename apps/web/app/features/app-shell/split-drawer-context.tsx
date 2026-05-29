@@ -79,12 +79,28 @@ export interface SplitDrawerNotificationsPayload {
 }
 
 /**
+ * Payload opening a Cesare session's context surface from the LeftRail.
+ * Spec 44 sessions menu: clicking a session row opens Cesare to `full` and
+ * lifts the page/scope/entities the session touched into a SplitDrawer.
+ * The trace payload is intentionally minimal for now — once we persist
+ * per-session entity references this becomes a richer view.
+ */
+export interface SplitDrawerSessionContextPayload {
+  kind: "session-context";
+  /** The session id this drawer reflects. */
+  sessionId: string;
+  /** Session title used as the SplitDrawer header. */
+  title: string;
+}
+
+/**
  * Discriminated union of every payload the shell-level SplitDrawer can
  * host. New kinds (versions, document browser) get added here.
  */
 export type SplitDrawerPayload =
   | SplitDrawerTracePayload
-  | SplitDrawerNotificationsPayload;
+  | SplitDrawerNotificationsPayload
+  | SplitDrawerSessionContextPayload;
 
 interface SplitDrawerContextValue {
   /** Open the drawer with a new payload. Resets state to `open`. */

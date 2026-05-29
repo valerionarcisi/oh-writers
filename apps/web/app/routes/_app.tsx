@@ -11,10 +11,6 @@ import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
-import {
-  useSessions as useCesareSessions,
-  useCreateSession as useCreateCesareSession,
-} from "~/features/predictions";
 import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
@@ -185,30 +181,10 @@ function AppLayout() {
     title: p.title,
   }));
 
-  // Cesare sessions for the LeftRail "Sessioni Cesare" slot. Loaded only when
-  // we have a project (the rail simply hides the section when sessions is
-  // undefined). Active session is the most recently used one — re-deriving
-  // here keeps the rail aligned with the chat surface which defaults the same
-  // way.
-  const cesareSessionsQuery = useCesareSessions(projectId);
-  const createCesareSession = useCreateCesareSession(projectId ?? "");
-  const cesareSessionsForRail = cesareSessionsQuery.data?.map((s, idx) => ({
-    id: s.id,
-    title: s.title,
-    lastAt: formatSessionRelative(s.lastMessageAt),
-    active: idx === 0,
-  }));
-
-  const handleCesareSessionSelect = (_sessionId: string) => {
-    // Active-session sync between rail and chat surface lives in CesareSheet;
-    // for now the rail row simply highlights and the chat-side popover handles
-    // the actual switch. A future iteration can lift activeSessionId into a
-    // shared context.
-  };
-
-  const handleCesareSessionNew = () => {
-    void createCesareSession.mutateAsync(undefined);
-  };
+  // Sessions are read inside AppShellInner via `useSessionsContext` (sourced
+  // from `SessionsProvider`). The provider is mounted by `AppShell` whenever
+  // there's a `projectId`, so the route layout only needs to forward
+  // `projectId` + `user`.
 
   const userMenuItems: DropdownMenuItem[] = [
     {
@@ -242,26 +218,8 @@ function AppLayout() {
       userMenuItems={userMenuItems}
       projectId={projectId}
       cesarePage={cesarePage}
-      cesareSessions={cesareSessionsForRail}
-      onCesareSessionSelect={handleCesareSessionSelect}
-      onCesareSessionNew={handleCesareSessionNew}
     >
       <Outlet />
     </AppShell>
   );
-}
-
-// Relative "lastAt" formatter shared with the Cesare drawer's session selector.
-// Kept simple so the rail shows recognisable buckets ("ora" / "2h" / "ieri").
-function formatSessionRelative(iso: string): string {
-  const ts = new Date(iso).getTime();
-  const diff = Date.now() - ts;
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "ora";
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "ieri";
-  return `${days}g`;
 }

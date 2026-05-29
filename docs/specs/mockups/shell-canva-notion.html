@@ -101,13 +101,14 @@
   .tool-btn{aspect-ratio:1;display:grid;place-items:center;border-radius:6px;color:var(--linen-600);cursor:pointer;font-size:13px}
   .tool-btn:hover{background:var(--linen-200);color:var(--linen-800)}
 
-  /* Sessioni Cesare — visible only when Cesare expanded */
-  .rail-sessions{display:none}
-  body[data-cesare="expanded"] .rail-sessions{display:flex;flex-direction:column;gap:1px}
+  /* Sessioni Cesare — Notion-style sidebar section, always visible when the
+     project has at least one session (Spec 44 sessions menu). */
+  .rail-sessions{display:flex;flex-direction:column;gap:1px}
   .rail-sessions .session{display:flex;align-items:center;gap:9px;padding:5px 10px;border-radius:6px;color:var(--linen-700);cursor:pointer;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rail-sessions .session:hover{background:var(--linen-200)}
   .rail-sessions .session.active{background:var(--leaf-50);color:var(--leaf-500);font-weight:500}
   .rail-sessions .session .glyph{color:var(--leaf-500);font-size:11px}
+  .rail-sessions .session .meta{margin-left:auto;font-size:11px;color:var(--linen-500);flex-shrink:0}
 
   /* ── Main column ── */
   .main{display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden;grid-column:2}
@@ -467,16 +468,19 @@
       <span class="chev">&#x25BE;</span>
     </div>
 
-    <!-- Cesare sessions (only when expanded) -->
+    <!-- Cesare sessions — always visible in the LeftRail (Spec 44 sessions
+         menu). Notion-style "Recents" pattern: chat-bubble glyph + title +
+         relative timestamp. Click a row to open the chat in Cesare full +
+         SplitDrawer with session context. -->
     <div class="rail-section">
-      <div class="rail-section-label rail-sessions-label" style="display:none">
-        Sessioni Cesare <span class="new">+ Nuova</span>
+      <div class="rail-section-label rail-sessions-label">
+        Sessioni Cesare <span class="new" id="new-session-btn">+ Nuova</span>
       </div>
       <div class="rail-sessions">
-        <div class="session active"><span class="glyph">&#x2726;</span>Breakdown Sc.2<span class="meta">ora</span></div>
-        <div class="session"><span class="glyph">&#x2726;</span>Riscrivi Atto II<span class="meta">2h</span></div>
-        <div class="session"><span class="glyph">&#x2726;</span>Costi scena 5<span class="meta">ieri</span></div>
-        <div class="session"><span class="glyph">&#x2726;</span>Logline alt.<span class="meta">3g</span></div>
+        <div class="session active" data-session="s1"><span class="glyph">&#x1F4AC;</span>Breakdown Sc.2<span class="meta">ora</span></div>
+        <div class="session" data-session="s2"><span class="glyph">&#x1F4AC;</span>Riscrivi Atto II<span class="meta">2h</span></div>
+        <div class="session" data-session="s3"><span class="glyph">&#x1F4AC;</span>Costi scena 5<span class="meta">ieri</span></div>
+        <div class="session" data-session="s4"><span class="glyph">&#x1F4AC;</span>Logline alt.<span class="meta">3g</span></div>
       </div>
     </div>
 
@@ -943,14 +947,10 @@
     const ctx=document.getElementById('ces-ctx'); if(ctx) ctx.textContent = map[v]||v.toUpperCase();
     // Show/hide breakdown recap inside Cesare panel
     document.querySelector('.ces-recap').style.display = v==='breakdown'?'block':'none';
-    // Show sessions label only when expanded
-    document.querySelector('.rail-sessions-label').style.display = document.body.dataset.cesare==='expanded'?'flex':'none';
   }
   function setCesare(c){
     document.body.dataset.cesare = c;
     document.querySelectorAll('.demo-row [data-cesare]').forEach(b=>b.classList.toggle('on', b.dataset.cesare===c));
-    const lbl = document.querySelector('.rail-sessions-label');
-    if(lbl) lbl.style.display = (c==='expanded'||c==='expanded-split'||c==='full')?'flex':'none';
   }
 
   /** Drawer state cycle: closed → expanded → expanded-split → full → expanded */
@@ -1124,6 +1124,52 @@
       setCesare('full');
       // Slight delay so the user sees the Cesare full-page transition before the split opens.
       setTimeout(()=>setSplit('open'), 150);
+    });
+  }
+
+  // ── LeftRail "Sessioni Cesare" — Spec 44 sessions menu ──
+  // Clicking a session row opens Cesare to `full` + SplitDrawer to `open`
+  // with the session title as the drawer header. Notion-style cross-flow:
+  // chat lives in the centre column, session context on the right.
+  function openSessionInChat(sessionEl){
+    document.querySelectorAll('.rail-sessions .session').forEach(s=>s.classList.toggle('active', s===sessionEl));
+    setCesare('full');
+    // Build a SplitDrawer body that reflects the chosen session
+    const title = sessionEl.textContent.replace(/\s+(ora|\d+m|\d+h|ieri|\d+g)\s*$/,'').trim();
+    const headEl = document.querySelector('.split-head h2');
+    if(headEl) headEl.textContent = 'Sessione · ' + title;
+    const badgeEl = document.querySelector('.split-head .badge');
+    if(badgeEl) badgeEl.textContent = 'Cesare · sessione';
+    // Replace the SplitDrawer body with a placeholder for the session context.
+    const body = document.querySelector('.split-body');
+    if(body){
+      body.innerHTML = ''
+        + '<div style="padding:18px 22px;color:var(--linen-700);font-size:13px;line-height:1.55;display:flex;flex-direction:column;gap:10px">'
+        + '<p style="margin:0">Riepilogo della sessione <strong>' + title + '</strong>: pagine consultate, scene toccate ed entit&agrave; modificate compariranno qui non appena Cesare avr&agrave; registrato attivit&agrave;.</p>'
+        + '<p style="margin:0;color:var(--linen-500)">Per ora la chat resta al centro: chiedi a Cesare e il pannello a destra si popoler&agrave; con il contesto utile.</p>'
+        + '</div>';
+    }
+    setTimeout(()=>setSplit('open'), 100);
+  }
+  document.querySelectorAll('.rail-sessions .session').forEach(s=>{
+    s.addEventListener('click', e=>{ e.stopPropagation(); openSessionInChat(s); });
+  });
+
+  // ── "+ Nuova" creates a session at the top of the list and immediately
+  //    opens it in chat + SplitDrawer. Mirrors AppShell.handleSessionNew. ──
+  const newSessionBtn = document.getElementById('new-session-btn');
+  if(newSessionBtn){
+    newSessionBtn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const list = document.querySelector('.rail-sessions');
+      if(!list) return;
+      const row = document.createElement('div');
+      row.className = 'session';
+      row.dataset.session = 's-new-' + Date.now();
+      row.innerHTML = '<span class="glyph">&#x1F4AC;</span>Nuova sessione<span class="meta">ora</span>';
+      list.prepend(row);
+      row.addEventListener('click', ev=>{ ev.stopPropagation(); openSessionInChat(row); });
+      openSessionInChat(row);
     });
   }
 

@@ -15,6 +15,7 @@ export type {
   SplitDrawerPayload,
   SplitDrawerTracePayload,
   SplitDrawerNotificationsPayload,
+  SplitDrawerSessionContextPayload,
 } from "./split-drawer-context";
 export {
   ActiveSceneProvider,

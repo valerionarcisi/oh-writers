@@ -28,9 +28,19 @@ import type {
   RailToolItem,
   CesareSessionItem,
 } from "@oh-writers/ui";
+// CesareSessionItem is still used to type the locally-derived rail items.
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
-import { CesareSheet, parseToolsExecuted } from "~/features/predictions";
-import type { CesarePage, AskCesareFn } from "~/features/predictions";
+import {
+  CesareSheet,
+  parseToolsExecuted,
+  SessionsProvider,
+  useSessionsContext,
+} from "~/features/predictions";
+import type {
+  CesarePage,
+  AskCesareFn,
+  CesareSession,
+} from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
@@ -119,11 +129,6 @@ interface AppShellProps {
   userMenuItems?: DropdownMenuItem[];
   projectId?: string;
   cesarePage?: CesarePage;
-  /** Optional Cesare sessions list for the rail. When omitted the rail
-   *  hides the Sessioni section even if Cesare is expanded. */
-  cesareSessions?: ReadonlyArray<CesareSessionItem>;
-  onCesareSessionSelect?: (sessionId: string) => void;
-  onCesareSessionNew?: () => void;
   children: ReactNode;
 }
 
@@ -149,12 +154,26 @@ const PAGE_TO_ROUTE_SEGMENT: Partial<Record<CesarePage, string>> = {
 };
 
 export function AppShell(props: AppShellProps) {
+  // SessionsProvider is mounted only when we're inside a project context —
+  // sessions are scoped per (projectId × userId), so outside a project route
+  // (dashboard, settings…) the provider has nothing to query. The
+  // useSessionsContext hook degrades gracefully via its default value.
+  const inner = <AppShellInner {...props} />;
   return (
     <SaveStateProvider>
       <ActiveSceneProvider>
         <CesareNotificationProvider>
           <SplitDrawerProvider>
-            <AppShellInner {...props} />
+            {props.projectId ? (
+              <SessionsProvider
+                projectId={props.projectId}
+                userId={props.user.id as string}
+              >
+                {inner}
+              </SessionsProvider>
+            ) : (
+              inner
+            )}
           </SplitDrawerProvider>
         </CesareNotificationProvider>
       </ActiveSceneProvider>
@@ -171,9 +190,6 @@ function AppShellInner({
   userMenuItems,
   projectId,
   cesarePage,
-  cesareSessions,
-  onCesareSessionSelect,
-  onCesareSessionNew,
   children,
 }: AppShellProps) {
   // Save-state is published by the page editors via `useSaveStateValue` and
@@ -674,6 +690,47 @@ function AppShellInner({
     [openPalette, router, handleBrandClick],
   );
 
+  // ── Cesare sessions (LeftRail "Sessioni Cesare" section) ──────
+  const sessionsCtx = useSessionsContext();
+  const railSessions = useMemo<ReadonlyArray<CesareSessionItem>>(
+    () =>
+      sessionsCtx.sessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        lastAt: formatSessionRelative(s.lastMessageAt),
+        active: s.id === sessionsCtx.activeSessionId,
+      })),
+    [sessionsCtx.sessions, sessionsCtx.activeSessionId],
+  );
+
+  // Click handler for session rows: drive the cross-component flow described
+  // in Spec 44 (sessions menu). Sets the active session, opens Cesare to
+  // `full`, and lifts the session context into the SplitDrawer so the user
+  // can see what the thread is about while the chat takes the centre column.
+  const openSessionInChat = useCallback(
+    (sessionId: string) => {
+      sessionsCtx.setActiveSession(sessionId);
+      setCesareState("full");
+      setCesareOpen(true);
+      markAllSeen();
+      const session = sessionsCtx.sessions.find(
+        (s: CesareSession) => s.id === sessionId,
+      );
+      const title = session?.title ?? "Sessione Cesare";
+      splitDrawer.open({
+        kind: "session-context",
+        sessionId,
+        title,
+      });
+    },
+    [sessionsCtx, splitDrawer, markAllSeen],
+  );
+
+  const handleSessionNew = useCallback(async () => {
+    const next = await sessionsCtx.createSession();
+    openSessionInChat(next.id);
+  }, [sessionsCtx, openSessionInChat]);
+
   // ── Rail sections (Sviluppo / Produzione / Recenti) ──────────
   const railSections = useMemo(() => {
     if (!projectId) {
@@ -724,9 +781,9 @@ function AppShellInner({
                   : undefined
               }
               sections={fullSections}
-              sessions={cesareSessions}
-              onSessionSelect={onCesareSessionSelect}
-              onSessionNew={onCesareSessionNew}
+              sessions={projectId ? railSessions : undefined}
+              onSessionSelect={openSessionInChat}
+              onSessionNew={projectId ? handleSessionNew : undefined}
               tools={railTools}
               onNavigate={handleNavigate}
             />
@@ -874,6 +931,62 @@ function SplitDrawerHost({
     );
   }
 
+  if (payload.kind === "session-context") {
+    // Session-context drawer: lifts the session header into the SplitDrawer
+    // while Cesare full-page hosts the chat. The body is intentionally a
+    // placeholder for now — future iterations enrich it with per-session
+    // page references / pinned entities / trace replay.
+    return (
+      <SplitDrawer
+        state={splitDrawer.state}
+        onStateChange={splitDrawer.setState}
+        onCycle={onCycle}
+        onStepBack={onStepBack}
+        onClose={splitDrawer.close}
+        header={
+          <h2
+            style={{
+              margin: 0,
+              fontFamily: "var(--ds-font-display)",
+              fontSize: 14,
+              color: "var(--ds-text)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {payload.title}
+          </h2>
+        }
+        size={{ width: splitDrawerWidth }}
+        onSizeChange={({ width }) => setSplitDrawerWidth(width)}
+        ariaLabel={`Contesto sessione Cesare: ${payload.title}`}
+        testId="cesare-session-context-drawer"
+      >
+        <div
+          style={{
+            padding: "var(--ds-space-4)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--ds-space-3)",
+            color: "var(--ds-text-2)",
+            fontSize: 13,
+            lineHeight: 1.55,
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            Riepilogo della sessione <strong>{payload.title}</strong>: pagine
+            consultate, scene toccate ed entità modificate compariranno qui non
+            appena Cesare avrà registrato attività su questa conversazione.
+          </p>
+          <p style={{ margin: 0, color: "var(--ds-text-faint)" }}>
+            Per ora la chat resta al centro: chiedi a Cesare e il pannello a
+            destra si popolerà con il contesto utile.
+          </p>
+        </div>
+      </SplitDrawer>
+    );
+  }
+
   // payload.kind === "trace"
   return (
     <SplitDrawer
@@ -953,4 +1066,20 @@ function SplitDrawerHost({
       />
     </SplitDrawer>
   );
+}
+
+// Relative "lastAt" formatter for the Cesare session rows in the LeftRail.
+// Kept here (rather than in a shared util) so the rail's bucket vocabulary
+// stays scoped to the shell — other consumers can ship their own buckets.
+function formatSessionRelative(iso: string): string {
+  const ts = new Date(iso).getTime();
+  const diff = Date.now() - ts;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "ora";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "ieri";
+  return `${days}g`;
 }

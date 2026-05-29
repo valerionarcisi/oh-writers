@@ -8,8 +8,12 @@
 //   - the message list (in-memory; persistence ships incrementally)
 //   - the send/receive lifecycle (askCesare → assistant reply → side-channels)
 //   - the drawer state machine (closed | peek | expanded | full)
-//   - the sessions selector (header dropdown) backed by `useSessions`
 //   - the "[Mostra modifiche]" trace flow that opens the SplitDrawer
+//
+// Sessions are NOT owned here anymore (Spec 44 sessions menu). The active
+// session id is read from `SessionsProvider` (LeftRail is the canonical UI
+// for switching/creating sessions); CesareSheet just reflects the active id
+// in its scope chips and resets the in-memory conversation when it changes.
 //
 // AppShell hands us `isOpen` / `onClose` / `onOpenFullPage` for back-compat
 // with the existing toggle UX (dock pill, CesareProvider). Internally we
@@ -21,7 +25,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -32,18 +35,13 @@ import {
   CollapsibleNote,
   useDrawerState,
   type CesareDrawerScope,
-  type CesareDrawerSession,
   type CesareDrawerContextTag,
   type CesareDrawerState,
   type TargetPageRef,
   type TraceMarker,
 } from "@oh-writers/ui";
 import { useSplitDrawer } from "~/features/app-shell";
-import {
-  useSessions,
-  useCreateSession,
-  type CesareSession,
-} from "~/features/predictions/sessions";
+import { useSessionsContext } from "~/features/predictions/sessions";
 import styles from "./CesareSheet.module.css";
 
 /**
@@ -404,32 +402,6 @@ function StepBlockActions({
   );
 }
 
-// ─── Sessions UI ───────────────────────────────────────────────────────────
-
-const formatRelativeLastAt = (iso: string): string => {
-  const ts = new Date(iso).getTime();
-  const diff = Date.now() - ts;
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "ora";
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "ieri";
-  return `${days}g`;
-};
-
-const toDrawerSessions = (
-  sessions: ReadonlyArray<CesareSession>,
-  activeId: string | null,
-): ReadonlyArray<CesareDrawerSession> =>
-  sessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    lastAt: formatRelativeLastAt(s.lastMessageAt),
-    isActive: s.id === activeId,
-  }));
-
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export interface CesareSheetProps {
@@ -510,57 +482,15 @@ export function CesareSheet({
   const [isLoading, setIsLoading] = useState(false);
 
   // ── Sessions ────────────────────────────────────────────────────────────
-  const sessionsQuery = useSessions(projectId);
-  const createSession = useCreateSession(projectId);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
-  // Once sessions load and we don't have an active one, default to the first.
+  // Sessions live in the LeftRail; CesareSheet only mirrors the active id.
+  // Switching the active session (from the rail) resets the in-memory chat
+  // so the user sees a clean slate. Persisted-history hydration is a
+  // follow-up.
+  const { activeSessionId } = useSessionsContext();
   useEffect(() => {
-    if (!sessionsQuery.data || activeSessionId) return;
-    const first = sessionsQuery.data[0];
-    if (first) setActiveSessionId(first.id);
-  }, [sessionsQuery.data, activeSessionId]);
-
-  // Switching the active session resets the in-memory chat so the user sees
-  // a clean slate. Persisted-history hydration is a follow-up.
-  const handleSessionSelect = useCallback(
-    (sessionId: string) => {
-      if (sessionId === activeSessionId) return;
-      setActiveSessionId(sessionId);
-      setMessages([]);
-      setInput("");
-    },
-    [activeSessionId],
-  );
-
-  const handleSessionNew = useCallback(async () => {
-    const result = await createSession.mutateAsync(undefined);
-    setActiveSessionId(result.id);
     setMessages([]);
     setInput("");
-  }, [createSession]);
-
-  const drawerSessions = useMemo(
-    () => toDrawerSessions(sessionsQuery.data ?? [], activeSessionId),
-    [sessionsQuery.data, activeSessionId],
-  );
-
-  // ── Sessions popover (simple absolutely-positioned dropdown) ────────────
-  const [isSessionPopoverOpen, setSessionPopoverOpen] = useState(false);
-  const handleSessionSelectorClick = useCallback(() => {
-    setSessionPopoverOpen((v) => !v);
-  }, []);
-  const handleSessionPick = useCallback(
-    (id: string) => {
-      handleSessionSelect(id);
-      setSessionPopoverOpen(false);
-    },
-    [handleSessionSelect],
-  );
-  const handleNewSessionClick = useCallback(async () => {
-    await handleSessionNew();
-    setSessionPopoverOpen(false);
-  }, [handleSessionNew]);
+  }, [activeSessionId]);
 
   // ── Context tag derived from the active page ────────────────────────────
   const contextTags = useMemo<ReadonlyArray<CesareDrawerContextTag>>(
@@ -798,9 +728,6 @@ export function CesareSheet({
       onStepBack={handleStepBack}
       onPeek={drawer.peek}
       onClose={drawer.close}
-      sessions={drawerSessions}
-      activeSessionId={activeSessionId ?? undefined}
-      onSessionSelectorClick={handleSessionSelectorClick}
       contextTags={contextTags}
       scopes={scopes}
       composer={{
@@ -812,15 +739,6 @@ export function CesareSheet({
       peekSubtitle={isLoading ? "sta pensando…" : "in attesa"}
     >
       {conversationBody}
-      {isSessionPopoverOpen && (
-        <SessionsPopover
-          sessions={sessionsQuery.data ?? []}
-          activeSessionId={activeSessionId}
-          onPick={handleSessionPick}
-          onNew={handleNewSessionClick}
-          onClose={() => setSessionPopoverOpen(false)}
-        />
-      )}
     </CesareDrawer>
   );
 }
@@ -944,73 +862,3 @@ function QuickPrompts({
   );
 }
 
-function SessionsPopover({
-  sessions,
-  activeSessionId,
-  onPick,
-  onNew,
-  onClose,
-}: {
-  sessions: ReadonlyArray<CesareSession>;
-  activeSessionId: string | null;
-  onPick: (id: string) => void;
-  onNew: () => void;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (!ref.current) return;
-      if (ref.current.contains(e.target as Node)) return;
-      onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-  return (
-    <div
-      ref={ref}
-      className={styles.sessionsPopover}
-      role="dialog"
-      aria-label="Sessioni Cesare"
-      data-testid="cesare-sessions-popover"
-    >
-      <ul className={styles.sessionsList} role="listbox">
-        {sessions.length === 0 && (
-          <li className={styles.sessionsEmpty}>Nessuna sessione</li>
-        )}
-        {sessions.map((s) => (
-          <li key={s.id}>
-            <button
-              type="button"
-              role="option"
-              aria-selected={s.id === activeSessionId}
-              className={[
-                styles.sessionRow,
-                s.id === activeSessionId ? styles.sessionRowActive : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={() => onPick(s.id)}
-            >
-              <span className={styles.sessionRowTitle}>{s.title}</span>
-              <span className={styles.sessionRowMeta}>
-                {formatRelativeLastAt(s.lastMessageAt)}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <button type="button" className={styles.sessionNewBtn} onClick={onNew}>
-        + Nuova sessione
-      </button>
-    </div>
-  );
-}

@@ -227,15 +227,11 @@
 }
 
 /* ── Sessions ──────────────────────────────────────────────── */
-/* The whole sessions slot is hidden by default; it appears only when the
-   user has Cesare open. We use display:none on the slot so it falls out of
-   the flex layout entirely and the rail gap between brand and Sviluppo
-   stays tight when Cesare is closed. */
+/* The sessions slot is rendered whenever the caller supplies at least one
+   session; visibility is no longer gated on Cesare state (Spec 44 sessions
+   menu — Notion-style "Recents" pattern). The slot stays display:block so
+   the rail keeps a stable layout. */
 .sessionsSlot {
-  display: none;
-}
-:global(body[data-cesare="expanded"]) .sessionsSlot,
-:global(body[data-cesare="full"]) .sessionsSlot {
   display: block;
 }
 
