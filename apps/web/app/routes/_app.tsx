@@ -133,17 +133,29 @@ function activeSegmentFromRouteId(routeId: string): string {
   return "";
 }
 
+// Route segment → Cesare page. The app navigates with English slugs, but we
+// also recognise the Italian deep-link aliases (e.g. /sinossi, /location): the
+// Cesare context chip + prompt suggestions must reflect the page the user is
+// actually on even when a localized URL was typed directly, instead of falling
+// back to the default and going stale (Spec 44 context-chip reactivity).
 const CESARE_PAGE_SEGMENTS: Array<{ segment: string; page: CesarePage }> = [
   { segment: "/shooting-plan", page: "shooting-plan" },
+  { segment: "/inquadrature", page: "shooting-plan" },
   { segment: "/screenplay", page: "screenplay" },
+  { segment: "/sceneggiatura", page: "screenplay" },
   { segment: "/breakdown", page: "breakdown" },
   { segment: "/budget", page: "budget" },
   { segment: "/schedule", page: "schedule" },
+  { segment: "/calendario", page: "schedule" },
   { segment: "/treatment", page: "treatment" },
+  { segment: "/trattamento", page: "treatment" },
   { segment: "/outline", page: "outline" },
+  { segment: "/scaletta", page: "outline" },
   { segment: "/synopsis", page: "synopsis" },
+  { segment: "/sinossi", page: "synopsis" },
   { segment: "/soggetto", page: "soggetto" },
   { segment: "/locations", page: "locations" },
+  { segment: "/location", page: "locations" },
 ];
 
 function deriveCesarePage(pathname: string): CesarePage {

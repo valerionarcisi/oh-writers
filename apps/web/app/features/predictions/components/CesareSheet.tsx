@@ -1075,6 +1075,9 @@ function MessageView({
   const docApplied = metadata.docApplied;
   const hasChanges = rewrite != null || metadata.hasProposal;
   const parsed = parseToolUpdates(message.content, page);
+  // Undo priority: a live document apply (Spec 44 canonical pattern) takes
+  // precedence — it reverts the open document to its previous version. Falls
+  // back to the single-scene rewrite cancel.
   const undoHandler =
     docApplied && docApplied.previousVersionId
       ? () => onUndoDocApply(docApplied)

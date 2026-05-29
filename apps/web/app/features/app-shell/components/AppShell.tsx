@@ -34,6 +34,7 @@ import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import { CesareSheet, parseToolsExecuted } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
+import { switchToVersion } from "~/features/documents";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
@@ -123,7 +124,8 @@ interface AppShellProps {
   projectId?: string;
   cesarePage?: CesarePage;
   /** Optional Cesare sessions list for the rail. When omitted the rail
-   *  hides the Sessioni section even if Cesare is expanded. */
+   *  hides the Sessioni section; when provided the section is always
+   *  visible regardless of Cesare drawer state (Spec 44 F1). */
   cesareSessions?: ReadonlyArray<CesareSessionItem>;
   onCesareSessionSelect?: (sessionId: string) => void;
   onCesareSessionNew?: () => void;
@@ -369,6 +371,58 @@ function AppShellInner({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  // Cesare live-doc "↩ Annulla" (Spec 44): when Cesare applies generated
+  // content live to a document, the inline trace offers an undo that reverts
+  // the document's active version to the one current before the apply. The chat
+  // surface emits a DOM event so it stays decoupled from the documents feature;
+  // AppShell owns the server call + query invalidation so the open editor
+  // refreshes immediately.
+  useEffect(() => {
+    const onUndo = (event: Event) => {
+      const detail = (event as CustomEvent).detail as
+        | { previousVersionId?: string }
+        | undefined;
+      const previousVersionId = detail?.previousVersionId;
+      if (!previousVersionId) return;
+      void (async () => {
+        const result = await switchToVersion({
+          data: { versionId: previousVersionId },
+        });
+        if (!result.isOk) {
+          showToast({
+            message: "Impossibile annullare la modifica.",
+            variant: "error",
+          });
+          return;
+        }
+        if (projectId) {
+          const docTypes = [
+            "logline",
+            "soggetto",
+            "synopsis",
+            "outline",
+            "treatment",
+          ] as const;
+          for (const t of docTypes) {
+            void queryClient.invalidateQueries({
+              queryKey: ["documents", projectId, t],
+            });
+          }
+          void queryClient.invalidateQueries({
+            queryKey: ["document-versions"],
+          });
+        }
+        showToast({
+          message: "✦ Modifica annullata — documento ripristinato.",
+          variant: "success",
+        });
+      })();
+    };
+    window.addEventListener("ohw:cesare:undo-doc-apply", onUndo);
+    return () =>
+      window.removeEventListener("ohw:cesare:undo-doc-apply", onUndo);
+  }, [projectId, queryClient, showToast]);
+
   // useWebPush exposes `permission` + `requestPermission` for callers that
   // want to gate UI on the push state; AppShell only needs to fire the
   // notification when the tab is hidden, so we ignore the rest.
@@ -477,13 +531,17 @@ function AppShellInner({
           queryKey: ["document-versions", activeDocument.id],
         });
         const lc = reply.toLowerCase();
+        // Cesare now applies generation + edits LIVE to the document (Spec 44),
+        // so any of these action verbs means the open editor has changed.
         if (
           lc.includes("aggiornato") ||
           lc.includes("espanso") ||
           lc.includes("compresso") ||
           lc.includes("riscritto") ||
           lc.includes("modificato") ||
-          lc.includes("sostituito")
+          lc.includes("sostituito") ||
+          lc.includes("generato") ||
+          lc.includes("applicat")
         ) {
           const labels: Record<string, string> = {
             soggetto: "il soggetto",
@@ -493,24 +551,6 @@ function AppShellInner({
           };
           showToast({
             message: `✦ Cesare ha aggiornato ${labels[cesarePage] ?? "il documento"}`,
-            variant: "success",
-          });
-        }
-        if (
-          lc.includes("draft") ||
-          lc.includes("bozza") ||
-          lc.includes("generato") ||
-          lc.includes("ho proposto")
-        ) {
-          const labels: Record<string, string> = {
-            soggetto: "soggetto",
-            synopsis: "sinossi",
-            outline: "scaletta",
-            treatment: "trattamento",
-            logline: "logline",
-          };
-          showToast({
-            message: `✦ Cesare ha proposto una bozza di ${labels[cesarePage] ?? "documento"}`,
             variant: "success",
           });
         }

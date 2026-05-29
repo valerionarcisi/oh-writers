@@ -21,8 +21,8 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     name: "propose_logline_from_screenplay",
     description:
       "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
-      "Crea una versione DRAFT del documento logline che l'utente può accettare o scartare " +
-      "tramite il banner che appare sopra l'editor. Usa SEMPRE questo tool quando l'utente " +
+      "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
+      "L'utente può ripristinare con Annulla. Usa SEMPRE questo tool quando l'utente " +
       "chiede di 'generare la logline' o 'scrivimi una logline'.",
     input_schema: {
       type: "object" as const,
@@ -39,7 +39,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     name: "propose_synopsis_from_screenplay",
     description:
       "Genera una sinossi (2-3 paragrafi, circa 400 parole) dalla sceneggiatura corrente del " +
-      "progetto. Crea una versione DRAFT del documento sinossi. Usa SEMPRE questo tool quando " +
+      "progetto. Applica live la nuova sinossi al documento e crea automaticamente una versione. Usa SEMPRE questo tool quando " +
       "l'utente chiede 'scrivimi la sinossi' o 'genera la sinossi'.",
     input_schema: {
       type: "object" as const,
@@ -55,7 +55,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
   {
     name: "propose_soggetto_v2",
     description:
-      "Riscrive il soggetto del progetto in una nuova versione DRAFT seguendo l'istruzione " +
+      "Riscrive il soggetto del progetto applicandolo live al documento (crea automaticamente una versione) seguendo l'istruzione " +
       "fornita. Usa quando l'utente vuole una variante del soggetto (es. 'più asciutto', " +
       "'più tematico', 'fammi un v2 con focus su X').",
     input_schema: {
@@ -79,7 +79,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     name: "propose_scaletta_from_soggetto",
     description:
       "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
-      "Crea una versione DRAFT del documento scaletta. Usa quando l'utente chiede 'dato il " +
+      "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
       "soggetto fammi la scaletta' o simile.",
     input_schema: {
       type: "object" as const,
@@ -357,11 +357,25 @@ const loadDocumentForType = (
 
 interface CreatedDraft {
   versionId: string;
+  /**
+   * The version that was active BEFORE this apply. The client wires it into
+   * the inline trace's "↩ Annulla" affordance so the user can revert the live
+   * document to its previous state. Null when the document had no active
+   * version yet (first content ever written).
+   */
+  previousVersionId: string | null;
   documentType: DocumentType;
   label: string;
 }
 
-const insertDraftVersion = (
+/**
+ * Auto-creates a version under the hood AND applies it live to the open
+ * document (Spec 44 canonical Notion pattern — Image 6): the generated content
+ * becomes the active version immediately so the open editor reflects it behind
+ * the floating Cesare chat. The previous active version stays in history so the
+ * inline trace can offer "↩ Annulla". No detached "Bozze di Cesare" draft tray.
+ */
+const applyVersionLive = (
   db: Db,
   documentId: string,
   documentType: DocumentType,
@@ -375,11 +389,11 @@ const insertDraftVersion = (
       if (!trimmed) {
         throw new Error("Il modello ha restituito un contenuto vuoto.");
       }
-      // Guard against the LLM returning the previous active content verbatim
-      // (or an existing draft byte-identical to it). A draft equal to the
-      // current version is useless — the user can't tell what changed and
-      // promoting it would be a no-op. Block at the DB boundary so every
-      // propose_* tool inherits the protection.
+      // Guard against the LLM returning the previous active content verbatim.
+      // Applying a version identical to the current one is a no-op the user
+      // can't perceive — fail fast so Cesare reports a clear error instead of
+      // silently "doing nothing". Block at the DB boundary so every propose_*
+      // tool inherits the protection.
       const existing = await tx
         .select({ content: documentVersions.content })
         .from(documentVersions)
@@ -390,6 +404,12 @@ const insertDraftVersion = (
           "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
         );
       }
+      const [docRow] = await tx
+        .select({ currentVersionId: documents.currentVersionId })
+        .from(documents)
+        .where(eq(documents.id, documentId))
+        .limit(1);
+      const previousVersionId = docRow?.currentVersionId ?? null;
       const [maxRow] = await tx
         .select({
           max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
@@ -404,18 +424,33 @@ const insertDraftVersion = (
           number: nextNum,
           label,
           content,
-          isDraft: true,
+          isDraft: false,
           createdBy,
         })
         .returning({ id: documentVersions.id });
-      if (!inserted) throw new Error("insertDraftVersion returned no rows");
-      return inserted.id;
+      if (!inserted) throw new Error("applyVersionLive returned no rows");
+      // Point the document at the new version and mirror its content so the
+      // open editor (which reads from the active version) updates live.
+      await tx
+        .update(documents)
+        .set({
+          currentVersionId: inserted.id,
+          content,
+          updatedAt: new Date(),
+        })
+        .where(eq(documents.id, documentId));
+      return { versionId: inserted.id, previousVersionId };
     }),
     (e) =>
       new CesareError(
-        e instanceof Error ? e.message : `insertDraftVersion: ${String(e)}`,
+        e instanceof Error ? e.message : `applyVersionLive: ${String(e)}`,
       ),
-  ).map((versionId) => ({ versionId, documentType, label }));
+  ).map(({ versionId, previousVersionId }) => ({
+    versionId,
+    previousVersionId,
+    documentType,
+    label,
+  }));
 
 // ─── Generators ───────────────────────────────────────────────────────────────
 
@@ -551,7 +586,7 @@ const handleProposeLogline = (
                 ),
               );
             }
-            return insertDraftVersion(
+            return applyVersionLive(
               db,
               doc.id,
               DocumentTypes.LOGLINE,
@@ -599,7 +634,7 @@ const handleProposeSynopsis = (
                 ),
               );
             }
-            return insertDraftVersion(
+            return applyVersionLive(
               db,
               doc.id,
               DocumentTypes.SYNOPSIS,
@@ -679,7 +714,7 @@ ${doc.content.slice(0, 18_000)}
               ),
             );
           }
-          return insertDraftVersion(
+          return applyVersionLive(
             db,
             doc.id,
             DocumentTypes.SOGGETTO,
@@ -734,7 +769,7 @@ const handleProposeScalettaFromSoggetto = (
                 ),
               );
             }
-            return insertDraftVersion(
+            return applyVersionLive(
               db,
               outlineDoc.id,
               DocumentTypes.OUTLINE,
@@ -758,9 +793,11 @@ const successResult = (id: string, payload: unknown): ToolResult => ({
 const draftPayload = (draft: CreatedDraft) => ({
   ok: true as const,
   version_id: draft.versionId,
+  previous_version_id: draft.previousVersionId,
   document_type: draft.documentType,
   label: draft.label,
-  toast: `✦ Cesare ha generato una draft di ${docTypeLabel(draft.documentType)} — vai sulla pagina per accettarla.`,
+  applied_live: true as const,
+  toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Usa ↩ Annulla per ripristinare.`,
 });
 
 export const executeDocumentGenTool = (
@@ -822,8 +859,8 @@ export const createDocumentGenTools = (
   propose_logline_from_screenplay: tool({
     description:
       "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
-      "Crea una versione DRAFT del documento logline che l'utente può accettare o scartare " +
-      "tramite il banner che appare sopra l'editor. Usa SEMPRE questo tool quando l'utente " +
+      "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
+      "L'utente può ripristinare con Annulla. Usa SEMPRE questo tool quando l'utente " +
       "chiede di 'generare la logline' o 'scrivimi una logline'.",
     inputSchema: z.object({
       instruction: z
@@ -847,7 +884,7 @@ export const createDocumentGenTools = (
   propose_synopsis_from_screenplay: tool({
     description:
       "Genera una sinossi (2-3 paragrafi, circa 400 parole) dalla sceneggiatura corrente del " +
-      "progetto. Crea una versione DRAFT del documento sinossi. Usa SEMPRE questo tool quando " +
+      "progetto. Applica live la nuova sinossi al documento e crea automaticamente una versione. Usa SEMPRE questo tool quando " +
       "l'utente chiede 'scrivimi la sinossi' o 'genera la sinossi'.",
     inputSchema: z.object({
       instruction: z
@@ -870,7 +907,7 @@ export const createDocumentGenTools = (
   }),
   propose_soggetto_v2: tool({
     description:
-      "Riscrive il soggetto del progetto in una nuova versione DRAFT seguendo l'istruzione " +
+      "Riscrive il soggetto del progetto applicandolo live al documento (crea automaticamente una versione) seguendo l'istruzione " +
       "fornita. Usa quando l'utente vuole una variante del soggetto (es. 'più asciutto', " +
       "'più tematico', 'fammi un v2 con focus su X').",
     inputSchema: z.object({
@@ -899,7 +936,7 @@ export const createDocumentGenTools = (
   propose_scaletta_from_soggetto: tool({
     description:
       "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
-      "Crea una versione DRAFT del documento scaletta. Usa quando l'utente chiede 'dato il " +
+      "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
       "soggetto fammi la scaletta' o simile.",
     inputSchema: z.object({
       target_scene_count: z

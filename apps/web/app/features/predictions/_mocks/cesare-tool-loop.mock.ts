@@ -353,7 +353,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una logline draft. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor.",
+        text: "Ho aggiornato la logline: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],
@@ -373,7 +373,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una sinossi draft. Vai sulla pagina sinossi per accettarla o scartarla dal banner sopra l'editor.",
+        text: "Ho aggiornato la sinossi: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],
@@ -397,7 +397,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una bozza v2 del soggetto. La trovi nel banner sopra l'editor del soggetto, puoi confrontarla, promuoverla o scartarla.",
+        text: "Ho aggiornato il soggetto con una nuova versione v2: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],
@@ -418,7 +418,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una scaletta draft dal soggetto. Vai sulla pagina scaletta per confrontarla e promuoverla.",
+        text: "Ho aggiornato la scaletta dal soggetto: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],

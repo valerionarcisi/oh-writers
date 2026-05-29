@@ -2484,6 +2484,31 @@ const extractSideChannelMarkers = (
       // ignore malformed payloads — the marker is best-effort
     }
   }
+  // Document generation tools apply the new content LIVE to the open document
+  // (Spec 44 canonical pattern). We surface a marker carrying the version that
+  // was active before the apply so the client can render an "↩ Annulla" that
+  // reverts the live document to its previous state.
+  if (
+    toolName === "propose_logline_from_screenplay" ||
+    toolName === "propose_synopsis_from_screenplay" ||
+    toolName === "propose_soggetto_v2" ||
+    toolName === "propose_scaletta_from_soggetto"
+  ) {
+    try {
+      const payload = JSON.parse(toolResultContent) as Record<string, unknown>;
+      if (payload && payload["applied_live"] === true) {
+        accumulator.push(
+          `<!--ohw:doc-applied:${JSON.stringify({
+            document_type: payload["document_type"],
+            version_id: payload["version_id"],
+            previous_version_id: payload["previous_version_id"],
+          })}-->`,
+        );
+      }
+    } catch {
+      // ignore malformed payloads — the marker is best-effort
+    }
+  }
 };
 
 // ─── Legacy manual tool loop (MOCK_AI=true) ───────────────────────────────────

@@ -418,7 +418,11 @@ export function CesareDrawer({
             )}
 
             {contextTags?.map((tag) => (
-              <span key={tag.id} className={styles.contextChip}>
+              <span
+                key={tag.id}
+                className={styles.contextChip}
+                data-testid="cesare-context-chip"
+              >
                 {tag.label}
                 {tag.onRemove && (
                   <button
