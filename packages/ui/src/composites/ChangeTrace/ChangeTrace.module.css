@@ -1,0 +1,233 @@
+/* packages/ui/src/composites/ChangeTrace/ChangeTrace.module.css
+ *
+ * Notion-style step block + change trace card. Tokens only; never raw hex.
+ * The animation budget is intentionally small — `prefers-reduced-motion`
+ * disables transitions entirely.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  font-family: var(--ds-font-sans);
+  color: var(--ds-text-2);
+}
+
+/* ── Steps (collapsible) ──────────────────────────────────────────────── */
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.stepsHeader {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--ds-space-1);
+  padding: 4px 8px;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ds-text-3);
+  transition: background var(--ds-duration-1) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-line-soft, var(--ds-surface-alt));
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.stepsCount {
+  font-variant-numeric: tabular-nums;
+}
+
+.chev {
+  font-size: 9px;
+  line-height: 1;
+  transition: transform var(--ds-duration-1) var(--ds-ease);
+}
+
+.stepsHeader[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+
+.stepsBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding-inline-start: var(--ds-space-3);
+  border-inline-start: 1px solid var(--ds-line);
+  margin-inline-start: var(--ds-space-2);
+}
+
+.thoughts,
+.updatesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.thoughtItem,
+.updateRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ds-text-2);
+}
+
+.thoughtDot,
+.updateDot {
+  color: var(--ds-text-faint);
+  font-size: 10px;
+}
+
+.thoughtLabel,
+.updateLabel {
+  color: var(--ds-text);
+}
+
+.updateGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.updateRow[data-kind="budget"] .updateGlyph {
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+}
+
+/* ── Summary card ──────────────────────────────────────────────────────── */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-1);
+  transition: box-shadow var(--ds-duration-2) var(--ds-ease);
+}
+
+.summary:hover {
+  box-shadow: var(--ds-shadow-2);
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+
+.summaryTitle {
+  font-family: var(--ds-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ds-text);
+}
+
+.summaryMeta {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryActions {
+  display: flex;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+}
+
+.actionPrimary,
+.actionSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin: 0;
+  border-radius: var(--ds-radius-md);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease);
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.actionPrimary {
+  background: var(--ds-agent-soft);
+  border: 1px solid var(--ds-agent);
+  color: var(--ds-agent);
+}
+
+.actionPrimary:hover {
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+}
+
+.actionPrimary[data-state="active"] {
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+}
+
+.actionSecondary {
+  background: transparent;
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text-2);
+}
+
+.actionSecondary:hover {
+  background: var(--ds-surface-alt);
+  border-color: var(--ds-text-3);
+  color: var(--ds-text);
+}
+
+/* ── Reduced motion fallback ──────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stepsHeader,
+  .chev,
+  .summary,
+  .actionPrimary,
+  .actionSecondary {
+    transition: none;
+  }
+}

@@ -244,6 +244,14 @@ export type {
   CollapsibleNoteKind,
 } from "./composites/CollapsibleNote/CollapsibleNote";
 
+// ─── ChangeTrace (Notion-style step block + Mostra modifiche) ─
+export { ChangeTrace } from "./composites/ChangeTrace/ChangeTrace";
+export type {
+  ChangeTraceProps,
+  ChangeUpdate,
+  ChangeUpdateKind,
+} from "./composites/ChangeTrace/ChangeTrace";
+
 // ─── SplitDrawer (Notion `»` pattern) ───────────────────────
 export { SplitDrawer } from "./composites/SplitDrawer/SplitDrawer";
 export type {

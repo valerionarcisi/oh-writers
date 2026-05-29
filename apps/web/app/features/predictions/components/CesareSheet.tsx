@@ -29,8 +29,9 @@ import type React from "react";
 import type { ResultShape } from "@oh-writers/utils";
 import {
   CesareDrawer,
-  CollapsibleNote,
+  ChangeTrace,
   useDrawerState,
+  type ChangeUpdate,
   type CesareDrawerScope,
   type CesareDrawerSession,
   type CesareDrawerContextTag,
@@ -333,12 +334,13 @@ function renderMarkdown(content: string): React.ReactNode {
   return nodes;
 }
 
-// ─── Step Block parsing ────────────────────────────────────────────────────
+// ─── Step Block / ChangeTrace parsing ─────────────────────────────────────
 //
 // Cesare's assistant turn carries an `<!--ohw:tools=N-->` marker when N > 0.
-// We render a Step Block via `<CollapsibleNote kind="cesare"/>` with a generic
-// timeline + the `[Mostra modifiche] [Annulla]` affordances when a rewrite
-// or proposal payload is present.
+// When N > 0 we render a `<ChangeTrace/>` (Notion-style step block) that
+// summarises the run in the assistant message. Tool-call details and write
+// markers (rewrite-scene, blocking-proposal) drive the affected-entity list
+// and the `[Mostra modifiche]` affordance.
 
 interface StepBlockMetadata {
   toolCount: number;
@@ -354,54 +356,138 @@ function extractStepBlockMetadata(content: string): StepBlockMetadata {
   };
 }
 
-function StepBlockTimeline({ toolCount }: { toolCount: number }) {
-  const steps = Math.max(toolCount, 1);
-  return (
-    <ol className={styles.stepTimeline} aria-label="Passaggi Cesare">
-      {Array.from({ length: steps }, (_, i) => (
-        <li key={i} className={styles.stepTimelineItem}>
-          <span aria-hidden className={styles.stepCheck}>
-            ✓
-          </span>
-          <span>Passaggio {i + 1}</span>
-        </li>
-      ))}
-    </ol>
-  );
+// Page → ChangeTrace update kind. The kind drives the icon glyph and the
+// "Updated X" wording in the summary title.
+const PAGE_TO_UPDATE_KIND: Record<CesarePage, ChangeUpdate["kind"]> = {
+  soggetto: "doc",
+  synopsis: "doc",
+  outline: "doc",
+  treatment: "doc",
+  screenplay: "scene",
+  breakdown: "breakdown",
+  budget: "budget",
+  schedule: "schedule",
+  "shooting-plan": "scene",
+  locations: "location",
+};
+
+// Page → "Updated X" label used in the ChangeTrace summary header.
+const PAGE_TO_UPDATED_LABEL: Record<CesarePage, string> = {
+  soggetto: "Aggiornato Soggetto",
+  synopsis: "Aggiornata Sinossi",
+  outline: "Aggiornata Scaletta",
+  treatment: "Aggiornato Trattamento",
+  screenplay: "Aggiornata Sceneggiatura",
+  breakdown: "Aggiornato Breakdown",
+  budget: "Aggiornato Budget",
+  schedule: "Aggiornato Calendario",
+  "shooting-plan": "Aggiornato Piano Inquadrature",
+  locations: "Aggiornate Location",
+};
+
+export interface ParsedToolUpdates {
+  /** Headline title for the ChangeTrace card. */
+  readonly title: string;
+  /** Affected entities surfaced in the step block. */
+  readonly updates: ReadonlyArray<ChangeUpdate>;
+  /** Per-step "Thought" / "Updated …" entries shown when the steps are expanded. */
+  readonly thoughts: ReadonlyArray<string>;
 }
 
-function StepBlockActions({
-  onShowChanges,
-  onCancel,
-  hasChanges,
-}: {
-  onShowChanges?: () => void;
-  onCancel?: () => void;
-  hasChanges: boolean;
-}) {
-  if (!hasChanges) return null;
-  return (
-    <div className={styles.stepActions}>
-      {onShowChanges && (
-        <button
-          type="button"
-          className={styles.stepActionPrimary}
-          onClick={onShowChanges}
-        >
-          Mostra modifiche
-        </button>
-      )}
-      {onCancel && (
-        <button
-          type="button"
-          className={styles.stepActionSecondary}
-          onClick={onCancel}
-        >
-          Annulla
-        </button>
-      )}
-    </div>
-  );
+/**
+ * Derive a ChangeTrace summary from the assistant reply + the page the user
+ * is on. The function is deliberately heuristic: the LLM reply uses Italian
+ * action verbs (`riscritto`, `aggiunto`, `spostato`…); we map those onto
+ * concrete `Updated X` labels per page. When a rewrite-scene marker is
+ * embedded we surface the specific scene; otherwise we fall back to the page.
+ */
+export function parseToolUpdates(
+  content: string,
+  page: CesarePage,
+): ParsedToolUpdates {
+  const meta = extractStepBlockMetadata(content);
+  const lc = content.toLowerCase();
+  const kind = PAGE_TO_UPDATE_KIND[page];
+  const baseLabel = PAGE_TO_UPDATED_LABEL[page];
+
+  const updates: ChangeUpdate[] = [];
+
+  // Single-scene rewrite: surface the affected scene number.
+  if (meta.rewrite) {
+    updates.push({
+      id: `scene-${meta.rewrite.scene_number}`,
+      kind: "scene",
+      label: `Sc.${meta.rewrite.scene_number} riscritta`,
+    });
+  }
+
+  // Otherwise extract a count hint from the reply itself ("3 scene rinominate",
+  // "5 oggetti", "4 voci", "2 candidati"). These cover the wording the tool
+  // loops generate after a write.
+  const COUNT_PATTERNS: ReadonlyArray<{ re: RegExp; suffix: string }> = [
+    { re: /(\d+)\s+scene\s+rinominat/i, suffix: "scene rinominate" },
+    { re: /(\d+)\s+scene\s+aggiornat/i, suffix: "scene aggiornate" },
+    { re: /(\d+)\s+oggett/i, suffix: "oggetti" },
+    { re: /(\d+)\s+voc/i, suffix: "voci" },
+    { re: /(\d+)\s+righ/i, suffix: "righe" },
+    { re: /(\d+)\s+candidat/i, suffix: "candidati" },
+    { re: /(\d+)\s+strip/i, suffix: "strip spostate" },
+    { re: /(\d+)\s+shot/i, suffix: "shot" },
+  ];
+  let countSuffix: string | null = null;
+  for (const { re, suffix } of COUNT_PATTERNS) {
+    const m = content.match(re);
+    if (m) {
+      countSuffix = `${m[1]} ${suffix}`;
+      if (updates.length === 0) {
+        updates.push({
+          id: `${page}-batch`,
+          kind,
+          label: countSuffix,
+        });
+      }
+      break;
+    }
+  }
+
+  // Fallback: when we cannot recover a specific entity, still surface the
+  // page itself so the user sees that "something" changed on that page.
+  if (updates.length === 0) {
+    const pageLabel = PAGE_LABELS[page];
+    updates.push({
+      id: `${page}-page`,
+      kind,
+      label: pageLabel.toLowerCase(),
+    });
+  }
+
+  // Compose the title. When we recovered a count, append it as the rationale.
+  const titleSuffix = countSuffix
+    ? ` · ${countSuffix}`
+    : meta.rewrite
+      ? ` · Sc.${meta.rewrite.scene_number}`
+      : "";
+  const title = `${baseLabel}${titleSuffix}`;
+
+  // Thoughts: derive simple phases from the action verbs present in the reply.
+  const thoughts: string[] = [];
+  if (lc.includes("leggo") || lc.includes("letto") || lc.includes("lettura")) {
+    thoughts.push("Lettura contesto");
+  }
+  if (lc.includes("analiz")) thoughts.push("Analisi");
+  if (
+    lc.includes("genero") ||
+    lc.includes("generato") ||
+    lc.includes("propost") ||
+    lc.includes("scritto") ||
+    lc.includes("riscritto") ||
+    lc.includes("aggiunto") ||
+    lc.includes("aggiornato")
+  ) {
+    thoughts.push("Esecuzione");
+  }
+
+  return { title, updates, thoughts };
 }
 
 // ─── Sessions UI ───────────────────────────────────────────────────────────
@@ -505,7 +591,16 @@ export function CesareSheet({
   }, [isOpen]);
 
   // ── Chat state ──────────────────────────────────────────────────────────
+  // `messages` is the source of truth for the UI; `messagesRef` mirrors it so
+  // the async send pipeline can read the latest history WITHOUT closing over
+  // a stale value (the alternative — running side effects inside a state
+  // updater function — fires twice in React StrictMode and races with the
+  // `setIsLoading` reset). See spec 44 WP-CHAT-FIX.
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -620,83 +715,94 @@ export function CesareSheet({
       if (!trimmed || isLoading) return;
       const userMessage: Message = { role: "user", content: trimmed };
 
-      setMessages((prev) => {
-        const next = [...prev, userMessage];
-        const historyForCall = prev;
-        const dispatchAndRender = async () => {
-          if (!askCesare) {
-            setMessages((m) => [
-              ...m,
-              {
-                role: "assistant",
-                content:
-                  "Cesare non è ancora disponibile su questa sezione. Tornerà presto.",
-              },
-            ]);
-            return;
-          }
-          const shape = await askCesare({
-            data: {
-              projectId,
-              message: trimmed,
-              pageContext: {
-                page,
-                sceneId: sceneId ?? null,
-                sceneNumber: sceneNumber ?? null,
-                requirementId: requirementId ?? null,
-                documentId: documentId ?? null,
-                shootingDayId: shootingDayId ?? null,
-                shootingDayNumber: shootingDayNumber ?? null,
-              },
-              conversationHistory: historyForCall,
-            },
-          });
-          const content = shape.isOk
-            ? shape.value
-            : "Mi dispiace, si è verificato un errore. Riprova.";
-          setMessages((m) => [...m, { role: "assistant", content }]);
-          onAssistantResponse?.(content);
+      // History is captured BEFORE we push the user's message so the server
+      // gets the same conversation the UI rendered. We read from the ref to
+      // avoid the stale-closure trap that would otherwise force us to do the
+      // work inside a setMessages updater (which fires its side effects
+      // twice in React StrictMode and races with the `setIsLoading` reset).
+      const historyForCall = messagesRef.current;
 
-          if (typeof window !== "undefined") {
-            const proposal = parseBlockingProposalMarker(content);
-            if (proposal) {
-              window.dispatchEvent(
-                new CustomEvent("ohw:cesare:blocking-proposal", {
-                  detail: proposal,
-                }),
-              );
-            }
-            const rewrite = parseRewriteSceneMarker(content);
-            if (rewrite) {
-              try {
-                window.sessionStorage.setItem(
-                  "ohw:cesare:pending-rewrite",
-                  JSON.stringify({
-                    ...rewrite,
-                    projectId,
-                    ts: Date.now(),
-                  }),
-                );
-              } catch {
-                // sessionStorage may be unavailable (private mode, iframe).
-              }
-              window.dispatchEvent(
-                new CustomEvent("ohw:cesare:rewrite-scene", {
-                  detail: rewrite,
-                }),
-              );
-              if (page === "screenplay") {
-                drawer.peek();
-              }
-            }
-          }
-        };
-        void dispatchAndRender().finally(() => setIsLoading(false));
-        return next;
-      });
-
+      // Append the user bubble + reset the composer synchronously — the user
+      // must see the bubble + cleared input even if the server call fails.
+      setMessages((prev) => [...prev, userMessage]);
       setInput("");
       setIsLoading(true);
+
+      if (!askCesare) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              "Cesare non è ancora disponibile su questa sezione. Tornerà presto.",
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Side-channel dispatching lives in plain async land (no state-updater
+      // boundary). `try/finally` guarantees the composer re-enables itself
+      // even if the server fn throws.
+      try {
+        const shape = await askCesare({
+          data: {
+            projectId,
+            message: trimmed,
+            pageContext: {
+              page,
+              sceneId: sceneId ?? null,
+              sceneNumber: sceneNumber ?? null,
+              requirementId: requirementId ?? null,
+              documentId: documentId ?? null,
+              shootingDayId: shootingDayId ?? null,
+              shootingDayNumber: shootingDayNumber ?? null,
+            },
+            conversationHistory: historyForCall,
+          },
+        });
+        const content = shape.isOk
+          ? shape.value
+          : "Mi dispiace, si è verificato un errore. Riprova.";
+        setMessages((prev) => [...prev, { role: "assistant", content }]);
+        onAssistantResponse?.(content);
+
+        if (typeof window !== "undefined") {
+          const proposal = parseBlockingProposalMarker(content);
+          if (proposal) {
+            window.dispatchEvent(
+              new CustomEvent("ohw:cesare:blocking-proposal", {
+                detail: proposal,
+              }),
+            );
+          }
+          const rewrite = parseRewriteSceneMarker(content);
+          if (rewrite) {
+            try {
+              window.sessionStorage.setItem(
+                "ohw:cesare:pending-rewrite",
+                JSON.stringify({
+                  ...rewrite,
+                  projectId,
+                  ts: Date.now(),
+                }),
+              );
+            } catch {
+              // sessionStorage may be unavailable (private mode, iframe).
+            }
+            window.dispatchEvent(
+              new CustomEvent("ohw:cesare:rewrite-scene", {
+                detail: rewrite,
+              }),
+            );
+            if (page === "screenplay") {
+              drawer.peek();
+            }
+          }
+        }
+      } finally {
+        setIsLoading(false);
+      }
     },
     [
       askCesare,
@@ -754,6 +860,7 @@ export function CesareSheet({
         <MessageView
           key={`msg-${i}-${m.role}`}
           message={m}
+          page={page}
           onShowChangesForRewrite={handleShowChangesForRewrite}
           onCancelRewrite={handleCancelRewrite}
         />
@@ -829,10 +936,12 @@ export function CesareSheet({
 
 function MessageView({
   message,
+  page,
   onShowChangesForRewrite,
   onCancelRewrite,
 }: {
   message: Message;
+  page: CesarePage;
   onShowChangesForRewrite: (rewrite: {
     scene_number: number;
     new_content: string;
@@ -863,27 +972,26 @@ function MessageView({
 
   const rewrite = metadata.rewrite;
   const hasChanges = rewrite != null || metadata.hasProposal;
-  const stepCount = metadata.toolCount;
-  const stepLabel = stepCount === 1 ? "1 passaggio" : `${stepCount} passaggi`;
+  const parsed = parseToolUpdates(message.content, page);
 
   return (
     <div className={styles.assistantWithSteps}>
       {rendered && <div className={styles.bubbleMarkdown}>{rendered}</div>}
-      <CollapsibleNote
-        kind="cesare"
-        eyebrow="Cesare"
-        title={stepLabel}
-        body={<StepBlockTimeline toolCount={stepCount} />}
-        actions={
-          <StepBlockActions
-            hasChanges={hasChanges}
-            onShowChanges={
-              rewrite ? () => onShowChangesForRewrite(rewrite) : undefined
-            }
-            onCancel={rewrite ? () => onCancelRewrite(rewrite) : undefined}
-          />
+      <ChangeTrace
+        title={parsed.title}
+        stepCount={metadata.toolCount}
+        thoughts={parsed.thoughts}
+        updates={parsed.updates}
+        onShowChanges={
+          rewrite
+            ? () => onShowChangesForRewrite(rewrite)
+            : () => undefined
         }
-        defaultOpen={hasChanges}
+        onUndo={
+          rewrite && hasChanges ? () => onCancelRewrite(rewrite) : undefined
+        }
+        defaultStepsOpen={false}
+        testId="cesare-change-trace"
       />
     </div>
   );
