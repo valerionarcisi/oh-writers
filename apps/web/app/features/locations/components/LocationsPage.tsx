@@ -484,6 +484,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
         onClose={() => setLightbox(null)}
       />
 
+      {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left; Cesare → BottomDock. */}
       <FloatingDock
         label="LOCATION"
         infoChips={[
@@ -511,9 +512,6 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             onClick: () => exportMutation.mutate(),
           },
         ]}
-        cesareNoteCount={0}
-        onCesareClick={openCesare}
-        data-testid="locations-floating-dock"
       />
     </div>
   );

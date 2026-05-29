@@ -65,7 +65,9 @@ interface SchedulePageProps {
 
 export function SchedulePage({ projectId }: SchedulePageProps) {
   const qc = useQueryClient();
-  const openCesare = useCesareOpen();
+  // Cesare now lives in the shell-level BottomDock (Spec 44 TKT-LEAD-01).
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveScene = useSetActiveScene();
   const setActiveShootingDay = useSetActiveShootingDay();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
@@ -485,6 +487,8 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         />
       )}
 
+      {/* Spec 44 TKT-LEAD-01: page-scoped CTAs only, bottom-left. The
+        * shell-level BottomDock owns bottom-right + the universal ✦ Cesare. */}
       <FloatingDock
         label="PIANO DI RIPRESA"
         primaryAction={{
@@ -504,8 +508,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
             onClick: exportPdf,
           },
         ]}
-        cesareNoteCount={0}
-        onCesareClick={openCesare}
       />
     </div>
   );

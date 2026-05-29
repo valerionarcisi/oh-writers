@@ -5,6 +5,11 @@ export {
   useSaveStatePublisher,
   useSaveStateValue,
 } from "./save-state-context";
+export {
+  TopBarSlotsProvider,
+  useTopBarSlots,
+  useTopBarSlotPublisher,
+} from "./top-bar-slots-context";
 export { useCesareOpen } from "./cesare-context";
 export {
   SplitDrawerProvider,
