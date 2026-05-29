@@ -115,6 +115,21 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never duplicate the bell / avatar / gear icons** across both `BottomDock` and `CesareDrawer` header — they live in exactly one of the two surfaces depending on Cesare state (Dock when `closed`, Cesare header otherwise).
 - **Never read `body[data-cesare]` and expect 4 string values.** It only stores `closed` or `expanded`. Peek and full are runtime-only states inside the `CesareDrawer` reducer; `expanded-split` is internal to the SplitDrawer co-existence flow and is never persisted (it collapses to `expanded` for the body attribute and for the user-facing cycle).
 - **Never anchor a per-page action bar at bottom-right.** The shell-level `BottomDock` lives there. Use `<FloatingDock/>` (bottom-left by default) or migrate the CTAs into a TopBar action slot.
+- **Never park a Cesare edit in a side draft tray as the primary flow.** Every Cesare edit applies LIVE to the open entity. See [Agentic Edit Pattern](#agentic-edit-pattern-canonical) below — it is mandatory for all features.
+- **Never conflate `CesareDrawer` with `SplitDrawer`.** `CesareDrawer` is the floating bottom-right chat (no routing). `SplitDrawer` is the routed side-peek that injects a real page beside the current one via the `?peek=` search param and compresses the main lane. Cesare sessions open as a real central route (`/projects/:id/sessions/:sessionId`), not a peek. See [Spec 46](docs/specs/46-split-drawer.md).
+
+---
+
+## Agentic Edit Pattern (canonical)
+
+Every Cesare edit, in **every feature** (Soggetto, Sinossi, Scaletta, Trattamento, Sceneggiatura, Breakdown, Budget, Calendario, Location — no exceptions), follows the same contract. Modeled on Notion AI.
+
+1. Chat stays a **floating bottom-right drawer** — never a fullscreen takeover, never reflows the editor.
+2. The **open entity updates LIVE behind the chat** while the trace renders. The visible document is the preview; there is no detached drawer for the edit itself.
+3. A **version is auto-created** before the change is applied (so every AI mutation is revertible).
+4. The chat renders an **inline compact trace**: `N passaggi › → reasoning/Thought › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff) and **↩ Annulla** (revert).
+
+When you add a Cesare tool that mutates any entity, reuse this flow — do not invent a per-feature variant. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md#agentic-edit-pattern) and the QA contract in `docs/specs/44-qa-iter-1-report.md`.
 
 ---
 

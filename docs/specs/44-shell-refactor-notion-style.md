@@ -385,3 +385,16 @@ Shared contract: `<TargetPagePreview pageRef, traceMarkers, onAccept, onReject /
 - **Session migration for existing chats** → seed all existing messages into a single "default" session per project × user on migration. New sessions opt-in.
 - **State explosion (view × cesare × shell)** → 10 × 4 × 3 = 120 combos. Reduce risk via reducer with `ts-pattern` exhaustive matching for transitions; Vitest covers the reducer.
 - **chrome-agent visual diff is fuzzy** → lead validator augments visual screenshots with explicit DOM assertions (data-testid presence, computed CSS values for editor width).
+
+## Agentic Edit Pattern
+
+Canonical for **every feature** (Soggetto, Sinossi, Scaletta, Trattamento, Sceneggiatura, Breakdown, Budget, Calendario, Location — no exceptions). Modeled on Notion AI. Approved by the product owner during QA iter-1 (TEST-878-2, 2026-05-29), choosing "live-doc + Annulla" over the draft-tray flow.
+
+When Cesare edits an entity:
+
+1. The chat stays a **floating bottom-right drawer** — never a fullscreen takeover, never reflows the editor.
+2. The **open entity updates LIVE behind the chat** as the trace renders. The visible document is the preview; there is no detached SplitDrawer for the edit itself.
+3. A **version is auto-created** before the change applies, so every AI mutation is revertible.
+4. The chat renders an **inline compact trace**: `N passaggi › → reasoning › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff) and **↩ Annulla** (revert).
+
+The legacy "Bozze di Cesare" draft tray (Confronta / Promuovi a attiva / Scarta) is retired as the primary apply path. Implemented by replacing `insertDraftVersion` with `applyVersionLive` (auto-creates a non-draft version, points `documents.currentVersionId` at it, editor updates live via query invalidation). Any new Cesare tool that mutates an entity reuses this flow rather than inventing a per-feature variant.
