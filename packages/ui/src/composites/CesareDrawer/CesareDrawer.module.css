@@ -116,24 +116,28 @@
   animation: drawer-slide-from-right var(--ds-duration-3) var(--ds-ease) both;
 }
 
-/* ── State: full ───────────────────────────────────────────────────────── */
+/* ── State: full ───────────────────────────────────────────────────────── *
+ * Per the Notion model there is NO fullscreen takeover: `full` is a larger,
+ * full-height floating panel anchored to the right edge, but its width is
+ * capped so the document stays visible/live on the left. The editor is never
+ * hidden and never reflows (the drawer is `position: fixed`). */
 .root[data-state="full"] {
   display: flex;
   flex-direction: column;
-  inset: 0;
-  inline-size: 100vw;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: clamp(420px, 56vw, 720px);
   block-size: 100vh;
   border-radius: 0;
   border: none;
-  box-shadow: none;
-  background: var(--ds-bg);
+  border-inline-start: 1px solid var(--drawer-border);
+  box-shadow: var(--ds-shadow-3);
+  background: var(--ds-surface);
   z-index: 500;
-  animation: drawer-scale-up var(--ds-duration-3) var(--ds-ease) both;
+  animation: drawer-slide-from-right var(--ds-duration-3) var(--ds-ease) both;
 }
 
 .root[data-state="full"] .frame {
-  max-inline-size: 780px;
-  margin-inline: auto;
   inline-size: 100%;
 }
 
@@ -682,7 +686,7 @@
  * its right edge inward without the JS having to recompute anything.
  */
 :global(body[data-split-drawer="open"]) .root[data-state="full"] {
-  inline-size: calc(100vw - var(--split-width, 480px));
+  inset-inline-end: var(--split-width, 480px);
 }
 :global(body[data-split-drawer="full"]) .root[data-state="full"] {
   display: none;

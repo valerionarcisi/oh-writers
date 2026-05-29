@@ -718,9 +718,18 @@ function AppShellInner({
     [railSections, recentsSection],
   );
 
-  const focusToggleLabel =
-    shellState === "focus" ? "Esci da Focus (⌃⌥F)" : "Focus mode (⌃⌥F)";
-  const focusToggleGlyph =
+  // The chevron at the rail boundary toggles the sidebar collapse/expand
+  // (Notion ⌘\). In focus mode it doubles as the focus exit. In collapsed
+  // mode the top-left hamburger owns re-expand, so the chevron is hidden
+  // there (CSS) to avoid two competing affordances. Label describes the
+  // actual action — not "Focus" — see FU-44-03.
+  const collapseToggleLabel =
+    shellState === "focus"
+      ? "Esci da Focus (⌃⌥F)"
+      : shellState === "collapsed"
+        ? "Espandi la barra laterale (⌘\\)"
+        : "Comprimi la barra laterale (⌘\\)";
+  const collapseToggleGlyph =
     shellState === "collapsed" ? "»" : shellState === "focus" ? "»" : "«";
 
   return (
@@ -774,12 +783,15 @@ function AppShellInner({
             {children}
           </main>
 
-          {/* Focus toggle — sits at the rail boundary; ⌃⌥F also fires it. */}
+          {/* Collapse/expand toggle — sits at the rail boundary; ⌘\ also
+              fires the collapse cycle. Hidden when collapsed (the top-left
+              hamburger owns re-expand in the Notion model). Label matches the
+              action it performs (FU-44-03). */}
           <button
             type="button"
             className={styles.focusToggle}
-            aria-label={focusToggleLabel}
-            title={focusToggleLabel}
+            aria-label={collapseToggleLabel}
+            title={collapseToggleLabel}
             onClick={() =>
               setShellState((prev) =>
                 prev === "focus"
@@ -789,9 +801,9 @@ function AppShellInner({
                     : "collapsed",
               )
             }
-            data-testid="shell-focus-toggle"
+            data-testid="shell-collapse-toggle"
           >
-            {focusToggleGlyph}
+            {collapseToggleGlyph}
           </button>
 
           <BottomDock

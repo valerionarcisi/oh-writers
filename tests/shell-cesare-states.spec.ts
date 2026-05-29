@@ -73,17 +73,38 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
       .toBe("expanded");
 
     // ── expanded → full (cycle button "↗") ────────────────────────────────
+    // The drawer cycles expanded → expanded-split → full. AppShell mirrors
+    // expanded-split onto body[data-cesare]="expanded", so we click "↗" until
+    // the drawer's own data-state reaches "full".
+    await drawer.getByRole("button", { name: "Espandi" }).first().click();
     await drawer.getByRole("button", { name: "Espandi" }).first().click();
     await expect
-      .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
+      .poll(async () =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector('[data-testid="cesare-drawer"]')
+              ?.getAttribute("data-state") ?? "",
+        ),
+      )
       .toBe("full");
 
-    // In full mode the editor is hidden by the overlay — we don't measure
-    // width here; we just confirm the rail/topstrip/dock are no longer
-    // observable to the user.
-    await expect(page.getByTestId("bottom-dock")).toBeHidden({
-      timeout: 3_000,
+    // Notion model: `full` is a larger floating drawer, NOT a fullscreen
+    // takeover. The editor must stay visible and keep its bounding width —
+    // the drawer is position:fixed and never reflows the layout.
+    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible();
+    const widthFull = await readEditorWidth();
+    expect(
+      widthFull,
+      `Editor width changed when Cesare moved to "full" (${baselineWidth} → ${widthFull}); full must stay a floating drawer.`,
+    ).toBe(baselineWidth);
+    // The editor's left portion must remain on-screen (drawer is right-anchored
+    // and width-capped), so the editor's left edge stays at the viewport left.
+    const editorLeft = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="breakdown-page-v2"]');
+      return el ? Math.round(el.getBoundingClientRect().left) : -1;
     });
+    expect(editorLeft).toBeGreaterThanOrEqual(0);
 
     // ── full → closed (×) ─────────────────────────────────────────────────
     await drawer.getByRole("button", { name: "Chiudi" }).click();

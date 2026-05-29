@@ -13,9 +13,12 @@
   transition: grid-template-columns var(--ds-duration-3) var(--ds-ease);
 }
 
-/* Collapsed rail — icons-only mode. */
+/* Collapsed rail — Notion model: the rail column collapses to 0 so the main
+   column (TopBar + content) reaches the left edge. The rail itself becomes a
+   fixed overlay (see LeftRail.module.css) toggled by the top-left hamburger;
+   it never reserves layout width, so the editor never reflows when it opens. */
 :global(body[data-shell="collapsed"]) .shell {
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 0 1fr;
 }
 
 /* Focus mode — rail + top strip + dock hidden so the editor takes the
@@ -73,8 +76,10 @@
   outline-offset: 2px;
 }
 
+/* Collapsed mode: the top-left hamburger owns re-expand, so hide the rail
+   boundary chevron to avoid two competing affordances (Notion model). */
 :global(body[data-shell="collapsed"]) .focusToggle {
-  inset-inline-start: 62px;
+  display: none;
 }
 
 :global(body[data-shell="focus"]) .focusToggle {

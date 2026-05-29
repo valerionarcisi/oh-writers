@@ -1,11 +1,13 @@
 // tests/shell-collapse.spec.ts
 //
-// [OHW-044-B] Shell 3-state transitions + Focus mode + hover-reveal.
+// [OHW-044-B] Shell 3-state transitions + Focus mode + hamburger overlay.
 //
 // Shell states: full | collapsed | focus. Toggled via `⌘\` (Notion shortcut)
-// for full↔collapsed and `⌃⌥F` for focus. In `collapsed` the rail hides but
-// a 4px sentinel at the left edge reveals it as an overlay (NOT a column —
-// main content must keep its bounding rect identical when the rail slides in).
+// for full↔collapsed and `⌃⌥F` for focus. In `collapsed` (Notion model) the
+// rail fully disappears — the main column reaches the left edge — and a
+// top-left hamburger ☰ opens the rail as an overlay popover. The popover must
+// NOT reflow the main content (bounding rect identical), and ESC / outside
+// click close it.
 import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
@@ -87,7 +89,7 @@ test.describe("[OHW-044-B] Shell collapse / focus transitions", () => {
       .not.toBe("focus");
   });
 
-  test("main content width stays stable when the rail reveals in collapsed mode (overlay, not column)", async ({
+  test("collapsed hides the rail and shows the top-left hamburger", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
@@ -95,7 +97,33 @@ test.describe("[OHW-044-B] Shell collapse / focus transitions", () => {
       timeout: 15_000,
     });
 
-    // Start in collapsed
+    await page.evaluate(() => {
+      window.localStorage.setItem("ohw.shell.state", "collapsed");
+    });
+    await page.reload();
+    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(async () => await page.evaluate(() => document.body.dataset.shell))
+      .toBe("collapsed");
+
+    // Notion model: the rail is hidden (no persistent icon strip) and the
+    // hamburger is the only sidebar affordance.
+    await expect(page.getByTestId("left-rail")).toBeHidden({ timeout: 3_000 });
+    await expect(page.getByTestId("rail-hamburger")).toBeVisible({
+      timeout: 3_000,
+    });
+  });
+
+  test("opening the hamburger popover does not reflow the editor; ESC + outside-click close it", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
+    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
+      timeout: 15_000,
+    });
+
     await page.evaluate(() => {
       window.localStorage.setItem("ohw.shell.state", "collapsed");
     });
@@ -119,19 +147,44 @@ test.describe("[OHW-044-B] Shell collapse / focus transitions", () => {
     const widthCollapsed = await readMainWidth();
     expect(widthCollapsed).toBeGreaterThan(0);
 
-    // Move mouse to far-left edge to trigger the hover-reveal sentinel.
-    // The sentinel is a 4px hot zone — move to x=2 to land inside it.
-    await page.mouse.move(2, 400);
+    // Open the rail overlay via the hamburger.
+    await page.getByTestId("rail-hamburger").click();
+    await expect(page.getByTestId("left-rail")).toBeVisible({ timeout: 3_000 });
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.dataset.railOverlay ?? ""),
+      )
+      .toBe("open");
 
-    // We don't assert the rail becomes immediately visible (the timing
-    // is debounced and the sentinel uses pointer-events JS); we assert
-    // the main content width does NOT change after the hover, because
-    // the rail must be an overlay (z-index above editor), not a column.
-    await page.waitForTimeout(450);
-    const widthHovered = await readMainWidth();
+    // The overlay must NOT reflow the editor — the rail floats above it.
+    const widthWithOverlay = await readMainWidth();
     expect(
-      widthHovered,
-      `Main content reflowed on rail hover-reveal (${widthCollapsed} → ${widthHovered}); the rail must be an overlay, not a column.`,
+      widthWithOverlay,
+      `Editor reflowed when the rail overlay opened (${widthCollapsed} → ${widthWithOverlay}); the rail must be an overlay, not a column.`,
     ).toBe(widthCollapsed);
+
+    // ESC closes the overlay.
+    await page.keyboard.press("Escape");
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.dataset.railOverlay ?? ""),
+      )
+      .toBe("");
+    await expect(page.getByTestId("left-rail")).toBeHidden({ timeout: 3_000 });
+
+    // Re-open, then outside-click closes the overlay.
+    await page.getByTestId("rail-hamburger").click();
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.dataset.railOverlay ?? ""),
+      )
+      .toBe("open");
+    // Click far from the rail (right side of the viewport) to dismiss.
+    await page.mouse.click(widthCollapsed - 40, 400);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.dataset.railOverlay ?? ""),
+      )
+      .toBe("");
   });
 });
