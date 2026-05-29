@@ -136,6 +136,38 @@ function parseBlockingProposalMarker(content: string): unknown | null {
 }
 
 /**
+ * Side-channel for document-gen tools. The server applies the generated
+ * content LIVE to the open document (Spec 44 canonical pattern) and embeds this
+ * marker carrying the version that was active before the apply, so the client
+ * can offer "↩ Annulla" (revert to the previous version). Returns null when the
+ * marker is absent or malformed.
+ */
+export interface DocAppliedMarker {
+  readonly documentType: string;
+  readonly versionId: string;
+  readonly previousVersionId: string | null;
+}
+
+export function parseDocAppliedMarker(
+  content: string,
+): DocAppliedMarker | null {
+  const m = content.match(/<!--ohw:doc-applied:([\s\S]*?)-->/);
+  if (!m || !m[1]) return null;
+  try {
+    const parsed = JSON.parse(m[1]) as Record<string, unknown>;
+    if (typeof parsed["version_id"] !== "string") return null;
+    const previous = parsed["previous_version_id"];
+    return {
+      documentType: String(parsed["document_type"] ?? ""),
+      versionId: parsed["version_id"],
+      previousVersionId: typeof previous === "string" ? previous : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Parses the rewrite_scene side-channel marker embedded in the assistant
  * reply. Returns `{ scene_number, new_content }` when present, null otherwise.
  */
@@ -263,6 +295,7 @@ function stripToolCalls(content: string): string {
     .replace(/<!--ohw:tools=\d+-->/g, "")
     .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:rewrite-scene-b64:[A-Za-z0-9+/=]+-->/g, "")
+    .replace(/<!--ohw:doc-applied:[\s\S]*?-->/g, "")
     .trim();
 }
 
@@ -347,6 +380,7 @@ interface StepBlockMetadata {
   toolCount: number;
   rewrite: { scene_number: number; new_content: string } | null;
   hasProposal: boolean;
+  docApplied: DocAppliedMarker | null;
 }
 
 function extractStepBlockMetadata(content: string): StepBlockMetadata {
@@ -354,6 +388,7 @@ function extractStepBlockMetadata(content: string): StepBlockMetadata {
     toolCount: parseToolsExecuted(content),
     rewrite: parseRewriteSceneMarker(content),
     hasProposal: parseBlockingProposalMarker(content) !== null,
+    docApplied: parseDocAppliedMarker(content),
   };
 }
 
@@ -715,6 +750,24 @@ export function CesareSheet({
     [],
   );
 
+  const handleUndoDocApply = useCallback((marker: DocAppliedMarker) => {
+    // Cesare applied the generated content live to the open document. Reverting
+    // means switching the document's active version back to the one that was
+    // current before the apply. AppShell owns the server call + query
+    // invalidation so the editor refreshes; we keep the chat decoupled from the
+    // documents feature by emitting a DOM event (symmetric with cancel-rewrite).
+    if (typeof window === "undefined") return;
+    if (!marker.previousVersionId) return;
+    window.dispatchEvent(
+      new CustomEvent("ohw:cesare:undo-doc-apply", {
+        detail: {
+          documentType: marker.documentType,
+          previousVersionId: marker.previousVersionId,
+        },
+      }),
+    );
+  }, []);
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -869,6 +922,7 @@ export function CesareSheet({
           page={page}
           onShowChangesForRewrite={handleShowChangesForRewrite}
           onCancelRewrite={handleCancelRewrite}
+          onUndoDocApply={handleUndoDocApply}
         />
       ))}
       {isLoading && <LoadingIndicator />}
@@ -946,6 +1000,7 @@ function MessageView({
   page,
   onShowChangesForRewrite,
   onCancelRewrite,
+  onUndoDocApply,
 }: {
   message: Message;
   page: CesarePage;
@@ -957,6 +1012,7 @@ function MessageView({
     scene_number: number;
     new_content: string;
   }) => void;
+  onUndoDocApply: (marker: DocAppliedMarker) => void;
 }) {
   if (message.role === "user") {
     return (
@@ -978,8 +1034,18 @@ function MessageView({
   }
 
   const rewrite = metadata.rewrite;
+  const docApplied = metadata.docApplied;
   const hasChanges = rewrite != null || metadata.hasProposal;
   const parsed = parseToolUpdates(message.content, page);
+  // Undo priority: a live document apply (Spec 44 canonical pattern) takes
+  // precedence — it reverts the open document to its previous version. Falls
+  // back to the single-scene rewrite cancel.
+  const undoHandler =
+    docApplied && docApplied.previousVersionId
+      ? () => onUndoDocApply(docApplied)
+      : rewrite && hasChanges
+        ? () => onCancelRewrite(rewrite)
+        : undefined;
 
   return (
     <div className={styles.assistantWithSteps}>
@@ -992,9 +1058,7 @@ function MessageView({
         onShowChanges={
           rewrite ? () => onShowChangesForRewrite(rewrite) : () => undefined
         }
-        onUndo={
-          rewrite && hasChanges ? () => onCancelRewrite(rewrite) : undefined
-        }
+        onUndo={undoHandler}
         defaultStepsOpen={false}
         testId="cesare-change-trace"
       />

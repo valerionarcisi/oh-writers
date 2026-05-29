@@ -54,11 +54,10 @@ export type LeftRailProps = {
   /** Sviluppo / Produzione / Recenti — each rendered as a labelled section.
    *  Section ordering is preserved. */
   sections: ReadonlyArray<RailSection>;
-  /** Cesare sessions — when provided AND `body[data-cesare]` is `expanded`
-   *  or `full`, the rail surfaces a "Sessioni Cesare" section above the
-   *  primary nav. CSS handles visibility, but we still need the markup so
-   *  the section can fade in without remount jank. WP-B will replace the
-   *  hardcoded placeholders by feeding real session data. */
+  /** Cesare sessions — when provided, the rail always surfaces a "Sessioni
+   *  Cesare" section above the primary nav (Spec 44 F1), independent of
+   *  whether the Cesare drawer is open. The section self-hides only when
+   *  there are no sessions to show. */
   sessions?: ReadonlyArray<CesareSessionItem>;
   /** Click handler when the user activates a session row. */
   onSessionSelect?: (sessionId: string) => void;
@@ -360,9 +359,8 @@ export function LeftRail({
         </button>
       )}
 
-      {/* Sessions slot — CSS hides this section when data-cesare is not
-          expanded/full. We always emit the markup so the transition is a
-          fade, not a remount. */}
+      {/* Sessions slot — always visible (Spec 44 F1). The section itself
+          renders null only when there are no sessions. */}
       <div className={styles.sessionsSlot}>{renderSessions()}</div>
 
       {sections.map((section) => (

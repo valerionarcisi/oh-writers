@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { parseToolsExecuted, parseRewriteSceneMarker } from "./CesareSheet";
+import {
+  parseToolsExecuted,
+  parseRewriteSceneMarker,
+  parseDocAppliedMarker,
+} from "./CesareSheet";
 
 describe("parseToolsExecuted", () => {
   it("returns 0 when the marker is absent", () => {
@@ -42,5 +46,50 @@ describe("parseRewriteSceneMarker", () => {
     const bad = { scene_number: "5", new_content: "" };
     const marker = `<!--ohw:rewrite-scene-b64:${encode(bad)}-->`;
     expect(parseRewriteSceneMarker(marker)).toBeNull();
+  });
+});
+
+describe("parseDocAppliedMarker", () => {
+  it("returns null when no marker is present", () => {
+    expect(parseDocAppliedMarker("just a reply")).toBeNull();
+  });
+
+  it("parses a doc-applied marker with a previous version", () => {
+    const payload = {
+      document_type: "soggetto",
+      version_id: "v-new",
+      previous_version_id: "v-old",
+    };
+    const marker = `reply <!--ohw:doc-applied:${JSON.stringify(payload)}-->`;
+    expect(parseDocAppliedMarker(marker)).toEqual({
+      documentType: "soggetto",
+      versionId: "v-new",
+      previousVersionId: "v-old",
+    });
+  });
+
+  it("tolerates a null previous version (first content ever written)", () => {
+    const payload = {
+      document_type: "logline",
+      version_id: "v-new",
+      previous_version_id: null,
+    };
+    const marker = `<!--ohw:doc-applied:${JSON.stringify(payload)}-->`;
+    expect(parseDocAppliedMarker(marker)).toEqual({
+      documentType: "logline",
+      versionId: "v-new",
+      previousVersionId: null,
+    });
+  });
+
+  it("returns null when version_id is missing", () => {
+    const marker = `<!--ohw:doc-applied:${JSON.stringify({ document_type: "x" })}-->`;
+    expect(parseDocAppliedMarker(marker)).toBeNull();
+  });
+
+  it("returns null on malformed JSON", () => {
+    expect(
+      parseDocAppliedMarker("<!--ohw:doc-applied:{not json-->"),
+    ).toBeNull();
   });
 });

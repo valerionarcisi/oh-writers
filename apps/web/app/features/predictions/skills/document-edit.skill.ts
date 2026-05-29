@@ -33,8 +33,8 @@ STRUMENTI DISPONIBILI SU QUESTO ${label.toUpperCase()}:
 
 Quando l'utente chiede una modifica concreta (riscrivi, cambia, espandi, accorcia, sostituisci) USA SEMPRE il tool appropriato — non limitarti a suggerire il testo nel chat. Conferma in italiano cosa hai fatto dopo ogni edit.
 
-GENERAZIONE DOCUMENTI (propose/accept):
-Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta) USA I TOOLS dedicati. Tutto crea una DRAFT visibile in un banner sopra l'editor con i pulsanti "Promuovi a attiva" / "Scarta".
+GENERAZIONE DOCUMENTI (applica LIVE al documento):
+Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta) USA I TOOLS dedicati. Ogni tool APPLICA DIRETTAMENTE il nuovo contenuto al documento aperto (si aggiorna live nell'editor) e crea automaticamente una nuova versione sotto il cofano. L'utente può ripristinare con "↩ Annulla". NON esiste più un banner di draft da promuovere o scartare.
 
 WORKFLOW:
 - "genera la logline" / "scrivimi la logline" → propose_logline_from_screenplay({ instruction? })
@@ -50,9 +50,9 @@ WORKFLOW:
 
 ✅ CORRETTO:
 [propose_logline_from_screenplay({ instruction: "più commerciale" })]
-"Ho generato una logline draft per il progetto. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor."
+"Ho aggiornato la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla."
 
-REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
+REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e conferma che l'hai aggiornato live (l'utente può aprire quella pagina per vederlo).`;
 };
 
 // ─── Skill factory ────────────────────────────────────────────────────────────

@@ -227,15 +227,11 @@
 }
 
 /* ── Sessions ──────────────────────────────────────────────── */
-/* The whole sessions slot is hidden by default; it appears only when the
-   user has Cesare open. We use display:none on the slot so it falls out of
-   the flex layout entirely and the rail gap between brand and Sviluppo
-   stays tight when Cesare is closed. */
+/* The sessions slot is always visible (Spec 44 F1): the "Sessioni Cesare"
+   section is a permanent navigation surface, independent of whether the Cesare
+   drawer is open. The slot self-hides via `renderSessions` returning null when
+   there are no sessions to show. */
 .sessionsSlot {
-  display: none;
-}
-:global(body[data-cesare="expanded"]) .sessionsSlot,
-:global(body[data-cesare="full"]) .sessionsSlot {
   display: block;
 }
 

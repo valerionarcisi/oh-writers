@@ -11,6 +11,7 @@ export {
   promoteDocumentDraft,
   discardDocumentDraft,
 } from "./server/drafts.server";
+export { switchToVersion } from "./server/versions.server";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
 export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
