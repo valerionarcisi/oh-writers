@@ -318,28 +318,30 @@ export function LeftRail({
       aria-label={ariaLabel ?? "Navigazione progetto"}
       data-testid="left-rail"
     >
-      {overlay?.onLockOpen && (
+      <div className={styles.brandRow}>
         <button
-          ref={lockRef}
-          {...lockBtnProps}
-          className={styles.lockOpen}
-          title="Fissa sidebar (⌘\)"
-          data-testid="rail-lock-open"
+          ref={brandRef}
+          {...brandBtnProps}
+          className={styles.brand}
+          data-rail-brand=""
         >
-          »
+          <span className={styles.brandMark} aria-hidden="true">
+            O
+          </span>
+          <span className={styles.brandName}>{brand.label}</span>
         </button>
-      )}
-      <button
-        ref={brandRef}
-        {...brandBtnProps}
-        className={styles.brand}
-        data-rail-brand=""
-      >
-        <span className={styles.brandMark} aria-hidden="true">
-          O
-        </span>
-        <span className={styles.brandName}>{brand.label}</span>
-      </button>
+        {overlay?.onLockOpen && (
+          <button
+            ref={lockRef}
+            {...lockBtnProps}
+            className={styles.lockOpen}
+            title="Fissa sidebar (⌘\)"
+            data-testid="rail-lock-open"
+          >
+            »
+          </button>
+        )}
+      </div>
 
       {project && (
         <button

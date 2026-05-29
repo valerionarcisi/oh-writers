@@ -19,6 +19,19 @@
 }
 
 /* ── Brand + project header ───────────────────────────────── */
+/* Brand label sits left; the pin (lock-open) sits at the opposite edge and
+   only reveals on hover/focus of the rail. */
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.brandRow .brand {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -321,18 +334,20 @@
    outside-click / ESC / close-button dismiss it. */
 :global(body[data-shell="collapsed"]) .rail {
   position: fixed;
-  inset-block-start: 48px;
-  inset-inline-start: 0;
-  block-size: calc(100vh - 48px);
+  inset-block-start: 56px;
+  inset-inline-start: var(--space-2);
+  block-size: calc(100vh - 64px);
   inline-size: 260px;
   padding: 14px 10px;
   background: var(--ds-surface-alt);
   box-shadow: var(--ds-shadow-3);
-  border-inline-end: 1px solid var(--ds-line);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg, var(--radius-lg));
   z-index: 320;
-  /* Hidden by default — translateX(-100%) keeps the element mounted so the
-     react-aria overlay listeners stay wired. */
-  transform: translateX(-100%);
+  /* Hidden by default — slides fully off the left edge (including its own
+     inset margin) while staying mounted so the react-aria overlay listeners
+     stay wired. */
+  transform: translateX(calc(-100% - var(--space-2)));
   visibility: hidden;
   transition:
     transform var(--ds-duration-3) var(--ds-ease),
@@ -354,17 +369,16 @@
   display: none;
 }
 
-/* ── Pin button (lock-open) inside the overlay panel ──────── */
-/* The overlayControls wrapper is no longer used; .lockOpen is now
-   positioned directly inside the <aside> at top-right. */
+/* ── Pin button (lock-open) on the brand row ──────────────── */
+/* Sits at the opposite edge of the brand label, hidden until the rail (or the
+   pin itself) is hovered/focused. */
 .lockOpen {
-  position: absolute;
-  inset-block-start: 10px;
-  inset-inline-end: 8px;
+  flex: 0 0 auto;
   inline-size: 26px;
   block-size: 26px;
-  display: none;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--ds-text-faint);
@@ -372,6 +386,11 @@
   cursor: pointer;
   font-size: 14px;
   padding: 0;
+  opacity: 0;
+  transition:
+    opacity var(--ds-duration-2, 120ms) var(--ds-ease, ease),
+    background var(--ds-duration-2, 120ms) var(--ds-ease, ease),
+    color var(--ds-duration-2, 120ms) var(--ds-ease, ease);
 
   &:hover {
     background: var(--ds-surface);
@@ -381,11 +400,13 @@
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
+    opacity: 1;
   }
 }
 
-:global(body[data-shell="collapsed"][data-rail-overlay="open"]) .lockOpen {
-  display: grid;
+.rail:hover .lockOpen,
+.brandRow:hover .lockOpen {
+  opacity: 1;
 }
 
 /* ── Reduced motion ────────────────────────────────────────── */
