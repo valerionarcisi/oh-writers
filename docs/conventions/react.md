@@ -42,7 +42,7 @@ features/screenplay-editor/
 
 The AppShell is composed of these top-level building blocks (see [Spec 44](../specs/44-shell-refactor-notion-style.md)):
 
-- `LeftRail` — project identity, Document Type / Production View nav, Cesare Sessions (when Cesare is expanded), Recents, tool icons. Hover-reveal in `collapsed` mode via `useRailReveal`.
+- `LeftRail` — project identity, Document Type / Production View nav, Cesare Sessions (when Cesare is expanded), Recents, tool icons. In `collapsed` mode the rail is hidden and a top-left `RailHamburger` toggles it back in as a sliding overlay (`useRailOverlay`); dismiss via outside-click / ESC / hamburger again — no hover-reveal.
 - `TopBar` — slim per-page header. Optional `elementLegend` slot, used only on Sceneggiatura.
 - `BottomDock` — floating pill bottom-right (`bell · avatar · gear · ✦ Cesare`). Visible only when Cesare = `closed` AND shell ≠ `focus`.
 - `CesareSheet` — composes the `CesareDrawer` Notion-class primitive. Owns the chat state (messages, sessions, send pipeline); the drawer owns chrome + state machine. When non-closed, the dock icons merge into its header.

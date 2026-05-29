@@ -230,12 +230,14 @@ export type {
   UseDrawerResizeResult,
 } from "./composites/CesareDrawer/use-drawer-resize";
 
-// ─── Rail hover-reveal ───────────────────────────────────────
-export { useRailReveal } from "./shell/LeftRail/use-rail-reveal";
+// ─── Rail collapse overlay (Notion hamburger pattern) ────────
+export { RailHamburger } from "./shell/LeftRail/RailHamburger";
+export type { RailHamburgerProps } from "./shell/LeftRail/RailHamburger";
+export { useRailOverlay } from "./shell/LeftRail/use-rail-overlay";
 export type {
-  UseRailRevealOptions,
-  UseRailRevealResult,
-} from "./shell/LeftRail/use-rail-reveal";
+  UseRailOverlayOptions,
+  UseRailOverlayResult,
+} from "./shell/LeftRail/use-rail-overlay";
 
 // ─── CollapsibleNote (shared margin notes + Step Blocks) ─────
 export { CollapsibleNote } from "./composites/CollapsibleNote/CollapsibleNote";

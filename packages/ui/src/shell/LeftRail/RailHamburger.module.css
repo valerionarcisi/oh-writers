@@ -1,0 +1,51 @@
+/* packages/ui/src/shell/LeftRail/RailHamburger.module.css */
+
+/* Notion-style hamburger anchored top-left. Visible only when the shell is
+   collapsed; hidden in full (the rail itself is open) and in focus mode
+   (chrome hidden). Sits above the rail's overlay z-index so the user can
+   always dismiss the open rail via the same button. */
+.hamburger {
+  position: fixed;
+  inset-block-start: 12px;
+  inset-inline-start: 12px;
+  inline-size: 32px;
+  block-size: 32px;
+  display: none;
+  place-items: center;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-2);
+  cursor: pointer;
+  box-shadow: var(--ds-shadow-1);
+  z-index: 340;
+  padding: 0;
+  font: inherit;
+  transition: background var(--ds-duration-2) var(--ds-ease);
+}
+
+:global(body[data-shell="collapsed"]) .hamburger {
+  display: grid;
+}
+
+.hamburger:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.hamburger:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+.glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hamburger {
+    transition: none;
+  }
+}

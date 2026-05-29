@@ -13,6 +13,8 @@ import {
   SkipLink,
   CommandPalette,
   LeftRail,
+  RailHamburger,
+  useRailOverlay,
   BottomDock,
   SplitDrawer,
   TargetPagePreview,
@@ -198,6 +200,15 @@ function AppShellInner({
   const splitDrawer = useSplitDrawer();
   const openBellDrawer = useBellOpener();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
+  // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
+  // by default and a top-left hamburger toggles it as a sliding overlay.
+  // No hover-reveal sentinel — outside-click / ESC / hamburger again close
+  // it. The hook is a no-op outside `collapsed`.
+  const railOverlay = useRailOverlay({ shellState });
+  const lockRailOpen = useCallback(() => {
+    railOverlay.close();
+    setShellState("full");
+  }, [railOverlay]);
   const {
     notifications,
     startNotification,
@@ -729,8 +740,25 @@ function AppShellInner({
               onSessionNew={onCesareSessionNew}
               tools={railTools}
               onNavigate={handleNavigate}
+              overlay={
+                shellState === "collapsed"
+                  ? {
+                      isOpen: railOverlay.isOpen,
+                      onDismiss: railOverlay.close,
+                      onLockOpen: lockRailOpen,
+                    }
+                  : undefined
+              }
             />
           </div>
+
+          {/* Notion-style hamburger — always visible top-left while collapsed,
+              hidden otherwise via CSS (`data-shell` selector). Toggles the
+              rail overlay; never disappears on hover or scroll. */}
+          <RailHamburger
+            onPress={railOverlay.toggle}
+            isOverlayOpen={railOverlay.isOpen}
+          />
 
           <main id="main-content" className={styles.main}>
             <TopBar sectionName={sectionName} onSearch={openPalette} />

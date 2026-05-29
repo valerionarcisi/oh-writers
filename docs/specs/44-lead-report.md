@@ -4,7 +4,7 @@
 
 Spec 44 is shipped on the integration branch `refactor/ux-notion-v3` and is ready to land via [PR #2](https://github.com/valerionarcisi/oh-writers/pull/2). The merged shell is the Notion-class composition described in the spec glossary:
 
-- **LeftRail** (240px / 56px collapsed with hover-reveal via `useRailReveal`, hidden in focus) + slim **TopBar** (`elementLegend` slot on Sceneggiatura) + **BottomDock** (`bell · avatar · gear · ✦ Cesare`, bottom-right, hidden when Cesare ≠ closed or shell = focus).
+- **LeftRail** (240px when full; in collapsed mode it is hidden and a `RailHamburger` button top-left toggles it back in as a sliding overlay via `useRailOverlay`; outside-click / ESC / hamburger again close it; hidden in focus) + slim **TopBar** (`elementLegend` slot on Sceneggiatura) + **BottomDock** (`bell · avatar · gear · ✦ Cesare`, bottom-right, hidden when Cesare ≠ closed or shell = focus).
 - **CesareDrawer** Notion-class primitive — user-facing states `closed | peek | expanded | full`, plus the internal `expanded-split` transient used during the SplitDrawer cross-flow. `body[data-cesare]` only ever stores `closed | expanded`; the cycle button skips the transient.
 - **SplitDrawer** primitive (`closed | open | full`) mounted once at the shell via `SplitDrawerProvider` + `SplitDrawerHost`, with a discriminated payload (`trace`, `notifications`).
 - Shortcuts: `⌘K`, `⌘\`, `⌃⌥F`. State persistence: `data-shell` (full/collapsed) and `data-cesare` (closed/expanded) in `localStorage`.

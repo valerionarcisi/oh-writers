@@ -1,6 +1,6 @@
 // packages/ui/src/shell/LeftRail/LeftRail.tsx
 import { useRef } from "react";
-import { useButton } from "react-aria";
+import { useButton, useOverlay } from "react-aria";
 import type { ReactNode } from "react";
 import { Icon } from "../../icons/Icon";
 import type { IconName } from "../../icons/icon-names";
@@ -73,6 +73,22 @@ export type LeftRailProps = {
   tools?: ReadonlyArray<RailToolItem>;
   /** Optional aria-label override for the rail nav landmark. */
   ariaLabel?: string;
+  /** Overlay mode props — supplied by AppShell when `data-shell="collapsed"`.
+   *  When provided, the rail behaves as a dismissible overlay: outside-click
+   *  + ESC fire `onDismiss`; a top-right `«` button mirrors that dismiss;
+   *  the optional `onLockOpen` chip switches the shell back to `full`.
+   *  When omitted, the rail is rendered statically (full mode). */
+  overlay?: {
+    /** True when the overlay is currently visible. Drives outside-click +
+     *  ESC listeners via react-aria's `useOverlay`. */
+    isOpen: boolean;
+    /** Called when the user clicks outside the rail, presses ESC, or hits
+     *  the `«` close button. */
+    onDismiss: () => void;
+    /** Optional — when provided, the rail surfaces a `»` chip that locks
+     *  the rail open (caller flips shell state back to `full`). */
+    onLockOpen?: () => void;
+  };
 };
 
 // React-aria button wrapper for rail rows. Keeps the spread surface narrow
@@ -201,7 +217,9 @@ export function LeftRail({
   onNavigate,
   tools,
   ariaLabel,
+  overlay,
 }: LeftRailProps) {
+  const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: brandBtnProps } = useButton(
     { onPress: brand.onPress, "aria-label": brand.label },
@@ -215,6 +233,43 @@ export function LeftRail({
       isDisabled: !project?.onPress,
     },
     projectRef,
+  );
+
+  // react-aria handles ESC + outside-click for the overlay case. When the
+  // rail is rendered statically (no `overlay` prop) the handler is a no-op,
+  // matching `useOverlay`'s `isOpen: false` contract.
+  const overlayActive = overlay?.isOpen ?? false;
+  const dismissOverlay = overlay?.onDismiss ?? (() => undefined);
+  const { overlayProps } = useOverlay(
+    {
+      isOpen: overlayActive,
+      onClose: dismissOverlay,
+      isDismissable: true,
+      shouldCloseOnBlur: false,
+      isKeyboardDismissDisabled: false,
+    },
+    railRef,
+  );
+
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps: closeBtnProps } = useButton(
+    {
+      onPress: dismissOverlay,
+      "aria-label": "Chiudi sidebar",
+      isDisabled: !overlay,
+    },
+    closeRef,
+  );
+
+  const lockRef = useRef<HTMLButtonElement>(null);
+  const handleLockOpen = overlay?.onLockOpen ?? (() => undefined);
+  const { buttonProps: lockBtnProps } = useButton(
+    {
+      onPress: handleLockOpen,
+      "aria-label": "Mantieni sidebar aperta",
+      isDisabled: !overlay?.onLockOpen,
+    },
+    lockRef,
   );
 
   const renderSessions = (): ReactNode => {
@@ -249,10 +304,36 @@ export function LeftRail({
 
   return (
     <aside
+      ref={railRef}
+      {...overlayProps}
       className={styles.rail}
       aria-label={ariaLabel ?? "Navigazione progetto"}
       data-testid="left-rail"
     >
+      {overlay && (
+        <div className={styles.overlayControls}>
+          {overlay.onLockOpen && (
+            <button
+              ref={lockRef}
+              {...lockBtnProps}
+              className={styles.lockOpen}
+              data-testid="rail-lock-open"
+              title="Mantieni sidebar aperta"
+            >
+              <span aria-hidden="true">&#187;</span>
+            </button>
+          )}
+          <button
+            ref={closeRef}
+            {...closeBtnProps}
+            className={styles.close}
+            data-testid="rail-close"
+            title="Chiudi sidebar"
+          >
+            <span aria-hidden="true">&#171;</span>
+          </button>
+        </div>
+      )}
       <button
         ref={brandRef}
         {...brandBtnProps}

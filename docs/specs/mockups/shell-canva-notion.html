@@ -62,11 +62,13 @@
   .rail-spacer{flex:1;min-height:8px}
 
   /* Collapsed rail — hidden by default (grid column is 0) and revealed
-     as a TEMPORARY overlay when data-rail-reveal="open" (set by the hover
-     sentinel at the left viewport edge). */
+     as an overlay when data-rail-overlay="open" (set by the hamburger
+     button at top-left, dismissed by outside-click / ESC / hamburger
+     again). No hover sentinel — Notion's actual collapsed-sidebar
+     behaviour does not auto-reveal on edge hover. */
   body[data-shell="collapsed"] .rail,
   body[data-shell="focus"] .rail{display:none}
-  body[data-shell="collapsed"][data-rail-reveal="open"] .rail{
+  body[data-shell="collapsed"][data-rail-overlay="open"] .rail{
     display:flex;position:fixed;top:0;left:0;height:100vh;width:240px;z-index:320;
     box-shadow:var(--shadow-3);background:var(--linen-100);
     border-right:1px solid var(--linen-300);padding:14px 10px;gap:16px;
@@ -75,24 +77,18 @@
   @keyframes rail-slide-in{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
   body[data-shell="collapsed"] .topstrip{padding:8px 14px}
 
-  /* Hover sentinel — 4px-wide column on the left edge that captures pointer
-     events. Invisible to the user. Disabled (no pointer events) outside the
-     collapsed shell state. */
-  .rail-sentinel{position:fixed;top:0;left:0;width:4px;height:100vh;z-index:330;background:transparent;pointer-events:none}
-  body[data-shell="collapsed"]:not([data-shell="focus"]) .rail-sentinel{pointer-events:auto}
-  body[data-shell="full"] .rail-sentinel,
-  body[data-shell="focus"] .rail-sentinel{pointer-events:none}
-
-  /* Lock-open chip (» in the revealed rail header) — only visible when
-     hover-revealed. */
+  /* Lock-open chip (» in the rail header) — only visible when the rail
+     overlay is shown. Clicking it dismisses the overlay and switches the
+     shell back to `full`. */
   .rail-lock-open{position:absolute;top:14px;right:10px;width:24px;height:24px;
     display:none;place-items:center;background:transparent;border:none;color:var(--linen-600);
     cursor:pointer;border-radius:6px;font-size:14px;z-index:1}
   .rail-lock-open:hover{background:var(--linen-200);color:var(--linen-800)}
-  body[data-shell="collapsed"][data-rail-reveal="open"] .rail-lock-open{display:grid}
+  body[data-shell="collapsed"][data-rail-overlay="open"] .rail-lock-open{display:grid}
 
-  /* Hamburger button — visible in collapsed but not in focus. */
-  .hamburger{position:fixed;top:14px;left:14px;width:28px;height:28px;display:none;place-items:center;
+  /* Hamburger button — visible whenever shell is collapsed (open OR closed
+     overlay state); hidden otherwise. Position never changes. */
+  .hamburger{position:fixed;top:12px;left:12px;width:32px;height:32px;display:none;place-items:center;
     background:var(--white);border:1px solid var(--linen-300);border-radius:6px;color:var(--linen-700);
     cursor:pointer;box-shadow:var(--shadow-1);z-index:340;font-size:14px}
   body[data-shell="collapsed"] .hamburger{display:grid}
@@ -247,7 +243,7 @@
 
   @media (prefers-reduced-motion: reduce){
     .cesare{animation:none !important}
-    body[data-shell="collapsed"][data-rail-reveal="open"] .rail{animation:none}
+    body[data-shell="collapsed"][data-rail-overlay="open"] .rail{animation:none}
   }
   .ces-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--linen-200);background:var(--linen-50);flex-shrink:0}
   .ces-head-l{display:flex;align-items:center;gap:8px}
@@ -446,9 +442,9 @@
   </div>
 </div>
 
-<!-- Hover sentinel + hamburger (visible only in collapsed mode) -->
-<div class="rail-sentinel" id="rail-sentinel"></div>
-<button class="hamburger" id="hamburger" title="Apri sidebar">&#9776;</button>
+<!-- Hamburger button — visible only in collapsed mode (full and focus hide it).
+     Position is fixed top-left, never changes between open/closed overlay states. -->
+<button class="hamburger" id="hamburger" title="Apri sidebar" aria-label="Apri sidebar">&#9776;</button>
 
 <!-- Shell collapse button (always available) -->
 <button class="shell-collapse" id="shell-collapse-btn" title="Collassa AppShell (Focus)">&laquo;</button>
@@ -978,8 +974,8 @@
     document.body.dataset.shell = s;
     document.querySelectorAll('.demo-row [data-shell]').forEach(b=>b.classList.toggle('on', b.dataset.shell===s));
     const btn=document.getElementById('shell-collapse-btn'); if(btn) btn.innerHTML = s==='collapsed' ? '&raquo;' : '&laquo;';
-    // Clear any lingering hover-reveal when leaving collapsed.
-    if(s!=='collapsed') document.body.removeAttribute('data-rail-reveal');
+    // Clear any lingering overlay when leaving collapsed.
+    if(s!=='collapsed') document.body.removeAttribute('data-rail-overlay');
   }
 
   // bind demo toggles
@@ -1011,56 +1007,51 @@
     n.addEventListener('click',()=>n.classList.toggle('open'));
   });
 
-  // ── Hover-reveal sentinel (collapsed shell) ──
-  let hoverHideTimer = null;
-  function clearHoverHide(){ if(hoverHideTimer){ clearTimeout(hoverHideTimer); hoverHideTimer=null; } }
-  function revealRail(){
-    if(document.body.dataset.shell!=='collapsed') return;
-    clearHoverHide();
-    document.body.setAttribute('data-rail-reveal','open');
-  }
-  function scheduleHideRail(){
-    if(document.body.dataset.shell!=='collapsed') return;
-    clearHoverHide();
-    hoverHideTimer = setTimeout(()=>{
-      document.body.removeAttribute('data-rail-reveal');
-      hoverHideTimer = null;
-    }, 300);
-  }
-  const sentinel = document.getElementById('rail-sentinel');
+  // ── Rail overlay (collapsed shell, Notion-compliant) ──
+  // No hover sentinel: the rail appears solely on hamburger click and is
+  // dismissed by outside-click, ESC, or hamburger again.
   const railEl = document.getElementById('rail');
-  if(sentinel){
-    sentinel.addEventListener('mouseenter', revealRail);
-    sentinel.addEventListener('mouseleave', scheduleHideRail);
+
+  function isRailOverlayOpen(){
+    return document.body.getAttribute('data-rail-overlay') === 'open';
   }
-  if(railEl){
-    railEl.addEventListener('mouseenter', revealRail);
-    railEl.addEventListener('mouseleave', scheduleHideRail);
+  function openRailOverlay(){
+    if(document.body.dataset.shell!=='collapsed') return;
+    document.body.setAttribute('data-rail-overlay','open');
+  }
+  function closeRailOverlay(){
+    document.body.removeAttribute('data-rail-overlay');
+  }
+  function toggleRailOverlay(){
+    if(isRailOverlayOpen()) closeRailOverlay(); else openRailOverlay();
   }
 
-  // ── Lock-open chip (» inside the revealed rail) ──
-  const lockBtn = document.getElementById('rail-lock-open');
-  if(lockBtn){
-    lockBtn.addEventListener('click',e=>{
-      e.stopPropagation();
-      clearHoverHide();
-      document.body.removeAttribute('data-rail-reveal');
-      setShell('full');
-    });
-  }
-
-  // ── Hamburger (collapsed mode) — toggles the rail reveal manually ──
+  // ── Hamburger (collapsed mode) — toggles the rail overlay ──
   const hamburger = document.getElementById('hamburger');
   if(hamburger){
     hamburger.addEventListener('click',e=>{
       e.stopPropagation();
-      if(document.body.getAttribute('data-rail-reveal')==='open'){
-        document.body.removeAttribute('data-rail-reveal');
-      } else {
-        document.body.setAttribute('data-rail-reveal','open');
-      }
+      toggleRailOverlay();
     });
   }
+
+  // ── Lock-open chip (» inside the rail overlay) ──
+  const lockBtn = document.getElementById('rail-lock-open');
+  if(lockBtn){
+    lockBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      closeRailOverlay();
+      setShell('full');
+    });
+  }
+
+  // ── Outside-click dismiss ──
+  document.addEventListener('mousedown',e=>{
+    if(!isRailOverlayOpen()) return;
+    if(railEl && railEl.contains(e.target)) return;
+    if(hamburger && hamburger.contains(e.target)) return;
+    closeRailOverlay();
+  });
 
   // ── Keyboard shortcuts ──
   document.addEventListener('keydown',e=>{
@@ -1073,6 +1064,11 @@
     if(e.ctrlKey && e.altKey && (e.key==='f'||e.key==='F')){
       e.preventDefault();
       setShell(document.body.dataset.shell==='focus'?'full':'focus');
+    }
+    // ESC — dismiss the rail overlay if open
+    if(e.key==='Escape' && isRailOverlayOpen()){
+      e.preventDefault();
+      closeRailOverlay();
     }
   });
 
