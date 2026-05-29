@@ -36,9 +36,18 @@ export type TopBarSectionGroup = {
 };
 
 export type TopBarProps = {
+  /** Optional slot rendered before the section crumb. Used to host the
+   *  RailHamburger when the shell is in collapsed mode. */
+  start?: ReactNode;
   /** Section / page name shown as the breadcrumb crumb (the rail handles
    *  navigation; this is purely an in-context label). */
   sectionName: string;
+  /** Optional center slot — rendered in the middle of the top row, centred
+   *  absolutely so it doesn't shift the right actions. Used to host the
+   *  LoglinePill on the Soggetto / narrative doc pages. */
+  center?: ReactNode;
+  /** Optional extra actions injected before the search button (e.g. export). */
+  actions?: ReactNode;
 
   /** Whether the page has scrolled past 0 — controls border-bottom appearance. */
   isScrolled?: boolean;
@@ -110,7 +119,10 @@ export type TopBarProps = {
 };
 
 export function TopBar({
+  start,
   sectionName,
+  center,
+  actions,
   isScrolled = false,
   scopeChip,
   versionSelector,
@@ -125,13 +137,21 @@ export function TopBar({
         .join(" ")}
       data-testid="topstrip"
     >
-      <div className={styles.row}>
+      <div
+        className={[styles.row, center ? styles.rowHasCenter : ""]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className={styles.left}>
+          {start}
           <span className={styles.crumb}>{sectionName}</span>
           {scopeChip && <span className={styles.scope}>{scopeChip}</span>}
         </div>
 
+        {center && <div className={styles.center}>{center}</div>}
+
         <div className={styles.right}>
+          {actions}
           {onSearch && (
             <button
               type="button"

@@ -48,6 +48,22 @@
   --color-accent-hover: var(--ds-leaf-500);
 }
 
+/* Export icon button in TopBar — matches the iconBtn style of TopBar.module.css */
+.exportTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-text-3);
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text-2);
+  }
+}
+
 /* Status messages */
 .status {
   padding: var(--space-8);

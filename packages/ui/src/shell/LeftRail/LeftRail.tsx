@@ -270,27 +270,6 @@ export function LeftRail({
     railRef,
   );
 
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const { buttonProps: closeBtnProps } = useButton(
-    {
-      onPress: dismissOverlay,
-      "aria-label": "Chiudi sidebar",
-      isDisabled: !overlay,
-    },
-    closeRef,
-  );
-
-  const lockRef = useRef<HTMLButtonElement>(null);
-  const handleLockOpen = overlay?.onLockOpen ?? (() => undefined);
-  const { buttonProps: lockBtnProps } = useButton(
-    {
-      onPress: handleLockOpen,
-      "aria-label": "Mantieni sidebar aperta",
-      isDisabled: !overlay?.onLockOpen,
-    },
-    lockRef,
-  );
-
   const renderSessions = (): ReactNode => {
     if (!sessions || sessions.length === 0) return null;
     return (
@@ -330,30 +309,6 @@ export function LeftRail({
       aria-label={ariaLabel ?? "Navigazione progetto"}
       data-testid="left-rail"
     >
-      {overlay && (
-        <div className={styles.overlayControls}>
-          {overlay.onLockOpen && (
-            <button
-              ref={lockRef}
-              {...lockBtnProps}
-              className={styles.lockOpen}
-              data-testid="rail-lock-open"
-              title="Mantieni sidebar aperta"
-            >
-              <span aria-hidden="true">&#187;</span>
-            </button>
-          )}
-          <button
-            ref={closeRef}
-            {...closeBtnProps}
-            className={styles.close}
-            data-testid="rail-close"
-            title="Chiudi sidebar"
-          >
-            <span aria-hidden="true">&#171;</span>
-          </button>
-        </div>
-      )}
       <button
         ref={brandRef}
         {...brandBtnProps}

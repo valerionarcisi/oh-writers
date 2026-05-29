@@ -5,22 +5,18 @@
    (chrome hidden). Sits above the rail's overlay z-index so the user can
    always dismiss the open rail via the same button. */
 .hamburger {
-  position: fixed;
-  inset-block-start: 12px;
-  inset-inline-start: 12px;
-  inline-size: 32px;
-  block-size: 32px;
   display: none;
+  inline-size: 28px;
+  block-size: 28px;
   place-items: center;
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-line);
+  background: transparent;
+  border: none;
   border-radius: var(--ds-radius-sm);
-  color: var(--ds-text-2);
+  color: var(--ds-text-3);
   cursor: pointer;
-  box-shadow: var(--ds-shadow-1);
-  z-index: 340;
   padding: 0;
   font: inherit;
+  flex-shrink: 0;
   transition: background var(--ds-duration-2) var(--ds-ease);
 }
 
@@ -30,7 +26,7 @@
 
 .hamburger:hover {
   background: var(--ds-surface-alt);
-  color: var(--ds-text);
+  color: var(--ds-text-2);
 }
 
 .hamburger:focus-visible {

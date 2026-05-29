@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { FloatingDock, Skeleton } from "@oh-writers/ui";
+import { DropdownMenu, Icon, Skeleton } from "@oh-writers/ui";
 import {
   DraftBanner,
   ExportPdfModal,
@@ -220,6 +220,30 @@ function SoggettoPageReady({
         canEditLogline={canEdit}
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
+        topBarActions={
+          <DropdownMenu
+            trigger={<Icon name="upload" size={14} aria-hidden={true} />}
+            align="end"
+            triggerClassName={styles.exportTrigger}
+            items={[
+              {
+                label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
+                onClick: () => {
+                  if (isVersionsOpen) closeDrawer();
+                  setIsExportOpen(true);
+                },
+                disabled: exportDocx.isPending,
+              },
+              {
+                label: "Esporta SIAE",
+                onClick: () => {
+                  if (isVersionsOpen) closeDrawer();
+                  setIsSiaeOpen(true);
+                },
+              },
+            ]}
+          />
+        }
         rightAside={
           <MarginNotesColumn
             projectId={projectId}
@@ -245,27 +269,6 @@ function SoggettoPageReady({
           />
         </div>
       </NarrativeDocsShell>
-
-      {/* Spec 44 TKT-LEAD-01: bottom-left page CTAs; Cesare → BottomDock. */}
-      <FloatingDock
-        primaryAction={{
-          label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
-          hotkey: "⌘E",
-          onClick: () => {
-            if (isVersionsOpen) closeDrawer();
-            setIsExportOpen(true);
-          },
-        }}
-        secondaryActions={[
-          {
-            label: "Esporta SIAE",
-            onClick: () => {
-              if (isVersionsOpen) closeDrawer();
-              setIsSiaeOpen(true);
-            },
-          },
-        ]}
-      />
     </div>
   );
 }

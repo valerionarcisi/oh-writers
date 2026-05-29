@@ -26,6 +26,27 @@
   min-width: 0;
 }
 
+/* When a center slot is present, use a 3-column approach so the center
+   is truly centred regardless of left/right widths. */
+.rowHasCenter {
+  position: relative;
+}
+
+.center {
+  position: absolute;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  max-inline-size: 480px;
+  inline-size: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+
+  & > * {
+    pointer-events: auto;
+  }
+}
+
 .left {
   display: flex;
   align-items: center;

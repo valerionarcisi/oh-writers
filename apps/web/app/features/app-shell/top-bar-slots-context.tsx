@@ -29,6 +29,10 @@ import {
 
 interface TopBarSlots {
   elementLegend: ReactNode | null;
+  /** Absolutely-centred middle slot (e.g. LoglinePill on narrative doc pages). */
+  center: ReactNode | null;
+  /** Extra actions injected into the TopBar right slot (e.g. export button). */
+  actions: ReactNode | null;
 }
 
 interface TopBarSlotsContextValue {
@@ -42,7 +46,11 @@ interface TopBarSlotsContextValue {
 const TopBarSlotsContext = createContext<TopBarSlotsContextValue | null>(null);
 
 export function TopBarSlotsProvider({ children }: { children: ReactNode }) {
-  const [slots, setSlots] = useState<TopBarSlots>({ elementLegend: null });
+  const [slots, setSlots] = useState<TopBarSlots>({
+    elementLegend: null,
+    center: null,
+    actions: null,
+  });
 
   const setSlot = useCallback<TopBarSlotsContextValue["setSlot"]>(
     (key, value) => {
@@ -67,7 +75,7 @@ export function TopBarSlotsProvider({ children }: { children: ReactNode }) {
 
 export function useTopBarSlots(): TopBarSlots {
   const ctx = useContext(TopBarSlotsContext);
-  if (!ctx) return { elementLegend: null };
+  if (!ctx) return { elementLegend: null, center: null, actions: null };
   return ctx.slots;
 }
 

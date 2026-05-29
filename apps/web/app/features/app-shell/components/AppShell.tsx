@@ -808,19 +808,19 @@ function AppShellInner({
             />
           </div>
 
-          {/* Notion-style hamburger — always visible top-left while collapsed,
-              hidden otherwise via CSS (`data-shell` selector). Clicking toggles
-              the overlay; hovering opens it so the user can slide into the panel. */}
-          <RailHamburger
-            onPress={railOverlay.toggle}
-            onHoverStart={railOverlay.open}
-            onHoverEnd={railOverlay.scheduleClose}
-            isOverlayOpen={railOverlay.isOpen}
-          />
-
           <main id="main-content" className={styles.main}>
             <TopBar
+              start={
+                <RailHamburger
+                  onPress={railOverlay.toggle}
+                  onHoverStart={railOverlay.open}
+                  onHoverEnd={railOverlay.scheduleClose}
+                  isOverlayOpen={railOverlay.isOpen}
+                />
+              }
               sectionName={sectionName}
+              center={topBarSlots.center ?? undefined}
+              actions={topBarSlots.actions ?? undefined}
               onSearch={openPalette}
               elementLegend={topBarSlots.elementLegend ?? undefined}
             />
