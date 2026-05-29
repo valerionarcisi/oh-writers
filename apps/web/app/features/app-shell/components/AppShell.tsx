@@ -812,10 +812,7 @@ function AppShellInner({
             <TopBar
               start={
                 <RailHamburger
-                  onPress={
-                    // Click while open = pin (lock full); click while closed = open overlay.
-                    railOverlay.isOpen ? lockRailOpen : railOverlay.open
-                  }
+                  onPress={railOverlay.toggle}
                   onHoverStart={railOverlay.open}
                   onHoverEnd={railOverlay.scheduleClose}
                   isOverlayOpen={railOverlay.isOpen}

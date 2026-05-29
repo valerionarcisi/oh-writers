@@ -239,6 +239,15 @@ export function LeftRail({
     },
     projectRef,
   );
+  const lockRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps: lockBtnProps } = useButton(
+    {
+      onPress: overlay?.onLockOpen ?? (() => undefined),
+      "aria-label": "Fissa sidebar (⌘\\)",
+      isDisabled: !overlay?.onLockOpen,
+    },
+    lockRef,
+  );
 
   // react-aria handles ESC + outside-click for the overlay case. When the
   // rail is rendered statically (no `overlay` prop) the handler is a no-op,
@@ -309,6 +318,17 @@ export function LeftRail({
       aria-label={ariaLabel ?? "Navigazione progetto"}
       data-testid="left-rail"
     >
+      {overlay?.onLockOpen && (
+        <button
+          ref={lockRef}
+          {...lockBtnProps}
+          className={styles.lockOpen}
+          title="Fissa sidebar (⌘\)"
+          data-testid="rail-lock-open"
+        >
+          »
+        </button>
+      )}
       <button
         ref={brandRef}
         {...brandBtnProps}
