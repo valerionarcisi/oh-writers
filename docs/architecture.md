@@ -241,6 +241,37 @@ Every Yjs message → room access checked against team membership
 
 ## CSS Architecture
 
+### Shell Model
+
+The AppShell is a Notion-class composition that ships exactly four top-level surfaces. The editor area is pixel-stable when Cesare opens, closes, or resizes — nothing in the shell reserves a column for the assistant. See [Spec 44](./specs/44-shell-refactor-notion-style.md) for the authoritative state model.
+
+**Surfaces:**
+
+- **LeftRail** — 240px when shell is `full`, 56px when `collapsed` (revealed as a temporary overlay on left-edge hover via `useRailReveal`), hidden when `focus`. Owns project identity, Document Type / Production View nav, Cesare Sessions (visible only when Cesare is `expanded`/`full`), Recents, and tool icons.
+- **Slim TopBar** — one row per page, with an optional `elementLegend` slot (Sceneggiatura only).
+- **BottomDock** — `bell · avatar · gear · ✦ Cesare`, fixed bottom-right. Hidden when Cesare ≠ `closed` (its bell/avatar/gear icons move into the Cesare drawer header) OR when shell = `focus`.
+- **Cesare Drawer** — Notion-class floating sub-window anchored bottom-right. Four user-facing states (`closed | peek | expanded | full`) plus one internal transient (`expanded-split`) used during the SplitDrawer cross-flow when both surfaces co-exist. The transient state collapses to `expanded` for the persisted `body[data-cesare]` flag and for the user-facing cycle button.
+
+**SplitDrawer** is a separate `packages/ui` composite for right-anchored auxiliary panels (`closed | open | full`). It reflows the page narrower on the left. Consumers ship via `SplitDrawerProvider` + `SplitDrawerHost` (mounted once at the shell level): `NotificationCenterDrawer` (bell), and future `VersionsDrawer`, `DocumentBrowserDrawer`, `DiffViewer`.
+
+**Trace flow** (Cesare full → SplitDrawer with affected page): the Cesare Step Block's `[Mostra modifiche]` affordance calls `useShowChangesInSplitDrawer({ pageRef, traceMarkers, onAccept, onReject, onAcceptAll, onRejectAll })`. The SplitDrawer renders `<TargetPagePreview/>` of the affected page with a trace overlay and accept/reject footer. Cesare narrows automatically; promoting the SplitDrawer to `full` retreats Cesare to `peek`.
+
+**Body data-attributes** (driven by AppShell, the only mechanism shell-aware CSS may key off):
+
+- `data-view` — current route segment
+- `data-cesare` — `closed | expanded | peek | full` (the `expanded-split` runtime state is collapsed to `expanded` here)
+- `data-shell` — `full | collapsed | focus`
+- `data-cesare-thinking` — `true` while an agentic run is in progress
+- `data-split-drawer` — `open | full` when the SplitDrawer is mounted (absent when `closed`)
+- `data-rail-reveal` — `open` only while the collapsed rail is hover-revealed
+
+**Persistence** (per user, in `localStorage`):
+
+- `data-shell` persists `full` and `collapsed` only; `focus` is transient
+- `data-cesare` persists `closed` and `expanded` only; `peek`, `full`, and the internal `expanded-split` are runtime-only
+
+**Shortcuts:** `⌘K` opens the command palette, `⌘\` toggles `full ↔ collapsed`, `⌃⌥F` toggles `focus`.
+
 ### Design Philosophy — Dark Modern SaaS
 
 Clean, warm dark aesthetic with depth and polish. Content-first — the editor area is the hero.
