@@ -36,7 +36,7 @@ export function RailHamburger({
 }: RailHamburgerProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const label =
-    ariaLabel ?? (isOverlayOpen ? "Chiudi sidebar" : "Apri sidebar");
+    ariaLabel ?? (isOverlayOpen ? "Fissa sidebar (⌘\\)" : "Apri sidebar");
   const { buttonProps } = useButton(
     {
       onPress,
