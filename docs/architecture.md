@@ -247,7 +247,7 @@ The AppShell is a Notion-class composition that ships exactly four top-level sur
 
 **Surfaces:**
 
-- **LeftRail** — 240px when shell is `full`, 56px when `collapsed` (revealed as a temporary overlay on left-edge hover via `useRailReveal`), hidden when `focus`. Owns project identity, Document Type / Production View nav, Cesare Sessions (visible only when Cesare is `expanded`/`full`), Recents, and tool icons.
+- **LeftRail** — 240px when shell is `full`, hidden when `collapsed` (a top-left hamburger button toggles it back in as a sliding overlay via `useRailOverlay` + `RailHamburger`; outside-click / ESC / hamburger again close it), hidden when `focus`. Owns project identity, Document Type / Production View nav, Cesare Sessions (visible only when Cesare is `expanded`/`full`), Recents, and tool icons.
 - **Slim TopBar** — one row per page, with an optional `elementLegend` slot (Sceneggiatura only).
 - **BottomDock** — `bell · avatar · gear · ✦ Cesare`, fixed bottom-right. Hidden when Cesare ≠ `closed` (its bell/avatar/gear icons move into the Cesare drawer header) OR when shell = `focus`.
 - **Cesare Drawer** — Notion-class floating sub-window anchored bottom-right. Four user-facing states (`closed | peek | expanded | full`) plus one internal transient (`expanded-split`) used during the SplitDrawer cross-flow when both surfaces co-exist. The transient state collapses to `expanded` for the persisted `body[data-cesare]` flag and for the user-facing cycle button.
@@ -263,7 +263,7 @@ The AppShell is a Notion-class composition that ships exactly four top-level sur
 - `data-shell` — `full | collapsed | focus`
 - `data-cesare-thinking` — `true` while an agentic run is in progress
 - `data-split-drawer` — `open | full` when the SplitDrawer is mounted (absent when `closed`)
-- `data-rail-reveal` — `open` only while the collapsed rail is hover-revealed
+- `data-rail-overlay` — `open` only while the collapsed rail is shown as an overlay (toggled by the hamburger / dismissed by outside-click / ESC / close button)
 
 **Persistence** (per user, in `localStorage`):
 
