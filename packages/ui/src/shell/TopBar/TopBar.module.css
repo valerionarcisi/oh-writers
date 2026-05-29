@@ -36,11 +36,13 @@
   position: absolute;
   inset-inline-start: 50%;
   transform: translateX(-50%);
-  max-inline-size: 480px;
-  inline-size: 100%;
+  max-inline-size: 640px;
+  inline-size: max-content;
   display: flex;
   justify-content: center;
   pointer-events: none;
+  /* Clip so it doesn't visually overflow into left/right when viewport narrow */
+  overflow: hidden;
 
   & > * {
     pointer-events: auto;
