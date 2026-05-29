@@ -435,7 +435,11 @@ export const CESARE_DOCUMENT_TOOLS = [
 
 // ─── Document tools factory (AI SDK v5 format) ────────────────────────────────
 
-export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
+export const createDocumentTools = (
+  db: Db,
+  docContext: DocumentContext,
+  userIdFallback: string | null = null,
+) => ({
   apply_text_edit: tool({
     description:
       "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
@@ -455,6 +459,7 @@ export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
         input as ApplyTextEditInput,
         db,
         docContext,
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -490,6 +495,7 @@ export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
         ),
         800,
         "espanso",
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -525,6 +531,7 @@ export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
         ),
         600,
         "compresso",
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -1273,43 +1280,89 @@ interface SectionRange {
   headingText: string;
 }
 
-// Updates documents.content and the active version row in one transaction.
-// Mirrors the persistence pattern in saveDocument so the Versions popover
-// stays consistent and onSuccess invalidations on the client pick up the new
-// content via the standard ["documents", projectId, type] query key.
-const persistDocumentContent = (
+/**
+ * Result of a live document apply: the freshly created version plus the one
+ * that was active before it. The client wires `previousVersionId` into the
+ * inline trace's "↩ Annulla" so the user can revert the live document. Null
+ * when the document had no active version yet (first content ever written).
+ */
+export interface AppliedDocumentEdit {
+  versionId: string;
+  previousVersionId: string | null;
+}
+
+// Applies new content LIVE to the open document following the canonical Spec 44
+// Agentic Edit Pattern: every Cesare edit auto-creates a NEW non-draft version,
+// repoints documents.current_version_id at it, and mirrors the content onto the
+// document row so the open editor reflects it. The previous active version stays
+// in history so the inline trace can offer "↩ Annulla". We must NOT update the
+// active version row in place — that would erase history and leave nothing to
+// revert to (the iter-1 regression). `createdBy` falls back to the supplied
+// `userIdFallback` when the document row carries no creator.
+export const persistDocumentContent = (
   db: Db,
   documentId: string,
   nextContent: string,
-): ResultAsync<void, CesareError> =>
+  userIdFallback: string | null,
+): ResultAsync<AppliedDocumentEdit, CesareError> =>
   ResultAsync.fromPromise(
-    db.transaction(async (tx) => {
+    db.transaction(async (tx): Promise<AppliedDocumentEdit> => {
       const [doc] = await tx
         .select({
           id: documents.id,
           currentVersionId: documents.currentVersionId,
+          createdBy: documents.createdBy,
         })
         .from(documents)
         .where(eq(documents.id, documentId))
         .limit(1);
       if (!doc) throw new Error(`Document ${documentId} not found`);
 
-      if (doc.currentVersionId) {
-        await tx
-          .update(documentVersions)
-          .set({ content: nextContent, updatedAt: new Date() })
-          .where(eq(documentVersions.id, doc.currentVersionId));
+      const previousVersionId = doc.currentVersionId ?? null;
+      const creator = doc.createdBy ?? userIdFallback;
+      if (!creator) {
+        throw new Error(
+          "Cannot determine the version author: document has no createdBy and no fallback user.",
+        );
       }
+
+      const [maxRow] = await tx
+        .select({
+          max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
+        })
+        .from(documentVersions)
+        .where(eq(documentVersions.documentId, documentId));
+      const nextNum = (maxRow?.max ?? 0) + 1;
+
+      const [inserted] = await tx
+        .insert(documentVersions)
+        .values({
+          documentId,
+          number: nextNum,
+          label: `Cesare · modifica ${nextNum}`,
+          content: nextContent,
+          isDraft: false,
+          createdBy: creator,
+        })
+        .returning({ id: documentVersions.id });
+      if (!inserted) throw new Error("persistDocumentContent returned no rows");
+
       await tx
         .update(documents)
-        .set({ content: nextContent, updatedAt: new Date() })
+        .set({
+          currentVersionId: inserted.id,
+          content: nextContent,
+          updatedAt: new Date(),
+        })
         .where(eq(documents.id, doc.id));
+
+      return { versionId: inserted.id, previousVersionId };
     }),
     (e) =>
       new CesareError(
         `persistDocumentContent failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
-  ).map(() => undefined);
+  );
 
 const normalizeHeading = (raw: string): string =>
   raw
@@ -1408,14 +1461,22 @@ const docTypeLabel = (type: DocumentType): string => {
   }
 };
 
+interface DocumentEditResult {
+  ok: boolean;
+  reason?: string;
+  toast?: string;
+  applied_live?: true;
+  document_type?: DocumentType;
+  version_id?: string;
+  previous_version_id?: string | null;
+}
+
 const executeApplyTextEdit = (
   input: ApplyTextEditInput,
   db: Db,
   doc: DocumentContext,
-): ResultAsync<
-  { ok: boolean; reason?: string; toast?: string },
-  CesareError
-> => {
+  userIdFallback: string | null,
+): ResultAsync<DocumentEditResult, CesareError> => {
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
   }
@@ -1427,15 +1488,21 @@ const executeApplyTextEdit = (
     });
   }
   const next = doc.content.replace(input.find, input.replace);
-  return persistDocumentContent(db, doc.documentId, next).map(() => {
-    // Mutate the in-memory copy so subsequent tool calls in the same turn
-    // see the updated content.
-    doc.content = next;
-    return {
-      ok: true,
-      toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
-    };
-  });
+  return persistDocumentContent(db, doc.documentId, next, userIdFallback).map(
+    (applied) => {
+      // Mutate the in-memory copy so subsequent tool calls in the same turn
+      // see the updated content.
+      doc.content = next;
+      return {
+        ok: true,
+        applied_live: true as const,
+        document_type: doc.documentType,
+        version_id: applied.versionId,
+        previous_version_id: applied.previousVersionId,
+        toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
+      };
+    },
+  );
 };
 
 const EXPAND_SECTION_MODEL = "claude-haiku-4-5";
@@ -1505,10 +1572,8 @@ const generateAndReplaceSection = (
   prompt: string,
   maxTokens: number,
   toastVerb: string,
-): ResultAsync<
-  { ok: boolean; reason?: string; toast?: string },
-  CesareError
-> => {
+  userIdFallback: string | null,
+): ResultAsync<DocumentEditResult, CesareError> => {
   const range = findSection(doc.content, heading);
   if (!range) {
     return okAsync({
@@ -1537,10 +1602,19 @@ const generateAndReplaceSection = (
         );
       }
       const nextContent = replaceSection(doc.content, range, newText);
-      return persistDocumentContent(db, doc.documentId, nextContent).map(() => {
+      return persistDocumentContent(
+        db,
+        doc.documentId,
+        nextContent,
+        userIdFallback,
+      ).map((applied) => {
         doc.content = nextContent;
         return {
           ok: true,
+          applied_live: true as const,
+          document_type: doc.documentType,
+          version_id: applied.versionId,
+          previous_version_id: applied.previousVersionId,
           toast: `✦ Cesare ha ${toastVerb} "${range.headingText.replace(/^#+\s*/, "").trim()}"`,
         };
       });
@@ -1551,6 +1625,7 @@ export const executeDocumentTool = (
   block: ToolUseBlock,
   db: Db,
   docContext: DocumentContext,
+  userIdFallback: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const successResult = (id: string, payload: unknown): ToolResult => ({
     type: "tool_result",
@@ -1560,8 +1635,8 @@ export const executeDocumentTool = (
 
   if (block.name === "apply_text_edit") {
     const input = block.input as ApplyTextEditInput;
-    return executeApplyTextEdit(input, db, docContext).map((res) =>
-      successResult(block.id, res),
+    return executeApplyTextEdit(input, db, docContext, userIdFallback).map(
+      (res) => successResult(block.id, res),
     );
   }
 
@@ -1581,6 +1656,7 @@ export const executeDocumentTool = (
       ),
       800,
       "espanso",
+      userIdFallback,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -1601,6 +1677,7 @@ export const executeDocumentTool = (
       ),
       600,
       "compresso",
+      userIdFallback,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -2168,7 +2245,7 @@ export const runDocumentToolLoop = (
     projectId,
     model,
     sdkTools: {
-      ...createDocumentTools(db, docContext),
+      ...createDocumentTools(db, docContext, userIdFallback),
       ...createDocumentGenTools(db, projectId, userIdFallback),
       ...createReadTools(db, projectId),
     },
@@ -2190,7 +2267,7 @@ export const runDocumentToolLoop = (
           userIdFallback,
         );
       }
-      return executeDocumentTool(block, dbArg, docContext);
+      return executeDocumentTool(block, dbArg, docContext, userIdFallback);
     },
   });
 
@@ -2347,6 +2424,7 @@ export const runUniversalToolLoop = (
             documentType: "logline",
             content: "",
           },
+          ctx.userIdFallback,
         );
       }
 
@@ -2484,15 +2562,20 @@ const extractSideChannelMarkers = (
       // ignore malformed payloads — the marker is best-effort
     }
   }
-  // Document generation tools apply the new content LIVE to the open document
-  // (Spec 44 canonical pattern). We surface a marker carrying the version that
-  // was active before the apply so the client can render an "↩ Annulla" that
-  // reverts the live document to its previous state.
+  // Document tools apply the new content LIVE to the open document (Spec 44
+  // canonical pattern) — both the whole-document generators (propose_*) and the
+  // in-place edits (apply_text_edit / expand_section / compress_section). We
+  // surface a marker carrying the version that was active before the apply so
+  // the client can render an "↩ Annulla" that reverts the live document to its
+  // previous state.
   if (
     toolName === "propose_logline_from_screenplay" ||
     toolName === "propose_synopsis_from_screenplay" ||
     toolName === "propose_soggetto_v2" ||
-    toolName === "propose_scaletta_from_soggetto"
+    toolName === "propose_scaletta_from_soggetto" ||
+    toolName === "apply_text_edit" ||
+    toolName === "expand_section" ||
+    toolName === "compress_section"
   ) {
     try {
       const payload = JSON.parse(toolResultContent) as Record<string, unknown>;

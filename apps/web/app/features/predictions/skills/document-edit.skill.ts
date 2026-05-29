@@ -78,7 +78,7 @@ export const buildDocumentEditSkill = (
     if (isDocumentGenToolName(block.name)) {
       return executeDocumentGenTool(block, db, projectId, userIdFallback);
     }
-    return executeDocumentTool(block, db, docCtx);
+    return executeDocumentTool(block, db, docCtx, userIdFallback);
   },
   requiredData: ["documents", "scene-summaries"],
 });

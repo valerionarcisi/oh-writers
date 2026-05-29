@@ -85,7 +85,7 @@ export const createUniversalCesareTools = (
     ...createScreenplayTools(db, ctx.projectId),
 
     // Document text edits on the active document (apply_text_edit, …)
-    ...createDocumentTools(db, docCtx),
+    ...createDocumentTools(db, docCtx, ctx.userIdFallback),
 
     // Document generation (logline/synopsis/scaletta/treatment proposers)
     ...createDocumentGenTools(db, ctx.projectId, ctx.userIdFallback),
