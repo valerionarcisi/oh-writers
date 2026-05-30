@@ -67,13 +67,28 @@ Bug (Image #3): add a LeftRail entry dedicated to Cesare that opens the **full C
 
 ### A6 — "Mostra / Nascondi modifiche" end-to-end (Notion)
 
-Bug (Image #4): the show/hide-changes button must work end-to-end depending on Cesare open mode:
+Bug (Image #4): the show/hide-changes button must work end-to-end. The discriminant
+is **which Cesare SURFACE** is open, not an internal drawer-state enum:
 
-- Cesare **floating/expanded** → toggle **live diff** on the open document (spec 44 live-doc model:
-  `body[data-cesare-diff]` + `ohw:cesare:live-diff`, highlight ring on `<main>`).
-- Cesare **full page** → open the **SplitDrawer** with the trace's target page in diff/trace mode (`?peek=<target>`).
-- Depends on A2 (real trace markers) + A4 (split-drawer). Wave 2.
-- E2E: floating → toggling shows/hides live diff; full → opens split with diff; Annulla reverts (version restored).
+- **Cesare bottom-right (floating drawer)** → the document is visible, so the toggle
+  shows/hides the **diff inline on the live document** (verde aggiunte / rosso rimozioni,
+  word-level, in-place). NOT a generic ring — a real coloured diff on the open doc.
+- **Cesare full-page session** (opened by clicking a session in the sidebar →
+  `/sessions/:sessionId`, where the chat fills the view and the doc is NOT visible) →
+  the toggle opens the **SplitDrawer** with the target page + diff beside the chat.
+  The SplitDrawer is **routed** (`?peek=<target>`, deep-linkable/shareable) per Spec 49.
+
+Why the branch (not Notion-identical): Notion AI is always a small side drawer, so it
+can always diff inline. We additionally have a full-page session surface where the doc
+is covered — there the inline toggle would show nothing, so it opens the routed split.
+
+- `↩ Annulla` reverts the auto-created version in BOTH surfaces.
+- Depends on A2 (real trace markers) + A4 (split-drawer) + A5 (sessions full page). Wave 2.
+- **Note (re-QA at gate):** the merged A6 keyed the branch on `surface`/`drawer.state`
+  and painted a ring on `<main>`. Verify against THIS contract — the inline case must be a
+  real word-level coloured diff, and the full-page case must be the routed `?peek` split.
+- E2E: bottom-right Cesare → toggling shows/hides the inline coloured diff; full-page
+  session → opens the routed split with diff; Annulla reverts (version restored) in both.
 
 ## Waves & dependencies
 
