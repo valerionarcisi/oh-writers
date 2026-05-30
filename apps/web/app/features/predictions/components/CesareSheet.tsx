@@ -26,7 +26,7 @@ import {
   type TargetPageRef,
   type TraceMarker,
 } from "@oh-writers/ui";
-import { useSplitDrawer } from "~/features/app-shell";
+import { useSplitDrawer, setLiveDiffState } from "~/features/app-shell";
 import {
   useSessions,
   useCreateSession,
@@ -413,23 +413,28 @@ export function CesareSheet({
     );
   }, []);
 
-  // Live-doc inline diff toggle (Spec 47b FIX 4). Cesare edits already landed on
-  // the open document; revealing the diff renders a WORD-LEVEL coloured overlay
-  // on the live page. The shell paints it from body[data-cesare-diff] + the
-  // ohw:cesare:live-diff broadcast (which now carries the diff segments).
+  // Live-doc inline diff toggle (Spec 47d). Cesare edits already landed on the
+  // touched documents; revealing the diff paints a green WORD-LEVEL highlight
+  // INSIDE each document's prose — no overlay panel. We arm body[data-cesare-
+  // diff] (the global flag) AND the live-diff store, which carries one diff per
+  // touched document keyed by documentType. Each per-document <CesareLiveDiff/>
+  // reads its own entry from the store (with last-value replay), so opening any
+  // touched doc — even after the toggle fired — shows its highlight.
   const toggleLiveDiff = useCallback(
-    (showing: boolean, liveDiff?: LiveDiffMarker | null) => {
+    (showing: boolean, liveDiffs?: ReadonlyArray<LiveDiffMarker>) => {
       if (typeof document === "undefined") return;
       if (showing) {
         document.body.setAttribute("data-cesare-diff", "on");
       } else {
         document.body.removeAttribute("data-cesare-diff");
       }
-      window.dispatchEvent(
-        new CustomEvent("ohw:cesare:live-diff", {
-          detail: { showing, diff: showing ? (liveDiff ?? null) : null },
-        }),
-      );
+      const diffs: Record<string, LiveDiffMarker> = {};
+      if (showing && liveDiffs) {
+        for (const d of liveDiffs) {
+          if (d.documentType) diffs[d.documentType] = d;
+        }
+      }
+      setLiveDiffState({ showing, diffs });
     },
     [],
   );
@@ -438,19 +443,19 @@ export function CesareSheet({
     (args: {
       traceMarkers: ReadonlyArray<TraceMarker>;
       scope?: string;
-      liveDiff?: LiveDiffMarker | null;
+      liveDiffs?: ReadonlyArray<LiveDiffMarker>;
     }) => {
       const surfaceChoice = decideShowChangesSurface({
         surface,
         drawerState: drawer.state,
       });
       if (surfaceChoice._tag === "live-diff") {
-        toggleLiveDiff(true, args.liveDiff ?? null);
+        toggleLiveDiff(true, args.liveDiffs ?? []);
         return;
       }
       const pageRef = buildTargetPageRef(page, args.scope);
       if (!pageRef) {
-        toggleLiveDiff(true, args.liveDiff ?? null);
+        toggleLiveDiff(true, args.liveDiffs ?? []);
         return;
       }
       showChangesInSplit({

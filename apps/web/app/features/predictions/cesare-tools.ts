@@ -2632,12 +2632,16 @@ const extractSideChannelMarkers = (
             previous_version_id: payload["previous_version_id"],
           })}-->`,
         );
-        // Spec 47b FIX 4 — when the edit carries precomputed word-diff segments,
-        // emit them base64-encoded so the client renders the inline coloured
-        // live diff for "Mostra modifiche" without an extra round-trip.
+        // Spec 47d — when the edit carries precomputed word-diff segments, emit
+        // them base64-encoded so the client renders the inline coloured live
+        // diff INSIDE the document (no overlay) for "Mostra modifiche" without
+        // an extra round-trip. One marker per touched document; the payload
+        // carries the `document_type` so the shell keys the highlight per doc
+        // (a cross-entity edit emits several markers, one per touched entity).
         const segments = payload["diff_segments"];
         if (Array.isArray(segments) && segments.length > 0) {
           const diffJson = JSON.stringify({
+            documentType: payload["document_type"] ?? "",
             label: payload["diff_label"] ?? "",
             segments,
           });

@@ -1,74 +1,64 @@
 // apps/web/app/features/app-shell/components/CesareLiveDiff.tsx
 //
-// Spec 47b FIX 4 — the floating "Mostra modifiche" inline coloured diff.
+// Spec 47d — the inline "Mostra modifiche" word highlight, painted INSIDE the
+// real document prose (no floating overlay panel).
 //
 // When Cesare is the floating bottom-right drawer the edited document is visible
 // behind it, so "Mostra modifiche" reveals a WORD-LEVEL coloured diff (green
-// additions / red removals) of what changed — NOT a generic highlight ring.
+// additions / struck-through removals) of what changed, rendered as an absolute
+// layer that covers ONLY the document body it belongs to — the prose region,
+// not the top-left of the page. The diff text is plain prose (the server strips
+// block markup before diffing) so the user never sees raw HTML (`<p>`, `</p>`).
 //
-// The chat surface broadcasts the precomputed word-diff segments on the
-// `ohw:cesare:live-diff` event; this overlay (mounted inside the shell's main
-// lane) renders them. `body[data-cesare-diff="on"]` is still flipped by the
-// chat so existing wiring/tests keep working, but the visible diff is this
-// overlay, not the `<main>` ring.
-import { useEffect, useState } from "react";
+// One instance is mounted per document body (`documentType` prop). The shell's
+// chat arms the live-diff store with one diff per touched document keyed by
+// type; each instance picks its own from the store on mount AND on change, so
+// "tutti = tutti": opening any touched doc while diff mode is armed shows that
+// doc's green highlight even though it mounted after the toggle fired.
+import { useSyncExternalStore } from "react";
+import type { DocumentType } from "@oh-writers/domain";
+import {
+  getLiveDiffState,
+  subscribeLiveDiff,
+  type LiveDiffEntry,
+} from "../cesare-live-diff-store";
 import styles from "./CesareLiveDiff.module.css";
 
-interface DiffSegment {
-  readonly op: "eq" | "add" | "del";
-  readonly text: string;
+interface CesareLiveDiffProps {
+  /** The document this highlight layer belongs to. Only the matching diff from
+   *  the armed store is painted, so the highlight is keyed per document. */
+  readonly documentType: DocumentType;
 }
 
-interface LiveDiffPayload {
-  readonly label: string;
-  readonly segments: ReadonlyArray<DiffSegment>;
+function usePayloadFor(documentType: DocumentType): LiveDiffEntry | null {
+  const state = useSyncExternalStore(
+    subscribeLiveDiff,
+    getLiveDiffState,
+    getLiveDiffState,
+  );
+  if (!state.showing) return null;
+  return state.diffs[documentType] ?? null;
 }
 
-interface LiveDiffEventDetail {
-  readonly showing: boolean;
-  readonly diff: LiveDiffPayload | null;
-}
-
-export function CesareLiveDiff() {
-  const [payload, setPayload] = useState<LiveDiffPayload | null>(null);
-
-  useEffect(() => {
-    const onLiveDiff = (event: Event) => {
-      const detail = (event as CustomEvent<LiveDiffEventDetail>).detail;
-      if (!detail || !detail.showing || !detail.diff) {
-        setPayload(null);
-        return;
-      }
-      setPayload(detail.diff);
-    };
-    window.addEventListener("ohw:cesare:live-diff", onLiveDiff);
-    return () => window.removeEventListener("ohw:cesare:live-diff", onLiveDiff);
-  }, []);
-
+export function CesareLiveDiff({ documentType }: CesareLiveDiffProps) {
+  const payload = usePayloadFor(documentType);
   if (!payload) return null;
 
   return (
     <div
-      className={styles.overlay}
-      data-testid="cesare-live-diff-overlay"
+      className={styles.layer}
+      data-testid="cesare-live-diff-inline"
+      data-document-type={documentType}
       role="region"
       aria-label="Modifiche di Cesare"
     >
-      <header className={styles.header}>
-        <span className={styles.glyph} aria-hidden="true">
-          ✦
-        </span>
-        <span className={styles.title}>
-          Modifiche{payload.label ? ` · ${payload.label}` : ""}
-        </span>
-      </header>
       <p className={styles.body}>
         {payload.segments.map((seg, i) => {
           if (seg.op === "add") {
             return (
-              <span key={i} className={styles.added} data-diff-op="add">
+              <mark key={i} className={styles.added} data-diff-op="add">
                 {seg.text}
-              </span>
+              </mark>
             );
           }
           if (seg.op === "del") {

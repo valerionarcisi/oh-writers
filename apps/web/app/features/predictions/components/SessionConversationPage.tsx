@@ -83,7 +83,7 @@ export function SessionConversationPage({
     (args: {
       traceMarkers: ReadonlyArray<TraceMarker>;
       scope?: string;
-      liveDiff?: LiveDiffMarker | null;
+      liveDiffs?: ReadonlyArray<LiveDiffMarker>;
     }) => {
       const pageRef = buildTargetPageRef(page, args.scope);
       if (!pageRef) return;

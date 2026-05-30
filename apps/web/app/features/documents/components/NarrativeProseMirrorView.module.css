@@ -1,4 +1,5 @@
 .wrapper {
+  position: relative;
   display: block;
   inline-size: 100%;
 }

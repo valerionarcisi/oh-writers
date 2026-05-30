@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { DocumentType } from "@oh-writers/domain";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { toCartelle } from "../lib/cartelle-counter";
 import styles from "./FreeNarrativeEditor.module.css";
@@ -16,6 +17,8 @@ export interface FreeNarrativeEditorProps {
   /** When true, suppresses the internal cartelle/chars counter. Caller is
    *  expected to render a DocStats at page level instead. */
   readonly hideCounter?: boolean;
+  /** Document type for the Cesare inline live-diff highlight (Spec 47d). */
+  readonly diffDocumentType?: DocumentType;
 }
 
 const stripHtmlTags = (html: string): string =>
@@ -31,6 +34,7 @@ export function FreeNarrativeEditor({
   testId,
   embedded = false,
   hideCounter = false,
+  diffDocumentType,
 }: FreeNarrativeEditorProps) {
   const { cartelle, chars } = useMemo(() => {
     const plain = stripHtmlTags(content);
@@ -46,6 +50,7 @@ export function FreeNarrativeEditor({
         enableHeadings={true}
         readOnly={!canEdit}
         placeholder={PLACEHOLDER}
+        diffDocumentType={diffDocumentType}
       />
       {!hideCounter && (
         <div className={styles.counter} aria-live="polite">

@@ -265,6 +265,7 @@ function SoggettoPageReady({
             canEdit={canEdit}
             embedded
             testId="subject-editor"
+            diffDocumentType={DocumentTypes.SOGGETTO}
           />
         </div>
       </NarrativeDocsShell>

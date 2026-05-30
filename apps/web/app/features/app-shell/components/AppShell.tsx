@@ -80,7 +80,6 @@ import {
 import { ensurePageTraceRegistry } from "../page-trace-registry";
 import { isCesarePeek } from "../cesare-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
-import { CesareLiveDiff } from "./CesareLiveDiff";
 import styles from "./AppShell.module.css";
 
 ensurePageTraceRegistry();
@@ -981,10 +980,10 @@ function AppShellInner({
               (hover-revealed `«`). ⌘\ still drives the full↔collapsed cycle
               from the keydown handler above. */}
 
-          {/* Floating "Mostra modifiche" word-level coloured diff overlay
-              (Spec 47b FIX 4). Renders the diff segments broadcast by the chat
-              when the doc is visible behind the floating drawer. */}
-          <CesareLiveDiff />
+          {/* Spec 47d — the "Mostra modifiche" diff is no longer a shell-level
+              floating overlay; it is painted INSIDE each touched document's
+              prose by a per-document <CesareLiveDiff/> (mounted in the document
+              bodies). The shell only relays the broadcast. */}
 
           <BottomDock onCesareToggle={toggleCesare} />
 

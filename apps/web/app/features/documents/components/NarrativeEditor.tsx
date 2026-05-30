@@ -404,6 +404,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         placeholder={DOCUMENT_PLACEHOLDERS[type]}
         readOnly={isReadOnly}
         enableHeadings={isTreatment}
+        diffDocumentType={type}
         onReady={(view) => {
           editorViewRef.current = view;
           // Re-render the toolbar on every transaction so the active
