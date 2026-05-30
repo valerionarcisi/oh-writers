@@ -4,12 +4,15 @@ import {
   redirect,
   useMatches,
   useLocation,
+  useNavigate,
 } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
+import { peekSearchSchema, CESARE_PEEK_TOKEN } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
 import {
   useSessions as useCesareSessions,
@@ -31,6 +34,11 @@ const fetchUser = createServerFn({ method: "GET" }).handler(
 );
 
 export const Route = createFileRoute("/_app")({
+  // `?peek=` drives the Notion-style split drawer (Spec 46). Validated at the
+  // shell layout so every project page can carry it. Content validation (same-
+  // project guard, fail-closed) happens in `parseCesarePeek` inside AppShell;
+  // here we only validate the shape so the search param survives navigation.
+  validateSearch: peekSearchSchema,
   loader: async (): Promise<{ user: AppUser }> => {
     const user = await fetchUser();
     if (!user) throw redirect({ to: "/login" });
@@ -169,9 +177,27 @@ function AppLayout() {
   const { user } = Route.useLoaderData();
   const matches = useMatches();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const search = Route.useSearch();
+  const { peek } = search;
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
+
+  // `?peek=` open/close are pure search-param mutations on the CURRENT host
+  // path — we target the live `pathname` so the host page stays mounted (it
+  // only compresses) and only the search param changes. Browser-back then
+  // closes the peek (the param pops). Each open is a distinct history entry.
+  const openCesarePeek = useCallback(() => {
+    void navigate({
+      to: pathname,
+      search: { ...search, peek: CESARE_PEEK_TOKEN },
+    });
+  }, [navigate, pathname, search]);
+  const closePeek = useCallback(() => {
+    const { peek: _dropped, ...rest } = search;
+    void navigate({ to: pathname, search: rest });
+  }, [navigate, pathname, search]);
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
@@ -257,6 +283,9 @@ function AppLayout() {
       cesareSessions={cesareSessionsForRail}
       onCesareSessionSelect={handleCesareSessionSelect}
       onCesareSessionNew={handleCesareSessionNew}
+      peek={peek ?? null}
+      onOpenCesarePeek={openCesarePeek}
+      onClosePeek={closePeek}
     >
       <Outlet />
     </AppShell>

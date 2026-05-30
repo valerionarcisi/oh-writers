@@ -6,6 +6,8 @@
    drive the rail width and Focus mode visibility — both are CSS-only so
    transitions stay cheap and there's a single source of truth. */
 .shell {
+  --cesare-peek-size: clamp(360px, 42vw, 560px);
+
   display: grid;
   grid-template-columns: 240px 1fr;
   min-block-size: 100vh;
@@ -25,6 +27,20 @@
    entire viewport. Cesare can still be opened on top via its own state. */
 :global(body[data-shell="focus"]) .shell {
   grid-template-columns: 0 1fr;
+}
+
+/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). The shell grows a third
+   track for the peek lane; the main lane (`minmax(0, 1fr)`) reflows narrower so
+   the page COLLAPSES beside Cesare instead of being overlaid. This is the
+   deliberate difference from the floating drawer, which never reflows the page.
+   The grid-template-columns transition animates the collapse smoothly. */
+:global(body[data-cesare-split="open"]) .shell {
+  grid-template-columns: 240px minmax(0, 1fr) var(--cesare-peek-size);
+}
+
+:global(body[data-cesare-split="open"][data-shell="collapsed"]) .shell,
+:global(body[data-cesare-split="open"][data-shell="focus"]) .shell {
+  grid-template-columns: 0 minmax(0, 1fr) var(--cesare-peek-size);
 }
 
 .rail {
