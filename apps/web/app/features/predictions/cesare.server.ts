@@ -1986,6 +1986,7 @@ const callCesareV2 = (
   model: string,
   page: string,
   onStreamEvent?: (event: CesareStreamEvent) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   const messages = [
     ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
@@ -2004,6 +2005,7 @@ const callCesareV2 = (
       model,
       onStreamEvent,
       forcedFirstTool,
+      abortSignal,
     );
 
   // Intent classifier hint. The classifier only fires on the screenplay page —
@@ -2037,6 +2039,7 @@ const handleAskCesareV2 = (
   db: Db,
   access: ProjectAccess,
   onStreamEvent?: (event: CesareStreamEvent) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   if (
     process.env["MOCK_AI"] === "true" &&
@@ -2167,6 +2170,7 @@ const handleAskCesareV2 = (
             model,
             data.pageContext.page,
             onStreamEvent,
+            abortSignal,
           ).map((reply) => {
             emitCesareMetricEvent(
               data.pageContext.page,
@@ -2290,8 +2294,9 @@ export const runCesareStreamWithAccess = (
   data: CesareInput,
   access: CesareStreamAccess,
   onStreamEvent: (event: CesareStreamEvent) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> =>
-  handleAskCesareV2(data, access.db, access.access, onStreamEvent);
+  handleAskCesareV2(data, access.db, access.access, onStreamEvent, abortSignal);
 
 // Test-only mock-context setter lives in the API route
 // `/api/test/mock-context` so it can be hit from Playwright without going

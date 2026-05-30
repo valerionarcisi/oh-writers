@@ -4,22 +4,31 @@ import {
   runCesareStreamWithAccess,
   CesareInputSchema,
 } from "~/features/predictions/cesare.server";
-import {
-  encodeStreamEvent,
-  parseToolsExecutedMarker,
-  type CesareStreamEvent,
-} from "~/features/predictions/cesare-stream-events";
+import { buildCesareEventStream } from "~/features/predictions/cesare-stream.effect";
 import { logger } from "~/server/logger";
 
 /**
  * Spec 47a (A2) — streamed Cesare transport.
+ * Spec 48 (W-E2) — the run is now an Effect fiber with structured interruption.
  *
  * `POST /api/cesare/stream` runs the SAME V2 handler `askCesare` uses, but emits
  * typed step events (`reasoning | reading | writing | tool | done | error`) as
  * newline-delimited JSON over a `ReadableStream` while the tool loop runs. It is
- * page-agnostic and domain-agnostic — every Cesare page posts here. Auth +
- * project access are enforced inside `runCesareStream` via `withProjectAccess`,
- * so the Anthropic key never leaves the server.
+ * page-agnostic and domain-agnostic — every Cesare page posts here.
+ *
+ * The wire format is UNCHANGED from 47a; what changed in W-E2 is the SERVER
+ * orchestration: the body is backed by an Effect fiber (under the W-E1
+ * Db/Access/AiClient Layers) so that when the browser aborts the fetch, the
+ * `ReadableStream.cancel` callback interrupts the fiber and the bridged
+ * `AbortSignal` tears down the in-flight model call — no leaked work. See
+ * `cesare-stream.effect.ts`.
+ *
+ * Auth: project access is gated TWICE with identical semantics, both from the
+ * request's OWN headers via `resolveProjectAccessFromHeaders` (the auth fix):
+ *  1. a pre-flight neverthrow check here, so a denied caller gets HTTP 403
+ *     before any stream opens (the exact status contract the client relies on);
+ *  2. inside the Effect, through the Access Layer — the canonical W-E1 seam the
+ *     fiber consumes. The Anthropic key never reaches the client.
  *
  * The non-streaming `askCesare` server function stays as the fallback for
  * callers that cannot consume a stream.
@@ -36,10 +45,10 @@ export const APIRoute = createAPIFileRoute("/api/cesare/stream")({
     }
     const data = parsed.data;
 
-    // Resolve project access from the request's OWN headers (not the ambient
-    // `getWebRequest()`, which is not reliably populated inside an API route's
-    // POST handler — that silently dropped the Better Auth session and 403'd
-    // every browser stream). Resolve NOW, before the stream's async `start`.
+    // Pre-flight access check (HTTP 403 contract). Resolve from the request's
+    // OWN headers — `getWebRequest()` is not reliably populated inside an API
+    // route's POST handler, which silently dropped the Better Auth session and
+    // 403'd every browser stream.
     const accessResult = await resolveCesareStreamAccess(
       data.projectId,
       request.headers,
@@ -54,44 +63,24 @@ export const APIRoute = createAPIFileRoute("/api/cesare/stream")({
         headers: { "Content-Type": "application/json" },
       });
     }
-    const access = accessResult.value;
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const emit = (event: CesareStreamEvent): void => {
-          controller.enqueue(encoder.encode(encodeStreamEvent(event)));
-        };
-
-        // The handler returns a neverthrow Result; we translate it into the
-        // terminal `done` / `error` events. Step events were already emitted
-        // live via the `emit` sink while the loop ran.
-        const result = await runCesareStreamWithAccess(data, access, emit);
-
-        result.match(
-          (reply) => {
-            emit({
-              _tag: "done",
-              result: reply,
-              toolsExecuted: parseToolsExecutedMarker(reply),
-            });
-          },
-          (error) => {
-            // Log the internal cause; send a user-facing IT message only.
-            logger.warn(
-              { tag: error._tag, projectId: data.projectId },
-              "cesare.stream.failed",
-            );
-            emit({
-              _tag: "error",
-              message: "Mi dispiace, si è verificato un errore. Riprova.",
-            });
-          },
-        );
-
-        controller.close();
+    // Hand the run to the Effect fiber. It re-resolves access through the
+    // Access Layer (canonical W-E1 seam) and runs the SAME V2 handler with the
+    // live step-event sink and the fiber's abort signal threaded in. Step events
+    // were already emitted live; the fiber pushes the terminal done/error.
+    const stream = buildCesareEventStream(
+      {
+        projectId: data.projectId,
+        handle: (db, access, onStreamEvent, abortSignal) =>
+          runCesareStreamWithAccess(
+            data,
+            { db, access },
+            onStreamEvent,
+            abortSignal,
+          ),
       },
-    });
+      request.headers,
+    );
 
     return new Response(stream, {
       status: 200,

@@ -2531,6 +2531,15 @@ interface RunToolLoopArgs {
    * identical to before.
    */
   onStreamEvent?: (event: CesareStreamEvent) => void;
+  /**
+   * Spec 48 (W-E2) — optional abort signal bridged from the Effect fiber that
+   * orchestrates the streamed run. When the client aborts the fetch (drawer
+   * closed / navigation / connection drop), the stream's `cancel` interrupts the
+   * fiber, which aborts this signal; the AI SDK `generateText` call honours it
+   * and tears the model request down, so no server-side work leaks. Undefined on
+   * the non-streaming path, where behaviour is identical to before.
+   */
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -2672,6 +2681,12 @@ const runLegacyToolLoop = (
       let maxStepsHit = false;
 
       for (let i = 0; i < MAX_ITERATIONS; i++) {
+        // Spec 48 (W-E2) — honour interruption between iterations on the mock
+        // path too: when the orchestrating fiber is interrupted, the bridged
+        // signal aborts, and we stop the loop rather than leak further work.
+        if (args.abortSignal?.aborted) {
+          throw new DOMException("aborted", "AbortError");
+        }
         const toolChoice =
           i === 0 && args.forcedFirstTool
             ? ({ type: "tool", name: args.forcedFirstTool } as const)
@@ -2826,6 +2841,10 @@ const runGenericToolLoop = (
           : "auto",
         stopWhen: stepCountIs(5),
         maxOutputTokens: 1500,
+        // Spec 48 (W-E2) — when the orchestrating Effect fiber is interrupted
+        // (client aborted the fetch), this signal aborts and the AI SDK tears
+        // down the in-flight model request so no work leaks server-side.
+        ...(args.abortSignal ? { abortSignal: args.abortSignal } : {}),
         experimental_telemetry: {
           isEnabled: true,
           functionId: "cesare-tool-loop",
@@ -4253,6 +4272,7 @@ export const runUnifiedToolLoop = (
   model: string,
   onStreamEvent?: (event: CesareStreamEvent) => void,
   forcedFirstTool?: string,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   const sdkTools = bridgeLegacyTools(
     tools as readonly AnthropicTool[],
@@ -4273,5 +4293,6 @@ export const runUnifiedToolLoop = (
       executor(block, dbArg, projectIdArg, access),
     ...(onStreamEvent ? { onStreamEvent } : {}),
     ...(forcedFirstTool ? { forcedFirstTool } : {}),
+    ...(abortSignal ? { abortSignal } : {}),
   });
 };

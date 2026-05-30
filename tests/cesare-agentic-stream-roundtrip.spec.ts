@@ -253,6 +253,94 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     ).toBe(true);
   });
 
+  test("[OHW-048-A3] aborting the stream fetch cancels the server run (no wedge: a follow-up turn still streams to done)", async ({
+    authenticatedPage,
+  }) => {
+    // Spec 48 (W-E2) — structured interruption. The server run is now an Effect
+    // fiber; cancelling the ReadableStream interrupts the fiber and aborts the
+    // bridged AbortSignal, so the in-flight model call tears down. We assert the
+    // OBSERVABLE consequences from the browser:
+    //  1. an aborted stream fetch rejects PROMPTLY with AbortError (the
+    //     connection was torn down → the server `cancel` fired), well under a
+    //     full-turn duration;
+    //  2. the server is NOT wedged by the cancelled run — a fresh NORMAL turn
+    //     streams all the way to a terminal `done` event. A leaked fiber holding
+    //     the connection / DB handle would stall the follow-up.
+    await authenticatedPage.goto(
+      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`,
+    );
+    await authenticatedPage.waitForLoadState("networkidle");
+
+    const body = {
+      projectId: TEAM_PROJECT_ID,
+      message: "Fammi un v2 del soggetto più asciutto.",
+      pageContext: {
+        page: "soggetto",
+        sceneId: null,
+        sceneNumber: null,
+        requirementId: null,
+        documentId: null,
+        shootingDayId: null,
+        shootingDayNumber: null,
+      },
+      conversationHistory: [],
+    };
+
+    // 1) Start a stream, read the first byte to prove it opened, then abort.
+    const aborted = await authenticatedPage.evaluate(async (payload) => {
+      const controller = new AbortController();
+      const startedAt = Date.now();
+      try {
+        const res = await fetch("/api/cesare/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        const reader = res.body!.getReader();
+        // Read the first chunk (stream is live), then abort mid-flight.
+        await reader.read();
+        controller.abort();
+        // Subsequent read must reject because the fetch was aborted.
+        await reader.read();
+        return { rejected: false, ms: Date.now() - startedAt };
+      } catch (e) {
+        return {
+          rejected: true,
+          name: (e as Error).name,
+          ms: Date.now() - startedAt,
+        };
+      }
+    }, body);
+
+    expect(aborted.rejected).toBe(true);
+    expect(aborted.name).toBe("AbortError");
+    // Aborted promptly — not after the whole turn completed.
+    expect(aborted.ms).toBeLessThan(15_000);
+
+    // 2) The server is healthy: a fresh normal turn streams to a terminal done.
+    const followUp = await authenticatedPage.evaluate(async (payload) => {
+      const res = await fetch("/api/cesare/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ...payload,
+          message: "Il conflitto centrale è chiaro?",
+        }),
+      });
+      const text = await res.text();
+      return text
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => (JSON.parse(l) as { _tag: string })._tag);
+    }, body);
+
+    expect(followUp).toContain("done");
+  });
+
   test("[OHW-047-A2] stream transport error degrades gracefully to the askCesare fallback (reply still lands)", async ({
     authenticatedPage,
   }) => {
