@@ -179,7 +179,11 @@ function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
   const { buttonProps } = useButton(
     {
       onPress: onOpen ?? (() => undefined),
-      "aria-label": "Apri Cesare",
+      // Distinct from the BottomDock pill's "Apri Cesare" — the rail entry
+      // opens the full sessions page, the dock pill opens the floating chat.
+      // A shared accessible name would make both ambiguous to assistive tech
+      // and to E2E locators.
+      "aria-label": "Apri sessioni Cesare",
       isDisabled: !onOpen,
     },
     ref,
