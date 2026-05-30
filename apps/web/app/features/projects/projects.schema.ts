@@ -27,7 +27,9 @@ export const UpdateProjectInput = z.object({
     title: z.string().min(1).max(200).optional(),
     format: z.enum(formatValues).optional(),
     genre: z.enum(genreValues).optional().nullable(),
-    logline: z.string().max(500).optional().nullable(),
+    // The logline is NOT updated through the project: it lives as a `logline`
+    // document (single source of truth — see spec 47c). It is edited via the
+    // document save path (overview pill autosave) or Cesare.
   }),
 });
 

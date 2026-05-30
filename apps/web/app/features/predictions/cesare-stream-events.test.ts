@@ -103,10 +103,17 @@ describe("tool → entity map", () => {
     expect(m).toEqual({ access: "write", domain: "synopsis" });
   });
 
-  it("maps the logline generator onto the soggetto domain", () => {
+  it("maps the logline generator onto the logline domain", () => {
     expect(mappingForTool("propose_logline_from_screenplay")).toEqual({
       access: "write",
-      domain: "soggetto",
+      domain: "logline",
+    });
+  });
+
+  it("maps the free-prompt write_logline tool onto the logline domain", () => {
+    expect(mappingForTool("write_logline")).toEqual({
+      access: "write",
+      domain: "logline",
     });
   });
 
@@ -120,5 +127,6 @@ describe("tool → entity map", () => {
       label: "Budget",
     });
     expect(labelForDomain("locations")).toBe("Location");
+    expect(labelForDomain("logline")).toBe("Logline");
   });
 });

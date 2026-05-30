@@ -338,10 +338,60 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Documents — write_logline EDIT existing (OHW-047-A8).
+  // "rendi la logline più corta/tesa", "cambia il protagonista della logline".
+  // Placed before the WRITE + propose_* scenarios so the edit verbs win.
+  {
+    match:
+      /rendi la logline|logline più corta|logline piu corta|logline più tesa|logline piu tesa|cambia il protagonista della logline|modifica la logline/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "write_logline",
+            input: { instruction: "rendila più corta e tesa", mode: "edit" },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho modificato la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — write_logline WRITE from a free instruction (OHW-047-A8).
+  // "scrivimi una logline su un detective che…" — no screenplay needed.
+  // Matched before propose_logline_from_screenplay; the "dalla sceneggiatura"
+  // wording (below) is the only path that still routes to the extraction tool.
+  {
+    match:
+      /scrivimi una logline su|scrivimi una logline per|logline su un|logline su una|scrivi una logline su/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "write_logline",
+            input: {
+              instruction: "un detective insonne che insegue un killer",
+              mode: "write",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho scritto la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Documents — propose_logline_from_screenplay (OHW-575)
   {
     match:
-      /genera la logline|generare la logline|scrivimi la logline|scrivimi una logline|fammi una logline/i,
+      /logline dalla sceneggiatura|estrai la logline|genera la logline|generare la logline|scrivimi la logline|fammi una logline/i,
     turns: [
       {
         tool_uses: [

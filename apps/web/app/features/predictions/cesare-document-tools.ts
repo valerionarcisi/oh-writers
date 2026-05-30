@@ -20,10 +20,11 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
   {
     name: "propose_logline_from_screenplay",
     description:
-      "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
+      "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
       "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
-      "L'utente può ripristinare con Annulla. Usa SEMPRE questo tool quando l'utente " +
-      "chiede di 'generare la logline' o 'scrivimi una logline'.",
+      "L'utente può ripristinare con Annulla. Usa questo tool SOLO quando l'utente chiede esplicitamente " +
+      "di derivare/estrarre la logline DALLA sceneggiatura (es. 'genera la logline dalla sceneggiatura'). " +
+      "Per scrivere una logline da un'istruzione libera o per modificare quella esistente usa invece write_logline.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -33,6 +34,33 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
             "Istruzione opzionale che orienta lo stile (es. 'più commerciale', 'focus su personaggio', 'tono ironico')",
         },
       },
+    },
+  },
+  {
+    name: "write_logline",
+    description:
+      "Scrive o modifica la logline del progetto (max 200 caratteri) da un'istruzione in linguaggio naturale, " +
+      "SENZA bisogno della sceneggiatura. Applica live la nuova logline al documento e crea automaticamente una versione " +
+      "(l'utente può ripristinare con ↩ Annulla). Usa questo tool quando l'utente: " +
+      "(a) chiede di SCRIVERE una logline da una premessa ('scrivimi una logline su un detective che…'), oppure " +
+      "(b) chiede di MODIFICARE la logline esistente ('rendila più corta', 'più tesa', 'cambia il protagonista'). " +
+      "Disponibile da qualunque pagina.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        instruction: {
+          type: "string",
+          description:
+            "L'istruzione in linguaggio naturale: la premessa da cui scrivere la logline, oppure la modifica da applicare a quella esistente.",
+        },
+        mode: {
+          type: "string",
+          enum: ["auto", "write", "edit"],
+          description:
+            "Opzionale. 'write' = scrivi una logline nuova ignorando l'esistente; 'edit' = riscrivi quella esistente seguendo l'istruzione; 'auto' (default) = modifica se ne esiste già una, altrimenti ne scrive una nuova.",
+        },
+      },
+      required: ["instruction"],
     },
   },
   {
@@ -289,6 +317,24 @@ export const sanitizeLogline = (raw: string): string => {
   return noQuotes.slice(0, LOGLINE_HARD_CAP);
 };
 
+export type LoglineWriteMode = "write" | "edit";
+
+/**
+ * Resolves the effective write/edit mode for `write_logline`. The model may
+ * pass an explicit `mode`; otherwise `"auto"` (the default) edits when a
+ * non-empty logline already exists and writes a fresh one otherwise. Keeping
+ * this as a pure function lets the unit test pin every branch without a DB.
+ */
+export const resolveLoglineMode = (
+  requested: "auto" | "write" | "edit" | undefined,
+  existing: string | null,
+): LoglineWriteMode => {
+  if (requested === "write") return "write";
+  if (requested === "edit") return "edit";
+  const hasExisting = (existing ?? "").trim().length > 0;
+  return hasExisting ? "edit" : "write";
+};
+
 // ─── Source content loaders ───────────────────────────────────────────────────
 
 const loadScreenplayContent = (
@@ -463,6 +509,26 @@ REGOLE:
 - NIENTE virgolette di apertura/chiusura, NIENTE commenti, NIENTE preamboli.
 - Output: SOLO la logline, su una sola riga.`;
 
+const LOGLINE_WRITE_SYSTEM = `Sei Cesare, editor narrativo italiano. Devi scrivere UNA logline efficace a partire dall'istruzione dell'autore.
+
+REGOLE:
+- Massimo 200 caratteri, una sola frase.
+- Struttura "protagonista + obiettivo + ostacolo".
+- Italiano, registro asciutto e specifico.
+- Usa SOLO ciò che è nell'istruzione: non inventare titoli o dettagli non richiesti.
+- NIENTE virgolette di apertura/chiusura, NIENTE commenti, NIENTE preamboli.
+- Output: SOLO la logline, su una sola riga.`;
+
+const LOGLINE_EDIT_SYSTEM = `Sei Cesare, editor narrativo italiano. Devi RISCRIVERE una logline esistente seguendo l'istruzione dell'autore.
+
+REGOLE:
+- Massimo 200 caratteri, una sola frase.
+- Applica fedelmente l'istruzione (es. più corta, più tesa, cambia protagonista) mantenendo il nucleo della logline a meno che l'istruzione non chieda di cambiarlo.
+- La tua versione DEVE essere diversa dalla logline attuale.
+- Italiano, registro asciutto e specifico.
+- NIENTE virgolette di apertura/chiusura, NIENTE commenti, NIENTE preamboli.
+- Output: SOLO la logline, su una sola riga.`;
+
 const SYNOPSIS_SYSTEM = `Sei Cesare, editor narrativo italiano. Stai leggendo una sceneggiatura completa e devi scrivere una sinossi cinematografica.
 
 REGOLE:
@@ -492,6 +558,10 @@ REGOLE:
 const MOCK_OUTPUTS: Record<string, string> = {
   "cesare.proposeLogline":
     "Un giovane regista torna nel paese d'origine per girare il film che lo ossessiona da anni, ma scopre che il suo passato non vuole essere raccontato.",
+  "cesare.writeLogline":
+    "Un detective insonne insegue un killer che lascia indizi solo a chi non dorme, e per fermarlo deve restare sveglio più a lungo della propria sanità mentale.",
+  "cesare.editLogline":
+    "Un detective insonne dà la caccia a un killer in una città che non dorme mai, sapendo che il primo a chiudere gli occhi sarà la prossima vittima.",
   "cesare.proposeSynopsis": `Quando Marco torna a Falerone per girare il suo primo lungometraggio, il paese accoglie la troupe con una freddezza inattesa. La protagonista della sua storia — la madre, morta vent'anni prima — è ancora un nervo scoperto per chi l'ha conosciuta, e ogni inquadratura sembra disturbare qualcosa.
 
 Tea, l'attrice scelta per il ruolo, intuisce che Marco non sta raccontando un personaggio ma sé stesso. Tra lei e il regista si crea un'intimità che cresce in parallelo al film: ogni nuova scena costringe Marco a confessare un dettaglio in più. L'antagonista non è una persona ma un silenzio collettivo che il paese ha eretto per proteggersi.
@@ -514,6 +584,11 @@ Il film finito è diverso da quello immaginato. Marco lo proietta in piazza, dav
 10. INT. CASA DI MARCO - ALBA — Marco scrive una lettera alla madre.`,
 };
 
+// Monotonic counter that keeps each MOCK_AI logline write/edit distinct, so the
+// applyVersionLive duplicate guard never trips when an E2E suite exercises the
+// same project repeatedly. Mock-only; never used on the real generation path.
+let mockLoglineNonce = 0;
+
 const runGeneration = (
   systemPrompt: string,
   userPrompt: string,
@@ -524,6 +599,21 @@ const runGeneration = (
   // API key is missing. Keeps Vitest + Playwright deterministic and free.
   if (process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"]) {
     const text = MOCK_OUTPUTS[operation] ?? "Bozza generata da Cesare (mock).";
+    // Logline write/edit can be exercised repeatedly across E2E cases against
+    // the same project. `applyVersionLive` rejects content identical to an
+    // existing version (no-op guard), so a fixed mock string would make the 2nd
+    // write fail. Append a tiny unique suffix (within the 200-char cap) ONLY for
+    // these two operations so each mock write is a real, distinct version.
+    if (
+      operation === "cesare.writeLogline" ||
+      operation === "cesare.editLogline"
+    ) {
+      mockLoglineNonce += 1;
+      const suffix = ` (#${Date.now().toString(36).slice(-4)}-${mockLoglineNonce})`;
+      return okAsync(
+        `${text.slice(0, LOGLINE_HARD_CAP - suffix.length)}${suffix}`,
+      );
+    }
     return okAsync(text);
   }
   return callHaiku(
@@ -549,6 +639,7 @@ interface ProposeInput {
   instruction?: string;
   label?: string;
   target_scene_count?: number;
+  mode?: "auto" | "write" | "edit";
 }
 
 const handleProposeLogline = (
@@ -598,6 +689,82 @@ const handleProposeLogline = (
         ),
       );
   });
+
+/**
+ * Writes or edits the logline document from a FREE natural-language instruction,
+ * without needing the screenplay. Mode resolution (write vs edit) is decided by
+ * `resolveLoglineMode` against the document's current content. Both paths apply
+ * LIVE via `applyVersionLive` (auto-version first), so the agentic-edit pattern
+ * is identical to the screenplay-extraction path — no per-feature variant.
+ */
+const handleWriteLogline = (
+  input: ProposeInput,
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+): ResultAsync<CreatedDraft, CesareError> => {
+  const instruction = (input.instruction ?? "").trim();
+  if (instruction.length === 0) {
+    return errAsync(
+      new CesareError(
+        "write_logline richiede un'istruzione: descrivi la logline da scrivere o la modifica da applicare.",
+      ),
+    );
+  }
+  return loadDocumentForType(db, projectId, DocumentTypes.LOGLINE).andThen(
+    (doc) => {
+      if (!doc) {
+        return errAsync(
+          new CesareError("Documento logline non trovato per il progetto."),
+        );
+      }
+      const existing = doc.content.trim();
+      const mode = resolveLoglineMode(input.mode, existing);
+      if (mode === "edit" && existing.length === 0) {
+        return errAsync(
+          new CesareError(
+            "Non c'è ancora una logline da modificare. Dammi una premessa e la scrivo da zero.",
+          ),
+        );
+      }
+      const systemPrompt =
+        mode === "edit" ? LOGLINE_EDIT_SYSTEM : LOGLINE_WRITE_SYSTEM;
+      const operation =
+        mode === "edit" ? "cesare.editLogline" : "cesare.writeLogline";
+      const user =
+        mode === "edit"
+          ? `Istruzione: ${instruction}\n\nLogline attuale (NON ritornarla identica):\n---\n${existing}\n---`
+          : `Istruzione: ${instruction}\n\nScrivi la logline.`;
+      return runGeneration(systemPrompt, user, 200, operation)
+        .map(sanitizeLogline)
+        .andThen((logline) => {
+          if (logline.length === 0) {
+            return errAsync(
+              new CesareError(
+                "Il modello ha restituito una logline vuota. Riformula l'istruzione.",
+              ),
+            );
+          }
+          const creator = doc.ownerId ?? userIdFallback;
+          if (!creator) {
+            return errAsync(
+              new CesareError(
+                "Impossibile determinare l'autore della draft: documento senza createdBy.",
+              ),
+            );
+          }
+          return applyVersionLive(
+            db,
+            doc.id,
+            DocumentTypes.LOGLINE,
+            creator,
+            logline,
+            buildDraftLabel(DocumentTypes.LOGLINE, instruction),
+          );
+        });
+    },
+  );
+};
 
 const handleProposeSynopsis = (
   input: ProposeInput,
@@ -812,6 +979,11 @@ export const executeDocumentGenTool = (
       (draft) => successResult(block.id, draftPayload(draft)),
     );
   }
+  if (block.name === "write_logline") {
+    return handleWriteLogline(input, db, projectId, userIdFallback).map(
+      (draft) => successResult(block.id, draftPayload(draft)),
+    );
+  }
   if (block.name === "propose_synopsis_from_screenplay") {
     return handleProposeSynopsis(input, db, projectId, userIdFallback).map(
       (draft) => successResult(block.id, draftPayload(draft)),
@@ -845,6 +1017,7 @@ export const executeDocumentGenTool = (
  */
 export const isDocumentGenToolName = (name: string): boolean =>
   name === "propose_logline_from_screenplay" ||
+  name === "write_logline" ||
   name === "propose_synopsis_from_screenplay" ||
   name === "propose_soggetto_v2" ||
   name === "propose_scaletta_from_soggetto";
@@ -858,10 +1031,10 @@ export const createDocumentGenTools = (
 ) => ({
   propose_logline_from_screenplay: tool({
     description:
-      "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
+      "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
       "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
-      "L'utente può ripristinare con Annulla. Usa SEMPRE questo tool quando l'utente " +
-      "chiede di 'generare la logline' o 'scrivimi una logline'.",
+      "L'utente può ripristinare con Annulla. Usa SOLO quando l'utente chiede di derivare la logline DALLA sceneggiatura. " +
+      "Per scrivere da un'istruzione libera o modificare l'esistente usa write_logline.",
     inputSchema: z.object({
       instruction: z
         .string()
@@ -872,6 +1045,35 @@ export const createDocumentGenTools = (
     }),
     execute: async (input, _opts) => {
       const result = await handleProposeLogline(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
+  write_logline: tool({
+    description:
+      "Scrive o modifica la logline del progetto (max 200 caratteri) da un'istruzione in linguaggio naturale, " +
+      "senza bisogno della sceneggiatura. Applica live al documento e crea automaticamente una versione (↩ Annulla per ripristinare). " +
+      "Usa quando l'utente chiede di SCRIVERE una logline da una premessa o di MODIFICARE quella esistente. Disponibile da qualunque pagina.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .describe(
+          "L'istruzione: la premessa da cui scrivere la logline, oppure la modifica da applicare a quella esistente.",
+        ),
+      mode: z
+        .enum(["auto", "write", "edit"])
+        .optional()
+        .describe(
+          "Opzionale. 'write' = scrivi nuova; 'edit' = riscrivi l'esistente; 'auto' (default) = modifica se esiste già, altrimenti scrive nuova.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleWriteLogline(
         input as ProposeInput,
         db,
         projectId,
