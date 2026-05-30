@@ -1,5 +1,16 @@
 # Spec 43 — Cesare universal tool layer
 
+> **Status update (spec 47b / A7):** the universal dispatch described here
+> originally landed in the legacy V1 path (`handleAskCesare` →
+> `callCesareUniversal`), which is no longer wired to the active request/stream
+> path. Universal dispatch is now implemented in the **active V2 path**
+> (`handleAskCesareV2`, the `askCesare` server fn + `POST /api/cesare/stream`)
+> by making the skills registry's `selectForPage` return the full tool superset
+> instead of gating per page. The per-page tool gate (`PAGE_SKILL_MAP`) is now an
+> ordering hint (`PAGE_PRIMARY_SKILLS`), not a filter. See
+> [Spec 47b](./47b-cesare-universal-dispatch-active-path.md) for the details and
+> the guards that stayed in place.
+
 ## Problem
 
 Today Cesare's tool surface is **page-bound**: each page (`screenplay`,
@@ -41,7 +52,9 @@ Out of scope (separate specs):
 
 - Re-think `cesare-intent-classifier`: with a universal toolset, the
   classifier's role becomes "hint the most-likely tool" rather than "gate
-  what's available". We'll revisit it in a follow-up spec.
+  what's available". (Done in 47b: the classifier now runs in the active V2
+  path, page-agnostically, whenever the screenplay propose tools are exposed,
+  and only forces a tool — never gates the surface.)
 - Pricing/cost tuning of the larger system prompt that now ships every
   tool description.
 - Permission scoping (e.g. viewer role should not see write tools): handled

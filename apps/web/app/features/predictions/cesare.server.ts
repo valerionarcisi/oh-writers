@@ -1982,23 +1982,50 @@ const callCesareV2 = (
   executor: import("./skills/types").SkillExecutor,
   tools: readonly import("./skills/types").AnthropicTool[],
   model: string,
+  page: string,
   onStreamEvent?: (event: CesareStreamEvent) => void,
 ): ResultAsync<string, CesareError> => {
   const messages = [
     ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
     { role: "user" as const, content: message },
   ];
-  return runUnifiedToolLoop(
-    systemPrompt,
-    messages,
-    tools as readonly unknown[],
-    executor,
-    db,
-    projectId,
-    access,
-    model,
-    onStreamEvent,
-  );
+
+  const run = (forcedFirstTool?: string): ResultAsync<string, CesareError> =>
+    runUnifiedToolLoop(
+      systemPrompt,
+      messages,
+      tools as readonly unknown[],
+      executor,
+      db,
+      projectId,
+      access,
+      model,
+      onStreamEvent,
+      forcedFirstTool,
+    );
+
+  // Intent classifier hint. The classifier only fires on the screenplay page —
+  // that is where the inline-instead-of-tool bug bites and where the prompt is
+  // framed. Universal dispatch exposes the screenplay propose_* tools on every
+  // page, but we deliberately do NOT run the screenplay-framed classifier from
+  // other pages: it would add a Haiku call to pages that never had one and could
+  // force a screenplay tool onto an unrelated domain request. On other pages we
+  // let `tool_choice: "auto"` choose. On any error / low confidence / MOCK_AI it
+  // falls back to "auto" too.
+  if (page !== "screenplay") return run();
+
+  return classifyIntent({
+    userMessage: message,
+    page: "screenplay",
+    availableTools: SCREENPLAY_PROPOSE_TOOLS,
+  })
+    .map((intent) => intent.suggestedTool)
+    .orElse(() =>
+      ResultAsync.fromSafePromise(
+        Promise.resolve<string | undefined>(undefined),
+      ),
+    )
+    .andThen((forcedFirstTool) => run(forcedFirstTool));
 };
 
 // ─── V2 handler — stratified context (spec 39) ────────────────────────────────
@@ -2055,11 +2082,22 @@ const handleAskCesareV2 = (
         requirementId: data.pageContext.requirementId ?? null,
       };
 
-      // Step 3: preliminary registry + skills (no document-edit override)
-      const prelimRegistry = buildSkillRegistry(prelimBuildCtx);
+      // Step 3: preliminary registry. `selectForPage` now returns the FULL
+      // universal skill superset (spec 47b) so any tool is dispatchable from any
+      // page; the page only orders which guidance leads. `userIdFallback` lets
+      // the always-available document-gen skill attribute auto-created versions.
+      const prelimRegistry = buildSkillRegistry(
+        prelimBuildCtx,
+        {},
+        access.user.id,
+      );
       const prelimSkills = prelimRegistry.selectForPage(page, null);
 
-      // Step 4: lean local context — only loads data declared by active skills
+      // Step 4: lean local context. We scope DB loading to the PAGE-PRIMARY
+      // skills (not the universal set) so round-trips stay proportional to the
+      // page. Cross-domain write tools (e.g. propose_soggetto_v2) resolve their
+      // own target data inside the executor, so they need no pre-loaded context.
+      const contextSkills = prelimRegistry.primarySkillsForPage(page);
       const pageCtx = {
         sceneId: data.pageContext.sceneId ?? null,
         sceneNumber: data.pageContext.sceneNumber ?? null,
@@ -2069,7 +2107,7 @@ const handleAskCesareV2 = (
         shootingDayNumber: data.pageContext.shootingDayNumber ?? null,
       };
 
-      return buildLocalContext(db, data.projectId, pageCtx, prelimSkills, page)
+      return buildLocalContext(db, data.projectId, pageCtx, contextSkills, page)
         .mapErr(
           (e) =>
             new CesareError(
@@ -2095,9 +2133,11 @@ const handleAskCesareV2 = (
               docCtx,
               access.user.id,
             );
-            finalRegistry = buildSkillRegistry(prelimBuildCtx, {
-              "document-edit": docEditSkill,
-            });
+            finalRegistry = buildSkillRegistry(
+              prelimBuildCtx,
+              { "document-edit": docEditSkill },
+              access.user.id,
+            );
             finalSkills = finalRegistry.selectForPage(page, null);
           }
 
@@ -2123,6 +2163,7 @@ const handleAskCesareV2 = (
             executor,
             tools,
             model,
+            data.pageContext.page,
             onStreamEvent,
           ).map((reply) => {
             emitCesareMetricEvent(
