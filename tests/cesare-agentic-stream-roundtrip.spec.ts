@@ -121,6 +121,43 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     });
   });
 
+  test("[OHW-047-A1] a failed send marks the bubble (data-status=failed), never silently lost", async ({
+    authenticatedPage,
+  }) => {
+    // Sad path: when the transport fails (stream route 500 / aborted), the
+    // optimistic bubble must NOT vanish — it must reach the terminal `failed`
+    // status so the user sees the send did not go through. We fail BOTH the
+    // streaming route and the askCesare fallback so the reducer's
+    // `message/failed` path fires.
+    await authenticatedPage.route("**/api/cesare/stream", (route) =>
+      route.fulfill({ status: 500, body: "boom" }),
+    );
+    await authenticatedPage.route("**/_serverFn/**", (route) => {
+      // Let non-Cesare server fns through; only break the ask fallback.
+      if (route.request().url().includes("askCesare")) {
+        return route.fulfill({ status: 500, body: "boom" });
+      }
+      return route.continue();
+    });
+
+    await authenticatedPage.goto(
+      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`,
+    );
+    await authenticatedPage.waitForLoadState("networkidle");
+    await openCesare(authenticatedPage);
+
+    await sendCesareMessage(authenticatedPage, "Questo invio deve fallire");
+    const bubble = authenticatedPage
+      .getByTestId("cesare-user-bubble")
+      .filter({ hasText: "Questo invio deve fallire" });
+
+    // The bubble is present (never wiped) AND marked failed (not stuck pending).
+    await expect(bubble).toBeVisible({ timeout: 5_000 });
+    await expect(bubble).toHaveAttribute("data-status", "failed", {
+      timeout: 15_000,
+    });
+  });
+
   test("[OHW-047-A2] a write request streams reading→writing→done before the result card", async ({
     authenticatedPage,
   }) => {
