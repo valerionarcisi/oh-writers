@@ -246,4 +246,38 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
       `expected a writing{synopsis} event; got: ${JSON.stringify(events)}`,
     ).toBe(true);
   });
+
+  test("[OHW-047-A2] stream transport error degrades gracefully to the askCesare fallback (reply still lands)", async ({
+    authenticatedPage,
+  }) => {
+    // Sad path for the streamed transport: when the SSE/NDJSON stream route is
+    // down (500), the chat must NOT hang or silently lose the turn — it falls
+    // back to the non-streaming askCesare server fn and still delivers a reply.
+    // We break ONLY the stream route; the fallback stays live.
+    await authenticatedPage.route("**/api/cesare/stream", (route) =>
+      route.fulfill({ status: 500, body: "stream down" }),
+    );
+
+    await authenticatedPage.goto(
+      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`,
+    );
+    await authenticatedPage.waitForLoadState("networkidle");
+    await openCesare(authenticatedPage);
+
+    await sendCesareMessage(
+      authenticatedPage,
+      "Suggerisci un arco del personaggio",
+    );
+    const bubble = authenticatedPage
+      .getByTestId("cesare-user-bubble")
+      .filter({ hasText: "Suggerisci un arco del personaggio" });
+    await expect(bubble).toBeVisible({ timeout: 5_000 });
+
+    // The fallback delivered a reply: the bubble reaches `delivered`, not stuck
+    // pending and not failed (the stream error was recovered, not fatal).
+    await waitForCesareReply(authenticatedPage);
+    await expect(bubble).toHaveAttribute("data-status", "delivered", {
+      timeout: 20_000,
+    });
+  });
 });

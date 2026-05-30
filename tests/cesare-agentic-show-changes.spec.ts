@@ -148,4 +148,39 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
       timeout: 15_000,
     });
   });
+
+  test("[OHW-047-A6] a chat-only reply (no edit) shows NO Mostra modifiche affordance", async ({
+    authenticatedPage,
+  }) => {
+    // Edge/sad path: "Mostra/Nascondi modifiche" must appear ONLY when an edit
+    // actually happened. A plain question that runs no write tool produces a
+    // chat reply with no ChangeTrace — so neither the toggle nor Annulla exist,
+    // and no live diff is ever armed.
+    test.setTimeout(120_000);
+    const page = authenticatedPage;
+    const body = page.locator("body");
+
+    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`);
+    await page.waitForLoadState("networkidle");
+
+    await openCesare(page);
+    await sendCesare(page, "Il conflitto centrale è chiaro?");
+
+    // A reply lands (chat-only), but there is no change-trace card.
+    await expect(page.getByTestId("cesare-conversation")).toBeVisible();
+    await expect
+      .poll(
+        async () => (await page.getByTestId("cesare-conversation").locator("p").count()),
+        { timeout: 60_000 },
+      )
+      .toBeGreaterThanOrEqual(2);
+
+    await expect(page.getByTestId("cesare-change-trace")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Mostra modifiche" }),
+    ).toHaveCount(0);
+    // No live diff was armed and no split opened.
+    await expect(body).not.toHaveAttribute("data-cesare-diff", "on");
+    await expect(body).not.toHaveAttribute("data-split-drawer", /open|full/);
+  });
 });
