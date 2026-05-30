@@ -3,7 +3,7 @@ import { toShape, type ResultShape } from "@oh-writers/utils";
 import { ok, err } from "neverthrow";
 import { DbLayer } from "./db.layer";
 import { AccessLayer } from "./access.layer";
-import { AnthropicClientLayer } from "./anthropic.layer";
+import { AiClientLayer } from "./ai.layer";
 import { ObservabilityLayer } from "./langfuse.layer";
 
 // ─── Anti-corruption layer (Effect → ResultShape) ─────────────────────────────
@@ -25,12 +25,12 @@ import { ObservabilityLayer } from "./langfuse.layer";
 // This keeps the external contract byte-identical to a `toShape(...)` handler.
 
 // The composed foundation environment for AI Effects: Db feeds Access; the
-// Anthropic client and observability stand alongside. Provided once here so
-// callers never assemble the graph by hand.
+// model client and observability stand alongside. Provided once here so callers
+// never assemble the graph by hand.
 export const AiContextLayer = Layer.mergeAll(
   Layer.provide(AccessLayer, DbLayer),
   DbLayer,
-  AnthropicClientLayer,
+  AiClientLayer,
   ObservabilityLayer,
 );
 

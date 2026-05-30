@@ -6,7 +6,7 @@
 export { fromResultAsync } from "./interop";
 export { DbService, DbLayer } from "./db.layer";
 export { AccessService, AccessLayer } from "./access.layer";
-export { AnthropicClient, AnthropicClientLayer } from "./anthropic.layer";
+export { AiClient, AiClientLayer } from "./ai.layer";
 export { Observability, ObservabilityLayer } from "./langfuse.layer";
 export {
   AiContextLayer,
