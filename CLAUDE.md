@@ -131,6 +131,8 @@ Every Cesare edit, in **every feature** (Soggetto, Sinossi, Scaletta, Trattament
 
 When you add a Cesare tool that mutates any entity, reuse this flow — do not invent a per-feature variant. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md#agentic-edit-pattern) and the QA contract in `docs/specs/44-qa-iter-1-report.md`.
 
+**Tracer is mandatory — product invariant.** Cesare must ALWAYS give the user live visibility into what it is seeing and doing. Every turn renders a streamed step trace as it happens — `reading{entity}` (cosa sta leggendo) → `reasoning`/Thought → `writing{entity}` (cosa sta scrivendo, anche cross-domain) → `tool{name}` → `done`/Fatto → result card. No silent action, no mute spinner, no "loading…" without a step trace behind it. This holds for every feature, every page, every request type, and every future surface (including the Effect refactor in Spec 48 and the routed surfaces in Spec 49). The transport is the streamed step events (Spec 47a / `cesare-stream-events.ts`); if a tool runs without emitting a step, that is a bug. Any new AI capability that does not surface its trace to the user fails review.
+
 ---
 
 ## Domain Boundaries
