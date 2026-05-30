@@ -44,6 +44,13 @@ export const streamCesare = async (
   const response = await fetch("/api/cesare/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    // `credentials: "include"` is REQUIRED: the stream route resolves the
+    // Better Auth session from the request cookie. A programmatic `fetch` does
+    // not attach the session cookie by default, so without this the route
+    // resolves no session and returns 403 (ForbiddenError: read project) —
+    // surfacing in the UI as "Invio non riuscito". E2E missed this because
+    // Playwright's `request.post` always carries the storage-state cookie.
+    credentials: "include",
     body: JSON.stringify(input),
     ...(signal ? { signal } : {}),
   });

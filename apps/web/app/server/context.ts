@@ -7,20 +7,31 @@ export type AppUser = {
   email: string;
 };
 
-export const getUser = async (): Promise<AppUser | null> => {
-  const request = getWebRequest();
-  if (!request) return null;
+// Resolve the user from an EXPLICIT Headers object. API file routes (e.g.
+// `/api/cesare/stream`) receive `request` as a handler argument and must pass
+// `request.headers` here directly — the ambient `getWebRequest()` is not
+// reliably populated inside an API route's POST handler the way it is inside a
+// `createServerFn`, which silently yielded "no session → 403" on the stream.
+export const getUserFromHeaders = async (
+  headers: Headers,
+): Promise<AppUser | null> => {
   // Dynamic import: auth.ts pulls in @oh-writers/db → postgres which
   // references Node-only globals (Buffer, net). Keeping this dynamic
   // ensures the browser bundle never loads the postgres driver.
   const { auth } = await import("./auth");
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await auth.api.getSession({ headers });
   if (!session?.user) return null;
   return {
     id: session.user.id as UserId,
     name: session.user.name,
     email: session.user.email,
   };
+};
+
+export const getUser = async (): Promise<AppUser | null> => {
+  const request = getWebRequest();
+  if (!request) return null;
+  return getUserFromHeaders(request.headers);
 };
 
 export const requireUser = async (): Promise<AppUser> => {

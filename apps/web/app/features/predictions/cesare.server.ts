@@ -25,6 +25,7 @@ import type { DocumentType } from "@oh-writers/domain";
 import { toShape, repairMojibake } from "@oh-writers/utils";
 import {
   withProjectAccess,
+  withProjectAccessHeaders,
   type WithProjectAccessCtx,
 } from "~/server/pipeline";
 import type { Db } from "~/server/db";
@@ -2276,11 +2277,12 @@ export type CesareStreamAccess = WithProjectAccessCtx;
 
 export const resolveCesareStreamAccess = (
   projectId: string,
+  headers: Headers,
 ): ResultAsync<
   CesareStreamAccess,
   import("~/server/access").ProjectAccessError
 > =>
-  withProjectAccess(projectId, "view", (ctx) =>
+  withProjectAccessHeaders(projectId, "view", headers, (ctx) =>
     ResultAsync.fromSafePromise(Promise.resolve(ctx)),
   );
 

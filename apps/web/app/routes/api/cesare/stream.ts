@@ -36,10 +36,14 @@ export const APIRoute = createAPIFileRoute("/api/cesare/stream")({
     }
     const data = parsed.data;
 
-    // Resolve project access NOW, while the ambient request context
-    // (`getWebRequest`) is still live — it is NOT available inside the stream's
-    // async `start` callback below.
-    const accessResult = await resolveCesareStreamAccess(data.projectId);
+    // Resolve project access from the request's OWN headers (not the ambient
+    // `getWebRequest()`, which is not reliably populated inside an API route's
+    // POST handler — that silently dropped the Better Auth session and 403'd
+    // every browser stream). Resolve NOW, before the stream's async `start`.
+    const accessResult = await resolveCesareStreamAccess(
+      data.projectId,
+      request.headers,
+    );
     if (accessResult.isErr()) {
       logger.warn(
         { tag: accessResult.error._tag, projectId: data.projectId },
