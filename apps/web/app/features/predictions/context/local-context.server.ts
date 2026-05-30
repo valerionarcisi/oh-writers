@@ -2,7 +2,8 @@
 // active skills' requiredData. The full assembleContext in cesare.server.ts
 // is kept intact; buildLocalContext is the new parallel path.
 
-import { ResultAsync } from "neverthrow";
+import { Effect, Layer } from "effect";
+import type { ResultAsync } from "neverthrow";
 import { and, count, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import {
   breakdownElements,
@@ -34,6 +35,7 @@ import type {
 import { SceneSummarySchema } from "@oh-writers/domain";
 import { DbError } from "@oh-writers/utils";
 import type { Db } from "~/server/db";
+import { DbService, toResultAsync } from "~/server/effect";
 import type { DataRequirement, PageType, Skill } from "../skills/types";
 
 // ─── Page context (local subset of CesareInput.pageContext) ──────────────────
@@ -822,208 +824,272 @@ const DOCUMENT_PAGES = new Set<PageType>([
   "treatment",
 ]);
 
+// Spec 48 W-E5 — bounded concurrency for the context-assembly fan-out. Each
+// loader is an INDEPENDENT, read-only DB query (no ordering or shared-state
+// dependency within a phase), which is exactly where parallelism is safe —
+// unlike the W-E3 tool loop, where strict sequencing was required. The bound
+// caps in-flight queries on the shared pool: 6 covers phase 2's 8 reads with
+// only a small queue, and comfortably covers phase 3's 2.
+const CONTEXT_LOAD_CONCURRENCY = 6;
+
+/**
+ * Effect core of {@link buildLocalContext}. Pulls `db` from the `DbService`
+ * Layer and runs the genuinely-independent reads with bounded concurrency via
+ * `Effect.all`. The orchestration (phase ordering, the pure summary-window /
+ * requirement-matching logic) is byte-identical to the previous Promise-based
+ * version; only the parallel primitive changed (`Promise.all` →
+ * `Effect.all(..., { concurrency })`).
+ *
+ * Loaders are lifted with `Effect.promise` (the deep modules stay
+ * Promise-returning). A thrown DB error therefore surfaces as a DEFECT, which
+ * the outer `catchAllDefect` maps to the SAME `DbError("buildLocalContext", e)`
+ * the previous `ResultAsync.fromPromise` mapper produced — so the typed error
+ * channel is unchanged.
+ */
+export const buildLocalContextEffect = (
+  projectId: string,
+  pageContext: LocalPageContext,
+  skills: ReadonlyArray<Skill>,
+  pageType: PageType = "screenplay",
+): Effect.Effect<LocalContextConcrete, DbError, DbService> =>
+  Effect.gen(function* () {
+    const { db } = yield* DbService;
+
+    const needed = new Set<DataRequirement>(
+      skills.flatMap((s) => [...s.requiredData]),
+    );
+    // Always load project documents for document pages so the document-edit
+    // skill override (injected by the caller after this function returns) can
+    // find the active document in localCtx.activeDocument.
+    if (DOCUMENT_PAGES.has(pageType)) {
+      needed.add("documents");
+    }
+
+    // Phase 1: always load screenplay metadata (small: ids + headings only).
+    // All other loaders that depend on screenplayId run in phase 2.
+    const screenplayData = yield* Effect.promise(() =>
+      loadScenesMetadata(db, projectId),
+    );
+    const { scenes: sceneMeta, screenplayId, characters } = screenplayData;
+
+    // Resolve currentScene from the page context
+    const effectiveSceneId =
+      pageContext.sceneId && pageContext.sceneId.length > 10
+        ? pageContext.sceneId
+        : null;
+
+    const currentScene: SceneMetaRow | null = effectiveSceneId
+      ? (sceneMeta.find((s) => s.id === effectiveSceneId) ?? null)
+      : pageContext.sceneNumber !== null
+        ? (sceneMeta.find((s) => s.number === pageContext.sceneNumber) ?? null)
+        : null;
+
+    // Determine linked scene IDs for the scene window (locations page uses
+    // requirement-linked scenes instead of the numeric window).
+    // We pre-compute this here so the scene window loader can run in phase 2.
+    // For non-locations pages, linkedSceneIds is empty — the window loader
+    // falls back to the numeric window around centerSceneNumber.
+    const requirementIdForWindow = pageContext.requirementId ?? null;
+
+    // Phase 2: run always-needed lean loaders and conditional loaders with
+    // bounded concurrency. Each conditional loader resolves to a null / empty
+    // default when its DataRequirement is not in the needed set. These eight
+    // reads are independent of each other, so they fan out up to
+    // CONTEXT_LOAD_CONCURRENCY at a time.
+    const [
+      projectTitle,
+      projectDocuments,
+      budget,
+      schedule,
+      activeShootingDay,
+      locations,
+      breakdownElementRows,
+      shotPlanSummaries,
+    ] = yield* Effect.all(
+      [
+        Effect.promise(() => loadProjectTitle(db, projectId)),
+        needed.has("documents")
+          ? Effect.promise(() => loadProjectDocuments(db, projectId))
+          : Effect.succeed([] as ProjectDocumentRow[]),
+        needed.has("budget")
+          ? Effect.promise(() => loadBudgetSummary(db, projectId))
+          : Effect.succeed(null as BudgetSummary | null),
+        needed.has("schedule")
+          ? Effect.promise(() => loadScheduleSummary(db, projectId))
+          : Effect.succeed(null as ScheduleSummary | null),
+        needed.has("schedule")
+          ? Effect.promise(() =>
+              loadActiveShootingDay(db, pageContext.shootingDayId),
+            )
+          : Effect.succeed(null as ShootingDayRow | null),
+        needed.has("locations")
+          ? Effect.promise(() => loadLocationsContext(db, projectId))
+          : Effect.succeed([] as LocationRequirementRow[]),
+        needed.has("breakdown")
+          ? Effect.promise(() =>
+              loadBreakdownElements(db, projectId, effectiveSceneId),
+            )
+          : Effect.succeed([] as BreakdownElementRow[]),
+        needed.has("shot-plans")
+          ? Effect.promise(() => loadShotPlans(db, effectiveSceneId))
+          : Effect.succeed([] as ShotPlanSummary[]),
+      ],
+      { concurrency: CONTEXT_LOAD_CONCURRENCY },
+    );
+
+    // Resolve currentRequirement from the loaded locations list
+    let currentRequirement: LocationRequirementRow | null =
+      requirementIdForWindow
+        ? (locations.find((r) => r.id === requirementIdForWindow) ?? null)
+        : null;
+
+    // Fallback: match requirement name against scene headings when no
+    // explicit scene links are registered (same logic as assembleContext).
+    let linkedSceneIds: string[] =
+      currentRequirement?.linkedScenes.map((s) => s.id) ?? [];
+
+    if (currentRequirement && linkedSceneIds.length === 0) {
+      const norm = (s: string): string =>
+        s
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, " ")
+          .trim();
+      const reqTokens = norm(currentRequirement.name)
+        .split(" ")
+        .filter((t) => t.length >= 3);
+      if (reqTokens.length > 0) {
+        const matched = sceneMeta.filter((sc) => {
+          const h = norm(sc.heading);
+          return reqTokens.every((t) => h.includes(t));
+        });
+        linkedSceneIds = matched.map((sc) => sc.id);
+        if (matched.length > 0) {
+          currentRequirement = {
+            ...currentRequirement,
+            linkedScenes: matched.map((sc) => ({
+              id: sc.id,
+              number: sc.number,
+              heading: sc.heading,
+              intExt: "",
+              timeOfDay: null,
+              characterNames: [],
+              notes: null,
+              breakdownElements: [],
+            })),
+          };
+        }
+      }
+    }
+
+    // Phase 3: scene window + strip scene IDs — depend on screenplayId +
+    // linkedSceneIds from phase 2. Both run in parallel (bounded).
+    const shootingDayId = pageContext.shootingDayId ?? null;
+
+    const [sceneWindow, stripSceneIds] = yield* Effect.all(
+      [
+        Effect.promise(() =>
+          loadSceneWindow(
+            db,
+            screenplayId,
+            currentScene?.number ?? pageContext.sceneNumber,
+            linkedSceneIds,
+          ),
+        ),
+        // For schedule page: load strip scene IDs to build the summary window.
+        // Runs in parallel with sceneWindow — no serial waterfall.
+        pageType === "schedule" && shootingDayId
+          ? Effect.promise(() => loadStripSceneIds(db, shootingDayId))
+          : Effect.succeed([] as string[]),
+      ],
+      { concurrency: CONTEXT_LOAD_CONCURRENCY },
+    );
+
+    // Resolve summary window.
+    // Schedule page: prefer strip scene IDs when the day has scenes; fall back
+    // to numeric ±3 around sceneNumber when the day is newly created (no strips).
+    // All other pages: use computeSummaryWindow (pure function, no DB).
+    const summarySceneIds: string[] = (() => {
+      if (pageType === "schedule") {
+        if (stripSceneIds.length > 0) return stripSceneIds;
+        // Empty shooting day: fall back to sceneNumber window so Cesare still
+        // gets narrative context even when no strips are assigned yet.
+        const center = pageContext.sceneNumber;
+        if (center === null) return [];
+        return sceneMeta
+          .filter((s) => s.number >= center - 3 && s.number <= center + 3)
+          .map((s) => s.id);
+      }
+      return computeSummaryWindow(
+        pageType,
+        pageContext,
+        sceneMeta,
+        linkedSceneIds,
+      );
+    })();
+
+    const sceneSummaries = yield* needed.has("scene-summaries") &&
+    summarySceneIds.length > 0
+      ? Effect.promise(() => loadSceneSummaries(db, summarySceneIds))
+      : Effect.succeed([] as SceneSummaryRow[]);
+
+    // Resolve activeDocument from the documents list
+    const activeDocId = pageContext.documentId ?? null;
+    const activeDocument: ActiveDocumentRow | null = activeDocId
+      ? (() => {
+          const found = projectDocuments.find((d) => d.id === activeDocId);
+          return found
+            ? ({ ...found, isActive: true } as ActiveDocumentRow)
+            : null;
+        })()
+      : null;
+
+    return {
+      projectTitle,
+      scenes: sceneMeta,
+      currentScene,
+      sceneWindow,
+      sceneSummaries,
+      characters,
+      activeDocument,
+      currentRequirement,
+      activeShootingDay,
+      breakdownElements: breakdownElementRows,
+      budget,
+      schedule,
+      locations,
+      projectDocuments,
+      shotPlans: shotPlanSummaries,
+    } satisfies LocalContextConcrete;
+  }).pipe(
+    // A thrown DB error inside a lifted loader surfaces as a defect; map it to
+    // the SAME typed `DbError("buildLocalContext", e)` the previous
+    // `ResultAsync.fromPromise` mapper produced, so the err channel is unchanged.
+    Effect.catchAllDefect((defect) =>
+      Effect.fail(new DbError("buildLocalContext", defect)),
+    ),
+  );
+
+/**
+ * Lean context loader. Loads only the data declared by the active skills'
+ * requiredData, with independent reads fanned out under bounded concurrency.
+ *
+ * Spec 48 W-E5: the orchestration is now an Effect ({@link buildLocalContextEffect})
+ * that pulls `db` from the `DbService` Layer; here we provide that Layer around
+ * the caller's `db` handle and bridge back to the canonical `ResultAsync` so the
+ * only caller (`cesare.server.ts`) is untouched — same return type, same
+ * `DbError` channel.
+ */
 export const buildLocalContext = (
   db: Db,
   projectId: string,
   pageContext: LocalPageContext,
   skills: ReadonlyArray<Skill>,
   pageType: PageType = "screenplay",
-): ResultAsync<LocalContextConcrete, DbError> => {
-  const needed = new Set<DataRequirement>(
-    skills.flatMap((s) => [...s.requiredData]),
+): ResultAsync<LocalContextConcrete, DbError> =>
+  toResultAsync(
+    buildLocalContextEffect(projectId, pageContext, skills, pageType).pipe(
+      Effect.provide(Layer.succeed(DbService, { db })),
+    ),
   );
-  // Always load project documents for document pages so the document-edit
-  // skill override (injected by the caller after this function returns) can
-  // find the active document in localCtx.activeDocument.
-  if (DOCUMENT_PAGES.has(pageType)) {
-    needed.add("documents");
-  }
-
-  return ResultAsync.fromPromise(
-    (async (): Promise<LocalContextConcrete> => {
-      // Phase 1: always load screenplay metadata (small: ids + headings only).
-      // All other loaders that depend on screenplayId run in phase 2.
-      const screenplayData = await loadScenesMetadata(db, projectId);
-      const { scenes: sceneMeta, screenplayId, characters } = screenplayData;
-
-      // Resolve currentScene from the page context
-      const effectiveSceneId =
-        pageContext.sceneId && pageContext.sceneId.length > 10
-          ? pageContext.sceneId
-          : null;
-
-      const currentScene: SceneMetaRow | null = effectiveSceneId
-        ? (sceneMeta.find((s) => s.id === effectiveSceneId) ?? null)
-        : pageContext.sceneNumber !== null
-          ? (sceneMeta.find((s) => s.number === pageContext.sceneNumber) ??
-            null)
-          : null;
-
-      // Determine linked scene IDs for the scene window (locations page uses
-      // requirement-linked scenes instead of the numeric window).
-      // We pre-compute this here so the scene window loader can run in phase 2.
-      // For non-locations pages, linkedSceneIds is empty — the window loader
-      // falls back to the numeric window around centerSceneNumber.
-      const requirementIdForWindow = pageContext.requirementId ?? null;
-
-      // Phase 2: run always-needed lean loaders and conditional loaders in
-      // parallel. Each conditional loader resolves to a null / empty default
-      // when its DataRequirement is not in the needed set.
-      const [
-        projectTitle,
-        projectDocuments,
-        budget,
-        schedule,
-        activeShootingDay,
-        locations,
-        breakdownElementRows,
-        shotPlanSummaries,
-      ] = await Promise.all([
-        loadProjectTitle(db, projectId),
-        needed.has("documents")
-          ? loadProjectDocuments(db, projectId)
-          : Promise.resolve([] as ProjectDocumentRow[]),
-        needed.has("budget")
-          ? loadBudgetSummary(db, projectId)
-          : Promise.resolve(null),
-        needed.has("schedule")
-          ? loadScheduleSummary(db, projectId)
-          : Promise.resolve(null),
-        needed.has("schedule")
-          ? loadActiveShootingDay(db, pageContext.shootingDayId)
-          : Promise.resolve(null),
-        needed.has("locations")
-          ? loadLocationsContext(db, projectId)
-          : Promise.resolve([] as LocationRequirementRow[]),
-        needed.has("breakdown")
-          ? loadBreakdownElements(db, projectId, effectiveSceneId)
-          : Promise.resolve([] as BreakdownElementRow[]),
-        needed.has("shot-plans")
-          ? loadShotPlans(db, effectiveSceneId)
-          : Promise.resolve([] as ShotPlanSummary[]),
-      ]);
-
-      // Resolve currentRequirement from the loaded locations list
-      let currentRequirement: LocationRequirementRow | null =
-        requirementIdForWindow
-          ? (locations.find((r) => r.id === requirementIdForWindow) ?? null)
-          : null;
-
-      // Fallback: match requirement name against scene headings when no
-      // explicit scene links are registered (same logic as assembleContext).
-      let linkedSceneIds: string[] =
-        currentRequirement?.linkedScenes.map((s) => s.id) ?? [];
-
-      if (currentRequirement && linkedSceneIds.length === 0) {
-        const norm = (s: string): string =>
-          s
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[̀-ͯ]/g, "")
-            .replace(/[^a-z0-9]+/g, " ")
-            .trim();
-        const reqTokens = norm(currentRequirement.name)
-          .split(" ")
-          .filter((t) => t.length >= 3);
-        if (reqTokens.length > 0) {
-          const matched = sceneMeta.filter((sc) => {
-            const h = norm(sc.heading);
-            return reqTokens.every((t) => h.includes(t));
-          });
-          linkedSceneIds = matched.map((sc) => sc.id);
-          if (matched.length > 0) {
-            currentRequirement = {
-              ...currentRequirement,
-              linkedScenes: matched.map((sc) => ({
-                id: sc.id,
-                number: sc.number,
-                heading: sc.heading,
-                intExt: "",
-                timeOfDay: null,
-                characterNames: [],
-                notes: null,
-                breakdownElements: [],
-              })),
-            };
-          }
-        }
-      }
-
-      // Phase 3: scene window + scene summaries — depend on screenplayId +
-      // linkedSceneIds from phase 2. All three loaders run in parallel.
-      const shootingDayId = pageContext.shootingDayId ?? null;
-
-      const [sceneWindow, stripSceneIds] = await Promise.all([
-        loadSceneWindow(
-          db,
-          screenplayId,
-          currentScene?.number ?? pageContext.sceneNumber,
-          linkedSceneIds,
-        ),
-        // For schedule page: load strip scene IDs to build the summary window.
-        // Runs in parallel with sceneWindow — no serial waterfall.
-        pageType === "schedule" && shootingDayId
-          ? loadStripSceneIds(db, shootingDayId)
-          : Promise.resolve([] as string[]),
-      ]);
-
-      // Resolve summary window.
-      // Schedule page: prefer strip scene IDs when the day has scenes; fall back
-      // to numeric ±3 around sceneNumber when the day is newly created (no strips).
-      // All other pages: use computeSummaryWindow (pure function, no DB).
-      const summarySceneIds: string[] = (() => {
-        if (pageType === "schedule") {
-          if (stripSceneIds.length > 0) return stripSceneIds;
-          // Empty shooting day: fall back to sceneNumber window so Cesare still
-          // gets narrative context even when no strips are assigned yet.
-          const center = pageContext.sceneNumber;
-          if (center === null) return [];
-          return sceneMeta
-            .filter((s) => s.number >= center - 3 && s.number <= center + 3)
-            .map((s) => s.id);
-        }
-        return computeSummaryWindow(
-          pageType,
-          pageContext,
-          sceneMeta,
-          linkedSceneIds,
-        );
-      })();
-
-      const sceneSummaries = await (needed.has("scene-summaries") &&
-      summarySceneIds.length > 0
-        ? loadSceneSummaries(db, summarySceneIds)
-        : Promise.resolve([] as SceneSummaryRow[]));
-
-      // Resolve activeDocument from the documents list
-      const activeDocId = pageContext.documentId ?? null;
-      const activeDocument: ActiveDocumentRow | null = activeDocId
-        ? (() => {
-            const found = projectDocuments.find((d) => d.id === activeDocId);
-            return found
-              ? ({ ...found, isActive: true } as ActiveDocumentRow)
-              : null;
-          })()
-        : null;
-
-      return {
-        projectTitle,
-        scenes: sceneMeta,
-        currentScene,
-        sceneWindow,
-        sceneSummaries,
-        characters,
-        activeDocument,
-        currentRequirement,
-        activeShootingDay,
-        breakdownElements: breakdownElementRows,
-        budget,
-        schedule,
-        locations,
-        projectDocuments,
-        shotPlans: shotPlanSummaries,
-      };
-    })(),
-    (e) => new DbError("buildLocalContext", e),
-  );
-};
