@@ -19,8 +19,11 @@ import {
   useSiaeMetadata,
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
-import { useVersionsDrawer } from "~/features/versions";
-import { useCesareOpen, useSetActiveDocument } from "~/features/app-shell";
+import {
+  useCesareOpen,
+  useSetActiveDocument,
+  useRoutedSurface,
+} from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -155,25 +158,26 @@ function SoggettoPageReady({
   const saveSoggetto = useSaveDocument();
   const saveLogline = useSaveDocument();
   const exportDocx = useExportSubjectDocx();
-  const {
-    state: drawerState,
-    open: openDrawer,
-    close: closeDrawer,
-  } = useVersionsDrawer();
-  const isVersionsOpen =
-    drawerState.isOpen &&
-    drawerState.scope?.kind === "document" &&
-    drawerState.scope.documentId === soggettoDoc.id;
+  // Spec 49 W2: Versions open via the ROUTER (`?versions=<docId>`), not the
+  // legacy context drawer. The host page compresses beside the routed
+  // SplitDrawer. `vcur` carries the current-version baseline for the
+  // "vs current" diff so the surface stays deep-linkable.
+  const versionsSurface = useRoutedSurface({
+    param: "versions",
+    companions: ["vstate", "vcur"],
+  });
+  const isVersionsOpen = versionsSurface.value === soggettoDoc.id;
   const toggleVersions = () => {
-    if (isVersionsOpen) closeDrawer();
-    else
-      openDrawer({
-        kind: "document",
-        documentId: soggettoDoc.id,
-        docType: DocumentTypes.SOGGETTO,
-        canEdit: soggettoDoc.canEdit,
-        currentVersionId: soggettoDoc.currentVersionId ?? null,
-      });
+    if (isVersionsOpen) {
+      versionsSurface.close();
+      return;
+    }
+    versionsSurface.open(
+      soggettoDoc.id,
+      soggettoDoc.currentVersionId
+        ? { vcur: soggettoDoc.currentVersionId }
+        : undefined,
+    );
   };
 
   useAutoSave(
@@ -227,7 +231,7 @@ function SoggettoPageReady({
               {
                 label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
                 onClick: () => {
-                  if (isVersionsOpen) closeDrawer();
+                  if (isVersionsOpen) versionsSurface.close();
                   setIsExportOpen(true);
                 },
                 disabled: exportDocx.isPending,
@@ -235,7 +239,7 @@ function SoggettoPageReady({
               {
                 label: "Esporta SIAE",
                 onClick: () => {
-                  if (isVersionsOpen) closeDrawer();
+                  if (isVersionsOpen) versionsSurface.close();
                   setIsSiaeOpen(true);
                 },
               },

@@ -1,0 +1,49 @@
+/* apps/web/app/features/app-shell/components/VersionsSplitLane.module.css
+ *
+ * The Versions split lane — a real grid column (Spec 49 W1 + W2). Lives INSIDE
+ * the shell grid as the third column so the main lane reflows narrower beside
+ * it (the page COMPRESSES). NOT fixed/absolute in `open`: that is the
+ * deliberate difference from a floating overlay. The contained SplitDrawer
+ * (placement="lane") fills the column in `open`, and escalates to its own
+ * fixed 100vw overlay in `full` (the `↗` expand). */
+
+.lane {
+  grid-column: 3;
+  min-inline-size: 0;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  contain: layout style;
+  animation: versions-lane-slide-in var(--ds-duration-3) var(--ds-ease) both;
+}
+
+.lane > * {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: var(--text-sm);
+  color: var(--ds-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes versions-lane-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(4%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane {
+    animation: none;
+  }
+}

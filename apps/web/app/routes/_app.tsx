@@ -12,7 +12,12 @@ import type { UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
-import { peekSearchSchema, CESARE_PEEK_TOKEN } from "~/features/app-shell";
+import {
+  peekSearchSchema,
+  CESARE_PEEK_TOKEN,
+  versionsSearchSchema,
+  useRoutedSurface,
+} from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
 import {
   useSessions as useCesareSessions,
@@ -33,12 +38,15 @@ const fetchUser = createServerFn({ method: "GET" }).handler(
   },
 );
 
+// The shell layout carries every routed auxiliary surface as search params:
+// `?peek=` (Spec 46 Cesare/page side-peek) and `?versions=`/`?vstate=`/`?vcur=`
+// (Spec 49 Versions SplitDrawer). Shape-only validation here so the params
+// survive navigation; content validation (fail-closed) lives in the parsers
+// inside AppShell.
+const appSearchSchema = peekSearchSchema.merge(versionsSearchSchema);
+
 export const Route = createFileRoute("/_app")({
-  // `?peek=` drives the Notion-style split drawer (Spec 46). Validated at the
-  // shell layout so every project page can carry it. Content validation (same-
-  // project guard, fail-closed) happens in `parseCesarePeek` inside AppShell;
-  // here we only validate the shape so the search param survives navigation.
-  validateSearch: peekSearchSchema,
+  validateSearch: appSearchSchema,
   loader: async (): Promise<{ user: AppUser }> => {
     const user = await fetchUser();
     if (!user) throw redirect({ to: "/login" });
@@ -180,7 +188,7 @@ function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const { peek } = search;
+  const { peek, versions, vstate, vcur } = search;
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
@@ -199,6 +207,31 @@ function AppLayout() {
     const { peek: _dropped, ...rest } = search;
     void navigate({ to: pathname, search: rest });
   }, [navigate, pathname, search]);
+
+  // Versions SplitDrawer (Spec 49). `useRoutedSurface` owns the URL ↔ surface
+  // mapping so this layout never hand-rolls the param mutation. `vstate`/`vcur`
+  // are companions cleared together with `versions` on close.
+  const versionsSurface = useRoutedSurface({
+    param: "versions",
+    companions: ["vstate", "vcur"],
+  });
+  const closeVersions = versionsSurface.close;
+  // `↗` expand → real navigation to the full-screen versions route (new history
+  // entry; browser-back / `↙` returns to the split). The doc + baseline are
+  // preserved so the full route stays deep-linkable.
+  const expandVersions = useCallback(() => {
+    if (versions == null) return;
+    const companions: Record<string, string> = { vstate: "full" };
+    if (vcur != null) companions["vcur"] = vcur;
+    versionsSurface.navigateState(versions, companions);
+  }, [versionsSurface, versions, vcur]);
+  // `↙` step-back → drop `vstate` (back to the split) as a real navigation.
+  const stepBackVersions = useCallback(() => {
+    if (versions == null) return;
+    const companions: Record<string, string> = {};
+    if (vcur != null) companions["vcur"] = vcur;
+    versionsSurface.navigateState(versions, companions);
+  }, [versionsSurface, versions, vcur]);
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
@@ -323,6 +356,12 @@ function AppLayout() {
       onOpenCesarePeek={openCesarePeek}
       onClosePeek={closePeek}
       onCesareSessionsOpen={handleCesareSessionsOpen}
+      versionsParam={versions ?? null}
+      versionsStateParam={vstate ?? null}
+      versionsCurrentParam={vcur ?? null}
+      onCloseVersions={closeVersions}
+      onExpandVersions={expandVersions}
+      onStepBackVersions={stepBackVersions}
     >
       <Outlet />
     </AppShell>

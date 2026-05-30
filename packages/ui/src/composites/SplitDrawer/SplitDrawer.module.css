@@ -80,6 +80,22 @@
   inline-size: 100%;
 }
 
+/* ── Placement: lane (in-flow grid column — host page COMPRESSES) ──────── */
+/* Spec 49 routed model. When the drawer is placed inside a real grid column,
+   the parent owns the column track width and the drawer fills it in-flow
+   instead of overlaying. `full` still escalates to the 100vw overlay so the
+   `↗` expand reads as a real full-screen route. */
+.root[data-placement="lane"][data-state="open"] {
+  position: relative;
+  inset: auto;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.root[data-placement="lane"][data-state="full"] {
+  position: fixed;
+}
+
 /* ── Frame (header + body + footer) ───────────────────────────────────── */
 .frame {
   display: flex;
