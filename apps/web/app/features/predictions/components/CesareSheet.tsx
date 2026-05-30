@@ -571,6 +571,15 @@ export interface CesareSheetProps {
   askCesare?: AskCesareFn | null;
   /** Called after each assistant response — used to invalidate queries. */
   onAssistantResponse?: (reply: string) => void;
+  /** Spec 47-A5 — the central `/sessions/:sessionId` route publishes the
+   *  session it wants in focus here. When it changes, the drawer adopts it as
+   *  its active session so the floating chat (authoritative) shows that exact
+   *  thread without forking a second container. */
+  focusedSessionId?: string | null;
+  /** Spec 47-A5 — mirror of the drawer's active session id back to the shell so
+   *  the rail / route highlight stays in sync when the user switches sessions
+   *  from inside the drawer. */
+  onActiveSessionChange?: (sessionId: string | null) => void;
   /** Spec 44 — bell / avatar / gear icons migrated from the BottomDock when
    *  Cesare state ≠ closed. AppShell supplies the same handlers it gives to
    *  the BottomDock so the user keeps a single command surface visible. */
@@ -599,6 +608,8 @@ export function CesareSheet({
   onCesareStateChange,
   askCesare = null,
   onAssistantResponse,
+  focusedSessionId = null,
+  onActiveSessionChange,
   dockIcons,
   surface = "floating",
   onOpenAsSplit,
@@ -709,6 +720,26 @@ export function CesareSheet({
   });
   const messages = chat.messages;
   const isLoading = chat.isLoading;
+
+  // Spec 47-A5 — the central `/sessions/:sessionId` route asks the drawer to
+  // focus a specific session. Adopt it as the active session so the floating
+  // chat — the single source of truth — shows that session's thread. We swap
+  // via `chat.selectSession` (A1), which keeps each thread intact and can
+  // never wipe a just-sent bubble. Guard on equality so a live thread is not
+  // re-selected on every render.
+  useEffect(() => {
+    if (!focusedSessionId || focusedSessionId === activeSessionId) return;
+    setActiveSessionId(focusedSessionId);
+    chat.selectSession(focusedSessionId);
+    setInput("");
+  }, [focusedSessionId, activeSessionId, chat]);
+
+  // Spec 47-A5 — mirror the active session back to the shell so the rail and
+  // the central route highlight stay in sync when the user switches from the
+  // drawer's own selector.
+  useEffect(() => {
+    onActiveSessionChange?.(activeSessionId);
+  }, [activeSessionId, onActiveSessionChange]);
 
   // Switching the active session keeps each thread intact (A1): a swap can
   // never wipe a just-sent bubble — it only changes which thread is visible.

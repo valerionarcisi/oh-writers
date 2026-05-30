@@ -175,6 +175,50 @@ describe("LeftRail", () => {
     expect(onSessionNew).toHaveBeenCalledTimes(1);
   });
 
+  it("renders the dedicated Cesare entry when onSessionsOpen is supplied", () => {
+    const { getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={SESSIONS}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(getByTestId("rail-cesare-entry")).toBeTruthy();
+  });
+
+  it("invokes onSessionsOpen when the Cesare entry is clicked", () => {
+    const onSessionsOpen = vi.fn();
+    const { getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={SESSIONS}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={onSessionsOpen}
+        onNavigate={vi.fn()}
+      />,
+    );
+    fireEvent.click(getByTestId("rail-cesare-entry"));
+    expect(onSessionsOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the sessions section reachable via the Cesare entry even with no sessions", () => {
+    const { getByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        sessions={[]}
+        onSessionSelect={vi.fn()}
+        onSessionsOpen={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(getByTestId("rail-cesare-entry")).toBeTruthy();
+  });
+
   it("marks the active session with aria-current=page", () => {
     const { getByRole } = render(
       <LeftRail

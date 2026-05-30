@@ -19,6 +19,7 @@ export {
   useTopBarSlotPublisher,
 } from "./top-bar-slots-context";
 export { useCesareOpen } from "./cesare-context";
+export { useCesareSessionFocus } from "./cesare-session-focus-context";
 export {
   SplitDrawerProvider,
   useSplitDrawer,

@@ -13,6 +13,7 @@ import {
 import { unwrapResult } from "@oh-writers/utils";
 import {
   listSessions,
+  getSession,
   createSession,
   renameSession,
   deleteSession,
@@ -22,6 +23,9 @@ import type { CesareSession } from "./sessions.schema";
 export const sessionsQueryKey = (projectId: string) =>
   ["cesare-sessions", projectId] as const;
 
+export const sessionQueryKey = (projectId: string, sessionId: string) =>
+  ["cesare-session", projectId, sessionId] as const;
+
 export const sessionsQueryOptions = (projectId: string) =>
   queryOptions({
     queryKey: sessionsQueryKey(projectId),
@@ -30,12 +34,33 @@ export const sessionsQueryOptions = (projectId: string) =>
     staleTime: 30_000,
   });
 
+// Single-session fetch for the central `/sessions/:sessionId` route. The server
+// fn fails closed on a foreign / unknown id, so `unwrapResult` throws a
+// not-found error here — the route renders its not-found body in that case.
+export const sessionQueryOptions = (projectId: string, sessionId: string) =>
+  queryOptions({
+    queryKey: sessionQueryKey(projectId, sessionId),
+    queryFn: async (): Promise<CesareSession> =>
+      unwrapResult(await getSession({ data: { projectId, id: sessionId } })),
+    staleTime: 30_000,
+    retry: false,
+  });
+
 // ─── Queries ────────────────────────────────────────────────────────────────
 
 export const useSessions = (projectId: string | null | undefined) =>
   useQuery({
     ...sessionsQueryOptions(projectId ?? ""),
     enabled: Boolean(projectId),
+  });
+
+export const useSession = (
+  projectId: string | null | undefined,
+  sessionId: string | null | undefined,
+) =>
+  useQuery({
+    ...sessionQueryOptions(projectId ?? "", sessionId ?? ""),
+    enabled: Boolean(projectId) && Boolean(sessionId),
   });
 
 // ─── Mutations ──────────────────────────────────────────────────────────────

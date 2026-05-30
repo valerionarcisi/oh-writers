@@ -1,0 +1,127 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  max-inline-size: 720px;
+  margin-inline: auto;
+  padding-block: var(--ds-space-6);
+  padding-inline: var(--ds-space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.brandGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-agent);
+  font-size: 18px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: 20px;
+  color: var(--ds-text);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ds-text-3);
+}
+
+.newButton {
+  border: 1px solid var(--ds-line);
+  background: transparent;
+  color: var(--ds-action);
+  font: inherit;
+  font-size: 13px;
+  padding-block: 6px;
+  padding-inline: 12px;
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  inline-size: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  padding-block: 10px;
+  padding-inline: 12px;
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+  color: var(--ds-text);
+
+  &:hover {
+    background: var(--ds-surface);
+    border-color: var(--ds-line);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.rowGlyph {
+  color: var(--ds-agent);
+  font-size: 14px;
+}
+
+.rowTitle {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  color: var(--ds-text-faint);
+  font-size: 12px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ds-text-3);
+  font-size: 14px;
+}

@@ -62,6 +62,7 @@ const SECTION_LABELS: Record<string, string> = {
   treatment: "Trattamento",
   settings: "Impostazioni",
   "title-page": "Frontespizio",
+  sessions: "Cesare",
   dashboard: "Progetti",
 };
 
@@ -230,22 +231,57 @@ function AppLayout() {
   // way.
   const cesareSessionsQuery = useCesareSessions(projectId);
   const createCesareSession = useCreateCesareSession(projectId ?? "");
+  // Highlight the session the user is currently viewing on the central
+  // `/sessions/:sessionId` route (when on it), else fall back to most-recent.
+  const activeSessionIdFromRoute = (
+    matches.find((m) => m.routeId.includes("/sessions/$sessionId"))?.params as
+      | { sessionId?: string }
+      | undefined
+  )?.sessionId;
   const cesareSessionsForRail = cesareSessionsQuery.data?.map((s, idx) => ({
     id: s.id,
     title: s.title,
     lastAt: formatSessionRelative(s.lastMessageAt),
-    active: idx === 0,
+    active: activeSessionIdFromRoute
+      ? s.id === activeSessionIdFromRoute
+      : idx === 0,
   }));
 
-  const handleCesareSessionSelect = (_sessionId: string) => {
-    // Active-session sync between rail and chat surface lives in CesareSheet;
-    // for now the rail row simply highlights and the chat-side popover handles
-    // the actual switch. A future iteration can lift activeSessionId into a
-    // shared context.
+  // Spec 47-A5 — clicking a session row opens its full conversation at the
+  // central, deep-linkable route (NOT a peek). The shell-level session focus
+  // context (read by CesareSheet) then aligns the authoritative floating drawer.
+  const handleCesareSessionSelect = (sessionId: string) => {
+    if (!projectId) return;
+    void navigate({
+      to: "/projects/$id/sessions/$sessionId",
+      params: { id: projectId, sessionId },
+    });
   };
 
+  // The rail's dedicated "Cesare" entry opens the sessions landing.
+  const handleCesareSessionsOpen = () => {
+    if (!projectId) return;
+    void navigate({
+      to: "/projects/$id/sessions",
+      params: { id: projectId },
+    });
+  };
+
+  // "+ Nuova" creates a session and lands the user straight on its central
+  // conversation route.
   const handleCesareSessionNew = () => {
-    void createCesareSession.mutateAsync(undefined);
+    if (!projectId) return;
+    void createCesareSession
+      .mutateAsync(undefined)
+      .then((session) => {
+        void navigate({
+          to: "/projects/$id/sessions/$sessionId",
+          params: { id: projectId, sessionId: session.id },
+        });
+      })
+      // The mutation records its own error state; swallow the floating
+      // rejection so it doesn't surface as an unhandled promise rejection.
+      .catch(() => undefined);
   };
 
   const userMenuItems: DropdownMenuItem[] = [
@@ -286,6 +322,7 @@ function AppLayout() {
       peek={peek ?? null}
       onOpenCesarePeek={openCesarePeek}
       onClosePeek={closePeek}
+      onCesareSessionsOpen={handleCesareSessionsOpen}
     >
       <Outlet />
     </AppShell>
