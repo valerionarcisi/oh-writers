@@ -18,8 +18,11 @@
  *   - The drag-resize handles are mounted only when their corresponding
  *     state is active. Sizes are read from / persisted to localStorage via
  *     `DRAWER_SIZE_STORAGE_KEYS`.
- *   - Window-control buttons (`bell / avatar / gear`) are surfaced ONLY when
- *     state !== "closed" (they migrate from the BottomDock per spec 44).
+ *   - The header keeps a Notion-minimal primary icon set: `↗` open-as-page /
+ *     expand, `…` overflow, `−` minimise, `×` close. Every secondary action
+ *     (new chat, share/export, step-back, and the dock's bell / avatar / gear
+ *     carried over per spec 44) collapses into the `…` overflow menu so the
+ *     header never crowds. The overflow is a react-aria `DropdownMenu`.
  *   - The drawer never re-mounts when transitioning; the DOM stays stable
  *     and CSS animates the `[data-state]` flip.
  */
@@ -35,6 +38,8 @@ import {
   type ChangeEvent,
 } from "react";
 import { useButton } from "react-aria";
+import { DropdownMenu } from "../../components/DropdownMenu";
+import type { DropdownMenuItem } from "../../components/DropdownMenu";
 import styles from "./CesareDrawer.module.css";
 import type { CesareDrawerState } from "./use-drawer-state";
 import {
@@ -107,10 +112,18 @@ export interface CesareDrawerProps {
   activeSessionId?: string;
   onSessionSelectorClick?: () => void;
 
+  /** Start a fresh conversation. Surfaced as the first `…` overflow entry. */
+  onNewChat?: () => void;
+  /** Share / export the current conversation. Surfaced in the `…` overflow. */
+  onShare?: () => void;
+
   /** Page-scope tag (BREAKDOWN, SOGGETTO, etc.) + dismissible pins. */
   contextTags?: ReadonlyArray<CesareDrawerContextTag>;
 
-  /** Bell / avatar / gear — migrated from the BottomDock when open. */
+  /** Bell / avatar / gear — migrated from the BottomDock when open. Per the
+   *  Notion-minimal audit (spec 44 + 47/A3) these never sit inline in the
+   *  header: they fold into the `…` overflow menu so the visible icon row
+   *  stays `↗ … − ×`. */
   dockIcons?: CesareDrawerDockIcons;
 
   /** Scope chips rendered above the composer input. */
@@ -239,6 +252,8 @@ export function CesareDrawer({
   sessions,
   activeSessionId,
   onSessionSelectorClick,
+  onNewChat,
+  onShare,
   contextTags,
   dockIcons,
   scopes,
@@ -366,8 +381,48 @@ export function CesareDrawer({
     [composer],
   );
 
+  // ─── Overflow menu (`…`) ─────────────────────────────────────────────────
+  // Every secondary action collapses here so the primary icon row stays the
+  // Notion-minimal `↗ … − ×`. Order: new chat · share/export · step-back ·
+  // then the dock icons (bell / avatar / gear) carried over per spec 44.
+  const overflowItems = useMemo<DropdownMenuItem[]>(() => {
+    const items: DropdownMenuItem[] = [];
+    if (onNewChat) {
+      items.push({
+        label: "Nuova conversazione",
+        icon: "✎",
+        onClick: onNewChat,
+      });
+    }
+    if (onShare) {
+      items.push({ label: "Condividi / Esporta", icon: "↗", onClick: onShare });
+    }
+    if (state === "full") {
+      items.push({ label: "Riduci", icon: "↙", onClick: onStepBack });
+    }
+    if (dockIcons?.onBell) {
+      items.push({
+        label: dockIcons.hasUnreadNotifications
+          ? "Notifiche · nuove"
+          : "Notifiche",
+        icon: "🔔",
+        onClick: dockIcons.onBell,
+      });
+    }
+    if (dockIcons?.onAvatar) {
+      items.push({ label: "Profilo", icon: "👤", onClick: dockIcons.onAvatar });
+    }
+    if (dockIcons?.onGear) {
+      items.push({
+        label: "Impostazioni",
+        icon: "⚙",
+        onClick: dockIcons.onGear,
+      });
+    }
+    return items;
+  }, [onNewChat, onShare, state, onStepBack, dockIcons]);
+
   // ─── Render ─────────────────────────────────────────────────────────────
-  const showDockIcons = state !== "closed" && state !== "peek";
   const isResizing = expandedResize.isResizing || splitResize.isResizing;
 
   return (
@@ -438,48 +493,31 @@ export function CesareDrawer({
             ))}
           </div>
 
+          {/* Notion-minimal primary set: ↗ open-as-page · … overflow ·
+              − minimise · × close. Bell / avatar / gear / new-chat / share /
+              step-back all live inside the overflow. */}
           <div className={styles.headerRight}>
-            {showDockIcons && dockIcons && (
-              <>
-                {dockIcons.onBell && (
-                  <HeaderButton
-                    onPress={dockIcons.onBell}
-                    label="Notifiche"
-                    icon={<span aria-hidden="true">🔔</span>}
-                  />
-                )}
-                {dockIcons.onAvatar && (
-                  <HeaderButton
-                    onPress={dockIcons.onAvatar}
-                    label="Profilo"
-                    icon={
-                      <span aria-hidden="true">
-                        {dockIcons.avatarLabel ?? "V"}
-                      </span>
-                    }
-                  />
-                )}
-                {dockIcons.onGear && (
-                  <HeaderButton
-                    onPress={dockIcons.onGear}
-                    label="Impostazioni"
-                    icon={<span aria-hidden="true">⚙</span>}
-                  />
-                )}
-                <span className={styles.headerDivider} aria-hidden="true" />
-              </>
-            )}
-
             <HeaderButton
               onPress={onCycle}
               label="Espandi"
               icon={<span aria-hidden="true">↗</span>}
             />
-            {state === "full" && (
-              <HeaderButton
-                onPress={onStepBack}
-                label="Riduci"
-                icon={<span aria-hidden="true">↙</span>}
+            {overflowItems.length > 0 && (
+              <DropdownMenu
+                align="end"
+                triggerClassName={styles.iconBtn}
+                triggerLabel="Altre azioni"
+                triggerTitle="Altre azioni"
+                trigger={
+                  <span className={styles.overflowGlyph} aria-hidden="true">
+                    {dockIcons?.hasUnreadNotifications && (
+                      <span className={styles.overflowDot} aria-hidden="true" />
+                    )}
+                    …
+                  </span>
+                }
+                items={overflowItems}
+                data-testid="cesare-overflow-menu"
               />
             )}
             <HeaderButton

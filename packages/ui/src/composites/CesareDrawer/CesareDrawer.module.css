@@ -261,13 +261,6 @@
   flex-shrink: 0;
 }
 
-.headerDivider {
-  inline-size: 1px;
-  block-size: 16px;
-  background: var(--ds-line);
-  margin-inline: 4px;
-}
-
 .iconBtn {
   inline-size: 24px;
   block-size: 24px;
@@ -279,6 +272,7 @@
   color: var(--ds-text-3);
   cursor: pointer;
   font-size: 13px;
+  padding: 0;
 
   &:hover {
     background: var(--ds-surface-alt);
@@ -289,6 +283,26 @@
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
+}
+
+/* `…` overflow trigger glyph + the unread-notifications dot it can carry. */
+.overflowGlyph {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  line-height: 1;
+}
+
+.overflowDot {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  inline-size: 5px;
+  block-size: 5px;
+  border-radius: 50%;
+  background: var(--ds-agent);
 }
 
 .iconBtnDanger:hover {

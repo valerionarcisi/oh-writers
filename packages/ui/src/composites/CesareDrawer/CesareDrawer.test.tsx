@@ -234,12 +234,14 @@ describe("CesareDrawer", () => {
     expect(onCycle).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onStepBack from full state via ↙", () => {
+  it("calls onStepBack from full state via the overflow 'Riduci' entry", () => {
     const onStepBack = vi.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText, getByText } = render(
       <CesareDrawer {...baseProps} state="full" onStepBack={onStepBack} />,
     );
-    fireEvent.click(getByLabelText("Riduci"));
+    // ↙ no longer sits inline — it lives inside the `…` overflow.
+    fireEvent.click(getByLabelText("Altre azioni"));
+    fireEvent.click(getByText("Riduci"));
     expect(onStepBack).toHaveBeenCalledTimes(1);
   });
 
@@ -272,23 +274,52 @@ describe("CesareDrawer", () => {
     expect(trigger.textContent).toContain("Breakdown Sc.2");
   });
 
-  it("renders dock icons only when state is open (not peek/closed)", () => {
-    const dockIcons = {
-      onBell: () => undefined,
-      onAvatar: () => undefined,
-      onGear: () => undefined,
-    };
-    const { getByLabelText, rerender, queryByLabelText } = render(
-      <CesareDrawer {...baseProps} dockIcons={dockIcons} />,
+  it("header shows only the Notion-minimal primary icon set", () => {
+    const { getByLabelText, queryByLabelText } = render(
+      <CesareDrawer
+        {...baseProps}
+        onNewChat={() => undefined}
+        dockIcons={{ onBell: () => undefined }}
+      />,
     );
-    expect(getByLabelText("Notifiche")).toBeTruthy();
-    expect(getByLabelText("Profilo")).toBeTruthy();
-    expect(getByLabelText("Impostazioni")).toBeTruthy();
-
-    rerender(
-      <CesareDrawer {...baseProps} state="peek" dockIcons={dockIcons} />,
-    );
+    // Allowed primary icons.
+    expect(getByLabelText("Espandi")).toBeTruthy();
+    expect(getByLabelText("Altre azioni")).toBeTruthy();
+    expect(getByLabelText("Minimizza")).toBeTruthy();
+    expect(getByLabelText("Chiudi")).toBeTruthy();
+    // Secondary actions must NOT be inline — they live in the overflow.
     expect(queryByLabelText("Notifiche")).toBeNull();
+    expect(queryByLabelText("Profilo")).toBeNull();
+    expect(queryByLabelText("Impostazioni")).toBeNull();
+    expect(queryByLabelText("Riduci")).toBeNull();
+  });
+
+  it("overflow menu opens and surfaces the secondary actions", () => {
+    const onNewChat = vi.fn();
+    const onBell = vi.fn();
+    const onGear = vi.fn();
+    const { getByLabelText, getByText, queryByText } = render(
+      <CesareDrawer
+        {...baseProps}
+        onNewChat={onNewChat}
+        dockIcons={{ onBell, onGear }}
+      />,
+    );
+    // Closed: menu entries are not in the document.
+    expect(queryByText("Nuova conversazione")).toBeNull();
+    // Open the `…` overflow.
+    fireEvent.click(getByLabelText("Altre azioni"));
+    expect(getByText("Nuova conversazione")).toBeTruthy();
+    expect(getByText("Notifiche")).toBeTruthy();
+    expect(getByText("Impostazioni")).toBeTruthy();
+    // Selecting an entry fires its handler.
+    fireEvent.click(getByText("Nuova conversazione"));
+    expect(onNewChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the overflow trigger when there are no secondary actions", () => {
+    const { queryByLabelText } = render(<CesareDrawer {...baseProps} />);
+    expect(queryByLabelText("Altre azioni")).toBeNull();
   });
 
   it("composer submits via cmd+enter", () => {

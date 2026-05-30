@@ -989,6 +989,7 @@ export function CesareSheet({
       sessions={drawerSessions}
       activeSessionId={activeSessionId ?? undefined}
       onSessionSelectorClick={handleSessionSelectorClick}
+      onNewChat={handleNewSessionClick}
       contextTags={contextTags}
       dockIcons={dockIcons}
       scopes={scopes}
