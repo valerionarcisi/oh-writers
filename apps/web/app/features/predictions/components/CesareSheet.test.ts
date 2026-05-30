@@ -3,7 +3,8 @@ import {
   parseToolsExecuted,
   parseRewriteSceneMarker,
   parseDocAppliedMarker,
-} from "./CesareSheet";
+  parseLiveDiffMarker,
+} from "./CesareConversation";
 
 describe("parseToolsExecuted", () => {
   it("returns 0 when the marker is absent", () => {
@@ -90,6 +91,56 @@ describe("parseDocAppliedMarker", () => {
   it("returns null on malformed JSON", () => {
     expect(
       parseDocAppliedMarker("<!--ohw:doc-applied:{not json-->"),
+    ).toBeNull();
+  });
+});
+
+// [OHW-047-A6] word-level live diff marker (Spec 47b FIX 4).
+describe("parseLiveDiffMarker", () => {
+  const encode = (obj: unknown): string => {
+    const json = JSON.stringify(obj);
+    const bytes = new TextEncoder().encode(json);
+    let bin = "";
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  };
+
+  it("returns null when no marker is present", () => {
+    expect(parseLiveDiffMarker("plain reply")).toBeNull();
+  });
+
+  it("decodes a valid word-diff marker", () => {
+    const payload = {
+      label: "Soggetto",
+      segments: [
+        { op: "eq", text: "Il " },
+        { op: "del", text: "gatto" },
+        { op: "add", text: "cane" },
+        { op: "eq", text: " dorme" },
+      ],
+    };
+    const marker = `reply <!--ohw:live-diff-b64:${encode(payload)}-->`;
+    const parsed = parseLiveDiffMarker(marker);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.label).toBe("Soggetto");
+    expect(parsed!.segments).toHaveLength(4);
+    expect(
+      parsed!.segments.some((s) => s.op === "add" && s.text === "cane"),
+    ).toBe(true);
+    expect(
+      parsed!.segments.some((s) => s.op === "del" && s.text === "gatto"),
+    ).toBe(true);
+  });
+
+  it("drops segments with unknown ops and rejects an empty result", () => {
+    const payload = { label: "x", segments: [{ op: "weird", text: "z" }] };
+    const marker = `<!--ohw:live-diff-b64:${encode(payload)}-->`;
+    expect(parseLiveDiffMarker(marker)).toBeNull();
+  });
+
+  it("returns null on malformed base64 / json", () => {
+    expect(
+      parseLiveDiffMarker("<!--ohw:live-diff-b64:@@notbase64@@-->"),
     ).toBeNull();
   });
 });

@@ -1,22 +1,12 @@
 // apps/web/app/features/predictions/components/CesareSheet.tsx
 //
-// Spec 44 WP-B — chat owner for the Cesare assistant.
+// Spec 44 WP-B — chat owner for the Cesare assistant (floating drawer surface).
 //
-// CesareSheet renders the conversation surface (messages + Step Blocks + the
-// composer) inside the Notion-class `<CesareDrawer/>` chrome shipped by
-// WP-DESIGN. The component owns:
-//   - the message list (in-memory; persistence ships incrementally)
-//   - the send/receive lifecycle (askCesare → assistant reply → side-channels)
-//   - the drawer state machine (closed | peek | expanded | full)
-//   - the sessions selector (header dropdown) backed by `useSessions`
-//   - the "[Mostra modifiche]" trace flow that opens the SplitDrawer
-//
-// AppShell hands us `isOpen` / `onClose` / `onOpenFullPage` for back-compat
-// with the existing toggle UX (dock pill, CesareProvider). Internally we
-// expand that to the 4-state machine via `useDrawerState`.
-//
-// Anything Cesare-related the parent already does (notifications, push, query
-// invalidations) continues to flow through `askCesare` + `onAssistantResponse`.
+// CesareSheet renders the conversation surface inside the Notion-class
+// `<CesareDrawer/>` chrome. The conversation rendering itself lives in the
+// shared `<CesareConversation/>` (Spec 47b FIX 2) so the full-page session route
+// renders the SAME thread without forking a second chat container. The chat
+// thread state + send pipeline live in the shared `CesareChatStoreProvider`.
 import {
   useCallback,
   useEffect,
@@ -25,17 +15,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type React from "react";
 import type { ResultShape } from "@oh-writers/utils";
 import {
   CesareDrawer,
-  ChangeTrace,
   useDrawerState,
-  type ChangeUpdate,
   type CesareDrawerScope,
   type CesareDrawerSession,
   type CesareDrawerContextTag,
-  type CesareDrawerDockIcons,
   type CesareDrawerState,
   type TargetPageRef,
   type TraceMarker,
@@ -47,7 +33,15 @@ import {
   type CesareSession,
 } from "~/features/predictions/sessions";
 import { useCesareChat } from "../use-cesare-chat";
-import type { ChatMessage, TraceStep } from "../use-cesare-chat-reducer";
+import {
+  CesareConversation,
+  PAGE_LABELS,
+  parseRewriteSceneMarker,
+  parseBlockingProposalMarkerForSideChannel,
+  type CesarePage,
+  type DocAppliedMarker,
+  type LiveDiffMarker,
+} from "./CesareConversation";
 import {
   decideShowChangesSurface,
   buildTargetPageRef,
@@ -55,10 +49,8 @@ import {
 import styles from "./CesareSheet.module.css";
 
 /**
- * Cross-component flow (Spec 44): consumers — currently the inline
- * `[Mostra modifiche]` affordance inside a Step Block — invoke the returned
- * function to surface the affected page inside the SplitDrawer with a trace
- * overlay. SplitDrawer + TargetPagePreview wiring lives in AppShell.
+ * Cross-component flow (Spec 44): consumers invoke the returned function to
+ * surface the affected page inside the SplitDrawer with a trace overlay.
  */
 export interface TraceForToolRunArgs {
   pageRef: TargetPageRef;
@@ -82,19 +74,12 @@ export function useShowChangesInSplitDrawer(): (
   );
 }
 
-// ─── Public types preserved for AppShell + Cesare server callers ───────────
-
-export type CesarePage =
-  | "soggetto"
-  | "synopsis"
-  | "outline"
-  | "treatment"
-  | "screenplay"
-  | "breakdown"
-  | "budget"
-  | "schedule"
-  | "shooting-plan"
-  | "locations";
+// ─── Re-exports preserved for existing importers ───────────────────────────
+export type { CesarePage } from "./CesareConversation";
+export {
+  parseToolsExecuted,
+  parseRewriteSceneMarker,
+} from "./CesareConversation";
 
 // ─── Server-side surface ───────────────────────────────────────────────────
 
@@ -115,112 +100,7 @@ export type AskCesareFn = (params: {
   };
 }) => Promise<ResultShape<string, { _tag: string; message: string }>>;
 
-// ─── Marker parsers (kept here so server consumers keep working) ───────────
-
-/**
- * Server appends "<!--ohw:tools=N-->" to the reply so the client can tell
- * whether tools were executed. Returns the integer N (default 0).
- */
-export function parseToolsExecuted(content: string): number {
-  const m = content.match(/<!--ohw:tools=(\d+)-->/);
-  if (!m) return 0;
-  return parseInt(m[1]!, 10);
-}
-
-/**
- * Side-channel for blocking proposals — the canvas listens to the same DOM
- * event the legacy sheet emitted, so we keep emitting it here.
- */
-function parseBlockingProposalMarker(content: string): unknown | null {
-  const m = content.match(/<!--ohw:blocking-proposal:([\s\S]*?)-->/);
-  if (!m || !m[1]) return null;
-  try {
-    return JSON.parse(m[1]);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Side-channel for document-gen tools. The server applies the generated
- * content LIVE to the open document (Spec 44 canonical pattern) and embeds this
- * marker carrying the version that was active before the apply, so the client
- * can offer "↩ Annulla" (revert to the previous version). Returns null when the
- * marker is absent or malformed.
- */
-export interface DocAppliedMarker {
-  readonly documentType: string;
-  readonly versionId: string;
-  readonly previousVersionId: string | null;
-}
-
-export function parseDocAppliedMarker(
-  content: string,
-): DocAppliedMarker | null {
-  const m = content.match(/<!--ohw:doc-applied:([\s\S]*?)-->/);
-  if (!m || !m[1]) return null;
-  try {
-    const parsed = JSON.parse(m[1]) as Record<string, unknown>;
-    if (typeof parsed["version_id"] !== "string") return null;
-    const previous = parsed["previous_version_id"];
-    return {
-      documentType: String(parsed["document_type"] ?? ""),
-      versionId: parsed["version_id"],
-      previousVersionId: typeof previous === "string" ? previous : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Parses the rewrite_scene side-channel marker embedded in the assistant
- * reply. Returns `{ scene_number, new_content }` when present, null otherwise.
- */
-export function parseRewriteSceneMarker(
-  content: string,
-): { scene_number: number; new_content: string } | null {
-  const m = content.match(/<!--ohw:rewrite-scene-b64:([A-Za-z0-9+/=]+)-->/);
-  if (!m || !m[1]) return null;
-  try {
-    const bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
-    const decoded = new TextDecoder("utf-8").decode(bytes);
-    const parsed = JSON.parse(decoded) as unknown;
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      typeof (parsed as Record<string, unknown>)["scene_number"] === "number" &&
-      typeof (parsed as Record<string, unknown>)["new_content"] === "string"
-    ) {
-      return {
-        scene_number: (parsed as Record<string, unknown>)[
-          "scene_number"
-        ] as number,
-        new_content: (parsed as Record<string, unknown>)[
-          "new_content"
-        ] as string,
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 // ─── Quick prompts (unchanged from legacy sheet) ───────────────────────────
-
-const PAGE_LABELS: Record<CesarePage, string> = {
-  soggetto: "SOGGETTO",
-  synopsis: "SINOSSI",
-  outline: "SCALETTA",
-  treatment: "TRATTAMENTO",
-  screenplay: "SCENEGGIATURA",
-  breakdown: "BREAKDOWN",
-  budget: "BUDGET",
-  schedule: "CALENDARIO",
-  "shooting-plan": "INQUADRATURE",
-  locations: "LOCATION",
-};
 
 const QUICK_PROMPTS_INITIAL: Record<CesarePage, string[]> = {
   soggetto: [
@@ -275,258 +155,6 @@ const QUICK_PROMPTS_INITIAL: Record<CesarePage, string[]> = {
   ],
 };
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function stripToolCalls(content: string): string {
-  return content
-    .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, "")
-    .replace(/<tool_call>[\s\S]*$/g, "")
-    .replace(/<tool_response>[\s\S]*?<\/tool_response>/g, "")
-    .replace(/<tool_response>[\s\S]*$/g, "")
-    .replace(/<\/tool_response>/g, "")
-    .replace(/<function_calls>[\s\S]*?<\/function_calls>/g, "")
-    .replace(/<function_calls>[\s\S]*$/g, "")
-    .replace(/<invoke[\s\S]*?<\/invoke>/g, "")
-    .replace(/<invoke[\s\S]*$/g, "")
-    .replace(/<parameter[\s\S]*?<\/parameter>/g, "")
-    .replace(
-      /<\/?(function_calls|antml:function_calls|invoke|parameter)[^>]*>/g,
-      "",
-    )
-    .replace(/<!--ohw:tools=\d+-->/g, "")
-    .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
-    .replace(/<!--ohw:rewrite-scene-b64:[A-Za-z0-9+/=]+-->/g, "")
-    .replace(/<!--ohw:doc-applied:[\s\S]*?-->/g, "")
-    .trim();
-}
-
-function renderInline(text: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = pattern.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    if (m[0].startsWith("**"))
-      parts.push(<strong key={m.index}>{m[2]}</strong>);
-    else parts.push(<em key={m.index}>{m[3]}</em>);
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
-}
-
-function renderMarkdown(content: string): React.ReactNode {
-  const clean = stripToolCalls(content);
-  if (clean.length === 0) return null;
-  const lines = clean.split("\n");
-  const nodes: React.ReactNode[] = [];
-  let bullets: string[] | null = null;
-  let key = 0;
-  const flushBullets = () => {
-    if (!bullets || bullets.length === 0) {
-      bullets = null;
-      return;
-    }
-    nodes.push(
-      <ul key={key++} className={styles.mdList}>
-        {bullets.map((b, i) => (
-          <li key={i} className={styles.mdListItem}>
-            {renderInline(b)}
-          </li>
-        ))}
-      </ul>,
-    );
-    bullets = null;
-  };
-  for (const raw of lines) {
-    const line = raw;
-    const bullet = line.match(/^[-*]\s+(.+)/);
-    if (bullet) {
-      if (!bullets) bullets = [];
-      bullets.push(bullet[1]!);
-      continue;
-    }
-    flushBullets();
-    if (line.trim() === "") {
-      nodes.push(<div key={key++} className={styles.mdSpacer} />);
-    } else if (/^#+\s+/.test(line)) {
-      const text = line.replace(/^#+\s+/, "");
-      nodes.push(
-        <h4 key={key++} className={styles.mdH3}>
-          {renderInline(text)}
-        </h4>,
-      );
-    } else {
-      nodes.push(
-        <p key={key++} className={styles.mdPara}>
-          {renderInline(line)}
-        </p>,
-      );
-    }
-  }
-  flushBullets();
-  return nodes;
-}
-
-// ─── Step Block / ChangeTrace parsing ─────────────────────────────────────
-//
-// Cesare's assistant turn carries an `<!--ohw:tools=N-->` marker when N > 0.
-// When N > 0 we render a `<ChangeTrace/>` (Notion-style step block) that
-// summarises the run in the assistant message. Tool-call details and write
-// markers (rewrite-scene, blocking-proposal) drive the affected-entity list
-// and the `[Mostra modifiche]` affordance.
-
-interface StepBlockMetadata {
-  toolCount: number;
-  rewrite: { scene_number: number; new_content: string } | null;
-  hasProposal: boolean;
-  docApplied: DocAppliedMarker | null;
-}
-
-function extractStepBlockMetadata(content: string): StepBlockMetadata {
-  return {
-    toolCount: parseToolsExecuted(content),
-    rewrite: parseRewriteSceneMarker(content),
-    hasProposal: parseBlockingProposalMarker(content) !== null,
-    docApplied: parseDocAppliedMarker(content),
-  };
-}
-
-// Page → ChangeTrace update kind. The kind drives the icon glyph and the
-// "Updated X" wording in the summary title.
-const PAGE_TO_UPDATE_KIND: Record<CesarePage, ChangeUpdate["kind"]> = {
-  soggetto: "doc",
-  synopsis: "doc",
-  outline: "doc",
-  treatment: "doc",
-  screenplay: "scene",
-  breakdown: "breakdown",
-  budget: "budget",
-  schedule: "schedule",
-  "shooting-plan": "scene",
-  locations: "location",
-};
-
-// Page → "Updated X" label used in the ChangeTrace summary header.
-const PAGE_TO_UPDATED_LABEL: Record<CesarePage, string> = {
-  soggetto: "Aggiornato Soggetto",
-  synopsis: "Aggiornata Sinossi",
-  outline: "Aggiornata Scaletta",
-  treatment: "Aggiornato Trattamento",
-  screenplay: "Aggiornata Sceneggiatura",
-  breakdown: "Aggiornato Breakdown",
-  budget: "Aggiornato Budget",
-  schedule: "Aggiornato Calendario",
-  "shooting-plan": "Aggiornato Piano Inquadrature",
-  locations: "Aggiornate Location",
-};
-
-export interface ParsedToolUpdates {
-  /** Headline title for the ChangeTrace card. */
-  readonly title: string;
-  /** Affected entities surfaced in the step block. */
-  readonly updates: ReadonlyArray<ChangeUpdate>;
-  /** Per-step "Thought" / "Updated …" entries shown when the steps are expanded. */
-  readonly thoughts: ReadonlyArray<string>;
-}
-
-/**
- * Derive a ChangeTrace summary from the assistant reply + the page the user
- * is on. The function is deliberately heuristic: the LLM reply uses Italian
- * action verbs (`riscritto`, `aggiunto`, `spostato`…); we map those onto
- * concrete `Updated X` labels per page. When a rewrite-scene marker is
- * embedded we surface the specific scene; otherwise we fall back to the page.
- */
-export function parseToolUpdates(
-  content: string,
-  page: CesarePage,
-): ParsedToolUpdates {
-  const meta = extractStepBlockMetadata(content);
-  const lc = content.toLowerCase();
-  const kind = PAGE_TO_UPDATE_KIND[page];
-  const baseLabel = PAGE_TO_UPDATED_LABEL[page];
-
-  const updates: ChangeUpdate[] = [];
-
-  // Single-scene rewrite: surface the affected scene number.
-  if (meta.rewrite) {
-    updates.push({
-      id: `scene-${meta.rewrite.scene_number}`,
-      kind: "scene",
-      label: `Sc.${meta.rewrite.scene_number} riscritta`,
-    });
-  }
-
-  // Otherwise extract a count hint from the reply itself ("3 scene rinominate",
-  // "5 oggetti", "4 voci", "2 candidati"). These cover the wording the tool
-  // loops generate after a write.
-  const COUNT_PATTERNS: ReadonlyArray<{ re: RegExp; suffix: string }> = [
-    { re: /(\d+)\s+scene\s+rinominat/i, suffix: "scene rinominate" },
-    { re: /(\d+)\s+scene\s+aggiornat/i, suffix: "scene aggiornate" },
-    { re: /(\d+)\s+oggett/i, suffix: "oggetti" },
-    { re: /(\d+)\s+voc/i, suffix: "voci" },
-    { re: /(\d+)\s+righ/i, suffix: "righe" },
-    { re: /(\d+)\s+candidat/i, suffix: "candidati" },
-    { re: /(\d+)\s+strip/i, suffix: "strip spostate" },
-    { re: /(\d+)\s+shot/i, suffix: "shot" },
-  ];
-  let countSuffix: string | null = null;
-  for (const { re, suffix } of COUNT_PATTERNS) {
-    const m = content.match(re);
-    if (m) {
-      countSuffix = `${m[1]} ${suffix}`;
-      if (updates.length === 0) {
-        updates.push({
-          id: `${page}-batch`,
-          kind,
-          label: countSuffix,
-        });
-      }
-      break;
-    }
-  }
-
-  // Fallback: when we cannot recover a specific entity, still surface the
-  // page itself so the user sees that "something" changed on that page.
-  if (updates.length === 0) {
-    const pageLabel = PAGE_LABELS[page];
-    updates.push({
-      id: `${page}-page`,
-      kind,
-      label: pageLabel.toLowerCase(),
-    });
-  }
-
-  // Compose the title. When we recovered a count, append it as the rationale.
-  const titleSuffix = countSuffix
-    ? ` · ${countSuffix}`
-    : meta.rewrite
-      ? ` · Sc.${meta.rewrite.scene_number}`
-      : "";
-  const title = `${baseLabel}${titleSuffix}`;
-
-  // Thoughts: derive simple phases from the action verbs present in the reply.
-  const thoughts: string[] = [];
-  if (lc.includes("leggo") || lc.includes("letto") || lc.includes("lettura")) {
-    thoughts.push("Lettura contesto");
-  }
-  if (lc.includes("analiz")) thoughts.push("Analisi");
-  if (
-    lc.includes("genero") ||
-    lc.includes("generato") ||
-    lc.includes("propost") ||
-    lc.includes("scritto") ||
-    lc.includes("riscritto") ||
-    lc.includes("aggiunto") ||
-    lc.includes("aggiornato")
-  ) {
-    thoughts.push("Esecuzione");
-  }
-
-  return { title, updates, thoughts };
-}
-
 // ─── Sessions UI ───────────────────────────────────────────────────────────
 
 const formatRelativeLastAt = (iso: string): string => {
@@ -568,30 +196,16 @@ export interface CesareSheetProps {
   onClose: () => void;
   /** Invoked when the user clicks the drawer's "↗ full" affordance. */
   onOpenFullPage: () => void;
-  /** Optional hook so AppShell can sync `body[data-cesare]` with the drawer's
-   *  internal 4-state machine. Falls back to direct DOM writes when omitted. */
   onCesareStateChange?: (next: CesareDrawerState) => void;
   /** Server function for chat. Pass null until the server fn is implemented. */
   askCesare?: AskCesareFn | null;
   /** Called after each assistant response — used to invalidate queries. */
   onAssistantResponse?: (reply: string) => void;
-  /** Spec 47-A5 — the central `/sessions/:sessionId` route publishes the
-   *  session it wants in focus here. When it changes, the drawer adopts it as
-   *  its active session so the floating chat (authoritative) shows that exact
-   *  thread without forking a second container. */
+  /** Spec 47-A5 — focused session published by the central route. */
   focusedSessionId?: string | null;
-  /** Spec 47-A5 — mirror of the drawer's active session id back to the shell so
-   *  the rail / route highlight stays in sync when the user switches sessions
-   *  from inside the drawer. */
+  /** Spec 47-A5 — mirror of the active session id back to the shell. */
   onActiveSessionChange?: (sessionId: string | null) => void;
-  /** Spec 44 — bell / avatar / gear icons migrated from the BottomDock when
-   *  Cesare state ≠ closed. AppShell supplies the same handlers it gives to
-   *  the BottomDock so the user keeps a single command surface visible. */
-  dockIcons?: CesareDrawerDockIcons;
-  /** Rendering surface (Spec 46 ?peek=, Spec 47 A4). `"floating"` is the
-   *  bottom-right sub-window; `"split"` flows the chat inside the shell's
-   *  page-collapsing peek column. The shell renders exactly one instance —
-   *  never both — so there is a single chat container. */
+  /** Rendering surface (Spec 46 ?peek=, Spec 47 A4). */
   surface?: "floating" | "split";
   /** "Open as split column" affordance — shown only on the floating surface. */
   onOpenAsSplit?: () => void;
@@ -614,7 +228,6 @@ export function CesareSheet({
   onAssistantResponse,
   focusedSessionId = null,
   onActiveSessionChange,
-  dockIcons,
   surface = "floating",
   onOpenAsSplit,
 }: CesareSheetProps) {
@@ -625,10 +238,6 @@ export function CesareSheet({
     onChange: (next) => {
       onCesareStateChange?.(next);
       if (typeof document !== "undefined") {
-        // Collapse `expanded-split` to `expanded` for the body attribute so
-        // CSS + tests can keep the 4-state contract `closed | expanded |
-        // peek | full` (Spec 44 glossary). The `expanded-split` Notion-`»`
-        // mode is internal to the drawer's resize machine.
         const normalised = next === "expanded-split" ? "expanded" : next;
         document.body.setAttribute("data-cesare", normalised);
       }
@@ -637,25 +246,16 @@ export function CesareSheet({
     },
   });
 
-  // Sync external `isOpen` prop into the state machine. AppShell flips the
-  // prop when the user clicks the dock pill (Cesare closed → opened) or when
-  // a CesareProvider consumer requests opening the assistant for a specific
-  // requirement.
   useEffect(() => {
     if (isOpen && drawer.state === "closed") {
       drawer.open("expanded");
     } else if (!isOpen && drawer.state !== "closed") {
       drawer.close();
     }
-    // We intentionally depend on `isOpen` only — drawer.* identities change
-    // each render and would cause feedback loops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // ── Chat state ──────────────────────────────────────────────────────────
-  // Spec 47a: the chat lifecycle (optimistic bubbles, per-session threads,
-  // delivery status, streamed live trace) is owned by `useCesareChat`. The
-  // composer value stays local because it is purely a controlled-input concern.
+  // ── Chat composer value (local controlled input) ─────────────────────────
   const [input, setInput] = useState("");
 
   // ── Sessions ────────────────────────────────────────────────────────────
@@ -663,7 +263,6 @@ export function CesareSheet({
   const createSession = useCreateSession(projectId);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
-  // Once sessions load and we don't have an active one, default to the first.
   useEffect(() => {
     if (!sessionsQuery.data || activeSessionId) return;
     const first = sessionsQuery.data[0];
@@ -671,16 +270,12 @@ export function CesareSheet({
   }, [sessionsQuery.data, activeSessionId]);
 
   // ── Assistant-reply side channels ────────────────────────────────────────
-  // The final reply still carries the legacy `<!--ohw:…-->` markers (Spec 47a
-  // keeps them in `done.result`). After the turn lands we dispatch the same DOM
-  // events the legacy sheet emitted so the editor's blocking/rewrite stores and
-  // AppShell's notification/invalidation flow keep working unchanged.
   const handleAssistantSideChannels = useCallback(
     (content: string) => {
       onAssistantResponse?.(content);
       if (typeof window === "undefined") return;
 
-      const proposal = parseBlockingProposalMarker(content);
+      const proposal = parseBlockingProposalMarkerForSideChannel(content);
       if (proposal) {
         window.dispatchEvent(
           new CustomEvent("ohw:cesare:blocking-proposal", { detail: proposal }),
@@ -706,7 +301,7 @@ export function CesareSheet({
     [onAssistantResponse, projectId, page, drawer],
   );
 
-  // ── Send pipeline (stream-first, askCesare fallback) ─────────────────────
+  // ── Send pipeline (shared store: stream-first, askCesare fallback) ───────
   const chat = useCesareChat({
     activeSessionId,
     askCesare,
@@ -725,12 +320,7 @@ export function CesareSheet({
   const messages = chat.messages;
   const isLoading = chat.isLoading;
 
-  // Spec 47-A5 — the central `/sessions/:sessionId` route asks the drawer to
-  // focus a specific session. Adopt it as the active session so the floating
-  // chat — the single source of truth — shows that session's thread. We swap
-  // via `chat.selectSession` (A1), which keeps each thread intact and can
-  // never wipe a just-sent bubble. Guard on equality so a live thread is not
-  // re-selected on every render.
+  // Spec 47-A5 — adopt the central route's focused session as active.
   useEffect(() => {
     if (!focusedSessionId || focusedSessionId === activeSessionId) return;
     setActiveSessionId(focusedSessionId);
@@ -738,15 +328,10 @@ export function CesareSheet({
     setInput("");
   }, [focusedSessionId, activeSessionId, chat]);
 
-  // Spec 47-A5 — mirror the active session back to the shell so the rail and
-  // the central route highlight stay in sync when the user switches from the
-  // drawer's own selector.
   useEffect(() => {
     onActiveSessionChange?.(activeSessionId);
   }, [activeSessionId, onActiveSessionChange]);
 
-  // Switching the active session keeps each thread intact (A1): a swap can
-  // never wipe a just-sent bubble — it only changes which thread is visible.
   const handleSessionSelect = useCallback(
     (sessionId: string) => {
       if (sessionId === activeSessionId) return;
@@ -769,7 +354,7 @@ export function CesareSheet({
     [sessionsQuery.data, activeSessionId],
   );
 
-  // ── Sessions popover (simple absolutely-positioned dropdown) ────────────
+  // ── Sessions popover ─────────────────────────────────────────────────────
   const [isSessionPopoverOpen, setSessionPopoverOpen] = useState(false);
   const handleSessionSelectorClick = useCallback(() => {
     setSessionPopoverOpen((v) => !v);
@@ -800,13 +385,11 @@ export function CesareSheet({
     [page, sceneNumber],
   );
 
-  // ── Send pipeline ───────────────────────────────────────────────────────
+  // ── Diff surface handlers (Spec 47-A6 / 47b FIX 4) ───────────────────────
   const showChangesInSplit = useShowChangesInSplitDrawer();
 
   const handleCancelRewrite = useCallback(
     (rewrite: { scene_number: number; new_content: string }) => {
-      // Emit a DOM event the editor's proposal store listens for. This keeps
-      // the cancel path symmetrical with the existing "accept" affordance.
       if (typeof window === "undefined") return;
       window.dispatchEvent(
         new CustomEvent("ohw:cesare:cancel-rewrite", {
@@ -818,11 +401,6 @@ export function CesareSheet({
   );
 
   const handleUndoDocApply = useCallback((marker: DocAppliedMarker) => {
-    // Cesare applied the generated content live to the open document. Reverting
-    // means switching the document's active version back to the one that was
-    // current before the apply. AppShell owns the server call + query
-    // invalidation so the editor refreshes; we keep the chat decoupled from the
-    // documents feature by emitting a DOM event (symmetric with cancel-rewrite).
     if (typeof window === "undefined") return;
     if (!marker.previousVersionId) return;
     window.dispatchEvent(
@@ -835,46 +413,44 @@ export function CesareSheet({
     );
   }, []);
 
-  // Live-doc inline diff toggle (Spec 44, canonical Notion model). Cesare edits
-  // already landed on the open document; revealing the diff paints a highlight
-  // overlay on the live page (no detached drawer, no separate render). The shell
-  // reads body[data-cesare-diff] to paint the highlight on <main>; consumers
-  // that want a finer-grained marker can listen for the broadcast event.
-  const toggleLiveDiff = useCallback((showing: boolean) => {
-    if (typeof document === "undefined") return;
-    if (showing) {
-      document.body.setAttribute("data-cesare-diff", "on");
-    } else {
-      document.body.removeAttribute("data-cesare-diff");
-    }
-    window.dispatchEvent(
-      new CustomEvent("ohw:cesare:live-diff", {
-        detail: { showing },
-      }),
-    );
-  }, []);
+  // Live-doc inline diff toggle (Spec 47b FIX 4). Cesare edits already landed on
+  // the open document; revealing the diff renders a WORD-LEVEL coloured overlay
+  // on the live page. The shell paints it from body[data-cesare-diff] + the
+  // ohw:cesare:live-diff broadcast (which now carries the diff segments).
+  const toggleLiveDiff = useCallback(
+    (showing: boolean, liveDiff?: LiveDiffMarker | null) => {
+      if (typeof document === "undefined") return;
+      if (showing) {
+        document.body.setAttribute("data-cesare-diff", "on");
+      } else {
+        document.body.removeAttribute("data-cesare-diff");
+      }
+      window.dispatchEvent(
+        new CustomEvent("ohw:cesare:live-diff", {
+          detail: { showing, diff: showing ? (liveDiff ?? null) : null },
+        }),
+      );
+    },
+    [],
+  );
 
-  // Spec 47-A6 — "Mostra modifiche" branches on how Cesare is open:
-  //   - FLOATING / expanded → inline live diff on the open document.
-  //   - FULL / SPLIT lane    → SplitDrawer showing the trace's target page
-  //     with the diff overlay (the doc is hidden/collapsed behind Cesare).
-  // The pure `decideShowChangesSurface` owns the branch so it stays testable.
   const handleShowChanges = useCallback(
-    (args: { traceMarkers: ReadonlyArray<TraceMarker>; scope?: string }) => {
+    (args: {
+      traceMarkers: ReadonlyArray<TraceMarker>;
+      scope?: string;
+      liveDiff?: LiveDiffMarker | null;
+    }) => {
       const surfaceChoice = decideShowChangesSurface({
         surface,
         drawerState: drawer.state,
       });
       if (surfaceChoice._tag === "live-diff") {
-        toggleLiveDiff(true);
+        toggleLiveDiff(true, args.liveDiff ?? null);
         return;
       }
-      // split-drawer branch — build the target page from the current page; fall
-      // back to the live diff when the page has no diff preview (schedule /
-      // shooting-plan) so the control is never a dead end.
       const pageRef = buildTargetPageRef(page, args.scope);
       if (!pageRef) {
-        toggleLiveDiff(true);
+        toggleLiveDiff(true, args.liveDiff ?? null);
         return;
       }
       showChangesInSplit({
@@ -892,10 +468,6 @@ export function CesareSheet({
     [surface, drawer.state, page, toggleLiveDiff, showChangesInSplit],
   );
 
-  // "Nascondi modifiche" clears BOTH surfaces unconditionally: the live-diff
-  // clear is a no-op when unset, and the SplitDrawer close is a no-op when it
-  // was never opened. Clearing both is robust to a mode change between Mostra
-  // and Nascondi (e.g. the user expanded Cesare to full meanwhile).
   const splitDrawerCtx = useSplitDrawer();
   const handleHideChanges = useCallback(() => {
     toggleLiveDiff(false);
@@ -919,11 +491,7 @@ export function CesareSheet({
   // ── Scopes shown above the composer ─────────────────────────────────────
   const scopes = useMemo<ReadonlyArray<CesareDrawerScope>>(
     () => [
-      {
-        id: "page",
-        icon: "📎",
-        label: PAGE_LABELS[page],
-      },
+      { id: "page", icon: "📎", label: PAGE_LABELS[page] },
       ...(sceneNumber != null
         ? [
             {
@@ -937,32 +505,24 @@ export function CesareSheet({
     [page, sceneNumber],
   );
 
-  // ── Body composition ────────────────────────────────────────────────────
+  // ── Body composition (shared conversation renderer) ──────────────────────
   const conversationBody: ReactNode = (
-    <div className={styles.conversation} data-testid="cesare-conversation">
-      {messages.length === 0 && <EmptyState page={page} />}
-      {messages.map((m) => (
-        <MessageView
-          key={m.id}
-          message={m}
-          page={page}
-          onShowChanges={handleShowChanges}
-          onHideChanges={handleHideChanges}
-          onCancelRewrite={handleCancelRewrite}
-          onUndoDocApply={handleUndoDocApply}
-        />
-      ))}
-      {messages.length === 0 && (
-        <QuickPrompts page={page} onSelect={handleQuickPrompt} />
-      )}
-    </div>
+    <CesareConversation
+      messages={messages}
+      page={page}
+      onShowChanges={handleShowChanges}
+      onHideChanges={handleHideChanges}
+      onCancelRewrite={handleCancelRewrite}
+      onUndoDocApply={handleUndoDocApply}
+      emptyState={
+        <>
+          <EmptyState page={page} />
+          <QuickPrompts page={page} onSelect={handleQuickPrompt} />
+        </>
+      }
+    />
   );
 
-  // Spec 44 defines 4 visible states (closed/peek/expanded/full). The
-  // underlying CesareDrawer machine adds `expanded-split` for the Notion-`»`
-  // SplitDrawer interplay; we hide it from the user-facing cycle so the
-  // visible "Espandi" affordance walks closed→expanded→full→expanded in one
-  // click each. Step-back handles the symmetric path.
   const handleCycle = useCallback(() => {
     if (drawer.state === "expanded") {
       drawer.setState("full");
@@ -998,7 +558,6 @@ export function CesareSheet({
       onSessionSelectorClick={handleSessionSelectorClick}
       onNewChat={handleNewSessionClick}
       contextTags={contextTags}
-      dockIcons={dockIcons}
       scopes={scopes}
       composer={{
         value: input,
@@ -1022,219 +581,7 @@ export function CesareSheet({
   );
 }
 
-// ─── Internal building blocks ──────────────────────────────────────────────
-
-function MessageView({
-  message,
-  page,
-  onShowChanges,
-  onHideChanges,
-  onCancelRewrite,
-  onUndoDocApply,
-}: {
-  message: ChatMessage;
-  page: CesarePage;
-  /** Reveal the diff (live-doc inline OR split-drawer, decided by the parent
-   *  from the Cesare open mode). The message supplies the trace markers + an
-   *  optional scope hint so the split branch can render the right target. */
-  onShowChanges: (args: {
-    traceMarkers: ReadonlyArray<TraceMarker>;
-    scope?: string;
-  }) => void;
-  /** Hide whichever diff surface was opened. */
-  onHideChanges: () => void;
-  onCancelRewrite: (rewrite: {
-    scene_number: number;
-    new_content: string;
-  }) => void;
-  onUndoDocApply: (marker: DocAppliedMarker) => void;
-}) {
-  // Per-message control of the diff toggle so the button label and the live
-  // highlight / split drawer stay in lockstep. Each trace card owns its own
-  // showing flag; the parent decides WHERE the diff is shown.
-  const [isShowingDiff, setShowingDiff] = useState(false);
-
-  if (message.role === "user") {
-    // A1: the bubble carries a delivery status. `pending` shows a spinner dot,
-    // `failed` tints the bubble + surfaces the failure (retry lives in the
-    // failed assistant text). `delivered` shows nothing extra.
-    return (
-      <div
-        className={[
-          styles.bubbleUser,
-          message.status === "failed" ? styles.bubbleUserFailed : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        data-testid="cesare-user-bubble"
-        data-status={message.status}
-      >
-        <p className={styles.bubbleText}>{message.content}</p>
-        {message.status === "pending" && (
-          <span
-            className={styles.bubbleStatusDot}
-            aria-label="Invio in corso"
-            data-testid="cesare-bubble-pending"
-          />
-        )}
-        {message.status === "failed" && (
-          <span className={styles.bubbleStatusFailed}>Invio non riuscito</span>
-        )}
-      </div>
-    );
-  }
-
-  // Assistant turn still in flight (A2): render the live trace from the streamed
-  // step events while the reply is empty + pending.
-  if (message.status === "pending") {
-    return message.trace.length > 0 ? (
-      <LiveTrace steps={message.trace} />
-    ) : (
-      <LoadingIndicator />
-    );
-  }
-
-  const metadata = extractStepBlockMetadata(message.content);
-  const rendered = renderMarkdown(message.content);
-  const hasStepBlock = metadata.toolCount > 0;
-
-  if (!hasStepBlock) {
-    return (
-      <div className={styles.bubbleAssistant}>
-        <div className={styles.bubbleMarkdown}>{rendered}</div>
-      </div>
-    );
-  }
-
-  const rewrite = metadata.rewrite;
-  const docApplied = metadata.docApplied;
-  const hasChanges = rewrite != null || metadata.hasProposal;
-  const parsed = parseToolUpdates(message.content, page);
-  // Undo priority: a live document apply (Spec 44 canonical pattern) takes
-  // precedence — it reverts the open document to its previous version. Falls
-  // back to the single-scene rewrite cancel.
-  const undoHandler =
-    docApplied && docApplied.previousVersionId
-      ? () => onUndoDocApply(docApplied)
-      : rewrite && hasChanges
-        ? () => onCancelRewrite(rewrite)
-        : undefined;
-
-  // Trace markers for the split-drawer branch: surface every affected entity
-  // as a `replace` marker so the embedded TargetPagePreview lists them. The
-  // scope hint (single-scene rewrite) sharpens the target page title.
-  const traceMarkers: ReadonlyArray<TraceMarker> = parsed.updates.map((u) => ({
-    id: u.id ?? u.label,
-    kind: "replace" as const,
-    anchor: u.label,
-  }));
-  const scope = rewrite ? `Sc.${rewrite.scene_number}` : undefined;
-
-  return (
-    <div className={styles.assistantWithSteps}>
-      {rendered && <div className={styles.bubbleMarkdown}>{rendered}</div>}
-      <ChangeTrace
-        title={parsed.title}
-        stepCount={metadata.toolCount}
-        thoughts={parsed.thoughts}
-        updates={parsed.updates}
-        isShowingChanges={isShowingDiff}
-        onShowChanges={() => {
-          setShowingDiff(true);
-          onShowChanges({ traceMarkers, scope });
-        }}
-        onHideChanges={() => {
-          setShowingDiff(false);
-          onHideChanges();
-        }}
-        onUndo={undoHandler}
-        defaultStepsOpen={false}
-        testId="cesare-change-trace"
-      />
-    </div>
-  );
-}
-
-function LoadingIndicator() {
-  return (
-    <div
-      className={styles.bubbleAssistant}
-      aria-busy="true"
-      aria-label="Cesare sta rispondendo"
-    >
-      <div className={styles.skeletonBody}>
-        <span
-          className={[styles.skeletonLine, styles.skeletonLong].join(" ")}
-        />
-        <span
-          className={[styles.skeletonLine, styles.skeletonMedium].join(" ")}
-        />
-        <span
-          className={[styles.skeletonLine, styles.skeletonShort].join(" ")}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─── Live trace (A2) ─────────────────────────────────────────────────────────
-// Renders the streamed step events as the inline Step Block while the assistant
-// turn is in flight. Each step shows a verb + entity ("sta leggendo
-// Sceneggiatura", "sta scrivendo Soggetto"); the latest step is mirrored into an
-// aria-live region so screen readers and E2E observe progress in real time.
-
-const TRACE_VERB: Record<TraceStep["kind"], string> = {
-  reasoning: "Sto ragionando",
-  reading: "Sto leggendo",
-  writing: "Sto scrivendo",
-  tool: "Eseguo",
-};
-
-function LiveTrace({ steps }: { steps: ReadonlyArray<TraceStep> }) {
-  const last = steps[steps.length - 1];
-  const liveLabel = last
-    ? `Cesare ${TRACE_VERB[last.kind].toLowerCase()}${
-        last.entity ? ` ${last.entity.label}` : ""
-      }`
-    : "Cesare sta lavorando";
-  return (
-    <div
-      className={styles.liveTrace}
-      data-testid="cesare-live-trace"
-      aria-busy="true"
-    >
-      <ul className={styles.liveTraceList}>
-        {steps.map((step, i) => (
-          <li
-            key={`${step.kind}-${i}-${step.text}`}
-            className={styles.liveTraceStep}
-            data-step-kind={step.kind}
-            data-entity-domain={step.entity?.domain ?? ""}
-          >
-            <span className={styles.liveTraceVerb}>
-              {TRACE_VERB[step.kind]}
-            </span>
-            {step.kind === "reasoning" ? (
-              <span className={styles.liveTraceText}>{step.text}</span>
-            ) : (
-              <span className={styles.liveTraceEntity}>
-                {step.entity ? step.entity.label : step.text}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-      <span
-        className={styles.liveTraceStatus}
-        role="status"
-        aria-live="polite"
-        data-testid="cesare-live-status"
-      >
-        {liveLabel}…
-      </span>
-    </div>
-  );
-}
+// ─── Floating-sheet-only building blocks ───────────────────────────────────
 
 function EmptyState({ page }: { page: CesarePage }) {
   return (

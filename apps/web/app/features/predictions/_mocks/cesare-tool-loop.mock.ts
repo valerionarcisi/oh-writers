@@ -161,6 +161,32 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Documents — apply_text_edit (deterministic find/replace; no LLM call).
+  // Used by the [OHW-047-A6] word-level live-diff E2E: the soggetto seed
+  // contains "traduttrice freelance", so this produces a real before→after diff.
+  {
+    match:
+      /sostituisci .*traduttrice|cambia traduttrice|interprete simultanea/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "apply_text_edit",
+            input: {
+              find: "traduttrice freelance",
+              replace: "interprete simultanea",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiornato il soggetto sostituendo la professione di Marta. Il documento è stato aggiornato.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Documents — compress_section
   {
     match: /accorcia|riassumi|comprimi/i,

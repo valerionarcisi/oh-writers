@@ -1,17 +1,15 @@
 // apps/web/app/features/predictions/use-cesare-chat.ts
 //
-// Spec 47a (A1 + A2) — React hook that drives the Cesare chat lifecycle.
+// Spec 47a (A1 + A2) — React hook that drives the Cesare chat lifecycle, and
+// Spec 47b FIX 2 — backed by the SHARED `CesareChatStoreProvider` so the
+// floating sheet and the full-page session render the same threads.
 //
-// Wraps the pure `chatReducer` and owns the send pipeline:
-//   1. append the optimistic user bubble + an in-flight assistant bubble
-//      SYNCHRONOUSLY (A1 — never lost to a session swap);
-//   2. stream the turn from `/api/cesare/stream`, reducing step events into the
-//      assistant bubble's live trace (A2);
-//   3. on `done`, mark both bubbles delivered with the final reply;
-//   4. on transport failure, fall back to the non-streaming `askCesare` server
-//      function, then to a typed error bubble — the user bubble is marked
-//      `failed` so the UI can offer a retry.
-import { useCallback, useReducer, useRef } from "react";
+// When mounted under a `CesareChatStoreProvider` (the app shell always is) the
+// hook is a thin adapter over the shared store: it publishes the live page
+// context + `askCesare` transport, keeps the requested session selected, and
+// returns the active session's messages. Outside a provider (isolated component
+// tests / Storybook) it degrades to a private reducer with the same lifecycle.
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
   chatReducer,
   initialChatState,
@@ -20,6 +18,7 @@ import {
   type ChatState,
 } from "./use-cesare-chat-reducer";
 import { streamCesare, type StreamCesareInput } from "./cesare-stream-client";
+import { useCesareChatStore } from "./cesare-chat-store";
 import type { AskCesareFn } from "./components/CesareSheet";
 
 const newId = (): string =>
@@ -48,24 +47,67 @@ export interface UseCesareChat {
   readonly selectSession: (sessionId: string) => void;
 }
 
-export const useCesareChat = ({
-  activeSessionId,
-  askCesare,
-  pageContext,
-  onAssistantResponse,
-}: UseCesareChatArgs): UseCesareChat => {
-  // Sessions load async; until the first id resolves we park the thread under a
-  // stable sentinel so a message sent before sessions hydrate is never lost.
+export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
+  const store = useCesareChatStore();
+  const local = useLocalCesareChat(args, store !== null);
+
+  // Publish the live transport + page context so the store's `send` (used by
+  // BOTH the floating composer and the full-page composer) always targets the
+  // page the user currently has open.
+  const { askCesare, pageContext, onAssistantResponse } = args;
+  useEffect(() => {
+    store?.setSendDeps({ askCesare, pageContext, onAssistantResponse });
+  }, [store, askCesare, pageContext, onAssistantResponse]);
+
+  // Keep the store's active session in sync with this surface's selection.
+  const desiredSession = args.activeSessionId ?? "__pending__";
+  useEffect(() => {
+    if (!store) return;
+    if (store.activeSessionId !== desiredSession) {
+      store.selectSession(desiredSession);
+    }
+  }, [store, desiredSession]);
+
+  const storeSend = useCallback(
+    async (text: string) => {
+      await store?.send(text);
+    },
+    [store],
+  );
+  const storeSelect = useCallback(
+    (sessionId: string) => store?.selectSession(sessionId),
+    [store],
+  );
+
+  if (store) {
+    return {
+      messages: store.activeMessages,
+      isLoading: store.isLoadingFor(store.activeSessionId),
+      send: storeSend,
+      selectSession: storeSelect,
+    };
+  }
+  return local;
+};
+
+// ─── Private reducer fallback (no provider) ────────────────────────────────
+// Preserves the original self-contained lifecycle for isolated usage. `inert`
+// skips the work when a store is present so we never run two pipelines.
+const useLocalCesareChat = (
+  {
+    activeSessionId,
+    askCesare,
+    pageContext,
+    onAssistantResponse,
+  }: UseCesareChatArgs,
+  inert: boolean,
+): UseCesareChat => {
   const sessionId = activeSessionId ?? "__pending__";
   const [state, dispatch] = useReducer(
     chatReducer,
     sessionId,
     initialChatState,
   );
-
-  // Keep the active session id in a ref so the async send pipeline always
-  // dispatches against the session the bubble was created under — a swap
-  // mid-flight must not redirect the reply into the wrong thread.
   const stateRef = useRef<ChatState>(state);
   stateRef.current = state;
 
@@ -75,15 +117,14 @@ export const useCesareChat = ({
 
   const send = useCallback(
     async (text: string) => {
+      if (inert) return;
       const trimmed = text.trim();
       if (trimmed.length === 0) return;
 
-      // The bubble is owned by whichever session is active at submit time.
       const targetSession = stateRef.current.activeSessionId;
       const userMessageId = newId();
       const assistantMessageId = newId();
 
-      // A1: append both bubbles synchronously — they cannot be wiped by a swap.
       dispatch({
         type: "message/send",
         sessionId: targetSession,
@@ -104,7 +145,6 @@ export const useCesareChat = ({
         return;
       }
 
-      // History excludes the just-sent bubble (the server appends `message`).
       const history = activeThread(stateRef.current)
         .filter((m) => m.id !== userMessageId && m.id !== assistantMessageId)
         .filter((m) => m.content.length > 0)
@@ -118,8 +158,6 @@ export const useCesareChat = ({
         conversationHistory: history,
       };
 
-      // A2: prefer the streamed transport. Step events feed the live trace; the
-      // terminal `done` carries the final reply (with legacy markers intact).
       let finalReply: string | null = null;
       let streamFailed = false;
       try {
@@ -143,8 +181,6 @@ export const useCesareChat = ({
         streamFailed = true;
       }
 
-      // Fallback to the non-streaming server fn when the stream produced no
-      // usable reply (transport down, or server emitted an `error` event).
       if (finalReply === null || streamFailed) {
         const shape = await askCesare({
           data: {
@@ -182,20 +218,13 @@ export const useCesareChat = ({
         });
       }
     },
-    [askCesare, onAssistantResponse, pageContext],
+    [inert, askCesare, onAssistantResponse, pageContext],
   );
 
   const messages = activeThread(state);
-  // Loading is state-driven (reactive): any assistant bubble still `pending`
-  // means a turn is in flight in the visible thread.
   const isLoading = messages.some(
     (m) => m.role === "assistant" && m.status === "pending",
   );
 
-  return {
-    messages,
-    isLoading,
-    send,
-    selectSession,
-  };
+  return { messages, isLoading, send, selectSession };
 };

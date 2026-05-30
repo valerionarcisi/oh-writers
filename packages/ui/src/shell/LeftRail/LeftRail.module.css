@@ -323,6 +323,61 @@
   font-weight: 500;
 }
 
+/* ── Account row (footer) ──────────────────────────────────── */
+/* Spec 47b FIX 1: bell / avatar / gear live here — the single home for the
+   account actions (no longer in the BottomDock or the Cesare header). */
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 6px var(--ds-space-2);
+  border-block-start: 1px solid var(--ds-line);
+}
+
+.accountBtn {
+  position: relative;
+  inline-size: 30px;
+  block-size: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  color: var(--ds-text-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.accountAvatar {
+  margin-inline-start: auto;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--ds-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--ds-line);
+}
+
+.accountDot {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-end: 5px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--ds-danger);
+  border: 1.5px solid var(--ds-surface-alt);
+}
+
 /* ── Tools row ─────────────────────────────────────────────── */
 .tools {
   display: grid;

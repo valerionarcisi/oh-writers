@@ -28,10 +28,15 @@ import type {
   ProjectSwitcherItem,
   DropdownMenuItem,
   RailToolItem,
+  RailAccountActions,
   CesareSessionItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
-import { CesareSheet, parseToolsExecuted } from "~/features/predictions";
+import {
+  CesareSheet,
+  parseToolsExecuted,
+  CesareChatStoreProvider,
+} from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
 import { switchToVersion } from "~/features/documents";
@@ -75,6 +80,7 @@ import {
 import { ensurePageTraceRegistry } from "../page-trace-registry";
 import { isCesarePeek } from "../cesare-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
+import { CesareLiveDiff } from "./CesareLiveDiff";
 import styles from "./AppShell.module.css";
 
 ensurePageTraceRegistry();
@@ -177,7 +183,12 @@ export function AppShell(props: AppShellProps) {
           <CesareNotificationProvider>
             <SplitDrawerProvider>
               <CesareSessionFocusProvider>
-                <AppShellInner {...props} />
+                {/* Spec 47b FIX 2 — the shared chat store wraps both the
+                    floating sheet and the full-page session route so they
+                    render the SAME threads (single chat container). */}
+                <CesareChatStoreProvider>
+                  <AppShellInner {...props} />
+                </CesareChatStoreProvider>
               </CesareSessionFocusProvider>
             </SplitDrawerProvider>
           </CesareNotificationProvider>
@@ -193,7 +204,6 @@ function AppShellInner({
   sectionName = "",
   activeSegment = "",
   projects,
-  userMenuItems,
   projectId,
   cesarePage,
   cesareSessions,
@@ -785,6 +795,20 @@ function AppShellInner({
     [openPalette, router, handleBrandClick],
   );
 
+  // ── Rail account row (bell / avatar / gear) ──────────────────
+  // Spec 47b FIX 1: the account actions live ONLY in the rail footer. The
+  // BottomDock and the Cesare header no longer render them.
+  const railAccount = useMemo<RailAccountActions>(
+    () => ({
+      onBell: openBellDrawer,
+      onAvatar: handleSettings,
+      onGear: handleSettings,
+      hasUnreadNotifications: hasUnseen,
+      avatarLabel: deriveInitials(user.name),
+    }),
+    [openBellDrawer, handleSettings, hasUnseen, user.name],
+  );
+
   // ── Rail sections (Sviluppo / Produzione / Recenti) ──────────
   const railSections = useMemo(() => {
     if (!projectId) {
@@ -860,13 +884,6 @@ function AppShellInner({
           onAssistantResponse={handleCesareAssistantResponse}
           focusedSessionId={focusedSessionId}
           onActiveSessionChange={setFocusedSessionId}
-          dockIcons={{
-            onBell: openBellDrawer,
-            onAvatar: handleSettings,
-            onGear: handleSettings,
-            hasUnreadNotifications: hasUnseen,
-            avatarLabel: deriveInitials(user.name),
-          }}
         />
       );
     },
@@ -885,10 +902,6 @@ function AppShellInner({
       handleCesareAssistantResponse,
       focusedSessionId,
       setFocusedSessionId,
-      openBellDrawer,
-      handleSettings,
-      hasUnseen,
-      user.name,
     ],
   );
 
@@ -913,6 +926,7 @@ function AppShellInner({
               onSessionSelect={onCesareSessionSelect}
               onSessionNew={onCesareSessionNew}
               onSessionsOpen={onCesareSessionsOpen}
+              account={railAccount}
               tools={railTools}
               onNavigate={handleNavigate}
               onCollapse={
@@ -967,14 +981,12 @@ function AppShellInner({
               (hover-revealed `«`). ⌘\ still drives the full↔collapsed cycle
               from the keydown handler above. */}
 
-          <BottomDock
-            user={{ initials: deriveInitials(user.name) }}
-            hasUnseen={hasUnseen}
-            onBell={openBellDrawer}
-            onSettings={handleSettings}
-            onCesareToggle={toggleCesare}
-            userMenuItems={userMenuItems}
-          />
+          {/* Floating "Mostra modifiche" word-level coloured diff overlay
+              (Spec 47b FIX 4). Renders the diff segments broadcast by the chat
+              when the doc is visible behind the floating drawer. */}
+          <CesareLiveDiff />
+
+          <BottomDock onCesareToggle={toggleCesare} />
 
           <VersionsDrawer />
           <CommandPalette

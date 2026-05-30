@@ -1,0 +1,63 @@
+/* apps/web/app/features/app-shell/components/CesareLiveDiff.module.css
+   Spec 47b FIX 4 — floating "Mostra modifiche" word-level coloured diff overlay.
+   Anchored over the top of the main lane so the diff reads in-place on the live
+   document, clear of the bottom-right Cesare drawer. */
+.overlay {
+  position: fixed;
+  inset-block-start: 64px;
+  inset-inline: var(--ds-space-6);
+  z-index: 340;
+  max-block-size: 50vh;
+  overflow-y: auto;
+  padding: var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-block-end: var(--ds-space-2);
+  font-family: var(--ds-font-display);
+  font-size: 13px;
+  color: var(--ds-text-2);
+}
+
+.glyph {
+  color: var(--ds-agent);
+}
+
+.title {
+  font-weight: 600;
+}
+
+.body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ds-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.equal {
+  color: var(--ds-text-2);
+}
+
+.added {
+  background: var(--ds-diff-add-bg);
+  color: var(--ds-diff-add-fg);
+  border-radius: var(--ds-radius-sm);
+  padding-inline: 1px;
+}
+
+.removed {
+  background: var(--ds-diff-remove-bg);
+  color: var(--ds-diff-remove-fg);
+  border-radius: var(--ds-radius-sm);
+  padding-inline: 1px;
+  text-decoration: line-through;
+}

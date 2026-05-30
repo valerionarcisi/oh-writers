@@ -273,6 +273,64 @@ describe("LeftRail", () => {
     expect(getByLabelText("Nav Custom")).toBeTruthy();
   });
 
+  // [OHW-047-A3] Account row (bell / avatar / gear) lives in the rail footer.
+  it("renders the account footer row when account is supplied", () => {
+    const { getByTestId, getByLabelText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+        account={{
+          onBell: vi.fn(),
+          onAvatar: vi.fn(),
+          onGear: vi.fn(),
+          avatarLabel: "VN",
+        }}
+      />,
+    );
+    expect(getByTestId("rail-account")).toBeTruthy();
+    expect(getByLabelText("Notifiche")).toBeTruthy();
+    expect(getByLabelText("Profilo")).toBeTruthy();
+    expect(getByLabelText("Impostazioni")).toBeTruthy();
+  });
+
+  it("does NOT render the account row when account is omitted", () => {
+    const { queryByTestId } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(queryByTestId("rail-account")).toBeNull();
+  });
+
+  it("fires the account handlers and announces unseen notifications", () => {
+    const onBell = vi.fn();
+    const onAvatar = vi.fn();
+    const onGear = vi.fn();
+    const { getByLabelText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+        account={{
+          onBell,
+          onAvatar,
+          onGear,
+          avatarLabel: "VN",
+          hasUnreadNotifications: true,
+        }}
+      />,
+    );
+    fireEvent.click(getByLabelText("Notifiche — nuove"));
+    fireEvent.click(getByLabelText("Profilo"));
+    fireEvent.click(getByLabelText("Impostazioni"));
+    expect(onBell).toHaveBeenCalledTimes(1);
+    expect(onAvatar).toHaveBeenCalledTimes(1);
+    expect(onGear).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the rail with a data-testid hook", () => {
     const { getByTestId } = render(
       <LeftRail

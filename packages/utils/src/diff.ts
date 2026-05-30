@@ -47,6 +47,47 @@ const splitLines = (value: string): string[] => {
   return lines;
 };
 
+// ─── Word-level inline diff ───────────────────────────────────────────────
+// Flat word-level segment stream for an INLINE diff (one continuous coloured
+// run, not side-by-side rows). Used by the Cesare "Mostra modifiche" live-doc
+// overlay: equal words render plain, added words green, removed words red.
+
+export type WordDiffOp = "eq" | "add" | "del";
+
+export interface WordDiffSegment {
+  readonly op: WordDiffOp;
+  readonly text: string;
+}
+
+/**
+ * Build a flat word-level diff between `before` and `after`. Pure, no I/O.
+ * Adjacent segments of the same op are coalesced so the rendered stream stays
+ * compact. The reader sees deletion (red) inline before its replacement
+ * insertion (green), with unchanged text plain.
+ */
+export const buildWordDiffSegments = (
+  before: string,
+  after: string,
+): WordDiffSegment[] => {
+  const parts = diffWordsWithSpace(before, after);
+  const segments: WordDiffSegment[] = [];
+  const push = (op: WordDiffOp, text: string) => {
+    if (text === "") return;
+    const last = segments[segments.length - 1];
+    if (last && last.op === op) {
+      segments[segments.length - 1] = { op, text: last.text + text };
+      return;
+    }
+    segments.push({ op, text });
+  };
+  for (const p of parts) {
+    if (p.added) push("add", p.value);
+    else if (p.removed) push("del", p.value);
+    else push("eq", p.value);
+  }
+  return segments;
+};
+
 /**
  * Build side-by-side diff rows for two strings. Pure, no I/O.
  *

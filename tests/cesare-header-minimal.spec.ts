@@ -1,18 +1,17 @@
 // tests/cesare-header-minimal.spec.ts
 //
-// [OHW-047-A3] Cesare header command trim (Notion-minimal).
+// [OHW-047-A3] Cesare header command trim (Notion-minimal) + account row home.
 //
-// The Cesare drawer header must show ONLY the allowed primary icons —
-// `↗ Espandi`, `… Altre azioni`, `− Minimizza`, `× Chiudi`. Every secondary
-// action (bell / avatar / gear carried from the dock, new chat, share/export,
-// step-back) lives inside the `…` overflow popover (react-aria menu) and must
-// NOT sit inline in the header. Spec 47 task A3 + Spec 44 drawer-header model.
+// Spec 47b FIX 1: the Cesare drawer header is truly minimal — agent name +
+// session selector + `↗ Espandi`, `− Minimizza`, `× Chiudi`. There is NO `…`
+// overflow. Bell / avatar / gear are NOT in the header and NOT in the
+// BottomDock; they live ONLY in the LeftRail FOOTER account row.
 import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
 
-test.describe("[OHW-047-A3] Cesare header is Notion-minimal", () => {
-  test("header shows only the allowed primary icons and the overflow opens", async ({
+test.describe("[OHW-047-A3] Cesare header is Notion-minimal; account row in rail footer", () => {
+  test("header has no overflow; bell/avatar/gear live in the rail footer, not the dock or header", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
@@ -20,26 +19,47 @@ test.describe("[OHW-047-A3] Cesare header is Notion-minimal", () => {
       timeout: 15_000,
     });
 
-    // Open Cesare via the BottomDock.
+    // ── The rail footer account row is the single home for bell/avatar/gear ──
+    const account = page.getByTestId("rail-account");
+    await expect(account).toBeVisible({ timeout: 10_000 });
+    await expect(
+      account.getByRole("button", { name: "Notifiche" }),
+    ).toBeVisible();
+    await expect(
+      account.getByRole("button", { name: "Profilo" }),
+    ).toBeVisible();
+    await expect(
+      account.getByRole("button", { name: "Impostazioni" }),
+    ).toBeVisible();
+
+    // ── The BottomDock no longer renders bell/settings — only the Cesare pill ─
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible({ timeout: 5_000 });
-    await dock.getByLabel("Apri Cesare").click();
+    await expect(
+      dock.getByRole("button", { name: "Apri Cesare" }),
+    ).toBeVisible();
+    await expect(dock.getByRole("button", { name: /Notifiche/ })).toHaveCount(
+      0,
+    );
+    await expect(
+      dock.getByRole("button", { name: /Impostazioni/ }),
+    ).toHaveCount(0);
 
+    // ── Open Cesare and assert the minimal header ────────────────────────────
+    await dock.getByRole("button", { name: "Apri Cesare" }).click();
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
-    // ── Allowed primary icons are visible ─────────────────────────────────
     await expect(drawer.getByRole("button", { name: "Espandi" })).toBeVisible();
-    await expect(
-      drawer.getByRole("button", { name: "Altre azioni" }),
-    ).toBeVisible();
     await expect(
       drawer.getByRole("button", { name: "Minimizza" }),
     ).toBeVisible();
     await expect(drawer.getByRole("button", { name: "Chiudi" })).toBeVisible();
 
-    // ── Secondary actions are NOT inline in the header ────────────────────
-    // Bell / avatar / gear and step-back moved into the `…` overflow.
+    // No `…` overflow trigger and no account icons inside the header.
+    await expect(
+      drawer.getByRole("button", { name: "Altre azioni" }),
+    ).toHaveCount(0);
     await expect(
       drawer.getByRole("button", { name: "Notifiche", exact: true }),
     ).toHaveCount(0);
@@ -49,26 +69,5 @@ test.describe("[OHW-047-A3] Cesare header is Notion-minimal", () => {
     await expect(
       drawer.getByRole("button", { name: "Impostazioni", exact: true }),
     ).toHaveCount(0);
-
-    // ── The `…` overflow opens and surfaces the secondary actions ─────────
-    await drawer.getByRole("button", { name: "Altre azioni" }).click();
-    const menu = page.getByTestId("cesare-overflow-menu");
-    await expect(menu).toBeVisible({ timeout: 3_000 });
-    await expect(
-      menu.getByRole("menuitem", { name: "Nuova conversazione" }),
-    ).toBeVisible();
-    await expect(
-      menu.getByRole("menuitem", { name: /Notifiche/ }),
-    ).toBeVisible();
-    await expect(
-      menu.getByRole("menuitem", { name: "Impostazioni" }),
-    ).toBeVisible();
-
-    // Clicking outside closes the overflow without dismissing the drawer.
-    await page.getByTestId("breakdown-page-v2").click({
-      position: { x: 5, y: 5 },
-    });
-    await expect(menu).toBeHidden();
-    await expect(drawer).toBeVisible();
   });
 });
