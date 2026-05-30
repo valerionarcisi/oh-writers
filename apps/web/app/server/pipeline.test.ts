@@ -8,11 +8,15 @@ vi.mock("~/server/db", () => ({
 }));
 vi.mock("~/server/access", () => ({
   requireProjectAccess: vi.fn(),
+  requireProjectAccessWithHeaders: vi.fn(),
 }));
 
-import { withProjectAccess } from "./pipeline";
+import { withProjectAccess, withProjectAccessHeaders } from "./pipeline";
 import { getDb } from "~/server/db";
-import { requireProjectAccess } from "~/server/access";
+import {
+  requireProjectAccess,
+  requireProjectAccessWithHeaders,
+} from "~/server/access";
 
 const PROJECT_ID = "00000000-0000-4000-a000-000000000010";
 const FAKE_DB = { __brand: "fake-db" } as never;
@@ -78,6 +82,56 @@ describe("withProjectAccess", () => {
 
     expect(result.isErr()).toBe(true);
     if (result.isErr()) expect(result.error).toBeInstanceOf(DbError);
+    expect(body).not.toHaveBeenCalled();
+  });
+
+  it("withProjectAccessHeaders resolves access from the passed Headers (stream-route path)", async () => {
+    vi.mocked(requireProjectAccessWithHeaders).mockReturnValue(
+      ResultAsync.fromSafePromise(Promise.resolve(FAKE_ACCESS)),
+    );
+    const headers = new Headers({ cookie: "ohw.session=abc" });
+    const body = vi.fn((ctx) =>
+      ResultAsync.fromSafePromise(Promise.resolve(ctx.access.project.id)),
+    );
+
+    const result = await withProjectAccessHeaders(
+      PROJECT_ID,
+      "view",
+      headers,
+      body,
+    );
+
+    expect(result.isOk()).toBe(true);
+    // The headers object is forwarded verbatim to the access resolver — this is
+    // the fix for the stream-route 403 (session resolved from request headers,
+    // not ambient getWebRequest()).
+    expect(requireProjectAccessWithHeaders).toHaveBeenCalledWith(
+      FAKE_DB,
+      PROJECT_ID,
+      "view",
+      headers,
+    );
+    expect(body).toHaveBeenCalledTimes(1);
+  });
+
+  it("withProjectAccessHeaders short-circuits Forbidden when no session in headers", async () => {
+    vi.mocked(requireProjectAccessWithHeaders).mockReturnValue(
+      ResultAsync.fromPromise(
+        Promise.reject(new ForbiddenError("read project")),
+        (e) => e as ForbiddenError,
+      ),
+    );
+    const body = vi.fn();
+
+    const result = await withProjectAccessHeaders(
+      PROJECT_ID,
+      "view",
+      new Headers(),
+      body,
+    );
+
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) expect(result.error).toBeInstanceOf(ForbiddenError);
     expect(body).not.toHaveBeenCalled();
   });
 
