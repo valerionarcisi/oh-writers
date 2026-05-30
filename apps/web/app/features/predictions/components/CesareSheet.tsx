@@ -46,6 +46,8 @@ import {
   useCreateSession,
   type CesareSession,
 } from "~/features/predictions/sessions";
+import { useCesareChat } from "../use-cesare-chat";
+import type { ChatMessage, TraceStep } from "../use-cesare-chat-reducer";
 import styles from "./CesareSheet.module.css";
 
 /**
@@ -270,11 +272,6 @@ const QUICK_PROMPTS_INITIAL: Record<CesarePage, string[]> = {
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
 
 function stripToolCalls(content: string): string {
   return content
@@ -632,18 +629,10 @@ export function CesareSheet({
   }, [isOpen]);
 
   // ── Chat state ──────────────────────────────────────────────────────────
-  // `messages` is the source of truth for the UI; `messagesRef` mirrors it so
-  // the async send pipeline can read the latest history WITHOUT closing over
-  // a stale value (the alternative — running side effects inside a state
-  // updater function — fires twice in React StrictMode and races with the
-  // `setIsLoading` reset). See spec 44 WP-CHAT-FIX.
-  const [messages, setMessages] = useState<Message[]>([]);
-  const messagesRef = useRef<Message[]>([]);
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+  // Spec 47a: the chat lifecycle (optimistic bubbles, per-session threads,
+  // delivery status, streamed live trace) is owned by `useCesareChat`. The
+  // composer value stays local because it is purely a controlled-input concern.
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   // ── Sessions ────────────────────────────────────────────────────────────
   const sessionsQuery = useSessions(projectId);
@@ -657,24 +646,79 @@ export function CesareSheet({
     if (first) setActiveSessionId(first.id);
   }, [sessionsQuery.data, activeSessionId]);
 
-  // Switching the active session resets the in-memory chat so the user sees
-  // a clean slate. Persisted-history hydration is a follow-up.
+  // ── Assistant-reply side channels ────────────────────────────────────────
+  // The final reply still carries the legacy `<!--ohw:…-->` markers (Spec 47a
+  // keeps them in `done.result`). After the turn lands we dispatch the same DOM
+  // events the legacy sheet emitted so the editor's blocking/rewrite stores and
+  // AppShell's notification/invalidation flow keep working unchanged.
+  const handleAssistantSideChannels = useCallback(
+    (content: string) => {
+      onAssistantResponse?.(content);
+      if (typeof window === "undefined") return;
+
+      const proposal = parseBlockingProposalMarker(content);
+      if (proposal) {
+        window.dispatchEvent(
+          new CustomEvent("ohw:cesare:blocking-proposal", { detail: proposal }),
+        );
+      }
+
+      const rewrite = parseRewriteSceneMarker(content);
+      if (rewrite) {
+        try {
+          window.sessionStorage.setItem(
+            "ohw:cesare:pending-rewrite",
+            JSON.stringify({ ...rewrite, projectId, ts: Date.now() }),
+          );
+        } catch {
+          // sessionStorage may be unavailable (private mode, iframe).
+        }
+        window.dispatchEvent(
+          new CustomEvent("ohw:cesare:rewrite-scene", { detail: rewrite }),
+        );
+        if (page === "screenplay") drawer.peek();
+      }
+    },
+    [onAssistantResponse, projectId, page, drawer],
+  );
+
+  // ── Send pipeline (stream-first, askCesare fallback) ─────────────────────
+  const chat = useCesareChat({
+    activeSessionId,
+    askCesare,
+    pageContext: {
+      projectId,
+      page,
+      sceneId: sceneId ?? null,
+      sceneNumber: sceneNumber ?? null,
+      requirementId: requirementId ?? null,
+      documentId: documentId ?? null,
+      shootingDayId: shootingDayId ?? null,
+      shootingDayNumber: shootingDayNumber ?? null,
+    },
+    onAssistantResponse: handleAssistantSideChannels,
+  });
+  const messages = chat.messages;
+  const isLoading = chat.isLoading;
+
+  // Switching the active session keeps each thread intact (A1): a swap can
+  // never wipe a just-sent bubble — it only changes which thread is visible.
   const handleSessionSelect = useCallback(
     (sessionId: string) => {
       if (sessionId === activeSessionId) return;
       setActiveSessionId(sessionId);
-      setMessages([]);
+      chat.selectSession(sessionId);
       setInput("");
     },
-    [activeSessionId],
+    [activeSessionId, chat],
   );
 
   const handleSessionNew = useCallback(async () => {
     const result = await createSession.mutateAsync(undefined);
     setActiveSessionId(result.id);
-    setMessages([]);
+    chat.selectSession(result.id);
     setInput("");
-  }, [createSession]);
+  }, [createSession, chat]);
 
   const drawerSessions = useMemo(
     () => toDrawerSessions(sessionsQuery.data ?? [], activeSessionId),
@@ -788,126 +832,18 @@ export function CesareSheet({
     );
   }, []);
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || isLoading) return;
-      const userMessage: Message = { role: "user", content: trimmed };
-
-      // History is captured BEFORE we push the user's message so the server
-      // gets the same conversation the UI rendered. We read from the ref to
-      // avoid the stale-closure trap that would otherwise force us to do the
-      // work inside a setMessages updater (which fires its side effects
-      // twice in React StrictMode and races with the `setIsLoading` reset).
-      const historyForCall = messagesRef.current;
-
-      // Append the user bubble + reset the composer synchronously — the user
-      // must see the bubble + cleared input even if the server call fails.
-      setMessages((prev) => [...prev, userMessage]);
-      setInput("");
-      setIsLoading(true);
-
-      if (!askCesare) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content:
-              "Cesare non è ancora disponibile su questa sezione. Tornerà presto.",
-          },
-        ]);
-        setIsLoading(false);
-        return;
-      }
-
-      // Side-channel dispatching lives in plain async land (no state-updater
-      // boundary). `try/finally` guarantees the composer re-enables itself
-      // even if the server fn throws.
-      try {
-        const shape = await askCesare({
-          data: {
-            projectId,
-            message: trimmed,
-            pageContext: {
-              page,
-              sceneId: sceneId ?? null,
-              sceneNumber: sceneNumber ?? null,
-              requirementId: requirementId ?? null,
-              documentId: documentId ?? null,
-              shootingDayId: shootingDayId ?? null,
-              shootingDayNumber: shootingDayNumber ?? null,
-            },
-            conversationHistory: historyForCall,
-          },
-        });
-        const content = shape.isOk
-          ? shape.value
-          : "Mi dispiace, si è verificato un errore. Riprova.";
-        setMessages((prev) => [...prev, { role: "assistant", content }]);
-        onAssistantResponse?.(content);
-
-        if (typeof window !== "undefined") {
-          const proposal = parseBlockingProposalMarker(content);
-          if (proposal) {
-            window.dispatchEvent(
-              new CustomEvent("ohw:cesare:blocking-proposal", {
-                detail: proposal,
-              }),
-            );
-          }
-          const rewrite = parseRewriteSceneMarker(content);
-          if (rewrite) {
-            try {
-              window.sessionStorage.setItem(
-                "ohw:cesare:pending-rewrite",
-                JSON.stringify({
-                  ...rewrite,
-                  projectId,
-                  ts: Date.now(),
-                }),
-              );
-            } catch {
-              // sessionStorage may be unavailable (private mode, iframe).
-            }
-            window.dispatchEvent(
-              new CustomEvent("ohw:cesare:rewrite-scene", {
-                detail: rewrite,
-              }),
-            );
-            if (page === "screenplay") {
-              drawer.peek();
-            }
-          }
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [
-      askCesare,
-      drawer,
-      isLoading,
-      onAssistantResponse,
-      projectId,
-      page,
-      sceneId,
-      sceneNumber,
-      requirementId,
-      documentId,
-      shootingDayId,
-      shootingDayNumber,
-    ],
-  );
-
   const handleSubmit = useCallback(() => {
-    void sendMessage(input);
-  }, [input, sendMessage]);
+    if (isLoading) return;
+    const text = input;
+    setInput("");
+    void chat.send(text);
+  }, [input, isLoading, chat]);
 
   const handleQuickPrompt = useCallback(
     (prompt: string) => {
-      void sendMessage(prompt);
+      void chat.send(prompt);
     },
-    [sendMessage],
+    [chat],
   );
 
   // ── Scopes shown above the composer ─────────────────────────────────────
@@ -934,10 +870,10 @@ export function CesareSheet({
   // ── Body composition ────────────────────────────────────────────────────
   const conversationBody: ReactNode = (
     <div className={styles.conversation} data-testid="cesare-conversation">
-      {messages.length === 0 && !isLoading && <EmptyState page={page} />}
-      {messages.map((m, i) => (
+      {messages.length === 0 && <EmptyState page={page} />}
+      {messages.map((m) => (
         <MessageView
-          key={`msg-${i}-${m.role}`}
+          key={m.id}
           message={m}
           page={page}
           onShowChangesForRewrite={handleShowChangesForRewrite}
@@ -946,8 +882,7 @@ export function CesareSheet({
           onUndoDocApply={handleUndoDocApply}
         />
       ))}
-      {isLoading && <LoadingIndicator />}
-      {!isLoading && messages.length === 0 && (
+      {messages.length === 0 && (
         <QuickPrompts page={page} onSelect={handleQuickPrompt} />
       )}
     </div>
@@ -1024,7 +959,7 @@ function MessageView({
   onToggleLiveDiff,
   onUndoDocApply,
 }: {
-  message: Message;
+  message: ChatMessage;
   page: CesarePage;
   onShowChangesForRewrite: (rewrite: {
     scene_number: number;
@@ -1053,12 +988,45 @@ function MessageView({
   }, [onToggleLiveDiff]);
 
   if (message.role === "user") {
+    // A1: the bubble carries a delivery status. `pending` shows a spinner dot,
+    // `failed` tints the bubble + surfaces the failure (retry lives in the
+    // failed assistant text). `delivered` shows nothing extra.
     return (
-      <div className={styles.bubbleUser}>
+      <div
+        className={[
+          styles.bubbleUser,
+          message.status === "failed" ? styles.bubbleUserFailed : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        data-testid="cesare-user-bubble"
+        data-status={message.status}
+      >
         <p className={styles.bubbleText}>{message.content}</p>
+        {message.status === "pending" && (
+          <span
+            className={styles.bubbleStatusDot}
+            aria-label="Invio in corso"
+            data-testid="cesare-bubble-pending"
+          />
+        )}
+        {message.status === "failed" && (
+          <span className={styles.bubbleStatusFailed}>Invio non riuscito</span>
+        )}
       </div>
     );
   }
+
+  // Assistant turn still in flight (A2): render the live trace from the streamed
+  // step events while the reply is empty + pending.
+  if (message.status === "pending") {
+    return message.trace.length > 0 ? (
+      <LiveTrace steps={message.trace} />
+    ) : (
+      <LoadingIndicator />
+    );
+  }
+
   const metadata = extractStepBlockMetadata(message.content);
   const rendered = renderMarkdown(message.content);
   const hasStepBlock = metadata.toolCount > 0;
@@ -1127,6 +1095,65 @@ function LoadingIndicator() {
           className={[styles.skeletonLine, styles.skeletonShort].join(" ")}
         />
       </div>
+    </div>
+  );
+}
+
+// ─── Live trace (A2) ─────────────────────────────────────────────────────────
+// Renders the streamed step events as the inline Step Block while the assistant
+// turn is in flight. Each step shows a verb + entity ("sta leggendo
+// Sceneggiatura", "sta scrivendo Soggetto"); the latest step is mirrored into an
+// aria-live region so screen readers and E2E observe progress in real time.
+
+const TRACE_VERB: Record<TraceStep["kind"], string> = {
+  reasoning: "Sto ragionando",
+  reading: "Sto leggendo",
+  writing: "Sto scrivendo",
+  tool: "Eseguo",
+};
+
+function LiveTrace({ steps }: { steps: ReadonlyArray<TraceStep> }) {
+  const last = steps[steps.length - 1];
+  const liveLabel = last
+    ? `Cesare ${TRACE_VERB[last.kind].toLowerCase()}${
+        last.entity ? ` ${last.entity.label}` : ""
+      }`
+    : "Cesare sta lavorando";
+  return (
+    <div
+      className={styles.liveTrace}
+      data-testid="cesare-live-trace"
+      aria-busy="true"
+    >
+      <ul className={styles.liveTraceList}>
+        {steps.map((step, i) => (
+          <li
+            key={`${step.kind}-${i}-${step.text}`}
+            className={styles.liveTraceStep}
+            data-step-kind={step.kind}
+            data-entity-domain={step.entity?.domain ?? ""}
+          >
+            <span className={styles.liveTraceVerb}>
+              {TRACE_VERB[step.kind]}
+            </span>
+            {step.kind === "reasoning" ? (
+              <span className={styles.liveTraceText}>{step.text}</span>
+            ) : (
+              <span className={styles.liveTraceEntity}>
+                {step.entity ? step.entity.label : step.text}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <span
+        className={styles.liveTraceStatus}
+        role="status"
+        aria-live="polite"
+        data-testid="cesare-live-status"
+      >
+        {liveLabel}…
+      </span>
     </div>
   );
 }

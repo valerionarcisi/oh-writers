@@ -26,6 +26,9 @@
 
 .bubbleUser {
   align-self: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
   max-inline-size: 92%;
   padding-inline: var(--ds-space-3);
   padding-block: var(--ds-space-2);
@@ -353,4 +356,98 @@
   &:hover {
     background: color-mix(in oklch, var(--ds-agent) 6%, transparent);
   }
+}
+
+/* ─── Message delivery status (A1) ─────────────────────────────────────────── */
+
+.bubbleUserFailed {
+  border: 1px solid color-mix(in oklch, var(--ds-danger) 45%, transparent);
+  background: var(--ds-danger-soft);
+}
+
+.bubbleStatusDot {
+  align-self: flex-end;
+  inline-size: var(--ds-space-2);
+  block-size: var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in oklch, var(--ds-agent) 60%, transparent);
+  animation: cesarePulse 900ms var(--ds-ease, ease-in-out) infinite;
+}
+
+.bubbleStatusFailed {
+  align-self: flex-end;
+  font-size: 0.6875rem;
+  color: var(--ds-danger);
+}
+
+@keyframes cesarePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubbleStatusDot {
+    animation: none;
+  }
+}
+
+/* ─── Live trace (A2) ──────────────────────────────────────────────────────── */
+
+.liveTrace {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  max-inline-size: 92%;
+  padding-inline-start: var(--ds-space-3);
+  border-inline-start: 2px solid
+    color-mix(in oklch, var(--ds-agent) 28%, transparent);
+}
+
+.liveTraceList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.liveTraceStep {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+  font-family: var(--ds-font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ds-text-2, var(--ds-text));
+}
+
+.liveTraceVerb {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+.liveTraceEntity {
+  font-weight: 600;
+  color: var(--ds-agent);
+}
+
+.liveTraceText {
+  color: var(--ds-text-2, var(--ds-text));
+  word-break: break-word;
+}
+
+.liveTraceStatus {
+  font-size: 0.75rem;
+  color: var(--ds-text-faint);
+  font-style: italic;
 }

@@ -23,7 +23,10 @@ import {
 } from "@oh-writers/db/schema";
 import type { DocumentType } from "@oh-writers/domain";
 import { toShape, repairMojibake } from "@oh-writers/utils";
-import { withProjectAccess } from "~/server/pipeline";
+import {
+  withProjectAccess,
+  type WithProjectAccessCtx,
+} from "~/server/pipeline";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
 import { generateText } from "ai";
@@ -57,6 +60,7 @@ import { buildDocumentEditSkill } from "./skills/document-edit.skill";
 import type { SkillBuildContext } from "./skills/types";
 import { buildGlobalContext, assembleSystemPromptV2 } from "./context";
 import { buildLocalContext } from "./context/local-context.server";
+import type { CesareStreamEvent } from "./cesare-stream-events";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
 
@@ -1978,6 +1982,7 @@ const callCesareV2 = (
   executor: import("./skills/types").SkillExecutor,
   tools: readonly import("./skills/types").AnthropicTool[],
   model: string,
+  onStreamEvent?: (event: CesareStreamEvent) => void,
 ): ResultAsync<string, CesareError> => {
   const messages = [
     ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
@@ -1992,6 +1997,7 @@ const callCesareV2 = (
     projectId,
     access,
     model,
+    onStreamEvent,
   );
 };
 
@@ -2001,6 +2007,7 @@ const handleAskCesareV2 = (
   data: CesareInput,
   db: Db,
   access: ProjectAccess,
+  onStreamEvent?: (event: CesareStreamEvent) => void,
 ): ResultAsync<string, CesareError> => {
   if (
     process.env["MOCK_AI"] === "true" &&
@@ -2116,6 +2123,7 @@ const handleAskCesareV2 = (
             executor,
             tools,
             model,
+            onStreamEvent,
           ).map((reply) => {
             emitCesareMetricEvent(
               data.pageContext.page,
@@ -2206,6 +2214,40 @@ export const askCesare = createServerFn({ method: "POST" })
       ),
     ),
   );
+
+// ─── Streaming entry (spec 47a / A2) ──────────────────────────────────────────
+// Shared by the `/api/cesare/stream` route. Re-exports the input schema so the
+// route validates against the same contract `askCesare` uses, and runs the SAME
+// V2 handler with a live step-event sink. Auth is gated through
+// `withProjectAccess` exactly like `askCesare`, so the Anthropic key never
+// reaches the client and project access is enforced identically.
+export { CesareInputSchema };
+
+// The ambient request context (`getWebRequest`) is only available while the
+// route handler is executing — NOT inside the `ReadableStream.start` callback,
+// which the runtime pulls asynchronously after the Response is returned. So the
+// route resolves project access eagerly (`resolveCesareStreamAccess`) WHILE the
+// context is live, then runs the tool loop with the resolved handle inside the
+// stream (`runCesareStreamWithAccess`). This keeps auth identical to `askCesare`
+// without leaking the request context into the stream body.
+export type CesareStreamAccess = WithProjectAccessCtx;
+
+export const resolveCesareStreamAccess = (
+  projectId: string,
+): ResultAsync<
+  CesareStreamAccess,
+  import("~/server/access").ProjectAccessError
+> =>
+  withProjectAccess(projectId, "view", (ctx) =>
+    ResultAsync.fromSafePromise(Promise.resolve(ctx)),
+  );
+
+export const runCesareStreamWithAccess = (
+  data: CesareInput,
+  access: CesareStreamAccess,
+  onStreamEvent: (event: CesareStreamEvent) => void,
+): ResultAsync<string, CesareError> =>
+  handleAskCesareV2(data, access.db, access.access, onStreamEvent);
 
 // Test-only mock-context setter lives in the API route
 // `/api/test/mock-context` so it can be hit from Playwright without going

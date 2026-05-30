@@ -34,6 +34,8 @@ import {
   type MissingLineProposal,
 } from "./cesare-budget-intelligence";
 import type { DocumentType } from "@oh-writers/domain";
+import type { CesareStreamEvent } from "./cesare-stream-events";
+import { mappingForTool, entityRefForDomain } from "./cesare-tool-entity-map";
 import {
   estimateSceneCost,
   DEFAULT_PRODUCTION_RATES,
@@ -2511,7 +2513,39 @@ interface RunToolLoopArgs {
   legacyMockClient?: LegacyAnthropicClient;
   /** Legacy tool definitions array — required only alongside legacyMockClient. */
   legacyTools?: readonly unknown[];
+  /**
+   * Spec 47a (A2) — optional sink for live step events. When provided, the loop
+   * emits `reasoning | reading | writing | tool` events as steps finish, then a
+   * terminal `done`. The streaming route (`/api/cesare/stream`) supplies this;
+   * the non-streaming `askCesare` path leaves it undefined so behaviour is
+   * identical to before.
+   */
+  onStreamEvent?: (event: CesareStreamEvent) => void;
 }
+
+/**
+ * Spec 47a (A2) — translate one completed tool call into a step event and push
+ * it to the sink. A `read_*` tool emits `reading{entity}`, a mutating tool emits
+ * `writing{entity}`, and an unmapped tool falls back to a raw `tool` event. The
+ * entity is the tool's TARGET domain (cross-domain aware), not the page.
+ */
+const emitToolStep = (
+  toolName: string,
+  onStreamEvent: ((event: CesareStreamEvent) => void) | undefined,
+): void => {
+  if (!onStreamEvent) return;
+  const mapping = mappingForTool(toolName);
+  if (!mapping) {
+    onStreamEvent({ _tag: "tool", name: toolName });
+    return;
+  }
+  const entity = entityRefForDomain(mapping.domain);
+  onStreamEvent(
+    mapping.access === "read"
+      ? { _tag: "reading", entity }
+      : { _tag: "writing", entity },
+  );
+};
 
 // ─── Legacy client interface (MOCK_AI=true only) ──────────────────────────────
 
@@ -2633,7 +2667,10 @@ const runLegacyToolLoop = (
         );
 
         for (const tb of textBlocks) {
-          if (tb.text.trim()) textAccumulator.push(tb.text.trim());
+          if (tb.text.trim()) {
+            textAccumulator.push(tb.text.trim());
+            args.onStreamEvent?.({ _tag: "reasoning", text: tb.text.trim() });
+          }
         }
 
         if (response.stop_reason !== "tool_use" || toolBlocks.length === 0) {
@@ -2653,6 +2690,7 @@ const runLegacyToolLoop = (
             });
           } else {
             toolsExecuted += 1;
+            emitToolStep(block.name, args.onStreamEvent);
             toolResults.push(result.value);
             extractSideChannelMarkers(
               block.name,
@@ -2770,15 +2808,25 @@ const runGenericToolLoop = (
           for (const part of stepResult.text
             ? [{ text: stepResult.text }]
             : []) {
-            if (part.text.trim()) textAccumulator.push(part.text.trim());
+            if (part.text.trim()) {
+              textAccumulator.push(part.text.trim());
+              // Spec 47a — surface the model's planning text as a live
+              // `reasoning` step so the trace shows progress before any tool
+              // resolves.
+              args.onStreamEvent?.({
+                _tag: "reasoning",
+                text: part.text.trim(),
+              });
+            }
           }
-          // Count tool invocations and extract side-channel markers
+          // Count tool invocations, emit live step events, extract markers.
           for (const toolCall of stepResult.toolCalls ?? []) {
             const toolResult = (stepResult.toolResults ?? []).find(
               (r) => r.toolCallId === toolCall.toolCallId,
             );
             if (toolResult) {
               toolsExecuted += 1;
+              emitToolStep(toolCall.toolName, args.onStreamEvent);
               extractSideChannelMarkers(
                 toolCall.toolName,
                 JSON.stringify(toolResult.output),
@@ -4176,6 +4224,7 @@ export const runUnifiedToolLoop = (
   projectId: string,
   access: ProjectAccess,
   model: string,
+  onStreamEvent?: (event: CesareStreamEvent) => void,
 ): ResultAsync<string, CesareError> => {
   const sdkTools = bridgeLegacyTools(
     tools as readonly AnthropicTool[],
@@ -4194,5 +4243,6 @@ export const runUnifiedToolLoop = (
     mockModel: resolveMockModel(),
     executor: (block, dbArg, projectIdArg) =>
       executor(block, dbArg, projectIdArg, access),
+    ...(onStreamEvent ? { onStreamEvent } : {}),
   });
 };
