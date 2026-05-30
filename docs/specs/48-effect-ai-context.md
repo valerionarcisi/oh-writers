@@ -74,6 +74,16 @@ Concretely:
 - `features/ai/anthropic-client.ts` → becomes the **`AnthropicClient` Layer**:
   the single place that owns retry / timeout / rate-limit / circuit-breaker for
   every Anthropic call in the app.
+  - **Captured idea — BYOK (build later, after this Layer exists):** let the user
+    save their own Anthropic API key + pick a default model (Haiku/Sonnet/Opus).
+    The `AnthropicClient` Layer is the single injection point — it resolves
+    key+model from the user context instead of the env. Security (non-negotiable,
+    per CLAUDE.md): the key is encrypted at-rest (never plaintext in the DB),
+    never logged, never returned to the client, never sent to Langfuse; all
+    Anthropic calls stay server-side; validate the key without exposing it; handle
+    revoke/expiry/foreign-key rate-limits. Model choice hooks into
+    `cesare-model-router.ts`. Scope decided: encrypted-key + model choice (not
+    multi-provider). Spec it out when we reach it.
 - LLM+db distillers: `bible-distill.server.ts`, `scene-summary.server.ts`,
   `documents/server/logline-from-subject.server.ts`,
   `predictions/context/local-context.server.ts` (DB assembly).
