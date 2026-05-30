@@ -144,13 +144,18 @@ architectural judgement stays with the judges + the user.
 - **W-E1** — Foundation `Layer`s: `Db`, `Access`, **`AnthropicClient`**,
   Langfuse observability. The ACL at `createServerFn` (Effect→`ResultShape`).
 - **W-E2** — Cesare stream (`/api/cesare/stream`) → `Stream` with interruption.
-- **W-E3** — Tool loop → `Effect.all` + retry on the client Layer.
+- **W-E3** (done — [48c](48c-effect-tool-loop-retry.md)) — Tool loop → Effect +
+  real retry/timeout on the client Layer; `AnthropicClient` Layer renamed to
+  `AiClient`. (`Effect.all`/concurrency was deliberately NOT applied inside the
+  loop — the tracer ordering + agentic-edit semantics require strict sequencing;
+  the AI SDK already owns intra-step tool parallelism. Concurrency lands in W-E5.)
 - **W-E4** — Auto-versioning → `acquireRelease` (version always created before
   apply, rollback on error guaranteed).
 - **W-E5** — LLM distillers (Circle 2): bible-distill, scene-summary,
   logline-from-subject, local-context assembly. **Excludes** pure md builders.
 - **W-E6** — Other AI feature servers (Circle 3): budget, breakdown spoglio,
-  locations rank/normalise/places, schedule — all onto `AnthropicClient`, dedup.
+  locations rank/normalise/places, schedule — all onto `AiClient`, dedup (reuse
+  `isRetryableModelError` for the retry taxonomy).
 - **W-E7** — (evaluate) `ws-server` collaboration.
 
 ## Reversibility
