@@ -71,9 +71,17 @@ Concretely:
 
 ### Circle 2 — Shared LLM client + distillers
 
-- `features/ai/anthropic-client.ts` → becomes the **`AnthropicClient` Layer**:
+- `features/ai/anthropic-client.ts` → becomes the **`AiClient` Layer**:
   the single place that owns retry / timeout / rate-limit / circuit-breaker for
-  every Anthropic call in the app.
+  every model call. **IMPORTANT — keep the Vercel AI SDK.** The app already calls
+  the model through the **Vercel AI SDK** (`ai` + `@ai-sdk/anthropic`:
+  `generateText` / `streamText` / `tool`), NOT raw `@anthropic-ai/sdk`. Effect does
+  NOT replace the AI SDK — it WRAPS it. The AI SDK stays the transport to the model
+  (streaming, tool-calling, provider abstraction); the `AiClient` Layer wraps those
+  SDK calls to add Effect's structured interruption, typed retry/timeout, resource
+  lifecycle, and concurrency. So the Layer is named for the model client role
+  (`AiClient`/`ModelClient`), not the raw Anthropic SDK. `streamText`'s
+  `AbortSignal` is bridged to Effect interruption; AI SDK tool definitions stay.
   - **Captured idea — BYOK (build later, after this Layer exists):** let the user
     save their own Anthropic API key + pick a default model (Haiku/Sonnet/Opus).
     The `AnthropicClient` Layer is the single injection point — it resolves
