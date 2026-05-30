@@ -85,7 +85,7 @@ Bug (Image #4): the show/hide-changes button must work end-to-end depending on C
 
 - **Design judge** — knows how oh-writers + Notion look; approves or rejects a graphic fix and sends it back. Compares against `docs/specs/mockups/shell-canva-notion.html` + the four reference screenshots in the brief.
 - **QA judge** — runs `pnpm test:unit`, `pnpm test:e2e` (the new OHW-047 tags), Cesare cost smoke; verifies happy+sad paths; bounces on red or missing tests.
-- **Lead judge** — orchestrates series/parallel, verifies E2E functionality end-to-end and that codebase quality matches the conventions (deep modules, neverthrow, Zod, react-aria, CSS Modules, English identifiers). Final authority on merge to `integ/ux-notion-v3-qa-iter-1`.
+- **Lead judge** — orchestrates series/parallel, verifies E2E functionality end-to-end and that codebase quality matches the conventions (deep modules, neverthrow, Zod, react-aria, CSS Modules, English identifiers). Final authority on merge to `integ/ux-notion-v3-qa-iter-1`. **MANDATORY: the Lead's final end-to-end pass runs against the REAL, NON-MOCKED Cesare (live Anthropic API, `MOCK_AI` unset/false).** Agents and the QA judge may use `MOCK_AI=true` for fast dev, but the Lead must prove the streaming trace, cross-domain writes, and Mostra/Nascondi flow all work with the real model before merging. Mock-only green is not sufficient to pass the Lead gate.
 
 Each agent (and each judge) has authority to send a sub-agent back when the requested thing is not actually functional or the design is wrong.
 
