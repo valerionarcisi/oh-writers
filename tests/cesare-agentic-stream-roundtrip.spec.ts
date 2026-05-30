@@ -129,22 +129,28 @@ test.describe("[Spec 47a] Cesare stream round-trip", () => {
     // status so the user sees the send did not go through. We fail BOTH the
     // streaming route and the askCesare fallback so the reducer's
     // `message/failed` path fires.
-    await authenticatedPage.route("**/api/cesare/stream", (route) =>
-      route.fulfill({ status: 500, body: "boom" }),
-    );
-    await authenticatedPage.route("**/_serverFn/**", (route) => {
-      // Let non-Cesare server fns through; only break the ask fallback.
-      if (route.request().url().includes("askCesare")) {
-        return route.fulfill({ status: 500, body: "boom" });
-      }
-      return route.continue();
-    });
-
+    // Navigate + open Cesare BEFORE arming the routes, so the page's own GET
+    // loaders are not affected. Then break both Cesare transports.
     await authenticatedPage.goto(
       `${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`,
     );
     await authenticatedPage.waitForLoadState("networkidle");
     await openCesare(authenticatedPage);
+
+    // 1) the streamed transport.
+    await authenticatedPage.route("**/api/cesare/stream", (route) =>
+      route.fulfill({ status: 500, body: "boom" }),
+    );
+    // 2) the askCesare fallback. TanStack server fns are POSTs to `/_server`
+    // (loaders are GET), so failing POST `/_server` requests breaks the fallback
+    // without touching the already-loaded page. Match by method, not by a
+    // hashed fn id (which the URL does not expose stably).
+    await authenticatedPage.route("**/_server**", (route) => {
+      if (route.request().method() === "POST") {
+        return route.fulfill({ status: 500, body: "boom" });
+      }
+      return route.continue();
+    });
 
     await sendCesareMessage(authenticatedPage, "Questo invio deve fallire");
     const bubble = authenticatedPage
