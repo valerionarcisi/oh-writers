@@ -479,6 +479,36 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Documents — cross-entity edit (Spec 47d). A single turn touches BOTH the
+  // soggetto AND the sinossi, so the server emits one live-diff marker per
+  // document. Used by the [OHW-047d] cross-entity test to assert each touched
+  // doc paints its own green inline highlight when opened.
+  {
+    match: /aggiorna soggetto e sinossi|allinea soggetto e sinossi/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_soggetto_v2",
+            input: {
+              instruction: "più asciutto e tematico",
+              label: "v2 cross",
+            },
+          },
+          {
+            name: "propose_synopsis_from_screenplay",
+            input: { instruction: "allinea al nuovo soggetto" },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiornato soggetto e sinossi e li ho applicati direttamente ai documenti. Se non ti convincono usa Annulla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Documents — propose_scaletta_from_soggetto (OHW-578)
   {
     match:

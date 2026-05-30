@@ -1,63 +1,42 @@
 /* apps/web/app/features/app-shell/components/CesareLiveDiff.module.css
-   Spec 47b FIX 4 — floating "Mostra modifiche" word-level coloured diff overlay.
-   Anchored over the top of the main lane so the diff reads in-place on the live
-   document, clear of the bottom-right Cesare drawer. */
-.overlay {
-  position: fixed;
-  inset-block-start: 64px;
-  inset-inline: var(--ds-space-6);
-  z-index: 340;
-  max-block-size: 50vh;
+   Spec 47d — inline "Mostra modifiche" word highlight rendered INSIDE the
+   document prose. The layer fills its (relatively-positioned) document-body
+   parent, painting the word-level diff in place over the prose — additions
+   green, removals struck — NOT a floating panel. Mounted once per document. */
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
   overflow-y: auto;
   padding: var(--ds-space-4);
   background: var(--ds-surface);
-  border: 1px solid var(--ds-line);
-  border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-3);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  margin-block-end: var(--ds-space-2);
-  font-family: var(--ds-font-display);
-  font-size: 13px;
-  color: var(--ds-text-2);
-}
-
-.glyph {
-  color: var(--ds-agent);
-}
-
-.title {
-  font-weight: 600;
+  border-radius: var(--ds-radius-md);
 }
 
 .body {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.8;
   color: var(--ds-text);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .equal {
-  color: var(--ds-text-2);
+  color: var(--ds-text);
 }
 
 .added {
-  background: var(--ds-diff-add-bg);
-  color: var(--ds-diff-add-fg);
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
   border-radius: var(--ds-radius-sm);
-  padding-inline: 1px;
+  padding-inline: 2px;
 }
 
 .removed {
   background: var(--ds-diff-remove-bg);
   color: var(--ds-diff-remove-fg);
   border-radius: var(--ds-radius-sm);
-  padding-inline: 1px;
+  padding-inline: 2px;
   text-decoration: line-through;
 }

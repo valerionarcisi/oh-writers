@@ -126,12 +126,17 @@ export function parseRewriteSceneMarker(
 }
 
 /**
- * Parses the word-level live diff side-channel marker (Spec 47b FIX 4). The
- * server precomputes the word-diff segments when it applies a document/section
- * edit; the client renders them as the inline coloured diff overlay. Returns
- * `null` when the marker is absent or malformed.
+ * Parses the word-level live diff side-channel markers (Spec 47d). The server
+ * precomputes the word-diff segments — already stripped of HTML block markup —
+ * when it applies a document edit, and emits ONE marker per touched document
+ * carrying that document's type. The client paints them as the inline coloured
+ * word highlight inside each document's prose (keyed by `documentType`), not an
+ * overlay panel. Returns `null`/`[]` when no marker is present or malformed.
  */
 export interface LiveDiffMarker {
+  /** The document the highlight belongs to (e.g. "soggetto"). Empty for legacy
+   *  single-doc markers that predate per-document keying. */
+  readonly documentType: string;
   readonly label: string;
   readonly segments: ReadonlyArray<{
     readonly op: "eq" | "add" | "del";
@@ -139,11 +144,9 @@ export interface LiveDiffMarker {
   }>;
 }
 
-export function parseLiveDiffMarker(content: string): LiveDiffMarker | null {
-  const m = content.match(/<!--ohw:live-diff-b64:([A-Za-z0-9+/=]+)-->/);
-  if (!m || !m[1]) return null;
+function decodeLiveDiffPayload(b64: string): LiveDiffMarker | null {
   try {
-    const bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     const decoded = new TextDecoder("utf-8").decode(bytes);
     const parsed = JSON.parse(decoded) as unknown;
     if (
@@ -153,7 +156,11 @@ export function parseLiveDiffMarker(content: string): LiveDiffMarker | null {
     ) {
       return null;
     }
-    const raw = parsed as { label?: unknown; segments: unknown[] };
+    const raw = parsed as {
+      documentType?: unknown;
+      label?: unknown;
+      segments: unknown[];
+    };
     const segments = raw.segments
       .filter(
         (s): s is { op: string; text: string } =>
@@ -165,10 +172,36 @@ export function parseLiveDiffMarker(content: string): LiveDiffMarker | null {
       .filter((s) => s.op === "eq" || s.op === "add" || s.op === "del")
       .map((s) => ({ op: s.op as "eq" | "add" | "del", text: s.text }));
     if (segments.length === 0) return null;
-    return { label: typeof raw.label === "string" ? raw.label : "", segments };
+    return {
+      documentType:
+        typeof raw.documentType === "string" ? raw.documentType : "",
+      label: typeof raw.label === "string" ? raw.label : "",
+      segments,
+    };
   } catch {
     return null;
   }
+}
+
+/**
+ * All live-diff markers in the assistant turn, one per touched document. A
+ * cross-entity edit (soggetto + sinossi + …) yields several entries, each keyed
+ * by its `documentType` so the shell can arm a highlight for every doc.
+ */
+export function parseLiveDiffMarkers(content: string): LiveDiffMarker[] {
+  const pattern = /<!--ohw:live-diff-b64:([A-Za-z0-9+/=]+)-->/g;
+  const markers: LiveDiffMarker[] = [];
+  for (const m of content.matchAll(pattern)) {
+    if (!m[1]) continue;
+    const decoded = decodeLiveDiffPayload(m[1]);
+    if (decoded) markers.push(decoded);
+  }
+  return markers;
+}
+
+/** First live-diff marker (back-compat for single-doc callers/tests). */
+export function parseLiveDiffMarker(content: string): LiveDiffMarker | null {
+  return parseLiveDiffMarkers(content)[0] ?? null;
 }
 
 // ─── Markdown rendering ─────────────────────────────────────────────────────
@@ -273,7 +306,8 @@ export interface StepBlockMetadata {
   rewrite: { scene_number: number; new_content: string } | null;
   hasProposal: boolean;
   docApplied: DocAppliedMarker | null;
-  liveDiff: LiveDiffMarker | null;
+  /** One live-diff per touched document (Spec 47d). Empty when none applied. */
+  liveDiffs: ReadonlyArray<LiveDiffMarker>;
 }
 
 export function extractStepBlockMetadata(content: string): StepBlockMetadata {
@@ -282,7 +316,7 @@ export function extractStepBlockMetadata(content: string): StepBlockMetadata {
     rewrite: parseRewriteSceneMarker(content),
     hasProposal: parseBlockingProposalMarker(content) !== null,
     docApplied: parseDocAppliedMarker(content),
-    liveDiff: parseLiveDiffMarker(content),
+    liveDiffs: parseLiveDiffMarkers(content),
   };
 }
 
@@ -394,11 +428,13 @@ export function parseToolUpdates(
 // ─── Conversation handlers (shared contract) ───────────────────────────────
 
 export interface ConversationHandlers {
-  /** Reveal the diff (live-doc inline OR split-drawer, decided by the parent). */
+  /** Reveal the diff (live-doc inline OR split-drawer, decided by the parent).
+   *  `liveDiffs` carries one entry per touched document so the shell can arm a
+   *  green inline highlight on each (Spec 47d). */
   onShowChanges: (args: {
     traceMarkers: ReadonlyArray<TraceMarker>;
     scope?: string;
-    liveDiff?: LiveDiffMarker | null;
+    liveDiffs?: ReadonlyArray<LiveDiffMarker>;
   }) => void;
   /** Hide whichever diff surface was opened. */
   onHideChanges: () => void;
@@ -525,7 +561,7 @@ export function MessageView({
         isShowingChanges={isShowingDiff}
         onShowChanges={() => {
           setShowingDiff(true);
-          onShowChanges({ traceMarkers, scope, liveDiff: metadata.liveDiff });
+          onShowChanges({ traceMarkers, scope, liveDiffs: metadata.liveDiffs });
         }}
         onHideChanges={() => {
           setShowingDiff(false);

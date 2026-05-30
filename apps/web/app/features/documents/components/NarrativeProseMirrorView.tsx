@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import type { DocumentType } from "@oh-writers/domain";
+import { CesareLiveDiff } from "~/features/app-shell";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import { buildNarrativePlugins } from "../lib/narrative-plugins";
 import { docToHtml, htmlToDoc } from "../lib/narrative-html";
@@ -15,6 +17,11 @@ interface NarrativeProseMirrorViewProps {
   enableHeadings?: boolean;
   readOnly?: boolean;
   extraPlugins?: ReadonlyArray<Plugin>;
+  /** When set, mounts the Cesare inline live-diff highlight for this document
+   *  type over the prose (Spec 47d) so "Mostra modifiche" paints the green
+   *  word highlight inside the real document. Absent for editors that never
+   *  host a Cesare doc edit. */
+  diffDocumentType?: DocumentType;
 }
 
 export function NarrativeProseMirrorView({
@@ -26,6 +33,7 @@ export function NarrativeProseMirrorView({
   enableHeadings = false,
   readOnly = false,
   extraPlugins,
+  diffDocumentType,
 }: NarrativeProseMirrorViewProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -115,6 +123,7 @@ export function NarrativeProseMirrorView({
       data-testid="rich-text-editor"
     >
       <div ref={mountRef} className={styles.mount} />
+      {diffDocumentType && <CesareLiveDiff documentType={diffDocumentType} />}
     </div>
   );
 }

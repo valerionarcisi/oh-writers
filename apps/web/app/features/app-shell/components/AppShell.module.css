@@ -59,14 +59,14 @@
   transition: box-shadow var(--ds-duration-3) var(--ds-ease);
 }
 
-/* Live-doc inline diff (Spec 47b FIX 4). Cesare edits land on the open document;
+/* Live-doc inline diff (Spec 47d). Cesare edits land on the open document(s);
    "Mostra modifiche" sets body[data-cesare-diff="on"] AND broadcasts the
-   word-level diff segments, which the <CesareLiveDiff/> overlay renders as a
-   real green/red coloured diff. The main lane keeps only a subtle accent ring to
-   frame the affected page; the actual diff lives in the overlay, not here.
-   "Nascondi modifiche" clears the attribute and the overlay. */
+   word-level diff segments per touched document. Each document body paints its
+   own green inline word highlight via <CesareLiveDiff/>; the main lane keeps
+   only a subtle accent ring to frame the affected page. "Nascondi modifiche"
+   clears the attribute and every per-document highlight. */
 :global(body[data-cesare-diff="on"]) .main {
-  box-shadow: inset 0 0 0 1px var(--ds-diff-add-fg);
+  box-shadow: inset 0 0 0 1px var(--ds-success);
   border-radius: var(--ds-radius-md);
 }
 

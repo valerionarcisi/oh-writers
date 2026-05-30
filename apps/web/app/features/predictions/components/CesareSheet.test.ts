@@ -4,6 +4,7 @@ import {
   parseRewriteSceneMarker,
   parseDocAppliedMarker,
   parseLiveDiffMarker,
+  parseLiveDiffMarkers,
 } from "./CesareConversation";
 
 describe("parseToolsExecuted", () => {
@@ -95,22 +96,24 @@ describe("parseDocAppliedMarker", () => {
   });
 });
 
-// [OHW-047-A6] word-level live diff marker (Spec 47b FIX 4).
-describe("parseLiveDiffMarker", () => {
-  const encode = (obj: unknown): string => {
-    const json = JSON.stringify(obj);
-    const bytes = new TextEncoder().encode(json);
-    let bin = "";
-    for (const b of bytes) bin += String.fromCharCode(b);
-    return btoa(bin);
-  };
+// [OHW-047d] word-level live-diff markers — one per touched document, keyed by
+// documentType so each involved doc paints its own green inline highlight.
+const encodeLiveDiff = (obj: unknown): string => {
+  const json = JSON.stringify(obj);
+  const bytes = new TextEncoder().encode(json);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+};
 
+describe("parseLiveDiffMarker", () => {
   it("returns null when no marker is present", () => {
     expect(parseLiveDiffMarker("plain reply")).toBeNull();
   });
 
-  it("decodes a valid word-diff marker", () => {
+  it("decodes a valid word-diff marker and carries the documentType", () => {
     const payload = {
+      documentType: "soggetto",
       label: "Soggetto",
       segments: [
         { op: "eq", text: "Il " },
@@ -119,9 +122,10 @@ describe("parseLiveDiffMarker", () => {
         { op: "eq", text: " dorme" },
       ],
     };
-    const marker = `reply <!--ohw:live-diff-b64:${encode(payload)}-->`;
+    const marker = `reply <!--ohw:live-diff-b64:${encodeLiveDiff(payload)}-->`;
     const parsed = parseLiveDiffMarker(marker);
     expect(parsed).not.toBeNull();
+    expect(parsed!.documentType).toBe("soggetto");
     expect(parsed!.label).toBe("Soggetto");
     expect(parsed!.segments).toHaveLength(4);
     expect(
@@ -132,9 +136,15 @@ describe("parseLiveDiffMarker", () => {
     ).toBe(true);
   });
 
+  it("defaults documentType to empty for legacy markers without it", () => {
+    const payload = { label: "x", segments: [{ op: "add", text: "z" }] };
+    const marker = `<!--ohw:live-diff-b64:${encodeLiveDiff(payload)}-->`;
+    expect(parseLiveDiffMarker(marker)!.documentType).toBe("");
+  });
+
   it("drops segments with unknown ops and rejects an empty result", () => {
     const payload = { label: "x", segments: [{ op: "weird", text: "z" }] };
-    const marker = `<!--ohw:live-diff-b64:${encode(payload)}-->`;
+    const marker = `<!--ohw:live-diff-b64:${encodeLiveDiff(payload)}-->`;
     expect(parseLiveDiffMarker(marker)).toBeNull();
   });
 
@@ -142,5 +152,48 @@ describe("parseLiveDiffMarker", () => {
     expect(
       parseLiveDiffMarker("<!--ohw:live-diff-b64:@@notbase64@@-->"),
     ).toBeNull();
+  });
+});
+
+describe("parseLiveDiffMarkers (per-document)", () => {
+  it("returns an empty array when no marker is present", () => {
+    expect(parseLiveDiffMarkers("plain reply")).toEqual([]);
+  });
+
+  it("parses one marker per touched document, keyed by documentType", () => {
+    const soggetto = {
+      documentType: "soggetto",
+      label: "Soggetto",
+      segments: [{ op: "add", text: "nuovo soggetto" }],
+    };
+    const sinossi = {
+      documentType: "synopsis",
+      label: "Sinossi",
+      segments: [{ op: "add", text: "nuova sinossi" }],
+    };
+    const content = `done <!--ohw:live-diff-b64:${encodeLiveDiff(
+      soggetto,
+    )}--> e <!--ohw:live-diff-b64:${encodeLiveDiff(sinossi)}-->`;
+    const markers = parseLiveDiffMarkers(content);
+    expect(markers.map((m) => m.documentType)).toEqual([
+      "soggetto",
+      "synopsis",
+    ]);
+    expect(markers[0]!.segments[0]!.text).toBe("nuovo soggetto");
+    expect(markers[1]!.segments[0]!.text).toBe("nuova sinossi");
+  });
+
+  it("skips malformed markers but keeps the valid ones", () => {
+    const valid = {
+      documentType: "treatment",
+      label: "Trattamento",
+      segments: [{ op: "add", text: "x" }],
+    };
+    const content = `<!--ohw:live-diff-b64:@@bad@@--> <!--ohw:live-diff-b64:${encodeLiveDiff(
+      valid,
+    )}-->`;
+    const markers = parseLiveDiffMarkers(content);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.documentType).toBe("treatment");
   });
 });

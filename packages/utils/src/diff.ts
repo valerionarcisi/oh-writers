@@ -60,16 +60,45 @@ export interface WordDiffSegment {
 }
 
 /**
+ * Normalise HTML block/inline markup to plain prose text. The Cesare live diff
+ * is shown to the user as words inside the document — never as raw markup — so
+ * every tag is stripped BEFORE diffing. Block-level closers (`</p>`, `</h1-6>`,
+ * `</li>`, `<br>`, …) collapse to a newline so paragraph boundaries survive as
+ * whitespace; all other tags are removed and the common HTML entities decoded.
+ * Runs of three or more newlines collapse to two so the diff stays compact.
+ * Pure, no I/O.
+ */
+export const htmlToPlainText = (html: string): string =>
+  html
+    .replace(/<\/(p|h[1-6]|li|blockquote|div)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+/**
  * Build a flat word-level diff between `before` and `after`. Pure, no I/O.
  * Adjacent segments of the same op are coalesced so the rendered stream stays
  * compact. The reader sees deletion (red) inline before its replacement
  * insertion (green), with unchanged text plain.
+ *
+ * Both inputs are run through `htmlToPlainText` first so the diff is computed on
+ * plain prose: the user only ever sees words, never block markup (`<p>`/`</p>`).
  */
 export const buildWordDiffSegments = (
   before: string,
   after: string,
 ): WordDiffSegment[] => {
-  const parts = diffWordsWithSpace(before, after);
+  const parts = diffWordsWithSpace(
+    htmlToPlainText(before),
+    htmlToPlainText(after),
+  );
   const segments: WordDiffSegment[] = [];
   const push = (op: WordDiffOp, text: string) => {
     if (text === "") return;
