@@ -16,8 +16,10 @@ import {
   peekSearchSchema,
   CESARE_PEEK_TOKEN,
   versionsSearchSchema,
+  serializeVersionsCompare,
   useRoutedSurface,
 } from "~/features/app-shell";
+import type { VersionsCompare } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
 import {
   useSessions as useCesareSessions,
@@ -39,10 +41,10 @@ const fetchUser = createServerFn({ method: "GET" }).handler(
 );
 
 // The shell layout carries every routed auxiliary surface as search params:
-// `?peek=` (Spec 46 Cesare/page side-peek) and `?versions=`/`?vstate=`/`?vcur=`
-// (Spec 49 Versions SplitDrawer). Shape-only validation here so the params
-// survive navigation; content validation (fail-closed) lives in the parsers
-// inside AppShell.
+// `?peek=` (Spec 46 Cesare/page side-peek) and
+// `?versions=`/`?vstate=`/`?vcur=`/`?compare=` (Spec 49 Versions SplitDrawer +
+// W3 Confronta). Shape-only validation here so the params survive navigation;
+// content validation (fail-closed) lives in the parsers inside AppShell.
 const appSearchSchema = peekSearchSchema.merge(versionsSearchSchema);
 
 export const Route = createFileRoute("/_app")({
@@ -188,7 +190,7 @@ function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const { peek, versions, vstate, vcur } = search;
+  const { peek, versions, vstate, vcur, compare } = search;
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
@@ -209,29 +211,43 @@ function AppLayout() {
   }, [navigate, pathname, search]);
 
   // Versions SplitDrawer (Spec 49). `useRoutedSurface` owns the URL ↔ surface
-  // mapping so this layout never hand-rolls the param mutation. `vstate`/`vcur`
-  // are companions cleared together with `versions` on close.
+  // mapping so this layout never hand-rolls the param mutation. `vstate`/`vcur`/
+  // `compare` are companions cleared together with `versions` on close.
   const versionsSurface = useRoutedSurface({
     param: "versions",
-    companions: ["vstate", "vcur"],
+    companions: ["vstate", "vcur", "compare"],
   });
   const closeVersions = versionsSurface.close;
   // `↗` expand → real navigation to the full-screen versions route (new history
-  // entry; browser-back / `↙` returns to the split). The doc + baseline are
-  // preserved so the full route stays deep-linkable.
+  // entry; browser-back / `↙` returns to the split). The doc + baseline + the
+  // active compare are preserved so the full route stays deep-linkable.
   const expandVersions = useCallback(() => {
     if (versions == null) return;
     const companions: Record<string, string> = { vstate: "full" };
     if (vcur != null) companions["vcur"] = vcur;
+    if (compare != null) companions["compare"] = compare;
     versionsSurface.navigateState(versions, companions);
-  }, [versionsSurface, versions, vcur]);
+  }, [versionsSurface, versions, vcur, compare]);
   // `↙` step-back → drop `vstate` (back to the split) as a real navigation.
   const stepBackVersions = useCallback(() => {
     if (versions == null) return;
     const companions: Record<string, string> = {};
     if (vcur != null) companions["vcur"] = vcur;
+    if (compare != null) companions["compare"] = compare;
     versionsSurface.navigateState(versions, companions);
-  }, [versionsSurface, versions, vcur]);
+  }, [versionsSurface, versions, vcur, compare]);
+  // W3 Confronta: patch the `?compare=` companion in place (replace, no history
+  // entry — an in-surface toggle shouldn't stack a back step). `null` drops it,
+  // returning the drawer to the default "vs current".
+  const changeVersionsCompare = useCallback(
+    (next: VersionsCompare | null) => {
+      versionsSurface.setParam(
+        "compare",
+        next ? serializeVersionsCompare(next) : null,
+      );
+    },
+    [versionsSurface],
+  );
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
@@ -359,6 +375,8 @@ function AppLayout() {
       versionsParam={versions ?? null}
       versionsStateParam={vstate ?? null}
       versionsCurrentParam={vcur ?? null}
+      versionsCompareParam={compare ?? null}
+      onVersionsCompareChange={changeVersionsCompare}
       onCloseVersions={closeVersions}
       onExpandVersions={expandVersions}
       onStepBackVersions={stepBackVersions}

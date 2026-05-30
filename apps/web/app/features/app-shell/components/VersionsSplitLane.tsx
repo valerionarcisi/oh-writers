@@ -25,12 +25,16 @@ import { useDialog, useOverlay, FocusScope } from "react-aria";
 import { SplitDrawer } from "@oh-writers/ui";
 import type { SplitDrawerState } from "@oh-writers/ui";
 import { VersionsSplitDrawer } from "~/features/versions";
-import type { VersionsPeek } from "../versions-peek";
+import type { VersionsPeek, VersionsCompare } from "../versions-peek";
 import styles from "./VersionsSplitLane.module.css";
 
 export interface VersionsSplitLaneProps {
   /** The validated routed Versions target (document + state + baseline). */
   readonly peek: VersionsPeek;
+  /** The validated `?compare=` pair (Spec 49 W3) or `null` for "vs current". */
+  readonly compare: VersionsCompare | null;
+  /** Patch the `?compare=` companion (null drops it). */
+  readonly onCompareChange: (next: VersionsCompare | null) => void;
   /** Width (px) of the split lane; persisted by AppShell. */
   readonly width: number;
   readonly onWidthChange: (next: number) => void;
@@ -44,6 +48,8 @@ export interface VersionsSplitLaneProps {
 
 export function VersionsSplitLane({
   peek,
+  compare,
+  onCompareChange,
   width,
   onWidthChange,
   onExpand,
@@ -103,6 +109,8 @@ export function VersionsSplitLane({
           <VersionsSplitDrawer
             documentId={peek.documentId}
             currentVersionId={peek.currentVersionId}
+            compare={compare}
+            onCompareChange={onCompareChange}
           />
         </SplitDrawer>
       </div>

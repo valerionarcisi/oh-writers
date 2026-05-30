@@ -30,11 +30,12 @@ import {
   toggleBulletList,
   toggleHeading,
 } from "../lib/narrative-plugins";
-import { useVersionsDrawer, useDocumentVersions } from "~/features/versions";
+import { useDocumentVersions } from "~/features/versions";
 import {
   useSaveStatePublisher,
   useCesareOpen,
   useSetActiveDocument,
+  useRoutedSurface,
 } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
@@ -97,18 +98,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     content,
     document.content,
   );
-  const {
-    state: drawerState,
-    open: openDrawer,
-    close: closeDrawer,
-  } = useVersionsDrawer();
-  const isVersionsOpen =
-    drawerState.isOpen &&
-    drawerState.scope?.kind === "document" &&
-    drawerState.scope.documentId === document.id;
-
-  // The drawer captures dirtyHook at open(); refs let the captured callbacks
-  // read fresh values on every drawer interaction without re-opening.
+  // Spec 49 W4: Versions open via the ROUTER (`?versions=<docId>`), not the
+  // legacy context drawer — same routed SplitDrawer as soggetto. The host page
+  // compresses beside the lane; `vcur` carries the current-version baseline so
+  // the "vs current" diff stays deep-linkable. `vstate`/`vcur`/`compare` are
+  // companions cleared on close.
+  const versionsSurface = useRoutedSurface({
+    param: "versions",
+    companions: ["vstate", "vcur", "compare"],
+  });
+  const isVersionsOpen = versionsSurface.value === document.id;
+  // Flush a pending autosave before opening Versions so the listed/diffed
+  // content reflects the latest edit, not a stale debounce window.
   const isDirtyRef = useRef(isDirty);
   const flushRef = useRef(flush);
   isDirtyRef.current = isDirty;
@@ -215,7 +216,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const exportPdf = useExportNarrativePdf();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const handleExport = () => {
-    if (isVersionsOpen) closeDrawer();
+    if (isVersionsOpen) versionsSurface.close();
     setIsExportModalOpen(true);
   };
   const handleGenerate = ({
@@ -230,20 +231,17 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   };
 
   const openVersionsDrawer = () => {
-    openDrawer(
-      {
-        kind: "document",
-        documentId: document.id,
-        docType: type,
-        canEdit: document.canEdit,
-        currentVersionId: document.currentVersionId ?? null,
-      },
-      {
-        dirtyHook: {
-          isDirty: () => isDirtyRef.current,
-          flush: () => flushRef.current(),
-        },
-      },
+    if (isVersionsOpen) {
+      versionsSurface.close();
+      return;
+    }
+    // Flush any pending autosave so the drawer lists the latest content.
+    if (isDirtyRef.current) flushRef.current();
+    versionsSurface.open(
+      document.id,
+      document.currentVersionId
+        ? { vcur: document.currentVersionId }
+        : undefined,
     );
   };
 
