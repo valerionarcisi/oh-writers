@@ -73,16 +73,23 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
-    // Header bell — labelled "Notifiche" inside the drawer header
-    const headerBell = drawer.getByRole("button", { name: "Notifiche" });
-    if ((await headerBell.count()) === 0) {
+    // The bell carried over from the dock now lives inside the `…` overflow
+    // (Notion-minimal header, spec 47/A3). Open the overflow, then pick it.
+    const overflowTrigger = drawer.getByRole("button", {
+      name: "Altre azioni",
+    });
+    if ((await overflowTrigger.count()) === 0) {
       test.skip(
         true,
-        "Drawer header is not wired to render the bell from the dockIcons prop in this seed state — skipped to avoid a false negative",
+        "Drawer header is not wired to render the dockIcons overflow in this seed state — skipped to avoid a false negative",
       );
       return;
     }
-    await headerBell.first().click();
+    await overflowTrigger.click();
+    const menuBell = page
+      .getByTestId("cesare-overflow-menu")
+      .getByRole("menuitem", { name: /Notifiche/ });
+    await menuBell.click();
 
     await expect(page.getByTestId("notification-center-drawer")).toBeVisible({
       timeout: 5_000,
