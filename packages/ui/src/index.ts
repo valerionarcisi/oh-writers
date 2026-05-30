@@ -175,14 +175,12 @@ export type {
   RailNavItem,
   RailSection,
   RailToolItem,
+  RailAccountActions,
   CesareSessionItem,
 } from "./shell/LeftRail/LeftRail";
 
 export { BottomDock } from "./shell/BottomDock/BottomDock";
-export type {
-  BottomDockProps,
-  BottomDockUser,
-} from "./shell/BottomDock/BottomDock";
+export type { BottomDockProps } from "./shell/BottomDock/BottomDock";
 
 export { CommandPalette } from "./shell/CommandPalette/CommandPalette";
 export type {
@@ -210,7 +208,6 @@ export type {
   CesareDrawerSession,
   CesareDrawerScope,
   CesareDrawerContextTag,
-  CesareDrawerDockIcons,
   CesareDrawerComposerProps,
 } from "./composites/CesareDrawer/CesareDrawer";
 export {

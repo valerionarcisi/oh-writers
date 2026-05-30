@@ -1,6 +1,6 @@
 import { type Tool, tool, generateText, stepCountIs, jsonSchema } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { repairMojibake } from "@oh-writers/utils";
+import { repairMojibake, buildWordDiffSegments } from "@oh-writers/utils";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
@@ -1471,6 +1471,10 @@ interface DocumentEditResult {
   document_type?: DocumentType;
   version_id?: string;
   previous_version_id?: string | null;
+  /** Spec 47b FIX 4 — precomputed word-level diff segments (before → after) so
+   *  the client can render the inline coloured live diff without a round-trip. */
+  diff_label?: string;
+  diff_segments?: ReadonlyArray<{ op: "eq" | "add" | "del"; text: string }>;
 }
 
 const executeApplyTextEdit = (
@@ -1489,7 +1493,8 @@ const executeApplyTextEdit = (
         "`find` string not found verbatim in the document — re-read the document and use an exact substring",
     });
   }
-  const next = doc.content.replace(input.find, input.replace);
+  const previousContent = doc.content;
+  const next = previousContent.replace(input.find, input.replace);
   return persistDocumentContent(db, doc.documentId, next, userIdFallback).map(
     (applied) => {
       // Mutate the in-memory copy so subsequent tool calls in the same turn
@@ -1501,6 +1506,8 @@ const executeApplyTextEdit = (
         document_type: doc.documentType,
         version_id: applied.versionId,
         previous_version_id: applied.previousVersionId,
+        diff_label: docTypeLabel(doc.documentType),
+        diff_segments: buildWordDiffSegments(previousContent, next),
         toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
       };
     },
@@ -1603,7 +1610,8 @@ const generateAndReplaceSection = (
           new CesareError("Haiku returned no text for section generation"),
         );
       }
-      const nextContent = replaceSection(doc.content, range, newText);
+      const previousContent = doc.content;
+      const nextContent = replaceSection(previousContent, range, newText);
       return persistDocumentContent(
         db,
         doc.documentId,
@@ -1617,6 +1625,8 @@ const generateAndReplaceSection = (
           document_type: doc.documentType,
           version_id: applied.versionId,
           previous_version_id: applied.previousVersionId,
+          diff_label: range.headingText.replace(/^#+\s*/, "").trim(),
+          diff_segments: buildWordDiffSegments(previousContent, nextContent),
           toast: `✦ Cesare ha ${toastVerb} "${range.headingText.replace(/^#+\s*/, "").trim()}"`,
         };
       });
@@ -2622,6 +2632,18 @@ const extractSideChannelMarkers = (
             previous_version_id: payload["previous_version_id"],
           })}-->`,
         );
+        // Spec 47b FIX 4 — when the edit carries precomputed word-diff segments,
+        // emit them base64-encoded so the client renders the inline coloured
+        // live diff for "Mostra modifiche" without an extra round-trip.
+        const segments = payload["diff_segments"];
+        if (Array.isArray(segments) && segments.length > 0) {
+          const diffJson = JSON.stringify({
+            label: payload["diff_label"] ?? "",
+            segments,
+          });
+          const b64 = Buffer.from(diffJson, "utf-8").toString("base64");
+          accumulator.push(`<!--ohw:live-diff-b64:${b64}-->`);
+        }
       }
     } catch {
       // ignore malformed payloads — the marker is best-effort

@@ -2,13 +2,12 @@
 //
 // [OHW-044-E] BottomDock visibility rules + single-source notification drawer.
 //
-// Per Spec 44 the BottomDock is the ONLY command surface when Cesare is
-// closed. When Cesare ≠ closed, the dock hides and its icons (bell /
-// avatar / gear) appear inside the Cesare drawer header.
+// Per Spec 44 the BottomDock is the Cesare launcher pill (Spec 47b FIX 1 slimmed
+// it to just that). When Cesare ≠ closed, the dock hides. The bell / avatar /
+// gear now live in the LeftRail FOOTER account row (their single home).
 //
-// Clicking the bell from the BottomDock OR from the Cesare header MUST
-// open the same SplitDrawer-mounted NotificationCenterDrawer — there is
-// one notification centre, not two.
+// Clicking the bell from the rail footer MUST open the SplitDrawer-mounted
+// NotificationCenterDrawer — there is one notification centre, not two.
 //
 // Clicking "Mostra modifiche" on a Step Block inside the Cesare drawer
 // MUST open the SplitDrawer with a target-page trace view.
@@ -42,7 +41,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
     await expect(dock).toBeVisible({ timeout: 3_000 });
   });
 
-  test("bell button from BottomDock opens the NotificationCenterDrawer", async ({
+  test("bell button from the rail footer opens the NotificationCenterDrawer", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
@@ -50,9 +49,9 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
       timeout: 15_000,
     });
 
-    const dock = page.getByTestId("bottom-dock");
-    await expect(dock).toBeVisible({ timeout: 5_000 });
-    await dock.getByLabel(/Notifiche/).click();
+    const account = page.getByTestId("rail-account");
+    await expect(account).toBeVisible({ timeout: 10_000 });
+    await account.getByRole("button", { name: /Notifiche/ }).click();
 
     // The drawer mounts via SplitDrawer with testId="notification-center-drawer"
     await expect(page.getByTestId("notification-center-drawer")).toBeVisible({
@@ -60,7 +59,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
     });
   });
 
-  test("bell button from Cesare drawer header opens the SAME NotificationCenterDrawer", async ({
+  test("the rail-footer bell stays the single notification source while Cesare is open", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
@@ -68,28 +67,19 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
       timeout: 15_000,
     });
 
-    // Open Cesare
+    // Open Cesare — the drawer header is minimal (no bell), and the bell still
+    // lives in the rail footer (single source).
     await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
+    await expect(
+      drawer.getByRole("button", { name: "Altre azioni" }),
+    ).toHaveCount(0);
 
-    // The bell carried over from the dock now lives inside the `…` overflow
-    // (Notion-minimal header, spec 47/A3). Open the overflow, then pick it.
-    const overflowTrigger = drawer.getByRole("button", {
-      name: "Altre azioni",
-    });
-    if ((await overflowTrigger.count()) === 0) {
-      test.skip(
-        true,
-        "Drawer header is not wired to render the dockIcons overflow in this seed state — skipped to avoid a false negative",
-      );
-      return;
-    }
-    await overflowTrigger.click();
-    const menuBell = page
-      .getByTestId("cesare-overflow-menu")
-      .getByRole("menuitem", { name: /Notifiche/ });
-    await menuBell.click();
+    await page
+      .getByTestId("rail-account")
+      .getByRole("button", { name: /Notifiche/ })
+      .click();
 
     await expect(page.getByTestId("notification-center-drawer")).toBeVisible({
       timeout: 5_000,

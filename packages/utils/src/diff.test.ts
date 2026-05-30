@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSideBySideDiff } from "./diff.js";
+import { buildSideBySideDiff, buildWordDiffSegments } from "./diff.js";
 
 describe("buildSideBySideDiff", () => {
   it("returns empty for two empty strings", () => {
@@ -51,5 +51,52 @@ describe("buildSideBySideDiff", () => {
     const rows = buildSideBySideDiff("a\nb", "");
     expect(rows.map((r) => r.kind)).toEqual(["removed", "removed"]);
     expect(rows.every((r) => r.right === null)).toBe(true);
+  });
+});
+
+// [OHW-047-A6] word-level inline diff for the Cesare live-doc overlay.
+describe("buildWordDiffSegments", () => {
+  it("returns a single eq segment for identical text", () => {
+    expect(buildWordDiffSegments("ciao mondo", "ciao mondo")).toEqual([
+      { op: "eq", text: "ciao mondo" },
+    ]);
+  });
+
+  it("marks a replaced word as del then add, keeping the unchanged parts eq", () => {
+    const segments = buildWordDiffSegments("Il gatto dorme", "Il cane dorme");
+    // Equal "Il ", removed "gatto", added "cane", equal " dorme".
+    expect(
+      segments.some((s) => s.op === "del" && s.text.includes("gatto")),
+    ).toBe(true);
+    expect(
+      segments.some((s) => s.op === "add" && s.text.includes("cane")),
+    ).toBe(true);
+    expect(
+      segments.some((s) => s.op === "eq" && s.text.includes("dorme")),
+    ).toBe(true);
+  });
+
+  it("treats a pure insertion as a single add segment", () => {
+    const segments = buildWordDiffSegments("ciao", "ciao mondo");
+    expect(segments[0]).toEqual({ op: "eq", text: "ciao" });
+    expect(
+      segments.some((s) => s.op === "add" && s.text.includes("mondo")),
+    ).toBe(true);
+    expect(segments.some((s) => s.op === "del")).toBe(false);
+  });
+
+  it("treats a pure deletion as a single del segment", () => {
+    const segments = buildWordDiffSegments("ciao mondo", "ciao");
+    expect(
+      segments.some((s) => s.op === "del" && s.text.includes("mondo")),
+    ).toBe(true);
+    expect(segments.some((s) => s.op === "add")).toBe(false);
+  });
+
+  it("coalesces adjacent segments of the same op", () => {
+    const segments = buildWordDiffSegments("", "uno due tre");
+    expect(segments).toHaveLength(1);
+    expect(segments[0]!.op).toBe("add");
+    expect(segments[0]!.text).toBe("uno due tre");
   });
 });

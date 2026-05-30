@@ -1,23 +1,31 @@
-// Spec 47-A5 — central, deep-linkable session conversation route
+// Spec 47-A5 + 47b FIX 2 — central, deep-linkable session conversation route
 // (`/projects/:id/sessions/:sessionId`). This REPLACES the main content (it is
 // not a `?peek=` side-drawer).
 //
-// Reconciliation with the floating CesareDrawer (authoritative): the drawer
-// owns the live conversation + agentic edits. This page does NOT fork a second
-// chat container. Instead it focuses the requested session via the shell-level
-// session-focus context (which `CesareSheet` adopts as its active session) and
-// expands Cesare, so the authoritative chat shows exactly this thread. The
-// central lane is a Notion-AI-style session page (title + metadata + entry CTA).
+// The page renders the REAL conversation for the focused session: every user +
+// assistant bubble, the agentic trace (Step Block / ChangeTrace), and the
+// Mostra/Nascondi modifiche + Annulla controls. It reuses the SAME renderer
+// (`<CesareConversation/>`) and the SAME shared chat store as the floating
+// drawer — so there is a single chat container, never a fork. The composer here
+// sends through the shared store, targeting this session's thread.
 //
 // Access control lives entirely server-side: `useSession` calls a `getSession`
-// server fn that fails closed (foreign / unknown id → not-found error). This
-// component renders a not-found body in that case — no session title or content
-// is shown for a session the user doesn't own.
-import { useEffect } from "react";
+// server fn that fails closed (foreign / unknown id → not-found error).
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { Skeleton, Button } from "@oh-writers/ui";
-import { useCesareOpen, useCesareSessionFocus } from "~/features/app-shell";
+import { Skeleton } from "@oh-writers/ui";
+import type { TraceMarker } from "@oh-writers/ui";
+import { useButton } from "react-aria";
+import { useCesareSessionFocus } from "~/features/app-shell";
 import { useSession } from "../sessions";
+import { useCesareChatStore } from "../cesare-chat-store";
+import {
+  CesareConversation,
+  type DocAppliedMarker,
+  type LiveDiffMarker,
+} from "./CesareConversation";
+import { useShowChangesInSplitDrawer } from "./CesareSheet";
+import { buildTargetPageRef } from "../cesare-show-changes";
 import styles from "./SessionConversationPage.module.css";
 
 const SessionIdParam = z.string().uuid();
@@ -37,28 +45,85 @@ export function SessionConversationPage({
     isValidParam ? projectId : null,
     isValidParam ? sessionId : null,
   );
-  const openCesare = useCesareOpen();
   const { setFocusedSessionId } = useCesareSessionFocus();
+  const store = useCesareChatStore();
+  const showChangesInSplit = useShowChangesInSplitDrawer();
 
   const session = sessionQuery.data;
-  // Depend on the stable id, not the query object — TanStack returns a fresh
-  // object on every refetch, and re-running `openCesare()` would forcibly
-  // re-expand Cesare even after the user collapsed it.
   const confirmedSessionId = session?.id ?? null;
 
-  // Once the session is confirmed owned, focus it in the authoritative drawer
-  // and expand Cesare so its conversation fills the floating surface.
+  // Once the session is confirmed owned, focus it so the floating drawer and
+  // this page agree on the active session (shared store, single source).
   useEffect(() => {
     if (!confirmedSessionId) return;
     setFocusedSessionId(confirmedSessionId);
-    openCesare();
-  }, [confirmedSessionId, setFocusedSessionId, openCesare]);
+    store?.selectSession(confirmedSessionId);
+  }, [confirmedSessionId, setFocusedSessionId, store]);
 
-  // Release the focus when leaving the route so a later page doesn't keep
-  // forcing this session active.
   useEffect(() => {
     return () => setFocusedSessionId(null);
   }, [setFocusedSessionId]);
+
+  // ── Composer ──────────────────────────────────────────────────────────────
+  const [input, setInput] = useState("");
+  const isLoading = store?.isLoadingFor(confirmedSessionId) ?? false;
+  const handleSubmit = useCallback(() => {
+    if (!store || !confirmedSessionId) return;
+    const text = input.trim();
+    if (text.length === 0 || isLoading) return;
+    setInput("");
+    void store.send(text, confirmedSessionId);
+  }, [store, confirmedSessionId, input, isLoading]);
+
+  // ── Diff handlers — full page hides the doc, so Mostra modifiche opens the
+  //    routed SplitDrawer with the affected page (A6 full-page branch). Undo
+  //    emits the same DOM events the floating drawer uses. ────────────────────
+  const page = store?.activePage ?? "soggetto";
+  const handleShowChanges = useCallback(
+    (args: {
+      traceMarkers: ReadonlyArray<TraceMarker>;
+      scope?: string;
+      liveDiff?: LiveDiffMarker | null;
+    }) => {
+      const pageRef = buildTargetPageRef(page, args.scope);
+      if (!pageRef) return;
+      showChangesInSplit({
+        pageRef,
+        traceMarkers: args.traceMarkers,
+        onAccept: () => undefined,
+        onReject: () => undefined,
+        onAcceptAll: () => undefined,
+        onRejectAll: () => undefined,
+        title: pageRef.scope
+          ? `${pageRef.title} · ${pageRef.scope}`
+          : pageRef.title,
+      });
+    },
+    [page, showChangesInSplit],
+  );
+  const handleHideChanges = useCallback(() => undefined, []);
+  const handleCancelRewrite = useCallback(
+    (rewrite: { scene_number: number; new_content: string }) => {
+      if (typeof window === "undefined") return;
+      window.dispatchEvent(
+        new CustomEvent("ohw:cesare:cancel-rewrite", {
+          detail: { sceneNumber: rewrite.scene_number },
+        }),
+      );
+    },
+    [],
+  );
+  const handleUndoDocApply = useCallback((marker: DocAppliedMarker) => {
+    if (typeof window === "undefined" || !marker.previousVersionId) return;
+    window.dispatchEvent(
+      new CustomEvent("ohw:cesare:undo-doc-apply", {
+        detail: {
+          documentType: marker.documentType,
+          previousVersionId: marker.previousVersionId,
+        },
+      }),
+    );
+  }, []);
 
   if (!isValidParam || sessionQuery.isError) {
     return (
@@ -84,6 +149,8 @@ export function SessionConversationPage({
     );
   }
 
+  const messages = store?.messagesFor(session.id) ?? [];
+
   return (
     <div
       className={styles.page}
@@ -102,19 +169,79 @@ export function SessionConversationPage({
         </div>
       </header>
 
-      <p className={styles.lede}>
-        La conversazione è aperta in Cesare, in basso a destra. Scrivi lì per
-        continuare questa sessione.
-      </p>
+      <CesareConversation
+        messages={messages}
+        page={page}
+        testId="session-conversation-thread"
+        onShowChanges={handleShowChanges}
+        onHideChanges={handleHideChanges}
+        onCancelRewrite={handleCancelRewrite}
+        onUndoDocApply={handleUndoDocApply}
+        emptyState={
+          <p className={styles.lede} data-testid="session-empty">
+            Nessun messaggio ancora in questa conversazione. Scrivi qui sotto
+            per iniziare.
+          </p>
+        }
+      />
 
-      <Button
-        variant="secondary"
-        size="md"
-        onPress={() => openCesare()}
-        data-testid="session-open-chat"
+      <SessionComposer
+        value={input}
+        onChange={setInput}
+        onSubmit={handleSubmit}
+        isThinking={isLoading}
+      />
+    </div>
+  );
+}
+
+// ─── Composer (full-page) ──────────────────────────────────────────────────
+
+function SessionComposer({
+  value,
+  onChange,
+  onSubmit,
+  isThinking,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  onSubmit: () => void;
+  isThinking: boolean;
+}) {
+  const sendRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps } = useButton(
+    {
+      onPress: onSubmit,
+      isDisabled: value.trim().length === 0 || isThinking,
+      "aria-label": "Invia messaggio",
+    },
+    sendRef,
+  );
+  return (
+    <div className={styles.composer} data-testid="session-composer">
+      <textarea
+        className={styles.composerInput}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+        placeholder="Chiedi a Cesare…"
+        disabled={isThinking}
+        rows={1}
+        aria-label="Composer Cesare"
+      />
+      <button
+        ref={sendRef}
+        {...buttonProps}
+        type="button"
+        className={styles.composerSend}
       >
-        ✦ Apri la conversazione
-      </Button>
+        ↑
+      </button>
     </div>
   );
 }

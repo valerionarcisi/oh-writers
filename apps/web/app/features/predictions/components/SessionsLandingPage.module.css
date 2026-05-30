@@ -125,3 +125,9 @@
   color: var(--ds-text-3);
   font-size: 14px;
 }
+
+.error {
+  margin: 0;
+  color: var(--ds-danger);
+  font-size: 13px;
+}

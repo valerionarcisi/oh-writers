@@ -39,6 +39,22 @@ export type RailToolItem = {
   onPress: () => void;
 };
 
+// Account row that lives in the rail FOOTER (Spec 47b FIX 1): notifications /
+// profile / settings. These used to sit in the BottomDock + the Cesare header
+// overflow; they now have a single home here so neither surface duplicates them.
+export type RailAccountActions = {
+  /** Open the notifications drawer. */
+  onBell: () => void;
+  /** Open the profile / account menu. */
+  onAvatar: () => void;
+  /** Open settings. */
+  onGear: () => void;
+  /** Red dot on the bell when there are unseen notifications. */
+  hasUnreadNotifications?: boolean;
+  /** Avatar initials shown on the profile button. */
+  avatarLabel: string;
+};
+
 export type LeftRailProps = {
   /** Brand mark — clicking returns to dashboard */
   brand: {
@@ -74,6 +90,10 @@ export type LeftRailProps = {
    *  passed through so the caller can integrate with the router of its
    *  choice (TanStack Router today, anything tomorrow). */
   onNavigate: (href: string) => void;
+  /** Account actions row in the rail FOOTER (Spec 47b FIX 1): bell / avatar /
+   *  gear. The single home for these icons — the BottomDock and Cesare header
+   *  no longer render them. */
+  account?: RailAccountActions;
   /** Tool icons row at the bottom of the rail (search / new / switch / more). */
   tools?: ReadonlyArray<RailToolItem>;
   /** Optional aria-label override for the rail nav landmark. */
@@ -224,6 +244,91 @@ function ToolButton({ tool }: { tool: RailToolItem }) {
   );
 }
 
+// Inline gear icon — `settings` isn't in the sprite (see icon-names.ts), so we
+// render the SVG directly. Same visual as the BottomDock gear.
+function GearGlyph() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+// Account footer row — bell / avatar / gear. Each is a react-aria button so
+// keyboard + focus handling matches the rest of the rail.
+function AccountRow({ account }: { account: RailAccountActions }) {
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const gearRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps: bellProps } = useButton(
+    {
+      onPress: account.onBell,
+      "aria-label": account.hasUnreadNotifications
+        ? "Notifiche — nuove"
+        : "Notifiche",
+    },
+    bellRef,
+  );
+  const { buttonProps: avatarProps } = useButton(
+    { onPress: account.onAvatar, "aria-label": "Profilo" },
+    avatarRef,
+  );
+  const { buttonProps: gearProps } = useButton(
+    { onPress: account.onGear, "aria-label": "Impostazioni" },
+    gearRef,
+  );
+  return (
+    <div
+      className={styles.account}
+      role="toolbar"
+      aria-label="Account"
+      data-testid="rail-account"
+    >
+      <button
+        ref={bellRef}
+        {...bellProps}
+        className={styles.accountBtn}
+        title="Notifiche"
+        data-rail-account="bell"
+      >
+        <Icon name="bell" size={15} aria-hidden={true} />
+        {account.hasUnreadNotifications && (
+          <span className={styles.accountDot} aria-hidden="true" />
+        )}
+      </button>
+      <button
+        ref={avatarRef}
+        {...avatarProps}
+        className={[styles.accountBtn, styles.accountAvatar].join(" ")}
+        title="Profilo"
+        data-rail-account="avatar"
+      >
+        <span aria-hidden="true">{account.avatarLabel}</span>
+      </button>
+      <button
+        ref={gearRef}
+        {...gearProps}
+        className={styles.accountBtn}
+        title="Impostazioni"
+        data-rail-account="gear"
+      >
+        <GearGlyph />
+      </button>
+    </div>
+  );
+}
+
 // Glyph wrapper that renders a sprite icon when the value matches a known
 // IconName, otherwise falls back to plain text (covers legacy unicode glyphs
 // not yet on the sprite — e.g. ✦ for sessions). The agent-spark token is
@@ -263,6 +368,7 @@ export function LeftRail({
   onSessionNew,
   onSessionsOpen,
   onNavigate,
+  account,
   tools,
   ariaLabel,
   overlay,
@@ -453,6 +559,8 @@ export function LeftRail({
       ))}
 
       <div className={styles.spacer} />
+
+      {account && <AccountRow account={account} />}
 
       {tools && tools.length > 0 && (
         <div className={styles.tools} role="toolbar" aria-label="Strumenti">

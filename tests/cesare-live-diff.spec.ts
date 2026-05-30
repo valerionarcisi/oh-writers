@@ -1,17 +1,18 @@
+// tests/cesare-live-diff.spec.ts
+//
+// [OHW-047-A6] Floating "Mostra modifiche" renders a WORD-LEVEL coloured diff.
+//
+// Spec 47b FIX 4: when Cesare is the floating bottom-right drawer the edited
+// document is visible, so "Mostra modifiche" must reveal a real word-level
+// coloured diff (green additions / red removals) inline — NOT a generic ring.
+// The diff segments are precomputed server-side when an edit is applied live and
+// rendered by the <CesareLiveDiff/> overlay.
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
-import { navigateToBreakdown, TEAM_PROJECT_ID } from "./breakdown/helpers";
-import { setMockContext } from "./helpers/cesare";
+import { BASE_URL } from "./fixtures";
+import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 
-/**
- * Local Cesare helpers. The shell dock and composer labels changed on this
- * branch (Spec 44 Notion shell: "Apri Cesare" trigger, "Invia messaggio" send),
- * so this spec drives them directly rather than via the legacy shared helpers.
- */
 async function openCesare(page: Page): Promise<void> {
-  // The dock toggle and the rail sessions header BOTH carry the accessible
-  // name "Apri Cesare" (rail entry added by Spec 47-A5). Scope to the bottom
-  // dock so we open the floating chat, not the rail sessions header.
   const trigger = page
     .getByTestId("bottom-dock")
     .getByRole("button", { name: "Apri Cesare" });
@@ -33,85 +34,80 @@ async function sendCesare(page: Page, text: string): Promise<void> {
   await sendBtn.click();
 }
 
-async function waitForReply(page: Page): Promise<void> {
-  // The conversation lives in [data-testid="cesare-conversation"]; an assistant
-  // reply pushes a second <p> (user bubble + assistant markdown). We poll the
-  // conversation paragraph count rather than the role=log a11y name, which is
-  // immune to ARIA-tree timing on the slide-in drawer.
-  const convo = page.getByTestId("cesare-conversation");
-  await expect
-    .poll(async () => await convo.locator("p").count(), { timeout: 90_000 })
-    .toBeGreaterThanOrEqual(2);
-}
-
-/**
- * [Spec 44] Cesare ChangeTrace — "Mostra modifiche" live-doc diff toggle
- *
- * Canonical Notion model: Cesare edits already landed on the open document.
- * The "Mostra modifiche" control in the ChangeTrace result card must reveal a
- * visible diff highlight on the live page (body[data-cesare-diff="on"] +
- * ChangeTrace data-state="showing"), and "Nascondi modifiche" must remove it.
- *
- * Regression for the iter-1 BLOCKER (E7): the button only toggled its own
- * label and produced no visible state change.
- *
- * Driven from the Breakdown page (well-seeded TEAM_PROJECT_ID) using the
- * estimate_scene_cost scenario, which emits a step block — so the ChangeTrace
- * card renders — while keeping the Cesare drawer expanded.
- */
-test.describe("[Spec 44] Cesare live-doc diff toggle", () => {
-  test("[OHW-044-diff] Mostra/Nascondi modifiche drives a visible live-doc diff state", async ({
+test.describe("[OHW-047-A6] Cesare floating live-doc WORD-LEVEL diff", () => {
+  test("Mostra modifiche reveals a coloured word-level diff; Nascondi removes it", async ({
     authenticatedPage,
   }) => {
-    // The mock LLM tool-loop round-trip can take 20-40s on a cold dev cache.
+    // The mock LLM tool-loop + a real Haiku section rewrite can take a while.
     test.setTimeout(120_000);
-    await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
+
+    // Drive from the soggetto page where Cesare applies an edit LIVE to the open
+    // document. The `apply_text_edit` scenario is a deterministic find/replace on
+    // the seeded soggetto ("traduttrice freelance" → "interprete simultanea"),
+    // so the server emits a step block AND a word-diff marker with both removals
+    // (red) and additions (green) — no LLM call needed.
+    await authenticatedPage.goto(
+      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`,
+    );
     await authenticatedPage.waitForLoadState("networkidle");
 
-    await setMockContext(authenticatedPage, { SCENE_NUMBER: 1 });
-
     await openCesare(authenticatedPage);
-    await sendCesare(authenticatedPage, "Stima il costo della scena 1.");
-    await waitForReply(authenticatedPage);
-
-    // The ChangeTrace result card must render.
-    const trace = authenticatedPage.getByTestId("cesare-change-trace");
-    await expect(trace).toBeVisible({ timeout: 20_000 });
-
-    // Initial state: no live diff highlight, trace idle.
-    await expect(trace).toHaveAttribute("data-state", "idle");
-    await expect(authenticatedPage.locator("body")).not.toHaveAttribute(
-      "data-cesare-diff",
-      "on",
+    await sendCesare(
+      authenticatedPage,
+      "Sostituisci la professione: Marta è una interprete simultanea.",
     );
 
-    // Click "Mostra modifiche" → live diff highlight appears.
+    // The ChangeTrace result card must render once the edit lands.
+    const trace = authenticatedPage.getByTestId("cesare-change-trace");
+    await expect(trace).toBeVisible({ timeout: 90_000 });
+    await expect(trace).toHaveAttribute("data-state", "idle");
+
+    // No diff overlay yet.
+    await expect(
+      authenticatedPage.getByTestId("cesare-live-diff-overlay"),
+    ).toHaveCount(0);
+
+    // Click "Mostra modifiche" → the word-level coloured diff overlay appears.
     const showBtn = trace.getByRole("button", { name: "Mostra modifiche" });
     await expect(showBtn).toBeVisible();
     await showBtn.click();
 
+    const overlay = authenticatedPage.getByTestId("cesare-live-diff-overlay");
+    await expect(overlay).toBeVisible({ timeout: 5_000 });
+    await expect(trace).toHaveAttribute("data-state", "showing");
+    // body flag still flips (back-compat wiring).
     await expect(authenticatedPage.locator("body")).toHaveAttribute(
       "data-cesare-diff",
       "on",
-      { timeout: 5_000 },
     );
-    await expect(trace).toHaveAttribute("data-state", "showing");
 
-    // The toggle now reads "Nascondi modifiche".
+    // The overlay shows real coloured word spans: a replace yields BOTH added
+    // (green) spans and removed (red) spans, word-level and inline.
+    await expect(overlay.locator('[data-diff-op="add"]').first()).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(overlay.locator('[data-diff-op="del"]').first()).toBeVisible({
+      timeout: 5_000,
+    });
+    // The added text ("interprete", "simultanea") is painted green; the removed
+    // text ("traduttrice", "freelance") is painted red — word-level, in place.
+    await expect(
+      overlay.locator('[data-diff-op="add"]', { hasText: "interprete" }),
+    ).toBeVisible();
+    await expect(
+      overlay.locator('[data-diff-op="del"]', { hasText: "traduttrice" }),
+    ).toBeVisible();
+
+    // Click "Nascondi modifiche" → the overlay is removed.
     const hideBtn = trace.getByRole("button", { name: "Nascondi modifiche" });
     await expect(hideBtn).toBeVisible();
-
-    // Click "Nascondi modifiche" → live diff highlight is removed.
     await hideBtn.click();
 
+    await expect(overlay).toHaveCount(0, { timeout: 5_000 });
     await expect(authenticatedPage.locator("body")).not.toHaveAttribute(
       "data-cesare-diff",
       "on",
-      { timeout: 5_000 },
     );
     await expect(trace).toHaveAttribute("data-state", "idle");
-    await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
-    ).toBeVisible();
   });
 });

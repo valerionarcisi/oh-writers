@@ -9,6 +9,12 @@ export type {
   AskCesareFn,
   TraceForToolRunArgs,
 } from "./components/CesareSheet";
+export {
+  CesareChatStoreProvider,
+  useCesareChatStore,
+} from "./cesare-chat-store";
+export type { CesareChatStore, CesareSendDeps } from "./cesare-chat-store";
+export { CesareConversation } from "./components/CesareConversation";
 export { RecapStrip } from "./components/RecapStrip";
 export { SessionsLandingPage } from "./components/SessionsLandingPage";
 export { SessionConversationPage } from "./components/SessionConversationPage";

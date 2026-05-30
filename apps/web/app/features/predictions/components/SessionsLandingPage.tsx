@@ -63,22 +63,30 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
   const sessionsQuery = useSessions(projectId);
   const createSession = useCreateSession(projectId);
 
+  // Spec 47b FIX 3 — "+ Nuova" must create a session and navigate to its route.
+  // Disabled while the create is in flight so a double-press can't fire two
+  // creates; a failed create surfaces an inline error instead of silently
+  // leaving the user on an empty landing.
+  const createAndOpen = () => {
+    if (createSession.isPending) return;
+    void createSession
+      .mutateAsync(undefined)
+      .then((session) => {
+        void navigate({
+          to: "/projects/$id/sessions/$sessionId",
+          params: { id: projectId, sessionId: session.id },
+        });
+      })
+      // The mutation records its own error state (rendered below); swallow the
+      // floating rejection so it doesn't become an unhandled promise rejection.
+      .catch(() => undefined);
+  };
+
   const newRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: newButtonProps } = useButton(
     {
-      onPress: () => {
-        void createSession
-          .mutateAsync(undefined)
-          .then((session) => {
-            void navigate({
-              to: "/projects/$id/sessions/$sessionId",
-              params: { id: projectId, sessionId: session.id },
-            });
-          })
-          // The mutation records its own error state; swallow the floating
-          // rejection so it doesn't become an unhandled promise rejection.
-          .catch(() => undefined);
-      },
+      onPress: createAndOpen,
+      isDisabled: createSession.isPending,
       "aria-label": "Nuova sessione Cesare",
     },
     newRef,
@@ -113,9 +121,19 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
           className={styles.newButton}
           data-testid="cesare-session-new"
         >
-          + Nuova
+          {createSession.isPending ? "Creazione…" : "+ Nuova"}
         </button>
       </header>
+
+      {createSession.isError && (
+        <p
+          className={styles.error}
+          role="alert"
+          data-testid="cesare-session-error"
+        >
+          Impossibile creare una nuova sessione. Riprova.
+        </p>
+      )}
 
       {sessionsQuery.isPending ? (
         <Skeleton

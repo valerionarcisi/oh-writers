@@ -234,17 +234,6 @@ describe("CesareDrawer", () => {
     expect(onCycle).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onStepBack from full state via the overflow 'Riduci' entry", () => {
-    const onStepBack = vi.fn();
-    const { getByLabelText, getByText } = render(
-      <CesareDrawer {...baseProps} state="full" onStepBack={onStepBack} />,
-    );
-    // ↙ no longer sits inline — it lives inside the `…` overflow.
-    fireEvent.click(getByLabelText("Altre azioni"));
-    fireEvent.click(getByText("Riduci"));
-    expect(onStepBack).toHaveBeenCalledTimes(1);
-  });
-
   it("calls onPeek and onClose", () => {
     const onPeek = vi.fn();
     const onClose = vi.fn();
@@ -274,51 +263,29 @@ describe("CesareDrawer", () => {
     expect(trigger.textContent).toContain("Breakdown Sc.2");
   });
 
-  it("header shows only the Notion-minimal primary icon set", () => {
+  // [OHW-047-A3] The header is truly minimal: agent name + session selector +
+  // ↗ / − / ×. There is NO `…` overflow, and bell/avatar/gear never sit here
+  // (they live in the LeftRail footer).
+  it("header shows only the Notion-minimal primary icon set — no overflow", () => {
     const { getByLabelText, queryByLabelText } = render(
-      <CesareDrawer
-        {...baseProps}
-        onNewChat={() => undefined}
-        dockIcons={{ onBell: () => undefined }}
-      />,
+      <CesareDrawer {...baseProps} onNewChat={() => undefined} />,
     );
     // Allowed primary icons.
     expect(getByLabelText("Espandi")).toBeTruthy();
-    expect(getByLabelText("Altre azioni")).toBeTruthy();
     expect(getByLabelText("Minimizza")).toBeTruthy();
     expect(getByLabelText("Chiudi")).toBeTruthy();
-    // Secondary actions must NOT be inline — they live in the overflow.
+    // No overflow trigger.
+    expect(queryByLabelText("Altre azioni")).toBeNull();
+    // Account actions are never inline in the chat header.
     expect(queryByLabelText("Notifiche")).toBeNull();
     expect(queryByLabelText("Profilo")).toBeNull();
     expect(queryByLabelText("Impostazioni")).toBeNull();
-    expect(queryByLabelText("Riduci")).toBeNull();
   });
 
-  it("overflow menu opens and surfaces the secondary actions", () => {
-    const onNewChat = vi.fn();
-    const onBell = vi.fn();
-    const onGear = vi.fn();
-    const { getByLabelText, getByText, queryByText } = render(
-      <CesareDrawer
-        {...baseProps}
-        onNewChat={onNewChat}
-        dockIcons={{ onBell, onGear }}
-      />,
+  it("never renders the `…` overflow trigger, even with onNewChat wired", () => {
+    const { queryByLabelText } = render(
+      <CesareDrawer {...baseProps} onNewChat={() => undefined} />,
     );
-    // Closed: menu entries are not in the document.
-    expect(queryByText("Nuova conversazione")).toBeNull();
-    // Open the `…` overflow.
-    fireEvent.click(getByLabelText("Altre azioni"));
-    expect(getByText("Nuova conversazione")).toBeTruthy();
-    expect(getByText("Notifiche")).toBeTruthy();
-    expect(getByText("Impostazioni")).toBeTruthy();
-    // Selecting an entry fires its handler.
-    fireEvent.click(getByText("Nuova conversazione"));
-    expect(onNewChat).toHaveBeenCalledTimes(1);
-  });
-
-  it("hides the overflow trigger when there are no secondary actions", () => {
-    const { queryByLabelText } = render(<CesareDrawer {...baseProps} />);
     expect(queryByLabelText("Altre azioni")).toBeNull();
   });
 

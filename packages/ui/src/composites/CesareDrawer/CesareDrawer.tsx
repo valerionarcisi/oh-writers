@@ -18,11 +18,11 @@
  *   - The drag-resize handles are mounted only when their corresponding
  *     state is active. Sizes are read from / persisted to localStorage via
  *     `DRAWER_SIZE_STORAGE_KEYS`.
- *   - The header keeps a Notion-minimal primary icon set: `↗` open-as-page /
- *     expand, `…` overflow, `−` minimise, `×` close. Every secondary action
- *     (new chat, share/export, step-back, and the dock's bell / avatar / gear
- *     carried over per spec 44) collapses into the `…` overflow menu so the
- *     header never crowds. The overflow is a react-aria `DropdownMenu`.
+ *   - The header is truly Notion-minimal: agent name + session selector + the
+ *     window-state controls `↗` open-as-page / expand, `−` minimise, `×` close.
+ *     There is NO `…` overflow. Secondary actions live elsewhere: new-chat in
+ *     the sessions popover (`+ Nuova`), and bell / avatar / gear in the LeftRail
+ *     footer (Spec 47b FIX 1) — never duplicated in the chat header.
  *   - The drawer never re-mounts when transitioning; the DOM stays stable
  *     and CSS animates the `[data-state]` flip.
  */
@@ -38,8 +38,6 @@ import {
   type ChangeEvent,
 } from "react";
 import { useButton } from "react-aria";
-import { DropdownMenu } from "../../components/DropdownMenu";
-import type { DropdownMenuItem } from "../../components/DropdownMenu";
 import styles from "./CesareDrawer.module.css";
 import type { CesareDrawerState } from "./use-drawer-state";
 import {
@@ -70,16 +68,6 @@ export interface CesareDrawerContextTag {
   id: string;
   label: string;
   onRemove?: () => void;
-}
-
-export interface CesareDrawerDockIcons {
-  onBell?: () => void;
-  onAvatar?: () => void;
-  onGear?: () => void;
-  /** When true, render a small notification dot on the bell. */
-  hasUnreadNotifications?: boolean;
-  /** Avatar initial / mark. */
-  avatarLabel?: string;
 }
 
 export interface CesareDrawerComposerProps {
@@ -128,19 +116,12 @@ export interface CesareDrawerProps {
   activeSessionId?: string;
   onSessionSelectorClick?: () => void;
 
-  /** Start a fresh conversation. Surfaced as the first `…` overflow entry. */
+  /** Start a fresh conversation. Surfaced by the consumer (sessions popover);
+   *  kept on the props so callers can still wire a fresh-chat affordance. */
   onNewChat?: () => void;
-  /** Share / export the current conversation. Surfaced in the `…` overflow. */
-  onShare?: () => void;
 
   /** Page-scope tag (BREAKDOWN, SOGGETTO, etc.) + dismissible pins. */
   contextTags?: ReadonlyArray<CesareDrawerContextTag>;
-
-  /** Bell / avatar / gear — migrated from the BottomDock when open. Per the
-   *  Notion-minimal audit (spec 44 + 47/A3) these never sit inline in the
-   *  header: they fold into the `…` overflow menu so the visible icon row
-   *  stays `↗ … − ×`. */
-  dockIcons?: CesareDrawerDockIcons;
 
   /** Scope chips rendered above the composer input. */
   scopes?: ReadonlyArray<CesareDrawerScope>;
@@ -262,7 +243,7 @@ export function CesareDrawer({
   state,
   onStateChange: _onStateChange,
   onCycle,
-  onStepBack,
+  onStepBack: _onStepBack,
   onPeek,
   onClose,
   surface = "floating",
@@ -270,10 +251,8 @@ export function CesareDrawer({
   sessions,
   activeSessionId,
   onSessionSelectorClick,
-  onNewChat,
-  onShare,
+  onNewChat: _onNewChat,
   contextTags,
-  dockIcons,
   scopes,
   onAddScope,
   composer,
@@ -399,47 +378,6 @@ export function CesareDrawer({
     [composer],
   );
 
-  // ─── Overflow menu (`…`) ─────────────────────────────────────────────────
-  // Every secondary action collapses here so the primary icon row stays the
-  // Notion-minimal `↗ … − ×`. Order: new chat · share/export · step-back ·
-  // then the dock icons (bell / avatar / gear) carried over per spec 44.
-  const overflowItems = useMemo<DropdownMenuItem[]>(() => {
-    const items: DropdownMenuItem[] = [];
-    if (onNewChat) {
-      items.push({
-        label: "Nuova conversazione",
-        icon: "✎",
-        onClick: onNewChat,
-      });
-    }
-    if (onShare) {
-      items.push({ label: "Condividi / Esporta", icon: "↗", onClick: onShare });
-    }
-    if (state === "full") {
-      items.push({ label: "Riduci", icon: "↙", onClick: onStepBack });
-    }
-    if (dockIcons?.onBell) {
-      items.push({
-        label: dockIcons.hasUnreadNotifications
-          ? "Notifiche · nuove"
-          : "Notifiche",
-        icon: "🔔",
-        onClick: dockIcons.onBell,
-      });
-    }
-    if (dockIcons?.onAvatar) {
-      items.push({ label: "Profilo", icon: "👤", onClick: dockIcons.onAvatar });
-    }
-    if (dockIcons?.onGear) {
-      items.push({
-        label: "Impostazioni",
-        icon: "⚙",
-        onClick: dockIcons.onGear,
-      });
-    }
-    return items;
-  }, [onNewChat, onShare, state, onStepBack, dockIcons]);
-
   // ─── Render ─────────────────────────────────────────────────────────────
   const isSplitSurface = surface === "split";
   const isResizing =
@@ -514,33 +452,15 @@ export function CesareDrawer({
             ))}
           </div>
 
-          {/* Notion-minimal primary set: ↗ open-as-page · … overflow ·
-              − minimise · × close. Bell / avatar / gear / new-chat / share /
-              step-back all live inside the overflow. */}
+          {/* Notion-minimal primary set: ↗ open-as-page · − minimise ·
+              × close. No `…` overflow — secondary actions live in the sessions
+              popover (new chat) and the LeftRail footer (bell/avatar/gear). */}
           <div className={styles.headerRight}>
             {!isSplitSurface && (
               <HeaderButton
                 onPress={onCycle}
                 label="Espandi"
                 icon={<span aria-hidden="true">↗</span>}
-              />
-            )}
-            {overflowItems.length > 0 && (
-              <DropdownMenu
-                align="end"
-                triggerClassName={styles.iconBtn}
-                triggerLabel="Altre azioni"
-                triggerTitle="Altre azioni"
-                trigger={
-                  <span className={styles.overflowGlyph} aria-hidden="true">
-                    {dockIcons?.hasUnreadNotifications && (
-                      <span className={styles.overflowDot} aria-hidden="true" />
-                    )}
-                    …
-                  </span>
-                }
-                items={overflowItems}
-                data-testid="cesare-overflow-menu"
               />
             )}
             {/* "Open as split column" — promotes the floating chat into the
