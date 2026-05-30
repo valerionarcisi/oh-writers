@@ -1,8 +1,27 @@
-import { generateText, jsonSchema, tool as sdkTool } from "ai";
+import { APICallError, generateText, jsonSchema, tool as sdkTool } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { ResultAsync } from "neverthrow";
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
+
+// Classify a thrown model error as transient (worth retrying) vs terminal.
+// The source of truth is the AI SDK's own `isRetryable` flag, which `APICallError`
+// sets for rate-limit (429), request timeout (408), conflict (409) and 5xx — and
+// clears for auth/validation (4xx). We also honour the same flag on any error
+// object that carries it explicitly (e.g. a synthesised request-timeout cause),
+// so retryability has one duck-typed contract. We never fabricate retryability
+// for auth/validation: a 401/403/400 surfaces immediately, never retried
+// (retrying only burns cost + latency on a request that cannot succeed).
+// Anything without the flag is treated as terminal (fail fast) — we do not retry
+// unknown failures blind.
+export const isRetryableModelError = (error: unknown): boolean => {
+  if (APICallError.isInstance(error)) return error.isRetryable === true;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { isRetryable?: unknown }).isRetryable === true
+  );
+};
 
 export interface ToolDefinition {
   readonly name: string;
@@ -51,9 +70,17 @@ export class AnthropicError {
   readonly _tag = "AnthropicError" as const;
   readonly message: string;
   readonly cause: string | null;
+  // Whether the underlying model failure is transient (rate-limit / 5xx /
+  // timeout) and therefore safe to retry. Classified ONCE here, at the SDK
+  // boundary, where the original error object (with its status code) is still
+  // available — downstream only sees this flag, never the raw error. Auth /
+  // validation failures are never retryable. The retry policy on the AiClient
+  // Layer (Spec 48 W-E3) reads this flag to decide whether to back off.
+  readonly retryable: boolean;
   constructor(operation: string, cause: unknown) {
     this.message = `Anthropic call failed in ${operation}`;
     this.cause = cause instanceof Error ? cause.message : String(cause ?? "");
+    this.retryable = isRetryableModelError(cause);
   }
 }
 
