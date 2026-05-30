@@ -13,6 +13,15 @@ export const ListSessionsInput = z.object({
   projectId: z.string().uuid(),
 });
 
+// Fetch a single session for the central `/sessions/:sessionId` route. Both
+// ids are required so the ownership guard can fail closed when the session
+// belongs to a different project than the one in the URL (no cross-project
+// leak).
+export const GetSessionInput = z.object({
+  id: z.string().uuid(),
+  projectId: z.string().uuid(),
+});
+
 export const CreateSessionInput = z.object({
   projectId: z.string().uuid(),
   title: z.string().trim().min(1).max(SESSION_TITLE_MAX).optional(),

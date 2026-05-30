@@ -40,6 +40,10 @@ import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
 import {
+  CesareSessionFocusProvider,
+  useCesareSessionFocus,
+} from "../cesare-session-focus-context";
+import {
   ActiveSceneProvider,
   useActiveScene,
   useActiveRequirementId,
@@ -129,6 +133,9 @@ interface AppShellProps {
   cesareSessions?: ReadonlyArray<CesareSessionItem>;
   onCesareSessionSelect?: (sessionId: string) => void;
   onCesareSessionNew?: () => void;
+  /** Spec 47-A5 — opens the full Cesare sessions landing
+   *  (`/projects/:id/sessions`). Wires the rail's dedicated "Cesare" entry. */
+  onCesareSessionsOpen?: () => void;
   children: ReactNode;
 }
 
@@ -160,7 +167,9 @@ export function AppShell(props: AppShellProps) {
         <ActiveSceneProvider>
           <CesareNotificationProvider>
             <SplitDrawerProvider>
-              <AppShellInner {...props} />
+              <CesareSessionFocusProvider>
+                <AppShellInner {...props} />
+              </CesareSessionFocusProvider>
             </SplitDrawerProvider>
           </CesareNotificationProvider>
         </ActiveSceneProvider>
@@ -181,6 +190,7 @@ function AppShellInner({
   cesareSessions,
   onCesareSessionSelect,
   onCesareSessionNew,
+  onCesareSessionsOpen,
   children,
 }: AppShellProps) {
   // Save-state is published by the page editors via `useSaveStateValue` and
@@ -206,6 +216,7 @@ function AppShellInner({
   );
   const splitDrawer = useSplitDrawer();
   const openBellDrawer = useBellOpener();
+  const { focusedSessionId, setFocusedSessionId } = useCesareSessionFocus();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
   // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
   // by default and a top-left hamburger toggles it as a sliding overlay.
@@ -778,6 +789,7 @@ function AppShellInner({
               sessions={cesareSessions}
               onSessionSelect={onCesareSessionSelect}
               onSessionNew={onCesareSessionNew}
+              onSessionsOpen={onCesareSessionsOpen}
               tools={railTools}
               onNavigate={handleNavigate}
               onCollapse={
@@ -865,6 +877,8 @@ function AppShellInner({
               }}
               askCesare={wrappedAskCesare}
               onAssistantResponse={handleCesareAssistantResponse}
+              focusedSessionId={focusedSessionId}
+              onActiveSessionChange={setFocusedSessionId}
               dockIcons={{
                 onBell: openBellDrawer,
                 // While Cesare is open, the avatar routes to the account

@@ -162,6 +162,35 @@
   }
 }
 
+/* Clickable "Cesare" entry in the sessions section title. Inherits the
+   uppercase label look but adds the agent glyph + hover/focus affordance so it
+   reads as the dedicated entry into the full Cesare page. */
+.sessionsTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--ds-text-faint);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--ds-radius-sm);
+
+  & > .glyph {
+    color: var(--ds-agent);
+  }
+
+  &:hover {
+    color: var(--ds-action);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
 .sectionItems {
   display: flex;
   flex-direction: column;

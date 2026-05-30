@@ -7,6 +7,7 @@ export {
   RenameSessionInput,
   DeleteSessionInput,
   TouchSessionInput,
+  GetSessionInput,
   DEFAULT_NEW_SESSION_TITLE,
   SESSION_TITLE_MAX,
 } from "./sessions.schema";
@@ -14,8 +15,11 @@ export type { CesareSession } from "./sessions.schema";
 export { CesareSessionNotFoundError } from "./sessions.errors";
 export {
   sessionsQueryKey,
+  sessionQueryKey,
   sessionsQueryOptions,
+  sessionQueryOptions,
   useSessions,
+  useSession,
   useCreateSession,
   useRenameSession,
   useDeleteSession,

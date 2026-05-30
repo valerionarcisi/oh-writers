@@ -64,6 +64,12 @@ export type LeftRailProps = {
   /** Click handler for the "+ Nuova" affordance in the sessions section
    *  label. Optional — when omitted, the affordance is hidden. */
   onSessionNew?: () => void;
+  /** Spec 47-A5 — opens the full Cesare sessions page (the central
+   *  `/projects/:id/sessions` landing). Renders the "Sessioni Cesare" section
+   *  title as a clickable entry. When omitted, the title is plain text.
+   *  The section is always rendered when this is provided, even with zero
+   *  sessions, so the dedicated Cesare entry is reachable from an empty list. */
+  onSessionsOpen?: () => void;
   /** Click handler for navigating to a primary nav item. The href is
    *  passed through so the caller can integrate with the router of its
    *  choice (TanStack Router today, anything tomorrow). */
@@ -165,6 +171,33 @@ function SessionItemButton({
   );
 }
 
+// The "Sessioni Cesare" section title. When `onOpen` is provided it is a
+// react-aria button that navigates to the full Cesare sessions page; otherwise
+// it is plain, non-interactive text.
+function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const { buttonProps } = useButton(
+    {
+      onPress: onOpen ?? (() => undefined),
+      "aria-label": "Apri Cesare",
+      isDisabled: !onOpen,
+    },
+    ref,
+  );
+  if (!onOpen) return <span>Sessioni Cesare</span>;
+  return (
+    <button
+      ref={ref}
+      {...buttonProps}
+      className={styles.sessionsTitle}
+      data-testid="rail-cesare-entry"
+    >
+      <RailGlyph icon="agent-spark" />
+      <span>Sessioni Cesare</span>
+    </button>
+  );
+}
+
 function ToolButton({ tool }: { tool: RailToolItem }) {
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
@@ -224,6 +257,7 @@ export function LeftRail({
   sessions,
   onSessionSelect,
   onSessionNew,
+  onSessionsOpen,
   onNavigate,
   tools,
   ariaLabel,
@@ -295,11 +329,15 @@ export function LeftRail({
   );
 
   const renderSessions = (): ReactNode => {
-    if (!sessions || sessions.length === 0) return null;
+    const hasSessions = Boolean(sessions && sessions.length > 0);
+    // Render the section when there's at least one session OR when a dedicated
+    // "open Cesare page" entry is wired — so the Cesare entry stays reachable
+    // even from an empty list.
+    if (!hasSessions && !onSessionsOpen) return null;
     return (
       <section className={styles.section} data-rail-section="sessions">
         <header className={styles.sectionLabel}>
-          <span>Sessioni Cesare</span>
+          <SessionsSectionTitle onOpen={onSessionsOpen} />
           {onSessionNew && (
             <button
               type="button"
@@ -311,15 +349,17 @@ export function LeftRail({
             </button>
           )}
         </header>
-        <div className={styles.sessions}>
-          {sessions.map((s) => (
-            <SessionItemButton
-              key={s.id}
-              session={s}
-              onActivate={() => onSessionSelect?.(s.id)}
-            />
-          ))}
-        </div>
+        {hasSessions && (
+          <div className={styles.sessions}>
+            {sessions!.map((s) => (
+              <SessionItemButton
+                key={s.id}
+                session={s}
+                onActivate={() => onSessionSelect?.(s.id)}
+              />
+            ))}
+          </div>
+        )}
       </section>
     );
   };

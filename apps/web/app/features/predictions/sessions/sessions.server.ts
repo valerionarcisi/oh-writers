@@ -19,10 +19,23 @@ import {
   RenameSessionInput,
   DeleteSessionInput,
   TouchSessionInput,
+  GetSessionInput,
   DEFAULT_NEW_SESSION_TITLE,
   type CesareSession,
 } from "./sessions.schema";
 import { CesareSessionNotFoundError, DbError } from "./sessions.errors";
+
+// ─── Ownership guard ─────────────────────────────────────────────────────────
+// Pure predicate so the central `/sessions/:sessionId` route's access decision
+// can be unit-tested without a DB. The session is reachable ONLY when it
+// belongs to the requesting user AND to the project named in the URL. Both
+// checks fail closed: any mismatch is treated as "not found" so we never leak
+// whether a foreign session exists or which project owns it.
+export const ownsSession = (
+  session: { userId: string; projectId: string },
+  request: { userId: string; projectId: string },
+): boolean =>
+  session.userId === request.userId && session.projectId === request.projectId;
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -117,6 +130,48 @@ export const listSessions = createServerFn({ method: "GET" })
             .map((rows) => rows.map(toWire)),
         ),
       ),
+  );
+
+// ─── Get one (central session route) ─────────────────────────────────────────
+// Powers `/projects/:id/sessions/:sessionId`. Resolves the row, runs the
+// project-view gate, then applies the `ownsSession` guard. Ownership failures
+// (unknown id, foreign user, cross-project) collapse to a single
+// `CesareSessionNotFoundError`; a denied project gate surfaces a
+// `ProjectAccessError`. Both are error results, and the route renders the same
+// not-found body for any error — so the ownership case is never distinguishable
+// from "no access" on the wire.
+
+export const getSession = createServerFn({ method: "GET" })
+  .validator(GetSessionInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        CesareSession,
+        ProjectAccessError | CesareSessionNotFoundError | DbError
+      >
+    > => {
+      const db = await getDb();
+      const result = await findSessionById(db, data.id).andThen((row) =>
+        withProjectAccess(data.projectId, "view", ({ access }) => {
+          if (
+            !ownsSession(row, {
+              userId: access.user.id,
+              projectId: data.projectId,
+            })
+          ) {
+            return errAsync(
+              new CesareSessionNotFoundError(data.id) as
+                | CesareSessionNotFoundError
+                | DbError,
+            );
+          }
+          return okAsync(toWire(row));
+        }),
+      );
+      return toShape(result);
+    },
   );
 
 // ─── Create ──────────────────────────────────────────────────────────────────

@@ -10,14 +10,19 @@ export type {
   TraceForToolRunArgs,
 } from "./components/CesareSheet";
 export { RecapStrip } from "./components/RecapStrip";
+export { SessionsLandingPage } from "./components/SessionsLandingPage";
+export { SessionConversationPage } from "./components/SessionConversationPage";
 export type {
   RecapStripProps,
   RecapStripCategoryItem,
 } from "./components/RecapStrip";
 export {
   sessionsQueryKey,
+  sessionQueryKey,
   sessionsQueryOptions,
+  sessionQueryOptions,
   useSessions,
+  useSession,
   useCreateSession,
   useRenameSession,
   useDeleteSession,
