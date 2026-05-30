@@ -1,8 +1,14 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { ResultAsync, okAsync, errAsync } from "neverthrow";
+import { Effect } from "effect";
 import { toShape, type ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
+import {
+  withExternalCallPolicy,
+  isTransientHttpStatus,
+  toResultAsync,
+} from "~/server/effect";
 import {
   executeSearchPlaces,
   type PlacePhoto,
@@ -126,12 +132,32 @@ interface NearbyResponse {
 const FIELD_MASK =
   "places.displayName,places.formattedAddress,places.location,places.id,places.types,places.photos,places.rating,places.priceLevel,places.editorialSummary";
 
-const callNearbySearch = (
+// Spec 48 W-E6 / Circle 4 — the Google Places `searchNearby` fetch wrapped in an
+// Effect that carries the SAME retry/timeout pattern as the model calls (the ADR
+// requires Google Places to use the model-call policy). The HTTP status is
+// classified ONCE here into the transient-vs-terminal `retryable` flag the policy
+// gate reads: a 429 / 5xx (or a network error / per-attempt timeout) is retried
+// with backoff; a 4xx is terminal. The API key is read from the env and never
+// leaks into the error — the wire error stays the existing `{ _tag, message }`.
+
+interface NearbyCallError {
+  readonly _tag: "PlacesNearbyError";
+  readonly message: string;
+  readonly retryable: boolean;
+}
+
+const nearbyTimeoutError = (): NearbyCallError => ({
+  _tag: "PlacesNearbyError",
+  message: "Google Places searchNearby request timed out",
+  retryable: true,
+});
+
+const nearbySearchEffect = (
   apiKey: string,
   body: Record<string, unknown>,
-): ResultAsync<NearbyResponse, PlacesAutocompleteError> =>
-  ResultAsync.fromPromise(
-    (async () => {
+): Effect.Effect<NearbyResponse, NearbyCallError> =>
+  Effect.tryPromise({
+    try: async (): Promise<NearbyResponse> => {
       const response = await fetch(
         "https://places.googleapis.com/v1/places:searchNearby",
         {
@@ -145,16 +171,44 @@ const callNearbySearch = (
         },
       );
       if (!response.ok) {
-        throw new Error(
-          `Google Places searchNearby ${response.status} ${response.statusText}`,
+        // Carry the status on the thrown error so `catch` below can classify
+        // retryability without re-reading the (already consumed) response.
+        throw Object.assign(
+          new Error(
+            `Google Places searchNearby ${response.status} ${response.statusText}`,
+          ),
+          { httpStatus: response.status },
         );
       }
       return (await response.json()) as NearbyResponse;
-    })(),
-    (e) => ({
-      _tag: "PlacesNearbyError",
-      message: e instanceof Error ? e.message : String(e),
-    }),
+    },
+    catch: (e): NearbyCallError => {
+      const httpStatus = (e as { httpStatus?: number }).httpStatus;
+      // A network error / JSON parse failure has no HTTP status → treat as
+      // transient (worth one retry). A 429 / 5xx is transient; any other 4xx is
+      // terminal.
+      const retryable =
+        httpStatus === undefined ? true : isTransientHttpStatus(httpStatus);
+      return {
+        _tag: "PlacesNearbyError",
+        message: e instanceof Error ? e.message : String(e),
+        retryable,
+      };
+    },
+  });
+
+const callNearbySearch = (
+  apiKey: string,
+  body: Record<string, unknown>,
+): ResultAsync<NearbyResponse, PlacesAutocompleteError> =>
+  toResultAsync(
+    withExternalCallPolicy(
+      nearbySearchEffect(apiKey, body),
+      nearbyTimeoutError,
+    ),
+  ).mapErr(
+    // Strip the internal `retryable` flag — the wire contract is `{ _tag, message }`.
+    ({ _tag, message }): PlacesAutocompleteError => ({ _tag, message }),
   );
 
 /**

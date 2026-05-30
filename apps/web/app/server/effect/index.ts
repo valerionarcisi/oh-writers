@@ -7,6 +7,13 @@ export { fromResultAsync, toResultAsync } from "./interop";
 export { DbService, DbLayer } from "./db.layer";
 export { AccessService, AccessLayer } from "./access.layer";
 export { AiClient, AiClientLayer } from "./ai.layer";
+export {
+  withExternalCallPolicy,
+  isTransientHttpStatus,
+  EXTERNAL_CALL_POLICY,
+  type RetryableError,
+  type ExternalCallPolicyOptions,
+} from "./external-policy";
 export { Observability, ObservabilityLayer } from "./langfuse.layer";
 export {
   AiContextLayer,
