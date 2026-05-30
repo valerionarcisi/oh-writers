@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { eq, and, isNull, count, gte, lte, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
+import { aiTelemetry } from "~/server/langfuse-config";
 import { ResultAsync } from "neverthrow";
 import {
   screenplays,
@@ -1598,10 +1599,7 @@ const callCesare = (
       system: systemPrompt.map((b) => b.text).join("\n\n"),
       messages,
       maxOutputTokens: 1024,
-      experimental_telemetry: {
-        isEnabled: true,
-        functionId: "cesare-text-only",
-      },
+      experimental_telemetry: aiTelemetry("cesare-text-only"),
     }).then((r) => repairMojibake(r.text)),
     (e) =>
       new CesareError(

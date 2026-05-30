@@ -168,8 +168,7 @@
   flex-wrap: wrap;
 }
 
-.actionPrimary,
-.actionSecondary {
+.actionPrimary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -181,6 +180,9 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  background: var(--ds-agent-soft);
+  border: 1px solid var(--ds-agent);
+  color: var(--ds-agent);
   transition:
     background var(--ds-duration-1) var(--ds-ease),
     color var(--ds-duration-1) var(--ds-ease),
@@ -190,12 +192,6 @@
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
-}
-
-.actionPrimary {
-  background: var(--ds-agent-soft);
-  border: 1px solid var(--ds-agent);
-  color: var(--ds-agent);
 }
 
 .actionPrimary:hover {
@@ -208,26 +204,13 @@
   color: var(--ds-text-on-dark);
 }
 
-.actionSecondary {
-  background: transparent;
-  border: 1px solid var(--ds-line);
-  color: var(--ds-text-2);
-}
-
-.actionSecondary:hover {
-  background: var(--ds-surface-alt);
-  border-color: var(--ds-text-3);
-  color: var(--ds-text);
-}
-
 /* ── Reduced motion fallback ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .stepsHeader,
   .chev,
   .summary,
-  .actionPrimary,
-  .actionSecondary {
+  .actionPrimary {
     transition: none;
   }
 }

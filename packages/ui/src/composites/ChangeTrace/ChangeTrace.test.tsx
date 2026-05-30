@@ -151,42 +151,20 @@ describe("ChangeTrace", () => {
     expect(screen.getByText("Nascondi modifiche")).toBeTruthy();
   });
 
-  it("renders the Undo button only when onUndo is provided", () => {
-    const onUndo = vi.fn();
-    const { rerender } = render(
-      <ChangeTrace
-        title="Aggiornata"
-        stepCount={1}
-        updates={SAMPLE_UPDATES}
-        onShowChanges={() => undefined}
-      />,
-    );
-    expect(screen.queryByText("Annulla")).toBeNull();
-    rerender(
-      <ChangeTrace
-        title="Aggiornata"
-        stepCount={1}
-        updates={SAMPLE_UPDATES}
-        onShowChanges={() => undefined}
-        onUndo={onUndo}
-      />,
-    );
-    expect(screen.getByText("Annulla")).toBeTruthy();
-  });
-
-  it("calls onUndo when the Undo button is clicked", () => {
-    const onUndo = vi.fn();
+  // Spec 47e — the inline "Annulla" affordance was removed: the edit is always
+  // applied and the toggle is a transient flash, not a revert. True rollback
+  // lives in the Versions SplitDrawer.
+  it("never renders an 'Annulla' button", () => {
     render(
       <ChangeTrace
         title="Aggiornata"
         stepCount={1}
         updates={SAMPLE_UPDATES}
         onShowChanges={() => undefined}
-        onUndo={onUndo}
+        onHideChanges={() => undefined}
       />,
     );
-    fireEvent.click(screen.getByText("Annulla"));
-    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Annulla")).toBeNull();
   });
 
   it("sets aria-pressed on the show/hide button to reflect state", () => {

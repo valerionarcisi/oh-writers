@@ -96,72 +96,73 @@ export const teamProjectsQueryOptions = (teamId: string) =>
 
 export const getProjectById = createServerFn({ method: "GET" })
   .validator(z.object({ projectId: z.string().uuid() }))
-  .handler(
-    async ({ data }) => {
-      const user = await requireUser();
-      const db = await getDb();
+  .handler(async ({ data }) => {
+    const user = await requireUser();
+    const db = await getDb();
 
-      const projectResult = await ResultAsync.fromPromise(
-        db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
-        (e) => new DbError("getProjectById", e),
-      );
-      if (projectResult.isErr()) return toShape(err(projectResult.error));
+    const projectResult = await ResultAsync.fromPromise(
+      db.query.projects.findFirst({ where: eq(projects.id, data.projectId) }),
+      (e) => new DbError("getProjectById", e),
+    );
+    if (projectResult.isErr()) return toShape(err(projectResult.error));
 
-      const project = projectResult.value;
-      if (!project)
-        return toShape(err(new ProjectNotFoundError(data.projectId)));
+    const project = projectResult.value;
+    if (!project) return toShape(err(new ProjectNotFoundError(data.projectId)));
 
-      // Backfill any DocumentType rows missing from this project. Pre-04f
-      // projects (and any future pipeline-type added after a project's
-      // creation) won't have a row for every type — onConflictDoNothing keeps
-      // this idempotent and cheap. Without this, the Overview cards grid
-      // silently drops the missing card (e.g. Soggetto on legacy projects).
-      const backfillResult = await ResultAsync.fromPromise(
+    // Backfill any DocumentType rows missing from this project. Pre-04f
+    // projects (and any future pipeline-type added after a project's
+    // creation) won't have a row for every type — onConflictDoNothing keeps
+    // this idempotent and cheap. Without this, the Overview cards grid
+    // silently drops the missing card (e.g. Soggetto on legacy projects).
+    const backfillResult = await ResultAsync.fromPromise(
+      db
+        .insert(documents)
+        .values(
+          Object.values(DocumentTypes).map((type) => ({
+            projectId: project.id,
+            type,
+            title: type.charAt(0).toUpperCase() + type.slice(1),
+            content: "",
+            createdBy: user.id,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [documents.projectId, documents.type],
+        }),
+      (e) => new DbError("getProjectById.backfill", e),
+    );
+    if (backfillResult.isErr()) return toShape(err(backfillResult.error));
+
+    const relatedResult = await ResultAsync.fromPromise(
+      Promise.all([
         db
-          .insert(documents)
-          .values(
-            Object.values(DocumentTypes).map((type) => ({
-              projectId: project.id,
-              type,
-              title: type.charAt(0).toUpperCase() + type.slice(1),
-              content: "",
-              createdBy: user.id,
-            })),
-          )
-          .onConflictDoNothing({
-            target: [documents.projectId, documents.type],
-          }),
-        (e) => new DbError("getProjectById.backfill", e),
-      );
-      if (backfillResult.isErr()) return toShape(err(backfillResult.error));
+          .select()
+          .from(documents)
+          .where(eq(documents.projectId, data.projectId)),
+        db.query.screenplays
+          .findFirst({ where: eq(screenplays.projectId, data.projectId) })
+          .then((row) => row ?? null),
+      ]),
+      (e) => new DbError("getProjectById.related", e),
+    );
 
-      const relatedResult = await ResultAsync.fromPromise(
-        Promise.all([
-          db
-            .select()
-            .from(documents)
-            .where(eq(documents.projectId, data.projectId)),
-          db.query.screenplays
-            .findFirst({ where: eq(screenplays.projectId, data.projectId) })
-            .then((row) => row ?? null),
-        ]),
-        (e) => new DbError("getProjectById.related", e),
-      );
-
-      return toShape(
-        relatedResult.map(([projectDocuments, screenplay]) => ({
-          ...project,
-          documents: projectDocuments.map(stripYjsState),
-          screenplay: screenplay ? stripYjsState(screenplay) : null,
-        })),
-      );
-    },
-  );
+    return toShape(
+      relatedResult.map(([projectDocuments, screenplay]) => ({
+        ...project,
+        documents: projectDocuments.map(stripYjsState),
+        screenplay: screenplay ? stripYjsState(screenplay) : null,
+      })),
+    );
+  });
 
 export const projectQueryOptions = (projectId: string) =>
   queryOptions({
     queryKey: ["projects", projectId] as const,
     queryFn: () => getProjectById({ data: { projectId } }),
+    // Skip until the id is a real uuid. The shell calls this with `""` on routes
+    // without a `$id` param (e.g. the dashboard); firing then would 500 on the
+    // server fn's uuid validation. The enabled guard keeps that noise out.
+    enabled: z.string().uuid().safeParse(projectId).success,
   });
 
 // ─── Create project ───────────────────────────────────────────────────────────

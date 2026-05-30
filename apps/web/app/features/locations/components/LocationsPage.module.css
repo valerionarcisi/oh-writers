@@ -37,3 +37,11 @@
   flex: 1 1 auto;
   min-inline-size: 0;
 }
+
+/* Server / pre-mount placeholder for the client-only Leaflet map. Fills the
+   column so the layout doesn't jump when the real map mounts. */
+.mapPlaceholder {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  background: var(--ds-surface-alt);
+}

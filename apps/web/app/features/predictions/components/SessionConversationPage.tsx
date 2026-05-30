@@ -19,11 +19,7 @@ import { useButton } from "react-aria";
 import { useCesareSessionFocus } from "~/features/app-shell";
 import { useSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
-import {
-  CesareConversation,
-  type DocAppliedMarker,
-  type LiveDiffMarker,
-} from "./CesareConversation";
+import { CesareConversation, type LiveDiffMarker } from "./CesareConversation";
 import { useShowChangesInSplitDrawer } from "./CesareSheet";
 import { buildTargetPageRef } from "../cesare-show-changes";
 import styles from "./SessionConversationPage.module.css";
@@ -102,28 +98,6 @@ export function SessionConversationPage({
     [page, showChangesInSplit],
   );
   const handleHideChanges = useCallback(() => undefined, []);
-  const handleCancelRewrite = useCallback(
-    (rewrite: { scene_number: number; new_content: string }) => {
-      if (typeof window === "undefined") return;
-      window.dispatchEvent(
-        new CustomEvent("ohw:cesare:cancel-rewrite", {
-          detail: { sceneNumber: rewrite.scene_number },
-        }),
-      );
-    },
-    [],
-  );
-  const handleUndoDocApply = useCallback((marker: DocAppliedMarker) => {
-    if (typeof window === "undefined" || !marker.previousVersionId) return;
-    window.dispatchEvent(
-      new CustomEvent("ohw:cesare:undo-doc-apply", {
-        detail: {
-          documentType: marker.documentType,
-          previousVersionId: marker.previousVersionId,
-        },
-      }),
-    );
-  }, []);
 
   if (!isValidParam || sessionQuery.isError) {
     return (
@@ -175,8 +149,6 @@ export function SessionConversationPage({
         testId="session-conversation-thread"
         onShowChanges={handleShowChanges}
         onHideChanges={handleHideChanges}
-        onCancelRewrite={handleCancelRewrite}
-        onUndoDocApply={handleUndoDocApply}
         emptyState={
           <p className={styles.lede} data-testid="session-empty">
             Nessun messaggio ancora in questa conversazione. Scrivi qui sotto

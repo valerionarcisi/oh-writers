@@ -76,16 +76,11 @@
   transition: box-shadow var(--ds-duration-3) var(--ds-ease);
 }
 
-/* Live-doc inline diff (Spec 47d). Cesare edits land on the open document(s);
-   "Mostra modifiche" sets body[data-cesare-diff="on"] AND broadcasts the
-   word-level diff segments per touched document. Each document body paints its
-   own green inline word highlight via <CesareLiveDiff/>; the main lane keeps
-   only a subtle accent ring to frame the affected page. "Nascondi modifiche"
-   clears the attribute and every per-document highlight. */
-:global(body[data-cesare-diff="on"]) .main {
-  box-shadow: inset 0 0 0 1px var(--ds-success);
-  border-radius: var(--ds-radius-md);
-}
+/* Live-doc inline diff (Spec 47e). Cesare edits always land on the open
+   document(s); "Mostra / Nascondi modifiche" is a TRANSIENT FLASH painted
+   per-document by <CesareLiveDiff/> (green additions / red previous text) that
+   fades out — there is no persistent body[data-cesare-diff] mode and no
+   standing ring on the main lane. */
 
 /* ── Focus toggle (top-left chevron) ──────────────────────────
    A small floating button anchored to the top-left of the main column. It

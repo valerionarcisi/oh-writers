@@ -1,57 +1,93 @@
 // apps/web/app/features/app-shell/cesare-live-diff-store.ts
 //
-// Spec 47d — durable "Mostra modifiche" state for the inline word highlight.
+// Spec 47e — "Mostra / Nascondi modifiche" as a TRANSIENT FLASH highlight.
 //
-// "Mostra modifiche" arms a green word highlight on EVERY document a Cesare
-// edit touched, keyed by documentType. The user can then open any of those
-// documents and see ITS highlight while diff mode stays armed. Because opening
-// a document mounts a fresh <CesareLiveDiff/> AFTER the toggle fired, a one-shot
-// DOM event would be missed — so the armed state lives in this module-level
-// store with last-value replay: a newly-mounted highlight reads the current
-// state on mount, and every instance subscribes to changes. The state survives
-// client-side (SPA) navigation; "Nascondi modifiche" clears it.
+// The edit is ALWAYS applied: the document already holds the new version. This
+// store does NOT model a persistent on/off "diff mode" — it models a one-shot
+// flash request per touched document:
 //
-// Pure client state — no DB, no React. The shell broadcaster (CesareSheet)
-// writes it; each per-document <CesareLiveDiff/> reads + subscribes.
+//   - "Mostra modifiche"   → flash the GREEN additions, then fade out.
+//   - "Nascondi modifiche" → flash the previous text with RED removals, then
+//                            fade out. The applied document is never changed —
+//                            it is a visual peek at "how it was".
+//
+// Each request carries a monotonically-increasing `nonce`. A per-document
+// <CesareLiveDiff/> reads its own entry (with last-value replay so a doc opened
+// AFTER the click still flashes) and fires-and-forgets: it paints the flash and
+// clears it on a timer keyed by the nonce. Because the nonce only changes on a
+// click — never on every render — the consumer's fade effect runs once per
+// click and the "Maximum update depth exceeded" loop is removed by construction
+// (no persistent reconciled state feeding an effect that re-subscribes each
+// render, unlike the 47d on/off model this replaces).
+//
+// Pure client state — no DB, no React. The chat surface (CesareSheet) writes it
+// via `flashLiveDiff`; each per-document <CesareLiveDiff/> reads + subscribes.
+
+export type LiveDiffMode = "mostra" | "nascondi";
 
 export interface LiveDiffSegment {
   readonly op: "eq" | "add" | "del";
   readonly text: string;
 }
 
-export interface LiveDiffEntry {
+/** A single flash request for one document. */
+export interface LiveDiffFlash {
   readonly documentType: string;
   readonly label: string;
+  readonly mode: LiveDiffMode;
   readonly segments: ReadonlyArray<LiveDiffSegment>;
+  /** Monotonic id of this flash request — drives the consumer's one-shot timer. */
+  readonly nonce: number;
 }
 
 export interface LiveDiffState {
-  /** Whether diff mode is armed (the user clicked "Mostra modifiche"). */
-  readonly showing: boolean;
-  /** Armed diffs keyed by documentType — one per touched document. */
-  readonly diffs: Readonly<Record<string, LiveDiffEntry>>;
+  /** Latest flash request per documentType. Replayed to docs opened later. */
+  readonly flashes: Readonly<Record<string, LiveDiffFlash>>;
 }
 
-const EMPTY_STATE: LiveDiffState = { showing: false, diffs: {} };
+const EMPTY_STATE: LiveDiffState = { flashes: {} };
 
 let state: LiveDiffState = EMPTY_STATE;
+let nonceCounter = 0;
 const listeners = new Set<() => void>();
 
 export function getLiveDiffState(): LiveDiffState {
   return state;
 }
 
-/** Arm the highlight for the given touched documents (or clear it). */
-export function setLiveDiffState(next: LiveDiffState): void {
-  state = next.showing ? next : EMPTY_STATE;
+interface FlashInput {
+  readonly documentType: string;
+  readonly label: string;
+  readonly segments: ReadonlyArray<LiveDiffSegment>;
+}
+
+/**
+ * Request a transient flash for the given touched documents. One shared nonce
+ * across the batch so a cross-entity edit flashes every open doc in lock-step.
+ */
+export function flashLiveDiff(
+  mode: LiveDiffMode,
+  inputs: ReadonlyArray<FlashInput>,
+): void {
+  if (inputs.length === 0) return;
+  nonceCounter += 1;
+  const nonce = nonceCounter;
+  const flashes: Record<string, LiveDiffFlash> = { ...state.flashes };
+  for (const input of inputs) {
+    if (!input.documentType) continue;
+    flashes[input.documentType] = {
+      documentType: input.documentType,
+      label: input.label,
+      mode,
+      segments: input.segments,
+      nonce,
+    };
+  }
+  state = { flashes };
   for (const listener of listeners) listener();
 }
 
-export function clearLiveDiffState(): void {
-  setLiveDiffState(EMPTY_STATE);
-}
-
-/** Subscribe to armed-state changes. Returns an unsubscribe fn. */
+/** Subscribe to flash requests. Returns an unsubscribe fn. */
 export function subscribeLiveDiff(listener: () => void): () => void {
   listeners.add(listener);
   return () => {

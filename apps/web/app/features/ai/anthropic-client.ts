@@ -1,6 +1,7 @@
 import { generateText, jsonSchema, tool as sdkTool } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { ResultAsync } from "neverthrow";
+import { aiTelemetry } from "~/server/langfuse-config";
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 
@@ -143,10 +144,7 @@ export const callHaiku = (
               : ("auto" as const),
           }
         : {}),
-      experimental_telemetry: {
-        isEnabled: true,
-        functionId: `call-haiku:${operation}`,
-      },
+      experimental_telemetry: aiTelemetry(`call-haiku:${operation}`),
     }).then((result) => {
       const toolUseBlocks: ToolUseBlock[] = result.toolCalls.map((tc) => ({
         type: "tool_use" as const,

@@ -4,23 +4,24 @@ import type { Page } from "@playwright/test";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 
 /**
- * [Spec 47-A6] "Mostra / Nascondi modifiche" end-to-end (Notion live-doc model).
+ * [Spec 47-A6 / 47e] "Mostra / Nascondi modifiche" end-to-end.
  *
  * The show/hide-changes control inside a ChangeTrace card branches on HOW Cesare
  * is open:
  *
- *   - FLOATING / expanded → toggling reveals an inline LIVE diff on the open
- *     document (body[data-cesare-diff="on"] + the shell paints a highlight ring
- *     on <main>). "Nascondi modifiche" clears it.
+ *   - FLOATING / expanded → "Mostra modifiche" flashes a TRANSIENT green diff
+ *     INSIDE the open document, then it fades (Spec 47e). "Nascondi modifiche"
+ *     flashes the red previous text, then fades — neither reverts; the document
+ *     always keeps the new version.
  *   - FULL page → "Mostra modifiche" opens the routed SplitDrawer
  *     (body[data-split-drawer] set) showing the trace's target page with the
  *     diff, because the full panel covers the live document.
- *   - "Annulla" reverts the live document to the version that was current before
- *     Cesare applied the change (the agentic-edit pattern auto-creates a version).
+ *   - There is NO inline "Annulla" (Spec 47e removed it; rollback lives in the
+ *     Versions SplitDrawer).
  *
  * Driven from the Soggetto page with the deterministic soggetto-v2 mock
  * scenario ("Marco torna a Falerone…"), which applies live AND renders a
- * ChangeTrace with both "Mostra modifiche" and "Annulla".
+ * ChangeTrace with "Mostra modifiche".
  *
  * Lives in the `mock-ui` Playwright project (MOCK_AI=true) via the
  * `cesare-agentic-*.spec.ts` glob.
@@ -62,7 +63,7 @@ async function sendV2AndWaitForTrace(page: Page) {
 }
 
 test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => {
-  test("[OHW-047-A6] floating toggles a live-doc diff; full opens the split drawer; Annulla reverts", async ({
+  test("[OHW-047-A6/047e] floating flashes a transient diff; full opens the split drawer; no Annulla", async ({
     authenticatedPage,
   }) => {
     test.setTimeout(150_000);
@@ -81,35 +82,34 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await expect(editor).toContainText(SOGGETTO_V2_MARKER, { timeout: 15_000 });
     await expect(page.getByTestId("document-draft-banner")).toHaveCount(0);
 
-    // ── BRANCH 1: FLOATING → inline live diff on the open document ──────────
+    // Spec 47e: no inline "Annulla" affordance (rollback lives in Versions).
+    await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
+
+    // ── BRANCH 1: FLOATING → transient inline flash on the open document ────
     await expect(trace).toHaveAttribute("data-state", "idle");
-    await expect(body).not.toHaveAttribute("data-cesare-diff", "on");
-    // No split drawer in the floating branch.
     await expect(body).not.toHaveAttribute("data-split-drawer", /open|full/);
 
     const showBtn = trace.getByRole("button", { name: "Mostra modifiche" });
     await expect(showBtn).toBeVisible();
     await showBtn.click();
 
-    // Live diff highlight + ring (the shell paints inset box-shadow on <main>).
-    await expect(body).toHaveAttribute("data-cesare-diff", "on", {
-      timeout: 5_000,
-    });
+    // Green flash appears INSIDE the document, then FADES OUT.
+    const flash = page.getByTestId("cesare-live-diff-inline");
+    await expect(flash).toBeVisible({ timeout: 5_000 });
+    await expect(flash).toHaveAttribute("data-flash-mode", "mostra");
     await expect(trace).toHaveAttribute("data-state", "showing");
-    const ring = await page
-      .locator("#main-content")
-      .evaluate((el) => getComputedStyle(el).boxShadow);
-    expect(ring).not.toBe("none");
     // Floating branch must NOT open the split drawer.
     await expect(body).not.toHaveAttribute("data-split-drawer", /open|full/);
+    await expect(flash).toHaveCount(0, { timeout: 6_000 });
 
-    // Nascondi modifiche → live diff cleared.
-    const hideBtn = trace.getByRole("button", { name: "Nascondi modifiche" });
-    await hideBtn.click();
-    await expect(body).not.toHaveAttribute("data-cesare-diff", "on", {
-      timeout: 5_000,
-    });
+    // Nascondi → red previous-text flash, then fades. The doc keeps the v2.
+    await trace.getByRole("button", { name: "Nascondi modifiche" }).click();
+    const peek = page.getByTestId("cesare-live-diff-inline");
+    await expect(peek).toBeVisible({ timeout: 5_000 });
+    await expect(peek).toHaveAttribute("data-flash-mode", "nascondi");
+    await expect(peek).toHaveCount(0, { timeout: 6_000 });
     await expect(trace).toHaveAttribute("data-state", "idle");
+    await expect(editor).toContainText(SOGGETTO_V2_MARKER);
 
     // ── BRANCH 2: FULL → SplitDrawer with the target page diff ─────────────
     // "Espandi" (the ↗ header control) walks expanded → full; in full the panel
@@ -121,12 +121,10 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
 
     await trace.getByRole("button", { name: "Mostra modifiche" }).click();
 
-    // SplitDrawer opened (body[data-split-drawer] set by the shell) and the
-    // live-doc ring is NOT used in this branch.
+    // SplitDrawer opened (body[data-split-drawer] set by the shell).
     await expect(body).toHaveAttribute("data-split-drawer", /open|full/, {
       timeout: 5_000,
     });
-    await expect(body).not.toHaveAttribute("data-cesare-diff", "on");
     // The drawer renders the affected target page (Soggetto) with the diff.
     await expect(page.getByTestId("trace-view-soggetto")).toBeVisible({
       timeout: 5_000,
@@ -138,15 +136,8 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
       timeout: 5_000,
     });
 
-    // ── BRANCH 3: Annulla reverts the live document ────────────────────────
-    const annulla = trace.getByRole("button", { name: "Annulla" });
-    await expect(annulla).toBeVisible({ timeout: 5_000 });
-    await annulla.click();
-
-    // The open editor reverts: the v2 marker is gone (version restored).
-    await expect(editor).not.toContainText(SOGGETTO_V2_MARKER, {
-      timeout: 15_000,
-    });
+    // The document still holds the v2 — nothing in this flow reverts it.
+    await expect(editor).toContainText(SOGGETTO_V2_MARKER);
   });
 
   test("[OHW-047-A6] a chat-only reply (no edit) shows NO Mostra modifiche affordance", async ({
@@ -170,7 +161,8 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await expect(page.getByTestId("cesare-conversation")).toBeVisible();
     await expect
       .poll(
-        async () => (await page.getByTestId("cesare-conversation").locator("p").count()),
+        async () =>
+          await page.getByTestId("cesare-conversation").locator("p").count(),
         { timeout: 60_000 },
       )
       .toBeGreaterThanOrEqual(2);
@@ -179,8 +171,8 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await expect(
       page.getByRole("button", { name: "Mostra modifiche" }),
     ).toHaveCount(0);
-    // No live diff was armed and no split opened.
-    await expect(body).not.toHaveAttribute("data-cesare-diff", "on");
+    // No flash was armed and no split opened.
+    await expect(page.getByTestId("cesare-live-diff-inline")).toHaveCount(0);
     await expect(body).not.toHaveAttribute("data-split-drawer", /open|full/);
   });
 });

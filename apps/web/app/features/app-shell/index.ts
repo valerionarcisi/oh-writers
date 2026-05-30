@@ -3,13 +3,13 @@ export { SaveStatusIndicator } from "./components/SaveStatusIndicator";
 export { CesareLiveDiff } from "./components/CesareLiveDiff";
 export {
   getLiveDiffState,
-  setLiveDiffState,
-  clearLiveDiffState,
+  flashLiveDiff,
   subscribeLiveDiff,
 } from "./cesare-live-diff-store";
 export type {
   LiveDiffState,
-  LiveDiffEntry,
+  LiveDiffFlash,
+  LiveDiffMode,
   LiveDiffSegment,
 } from "./cesare-live-diff-store";
 export {

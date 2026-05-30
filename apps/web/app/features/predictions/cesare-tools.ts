@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
+import { aiTelemetry } from "~/server/langfuse-config";
 import {
   locationCandidates,
   locationPhotos,
@@ -2826,10 +2827,7 @@ const runGenericToolLoop = (
           : "auto",
         stopWhen: stepCountIs(5),
         maxOutputTokens: 1500,
-        experimental_telemetry: {
-          isEnabled: true,
-          functionId: "cesare-tool-loop",
-        },
+        experimental_telemetry: aiTelemetry("cesare-tool-loop"),
         onStepFinish: (stepResult) => {
           // Collect text produced in each step
           for (const part of stepResult.text

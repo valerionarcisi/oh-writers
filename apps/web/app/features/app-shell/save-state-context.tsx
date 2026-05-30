@@ -61,11 +61,18 @@ export function useSaveStatePublisher(
   secondsAgo?: number,
 ) {
   const ctx = useContext(SaveStateContext);
+  // Depend ONLY on the stable `setSaveState` (a `useCallback([])`), never on the
+  // whole `ctx` object: `ctx` is a `useMemo([value, setSaveState])` whose
+  // reference changes every time the save-state updates. Depending on `ctx` made
+  // this effect re-run on each publish — cleanup reset to undefined, the body
+  // re-set the state, the value changed, `ctx` changed, the effect fired again —
+  // an infinite setState loop ("Maximum update depth exceeded").
+  const setSaveState = ctx?.setSaveState;
   useEffect(() => {
-    if (!ctx) return;
-    ctx.setSaveState({ state, secondsAgo });
+    if (!setSaveState) return;
+    setSaveState({ state, secondsAgo });
     return () => {
-      ctx.setSaveState({ state: undefined, secondsAgo: undefined });
+      setSaveState({ state: undefined, secondsAgo: undefined });
     };
-  }, [ctx, state, secondsAgo]);
+  }, [setSaveState, state, secondsAgo]);
 }

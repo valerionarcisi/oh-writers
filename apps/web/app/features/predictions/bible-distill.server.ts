@@ -19,6 +19,7 @@ import {
   type SceneSummary,
 } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
+import { aiTelemetry } from "~/server/langfuse-config";
 import { DbError, repairMojibake } from "@oh-writers/utils";
 import { findFilmBibleFixture } from "./_mocks/film-bible.fixtures";
 
@@ -155,10 +156,7 @@ const callSonnetForcedTool = async (
     tools: { [EMIT_TOOL_NAME]: EMIT_SDK_TOOL },
     toolChoice: { type: "tool", toolName: EMIT_TOOL_NAME },
     maxOutputTokens: 2048,
-    experimental_telemetry: {
-      isEnabled: true,
-      functionId: "bible-distill",
-    },
+    experimental_telemetry: aiTelemetry("bible-distill"),
   });
   const emitCall = result.toolCalls.find(
     (tc) => tc.toolName === EMIT_TOOL_NAME,
