@@ -106,6 +106,20 @@ budget (+ future). Confirm each page's versioning source before wiring.
 - Each wave: Design → QA → Lead judge, bounce-backs, then user confirm.
 - **Each wave ends with screenshots + video + report to the user.**
 
+## Captured idea — "Scrivi tutto da zero con Cesare" (split drawer via floating icon)
+
+Product idea (PO, 2026-05-30), to define later — NOT in this spec's build scope yet:
+
+Let the user write a whole project from a single spunto with Cesare carrying them
+through logline → soggetto → sinossi → scaletta → trattamento → sceneggiatura, each
+generated/edited live. This runs in a **Cesare SplitDrawer** promoted from the
+floating drawer via an icon (the `↗` "Apri come colonna" affordance A4 already added
+is the entry point). Routed/deep-linkable per this spec; tracer always visible per the
+CLAUDE.md product invariant. Open question to resolve before building: is this a
+guided "write-from-zero" mode (a creation/onboarding flow) or just the same Cesare
+chat opened in split — likely both, the split icon first (light, near-done via A4),
+the guided mode as its own later spec.
+
 ## Out of scope
 
 - Multiple simultaneous peeks (stack) — single surface at a time.
