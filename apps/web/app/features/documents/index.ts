@@ -16,11 +16,6 @@ export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
 export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
 export { TextEditor } from "./components/TextEditor";
-export { LoglineBlock } from "./components/LoglineBlock";
-export type {
-  LoglineBlockProps,
-  LoglineBlockLabels,
-} from "./components/LoglineBlock";
 export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
 export { NarrativeDocsShell } from "./components/NarrativeDocsShell";
@@ -41,7 +36,6 @@ export type {
   ExportSiaeModalLabels,
 } from "./components/ExportSiaeModal";
 export * from "./hooks/useExportSubjectSiae";
-export * from "./hooks/useExtractLoglineFromSubject";
 export * from "./documents.errors";
 export * from "./documents.schema";
 export type {

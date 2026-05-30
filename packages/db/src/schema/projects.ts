@@ -33,7 +33,11 @@ export const projects = pgTable(
     format: text("format", {
       enum: ["feature", "short", "series_episode", "pilot"],
     }).notNull(),
-    logline: text("logline"),
+    // The logline is NOT a project column. It lives as a `documents` row of
+    // type "logline" — the single source of truth (it owns versioning + the
+    // agentic edit pattern). A former `projects.logline` column was dropped
+    // because nothing read it and it shadowed the canonical document. See
+    // spec 47c.
     ownerId: uuid("owner_id").references(() => users.id, {
       onDelete: "cascade",
     }),

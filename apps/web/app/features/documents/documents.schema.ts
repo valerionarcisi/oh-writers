@@ -89,11 +89,6 @@ export const parseOutline = (raw: string): OutlineContent => {
 export const serializeOutline = (content: OutlineContent): string =>
   JSON.stringify(content);
 
-export const GenerateLoglineInputSchema = z.object({
-  projectId: z.string().uuid(),
-});
-export type GenerateLoglineInput = z.infer<typeof GenerateLoglineInputSchema>;
-
 export const SiaeAuthorSchema = z.object({
   fullName: z.string().min(1).max(200),
   taxCode: z.string().max(16).nullable(),

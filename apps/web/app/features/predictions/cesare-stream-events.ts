@@ -14,6 +14,7 @@ import { z } from "zod";
  *  is expressible: the `tool` step maps to its TARGET domain, independent of
  *  the page the user is on. */
 export const StreamEntityDomainSchema = z.enum([
+  "logline",
   "soggetto",
   "synopsis",
   "outline",

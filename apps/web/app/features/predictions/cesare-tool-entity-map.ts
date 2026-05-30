@@ -20,6 +20,7 @@ export interface ToolEntityMapping {
 // User-facing IT label per domain. Kept here (not in the page-label map) so the
 // stream layer has no dependency on the CesareSheet component.
 const DOMAIN_LABEL: Record<StreamEntityDomain, string> = {
+  logline: "Logline",
   soggetto: "Soggetto",
   synopsis: "Sinossi",
   outline: "Scaletta",
@@ -61,7 +62,8 @@ const TOOL_ENTITY_MAP: Readonly<Record<string, ToolEntityMapping>> = {
   suggest_reorder: { access: "read", domain: "schedule" },
 
   // ── document writes (cross-domain targets) ────────────────────────────────
-  propose_logline_from_screenplay: { access: "write", domain: "soggetto" },
+  propose_logline_from_screenplay: { access: "write", domain: "logline" },
+  write_logline: { access: "write", domain: "logline" },
   propose_synopsis_from_screenplay: { access: "write", domain: "synopsis" },
   propose_soggetto_v2: { access: "write", domain: "soggetto" },
   propose_scaletta_from_soggetto: { access: "write", domain: "outline" },

@@ -12,6 +12,7 @@ import {
   projects,
 } from "@oh-writers/db/schema";
 import {
+  DocumentTypes,
   FilmBibleSchema,
   formatSceneSummary,
   type FilmBible,
@@ -266,7 +267,6 @@ const loadProjectDistillData = (
           title: projects.title,
           genre: projects.genre,
           format: projects.format,
-          logline: projects.logline,
         })
         .from(projects)
         .where(eq(projects.id, projectId))
@@ -290,11 +290,19 @@ const loadProjectDistillData = (
         .from(documents)
         .where(eq(documents.projectId, projectId));
 
+      // The logline is the `logline` document (single source of truth — spec
+      // 47c), not a project column. Read it from the docs already loaded above.
+      const loglineDoc = docs.find((d) => d.type === DocumentTypes.LOGLINE);
+      const logline =
+        loglineDoc && loglineDoc.content.trim().length > 0
+          ? loglineDoc.content
+          : null;
+
       return {
         screenplayId: screenplay?.id ?? null,
         genre: project.genre ?? null,
         format: project.format,
-        logline: project.logline ?? null,
+        logline,
         title: project.title,
         documents: docs.map((d) => ({
           type: d.type,

@@ -2604,6 +2604,7 @@ const extractSideChannelMarkers = (
   // previous state.
   if (
     toolName === "propose_logline_from_screenplay" ||
+    toolName === "write_logline" ||
     toolName === "propose_synopsis_from_screenplay" ||
     toolName === "propose_soggetto_v2" ||
     toolName === "propose_scaletta_from_soggetto" ||

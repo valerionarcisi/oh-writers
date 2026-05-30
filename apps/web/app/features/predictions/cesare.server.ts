@@ -1108,7 +1108,8 @@ GENERAZIONE DOCUMENTI (propose/accept):
 Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta) USA I TOOLS dedicati. Tutto crea una DRAFT visibile in un banner sopra l'editor con i pulsanti "Promuovi a attiva" / "Scarta".
 
 WORKFLOW:
-- "genera la logline" / "scrivimi la logline" → propose_logline_from_screenplay({ instruction? })
+- "scrivimi una logline su [premessa]" / "rendi la logline più corta/tesa" / "cambia il protagonista della logline" → write_logline({ instruction, mode? })
+- "genera la logline DALLA sceneggiatura" / "estrai la logline" → propose_logline_from_screenplay({ instruction? })
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
 - "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })

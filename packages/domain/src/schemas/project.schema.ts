@@ -23,7 +23,8 @@ export const ProjectSchema = z.object({
     Formats.SERIES_EPISODE,
     Formats.PILOT,
   ]),
-  logline: z.string().max(500).nullable(),
+  // The logline lives as a `logline` document (single source of truth — spec
+  // 47c), not a project field. The former `projects.logline` column was dropped.
   ownerId: z.string().uuid().nullable(),
   teamId: z.string().uuid().nullable(),
   isArchived: z.boolean(),

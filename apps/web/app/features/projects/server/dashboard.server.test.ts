@@ -10,7 +10,6 @@ const baseProject = {
   slug: "non-fa-ridere",
   genre: "comedy" as const,
   format: "short" as const,
-  logline: null,
   ownerId: "user-1",
   teamId: null,
   isArchived: false,
