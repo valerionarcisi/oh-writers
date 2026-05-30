@@ -102,9 +102,16 @@ budget (+ future). Confirm each page's versioning source before wiring.
 - W2: `VersionsSplitDrawer` (list + vs-current) on one page (soggetto) end-to-end.
 - W3: Confronta side-by-side mode.
 - W4: roll out to every versioned page.
-- W5: route the floating Cesare open state (deep-link).
+- W5: route the floating Cesare open state (deep-link). **DEFERRED (PO, 2026-05-30):**
+  Cesare sessions are already deep-linkable via `/sessions/:id` (Spec 47-A5); routing the
+  floating open-state adds little now. Revisit if/when needed. Spec 49 ships with W1–W4.
 - Each wave: Design → QA → Lead judge, bounce-backs, then user confirm.
 - **Each wave ends with screenshots + video + report to the user.**
+
+**Status (2026-05-30):** Wave A (W1+W2) and Wave B (W3+W4) shipped + merged + verified live.
+W5 deferred. Versions SplitDrawer is routed on soggetto/synopsis/outline/treatment with vs-current
++ Confronta side-by-side. Screenplay keeps its own Fountain versioning domain (separate routes) —
+unifying it into the document-based drawer is a future consideration.
 
 ## Related
 
