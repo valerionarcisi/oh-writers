@@ -1,4 +1,5 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { titleHead } from "~/lib/document-title";
 import { Suspense } from "react";
 import { Skeleton } from "@oh-writers/ui";
 import { TeamMembersPage } from "~/features/teams";
@@ -6,6 +7,7 @@ import { TeamMembersPage } from "~/features/teams";
 const appRoute = getRouteApi("/_app");
 
 export const Route = createFileRoute("/_app/teams/$slug_/members")({
+  head: () => titleHead("Membri del team"),
   component: TeamMembersRoute,
 });
 

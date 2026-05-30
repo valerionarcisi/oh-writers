@@ -1,8 +1,14 @@
 /* apps/web/app/features/app-shell/components/CesareLiveDiff.module.css
-   Spec 47d — inline "Mostra modifiche" word highlight rendered INSIDE the
-   document prose. The layer fills its (relatively-positioned) document-body
-   parent, painting the word-level diff in place over the prose — additions
-   green, removals struck — NOT a floating panel. Mounted once per document. */
+   Spec 47e — TRANSIENT FLASH "Mostra / Nascondi modifiche" highlight rendered
+   INSIDE the document prose. The layer fills its (relatively-positioned)
+   document-body parent, paints the word-level flash in place over the prose —
+   additions green (Mostra), removals red (Nascondi) — then FADES OUT. It is a
+   one-shot visual peek, never a persistent panel; the JS timer unmounts it, the
+   animation just eases the exit. Mounted once per document.
+
+   The 2200ms animation MUST match FLASH_DURATION_MS in CesareLiveDiff.tsx — the
+   JS timer is authoritative (it unmounts the layer); the animation only fades
+   the same window so the exit isn't abrupt. Keep the two in sync. */
 .layer {
   position: absolute;
   inset: 0;
@@ -11,6 +17,26 @@
   padding: var(--ds-space-4);
   background: var(--ds-surface);
   border-radius: var(--ds-radius-md);
+  animation: flash-fade 2200ms var(--ds-ease) forwards;
+}
+
+@keyframes flash-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
 }
 
 .body {
@@ -39,4 +65,24 @@
   border-radius: var(--ds-radius-sm);
   padding-inline: 2px;
   text-decoration: line-through;
+}
+
+/* Reduced motion: keep the brief highlight but drop the slide transform and
+   ease the opacity only (Spec 47e). The layer still unmounts on the JS timer. */
+@media (prefers-reduced-motion: reduce) {
+  .layer {
+    animation: flash-fade-reduced 2200ms linear forwards;
+  }
+
+  @keyframes flash-fade-reduced {
+    0% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
 }

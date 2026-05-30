@@ -3,8 +3,11 @@
 // Notion-style "step block + change trace" primitive shipped by Spec 44
 // (WP-CHAT-FIX). Rendered inside an assistant message — or anywhere a batch
 // write operation completes — to summarise what was changed and expose a
-// `Mostra modifiche` / `Nascondi modifiche` affordance plus an optional
-// `Annulla` action.
+// `Mostra modifiche` / `Nascondi modifiche` affordance.
+//
+// Spec 47e removed the inline `Annulla` action: the edit is always applied and
+// "Mostra / Nascondi" is a transient flash (green additions / red previous
+// text), not a revert. True rollback lives in the Versions SplitDrawer.
 //
 // The component is intentionally NOT Cesare-specific: any feature in OHW that
 // finishes a multi-step write (bulk Fountain import, version restore, settings
@@ -19,7 +22,7 @@
 //   Done.
 //   ┌──────────────────────────────────────────────────────────┐
 //   │ Updated Soggetto · 3 scene rinominate                    │
-//   │ [Mostra modifiche] [Annulla]                             │
+//   │ [Mostra modifiche]                                       │
 //   └──────────────────────────────────────────────────────────┘
 //
 // Public API exposes a controlled `isShowingChanges` flag so the consumer
@@ -70,9 +73,6 @@ export interface ChangeTraceProps {
   /** Fires when the user clicks `Nascondi modifiche`. Optional — defaults to
    *  the same callback as `onShowChanges` (toggle). */
   readonly onHideChanges?: () => void;
-  /** Fires when the user clicks `Annulla`. Optional — the button only renders
-   *  when this handler is provided. */
-  readonly onUndo?: () => void;
   /** Controlled flag mirroring whether the consumer's diff surface is open.
    *  Drives the button label (`Mostra` ↔ `Nascondi`). When omitted the
    *  component holds its own state. */
@@ -104,7 +104,6 @@ export function ChangeTrace({
   updates,
   onShowChanges,
   onHideChanges,
-  onUndo,
   isShowingChanges,
   defaultStepsOpen = false,
   className,
@@ -114,7 +113,6 @@ export function ChangeTrace({
   const [isStepsOpen, setStepsOpen] = useState(defaultStepsOpen);
   const stepsBtnRef = useRef<HTMLButtonElement>(null);
   const showBtnRef = useRef<HTMLButtonElement>(null);
-  const undoBtnRef = useRef<HTMLButtonElement>(null);
 
   // Controlled / uncontrolled fallback so consumers can either drive the
   // label themselves or let the component own the toggle state.
@@ -135,10 +133,6 @@ export function ChangeTrace({
     onShowChanges();
   }, [showing, onShowChanges, onHideChanges]);
 
-  const handleUndoPress = useCallback(() => {
-    onUndo?.();
-  }, [onUndo]);
-
   const { buttonProps: stepsBtnProps } = useButton(
     {
       onPress: handleStepsToggle,
@@ -156,15 +150,6 @@ export function ChangeTrace({
       "aria-pressed": showing,
     },
     showBtnRef,
-  );
-
-  const { buttonProps: undoBtnProps } = useButton(
-    {
-      onPress: handleUndoPress,
-      elementType: "button",
-      isDisabled: !onUndo,
-    },
-    undoBtnRef,
   );
 
   const stepLabel = stepCount === 1 ? "1 passaggio" : `${stepCount} passaggi`;
@@ -249,16 +234,6 @@ export function ChangeTrace({
           >
             {showLabel}
           </button>
-          {onUndo && (
-            <button
-              {...undoBtnProps}
-              ref={undoBtnRef}
-              type="button"
-              className={styles.actionSecondary}
-            >
-              Annulla
-            </button>
-          )}
         </div>
       </div>
     </article>

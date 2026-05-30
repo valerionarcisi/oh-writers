@@ -428,21 +428,18 @@ export function parseToolUpdates(
 // ─── Conversation handlers (shared contract) ───────────────────────────────
 
 export interface ConversationHandlers {
-  /** Reveal the diff (live-doc inline OR split-drawer, decided by the parent).
-   *  `liveDiffs` carries one entry per touched document so the shell can arm a
-   *  green inline highlight on each (Spec 47d). */
+  /** Flash the GREEN additions inline on the live document (Spec 47e). The edit
+   *  is already applied; this is a transient peek at "what changed". `liveDiffs`
+   *  carries one entry per touched document so each open doc flashes its own. */
   onShowChanges: (args: {
     traceMarkers: ReadonlyArray<TraceMarker>;
     scope?: string;
     liveDiffs?: ReadonlyArray<LiveDiffMarker>;
   }) => void;
-  /** Hide whichever diff surface was opened. */
-  onHideChanges: () => void;
-  onCancelRewrite: (rewrite: {
-    scene_number: number;
-    new_content: string;
-  }) => void;
-  onUndoDocApply: (marker: DocAppliedMarker) => void;
+  /** Flash the RED previous text inline (Spec 47e) — a peek at "how it was".
+   *  Never a revert: the document keeps the new version. Same per-document
+   *  `liveDiffs` payload as `onShowChanges`. */
+  onHideChanges: (args: { liveDiffs?: ReadonlyArray<LiveDiffMarker> }) => void;
 }
 
 // ─── Conversation list ─────────────────────────────────────────────────────
@@ -480,8 +477,6 @@ export function MessageView({
   page,
   onShowChanges,
   onHideChanges,
-  onCancelRewrite,
-  onUndoDocApply,
 }: { message: ChatMessage; page: CesarePage } & ConversationHandlers) {
   const [isShowingDiff, setShowingDiff] = useState(false);
 
@@ -533,15 +528,7 @@ export function MessageView({
   }
 
   const rewrite = metadata.rewrite;
-  const docApplied = metadata.docApplied;
-  const hasChanges = rewrite != null || metadata.hasProposal;
   const parsed = parseToolUpdates(message.content, page);
-  const undoHandler =
-    docApplied && docApplied.previousVersionId
-      ? () => onUndoDocApply(docApplied)
-      : rewrite && hasChanges
-        ? () => onCancelRewrite(rewrite)
-        : undefined;
 
   const traceMarkers: ReadonlyArray<TraceMarker> = parsed.updates.map((u) => ({
     id: u.id ?? u.label,
@@ -565,9 +552,8 @@ export function MessageView({
         }}
         onHideChanges={() => {
           setShowingDiff(false);
-          onHideChanges();
+          onHideChanges({ liveDiffs: metadata.liveDiffs });
         }}
-        onUndo={undoHandler}
         defaultStepsOpen={false}
         testId="cesare-change-trace"
       />

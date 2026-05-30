@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { titleHead } from "~/lib/document-title";
 import { match } from "ts-pattern";
 import { Viewbar, ViewbarSep, Skeleton } from "@oh-writers/ui";
 import { SaveStatusIndicator } from "~/features/app-shell";
@@ -17,6 +18,7 @@ import styles from "./_app.projects.$id_.title-page.module.css";
 const SAVE_DEBOUNCE_MS = 800;
 
 export const Route = createFileRoute("/_app/projects/$id_/title-page")({
+  head: () => titleHead("Frontespizio"),
   component: TitlePageRoute,
 });
 

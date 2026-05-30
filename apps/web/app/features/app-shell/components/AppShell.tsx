@@ -39,7 +39,6 @@ import {
 } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
-import { switchToVersion } from "~/features/documents";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
@@ -501,57 +500,11 @@ function AppShellInner({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  // Cesare live-doc "↩ Annulla" (Spec 44): when Cesare applies generated
-  // content live to a document, the inline trace offers an undo that reverts
-  // the document's active version to the one current before the apply. The chat
-  // surface emits a DOM event so it stays decoupled from the documents feature;
-  // AppShell owns the server call + query invalidation so the open editor
-  // refreshes immediately.
-  useEffect(() => {
-    const onUndo = (event: Event) => {
-      const detail = (event as CustomEvent).detail as
-        | { previousVersionId?: string }
-        | undefined;
-      const previousVersionId = detail?.previousVersionId;
-      if (!previousVersionId) return;
-      void (async () => {
-        const result = await switchToVersion({
-          data: { versionId: previousVersionId },
-        });
-        if (!result.isOk) {
-          showToast({
-            message: "Impossibile annullare la modifica.",
-            variant: "error",
-          });
-          return;
-        }
-        if (projectId) {
-          const docTypes = [
-            "logline",
-            "soggetto",
-            "synopsis",
-            "outline",
-            "treatment",
-          ] as const;
-          for (const t of docTypes) {
-            void queryClient.invalidateQueries({
-              queryKey: ["documents", projectId, t],
-            });
-          }
-          void queryClient.invalidateQueries({
-            queryKey: ["document-versions"],
-          });
-        }
-        showToast({
-          message: "✦ Modifica annullata — documento ripristinato.",
-          variant: "success",
-        });
-      })();
-    };
-    window.addEventListener("ohw:cesare:undo-doc-apply", onUndo);
-    return () =>
-      window.removeEventListener("ohw:cesare:undo-doc-apply", onUndo);
-  }, [projectId, queryClient, showToast]);
+  // Spec 47e removed the inline "↩ Annulla" affordance: every Cesare edit is
+  // always applied and "Mostra / Nascondi modifiche" is a transient flash, not
+  // a revert. True rollback now lives exclusively in the Versions SplitDrawer
+  // (Spec 49) via `switchToVersion`, so the old `ohw:cesare:undo-doc-apply`
+  // shell listener is gone.
 
   // useWebPush exposes `permission` + `requestPermission` for callers that
   // want to gate UI on the push state; AppShell only needs to fire the

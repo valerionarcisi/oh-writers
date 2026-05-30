@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
+import { aiTelemetry } from "~/server/langfuse-config";
 import {
   locationCandidates,
   locationPhotos,
@@ -2909,10 +2910,9 @@ const runProductionToolLoopEffect = (
         // interrupted (client aborted the fetch), this signal aborts and the AI
         // SDK tears down the in-flight model request so no work leaks server-side.
         ...(args.abortSignal ? { abortSignal: args.abortSignal } : {}),
-        experimental_telemetry: {
-          isEnabled: true,
-          functionId: "cesare-tool-loop",
-        },
+        // Spec 47e FIX 5 — telemetry gated on Langfuse being configured so dev
+        // stays clean ("Not found" noise) when it isn't.
+        experimental_telemetry: aiTelemetry("cesare-tool-loop"),
         onStepFinish: (stepResult) => {
           // Collect text produced in each step
           for (const part of stepResult.text

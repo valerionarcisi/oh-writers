@@ -4,10 +4,9 @@
 // end-to-end, but WHAT it does depends on how Cesare is open:
 //
 //   - FLOATING / expanded — Cesare is a small bottom-right sub-window and the
-//     edited document is fully visible behind it. "Mostra modifiche" reveals an
-//     inline live diff ON the open document (spec 44 model: body[data-cesare-diff]
-//     + the ohw:cesare:live-diff broadcast → the shell paints a highlight ring on
-//     <main>). "Nascondi modifiche" clears it.
+//     edited document is fully visible behind it. "Mostra modifiche" flashes an
+//     inline transient highlight ON the open document (Spec 47e: green additions;
+//     "Nascondi modifiche" flashes the red previous text — a peek, not a revert).
 //
 //   - FULL page / SPLIT lane — Cesare either fills a right-anchored full-height
 //     panel or lives in the collapsing peek lane. Either way the open document

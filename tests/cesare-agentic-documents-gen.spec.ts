@@ -14,7 +14,8 @@ import {
  * document, the generated content is applied DIRECTLY to the open document (the
  * editor updates live behind the floating chat) and a version is auto-created
  * under the hood. There is NO "Bozze di Cesare" draft tray. The inline trace
- * offers "↩ Annulla" to revert to the previous version.
+ * offers "Mostra modifiche" (a transient flash); rollback lives in the Versions
+ * SplitDrawer, not an inline Annulla (Spec 47e).
  */
 test.describe("[Spec 44] Cesare Agentic — Document generation applies live", () => {
   test("[OHW-575] Cesare applies a generated logline live (no draft tray)", async ({
@@ -68,12 +69,14 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
       authenticatedPage.getByTestId("document-draft-banner"),
     ).toHaveCount(0);
 
-    // The inline trace exposes an "Annulla" affordance to revert the live doc.
+    // The inline trace exposes the "Mostra modifiche" flash control — and, per
+    // Spec 47e, NO inline "Annulla" (rollback lives in the Versions SplitDrawer).
     const trace = authenticatedPage.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 10_000 });
-    await expect(trace.getByRole("button", { name: "Annulla" })).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(
+      trace.getByRole("button", { name: "Mostra modifiche" }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });
 
   test("[OHW-578] Cesare applies a generated scaletta live (no draft tray)", async ({

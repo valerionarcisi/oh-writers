@@ -49,6 +49,16 @@ export interface UseSplitDrawerResizeResult {
   isResizing: boolean;
 }
 
+/**
+ * SSR-stable max: never reads `window`, so the server and the first client
+ * render agree on `aria-valuemax`. The real viewport-derived px is swapped in by
+ * the mount effect, after hydration. This is what removes the hydration
+ * mismatch on the resize handle.
+ */
+function resolveMaxSsr(max: number | string | undefined): number {
+  return typeof max === "number" ? max : 9999;
+}
+
 function resolveMax(max: number | string | undefined): number {
   if (typeof max === "number") return max;
   if (typeof window === "undefined") return 9999;
@@ -96,10 +106,12 @@ export function useSplitDrawerResize(
     isDisabled = false,
   } = options;
 
-  const [size, setSize] = useState<number>(() => {
-    const maxPx = resolveMax(max);
-    return clamp(initialSize, min, maxPx);
-  });
+  // `maxPx` starts SSR-stable so the first client render matches the server,
+  // then the mount effect resolves the real viewport-derived value.
+  const [maxPx, setMaxPx] = useState<number>(() => resolveMaxSsr(max));
+  const [size, setSize] = useState<number>(() =>
+    clamp(initialSize, min, resolveMaxSsr(max)),
+  );
   const [isResizing, setIsResizing] = useState(false);
   const dragStartSizeRef = useRef<number>(size);
   const lastSizeRef = useRef<number>(size);
@@ -108,15 +120,18 @@ export function useSplitDrawerResize(
     lastSizeRef.current = size;
   }, [size]);
 
-  // Clamp when the viewport shrinks so the drawer never overflows.
+  // Resolve the real max + clamp on mount and on every viewport resize. Client
+  // only (post-hydration), so the SSR/first-render `aria-valuemax` stays stable.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const onResize = () => {
-      const maxPx = resolveMax(max);
-      setSize((current) => clamp(current, min, maxPx));
+    const sync = () => {
+      const next = resolveMax(max);
+      setMaxPx(next);
+      setSize((current) => clamp(current, min, next));
     };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
   }, [max, min]);
 
   const handleStart = useCallback(() => {
@@ -133,7 +148,6 @@ export function useSplitDrawerResize(
   const handleMove = useCallback(
     (e: { deltaX: number; deltaY: number }) => {
       if (isDisabled) return;
-      const maxPx = resolveMax(max);
       // Right-anchored: dragging the left edge LEFT (negative deltaX)
       // grows the drawer rightward. We negate deltaX so leftward drag
       // increases the width.
@@ -142,7 +156,7 @@ export function useSplitDrawerResize(
       setSize(next);
       onSizeChange?.(next);
     },
-    [isDisabled, max, min, onSizeChange],
+    [isDisabled, maxPx, min, onSizeChange],
   );
 
   const { moveProps } = useMove({
@@ -160,9 +174,9 @@ export function useSplitDrawerResize(
       "aria-label": "Ridimensiona larghezza pannello",
       "aria-valuenow": size,
       "aria-valuemin": min,
-      "aria-valuemax": resolveMax(max),
+      "aria-valuemax": maxPx,
     };
-  }, [moveProps, isDisabled, max, min, size]);
+  }, [moveProps, isDisabled, maxPx, min, size]);
 
   return { handleProps, size, isResizing };
 }

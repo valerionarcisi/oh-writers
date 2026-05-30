@@ -1,6 +1,6 @@
 // IT is the default runtime language (Spec 04f). Hook up the shared i18n
 // layer later to surface English copy for non-IT users.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
@@ -25,10 +25,12 @@ import {
   useRoutedSurface,
 } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
+import { titleHead } from "~/lib/document-title";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/soggetto")({
+  head: () => titleHead("Soggetto"),
   component: SoggettoPage,
 });
 
@@ -167,18 +169,26 @@ function SoggettoPageReady({
     companions: ["vstate", "vcur"],
   });
   const isVersionsOpen = versionsSurface.value === soggettoDoc.id;
-  const toggleVersions = () => {
+  const versionsOpen = versionsSurface.open;
+  const versionsClose = versionsSurface.close;
+  const toggleVersions = useCallback(() => {
     if (isVersionsOpen) {
-      versionsSurface.close();
+      versionsClose();
       return;
     }
-    versionsSurface.open(
+    versionsOpen(
       soggettoDoc.id,
       soggettoDoc.currentVersionId
         ? { vcur: soggettoDoc.currentVersionId }
         : undefined,
     );
-  };
+  }, [
+    isVersionsOpen,
+    versionsOpen,
+    versionsClose,
+    soggettoDoc.id,
+    soggettoDoc.currentVersionId,
+  ]);
 
   useAutoSave(
     saveSoggetto,
@@ -197,6 +207,38 @@ function SoggettoPageReady({
       { onSuccess: () => setIsExportOpen(false) },
     );
   };
+
+  // Memoise the TopBar actions node: `useTopBarSlotPublisher` re-publishes on
+  // every new `value` reference, so an inline node here would loop the slot
+  // setState ("Maximum update depth"). All deps are stable (router-surface
+  // callbacks are useCallback'd; setters are stable).
+  const exportDocxPending = exportDocx.isPending;
+  const topBarActions = useMemo(
+    () => (
+      <ActionsMenu
+        data-testid="soggetto-actions-menu"
+        items={[
+          {
+            label: exportDocxPending ? "Esportazione…" : "Esporta DOCX",
+            onClick: () => {
+              if (isVersionsOpen) versionsClose();
+              setIsExportOpen(true);
+            },
+            disabled: exportDocxPending,
+          },
+          {
+            label: "Esporta SIAE",
+            onClick: () => {
+              if (isVersionsOpen) versionsClose();
+              setIsSiaeOpen(true);
+            },
+          },
+          { label: "Versioni", onClick: toggleVersions },
+        ]}
+      />
+    ),
+    [exportDocxPending, isVersionsOpen, versionsClose, toggleVersions],
+  );
 
   return (
     <div className={styles.page} data-testid="soggetto-page">
@@ -224,29 +266,7 @@ function SoggettoPageReady({
         canEditLogline={canEdit}
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
-        topBarActions={
-          <ActionsMenu
-            data-testid="soggetto-actions-menu"
-            items={[
-              {
-                label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
-                onClick: () => {
-                  if (isVersionsOpen) versionsSurface.close();
-                  setIsExportOpen(true);
-                },
-                disabled: exportDocx.isPending,
-              },
-              {
-                label: "Esporta SIAE",
-                onClick: () => {
-                  if (isVersionsOpen) versionsSurface.close();
-                  setIsSiaeOpen(true);
-                },
-              },
-              { label: "Versioni", onClick: toggleVersions },
-            ]}
-          />
-        }
+        topBarActions={topBarActions}
         rightAside={
           <MarginNotesColumn
             projectId={projectId}

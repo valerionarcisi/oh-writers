@@ -1,9 +1,11 @@
 import type { ComponentProps } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { titleHead } from "~/lib/document-title";
 import { ProjectForm, useCreateProject } from "~/features/projects";
 import styles from "./_app.projects.new.module.css";
 
 export const Route = createFileRoute("/_app/projects/new")({
+  head: () => titleHead("Nuovo progetto"),
   component: NewProjectPage,
 });
 

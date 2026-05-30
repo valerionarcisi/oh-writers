@@ -89,20 +89,27 @@ export function useTopBarSlots(): TopBarSlots {
  * caller is mounted. The slot clears automatically on unmount so a stale
  * legend cannot leak across routes.
  *
- * IMPORTANT: callers must stabilize `value` with `useMemo` before passing
- * it here. A new ReactNode reference on every render would cause an infinite
- * setState loop because ReactNode references are never reference-equal.
+ * IMPORTANT: callers must stabilize `value` with `useMemo` before passing it
+ * here. A new ReactNode reference on every render re-runs the publish effect,
+ * and since ReactNode references are never reference-equal the slot keeps
+ * updating — an infinite setState loop ("Maximum update depth exceeded").
  */
 export function useTopBarSlotPublisher<K extends keyof TopBarSlots>(
   key: K,
   value: TopBarSlots[K] | null,
 ): void {
   const ctx = useContext(TopBarSlotsContext);
+  // Depend ONLY on the stable `setSlot` (a `useCallback([])`), never on the
+  // whole `ctx` object: `ctx` is a `useMemo([slots, setSlot])` whose reference
+  // changes every time the slots update. Depending on `ctx` here re-ran the
+  // effect on each publish — cleanup cleared the slot, the body re-set it, the
+  // slots changed, `ctx` changed, and the effect fired again, an infinite loop.
+  const setSlot = ctx?.setSlot;
   useEffect(() => {
-    if (!ctx) return;
-    ctx.setSlot(key, value);
+    if (!setSlot) return;
+    setSlot(key, value);
     return () => {
-      ctx.setSlot(key, null);
+      setSlot(key, null);
     };
-  }, [ctx, key, value]);
+  }, [setSlot, key, value]);
 }

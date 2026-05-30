@@ -12,8 +12,8 @@ import { TEAM_PROJECT_ID } from "./breakdown/helpers";
  * PHASE 3 — Cesare can WRITE a logline from a free instruction and EDIT the
  * existing one via the universal `write_logline` tool. Both follow the canonical
  * agentic-edit pattern: apply LIVE to the open logline, auto-create a version
- * BEFORE applying, render the inline trace with Mostra/Nascondi modifiche + ↩
- * Annulla.
+ * BEFORE applying, render the inline trace with the transient "Mostra / Nascondi
+ * modifiche" flash (Spec 47e — no inline Annulla; rollback lives in Versions).
  *
  * Lives in the `mock-ui` Playwright project (MOCK_AI=true) via the
  * `cesare-agentic-*.spec.ts` glob.
@@ -104,9 +104,9 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
     await expect(reloadedEditor).toHaveValue(unique, { timeout: 10_000 });
   });
 
-  // ── HAPPY: Cesare WRITES a logline from a free prompt → live + version +
-  // Annulla reverts ──────────────────────────────────────────────────────────
-  test("[OHW-047-A8] Cesare writes a logline from a free prompt: applies live, auto-versions, Annulla reverts", async ({
+  // ── HAPPY: Cesare WRITES a logline from a free prompt → live + version, and
+  // the edit is ALWAYS kept (no inline Annulla — Spec 47e) ────────────────────
+  test("[OHW-047-A8] Cesare writes a logline from a free prompt: applies live, auto-versions, no inline Annulla", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(120_000);
@@ -132,14 +132,15 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
       .poll(async () => readLoglineFromPill(page), { timeout: 15_000 })
       .not.toBe(before);
 
-    // ↩ Annulla reverts the live document to the prior version.
-    const annulla = trace.getByRole("button", { name: "Annulla" });
-    await expect(annulla).toBeVisible({ timeout: 5_000 });
-    await annulla.click();
-
+    // Spec 47e: the inline "Annulla" affordance is gone. The edit is kept; the
+    // pill keeps the new logline (rollback lives in the Versions SplitDrawer).
+    await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
+    await expect(
+      trace.getByRole("button", { name: "Mostra modifiche" }),
+    ).toBeVisible({ timeout: 5_000 });
     await expect
-      .poll(async () => readLoglineFromPill(page), { timeout: 15_000 })
-      .toBe(before);
+      .poll(async () => readLoglineFromPill(page), { timeout: 5_000 })
+      .not.toBe(before);
   });
 
   // ── HAPPY: Cesare EDITS the existing logline → live + version ───────────────
@@ -163,10 +164,12 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
       .poll(async () => readLoglineFromPill(page), { timeout: 15_000 })
       .not.toBe(before);
 
-    // A revert affordance exists (a version was auto-created before applying).
-    await expect(trace.getByRole("button", { name: "Annulla" })).toBeVisible({
-      timeout: 5_000,
-    });
+    // A version was auto-created (rollback lives in the Versions SplitDrawer);
+    // the inline trace offers the transient "Mostra modifiche" flash, no Annulla.
+    await expect(
+      trace.getByRole("button", { name: "Mostra modifiche" }),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });
 
   // ── CROSS-PAGE: write_logline works from a NON-document page ────────────────

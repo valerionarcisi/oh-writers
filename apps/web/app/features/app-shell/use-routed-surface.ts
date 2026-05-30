@@ -23,7 +23,7 @@
 // The hook is generic over the param name(s); each surface wraps it with its
 // own typed helper (see `versions-peek` / `cesare-peek`).
 
-import { useCallback } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 export interface UseRoutedSurfaceResult {
@@ -77,45 +77,60 @@ export function useRoutedSurface(
 
   const value = search[param] ?? null;
 
+  // The action callbacks must stay reference-stable across renders: consumers
+  // feed them into `useMemo`/`useCallback` deps (e.g. a memoized TopBar actions
+  // node). `readSearch` returns a fresh object every render, and a default
+  // `companions` is a fresh array, so listing them as deps made the callbacks
+  // change identity on every render — which loops `useTopBarSlotPublisher`
+  // ("Maximum update depth"). We read the latest `search` through a ref and key
+  // `companions` by a stable string instead.
+  const searchRef = useRef(search);
+  searchRef.current = search;
+  const companionsKey = companions.join(",");
+  const companionsList = useMemo(
+    () => (companionsKey ? companionsKey.split(",") : []),
+    [companionsKey],
+  );
+
   const open = useCallback(
     (next: string, extra?: Readonly<Record<string, string>>) => {
       void navigate({
         to: pathname,
-        search: { ...search, ...extra, [param]: next },
+        search: { ...searchRef.current, ...extra, [param]: next },
       });
     },
-    [navigate, pathname, search, param],
+    [navigate, pathname, param],
   );
 
   const close = useCallback(() => {
-    const rest = { ...search };
+    const rest = { ...searchRef.current };
     delete rest[param];
-    for (const c of companions) delete rest[c];
+    for (const c of companionsList) delete rest[c];
     void navigate({ to: pathname, search: rest });
-  }, [navigate, pathname, search, param, companions]);
+  }, [navigate, pathname, param, companionsList]);
 
   const setParam = useCallback(
     (name: string, next: string | null) => {
-      const nextSearch = { ...search };
+      const nextSearch = { ...searchRef.current };
       if (next === null) delete nextSearch[name];
       else nextSearch[name] = next;
       // `replace` so an in-surface toggle doesn't stack a history entry the
       // user would have to back through to leave the surface.
       void navigate({ to: pathname, search: nextSearch, replace: true });
     },
-    [navigate, pathname, search],
+    [navigate, pathname],
   );
 
   const navigateState = useCallback(
     (next: string, extra?: Readonly<Record<string, string>>) => {
-      const rest = { ...search };
-      for (const c of companions) delete rest[c];
+      const rest = { ...searchRef.current };
+      for (const c of companionsList) delete rest[c];
       void navigate({
         to: pathname,
         search: { ...rest, ...extra, [param]: next },
       });
     },
-    [navigate, pathname, search, param, companions],
+    [navigate, pathname, param, companionsList],
   );
 
   return {

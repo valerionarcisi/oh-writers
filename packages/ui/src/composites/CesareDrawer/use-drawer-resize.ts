@@ -62,6 +62,16 @@ export interface UseDrawerResizeResult {
   isResizing: boolean;
 }
 
+/**
+ * SSR-stable max: never reads `window`, so the server and the first client
+ * render agree. A numeric `max` is exact; a viewport-relative `max` resolves to
+ * the placeholder until the mount effect swaps in the real px. Keeping this
+ * deterministic is what removes the `aria-valuemax` hydration mismatch.
+ */
+function resolveMaxSsr(max: number | string | undefined): number {
+  return typeof max === "number" ? max : 9999;
+}
+
 function resolveMax(
   max: number | string | undefined,
   axis: ResizeAxis,
@@ -121,10 +131,16 @@ export function useDrawerResize(
     isDisabled = false,
   } = options;
 
-  const [size, setSize] = useState<number>(() => {
-    const maxPx = resolveMax(max, axis);
-    return clamp(initialSize, min, maxPx);
-  });
+  // `maxPx` is held in state and initialised to the SSR-stable value so the
+  // first client render matches the server-rendered HTML exactly (no hydration
+  // mismatch on `aria-valuemax`). The real viewport-derived max is resolved in a
+  // mount effect, AFTER hydration, when reading `window` is safe and any change
+  // no longer triggers React's "attributes didn't match" warning.
+  const [maxPx, setMaxPx] = useState<number>(() => resolveMaxSsr(max));
+
+  const [size, setSize] = useState<number>(() =>
+    clamp(initialSize, min, resolveMaxSsr(max)),
+  );
   const [isResizing, setIsResizing] = useState(false);
   // `dragStartSizeRef` keeps the size at drag-start so each move event
   // computes a delta from the same anchor, regardless of intermediate state.
@@ -136,16 +152,19 @@ export function useDrawerResize(
     lastSizeRef.current = size;
   }, [size]);
 
-  // Resize listener — clamp the size when the viewport shrinks so the drawer
-  // never overflows after a window resize.
+  // Resolve the real max + clamp the size on mount and on every viewport
+  // resize. Runs only on the client (post-hydration), so the SSR/first-render
+  // `aria-valuemax` stays stable and the value updates without a mismatch.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const onResize = () => {
-      const maxPx = resolveMax(max, axis);
-      setSize((current) => clamp(current, min, maxPx));
+    const sync = () => {
+      const next = resolveMax(max, axis);
+      setMaxPx(next);
+      setSize((current) => clamp(current, min, next));
     };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
   }, [axis, max, min]);
 
   const handleStart = useCallback(() => {
@@ -162,7 +181,6 @@ export function useDrawerResize(
   const handleMove = useCallback(
     (e: { deltaX: number; deltaY: number }) => {
       if (isDisabled) return;
-      const maxPx = resolveMax(max, axis);
       // For block-axis (top edge), dragging UP (negative deltaY) makes drawer
       // grow downward — i.e. dragging up should INCREASE the height because
       // the drawer is anchored to the bottom-right. Hence subtract deltaY.
@@ -174,7 +192,7 @@ export function useDrawerResize(
       setSize(next);
       onSizeChange?.(next);
     },
-    [axis, isDisabled, max, min, onSizeChange],
+    [axis, isDisabled, maxPx, min, onSizeChange],
   );
 
   const { moveProps } = useMove({
@@ -197,9 +215,9 @@ export function useDrawerResize(
           : "Ridimensiona larghezza drawer",
       "aria-valuenow": size,
       "aria-valuemin": min,
-      "aria-valuemax": resolveMax(max, axis),
+      "aria-valuemax": maxPx,
     };
-  }, [moveProps, axis, isDisabled, max, min, size]);
+  }, [moveProps, axis, isDisabled, maxPx, min, size]);
 
   return { handleProps, size, isResizing };
 }

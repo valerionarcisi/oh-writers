@@ -30,6 +30,7 @@ import { geometryToCircle } from "../lib/area-filter";
 import { buildCrossMatches } from "../lib/cross-match";
 import { useExportLocations } from "../hooks/useExportLocations";
 import { LocationMap } from "./LocationMap";
+import { ClientOnly } from "./ClientOnly";
 import { LocationPanel } from "./LocationPanel";
 import { LocationDetailModal } from "./LocationDetailModal";
 import { AreaSearchPanel } from "./AreaSearchPanel";
@@ -402,39 +403,48 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
           />
         </div>
         <div className={styles.mapColumn}>
-          <LocationMap
-            requirements={requirements}
-            selectedId={selectedId}
-            selectedCandidateId={selectedCandidateId}
-            hoveredCandidateId={hoveredCandidateId}
-            onSelect={handleSelectRequirement}
-            onCandidateSelect={handleMapCandidateSelect}
-            onOpenDetailModal={handleOpenDetailModal}
-            onCircleDrawn={(circle) => {
-              setDrawnCircle(circle);
-              if (!circle) setFoundPlaces([]);
-            }}
-            foundPlaces={foundPlaces}
-            foundPlaceLabels={foundPlaceLabels}
-            onFoundPlaceAdd={(suggestion) => {
-              // Prefer the requirement the discovery matched this place to;
-              // fall back to the currently selected requirement.
-              const target =
-                discoveryTargets.get(suggestion.placeId)?.requirementId ??
-                selectedId;
-              if (target) handleAreaAddCandidate(target, suggestion);
-            }}
-            onAreaFilter={setAreaFilter}
-            areaFilter={areaFilter}
-            onClearArea={() => {
-              setAreaFilter(null);
-              setDrawnCircle(null);
-            }}
-            canRankByScene={foundPlaces.length > 0 && selectedId !== null}
-            rankPending={rankPending}
-            onRankByScene={handleRankByScene}
-            highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
-          />
+          {/* Leaflet renders against real pixels and mutates document.head, so
+              its SSR output never matches the hydrated DOM. Gate it client-only
+              to remove the hydration mismatch by construction. */}
+          <ClientOnly
+            fallback={
+              <div className={styles.mapPlaceholder} aria-hidden="true" />
+            }
+          >
+            <LocationMap
+              requirements={requirements}
+              selectedId={selectedId}
+              selectedCandidateId={selectedCandidateId}
+              hoveredCandidateId={hoveredCandidateId}
+              onSelect={handleSelectRequirement}
+              onCandidateSelect={handleMapCandidateSelect}
+              onOpenDetailModal={handleOpenDetailModal}
+              onCircleDrawn={(circle) => {
+                setDrawnCircle(circle);
+                if (!circle) setFoundPlaces([]);
+              }}
+              foundPlaces={foundPlaces}
+              foundPlaceLabels={foundPlaceLabels}
+              onFoundPlaceAdd={(suggestion) => {
+                // Prefer the requirement the discovery matched this place to;
+                // fall back to the currently selected requirement.
+                const target =
+                  discoveryTargets.get(suggestion.placeId)?.requirementId ??
+                  selectedId;
+                if (target) handleAreaAddCandidate(target, suggestion);
+              }}
+              onAreaFilter={setAreaFilter}
+              areaFilter={areaFilter}
+              onClearArea={() => {
+                setAreaFilter(null);
+                setDrawnCircle(null);
+              }}
+              canRankByScene={foundPlaces.length > 0 && selectedId !== null}
+              rankPending={rankPending}
+              onRankByScene={handleRankByScene}
+              highlightedCandidateIds={areaFilter?.matchingCandidateIds ?? []}
+            />
+          </ClientOnly>
           {drawnCircle ? (
             <AreaSearchPanel
               circle={drawnCircle}

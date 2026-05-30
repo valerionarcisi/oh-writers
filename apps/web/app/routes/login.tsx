@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { titleHead } from "~/lib/document-title";
 import { createServerFn } from "@tanstack/start";
 import { LoginForm } from "~/features/auth";
 import styles from "./_auth.module.css";
@@ -16,6 +17,7 @@ const fetchLoginData = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createFileRoute("/login")({
+  head: () => titleHead("Accedi"),
   loader: async () => {
     const data = await fetchLoginData();
     if (data.isAuthenticated) throw redirect({ to: "/dashboard" });

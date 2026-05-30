@@ -26,7 +26,7 @@ import {
   type TargetPageRef,
   type TraceMarker,
 } from "@oh-writers/ui";
-import { useSplitDrawer, setLiveDiffState } from "~/features/app-shell";
+import { useSplitDrawer, flashLiveDiff } from "~/features/app-shell";
 import {
   useSessions,
   useCreateSession,
@@ -39,7 +39,6 @@ import {
   parseRewriteSceneMarker,
   parseBlockingProposalMarkerForSideChannel,
   type CesarePage,
-  type DocAppliedMarker,
   type LiveDiffMarker,
 } from "./CesareConversation";
 import {
@@ -385,59 +384,35 @@ export function CesareSheet({
     [page, sceneNumber],
   );
 
-  // ── Diff surface handlers (Spec 47-A6 / 47b FIX 4) ───────────────────────
+  // ── Diff surface handlers (Spec 47e) ─────────────────────────────────────
   const showChangesInSplit = useShowChangesInSplitDrawer();
 
-  const handleCancelRewrite = useCallback(
-    (rewrite: { scene_number: number; new_content: string }) => {
-      if (typeof window === "undefined") return;
-      window.dispatchEvent(
-        new CustomEvent("ohw:cesare:cancel-rewrite", {
-          detail: { sceneNumber: rewrite.scene_number },
-        }),
-      );
+  // Live-doc inline flash (Spec 47e). Cesare edits already landed on the touched
+  // documents; the document always holds the new version. "Mostra modifiche"
+  // flashes the GREEN additions, "Nascondi modifiche" flashes the RED previous
+  // text (a peek at "how it was") — both transient, fading out, neither a
+  // revert. We arm the live-diff store with one flash per touched document
+  // keyed by documentType; each per-document <CesareLiveDiff/> reads its own
+  // entry (with last-value replay), so opening any touched doc — even after the
+  // click — flashes its own diff.
+  const flashLiveDiffFor = useCallback(
+    (
+      mode: "mostra" | "nascondi",
+      liveDiffs?: ReadonlyArray<LiveDiffMarker>,
+    ) => {
+      const inputs = (liveDiffs ?? [])
+        .filter((d) => d.documentType)
+        .map((d) => ({
+          documentType: d.documentType,
+          label: d.label,
+          segments: d.segments,
+        }));
+      flashLiveDiff(mode, inputs);
     },
     [],
   );
 
-  const handleUndoDocApply = useCallback((marker: DocAppliedMarker) => {
-    if (typeof window === "undefined") return;
-    if (!marker.previousVersionId) return;
-    window.dispatchEvent(
-      new CustomEvent("ohw:cesare:undo-doc-apply", {
-        detail: {
-          documentType: marker.documentType,
-          previousVersionId: marker.previousVersionId,
-        },
-      }),
-    );
-  }, []);
-
-  // Live-doc inline diff toggle (Spec 47d). Cesare edits already landed on the
-  // touched documents; revealing the diff paints a green WORD-LEVEL highlight
-  // INSIDE each document's prose — no overlay panel. We arm body[data-cesare-
-  // diff] (the global flag) AND the live-diff store, which carries one diff per
-  // touched document keyed by documentType. Each per-document <CesareLiveDiff/>
-  // reads its own entry from the store (with last-value replay), so opening any
-  // touched doc — even after the toggle fired — shows its highlight.
-  const toggleLiveDiff = useCallback(
-    (showing: boolean, liveDiffs?: ReadonlyArray<LiveDiffMarker>) => {
-      if (typeof document === "undefined") return;
-      if (showing) {
-        document.body.setAttribute("data-cesare-diff", "on");
-      } else {
-        document.body.removeAttribute("data-cesare-diff");
-      }
-      const diffs: Record<string, LiveDiffMarker> = {};
-      if (showing && liveDiffs) {
-        for (const d of liveDiffs) {
-          if (d.documentType) diffs[d.documentType] = d;
-        }
-      }
-      setLiveDiffState({ showing, diffs });
-    },
-    [],
-  );
+  const splitDrawerCtx = useSplitDrawer();
 
   const handleShowChanges = useCallback(
     (args: {
@@ -450,12 +425,12 @@ export function CesareSheet({
         drawerState: drawer.state,
       });
       if (surfaceChoice._tag === "live-diff") {
-        toggleLiveDiff(true, args.liveDiffs ?? []);
+        flashLiveDiffFor("mostra", args.liveDiffs);
         return;
       }
       const pageRef = buildTargetPageRef(page, args.scope);
       if (!pageRef) {
-        toggleLiveDiff(true, args.liveDiffs ?? []);
+        flashLiveDiffFor("mostra", args.liveDiffs);
         return;
       }
       showChangesInSplit({
@@ -470,14 +445,16 @@ export function CesareSheet({
           : pageRef.title,
       });
     },
-    [surface, drawer.state, page, toggleLiveDiff, showChangesInSplit],
+    [surface, drawer.state, page, flashLiveDiffFor, showChangesInSplit],
   );
 
-  const splitDrawerCtx = useSplitDrawer();
-  const handleHideChanges = useCallback(() => {
-    toggleLiveDiff(false);
-    splitDrawerCtx.close();
-  }, [toggleLiveDiff, splitDrawerCtx]);
+  const handleHideChanges = useCallback(
+    (args: { liveDiffs?: ReadonlyArray<LiveDiffMarker> }) => {
+      flashLiveDiffFor("nascondi", args.liveDiffs);
+      splitDrawerCtx.close();
+    },
+    [flashLiveDiffFor, splitDrawerCtx],
+  );
 
   const handleSubmit = useCallback(() => {
     if (isLoading) return;
@@ -517,8 +494,6 @@ export function CesareSheet({
       page={page}
       onShowChanges={handleShowChanges}
       onHideChanges={handleHideChanges}
-      onCancelRewrite={handleCancelRewrite}
-      onUndoDocApply={handleUndoDocApply}
       emptyState={
         <>
           <EmptyState page={page} />

@@ -1,7 +1,17 @@
 # Spec 47e — Mostra/Nascondi modifiche: transient flash highlight (no Annulla)
 
-Status: **Planned** · Decided 2026-05-30 (PO, from live audit). Supersedes the 47b/47d
+Status: **Built** · Decided 2026-05-30 (PO, from live audit). Supersedes the 47b/47d
 "persistent diff overlay + Annulla" behaviour for the document-edit case.
+
+Implementation note (2026-05-31): the live "Maximum update depth" the audit observed on
+Mostra/Nascondi was NOT in the diff component. Re-modelling the highlight as a transient
+flash removed the diff-side risk by construction, but the actual loop was in three shell
+publishers that depended on a context object whose reference changes on every state update
+(`top-bar-slots-context`, `save-state-context`) and on `useRoutedSurface`'s `open`/`close`
+callbacks that listed a per-render `search` object as a dependency. Those were fixed to
+depend only on their stable `setX` callback / read `search` through a ref, so the
+publishers no longer self-retrigger. The SSR `aria-valuemax="9999"` hydration mismatch on
+the drawer resize handles (audited as "LocationMap") was fixed in the same pass.
 
 ## The behaviour the PO wants (definitive)
 
