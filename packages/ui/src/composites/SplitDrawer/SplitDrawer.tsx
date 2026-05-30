@@ -68,6 +68,18 @@ export interface SplitDrawerProps {
   /** Accessible label for the drawer landmark. */
   ariaLabel?: string;
 
+  /**
+   * Where the drawer sits in the layout.
+   *   - `"overlay"` (default): `position: fixed`, right-anchored. The host page
+   *     does NOT reflow — it is painted over. Used by the legacy trace /
+   *     notification surfaces.
+   *   - `"lane"`: the drawer fills its parent (an in-flow grid column), so the
+   *     host page COMPRESSES beside it (Spec 49 routed model). The parent owns
+   *     the column width; the internal resize handle still drives `onSizeChange`
+   *     so the parent can resize the column.
+   */
+  placement?: "overlay" | "lane";
+
   /** Hook used by E2E tests. */
   testId?: string;
 }
@@ -117,6 +129,7 @@ export function SplitDrawer({
   onSizeChange,
   className,
   ariaLabel = "Split drawer",
+  placement = "overlay",
   testId,
 }: SplitDrawerProps) {
   const isOpen = state === "open";
@@ -177,6 +190,7 @@ export function SplitDrawer({
         .filter(Boolean)
         .join(" ")}
       data-state={state}
+      data-placement={placement}
       data-testid={testId ?? "split-drawer"}
       style={rootStyle}
       aria-label={ariaLabel}

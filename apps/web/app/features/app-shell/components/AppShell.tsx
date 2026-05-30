@@ -79,7 +79,9 @@ import {
 } from "../split-drawer-context";
 import { ensurePageTraceRegistry } from "../page-trace-registry";
 import { isCesarePeek } from "../cesare-peek";
+import { parseVersionsPeek } from "../versions-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
+import { VersionsSplitLane } from "./VersionsSplitLane";
 import styles from "./AppShell.module.css";
 
 ensurePageTraceRegistry();
@@ -150,6 +152,19 @@ interface AppShellProps {
   /** Spec 47-A5 — opens the full Cesare sessions landing
    *  (`/projects/:id/sessions`). Wires the rail's dedicated "Cesare" entry. */
   onCesareSessionsOpen?: () => void;
+  /** Raw `?versions` search param (Spec 49). `null` when absent. AppShell
+   *  validates it (UUID shape, fail closed) before mounting the lane. */
+  versionsParam?: string | null;
+  /** Raw `?vstate` companion — `"full"` promotes the lane to a full route. */
+  versionsStateParam?: string | null;
+  /** Raw `?vcur` companion — the "vs current" baseline version id. */
+  versionsCurrentParam?: string | null;
+  /** Clear `?versions` (× / ESC / browser-back). */
+  onCloseVersions?: () => void;
+  /** `↗` expand the Versions lane to the full-screen route. */
+  onExpandVersions?: () => void;
+  /** `↙` step the full-screen Versions route back to the split. */
+  onStepBackVersions?: () => void;
   children: ReactNode;
 }
 
@@ -212,6 +227,12 @@ function AppShellInner({
   onOpenCesarePeek,
   onClosePeek,
   onCesareSessionsOpen,
+  versionsParam = null,
+  versionsStateParam = null,
+  versionsCurrentParam = null,
+  onCloseVersions,
+  onExpandVersions,
+  onStepBackVersions,
   children,
 }: AppShellProps) {
   // Save-state is published by the page editors via `useSaveStateValue` and
@@ -333,6 +354,46 @@ function AppShellInner({
       }
     };
   }, [isCesareSplitActive]);
+
+  // Versions SplitDrawer (Spec 49). The raw `?versions` param is validated to a
+  // UUID (fail closed); a malformed / foreign id renders the host alone. When
+  // valid AND in the split state, `body[data-versions-split]` grows the third
+  // grid track so the page COMPRESSES beside the lane (same grid mechanism as
+  // the Cesare split). In `full` the lane escalates to its own overlay, so no
+  // grid track is reserved.
+  const versionsPeekResult = parseVersionsPeek(
+    versionsParam,
+    versionsStateParam,
+    versionsCurrentParam,
+  );
+  const versionsPeek = versionsPeekResult.isOk()
+    ? versionsPeekResult.value
+    : null;
+  const isVersionsSplitActive =
+    versionsPeek !== null && versionsPeek.state === "split";
+  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number>(480);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isVersionsSplitActive) {
+      document.body.setAttribute("data-versions-split", "open");
+    } else {
+      document.body.removeAttribute("data-versions-split");
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.removeAttribute("data-versions-split");
+      }
+    };
+  }, [isVersionsSplitActive]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.setProperty(
+      "--versions-split-size",
+      `${versionsLaneWidth}px`,
+    );
+  }, [versionsLaneWidth]);
 
   // When the SplitDrawer becomes `full`, Cesare retreats to peek so the
   // user keeps a single command surface visible. When the SplitDrawer is
@@ -974,6 +1035,22 @@ function AppShellInner({
             <CesarePeekLane onClose={() => onClosePeek?.()}>
               {renderCesareSheet("split")}
             </CesarePeekLane>
+          )}
+
+          {/* Versions split column (Spec 49 W1 + W2). A REAL third grid column
+              for the split state — the main lane reflows narrower beside it. In
+              `full` the lane renders its own overlay (the `↗` expanded route),
+              so no grid track is reserved. The single source of truth is the
+              `?versions` URL param; the lane's controls dispatch URL navs. */}
+          {versionsPeek !== null && (
+            <VersionsSplitLane
+              peek={versionsPeek}
+              width={versionsLaneWidth}
+              onWidthChange={setVersionsLaneWidth}
+              onExpand={() => onExpandVersions?.()}
+              onStepBack={() => onStepBackVersions?.()}
+              onClose={() => onCloseVersions?.()}
+            />
           )}
 
           {/* Collapse affordance now lives inside the LeftRail brand row

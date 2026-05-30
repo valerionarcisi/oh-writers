@@ -21,6 +21,22 @@ export {
 } from "./cesare-peek";
 export type { CesarePeek, PeekSearch } from "./cesare-peek";
 export {
+  versionsSearchSchema,
+  parseVersionsPeek,
+  InvalidVersionsPeekError,
+  VERSIONS_SURFACE_STATES,
+} from "./versions-peek";
+export type {
+  VersionsPeek,
+  VersionsSearch,
+  VersionsSurfaceState,
+} from "./versions-peek";
+export { useRoutedSurface } from "./use-routed-surface";
+export type {
+  UseRoutedSurfaceResult,
+  UseRoutedSurfaceOptions,
+} from "./use-routed-surface";
+export {
   SaveStateProvider,
   useSaveStatePublisher,
   useSaveStateValue,
