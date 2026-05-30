@@ -21,6 +21,23 @@ const readMainWidth = async (page: import("@playwright/test").Page) =>
     return Math.round(el.getBoundingClientRect().width);
   });
 
+// Open the floating drawer, then promote it into the split column. The dock
+// toggle drives the drawer's `isOpen` through a one-render effect, so we poll
+// the dock click until the drawer is actually visible before clicking
+// "Apri come colonna" — this removes a cold-start timing flake without
+// weakening any assertion below.
+const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
+  const drawer = page.getByTestId("cesare-drawer");
+  await expect(async () => {
+    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await expect(drawer).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+  await page.getByLabel("Apri come colonna").click();
+  await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
+    timeout: 5_000,
+  });
+};
+
 test.describe("[OHW-047-A4] Cesare split drawer", () => {
   test("opening the split collapses the main lane; ×/ESC/back restore it", async ({
     authenticatedPage: page,
@@ -43,16 +60,9 @@ test.describe("[OHW-047-A4] Cesare split drawer", () => {
     expect(widthBefore).toBeGreaterThan(0);
 
     // ── Open the split via the floating drawer's "open as column" affordance ──
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
-    await expect(page.getByTestId("cesare-drawer")).toBeVisible({
-      timeout: 5_000,
-    });
-    await page.getByLabel("Apri come colonna").click();
+    await openSplitViaDrawer(page);
 
     // The lane mounts and the page collapses.
-    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
-      timeout: 5_000,
-    });
     await expect
       .poll(async () =>
         page.evaluate(() => document.body.dataset.cesareSplit ?? ""),
@@ -81,11 +91,7 @@ test.describe("[OHW-047-A4] Cesare split drawer", () => {
     await expect.poll(async () => readMainWidth(page)).toBe(widthBefore);
 
     // ── ESC closes it ────────────────────────────────────────────────────────
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
-    await page.getByLabel("Apri come colonna").click();
-    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
-      timeout: 5_000,
-    });
+    await openSplitViaDrawer(page);
     expect(await readMainWidth(page)).toBeLessThan(widthBefore);
 
     await page.keyboard.press("Escape");
@@ -95,11 +101,7 @@ test.describe("[OHW-047-A4] Cesare split drawer", () => {
     await expect.poll(async () => readMainWidth(page)).toBe(widthBefore);
 
     // ── Browser-back closes it (the search param pops) ───────────────────────
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
-    await page.getByLabel("Apri come colonna").click();
-    await expect(page.getByTestId("cesare-peek-lane")).toBeVisible({
-      timeout: 5_000,
-    });
+    await openSplitViaDrawer(page);
     expect(await readMainWidth(page)).toBeLessThan(widthBefore);
 
     await page.goBack();
