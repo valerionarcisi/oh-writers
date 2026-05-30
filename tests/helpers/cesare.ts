@@ -2,12 +2,15 @@ import { type Page, expect } from "@playwright/test";
 import { BASE_URL } from "../fixtures";
 
 /**
- * Open the floating Cesare chat sheet via the action bar pill.
- * The trigger label is either "Cesare" or "Cesare — N note" depending on the
- * pending-notes count, so we match both with a regex.
+ * Open the floating Cesare chat sheet via the BottomDock pill.
+ * Post-Wave-1 shell refactor (Spec 44/47): the dock pill's accessible name is
+ * "Apri Cesare". The rail (Spec 47-A5) also exposes a button with that name, so
+ * we scope the trigger to the BottomDock to avoid matching the rail entry.
  */
 export async function openCesareSheet(page: Page): Promise<void> {
-  const trigger = page.getByRole("button", { name: /^Cesare(\s—.*)?$/ });
+  const trigger = page
+    .getByTestId("bottom-dock")
+    .getByRole("button", { name: "Apri Cesare" });
   await expect(trigger).toBeVisible({ timeout: 15_000 });
   await trigger.click();
   const input = page.getByPlaceholder("Chiedi a Cesare…");
@@ -61,7 +64,8 @@ export async function sendCesareMessage(
   // slow CI runners Playwright's accessibility-tree query can race with the
   // open transition and skip the subtree. A plain CSS attribute selector
   // queries the DOM directly and is immune to ARIA-tree timing.
-  const sendBtn = page.locator('[aria-label="Invia"]').first();
+  // Post-Wave-1: the send button's aria-label is "Invia messaggio".
+  const sendBtn = page.locator('[aria-label="Invia messaggio"]').first();
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.dispatchEvent("click");
 }
@@ -81,13 +85,11 @@ export async function sendCesareMessage(
  * and is immune to that race.
  */
 export async function waitForCesareReply(page: Page): Promise<string> {
-  // The only [role="log"] in the entire app is the Cesare conversation div
-  // (verified by repo-wide grep). Use the attribute selector directly — it
-  // does not consult the accessibility tree, so aria-hidden on an ancestor
-  // does NOT mask it.
-  const log = page.locator(
-    '[role="log"][aria-label="Conversazione con Cesare"]',
-  );
+  // Post-Wave-1 the conversation container carries `data-testid="cesare-
+  // conversation"` (the old role="log"/aria-label markup was removed when the
+  // chat moved to `useCesareChat`). A test-id selector queries the raw DOM, so
+  // aria-hidden on an ancestor during the open transition does NOT mask it.
+  const log = page.getByTestId("cesare-conversation");
   // Both bubbles render at least one <p>:
   //   - user bubble: <p class={bubbleText}>{content}</p>
   //   - assistant bubble: renderMarkdown(...) which wraps each line in
