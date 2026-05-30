@@ -102,6 +102,22 @@ export interface CesareDrawerProps {
   onPeek: () => void;
   onClose: () => void;
 
+  /**
+   * Rendering surface. Default `"floating"` is the bottom-right sub-window
+   * (Spec 44). `"split"` flows the SAME chrome inside a parent grid column so
+   * the shell can collapse the page beside it (the Spec 46 `?peek=` side-peek,
+   * Spec 47 task A4). In `"split"` the drawer fills its container (no fixed
+   * positioning, no resize handles); the page reflows narrower on the left.
+   */
+  surface?: "floating" | "split";
+
+  /**
+   * Optional "open as split column" affordance. When provided the expanded
+   * floating header renders a button that promotes the chat into the
+   * page-collapsing split lane. Omitted in `"split"` surface (already there).
+   */
+  onOpenAsSplit?: () => void;
+
   /** Sessions metadata for the dropdown trigger in the header. */
   sessions?: ReadonlyArray<CesareDrawerSession>;
   activeSessionId?: string;
@@ -236,6 +252,8 @@ export function CesareDrawer({
   onStepBack,
   onPeek,
   onClose,
+  surface = "floating",
+  onOpenAsSplit,
   sessions,
   activeSessionId,
   onSessionSelectorClick,
@@ -368,7 +386,9 @@ export function CesareDrawer({
 
   // ─── Render ─────────────────────────────────────────────────────────────
   const showDockIcons = state !== "closed" && state !== "peek";
-  const isResizing = expandedResize.isResizing || splitResize.isResizing;
+  const isSplitSurface = surface === "split";
+  const isResizing =
+    !isSplitSurface && (expandedResize.isResizing || splitResize.isResizing);
 
   return (
     <aside
@@ -379,9 +399,10 @@ export function CesareDrawer({
       ]
         .filter(Boolean)
         .join(" ")}
-      data-state={state}
+      data-state={isSplitSurface ? "expanded" : state}
+      data-surface={surface}
       data-testid="cesare-drawer"
-      style={rootStyle}
+      style={isSplitSurface ? undefined : rootStyle}
       aria-label={ariaLabel}
       role="complementary"
     >
@@ -470,23 +491,36 @@ export function CesareDrawer({
               </>
             )}
 
-            <HeaderButton
-              onPress={onCycle}
-              label="Espandi"
-              icon={<span aria-hidden="true">↗</span>}
-            />
-            {state === "full" && (
+            {!isSplitSurface && (
+              <HeaderButton
+                onPress={onCycle}
+                label="Espandi"
+                icon={<span aria-hidden="true">↗</span>}
+              />
+            )}
+            {!isSplitSurface && state === "full" && (
               <HeaderButton
                 onPress={onStepBack}
                 label="Riduci"
                 icon={<span aria-hidden="true">↙</span>}
               />
             )}
-            <HeaderButton
-              onPress={onPeek}
-              label="Minimizza"
-              icon={<span aria-hidden="true">−</span>}
-            />
+            {/* "Open as split column" — promotes the floating chat into the
+                page-collapsing side-peek (Spec 46 ?peek=). Only in floating. */}
+            {!isSplitSurface && onOpenAsSplit && (
+              <HeaderButton
+                onPress={onOpenAsSplit}
+                label="Apri come colonna"
+                icon={<span aria-hidden="true">◫</span>}
+              />
+            )}
+            {!isSplitSurface && (
+              <HeaderButton
+                onPress={onPeek}
+                label="Minimizza"
+                icon={<span aria-hidden="true">−</span>}
+              />
+            )}
             <HeaderButton
               onPress={onClose}
               label="Chiudi"

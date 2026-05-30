@@ -56,6 +56,38 @@
   }
 }
 
+/* ── Surface: split column (Spec 46 ?peek=, Spec 47 A4) ─────────────────────
+   The SAME chrome, but flowed inside the shell's peek grid column instead of
+   floating bottom-right. The lane (in AppShell) owns positioning + width; the
+   drawer just fills it. No fixed position → the page reflows narrower beside
+   it. Resize handles are hidden (the lane is a fixed-token column). This rule
+   wins over the [data-state] rules below because it is more specific AND
+   `position: relative` overrides the `fixed` from `.root`. */
+.root[data-surface="split"][data-state] {
+  position: relative;
+  inset: auto;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: none;
+  block-size: 100%;
+  min-block-size: 0;
+  max-block-size: none;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--ds-surface);
+  z-index: auto;
+  animation: none;
+  transition: none;
+}
+
+.root[data-surface="split"] .handleTop,
+.root[data-surface="split"] .handleLeft {
+  display: none;
+}
+
 /* ── State: closed ─────────────────────────────────────────────────────── */
 .root[data-state="closed"] {
   display: none;

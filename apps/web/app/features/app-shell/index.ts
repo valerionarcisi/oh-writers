@@ -1,6 +1,14 @@
 export { AppShell } from "./components/AppShell";
 export { SaveStatusIndicator } from "./components/SaveStatusIndicator";
 export {
+  peekSearchSchema,
+  parseCesarePeek,
+  isCesarePeek,
+  CESARE_PEEK_TOKEN,
+  InvalidPeekError,
+} from "./cesare-peek";
+export type { CesarePeek, PeekSearch } from "./cesare-peek";
+export {
   SaveStateProvider,
   useSaveStatePublisher,
   useSaveStateValue,

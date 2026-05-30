@@ -575,6 +575,13 @@ export interface CesareSheetProps {
    *  Cesare state ≠ closed. AppShell supplies the same handlers it gives to
    *  the BottomDock so the user keeps a single command surface visible. */
   dockIcons?: CesareDrawerDockIcons;
+  /** Rendering surface (Spec 46 ?peek=, Spec 47 A4). `"floating"` is the
+   *  bottom-right sub-window; `"split"` flows the chat inside the shell's
+   *  page-collapsing peek column. The shell renders exactly one instance —
+   *  never both — so there is a single chat container. */
+  surface?: "floating" | "split";
+  /** "Open as split column" affordance — shown only on the floating surface. */
+  onOpenAsSplit?: () => void;
 }
 
 export function CesareSheet({
@@ -593,6 +600,8 @@ export function CesareSheet({
   askCesare = null,
   onAssistantResponse,
   dockIcons,
+  surface = "floating",
+  onOpenAsSplit,
 }: CesareSheetProps) {
   // ── Drawer state machine ────────────────────────────────────────────────
   const initialDrawerState: CesareDrawerState = isOpen ? "expanded" : "closed";
@@ -921,6 +930,8 @@ export function CesareSheet({
       onStepBack={handleStepBack}
       onPeek={drawer.peek}
       onClose={drawer.close}
+      surface={surface}
+      onOpenAsSplit={onOpenAsSplit}
       sessions={drawerSessions}
       activeSessionId={activeSessionId ?? undefined}
       onSessionSelectorClick={handleSessionSelectorClick}

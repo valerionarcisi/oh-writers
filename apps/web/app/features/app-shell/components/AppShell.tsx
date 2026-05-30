@@ -69,6 +69,8 @@ import {
   useBellOpener,
 } from "../split-drawer-context";
 import { ensurePageTraceRegistry } from "../page-trace-registry";
+import { isCesarePeek } from "../cesare-peek";
+import { CesarePeekLane } from "./CesarePeekLane";
 import styles from "./AppShell.module.css";
 
 ensurePageTraceRegistry();
@@ -129,6 +131,13 @@ interface AppShellProps {
   cesareSessions?: ReadonlyArray<CesareSessionItem>;
   onCesareSessionSelect?: (sessionId: string) => void;
   onCesareSessionNew?: () => void;
+  /** Raw `?peek` search param (Spec 46). `null` when absent. AppShell
+   *  validates it (same-project guard, fail closed) before acting. */
+  peek?: string | null;
+  /** Open the Cesare split column (sets `?peek=cesare`). */
+  onOpenCesarePeek?: () => void;
+  /** Clear `?peek` (× / ESC / browser-back). */
+  onClosePeek?: () => void;
   children: ReactNode;
 }
 
@@ -181,6 +190,9 @@ function AppShellInner({
   cesareSessions,
   onCesareSessionSelect,
   onCesareSessionNew,
+  peek = null,
+  onOpenCesarePeek,
+  onClosePeek,
   children,
 }: AppShellProps) {
   // Save-state is published by the page editors via `useSaveStateValue` and
@@ -279,6 +291,28 @@ function AppShellInner({
     if (typeof document === "undefined") return;
     document.body.style.setProperty("--split-width", `${splitDrawerWidth}px`);
   }, [splitDrawerWidth]);
+
+  // Cesare split column (Spec 46 ?peek=, Spec 47 A4). The raw `?peek` param is
+  // validated against the current project (fail closed). When it resolves to
+  // the Cesare token we collapse the page: `body[data-cesare-split]` switches
+  // the shell grid to add the peek lane column and the main lane reflows. The
+  // floating Cesare sheet is unmounted while the lane is open so the chat never
+  // duplicates.
+  const isCesareSplitActive = isCesarePeek(peek, projectId ?? null);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isCesareSplitActive) {
+      document.body.setAttribute("data-cesare-split", "open");
+    } else {
+      document.body.removeAttribute("data-cesare-split");
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.removeAttribute("data-cesare-split");
+      }
+    };
+  }, [isCesareSplitActive]);
 
   // When the SplitDrawer becomes `full`, Cesare retreats to peek so the
   // user keeps a single command surface visible. When the SplitDrawer is
@@ -634,6 +668,16 @@ function AppShellInner({
     }
   }, [cesareState, markAllSeen]);
 
+  // Promote the floating chat into the split column. The split lane is the
+  // authoritative surface for `?peek=cesare`, so we close the floating sheet
+  // (it unmounts) before opening the peek — the chat is never duplicated, and
+  // the BottomDock returns when the lane closes.
+  const handleOpenAsSplit = useCallback(() => {
+    setCesareState("closed");
+    setCesareOpen(false);
+    onOpenCesarePeek?.();
+  }, [onOpenCesarePeek]);
+
   const handleActivateNotification = useCallback(
     (notification: CesareNotification) => {
       pendingPulseEntities.current = notification;
@@ -758,6 +802,81 @@ function AppShellInner({
     [railSections, recentsSection],
   );
 
+  // Shared Cesare chat props. Rendered as EITHER the floating sheet (default)
+  // OR the split-lane sheet (when `?peek=cesare`) — never both, so the chat is
+  // a single container (no duplication). The split lane's close clears `?peek`;
+  // the floating sheet's close just toggles the drawer off.
+  const renderCesareSheet = useCallback(
+    (surface: "floating" | "split") => {
+      if (!projectId) return null;
+      const isSplit = surface === "split";
+      return (
+        <CesareSheet
+          projectId={projectId}
+          page={cesarePage ?? "screenplay"}
+          sceneId={activeScene?.sceneId ?? null}
+          sceneNumber={activeScene?.sceneNumber ?? null}
+          requirementId={cesareRequirementId ?? activeRequirementId}
+          documentId={activeDocument?.id ?? null}
+          shootingDayId={activeShootingDay?.dayId ?? null}
+          shootingDayNumber={activeShootingDay?.dayNumber ?? null}
+          isOpen={isSplit ? true : cesareOpen}
+          surface={surface}
+          onOpenAsSplit={isSplit ? undefined : handleOpenAsSplit}
+          onClose={() => {
+            if (isSplit) {
+              onClosePeek?.();
+            } else {
+              setCesareOpen(false);
+            }
+          }}
+          onOpenFullPage={() => {
+            // Drawer manages full-page state itself; AppShell mirrors via
+            // onCesareStateChange below.
+          }}
+          onCesareStateChange={(next) => {
+            // Mirror the drawer's state into AppShell's body[data-cesare]
+            // driver. The drawer's `expanded-split` collapses to `expanded`
+            // for persistence. `peek` and `full` are transient. The split
+            // surface stays `expanded` internally, so this is a no-op there.
+            if (isSplit) return;
+            const normalised: CesareState =
+              next === "expanded-split" ? "expanded" : next;
+            setCesareState(normalised);
+            setCesareOpen(next !== "closed");
+          }}
+          askCesare={wrappedAskCesare}
+          onAssistantResponse={handleCesareAssistantResponse}
+          dockIcons={{
+            onBell: openBellDrawer,
+            onAvatar: handleSettings,
+            onGear: handleSettings,
+            hasUnreadNotifications: hasUnseen,
+            avatarLabel: deriveInitials(user.name),
+          }}
+        />
+      );
+    },
+    [
+      projectId,
+      cesarePage,
+      activeScene,
+      cesareRequirementId,
+      activeRequirementId,
+      activeDocument,
+      activeShootingDay,
+      cesareOpen,
+      handleOpenAsSplit,
+      onClosePeek,
+      wrappedAskCesare,
+      handleCesareAssistantResponse,
+      openBellDrawer,
+      handleSettings,
+      hasUnseen,
+      user.name,
+    ],
+  );
+
   return (
     <VersionsDrawerProvider>
       <CesareProvider openCesare={openCesare}>
@@ -818,6 +937,16 @@ function AppShellInner({
             {children}
           </main>
 
+          {/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). A REAL third
+              grid column — the main lane reflows narrower beside it (the page
+              collapses). Hosts the single split CesareSheet; closing it clears
+              `?peek`. */}
+          {isCesareSplitActive && (
+            <CesarePeekLane onClose={() => onClosePeek?.()}>
+              {renderCesareSheet("split")}
+            </CesarePeekLane>
+          )}
+
           {/* Collapse affordance now lives inside the LeftRail brand row
               (hover-revealed `«`). ⌘\ still drives the full↔collapsed cycle
               from the keydown handler above. */}
@@ -837,48 +966,9 @@ function AppShellInner({
             onClose={closePalette}
             items={paletteItems}
           />
-          {projectId && (
-            <CesareSheet
-              projectId={projectId}
-              page={cesarePage ?? "screenplay"}
-              sceneId={activeScene?.sceneId ?? null}
-              sceneNumber={activeScene?.sceneNumber ?? null}
-              requirementId={cesareRequirementId ?? activeRequirementId}
-              documentId={activeDocument?.id ?? null}
-              shootingDayId={activeShootingDay?.dayId ?? null}
-              shootingDayNumber={activeShootingDay?.dayNumber ?? null}
-              isOpen={cesareOpen}
-              onClose={() => setCesareOpen(false)}
-              onOpenFullPage={() => {
-                // Drawer manages full-page state itself; AppShell mirrors via
-                // onCesareStateChange below.
-              }}
-              onCesareStateChange={(next) => {
-                // Mirror the drawer's state into AppShell's body[data-cesare]
-                // driver. The drawer's `expanded-split` (Spec 44 cross-flow
-                // with SplitDrawer) collapses to AppShell's `expanded` for
-                // persistence purposes. `peek` and `full` are transient.
-                const normalised: CesareState =
-                  next === "expanded-split" ? "expanded" : next;
-                setCesareState(normalised);
-                setCesareOpen(next !== "closed");
-              }}
-              askCesare={wrappedAskCesare}
-              onAssistantResponse={handleCesareAssistantResponse}
-              dockIcons={{
-                onBell: openBellDrawer,
-                // While Cesare is open, the avatar routes to the account
-                // settings page — the most common destination from the
-                // BottomDock dropdown. A full dropdown popover from inside
-                // the drawer header would require expanding the chrome
-                // primitive (out of scope for this cleanup).
-                onAvatar: handleSettings,
-                onGear: handleSettings,
-                hasUnreadNotifications: hasUnseen,
-                avatarLabel: deriveInitials(user.name),
-              }}
-            />
-          )}
+          {/* Floating Cesare sheet — the default surface. Unmounted while the
+              split lane is open so the chat never duplicates. */}
+          {!isCesareSplitActive && renderCesareSheet("floating")}
           <SplitDrawerHost
             splitDrawer={splitDrawer}
             splitDrawerWidth={splitDrawerWidth}
