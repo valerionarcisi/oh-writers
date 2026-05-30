@@ -12,15 +12,17 @@
  * `location_type_source`) so it is computed once, not per area selection.
  */
 
-import { ResultAsync, okAsync, errAsync } from "neverthrow";
+import { ResultAsync, okAsync } from "neverthrow";
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { Effect } from "effect";
 import {
   locationRequirements,
   locationRequirementScenes,
   scenes,
 } from "@oh-writers/db/schema";
 import { resolveTypeByKeyword, LOCATION_TYPES } from "@oh-writers/domain";
-import { callHaiku, extractToolUse } from "~/features/ai";
+import { extractToolUse, type CallHaikuParams } from "~/features/ai";
+import { AiClient, AiClientLayer, toResultAsync } from "~/server/effect";
 import type { Db } from "~/server/db";
 import {
   NormalisationOutputSchema,
@@ -140,29 +142,57 @@ const normaliseWithMock = (
     }),
   );
 
+const buildNormaliseCallParams = (
+  contexts: readonly RequirementContext[],
+): CallHaikuParams => ({
+  system: NORMALISE_SYSTEM_PROMPT,
+  fewShot: {},
+  user: buildUserMessage(contexts),
+  maxTokens: 1024,
+  tools: [NORMALISE_TOOL],
+  toolChoice: { type: "tool", name: NORMALISE_TOOL_NAME },
+});
+
+// Spec 48 W-E6 — the batch normalisation model call routed through the `AiClient`
+// Layer, inheriting the shared W-E3 retry/timeout policy instead of calling
+// `callHaiku` raw. The model error is re-tagged into `LocationNormalisationError`,
+// keeping the failure channel byte-identical. Same Zod validation.
+export const normaliseWithAiEffect = (
+  projectId: string,
+  contexts: readonly RequirementContext[],
+): Effect.Effect<
+  NormalisationVerdict[],
+  LocationNormalisationError,
+  AiClient
+> =>
+  Effect.gen(function* () {
+    const ai = yield* AiClient;
+    const result = yield* ai
+      .callHaiku(
+        buildNormaliseCallParams(contexts),
+        "normaliseLocationRequirements",
+      )
+      .pipe(
+        Effect.mapError((e) => new LocationNormalisationError(projectId, e)),
+      );
+    const raw = extractToolUse(result.content, NORMALISE_TOOL_NAME);
+    const parsed = NormalisationOutputSchema.safeParse(raw);
+    return parsed.success
+      ? parsed.data.verdicts
+      : yield* Effect.fail(
+          new LocationNormalisationError(projectId, parsed.error),
+        );
+  });
+
 const normaliseWithAI = (
   projectId: string,
   contexts: readonly RequirementContext[],
 ): ResultAsync<NormalisationVerdict[], LocationNormalisationError> =>
-  callHaiku(
-    {
-      system: NORMALISE_SYSTEM_PROMPT,
-      fewShot: {},
-      user: buildUserMessage(contexts),
-      maxTokens: 1024,
-      tools: [NORMALISE_TOOL],
-      toolChoice: { type: "tool", name: NORMALISE_TOOL_NAME },
-    },
-    "normaliseLocationRequirements",
-  )
-    .mapErr((e) => new LocationNormalisationError(projectId, e))
-    .andThen((result) => {
-      const raw = extractToolUse(result.content, NORMALISE_TOOL_NAME);
-      const parsed = NormalisationOutputSchema.safeParse(raw);
-      return parsed.success
-        ? okAsync(parsed.data.verdicts)
-        : errAsync(new LocationNormalisationError(projectId, parsed.error));
-    });
+  toResultAsync(
+    normaliseWithAiEffect(projectId, contexts).pipe(
+      Effect.provide(AiClientLayer),
+    ),
+  );
 
 /**
  * Normalise every not-yet-resolved requirement of a project. Returns the count

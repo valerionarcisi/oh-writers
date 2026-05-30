@@ -16,6 +16,8 @@ import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { eq, asc } from "drizzle-orm";
 import { ResultAsync, err, ok } from "neverthrow";
+import { Duration, Effect } from "effect";
+import { runEffectToShape } from "~/server/effect";
 import {
   breakdownElements,
   breakdownOccurrences,
@@ -320,17 +322,20 @@ export const streamFullSpoglio = createServerFn({ method: "POST" })
           .where(eq(breakdownVersionState.versionId, data.screenplayVersionId));
       };
 
-      try {
-        if (isMock) {
-          for (const parsed of mockFullScriptBreakdown(scenesForLlm)) {
-            await sink(parsed);
-          }
-        } else {
-          await streamFromAnthropic(scenesForLlm, sink);
-        }
-      } catch (e) {
-        const cause = e instanceof Error ? e.message : String(e);
-        return toShape(err(new LlmSpoglioFailedError(cause)));
+      // Spec 48 W-E6 — the streamed Sonnet run as an Effect. The streaming
+      // transport (the raw `@anthropic-ai/sdk` `messages.stream`, distinct from
+      // the AiClient Layer's non-streaming `callHaiku`) stays the transport; the
+      // Effect adds a bounded per-run timeout so a hung run fails as a typed
+      // `LlmSpoglioFailedError` instead of wedging the request — and the previous
+      // raw `try/catch` (forbidden inside the AI boundary) is gone. The failure
+      // surfaces as the same `LlmSpoglioFailedError`, byte-identical on the wire.
+      const streamShape = await runEffectToShape(
+        isMock
+          ? runMockSpoglio(scenesForLlm, sink)
+          : runFullSpoglioStream(scenesForLlm, sink),
+      );
+      if (!streamShape.isOk) {
+        return toShape(err(streamShape.error));
       }
 
       const modelUsed = isMock ? "mock" : SONNET_MODEL;
@@ -495,6 +500,51 @@ const persistSceneItems = (
     }),
     (e) => new DbError("streamFullSpoglio/persistScene", e),
   );
+
+// A whole multi-scene streamed spoglio is a long, stateful run (mid-stream DB
+// persistence per scene). 5 minutes is generous headroom for a feature-length
+// script; past it the run is wedged and tearing it down is correct.
+const SPOGLIO_STREAM_TIMEOUT = Duration.minutes(5);
+
+// Effect wrapper around the streamed Sonnet run. The streaming transport is the
+// raw `@anthropic-ai/sdk` `messages.stream` (NOT the AiClient Layer's
+// non-streaming `callHaiku`), kept as-is. The Effect adds a bounded per-run
+// timeout: a hung stream fails as a `LlmSpoglioFailedError` instead of wedging
+// the request. A whole-stream retry is deliberately NOT applied — re-running a
+// half-persisted stateful stream would risk double work; the per-scene
+// `onConflictDoNothing` already makes the writes idempotent, but the run itself
+// is one shot.
+export const runFullSpoglioStream = (
+  scenesForLlm: { sceneNumber: number; heading: string; body: string }[],
+  sink: SceneSink,
+): Effect.Effect<void, LlmSpoglioFailedError> =>
+  Effect.tryPromise({
+    try: () => streamFromAnthropic(scenesForLlm, sink),
+    catch: (e) =>
+      new LlmSpoglioFailedError(e instanceof Error ? e.message : String(e)),
+  }).pipe(
+    Effect.timeoutFail({
+      duration: SPOGLIO_STREAM_TIMEOUT,
+      onTimeout: () =>
+        new LlmSpoglioFailedError("LLM spoglio stream timed out"),
+    }),
+  );
+
+// Mock path as an Effect, mirroring the previous in-handler loop. No model, no
+// timeout pressure — a deterministic fixture drained into the same sink.
+export const runMockSpoglio = (
+  scenesForLlm: { sceneNumber: number; heading: string; body: string }[],
+  sink: SceneSink,
+): Effect.Effect<void, LlmSpoglioFailedError> =>
+  Effect.tryPromise({
+    try: async () => {
+      for (const parsed of mockFullScriptBreakdown(scenesForLlm)) {
+        await sink(parsed);
+      }
+    },
+    catch: (e) =>
+      new LlmSpoglioFailedError(e instanceof Error ? e.message : String(e)),
+  });
 
 const streamFromAnthropic = async (
   scenesForLlm: { sceneNumber: number; heading: string; body: string }[],
