@@ -7,17 +7,24 @@ Status: **Planned** · Decided 2026-05-30 · Build LAST — after the Spec 47 fl
 The user wants to start a project from a single spunto and write the whole
 narrative chain with Cesare — logline → soggetto → sinossi → scaletta →
 trattamento → sceneggiatura — each generated/edited live, with full tracer
-visibility. Decided to ship **both**:
+visibility.
 
-1. **Split-drawer Cesare chat** (light) — promote the floating Cesare into a
-   dedicated routed column via an icon on the floating drawer. Mostly already
-   built: A4 added the `↗` "Apri come colonna" affordance + the `?peek=cesare`
-   split lane; this just finalises it as the entry point and makes it routed per
-   Spec 49.
-2. **Guided "write-from-zero" mode** (new feature) — a step-by-step flow from a
-   spunto through the full narrative chain.
+**Cost decision (PO, 2026-05-30): NO dedicated wizard.** The agentic generation
+is expensive — an auto-chained wizard could burn ~6 Anthropic calls per project
+(several long: trattamento, sceneggiatura). So we do NOT build a separate guided
+flow. Instead:
 
-These are two deliverables with different weight and timing.
+1. **Split-drawer Cesare chat** (light, near-done) — promote the floating Cesare
+   into a routed column via the floating drawer's icon (A4's `↗` "Apri come
+   colonna" + `?peek=cesare`).
+2. **Next-step suggestion (one call per click)** — Cesare suggests the next
+   narrative step when it makes sense, as a single button. The user generates
+   ONE entity at a time, by choice. Never an automatic chain. Cost is per-click,
+   user-controlled; there is no wizard to build or maintain.
+
+The documents ARE the state — "progress" is simply which docs exist. There is no
+separate entry point / onboarding flow to design: the suggestion surfaces inside
+the normal Cesare chat on any page.
 
 ## Part 1 — Split-drawer Cesare chat (light, near-done)
 
@@ -30,42 +37,29 @@ These are two deliverables with different weight and timing.
 - Finalisation only: ensure the open/close is fully routed (Spec 49) and the
   icon is discoverable.
 
-## Part 2 — Guided "write-from-zero" mode (new feature)
+## Part 2 — Next-step suggestion (one call per click)
 
-A creation/onboarding flow. From an empty or new project:
+NO wizard, NO auto-chain, NO separate flow. Inside the normal Cesare chat (in the
+split column or floating), when it makes sense Cesare offers the next narrative
+step as a **single suggestion button**:
 
-1. User enters a **spunto** (free text: theme, premise, a few lines).
-2. Cesare proposes a **logline** (live, versioned, tracer-visible). User accepts
-   or asks to refine in chat.
-3. Step advances to **soggetto**, generated from the accepted logline + spunto,
-   then **sinossi**, **scaletta**, **trattamento**, **sceneggiatura** — each:
-   - generated/edited LIVE via the canonical Agentic Edit Pattern
-     (auto-version before apply, Mostra/Nascondi, ↩ Annulla),
-   - using the cross-domain universal dispatch (A7) so each generator reads the
-     upstream docs (e.g. scaletta from soggetto),
-   - with the streamed step tracer always visible (CLAUDE.md invariant):
-     `reading{upstream} → reasoning → writing{entity} → done`.
-4. The user can stop at any step (not every project needs a full screenplay) and
-   resume later — progress is the documents themselves, not a separate wizard
-   state machine (the docs ARE the state).
+- The next step is derived from which documents already exist (the docs ARE the
+  state): no logline → suggest writing a logline from the spunto; logline but no
+  soggetto → suggest generating the soggetto from it; and so on up the chain
+  (logline → soggetto → sinossi → scaletta → trattamento → sceneggiatura).
+- The user clicks → **exactly one** generation runs, via the canonical Agentic
+  Edit Pattern (auto-version before apply, live, Mostra/Nascondi, ↩ Annulla),
+  using the cross-domain universal dispatch (A7) so the generator reads the
+  upstream docs (e.g. scaletta from soggetto), with the streamed tracer always
+  visible (`reading{upstream} → reasoning → writing{entity} → done`).
+- **Never an automatic chain.** One entity per click, user-chosen. Cost is
+  per-click and visible. The user can ignore the suggestion and type anything.
+- A spunto is just the first user message — no dedicated onboarding screen. If
+  the project is empty, the suggestion is "scrivi una logline dal tuo spunto".
 
-### Surface
-
-- Runs in the Cesare SplitDrawer (Part 1) so the just-written document is visible
-  in the column beside/under the chat as it forms.
-- A lightweight "chain" affordance (logline · soggetto · sinossi · scaletta ·
-  trattamento · sceneggiatura) shows progress + lets the user jump.
-- Each generated doc is a real document (versioned), reachable from its normal
-  route — the guided mode is an orchestration over existing entities, NOT a
-  parallel store. Reuse `write_logline` (A8) + the document-gen generators (A7).
-
-### Open design questions (resolve before building Part 2)
-
-- Is the chain a true wizard (linear, gated) or a free "suggested next step"
-  (user can jump around)? Lean: suggested-next, since the docs are the state.
-- Onboarding entry point: new-project flow, or an always-available "Scrivi da
-  zero" action on any project?
-- How much does each step auto-carry context forward vs ask the user.
+This is a thin orchestration over existing entities + a suggestion affordance —
+no parallel store, no state machine, no new generators (reuse `write_logline`
+(A8) + the document-gen tools (A7)).
 
 ## Reuse (no new variants)
 
