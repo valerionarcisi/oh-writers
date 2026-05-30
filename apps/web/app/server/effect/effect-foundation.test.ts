@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Context, Effect, Exit, Layer } from "effect";
 import { errAsync, okAsync } from "neverthrow";
-import { fromResultAsync } from "./interop";
+import { fromResultAsync, toResultAsync } from "./interop";
 import { exitToShape, runEffectToShape } from "./acl";
 
 // A representative domain error: a plain tagged value object, exactly like the
@@ -32,6 +32,26 @@ describe("[OHW-048] Effect foundation — neverthrow⇄Effect bridge", () => {
       expect(shape.error).toBeInstanceOf(SampleError);
       expect(shape.error._tag).toBe("SampleError");
     }
+  });
+
+  it("reverse bridge: an Effect success → ok ResultAsync", async () => {
+    const result = await toResultAsync(Effect.succeed(7));
+    expect(result.isOk()).toBe(true);
+    if (result.isOk()) expect(result.value).toBe(7);
+  });
+
+  it("reverse bridge: a typed Effect failure → err ResultAsync (tag preserved)", async () => {
+    const result = await toResultAsync(Effect.fail(new SampleError("back")));
+    expect(result.isErr()).toBe(true);
+    if (result.isErr()) {
+      expect(result.error).toBeInstanceOf(SampleError);
+      expect(result.error._tag).toBe("SampleError");
+    }
+  });
+
+  it("reverse bridge: a defect re-rejects the original value (programming error)", async () => {
+    const original = new Error("boom-defect");
+    await expect(toResultAsync(Effect.die(original))).rejects.toBe(original);
   });
 });
 

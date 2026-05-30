@@ -3,7 +3,7 @@
 // the foundation Layers, the neverthrow⇄Effect bridge, and the single ACL that
 // converts an Effect result into the canonical `ResultShape`.
 
-export { fromResultAsync } from "./interop";
+export { fromResultAsync, toResultAsync } from "./interop";
 export { DbService, DbLayer } from "./db.layer";
 export { AccessService, AccessLayer } from "./access.layer";
 export { AnthropicClient, AnthropicClientLayer } from "./anthropic.layer";
