@@ -9,9 +9,14 @@ import { setMockContext } from "./helpers/cesare";
  * so this spec drives them directly rather than via the legacy shared helpers.
  */
 async function openCesare(page: Page): Promise<void> {
-  const trigger = page.getByRole("button", { name: /Apri Cesare|^Cesare/ });
-  await trigger.first().waitFor({ state: "visible", timeout: 15_000 });
-  await trigger.first().click();
+  // The dock toggle and the rail sessions header BOTH carry the accessible
+  // name "Apri Cesare" (rail entry added by Spec 47-A5). Scope to the bottom
+  // dock so we open the floating chat, not the rail sessions header.
+  const trigger = page
+    .getByTestId("bottom-dock")
+    .getByRole("button", { name: "Apri Cesare" });
+  await trigger.waitFor({ state: "visible", timeout: 15_000 });
+  await trigger.click();
   await page
     .getByPlaceholder("Chiedi a Cesare…")
     .waitFor({ state: "visible", timeout: 5_000 });

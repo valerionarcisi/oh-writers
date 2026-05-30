@@ -48,6 +48,10 @@ import {
 } from "~/features/predictions/sessions";
 import { useCesareChat } from "../use-cesare-chat";
 import type { ChatMessage, TraceStep } from "../use-cesare-chat-reducer";
+import {
+  decideShowChangesSurface,
+  buildTargetPageRef,
+} from "../cesare-show-changes";
 import styles from "./CesareSheet.module.css";
 
 /**
@@ -799,27 +803,6 @@ export function CesareSheet({
   // ── Send pipeline ───────────────────────────────────────────────────────
   const showChangesInSplit = useShowChangesInSplitDrawer();
 
-  const handleShowChangesForRewrite = useCallback(
-    (rewrite: { scene_number: number; new_content: string }) => {
-      // The actual trace markers come from the editor's proposal store; for
-      // now we ship a minimal payload that opens the SplitDrawer with the
-      // screenplay page. WP-D / future iterations can enrich `traceMarkers`.
-      showChangesInSplit({
-        pageRef: {
-          kind: "screenplay",
-          scope: `Sc. ${rewrite.scene_number}`,
-        } as TargetPageRef,
-        traceMarkers: [],
-        onAccept: () => undefined,
-        onReject: () => undefined,
-        onAcceptAll: () => undefined,
-        onRejectAll: () => undefined,
-        title: `Sceneggiatura · Sc.${rewrite.scene_number}`,
-      });
-    },
-    [showChangesInSplit],
-  );
-
   const handleCancelRewrite = useCallback(
     (rewrite: { scene_number: number; new_content: string }) => {
       // Emit a DOM event the editor's proposal store listens for. This keeps
@@ -853,12 +836,11 @@ export function CesareSheet({
   }, []);
 
   // Live-doc inline diff toggle (Spec 44, canonical Notion model). Cesare edits
-  // already landed on the open document; "Mostra modifiche" reveals a highlight
-  // overlay on the live page (no detached drawer, no separate render), and
-  // "Nascondi modifiche" removes it. The shell reads body[data-cesare-diff] to
-  // paint the highlight on <main>; consumers that want a finer-grained marker
-  // can listen for the broadcast event.
-  const handleToggleLiveDiff = useCallback((showing: boolean) => {
+  // already landed on the open document; revealing the diff paints a highlight
+  // overlay on the live page (no detached drawer, no separate render). The shell
+  // reads body[data-cesare-diff] to paint the highlight on <main>; consumers
+  // that want a finer-grained marker can listen for the broadcast event.
+  const toggleLiveDiff = useCallback((showing: boolean) => {
     if (typeof document === "undefined") return;
     if (showing) {
       document.body.setAttribute("data-cesare-diff", "on");
@@ -871,6 +853,54 @@ export function CesareSheet({
       }),
     );
   }, []);
+
+  // Spec 47-A6 — "Mostra modifiche" branches on how Cesare is open:
+  //   - FLOATING / expanded → inline live diff on the open document.
+  //   - FULL / SPLIT lane    → SplitDrawer showing the trace's target page
+  //     with the diff overlay (the doc is hidden/collapsed behind Cesare).
+  // The pure `decideShowChangesSurface` owns the branch so it stays testable.
+  const handleShowChanges = useCallback(
+    (args: { traceMarkers: ReadonlyArray<TraceMarker>; scope?: string }) => {
+      const surfaceChoice = decideShowChangesSurface({
+        surface,
+        drawerState: drawer.state,
+      });
+      if (surfaceChoice._tag === "live-diff") {
+        toggleLiveDiff(true);
+        return;
+      }
+      // split-drawer branch — build the target page from the current page; fall
+      // back to the live diff when the page has no diff preview (schedule /
+      // shooting-plan) so the control is never a dead end.
+      const pageRef = buildTargetPageRef(page, args.scope);
+      if (!pageRef) {
+        toggleLiveDiff(true);
+        return;
+      }
+      showChangesInSplit({
+        pageRef,
+        traceMarkers: args.traceMarkers,
+        onAccept: () => undefined,
+        onReject: () => undefined,
+        onAcceptAll: () => undefined,
+        onRejectAll: () => undefined,
+        title: pageRef.scope
+          ? `${pageRef.title} · ${pageRef.scope}`
+          : pageRef.title,
+      });
+    },
+    [surface, drawer.state, page, toggleLiveDiff, showChangesInSplit],
+  );
+
+  // "Nascondi modifiche" clears BOTH surfaces unconditionally: the live-diff
+  // clear is a no-op when unset, and the SplitDrawer close is a no-op when it
+  // was never opened. Clearing both is robust to a mode change between Mostra
+  // and Nascondi (e.g. the user expanded Cesare to full meanwhile).
+  const splitDrawerCtx = useSplitDrawer();
+  const handleHideChanges = useCallback(() => {
+    toggleLiveDiff(false);
+    splitDrawerCtx.close();
+  }, [toggleLiveDiff, splitDrawerCtx]);
 
   const handleSubmit = useCallback(() => {
     if (isLoading) return;
@@ -916,9 +946,9 @@ export function CesareSheet({
           key={m.id}
           message={m}
           page={page}
-          onShowChangesForRewrite={handleShowChangesForRewrite}
+          onShowChanges={handleShowChanges}
+          onHideChanges={handleHideChanges}
           onCancelRewrite={handleCancelRewrite}
-          onToggleLiveDiff={handleToggleLiveDiff}
           onUndoDocApply={handleUndoDocApply}
         />
       ))}
@@ -997,38 +1027,32 @@ export function CesareSheet({
 function MessageView({
   message,
   page,
-  onShowChangesForRewrite,
+  onShowChanges,
+  onHideChanges,
   onCancelRewrite,
-  onToggleLiveDiff,
   onUndoDocApply,
 }: {
   message: ChatMessage;
   page: CesarePage;
-  onShowChangesForRewrite: (rewrite: {
-    scene_number: number;
-    new_content: string;
+  /** Reveal the diff (live-doc inline OR split-drawer, decided by the parent
+   *  from the Cesare open mode). The message supplies the trace markers + an
+   *  optional scope hint so the split branch can render the right target. */
+  onShowChanges: (args: {
+    traceMarkers: ReadonlyArray<TraceMarker>;
+    scope?: string;
   }) => void;
+  /** Hide whichever diff surface was opened. */
+  onHideChanges: () => void;
   onCancelRewrite: (rewrite: {
     scene_number: number;
     new_content: string;
   }) => void;
-  onToggleLiveDiff: (showing: boolean) => void;
   onUndoDocApply: (marker: DocAppliedMarker) => void;
 }) {
   // Per-message control of the diff toggle so the button label and the live
-  // highlight on the open document stay in lockstep. Each trace card owns its
-  // own showing flag; toggling drives body[data-cesare-diff] via the parent.
+  // highlight / split drawer stay in lockstep. Each trace card owns its own
+  // showing flag; the parent decides WHERE the diff is shown.
   const [isShowingDiff, setShowingDiff] = useState(false);
-
-  const handleShowChanges = useCallback(() => {
-    setShowingDiff(true);
-    onToggleLiveDiff(true);
-  }, [onToggleLiveDiff]);
-
-  const handleHideChanges = useCallback(() => {
-    setShowingDiff(false);
-    onToggleLiveDiff(false);
-  }, [onToggleLiveDiff]);
 
   if (message.role === "user") {
     // A1: the bubble carries a delivery status. `pending` shows a spinner dot,
@@ -1096,6 +1120,16 @@ function MessageView({
         ? () => onCancelRewrite(rewrite)
         : undefined;
 
+  // Trace markers for the split-drawer branch: surface every affected entity
+  // as a `replace` marker so the embedded TargetPagePreview lists them. The
+  // scope hint (single-scene rewrite) sharpens the target page title.
+  const traceMarkers: ReadonlyArray<TraceMarker> = parsed.updates.map((u) => ({
+    id: u.id ?? u.label,
+    kind: "replace" as const,
+    anchor: u.label,
+  }));
+  const scope = rewrite ? `Sc.${rewrite.scene_number}` : undefined;
+
   return (
     <div className={styles.assistantWithSteps}>
       {rendered && <div className={styles.bubbleMarkdown}>{rendered}</div>}
@@ -1106,12 +1140,13 @@ function MessageView({
         updates={parsed.updates}
         isShowingChanges={isShowingDiff}
         onShowChanges={() => {
-          // Always reveal the live diff highlight on the open document; when a
-          // single-scene rewrite is present, also surface the scene preview.
-          handleShowChanges();
-          if (rewrite) onShowChangesForRewrite(rewrite);
+          setShowingDiff(true);
+          onShowChanges({ traceMarkers, scope });
         }}
-        onHideChanges={handleHideChanges}
+        onHideChanges={() => {
+          setShowingDiff(false);
+          onHideChanges();
+        }}
         onUndo={undoHandler}
         defaultStepsOpen={false}
         testId="cesare-change-trace"
