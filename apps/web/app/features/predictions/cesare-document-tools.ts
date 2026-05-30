@@ -10,9 +10,10 @@ import {
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
-import { repairMojibake, buildWordDiffSegments } from "@oh-writers/utils";
+import { repairMojibake } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
+import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -400,119 +401,13 @@ const loadDocumentForType = (
   );
 
 // ─── Draft insertion ──────────────────────────────────────────────────────────
-
-interface CreatedDraft {
-  versionId: string;
-  /**
-   * The version that was active BEFORE this apply. The client wires it into
-   * the inline trace's "↩ Annulla" affordance so the user can revert the live
-   * document to its previous state. Null when the document had no active
-   * version yet (first content ever written).
-   */
-  previousVersionId: string | null;
-  documentType: DocumentType;
-  label: string;
-  /**
-   * Word-level diff (previous active content → new content) so the inline trace
-   * can render the coloured "Mostra modifiche" diff for document-gen edits, the
-   * same way `apply_text_edit` already does. Empty when there was no previous
-   * content (first write).
-   */
-  diffSegments: ReturnType<typeof buildWordDiffSegments>;
-}
-
-/**
- * Auto-creates a version under the hood AND applies it live to the open
- * document (Spec 44 canonical Notion pattern — Image 6): the generated content
- * becomes the active version immediately so the open editor reflects it behind
- * the floating Cesare chat. The previous active version stays in history so the
- * inline trace can offer "↩ Annulla". No detached "Bozze di Cesare" draft tray.
- */
-const applyVersionLive = (
-  db: Db,
-  documentId: string,
-  documentType: DocumentType,
-  createdBy: string,
-  content: string,
-  label: string,
-): ResultAsync<CreatedDraft, CesareError> =>
-  ResultAsync.fromPromise(
-    db.transaction(async (tx) => {
-      const trimmed = content.trim();
-      if (!trimmed) {
-        throw new Error("Il modello ha restituito un contenuto vuoto.");
-      }
-      // Guard against the LLM returning the previous active content verbatim.
-      // Applying a version identical to the current one is a no-op the user
-      // can't perceive — fail fast so Cesare reports a clear error instead of
-      // silently "doing nothing". Block at the DB boundary so every propose_*
-      // tool inherits the protection.
-      const existing = await tx
-        .select({ content: documentVersions.content })
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId));
-      const isDuplicate = existing.some((e) => e.content.trim() === trimmed);
-      if (isDuplicate) {
-        throw new Error(
-          "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
-        );
-      }
-      const [docRow] = await tx
-        .select({
-          currentVersionId: documents.currentVersionId,
-          content: documents.content,
-        })
-        .from(documents)
-        .where(eq(documents.id, documentId))
-        .limit(1);
-      const previousVersionId = docRow?.currentVersionId ?? null;
-      const previousContent = docRow?.content ?? "";
-      const [maxRow] = await tx
-        .select({
-          max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
-        })
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId));
-      const nextNum = (maxRow?.max ?? 0) + 1;
-      const [inserted] = await tx
-        .insert(documentVersions)
-        .values({
-          documentId,
-          number: nextNum,
-          label,
-          content,
-          isDraft: false,
-          createdBy,
-        })
-        .returning({ id: documentVersions.id });
-      if (!inserted) throw new Error("applyVersionLive returned no rows");
-      // Point the document at the new version and mirror its content so the
-      // open editor (which reads from the active version) updates live.
-      await tx
-        .update(documents)
-        .set({
-          currentVersionId: inserted.id,
-          content,
-          updatedAt: new Date(),
-        })
-        .where(eq(documents.id, documentId));
-      return { versionId: inserted.id, previousVersionId, previousContent };
-    }),
-    (e) =>
-      new CesareError(
-        e instanceof Error ? e.message : `applyVersionLive: ${String(e)}`,
-      ),
-  ).map(({ versionId, previousVersionId, previousContent }) => ({
-    versionId,
-    previousVersionId,
-    documentType,
-    label,
-    // Word-level diff for the inline "Mostra modifiche" coloured rendering.
-    // Skipped when there was no prior content (nothing to diff against).
-    diffSegments: previousContent.trim()
-      ? buildWordDiffSegments(previousContent, content)
-      : [],
-  }));
+//
+// Auto-versioning (create-version-before-apply + rollback-on-error) now lives in
+// `auto-version.effect.ts`, where the invariant is made explicit with Effect's
+// `acquireRelease` (Spec 48 W-E4). `applyVersionLive` keeps the same
+// `ResultAsync<CreatedDraft, CesareError>` boundary, so every handler below is
+// untouched. `CreatedDraft` (incl. the Spec 47d `diffSegments`) is re-exported
+// from that module.
 
 // ─── Generators ───────────────────────────────────────────────────────────────
 
@@ -625,8 +520,7 @@ const runGeneration = (
     mockGenerationNonce += 1;
     const suffix = ` (#${Date.now().toString(36).slice(-4)}-${mockGenerationNonce})`;
     const isLogline =
-      operation === "cesare.writeLogline" ||
-      operation === "cesare.editLogline";
+      operation === "cesare.writeLogline" || operation === "cesare.editLogline";
     if (isLogline) {
       return okAsync(
         `${text.slice(0, LOGLINE_HARD_CAP - suffix.length)}${suffix}`,
