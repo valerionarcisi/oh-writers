@@ -44,6 +44,20 @@ All params Zod-validated, same-project guarded, fail-closed (ignore + render
 host alone). Browser back closes; deep-link opens already-open. `react-aria`
 `useDialog`/`useOverlay` for the panel — mandatory, no hand-rolled dismiss.
 
+### SplitDrawer state behaviour (canonical)
+
+- **`open`** — host page stays mounted and **compresses** (left lane
+  `min-width:0; flex:1`); the drawer takes the right ~50%. Drag-resize the left
+  edge. Never floats.
+- **`↗` expand → NAVIGATE to the real page.** Expand does **not** merely widen the
+  panel — it performs a real route navigation to the peek target as a normal
+  full-screen route (e.g. `…/soggetto?peek=…/screenplay` → navigate to
+  `…/screenplay`). You leave the host context; the URL becomes the target page's
+  own route (fully shareable/deep-linkable, browser-back returns to the host +
+  peek). This is the load-bearing rule for `↗`.
+- **`↙` step-back** — from the navigated full page, back to the split-on-host.
+- **`×`** — clear the param; host page returns to full width.
+
 ## Components
 
 - `SplitDrawer` (existing `packages/ui` primitive) — reused for Versions +
