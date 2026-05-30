@@ -10,7 +10,7 @@ import {
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
 import type { Db } from "~/server/db";
 import { callHaiku, extractText } from "~/features/ai";
-import { repairMojibake } from "@oh-writers/utils";
+import { repairMojibake, buildWordDiffSegments } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 
@@ -412,6 +412,13 @@ interface CreatedDraft {
   previousVersionId: string | null;
   documentType: DocumentType;
   label: string;
+  /**
+   * Word-level diff (previous active content → new content) so the inline trace
+   * can render the coloured "Mostra modifiche" diff for document-gen edits, the
+   * same way `apply_text_edit` already does. Empty when there was no previous
+   * content (first write).
+   */
+  diffSegments: ReturnType<typeof buildWordDiffSegments>;
 }
 
 /**
@@ -451,11 +458,15 @@ const applyVersionLive = (
         );
       }
       const [docRow] = await tx
-        .select({ currentVersionId: documents.currentVersionId })
+        .select({
+          currentVersionId: documents.currentVersionId,
+          content: documents.content,
+        })
         .from(documents)
         .where(eq(documents.id, documentId))
         .limit(1);
       const previousVersionId = docRow?.currentVersionId ?? null;
+      const previousContent = docRow?.content ?? "";
       const [maxRow] = await tx
         .select({
           max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
@@ -485,17 +496,22 @@ const applyVersionLive = (
           updatedAt: new Date(),
         })
         .where(eq(documents.id, documentId));
-      return { versionId: inserted.id, previousVersionId };
+      return { versionId: inserted.id, previousVersionId, previousContent };
     }),
     (e) =>
       new CesareError(
         e instanceof Error ? e.message : `applyVersionLive: ${String(e)}`,
       ),
-  ).map(({ versionId, previousVersionId }) => ({
+  ).map(({ versionId, previousVersionId, previousContent }) => ({
     versionId,
     previousVersionId,
     documentType,
     label,
+    // Word-level diff for the inline "Mostra modifiche" coloured rendering.
+    // Skipped when there was no prior content (nothing to diff against).
+    diffSegments: previousContent.trim()
+      ? buildWordDiffSegments(previousContent, content)
+      : [],
   }));
 
 // ─── Generators ───────────────────────────────────────────────────────────────
@@ -966,6 +982,11 @@ const draftPayload = (draft: CreatedDraft) => ({
   document_type: draft.documentType,
   label: draft.label,
   applied_live: true as const,
+  // Word-level diff segments so the marker emitter (cesare-tools.ts) can ship
+  // the `ohw:live-diff-b64` marker and the client renders the coloured inline
+  // diff for "Mostra modifiche" on document-gen edits (Spec 47b FIX 4).
+  diff_segments: draft.diffSegments,
+  diff_label: draft.label,
   toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Usa ↩ Annulla per ripristinare.`,
 });
 
