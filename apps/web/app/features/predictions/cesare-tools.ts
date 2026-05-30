@@ -4225,6 +4225,7 @@ export const runUnifiedToolLoop = (
   access: ProjectAccess,
   model: string,
   onStreamEvent?: (event: CesareStreamEvent) => void,
+  forcedFirstTool?: string,
 ): ResultAsync<string, CesareError> => {
   const sdkTools = bridgeLegacyTools(
     tools as readonly AnthropicTool[],
@@ -4244,5 +4245,6 @@ export const runUnifiedToolLoop = (
     executor: (block, dbArg, projectIdArg) =>
       executor(block, dbArg, projectIdArg, access),
     ...(onStreamEvent ? { onStreamEvent } : {}),
+    ...(forcedFirstTool ? { forcedFirstTool } : {}),
   });
 };
