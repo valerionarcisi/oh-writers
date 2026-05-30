@@ -584,10 +584,11 @@ Il film finito è diverso da quello immaginato. Marco lo proietta in piazza, dav
 10. INT. CASA DI MARCO - ALBA — Marco scrive una lettera alla madre.`,
 };
 
-// Monotonic counter that keeps each MOCK_AI logline write/edit distinct, so the
+// Monotonic counter that keeps each MOCK_AI document generation distinct, so the
 // applyVersionLive duplicate guard never trips when an E2E suite exercises the
-// same project repeatedly. Mock-only; never used on the real generation path.
-let mockLoglineNonce = 0;
+// same project repeatedly (e.g. A6 + A7 both applying propose_soggetto_v2).
+// Mock-only; never used on the real generation path.
+let mockGenerationNonce = 0;
 
 const runGeneration = (
   systemPrompt: string,
@@ -599,22 +600,23 @@ const runGeneration = (
   // API key is missing. Keeps Vitest + Playwright deterministic and free.
   if (process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"]) {
     const text = MOCK_OUTPUTS[operation] ?? "Bozza generata da Cesare (mock).";
-    // Logline write/edit can be exercised repeatedly across E2E cases against
-    // the same project. `applyVersionLive` rejects content identical to an
-    // existing version (no-op guard), so a fixed mock string would make the 2nd
-    // write fail. Append a tiny unique suffix (within the 200-char cap) ONLY for
-    // these two operations so each mock write is a real, distinct version.
-    if (
+    // Any document-generation op can be exercised repeatedly across E2E cases
+    // against the same project (e.g. show-changes [A6] and universal-dispatch
+    // [A7] both apply `propose_soggetto_v2`). `applyVersionLive` rejects content
+    // identical to an existing version (no-op guard), so a fixed mock string
+    // would make the 2nd apply fail. Append a tiny unique suffix so every mock
+    // generation is a real, distinct version. Logline stays within its hard cap.
+    mockGenerationNonce += 1;
+    const suffix = ` (#${Date.now().toString(36).slice(-4)}-${mockGenerationNonce})`;
+    const isLogline =
       operation === "cesare.writeLogline" ||
-      operation === "cesare.editLogline"
-    ) {
-      mockLoglineNonce += 1;
-      const suffix = ` (#${Date.now().toString(36).slice(-4)}-${mockLoglineNonce})`;
+      operation === "cesare.editLogline";
+    if (isLogline) {
       return okAsync(
         `${text.slice(0, LOGLINE_HARD_CAP - suffix.length)}${suffix}`,
       );
     }
-    return okAsync(text);
+    return okAsync(`${text}${suffix}`);
   }
   return callHaiku(
     {
