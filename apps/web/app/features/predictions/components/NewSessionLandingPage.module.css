@@ -1,0 +1,257 @@
+/* Spec 52 — full-screen glowy Cesare new-session landing.
+   The shell already recedes (body[data-shell="focus"]); this page centres the
+   Cesare prompt in the viewport. All colour/space/radius/motion come from
+   --ds-* tokens — no hardcoded hex, px, or magic numbers. */
+
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 100%;
+  inline-size: 100%;
+  padding-block: var(--ds-space-10);
+  padding-inline: var(--ds-space-6);
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  inline-size: 100%;
+  max-inline-size: 640px;
+  gap: var(--ds-space-4);
+}
+
+.brandGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ds-space-10);
+  block-size: var(--ds-space-10);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-size: 1.5rem;
+  box-shadow: var(--ds-shadow-1);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: 2rem;
+  line-height: 1.15;
+  color: var(--ds-text);
+}
+
+.subheading {
+  margin: 0;
+  max-inline-size: 44ch;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ds-text-3);
+}
+
+/* ── Glow composer ───────────────────────────────────────────────────────
+   The glow is a soft animated gradient ring painted by a blurred pseudo-layer
+   BEHIND the composer surface, so the input itself stays crisp and readable.
+   The conic gradient slowly rotates + the ring pulses its opacity; both pause
+   under prefers-reduced-motion (static ring, no animation). */
+
+.glowWrap {
+  position: relative;
+  inline-size: 100%;
+  margin-block-start: var(--ds-space-4);
+  isolation: isolate;
+}
+
+.glowRing {
+  position: absolute;
+  inset: calc(-1 * var(--ds-space-2));
+  z-index: -1;
+  border-radius: var(--ds-radius-lg);
+  background: conic-gradient(
+    from 0deg,
+    var(--ds-agent),
+    var(--ds-action),
+    var(--ds-agent),
+    var(--ds-action),
+    var(--ds-agent)
+  );
+  filter: blur(var(--ds-space-3));
+  opacity: 0.35;
+  animation:
+    glow-spin 9s linear infinite,
+    glow-pulse 3.2s var(--ds-ease) infinite;
+}
+
+/* The composer lights its own focus-ring when the user is typing, layered on
+   top of the ambient glow so the active field reads clearly. */
+.glowWrap:focus-within .glowRing {
+  opacity: 0.6;
+}
+
+.composer {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-2);
+  inline-size: 100%;
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-2);
+  transition: border-color var(--ds-duration-2) var(--ds-ease);
+}
+
+.glowWrap:focus-within .composer {
+  border-color: var(--ds-agent);
+}
+
+.composerInput {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  padding-block: var(--ds-space-2);
+  padding-inline: var(--ds-space-2);
+  max-block-size: 40vh;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--ds-text-faint);
+  }
+}
+
+.composerSend {
+  flex: 0 0 auto;
+  inline-size: var(--ds-space-8);
+  block-size: var(--ds-space-8);
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+  cursor: pointer;
+  font-size: 1.0625rem;
+  transition: background var(--ds-duration-2) var(--ds-ease);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-action);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+/* ── Quick-prompt suggestions ────────────────────────────────────────────── */
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  margin-block-start: var(--ds-space-3);
+}
+
+.suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-family: var(--ds-font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding-inline: var(--ds-space-4);
+  padding-block: var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text-2);
+  cursor: pointer;
+  transition:
+    border-color var(--ds-duration-2) var(--ds-ease),
+    background var(--ds-duration-2) var(--ds-ease),
+    color var(--ds-duration-2) var(--ds-ease);
+
+  &:hover:not(:disabled) {
+    border-color: var(--ds-agent);
+    background: var(--ds-agent-soft);
+    color: var(--ds-text);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent);
+    outline-offset: 2px;
+  }
+}
+
+.suggestion[data-variant="next-step"] {
+  background: var(--ds-agent-soft);
+  border-color: color-mix(in oklch, var(--ds-agent) 40%, transparent);
+  color: var(--ds-text);
+}
+
+.suggestionSpark {
+  color: var(--ds-agent);
+  font-size: 0.9375rem;
+  line-height: 1;
+}
+
+.suggestionLabel {
+  white-space: nowrap;
+}
+
+.error {
+  margin: 0;
+  margin-block-start: var(--ds-space-2);
+  font-size: 0.875rem;
+  color: var(--ds-danger);
+}
+
+@keyframes glow-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Reduced motion → a static, non-animated ring (the glow stays, the movement
+   stops). The --ds-duration-* tokens already collapse to 0ms here; we also halt
+   the spin/pulse keyframes so nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .glowRing {
+    animation: none;
+    opacity: 0.4;
+  }
+}

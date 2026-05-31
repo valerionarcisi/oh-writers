@@ -42,6 +42,7 @@ import { Route as AppProjectsIdBreakdownImport } from "./routes/_app.projects.$i
 import { Route as AppProjectsIdSessionsIndexImport } from "./routes/_app.projects.$id_.sessions.index";
 import { Route as AppProjectsIdScreenplayIndexImport } from "./routes/_app.projects.$id_.screenplay.index";
 import { Route as AppProjectsIdShootingPlanBlockingEditorImport } from "./routes/_app.projects.$id_.shooting-plan_.blocking-editor";
+import { Route as AppProjectsIdSessionsNewImport } from "./routes/_app.projects.$id_.sessions.new";
 import { Route as AppProjectsIdSessionsSessionIdImport } from "./routes/_app.projects.$id_.sessions.$sessionId";
 import { Route as AppProjectsIdScreenplayVersionsImport } from "./routes/_app.projects.$id_.screenplay.versions";
 import { Route as AppProjectsIdScreenplayVersionsVIdImport } from "./routes/_app.projects.$id_.screenplay.versions.$vId";
@@ -239,6 +240,12 @@ const AppProjectsIdShootingPlanBlockingEditorRoute =
     path: "/projects/$id/shooting-plan/blocking-editor",
     getParentRoute: () => AppRoute,
   } as any);
+
+const AppProjectsIdSessionsNewRoute = AppProjectsIdSessionsNewImport.update({
+  id: "/new",
+  path: "/new",
+  getParentRoute: () => AppProjectsIdSessionsRoute,
+} as any);
 
 const AppProjectsIdSessionsSessionIdRoute =
   AppProjectsIdSessionsSessionIdImport.update({
@@ -482,6 +489,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppProjectsIdSessionsSessionIdImport;
       parentRoute: typeof AppProjectsIdSessionsImport;
     };
+    "/_app/projects/$id_/sessions/new": {
+      id: "/_app/projects/$id_/sessions/new";
+      path: "/new";
+      fullPath: "/projects/$id/sessions/new";
+      preLoaderRoute: typeof AppProjectsIdSessionsNewImport;
+      parentRoute: typeof AppProjectsIdSessionsImport;
+    };
     "/_app/projects/$id_/shooting-plan_/blocking-editor": {
       id: "/_app/projects/$id_/shooting-plan_/blocking-editor";
       path: "/projects/$id/shooting-plan/blocking-editor";
@@ -558,11 +572,13 @@ const AppProjectsIdScreenplayRouteWithChildren =
 
 interface AppProjectsIdSessionsRouteChildren {
   AppProjectsIdSessionsSessionIdRoute: typeof AppProjectsIdSessionsSessionIdRoute;
+  AppProjectsIdSessionsNewRoute: typeof AppProjectsIdSessionsNewRoute;
   AppProjectsIdSessionsIndexRoute: typeof AppProjectsIdSessionsIndexRoute;
 }
 
 const AppProjectsIdSessionsRouteChildren: AppProjectsIdSessionsRouteChildren = {
   AppProjectsIdSessionsSessionIdRoute: AppProjectsIdSessionsSessionIdRoute,
+  AppProjectsIdSessionsNewRoute: AppProjectsIdSessionsNewRoute,
   AppProjectsIdSessionsIndexRoute: AppProjectsIdSessionsIndexRoute,
 };
 
@@ -657,6 +673,7 @@ export interface FileRoutesByFullPath {
   "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   "/projects/$id/sessions/$sessionId": typeof AppProjectsIdSessionsSessionIdRoute;
+  "/projects/$id/sessions/new": typeof AppProjectsIdSessionsNewRoute;
   "/projects/$id/shooting-plan/blocking-editor": typeof AppProjectsIdShootingPlanBlockingEditorRoute;
   "/projects/$id/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/sessions/": typeof AppProjectsIdSessionsIndexRoute;
@@ -693,6 +710,7 @@ export interface FileRoutesByTo {
   "/teams/$slug/settings": typeof AppTeamsSlugSettingsRoute;
   "/projects/$id/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   "/projects/$id/sessions/$sessionId": typeof AppProjectsIdSessionsSessionIdRoute;
+  "/projects/$id/sessions/new": typeof AppProjectsIdSessionsNewRoute;
   "/projects/$id/shooting-plan/blocking-editor": typeof AppProjectsIdShootingPlanBlockingEditorRoute;
   "/projects/$id/screenplay": typeof AppProjectsIdScreenplayIndexRoute;
   "/projects/$id/sessions": typeof AppProjectsIdSessionsIndexRoute;
@@ -732,6 +750,7 @@ export interface FileRoutesById {
   "/_app/teams/$slug_/settings": typeof AppTeamsSlugSettingsRoute;
   "/_app/projects/$id_/screenplay/versions": typeof AppProjectsIdScreenplayVersionsRouteWithChildren;
   "/_app/projects/$id_/sessions/$sessionId": typeof AppProjectsIdSessionsSessionIdRoute;
+  "/_app/projects/$id_/sessions/new": typeof AppProjectsIdSessionsNewRoute;
   "/_app/projects/$id_/shooting-plan_/blocking-editor": typeof AppProjectsIdShootingPlanBlockingEditorRoute;
   "/_app/projects/$id_/screenplay/": typeof AppProjectsIdScreenplayIndexRoute;
   "/_app/projects/$id_/sessions/": typeof AppProjectsIdSessionsIndexRoute;
@@ -772,6 +791,7 @@ export interface FileRouteTypes {
     | "/teams/$slug/settings"
     | "/projects/$id/screenplay/versions"
     | "/projects/$id/sessions/$sessionId"
+    | "/projects/$id/sessions/new"
     | "/projects/$id/shooting-plan/blocking-editor"
     | "/projects/$id/screenplay/"
     | "/projects/$id/sessions/"
@@ -807,6 +827,7 @@ export interface FileRouteTypes {
     | "/teams/$slug/settings"
     | "/projects/$id/screenplay/versions"
     | "/projects/$id/sessions/$sessionId"
+    | "/projects/$id/sessions/new"
     | "/projects/$id/shooting-plan/blocking-editor"
     | "/projects/$id/screenplay"
     | "/projects/$id/sessions"
@@ -844,6 +865,7 @@ export interface FileRouteTypes {
     | "/_app/teams/$slug_/settings"
     | "/_app/projects/$id_/screenplay/versions"
     | "/_app/projects/$id_/sessions/$sessionId"
+    | "/_app/projects/$id_/sessions/new"
     | "/_app/projects/$id_/shooting-plan_/blocking-editor"
     | "/_app/projects/$id_/screenplay/"
     | "/_app/projects/$id_/sessions/"
@@ -993,6 +1015,7 @@ export const routeTree = rootRoute
       "parent": "/_app",
       "children": [
         "/_app/projects/$id_/sessions/$sessionId",
+        "/_app/projects/$id_/sessions/new",
         "/_app/projects/$id_/sessions/"
       ]
     },
@@ -1037,6 +1060,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/$id_/sessions/$sessionId": {
       "filePath": "_app.projects.$id_.sessions.$sessionId.tsx",
+      "parent": "/_app/projects/$id_/sessions"
+    },
+    "/_app/projects/$id_/sessions/new": {
+      "filePath": "_app.projects.$id_.sessions.new.tsx",
       "parent": "/_app/projects/$id_/sessions"
     },
     "/_app/projects/$id_/shooting-plan_/blocking-editor": {

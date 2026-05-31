@@ -96,13 +96,21 @@ test.describe("[OHW-047-A5-session] Full-page session renders the real conversat
   test("a fresh session page shows the empty-state, not a dead shell", async ({
     authenticatedPage: page,
   }) => {
-    // Create a brand-new session via the landing "+ Nuova" and confirm the
-    // session page renders the conversation surface (empty-state + composer),
-    // not the old 'opened in Cesare' placeholder.
+    // Spec 52 — "+ Nuova" now opens the full-screen landing; the session row is
+    // created when the user sends their first message there, which then docks
+    // into the conversation surface (empty-state replaced by the live turn +
+    // composer), not the old 'opened in Cesare' placeholder.
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/sessions`);
     await page.waitForLoadState("networkidle");
 
     await page.getByTestId("cesare-session-new").click();
+    await page.waitForURL(`**/projects/${TEAM_PROJECT_ID}/sessions/new`, {
+      timeout: 10_000,
+    });
+
+    await page.getByTestId("new-session-input").fill("Ciao Cesare");
+    await page.getByTestId("new-session-send").click();
+
     await page.waitForURL(
       new RegExp(`/projects/${TEAM_PROJECT_ID}/sessions/[0-9a-f-]+$`),
       { timeout: 10_000 },
