@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react";
+import { useCallback, useRef, useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
@@ -37,6 +37,16 @@ function ScreenplayEditorPage() {
   >([]);
   const editorRef = useRef<ScreenplayEditorHandle>(null);
   const { open: openVersionsDrawer } = useVersionsDrawer();
+
+  // Stable handler so the shell's TopBar "actions" slot publisher (a memoised
+  // ReactNode that depends on this callback) keeps a stable reference across
+  // renders. An inline arrow here produced a NEW node every render → the slot
+  // publisher's effect re-fired → setState → re-render → "Maximum update depth
+  // exceeded" loop on /screenplay.
+  const handleOpenVersions = useCallback(() => {
+    if (!screenplayId) return;
+    openVersionsDrawer({ kind: "screenplay", screenplayId });
+  }, [openVersionsDrawer, screenplayId]);
 
   // Build the acts array for the Indice popover. Fountain has no explicit act
   // structure, so all scenes live under a single "Sceneggiatura" act.
@@ -88,9 +98,7 @@ function ScreenplayEditorPage() {
           projectId={id}
           acts={acts}
           viewbarCenter={legendNode}
-          onOpenVersions={() =>
-            openVersionsDrawer({ kind: "screenplay", screenplayId: value.id })
-          }
+          onOpenVersions={handleOpenVersions}
           versions={
             versionsResult && versionsResult.isOk
               ? versionsResult.value.map((v, idx) => ({
