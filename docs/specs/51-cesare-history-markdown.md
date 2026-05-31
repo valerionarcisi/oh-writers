@@ -39,13 +39,25 @@ Every Cesare session (`cesare_sessions`, spec 44/46) gets a generated markdown *
 The session transcript is the human-readable, reusable record of "what Cesare and I did in this
 session" — surfaced on the session route (spec 46), reusable as context for a follow-up session.
 
-## Design questions to resolve before building
+## Decided value + approach (PO, 2026-05-31)
 
-- **Storage**: a new `cesare_edit_log` / `cesare_session_markdown` table (markdown text + metadata),
-  or generated-on-read from existing data (messages + versions + diff segments)? Lean: generate from
-  existing data + cache, so there's a single source of truth (the messages/versions) and the markdown
-  is a derived, regenerable view — not a second store to keep in sync. (Mirrors the "documents are the
-  state" rule.)
+**Both uses are wanted** — and they share one derivation:
+
+1. **Continuity between sessions (Cesare remembers).** The markdown history is fed back as bounded
+   context so sessions are continuous, not amnesiac. This is the strongest win; it plugs into the
+   existing context-`.md` assembly (spec 38/40).
+2. **Inspectable record for the human.** The same markdown is a readable/shareable document of "what
+   Cesare changed" and "what happened this session".
+
+**Architecture decision (non-negotiable): the markdown is a DERIVED VIEW, never a separate store.**
+We already hold the single source of truth — the `messages` (sessions), `documentVersions` + version
+ids (W-E4), and the `diff_segments` (47d). The markdown is **generated on-read from that data** (with
+an optional cache that is regenerable, never authoritative). NO `cesare_edit_log` /
+`cesare_session_markdown` table that lives its own life — that would be a second source of truth that
+drifts (the classic anti-pattern; violates DRY and "the documents are the state"). If a cache is
+added, deleting it must reproduce identical markdown.
+
+## Design questions to resolve before building
 - **Granularity / linking**: per-edit MD entries linked from the session MD; the session MD linked
   from the session route. Deep-linkable.
 - **Reuse as context**: the markdown plugs into the existing context-assembly (spec 38/40 local
