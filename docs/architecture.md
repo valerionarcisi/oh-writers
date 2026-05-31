@@ -27,14 +27,17 @@
 
 ### AI
 
-- **Anthropic Claude API** — narrative development, breakdown extraction, cost prediction, schedule optimization, location suggestions
-- Server-side calls only — API key never exposed to the client
+- **Vercel AI SDK** (`ai` + `@ai-sdk/anthropic`) — the transport to Claude (`generateText` / `streamText` / tool-calling). This is the model layer; we do not call raw `@anthropic-ai/sdk` from feature code.
+- **Effect-TS** is the orchestration engine of the AI bounded context (`features/predictions` + the AI server fns of other features + the shared client). Effect *wraps* the AI SDK — it does not replace it — adding structured interruption, typed retry/timeout, resource lifecycle (Layers), and bounded concurrency. See [Spec 48](specs/48-effect-ai-context.md).
+- **Layers**: `Db`, `Access` (session resolved from request headers — see Learnings), `AiClient` (single home for retry/timeout/rate-limit), `Observability` (Langfuse seam). An anti-corruption layer at the `createServerFn` boundary converts `Effect<A, E, R>` → the canonical `ResultShape`, so every server fn's external contract is unchanged and the rest of the app never sees Effect.
+- Server-side calls only — Anthropic + Google Places keys never exposed to the client.
 
 ### Error Handling
 
-- **neverthrow** — `Result<T, E>` and `ResultAsync<T, E>` for all operations that can fail
-- Typed domain errors per feature (`NotFoundError`, `ForbiddenError`, `ValidationError`, `AiError`, `DbError`)
-- React Error Boundaries for UI-level errors
+- **Two coexisting models, one boundary.** Inside the AI bounded context: **Effect** (`Effect<A, E, R>`, typed error + requirement channels). Everywhere else: **neverthrow** (`Result<T, E>` / `ResultAsync<T, E>`). The `createServerFn` seam is the single translation point (Effect → `ResultShape`); callers always see `ResultShape`.
+- Typed domain errors per feature with a `_tag` (`NotFoundError`, `ForbiddenError`, `ValidationError`, `DbError`, `CesareError`, `AnthropicError`, …).
+- `try/catch` only for programming errors / unrecoverable states (and parsing 3rd-party I/O); never for expected failures.
+- React Error Boundaries for UI-level errors.
 
 ### Infrastructure
 
@@ -431,9 +434,42 @@ The entire app runs 100% locally with no external services required.
 
 ## Testing Strategy
 
-All tests use **Playwright** exclusively — no Vitest, no Cypress, no Jest.
+Two layers:
 
-- **Unit-style**: pure functions, parsers, reducers — Playwright Node runner
-- **Component**: UI components via Playwright component testing
-- **E2E**: critical user flows (auth, project creation, screenplay editing, breakdown, scheduling)
-- Tag format: `[OHW-001]`
+- **Vitest** (`pnpm test:unit`) — pure functions, parsers, reducers, Effect Layers/ACL, server-fn logic. ~1500 tests; the fast inner loop.
+- **Playwright E2E** (`pnpm test:e2e`) — critical user flows. The `mock-ui` project runs with `MOCK_AI=true` against a seeded test DB on port 3002 (Playwright manages its own server). Tag format `[OHW-NNN]`.
+
+Both must be green before any commit (pre-commit hook runs lint `--max-warnings 0` + typecheck; the full suites gate the merge).
+
+## Learnings
+
+Hard-won lessons from the Cesare shell refactor + the Effect-TS migration. Read these before
+touching the AI context, the shell, or running a multi-agent wave.
+
+### AI / Effect
+
+- **Effect wraps the AI SDK; it does not replace it.** The Vercel AI SDK stays the model transport (`generateText`/`streamText`/tools). Effect adds interruption / retry / lifecycle *around* it. Name the Layer for the role (`AiClient`), not the raw vendor SDK.
+- **The boundary is the value.** Keeping `ResultShape` at every `createServerFn` made the whole AI migration (6 waves) invisible to callers — each wave was independently revertible. Translate Effect ↔ neverthrow in exactly ONE place (the ACL).
+- **Concurrency belongs to independent reads, not the tool loop.** Parallelising the Cesare tool loop would break the tracer step ordering (a product invariant) and race the auto-version-then-apply on the same entity. `Effect.all({concurrency})` is safe only for the context-assembly DB fan-out (read-only, order-independent) — prove equivalence (same result when reads complete out of order).
+- **`acquireRelease` makes "version before apply, rollback on error" impossible to forget.** The agentic-edit invariant is now structural, not a convention.
+- **Retry only transient failures.** Classify at the SDK boundary (`APICallError.isRetryable`): retry 429/5xx/timeout, never auth/validation. Cap retries (2) for cost discipline.
+
+### Auth / SSR
+
+- **`getWebRequest()` is not reliably populated inside an API file route's POST handler** (it is inside a `createServerFn`). The Cesare stream silently 403'd every browser request until access was resolved from the route's own `request.headers` instead of the ambient context. When an API route needs the session, pass `request.headers` explicitly.
+- **A "loading failed" UI symptom can be a server-side auth resolution bug**, not the client. E2E hid it because the test fixture always attaches the session cookie; the real browser `fetch` exposed it.
+- **Hydration mismatches hide in unexpected components.** A `/locations` mismatch attributed to the map was actually `aria-valuemax="9999"` on the drawer-resize handles (SSR placeholder vs client viewport value). Stabilise SSR-time values; render viewport-dependent widgets client-only.
+
+### UI / Cesare
+
+- **"Maximum update depth" is usually an unstable effect dependency, not the obvious component.** The Mostra/Nascondi loop was NOT in the diff component — it was three shell publishers depending on a context object whose reference changes every render, and a hook listing a per-render `search` object as a dep. Depend on the stable `setX` callback / read through a ref.
+- **Transient flash > persistent toggle state.** Modelling the diff highlight as a fire-and-forget flash (start on click → auto-clear via timer) removed the reconciliation loop by construction and matched the desired UX (green on Mostra, red on Nascondi, both fade; the document always keeps the change; no inline Annulla — true rollback lives in the Versions SplitDrawer).
+- **Disambiguate accessible names across surfaces.** Two buttons named "Apri Cesare" (dock pill + rail entry) broke ~10 E2E specs and assistive tech. One name per action.
+- **`document.title` per route** via TanStack Router `head` — was empty everywhere; easy to forget.
+
+### Multi-agent waves (process)
+
+- **Agent worktrees start from a STALE local branch ref.** Several waves reset to an old HEAD (e.g. W-E1 only) instead of the latest merge, silently building on outdated foundations. Always instruct agents to `git fetch` + `git reset --hard <integ>` and to CONFIRM specific marker files exist (e.g. `ai.layer.ts` not `anthropic.layer.ts`) before starting.
+- **`pnpm install` after every merge that touched `package.json`** — a merged dependency (`effect`) is not in `node_modules` until you install, and typecheck fails confusingly otherwise.
+- **The orchestrator is the Lead; merges and conflict resolution stay with it.** 3-way merges between an Effect-converted file and a stale-base fix are resolvable by hand when the overlaps are small — typecheck is the truth test after each resolution.
+- **Live-verify every UI change yourself.** "Tests pass" missed the empty session page, the 403 stream, and the update-depth loop; driving the real app with a browser caught all three. The first attempt often flakes (lost session) — re-login before concluding a feature is broken.
