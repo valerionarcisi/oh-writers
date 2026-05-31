@@ -1,6 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
+import {
+  navigateToBreakdown,
+  switchBreakdownView,
+  TEAM_PROJECT_ID,
+} from "./helpers";
 
 /**
  * [Spec 10 — Per-project view]
@@ -18,10 +22,10 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    // The SegmentedControl renders data-testid="segmented-per-project"
-    const perProjectTab = page.getByTestId("segmented-per-project");
-    await expect(perProjectTab).toBeVisible({ timeout: 10_000 });
-    await perProjectTab.click();
+    // The SegmentedControl renders data-testid="segmented-per-project" and
+    // role="tab"; switchBreakdownView clicks it and waits for the switch to
+    // take effect (the sticky viewbar re-mounts while Suspense settles).
+    await switchBreakdownView(page, "per-project");
 
     // ProjectBreakdownView root has data-testid="project-breakdown-table"
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
@@ -35,7 +39,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    await page.getByTestId("segmented-per-project").click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });
@@ -57,7 +61,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    await page.getByTestId("segmented-per-project").click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });
@@ -103,7 +107,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    await page.getByTestId("segmented-per-project").click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });
@@ -146,7 +150,7 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    await page.getByTestId("segmented-per-project").click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });
@@ -169,13 +173,13 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
     // Switch to per-project
-    await page.getByTestId("segmented-per-project").click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });
 
     // Switch back to per-scene
-    await page.getByTestId("segmented-per-scene").click();
+    await switchBreakdownView(page, "per-scene");
 
     // Project breakdown table must be gone
     await expect(page.getByTestId("project-breakdown-table")).not.toBeVisible({

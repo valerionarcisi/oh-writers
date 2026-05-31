@@ -1,61 +1,22 @@
-import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import {
-  navigateToBreakdown,
-  openSceneInBreakdown,
-  TEAM_PROJECT_ID,
-} from "./helpers";
 
+/**
+ * [Spec 10d] Cast tier on breakdown elements
+ *
+ * SKIPPED (removed UI, not a v3 testid rename): all three tests drove the
+ * "Aggiungi elemento" modal (`add-element-trigger` → `add-element-category` →
+ * `add-element-cast-tier` → `add-element-name` → `add-element-submit`) and the
+ * `cast-tier-label-*` / `accepted-tag-*` side-panel chips. The v3 breakdown
+ * redesign removed the BreakdownPanel and its AddElementModal entirely — there
+ * is no rendered `add-element-trigger` anywhere in the per-scene view, so the
+ * manual add-with-tier flow no longer exists to test.
+ *
+ * Cast tier itself survives as data and is rendered as a "Tier" column in the
+ * per-project ProjectBreakdownView table; the manual-creation flow these tests
+ * exercised does not. Re-enable if/when an add-element affordance returns.
+ */
 test.describe("[Spec 10d] Cast tier on breakdown elements", () => {
-  test("[OHW-300] Aggiungi defaults to Cast and shows the Tier select", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(page, 1);
-
-    await page.getByTestId("add-element-trigger").click();
-
-    const categorySelect = page.getByTestId("add-element-category");
-    await expect(categorySelect).toHaveValue("cast");
-
-    const tierSelect = page.getByTestId("add-element-cast-tier");
-    await expect(tierSelect).toBeVisible();
-    await expect(tierSelect).toHaveValue("principal");
-  });
-
-  test("[OHW-301] Tier select hides when category is not Cast", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(page, 1);
-
-    await page.getByTestId("add-element-trigger").click();
-    await page.getByTestId("add-element-category").selectOption("props");
-    await expect(page.getByTestId("add-element-cast-tier")).toHaveCount(0);
-  });
-
-  test("[OHW-302] Add a Day Player → Cast section sub-groups by tier", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(page, 1);
-
-    await page.getByTestId("add-element-trigger").click();
-    await page.getByTestId("add-element-name").fill("Roberto");
-    // category already defaults to cast; switch tier to day_player
-    await page.getByTestId("add-element-cast-tier").selectOption("day_player");
-    await page.getByTestId("add-element-submit").click();
-
-    // The Cast section now shows the "Giornaliero" sub-header with Roberto.
-    const dayPlayerLabel = page.getByTestId("cast-tier-label-day_player");
-    await expect(dayPlayerLabel).toBeVisible();
-    await expect(dayPlayerLabel).toHaveText("Giornaliero");
-
-    await expect(
-      page.getByTestId("accepted-tag-Roberto").first(),
-    ).toBeVisible();
-  });
+  test.skip("[OHW-300] Aggiungi defaults to Cast and shows the Tier select", () => {});
+  test.skip("[OHW-301] Tier select hides when category is not Cast", () => {});
+  test.skip("[OHW-302] Add a Day Player → Cast section sub-groups by tier", () => {});
 });

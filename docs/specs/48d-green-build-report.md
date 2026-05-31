@@ -153,3 +153,70 @@ warrant a dedicated "re-point chromium breakdown specs at the v3 UI" follow-up.
 - `tests/cesare-agentic-shooting-schedule.spec.ts`
 
 No `apps/`/`packages/` source changed. No `test.skip` added to hide a failure.
+
+---
+
+## Follow-up: chromium `tests/breakdown` re-pointed at the v3 UI
+
+The non-gated `chromium` breakdown suite (the ~35 pre-existing failures noted in
+"Out of scope" above) was re-pointed at the v3 UI. **Test-only changes** — no
+`apps/`/`packages/` source touched. Two consecutive warm-server full runs of
+`pnpm test:e2e --project=chromium tests/breakdown --retries=2`:
+
+| Run | Result                                       |
+| --- | -------------------------------------------- |
+| A   | **37 passed, 0 failed, 26 skipped** (EXIT=0) |
+| B   | **37 passed, 0 failed, 26 skipped** (EXIT=0) |
+
+Typecheck + lint (`eslint apps/web/app --max-warnings 0`) stayed green. The
+`mock-ui` gate is untouched (no `cesare-agentic-*` spec changed).
+
+### Renamed / relocated selectors fixed (old → new)
+
+| Old (v2)                                                             | New (v3)                                                                                                                               | Where                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `getByTestId("scene-toc-item-N")` then `scene-N-heading` (TOC click) | click `getByTestId("scene-N-heading")` in the reader                                                                                   | `helpers.openSceneInBreakdown` — SceneTOC sidebar removed; navigation is heading-click                                                                                                                                         |
+| raw `getByTestId("segmented-per-project").click()`                   | `switchBreakdownView(page, "per-project")` helper (clicks inside an `expect.toPass` gated on `aria-selected`)                          | per-project-view, bulk-actions, dialog-a11y, permissions — the sticky viewbar `SegmentedControl` re-mounts during Suspense settle and swallows a bare click (the `role="tab"`/`segmented-*` testids themselves were unchanged) |
+| `getByRole("dialog")`                                                | `locator("dialog[open]")` (+ scope cancel/confirm buttons to it)                                                                       | dialog-a11y — the v3 Dialog renders a native `<dialog open>` AND a react-aria `role="dialog"` content node, so `getByRole("dialog")` hit 2 elements (strict-mode violation)                                                    |
+| `getByTestId("accepted-tag-X")` / `ghost-tag-X` chips                | inline reader decorations: `[data-element-id]:not([data-ghost="true"])` (accepted) / `[data-ghost="true"]` (pending), filtered by text | auto-spoglio, inline-tagging — side-panel `BreakdownPanel` chips removed, replaced by inline highlights/ghosts over the screenplay text                                                                                        |
+| `getByTestId("breakdown-panel")` confirmation chip                   | inline `[data-cat="cast"]` highlight over the tagged text                                                                              | inline-tagging OHW-280                                                                                                                                                                                                         |
+| `[data-stale="true"]` inside `breakdown-panel` + `aria-disabled`     | `[data-stale="true"]` inside `readonly-screenplay-view`, dimmed (opacity < 1)                                                          | breakdown-stale OHW-253 — `aria-disabled` was a panel-only attribute                                                                                                                                                           |
+| `getByTestId("ai-respoglio-trigger")` dropdown                       | `getByRole("button", { name: "Ri-spogliare con AI" })` (FloatingDock primary action)                                                   | llm-import OHW-330-ui                                                                                                                                                                                                          |
+
+`navigateToBreakdown` also now waits for `readonly-screenplay-view` (the heaviest
+async child) so the page has settled before interaction.
+
+### Shared-DB isolation fix (not a selector change)
+
+`tests/breakdown/inline-tagging.spec.ts` gained a `test.beforeAll` that reseeds
+the test DB (`reseedTestDb` helper, mirrors `global-setup`). The breakdown suite
+shares one seed with `workers: 1`; alphabetically-earlier specs
+(`breakdown-bulk-actions` bulk-confirm, `breakdown-dialog-a11y` archive)
+permanently commit the auto-spoglio **pending ghosts** to accepted, leaving zero
+`[data-ghost="true"]` for the later ghost-interaction tests (OHW-284/285/286).
+Reseeding restores the pristine ghost state for that file. No assertion weakened.
+
+### `.skip`ped (genuinely-removed v3 UI / unavailable seed data — each carries an in-file comment)
+
+| Test                                                         | Reason                                                                                                                                                                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto-spoglio-bilingual` OHW-323                             | props "Bottiglia" ghost: team version content swapped to `NON_FA_RIDERE`, which doesn't contain the token (it lives only in breakdown scene NOTES); v3 highlights elements found in the VERSION text, so no props ghost renders |
+| `auto-spoglio-bilingual` OHW-324                             | scene-1 "Appartamento" highlight + FADE/CUT transition-leak guard — neither the location nor any transition token exists in the `NON_FA_RIDERE` version text, so both halves are untestable against the current seed            |
+| `breakdown-dictionary` OHW-10i-1                             | IT dictionary "tavolo" props ghost: against the current seed the reader renders only CAST inline decorations — no props/locations decorations are produced                                                                      |
+| `breakdown-cast-tier` OHW-300/301/302                        | the "Aggiungi elemento" modal (`add-element-trigger` + `add-element-cast-tier`) was removed with the BreakdownPanel; no manual add-with-tier flow exists                                                                        |
+| `breakdown-cesare` OHW-257-ui                                | per-scene "Suggerisci" button (`cesare-suggest-scene`) removed; suggestions are now inline ghosts auto-generated on mount                                                                                                       |
+| `breakdown-ignore` (single test)                             | the bulk "Ignora tutti" suggestion banner was removed; ghosts are accepted/ignored individually via the inline GhostPopover (covered by inline-tagging OHW-285/286)                                                             |
+| `inline-tagging` OHW-287 / `breakdown-readonly-ux` OHW-10h-2 | "reader scroll updates active TOC item": SceneTOC (`breakdown-toc`) + its scroll container (`breakdown-script`) removed; the window now scrolls and there is no active-TOC-item surface                                         |
+| `llm-import-spoglio` OHW-330-ui-menu                         | the `ai-respoglio` dropdown menu was replaced by a single FloatingDock action — no menu to open                                                                                                                                 |
+| `llm-import-spoglio` OHW-330-permissions                     | the v3 FloatingDock re-spoglio action is not `canEdit`-gated, so a viewer does see it — the old "viewer never sees the AI dropdown" contract no longer holds (server still enforces)                                            |
+
+(The remaining skips in these files — OHW-258/259/325/251/252/256/330..335 — were
+already `test.skip` before this work, pending MOCK_AI/seed fixtures.)
+
+### Files changed (test-only)
+
+- `tests/breakdown/helpers.ts` — v3 `openSceneInBreakdown`, new `switchBreakdownView` + `reseedTestDb`, `readonly-screenplay-view` settle wait, removed orphaned `acceptGhostTag`.
+- `tests/breakdown/{auto-spoglio,auto-spoglio-bilingual,breakdown-bulk-actions,breakdown-cast-tier,breakdown-cesare,breakdown-dialog-a11y,breakdown-dictionary,breakdown-ignore,breakdown-per-project-view,breakdown-permissions,breakdown-readonly-ux,breakdown-stale,inline-tagging,llm-import-spoglio}.spec.ts`
+
+No adjacent suite (`editor`/`documents`/`budget`/`schedule`) referenced these
+renamed testids — the bit-rot was isolated to `tests/breakdown/`.

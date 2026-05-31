@@ -10,26 +10,26 @@ import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
  * accepted (high-confidence categories) or pending ghosts. The run is
  * idempotent — text_hash short-circuits on subsequent mounts.
  *
- * The team-seed (see packages/db/src/seed/fixtures/breakdown-fixtures.ts)
- * gives us:
- *   - Scene 1 — "INT. APPARTAMENTO - NOTTE" → location "Appartamento" (accepted)
- *   - Scene 2 — "EXT. STRADA - GIORNO"     → location "Strada" (accepted)
- *                                          → vehicle "Macchina" (pending)
- *
- * Scene 1 is the default active scene on mount, so the tags should appear
- * in the breakdown panel without further interaction.
+ * Auto-extracted elements are no longer surfaced as side-panel `accepted-tag-*`
+ * chips (the BreakdownPanel was removed in the v3 redesign). They now render as
+ * inline decorations over the matched text in the screenplay reader: accepted
+ * elements as `[data-cat][data-element-id]` highlights, pending ones with an
+ * additional `[data-ghost="true"]`. The team version text (NON_FA_RIDERE)
+ * reliably yields accepted CAST highlights from its CAPS character cues, which
+ * is what these tests anchor on.
  */
 test.describe("[Spec 10e] Breakdown — auto-spoglio", () => {
-  test("[OHW-320] auto-spoglio extracts the seeded scene-1 location without user action", async ({
+  test("[OHW-320] auto-spoglio extracts elements on mount without user action", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    // The location extractor turns "INT. APPARTAMENTO - NOTTE" into the
-    // accepted tag "Appartamento". We never click "Suggerisci".
+    // No "Suggerisci"/manual action: simply mounting the page must produce
+    // committed inline highlights over the screenplay text.
+    const reader = page.getByTestId("readonly-screenplay-view");
     await expect(
-      page.getByTestId("accepted-tag-Appartamento").first(),
+      reader.locator('[data-element-id]:not([data-ghost="true"])').first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 
@@ -37,12 +37,16 @@ test.describe("[Spec 10e] Breakdown — auto-spoglio", () => {
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
+    const reader = page.getByTestId("readonly-screenplay-view");
+    const accepted = reader.locator(
+      '[data-element-id]:not([data-ghost="true"])',
+    );
 
-    // First visit — wait for the auto-spoglio result to land.
+    // First visit — wait for the auto-spoglio result to land, then snapshot
+    // the committed-highlight count.
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    const tag = page.getByTestId("accepted-tag-Appartamento");
-    await expect(tag.first()).toBeVisible({ timeout: 15_000 });
-    const firstCount = await tag.count();
+    await expect(accepted.first()).toBeVisible({ timeout: 15_000 });
+    const firstCount = await accepted.count();
 
     // Navigate away then back — the second mount must short-circuit
     // server-side via the text_hash check, so the count cannot grow.
@@ -50,12 +54,8 @@ test.describe("[Spec 10e] Breakdown — auto-spoglio", () => {
     await page.waitForURL("**/dashboard", { timeout: 10_000 });
 
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await expect(
-      page.getByTestId("accepted-tag-Appartamento").first(),
-    ).toBeVisible({ timeout: 15_000 });
-    const secondCount = await page
-      .getByTestId("accepted-tag-Appartamento")
-      .count();
+    await expect(accepted.first()).toBeVisible({ timeout: 15_000 });
+    const secondCount = await accepted.count();
 
     expect(secondCount).toBe(firstCount);
   });
