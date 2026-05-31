@@ -1,6 +1,31 @@
 # Spec 52 — New Cesare session: full-screen glowy landing (Notion AI style)
 
-Status: **Planned** · Decided 2026-05-31 (PO) · Build AFTER the merge to main.
+Status: **Built** · Decided 2026-05-31 (PO) · Implemented 2026-05-31.
+
+## Implementation notes (as built)
+
+- Route: `/projects/:id/sessions/new` (`_app.projects.$id_.sessions.new.tsx`) →
+  `NewSessionLandingPage`. The static `new` segment wins over the dynamic
+  `$sessionId` conversation route, so both are deep-linkable.
+- Focus mode is engaged declaratively via a new `ShellFocusRequestProvider`
+  (`shell-focus-request-context.tsx`): the landing calls `useRequestShellFocus()`
+  for its lifetime; AppShell reads `isFocusRequested` and broadcasts
+  `body[data-shell="focus"]` (`effectiveShellState`) WITHOUT overwriting the
+  user's persisted density. Releasing it (route unmount) restores the prior
+  layout. Reference-counted so nested / fast transitions can't strand focus.
+- Bug fixed: `body[data-shell="focus"] .rail { display:none }` removed the rail
+  from the shell grid, so the single remaining in-flow item (`main`) auto-placed
+  into the empty first track and collapsed to 0. The focus grid template is now a
+  single `minmax(0, 1fr)` column.
+- The glow is a blurred, rotating conic-gradient ring (`--ds-agent` →
+  `--ds-action`) behind the composer, pulsing its opacity; both animations are
+  removed under `prefers-reduced-motion` (static ring).
+- One chat container: the landing creates the session, pushes the first message
+  through the shared `useCesareChatStore`, then routes to `/sessions/:sessionId`,
+  which renders the same store thread. No second chat container, no replay.
+- The rail "+ Nuova" and the `/sessions` landing "+ Nuova" both now route to
+  `/sessions/new` (the session row is created on first send, not on click — no
+  empty throwaway sessions).
 
 ## Context
 

@@ -28,9 +28,13 @@
 }
 
 /* Focus mode — rail + top strip + dock hidden so the editor takes the
-   entire viewport. Cesare can still be opened on top via its own state. */
+   entire viewport. Cesare can still be opened on top via its own state.
+   The rail is `display: none` here (not just 0-width), so it leaves the grid
+   entirely; the template must therefore be a SINGLE column or the main lane
+   auto-places into the empty first track and collapses to 0 (Spec 52). The
+   split variants below re-add their own tracks via more specific selectors. */
 :global(body[data-shell="focus"]) .shell {
-  grid-template-columns: 0 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* Cesare split column (Spec 46 ?peek=, Spec 47 A4). The shell grows a third

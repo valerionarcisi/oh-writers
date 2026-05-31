@@ -49,6 +49,10 @@ import {
   useCesareSessionFocus,
 } from "../cesare-session-focus-context";
 import {
+  ShellFocusRequestProvider,
+  useShellFocusRequest,
+} from "../shell-focus-request-context";
+import {
   ActiveSceneProvider,
   useActiveScene,
   useActiveRequirementId,
@@ -205,10 +209,14 @@ export function AppShell(props: AppShellProps) {
               <CesareSessionFocusProvider>
                 {/* Spec 47b FIX 2 — the shared chat store wraps both the
                     floating sheet and the full-page session route so they
-                    render the SAME threads (single chat container). */}
-                <CesareChatStoreProvider>
-                  <AppShellInner {...props} />
-                </CesareChatStoreProvider>
+                    render the SAME threads (single chat container). Spec 52 —
+                    the focus-request provider lets the full-screen new-session
+                    landing ask the shell to recede the rail + topstrip. */}
+                <ShellFocusRequestProvider>
+                  <CesareChatStoreProvider>
+                    <AppShellInner {...props} />
+                  </CesareChatStoreProvider>
+                </ShellFocusRequestProvider>
               </CesareSessionFocusProvider>
             </SplitDrawerProvider>
           </CesareNotificationProvider>
@@ -267,6 +275,7 @@ function AppShellInner({
   const splitDrawer = useSplitDrawer();
   const openBellDrawer = useBellOpener();
   const { focusedSessionId, setFocusedSessionId } = useCesareSessionFocus();
+  const { isFocusRequested } = useShellFocusRequest();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
   // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
   // by default and a top-left hamburger toggles it as a sliding overlay.
@@ -301,20 +310,26 @@ function AppShellInner({
     setCesareOpen(cesarePersist === "expanded");
   }, []);
 
+  // Spec 52 — a routed surface (the full-screen new-session landing) can force
+  // focus mode for its lifetime. The user's persisted density (`shellState`) is
+  // never overwritten while the request is active; releasing it restores their
+  // prior layout automatically because we broadcast `shellState` again.
+  const effectiveShellState: ShellState = isFocusRequested
+    ? "focus"
+    : shellState;
+
   // Broadcast UI state to <body> so the rail/dock/cesare CSS modules can
   // react via :global([data-*]) selectors without prop-drilling.
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.body.setAttribute("data-shell", shellState);
+    document.body.setAttribute("data-shell", effectiveShellState);
     if (shellState !== "focus") {
       // Don't persist focus — it's a transient "single-shot" mode the user
-      // opts into. Survive only "full" and "collapsed".
+      // opts into. Survive only "full" and "collapsed". (The route-driven focus
+      // request never touches `shellState`, so it is never persisted either.)
       window.localStorage.setItem(SHELL_STORAGE_KEY, shellState);
-    } else {
-      // Persist the previous non-focus choice so leaving focus restores it.
-      // Read what's in storage and keep it.
     }
-  }, [shellState]);
+  }, [effectiveShellState, shellState]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
