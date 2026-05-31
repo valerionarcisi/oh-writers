@@ -43,6 +43,15 @@ export interface ChatState {
 export type ChatAction =
   | { readonly type: "session/select"; readonly sessionId: string }
   | {
+      // Spec 51 — replace an EMPTY session thread with the persisted history
+      // loaded on open. Hydrate is a no-op when the thread already has messages
+      // so a slower load round-trip never clobbers an in-flight optimistic
+      // bubble or a thread the user is already chatting in.
+      readonly type: "thread/hydrate";
+      readonly sessionId: string;
+      readonly messages: ReadonlyArray<ChatMessage>;
+    }
+  | {
       readonly type: "message/send";
       readonly sessionId: string;
       readonly userMessageId: string;
@@ -134,6 +143,11 @@ export const chatReducer = (state: ChatState, action: ChatAction): ChatState =>
       ...state,
       activeSessionId: sessionId,
     }))
+    .with({ type: "thread/hydrate" }, (a) => {
+      const existing = threadFor(state, a.sessionId);
+      if (existing.length > 0) return state;
+      return withThread(state, a.sessionId, a.messages);
+    })
     .with({ type: "message/send" }, (a) => {
       const thread = threadFor(state, a.sessionId);
       const userBubble: ChatMessage = {
