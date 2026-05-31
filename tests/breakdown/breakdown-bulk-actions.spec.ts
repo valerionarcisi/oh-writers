@@ -1,7 +1,8 @@
-import { expect } from "@playwright/test";
+import { expect, type ConsoleMessage } from "@playwright/test";
 import { test } from "../fixtures";
 import {
   navigateToBreakdown,
+  reseedTestDb,
   switchBreakdownView,
   TEAM_PROJECT_ID,
 } from "./helpers";
@@ -162,6 +163,103 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     await expect(bar.getByTestId("bulk-export-btn")).toBeVisible();
     await expect(bar.getByTestId("bulk-archive-btn")).toBeVisible();
     await expect(bar.getByTestId("bulk-recategorize-select")).toBeVisible();
+  });
+
+  // Archiving removes rows permanently from the seeded shared DB. Restore the
+  // pristine seed afterwards so later specs still see the archived elements.
+  test.describe("[Spec 10j] Bulk archive — confirm + persist (no crash)", () => {
+    test.afterAll(() => {
+      reseedTestDb();
+    });
+
+    test("[OHW-426] Confirming bulk archive persists and never crashes with a render-phase unmount", async ({
+      authenticatedPage,
+    }) => {
+      const page = authenticatedPage;
+
+      // Capture the specific React render-phase unmount error that the
+      // bulk-archive flow used to throw ("Attempted to synchronously unmount a
+      // root while React was already rendering"). The breakdown page mounts a
+      // nested React root (the ProseMirror selection toolbar); switching to the
+      // per-project view tore it down synchronously inside React's commit. The
+      // assertion below holds the whole flow — view switch + archive — to zero
+      // such errors.
+      const unmountErrors: string[] = [];
+      page.on("console", (m: ConsoleMessage) => {
+        if (
+          m.type() === "error" &&
+          /synchronously unmount a root/i.test(m.text())
+        ) {
+          unmountErrors.push(m.text());
+        }
+      });
+
+      await openPerProjectView(page);
+
+      const hasRows = await expandFirstGroup(page);
+      if (!hasRows) {
+        test.skip();
+        return;
+      }
+
+      const checkboxes = page.locator('tbody tr input[type="checkbox"]');
+      const total = await checkboxes.count();
+      if (total < 2) {
+        test.skip();
+        return;
+      }
+
+      const firstRow = page.locator("tbody tr[data-row-id]").first();
+      const firstRowId = await firstRow.getAttribute("data-row-id");
+      const secondRow = page.locator("tbody tr[data-row-id]").nth(1);
+      const secondRowId = await secondRow.getAttribute("data-row-id");
+      expect(firstRowId).toBeTruthy();
+      expect(secondRowId).toBeTruthy();
+
+      await checkboxes.nth(0).check();
+      await checkboxes.nth(1).check();
+
+      const bar = page.getByTestId("bulk-action-bar");
+      await expect(bar).toBeVisible({ timeout: 5_000 });
+
+      await bar.getByTestId("bulk-archive-btn").click();
+
+      const dialog = page.locator("dialog[open]");
+      await expect(dialog).toBeVisible({ timeout: 5_000 });
+
+      // Confirm the archive — this is the click that previously crashed.
+      await dialog.getByRole("button", { name: "Archivia" }).click();
+
+      // The bar clears once the selection is reset.
+      await expect(bar).not.toBeVisible({ timeout: 8_000 });
+
+      // Persistence: the two archived elements no longer appear in the table.
+      // The query refetches on mutation success and archived rows are filtered
+      // server-side (isNull(archivedAt)).
+      await expect(
+        page.locator(`tbody tr[data-row-id="${firstRowId}"]`),
+      ).toHaveCount(0, { timeout: 8_000 });
+      await expect(
+        page.locator(`tbody tr[data-row-id="${secondRowId}"]`),
+      ).toHaveCount(0);
+
+      // Reloading proves the archive was persisted (not just removed locally).
+      await page.reload();
+      await switchBreakdownView(page, "per-project");
+      await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
+        timeout: 10_000,
+      });
+      await expandFirstGroup(page);
+      await expect(
+        page.locator(`tbody tr[data-row-id="${firstRowId}"]`),
+      ).toHaveCount(0);
+      await expect(
+        page.locator(`tbody tr[data-row-id="${secondRowId}"]`),
+      ).toHaveCount(0);
+
+      // No render-phase unmount crash anywhere in the flow.
+      expect(unmountErrors).toEqual([]);
+    });
   });
 
   test("[OHW-425] Bulk confirm changes pending elements to accepted and clears selection", async ({

@@ -77,9 +77,20 @@ export function buildSelectionToolbarPlugin(
         },
         destroy() {
           dismiss();
-          root?.unmount();
+          // This plugin owns a nested React root. ProseMirror's destroy() runs
+          // synchronously while the host editor (ScriptReader) is unmounting —
+          // i.e. inside React's commit phase. Calling root.unmount() there
+          // throws "Attempted to synchronously unmount a root while React was
+          // already rendering". Defer the teardown to a microtask so it runs
+          // after the parent render settles. We capture the root locally so a
+          // re-created plugin instance can't have its root unmounted here.
+          const rootToUnmount = root;
+          const containerToRemove = container;
           root = null;
-          container.remove();
+          queueMicrotask(() => {
+            rootToUnmount?.unmount();
+            containerToRemove.remove();
+          });
         },
       };
     },
