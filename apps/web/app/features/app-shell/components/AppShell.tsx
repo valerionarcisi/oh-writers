@@ -39,6 +39,7 @@ import {
 } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
 import { askCesare } from "~/features/predictions/cesare.server";
+import { narrativeProgressQueryKey } from "~/features/documents";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
@@ -571,6 +572,15 @@ function AppShellInner({
 
   const handleCesareAssistantResponse = useCallback(
     (reply: string) => {
+      // Spec 50 — any assistant turn can change which narrative docs exist
+      // (generations are cross-domain), so refresh the next-step suggestion
+      // unconditionally before the per-page branches (some of which return early).
+      if (projectId) {
+        void queryClient.invalidateQueries({
+          queryKey: narrativeProgressQueryKey(projectId),
+        });
+      }
+
       if (cesarePage === "locations" && projectId) {
         void queryClient.invalidateQueries({
           queryKey: ["locations", projectId],
