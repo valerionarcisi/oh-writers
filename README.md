@@ -146,12 +146,23 @@ _Mirror of [`docs/specs/`](docs/specs/). Keep this in sync: move items from MVP 
 **Cesare AI assistant**
 
 - **ai/17 + 29 — Cesare v1** (universal in-page assistant; breakdown drafting; narrative structure review; schedule drafting; contextual popover with DOM highlight; agentic location scouting)
+- **spec 44 — Notion-style shell** (Canva-style LeftRail, floating CesareDrawer with state machine, slim TopBar, BottomDock; the editor never reflows when Cesare opens)
+- **spec 44 + 47a — agentic streaming** (`/api/cesare/stream` NDJSON; live step tracer reading→reasoning→writing→done; cross-domain — a request on one page can write another entity)
+- **spec 43 + 47b — universal tool dispatch** (every Cesare tool available on every page, not gated per-page)
+- **spec 47c — unified logline** (single source of truth; writable/editable from a free prompt via `write_logline`)
+- **spec 47d + 47e — live diff** (word-level green/red highlight inline in the document, transient flash on Mostra/Nascondi; the doc always keeps the change; rollback lives in the Versions SplitDrawer)
+- **spec 46 + 49 — Versions SplitDrawer** (routed `?peek` side-peek; vs-current + side-by-side Confronta; deep-linkable; rolled out to soggetto/sinossi/scaletta/trattamento)
+- **spec 44/46 + A5 — resumable sessions** (`cesare_sessions`, central `/sessions/:id` route, rail entry)
+- **spec 51 — message persistence + history markdown** (`cesare_messages`; sessions survive reload; per-edit changelog + per-session transcript markdown DERIVED on-read; bounded history fed back as context)
+- **spec 50 — write-from-zero** (next-step suggestion chip derived from existing docs; one generation per click, no wizard, no auto-chain)
+- **spec 52 — new-session landing** (full-screen glowy Notion-AI-style centred input, focus mode, single chat container)
 
 **Design system & infra**
 
 - **infra/07b — Design system v2** (DS Dialog migration, primitives unification, ambient dark theme, react-aria adoption for all interactive primitives)
 - **infra/23 — Server pipeline refactor** (`withProjectAccess` canonical pattern; `toShape`/`unwrapResult` at all server/client boundaries)
 - **infra/12d — DS primitives unification** (FloatingDock, SheetPanel, unified tokens)
+- **spec 48 — Effect-TS AI engine** (the AI bounded context — `features/predictions` + AI server fns — runs on Effect: `Db`/`Access`/`AiClient`/`Observability` Layers, structured stream interruption, typed retry/timeout on a single client, `acquireRelease` auto-versioning, bounded concurrency on context assembly; Effect wraps the Vercel AI SDK, never replaces it; an anti-corruption layer keeps `ResultShape` at every `createServerFn` so the rest of the app — still neverthrow + Zod — is untouched). See `docs/architecture.md` Learnings.
 
 ### MVP — the minimum viable pilot product
 
