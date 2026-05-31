@@ -53,6 +53,10 @@ export {
 export { useCesareOpen } from "./cesare-context";
 export { useCesareSessionFocus } from "./cesare-session-focus-context";
 export {
+  useShellFocusRequest,
+  useRequestShellFocus,
+} from "./shell-focus-request-context";
+export {
   SplitDrawerProvider,
   useSplitDrawer,
   useBellOpener,

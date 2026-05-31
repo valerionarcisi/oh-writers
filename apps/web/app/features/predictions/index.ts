@@ -18,6 +18,7 @@ export { CesareConversation } from "./components/CesareConversation";
 export { RecapStrip } from "./components/RecapStrip";
 export { SessionsLandingPage } from "./components/SessionsLandingPage";
 export { SessionConversationPage } from "./components/SessionConversationPage";
+export { NewSessionLandingPage } from "./components/NewSessionLandingPage";
 export type {
   RecapStripProps,
   RecapStripCategoryItem,

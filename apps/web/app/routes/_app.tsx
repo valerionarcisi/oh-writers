@@ -21,10 +21,7 @@ import {
 } from "~/features/app-shell";
 import type { VersionsCompare } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
-import {
-  useSessions as useCesareSessions,
-  useCreateSession as useCreateCesareSession,
-} from "~/features/predictions";
+import { useSessions as useCesareSessions } from "~/features/predictions";
 import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
@@ -279,7 +276,6 @@ function AppLayout() {
   // here keeps the rail aligned with the chat surface which defaults the same
   // way.
   const cesareSessionsQuery = useCesareSessions(projectId);
-  const createCesareSession = useCreateCesareSession(projectId ?? "");
   // Highlight the session the user is currently viewing on the central
   // `/sessions/:sessionId` route (when on it), else fall back to most-recent.
   const activeSessionIdFromRoute = (
@@ -316,21 +312,15 @@ function AppLayout() {
     });
   };
 
-  // "+ Nuova" creates a session and lands the user straight on its central
-  // conversation route.
+  // Spec 52 — "+ Nuova" / "Nuova sessione" opens the full-screen glowy landing
+  // (`/sessions/new`). The session row is created only when the user sends their
+  // first message there, so the rail never spawns empty throwaway sessions.
   const handleCesareSessionNew = () => {
     if (!projectId) return;
-    void createCesareSession
-      .mutateAsync(undefined)
-      .then((session) => {
-        void navigate({
-          to: "/projects/$id/sessions/$sessionId",
-          params: { id: projectId, sessionId: session.id },
-        });
-      })
-      // The mutation records its own error state; swallow the floating
-      // rejection so it doesn't surface as an unhandled promise rejection.
-      .catch(() => undefined);
+    void navigate({
+      to: "/projects/$id/sessions/new",
+      params: { id: projectId },
+    });
   };
 
   const userMenuItems: DropdownMenuItem[] = [
