@@ -17,7 +17,9 @@ import {
   useExportSubjectDocx,
   useSaveDocument,
   useSiaeMetadata,
+  emptyNarrativeDocument,
 } from "~/features/documents";
+import { toErrorView } from "~/components/ResultErrorView";
 import { useProject } from "~/features/projects";
 import {
   useCesareOpen,
@@ -52,19 +54,22 @@ function SoggettoPage() {
   }
   if (!soggetto.data || !logline.data) return null;
 
+  // A not-yet-written document on a reachable project is an empty editor, not
+  // an error — the server find-or-creates the row, so DocumentNotFoundError
+  // here is a transient that resolves to an empty doc. Only project-level
+  // failures (missing / forbidden project, DB error) surface an error body.
   const soggettoView = match(soggetto.data)
     .with({ isOk: true }, ({ value }) => ({ ok: true as const, value }))
     .with({ isOk: false }, ({ error }) =>
       match(error)
         .with({ _tag: "DocumentNotFoundError" }, () => ({
-          ok: false as const,
-          message: "Documento soggetto non trovato.",
+          ok: true as const,
+          value: emptyNarrativeDocument(id, DocumentTypes.SOGGETTO),
         }))
-        .with({ _tag: "DbError" }, () => ({
+        .otherwise((e) => ({
           ok: false as const,
-          message: "Impossibile caricare il soggetto. Riprova.",
-        }))
-        .exhaustive(),
+          message: toErrorView(e).message,
+        })),
     )
     .exhaustive();
 
@@ -73,14 +78,13 @@ function SoggettoPage() {
     .with({ isOk: false }, ({ error }) =>
       match(error)
         .with({ _tag: "DocumentNotFoundError" }, () => ({
-          ok: false as const,
-          message: "Documento logline non trovato.",
+          ok: true as const,
+          value: emptyNarrativeDocument(id, DocumentTypes.LOGLINE),
         }))
-        .with({ _tag: "DbError" }, () => ({
+        .otherwise((e) => ({
           ok: false as const,
-          message: "Impossibile caricare la logline. Riprova.",
-        }))
-        .exhaustive(),
+          message: toErrorView(e).message,
+        })),
     )
     .exhaustive();
 

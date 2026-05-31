@@ -13,6 +13,7 @@ export {
 } from "./server/drafts.server";
 export { switchToVersion } from "./server/versions.server";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
+export { emptyNarrativeDocument } from "./lib/empty-narrative-document";
 export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
 export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
 export { TextEditor } from "./components/TextEditor";

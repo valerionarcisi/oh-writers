@@ -85,29 +85,27 @@ export const getDocument = createServerFn({ method: "GET" })
     async ({
       data,
     }): Promise<
-      ResultShape<DocumentViewWithPermission, DocumentNotFoundError | DbError>
+      ResultShape<
+        DocumentViewWithPermission,
+        DocumentNotFoundError | ProjectNotFoundError | ForbiddenError | DbError
+      >
     > => {
       const user = await requireUser();
       const db = await getDb();
 
-      // Access check first: a 404 on the project must short-circuit before we
-      // would otherwise auto-create a row for a project the caller can't see.
+      // Access check first: an unreachable project must short-circuit before
+      // we would otherwise auto-create a row for a project the caller can't
+      // see. Project-level failures surface with their real tag (NotFound /
+      // Forbidden) so the route can tell "this project is gone/blocked" apart
+      // from "this document just hasn't been written yet". The latter is a
+      // valid empty editor (find-or-create below), never a not-found overlay.
       const accessResult = await requireProjectAccess(
         db,
         data.projectId,
         "view",
       );
       if (accessResult.isErr()) {
-        // Map ProjectNotFound/Forbidden back to DocumentNotFound to keep the
-        // public contract uniform: GETs by (projectId, type) report
-        // missing-document either way (project absence ⇒ doc unreachable).
-        const e = accessResult.error;
-        if (e._tag === "ProjectNotFoundError" || e._tag === "ForbiddenError") {
-          return toShape(
-            err(new DocumentNotFoundError(`${data.projectId}/${data.type}`)),
-          );
-        }
-        return toShape(err(e));
+        return toShape(err(accessResult.error));
       }
       const { project, membership } = accessResult.value;
       const permission = canEdit(project, user.id, membership);
