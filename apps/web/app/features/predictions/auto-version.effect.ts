@@ -226,11 +226,14 @@ export const applyVersionLiveEffect = (
             documentType,
             label,
             // Word-level diff (previous active content → new content) for the
-            // inline "Mostra modifiche" coloured rendering. Empty on first write
-            // (no prior content to diff against). MUST survive — Spec 47d.
-            diffSegments: acquired.previousContent.trim()
-              ? buildWordDiffSegments(acquired.previousContent, content)
-              : [],
+            // inline "Mostra modifiche" coloured rendering. On a first write the
+            // prior content is empty, so we diff `"" → content` to render the
+            // whole new document as additions (green) — the user still sees what
+            // Cesare wrote on a first generation. MUST survive — Spec 47d.
+            diffSegments: buildWordDiffSegments(
+              acquired.previousContent.trim() ? acquired.previousContent : "",
+              content,
+            ),
           }),
         ),
       ),

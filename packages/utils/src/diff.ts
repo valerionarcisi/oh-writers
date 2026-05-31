@@ -123,9 +123,22 @@ export const buildWordDiffSegments = (
  * Algorithm: diff by line, then walk the hunks pairing consecutive
  * remove+add hunks as "changed" rows (with intra-line segments). Lone
  * removes / adds become one-sided rows.
+ *
+ * Both inputs are run through `htmlToPlainText` first so the Versions
+ * side-by-side compare diffs plain prose: the user only ever sees words, never
+ * block markup (`<p>`/`</p>`) — matching the inline word diff. A trailing
+ * newline is then re-added (`htmlToPlainText` trims it) so `diffLines`
+ * terminates the final line cleanly and never folds an unchanged last line into
+ * a spurious "changed" hunk.
  */
+const withTrailingNewline = (text: string): string =>
+  text === "" || text.endsWith("\n") ? text : `${text}\n`;
+
 export const buildSideBySideDiff = (left: string, right: string): DiffRow[] => {
-  const hunks = diffLines(left, right);
+  const hunks = diffLines(
+    withTrailingNewline(htmlToPlainText(left)),
+    withTrailingNewline(htmlToPlainText(right)),
+  );
   const rows: DiffRow[] = [];
 
   for (let i = 0; i < hunks.length; i++) {

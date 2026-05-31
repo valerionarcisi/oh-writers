@@ -17,17 +17,17 @@ describe("buildSideBySideDiff", () => {
   });
 
   it("emits added rows when right has extra lines", () => {
-    const rows = buildSideBySideDiff("a\n", "a\nb\n");
-    expect(rows.map((r) => r.kind)).toEqual(["equal", "added"]);
-    expect(rows[1]!.left).toBeNull();
-    expect(rows[1]!.right?.[0]!.text).toBe("b");
+    const rows = buildSideBySideDiff("a\nb", "a\nb\nc");
+    expect(rows.map((r) => r.kind)).toEqual(["equal", "equal", "added"]);
+    expect(rows[2]!.left).toBeNull();
+    expect(rows[2]!.right?.[0]!.text).toBe("c");
   });
 
   it("emits removed rows when left has extra lines", () => {
-    const rows = buildSideBySideDiff("a\nb\n", "a\n");
-    expect(rows.map((r) => r.kind)).toEqual(["equal", "removed"]);
-    expect(rows[1]!.right).toBeNull();
-    expect(rows[1]!.left?.[0]!.text).toBe("b");
+    const rows = buildSideBySideDiff("a\nb\nc", "a\nb");
+    expect(rows.map((r) => r.kind)).toEqual(["equal", "equal", "removed"]);
+    expect(rows[2]!.right).toBeNull();
+    expect(rows[2]!.left?.[0]!.text).toBe("c");
   });
 
   it("pairs a remove+add as a changed row with intra-line segments", () => {
@@ -55,6 +55,35 @@ describe("buildSideBySideDiff", () => {
     const rows = buildSideBySideDiff("a\nb", "");
     expect(rows.map((r) => r.kind)).toEqual(["removed", "removed"]);
     expect(rows.every((r) => r.right === null)).toBe(true);
+  });
+
+  // [OHW-audit-F-versions] F-M2: the Versions side-by-side must diff plain prose,
+  // never raw block markup — no `<p>`/`</p>` may leak into any rendered segment.
+  it("strips block HTML so no raw tags leak into segments", () => {
+    const rows = buildSideBySideDiff(
+      "<p>Una riga</p><p>Due righe</p>",
+      "<p>Una riga</p><p>Tre righe</p>",
+    );
+    const allText = rows
+      .flatMap((r) => [...(r.left ?? []), ...(r.right ?? [])])
+      .map((s) => s.text)
+      .join("");
+    expect(allText).not.toContain("<p>");
+    expect(allText).not.toContain("</p>");
+    // Paragraph boundaries survive as separate rows; the changed paragraph
+    // becomes a "changed" row, the unchanged one stays "equal".
+    expect(rows.map((r) => r.kind)).toEqual(["equal", "changed"]);
+  });
+
+  it("diffs HTML inputs as words, marking the changed word only", () => {
+    const rows = buildSideBySideDiff(
+      "<p>The cat sat</p>",
+      "<p>The dog sat</p>",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.kind).toBe("changed");
+    const rightChanged = rows[0]!.right!.filter((s) => s.changed);
+    expect(rightChanged.map((s) => s.text.trim())).toEqual(["dog"]);
   });
 });
 
