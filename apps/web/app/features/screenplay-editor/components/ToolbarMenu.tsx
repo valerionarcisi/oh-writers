@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, Dialog } from "@oh-writers/ui";
 import { useMenuPopover } from "../hooks/useMenuPopover";
 import { useImportPdf } from "../hooks/useImportPdf";
+import { useImportFountain } from "../hooks/useImportFountain";
 import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import styles from "./ToolbarMenu.module.css";
 
@@ -69,6 +70,11 @@ export function ToolbarMenu({
     onCreateVersionThenImport,
     onTitlePageDetected,
   });
+  const fountainImp = useImportFountain({
+    hasExistingContent: hasContent,
+    onImport,
+    onCreateVersionThenImport,
+  });
 
   const runAndClose = (fn: () => void) => () => {
     close();
@@ -81,6 +87,11 @@ export function ToolbarMenu({
         {...imp.fileInputProps}
         className={styles.hiddenInput}
         data-testid="pdf-file-input"
+      />
+      <input
+        {...fountainImp.fileInputProps}
+        className={styles.hiddenInput}
+        data-testid="fountain-file-input"
       />
 
       <button
@@ -116,7 +127,20 @@ export function ToolbarMenu({
             <span className={styles.itemIcon} aria-hidden="true">
               ⇪
             </span>
-            <span className={styles.itemLabel}>Import PDF</span>
+            <span className={styles.itemLabel}>Importa PDF</span>
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.item}
+            onClick={runAndClose(fountainImp.openPicker)}
+            data-testid="menu-item-import-fountain"
+          >
+            <span className={styles.itemIcon} aria-hidden="true">
+              ⇪
+            </span>
+            <span className={styles.itemLabel}>Importa Fountain</span>
           </button>
 
           {onExportFountain && hasContent && (
@@ -227,6 +251,78 @@ export function ToolbarMenu({
                   variant="primary"
                   onClick={imp.confirm}
                   data-testid="import-confirm-ok"
+                  autoFocus
+                >
+                  Sostituisci
+                </Button>
+              )}
+            </>
+          }
+        >
+          <p>
+            {nextVersionLabel && onCreateVersionThenImport
+              ? "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla."
+              : "Sostituire la sceneggiatura attuale con il contenuto importato?"}
+          </p>
+        </Dialog>
+      )}
+
+      {fountainImp.status.type === "error" && (
+        <div
+          className={styles.errorBanner}
+          role="alert"
+          data-testid="import-fountain-error"
+        >
+          {fountainImp.status.message}
+          <button
+            type="button"
+            className={styles.dismissBtn}
+            onClick={fountainImp.cancel}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {fountainImp.status.type === "confirm" && (
+        <Dialog
+          isOpen
+          onClose={fountainImp.cancel}
+          title="Importa Fountain"
+          isDismissable={false}
+          data-testid="import-fountain-confirm"
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                onClick={fountainImp.cancel}
+                data-testid="import-fountain-confirm-cancel"
+              >
+                Annulla
+              </Button>
+              {nextVersionLabel && onCreateVersionThenImport ? (
+                <>
+                  <Button
+                    variant="danger"
+                    onClick={fountainImp.confirm}
+                    data-testid="import-fountain-confirm-overwrite"
+                  >
+                    Sovrascrivi
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={fountainImp.confirmWithVersion}
+                    data-testid="import-fountain-confirm-new-version"
+                    autoFocus
+                  >
+                    Salva come {nextVersionLabel} e importa
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={fountainImp.confirm}
+                  data-testid="import-fountain-confirm-ok"
                   autoFocus
                 >
                   Sostituisci

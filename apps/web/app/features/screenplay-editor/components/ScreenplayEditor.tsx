@@ -9,7 +9,7 @@ import {
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
-import { DocStats } from "@oh-writers/ui";
+import { DocStats, DropdownMenu } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
 import {
@@ -51,10 +51,13 @@ import {
   useDiscardDraftVersion,
 } from "../hooks/useProposals";
 import { ToolbarMenu } from "./ToolbarMenu";
-import { ScreenplayToolbar } from "./ScreenplayToolbar";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
-import { EXPORT_FORMATS, type ExportFormat } from "@oh-writers/domain";
+import {
+  EXPORT_FORMATS,
+  EXPORT_FORMAT_META,
+  type ExportFormat,
+} from "@oh-writers/domain";
 import { buildFountainFilename } from "../lib/export-pipeline";
 import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
@@ -917,9 +920,16 @@ export const ScreenplayEditor = forwardRef<
   const canEdit = screenplay.canEdit ?? false;
   const isOwner = screenplay.isOwner ?? false;
 
-  // Choose a sensible default export format for the dock's primary "Esporta
-  // PDF" button. The user can switch format from inside the export modal.
-  const defaultExportFormat: ExportFormat = EXPORT_FORMATS[0];
+  // The export trigger surfaces every production format as a dropdown item;
+  // picking one sets `exportFormat` which mounts the format-specific modal.
+  const exportMenuItems = EXPORT_FORMATS.map((format) => {
+    const meta = EXPORT_FORMAT_META[format];
+    return {
+      label: meta.labelIt,
+      description: meta.descriptionIt,
+      onClick: () => setExportFormat(format),
+    };
+  });
 
   return (
     <div className={`${styles.page} ${isFocusMode ? styles.focusMode : ""}`}>
@@ -1011,6 +1021,47 @@ export const ScreenplayEditor = forwardRef<
         />
       )}
 
+      {!isFocusMode && (
+        <div className={styles.actionsBar} data-testid="screenplay-actions-bar">
+          {hasContent && !exportPdf.isPending ? (
+            <DropdownMenu
+              align="start"
+              data-testid="screenplay-export-menu"
+              triggerClassName={styles.exportTrigger}
+              items={exportMenuItems}
+              trigger={
+                <span data-testid="screenplay-export-pdf">Esporta PDF ▾</span>
+              }
+            />
+          ) : (
+            <button
+              type="button"
+              className={styles.exportTrigger}
+              data-testid="screenplay-export-pdf"
+              disabled
+            >
+              {exportPdf.isPending ? "Esportazione…" : "Esporta PDF ▾"}
+            </button>
+          )}
+          <ToolbarMenu
+            projectId={screenplay.projectId}
+            hasContent={hasContent}
+            onImport={setContent}
+            nextVersionLabel={nextVersionLabel}
+            onCreateVersionThenImport={
+              nextVersionLabel ? handleCreateVersionThenImport : undefined
+            }
+            onToggleVersions={toggleVersionsDrawer}
+            isVersionsPanelOpen={isVersionsPanelOpen}
+            currentVersionLabel={latestVersion?.label ?? null}
+            onResequenceAll={canEdit ? onResequenceAll : undefined}
+            isOwner={isOwner}
+            onTitlePageDetected={handleTitlePageDetected}
+            onExportFountain={hasContent ? handleExportFountain : undefined}
+          />
+        </div>
+      )}
+
       <div className={styles.editorArea}>
         <div className={styles.pageShell}>
           <ProseMirrorView
@@ -1099,11 +1150,6 @@ export const ScreenplayEditor = forwardRef<
           setPendingStatus(false);
         }}
       />
-      {/* Spec 44 / iter-5: page-scoped CTAs (Esporta PDF, Focus, Versioni) now
-          live in the shell TopBar "…" actions menu. The bottom-left
-          FloatingDock was removed. NOTE: its overflow hosted ToolbarMenu
-          (Import / resequence / export-fountain) — that surface needs a new
-          home in a follow-up (tracked: TopBar "…" Importa placeholder). */}
     </div>
   );
 });
