@@ -34,6 +34,10 @@ export const assembleSystemPromptV2 = (
   global: GlobalContext,
   skills: ReadonlyArray<Skill>,
   local: LocalContext,
+  // Spec 51 — bounded "what we changed before" history (DERIVED). Null when
+  // there is no prior edit history. Placed alongside the local context (no
+  // cache_control) because it changes as edits accumulate.
+  historyContext: string | null = null,
 ): SystemPromptBlock[] => [
   { type: "text", text: ROLE_TEXT, cache_control: { type: "ephemeral" } },
   {
@@ -49,4 +53,7 @@ export const assembleSystemPromptV2 = (
     }),
   ),
   { type: "text", text: formatLocalContext(local) },
+  ...(historyContext !== null
+    ? [{ type: "text" as const, text: historyContext }]
+    : []),
 ];

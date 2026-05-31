@@ -22,6 +22,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   chatReducer,
   initialChatState,
@@ -32,6 +33,12 @@ import {
 import { streamCesare, type StreamCesareInput } from "./cesare-stream-client";
 import type { AskCesareFn } from "./components/CesareSheet";
 import type { CesarePage } from "./components/CesareConversation";
+import { persistTurn } from "./messages/messages.server";
+import { messagesQueryOptions } from "./messages/useMessages";
+import {
+  buildAssistantMetadata,
+  persistedToChatMessage,
+} from "./messages/message-metadata";
 
 const newId = (): string =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -85,10 +92,41 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
   );
   const stateRef = useRef<ChatState>(state);
   stateRef.current = state;
+  const queryClient = useQueryClient();
 
   // The floating sheet publishes these; the send pipeline reads the latest via
   // a ref so a re-render of the sheet never stales the transport.
   const sendDepsRef = useRef<CesareSendDeps | null>(null);
+
+  // Sessions already hydrated this mount — avoids re-fetching persisted history
+  // on every selectSession (the floating sheet + the full-page route both
+  // select the same session). Real UUIDs only; the synthetic pending session is
+  // never persisted.
+  const hydratedSessionsRef = useRef<Set<string>>(new Set());
+
+  // Load a session's persisted messages once and fill its (empty) thread, so a
+  // reload / first-open restores the conversation. The hydrate reducer action is
+  // a no-op when the thread already has bubbles, so an in-flight turn is never
+  // clobbered by a slower load.
+  const hydrateSession = useCallback(
+    async (sessionId: string) => {
+      if (sessionId === PENDING_SESSION) return;
+      if (hydratedSessionsRef.current.has(sessionId)) return;
+      const projectId = sendDepsRef.current?.pageContext.projectId;
+      if (!projectId) return;
+      hydratedSessionsRef.current.add(sessionId);
+      const persisted = await queryClient
+        .fetchQuery(messagesQueryOptions(projectId, sessionId))
+        .catch(() => null);
+      if (!persisted || persisted.length === 0) return;
+      dispatch({
+        type: "thread/hydrate",
+        sessionId,
+        messages: persisted.map(persistedToChatMessage),
+      });
+    },
+    [queryClient],
+  );
   // `activePage` is reactive (drives the full-page ChangeTrace labels), so it
   // lives in state — not just the ref. Defaults to the soggetto until the
   // floating sheet publishes the page the user actually has open.
@@ -100,115 +138,158 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const selectSession = useCallback((sessionId: string) => {
-    dispatch({ type: "session/select", sessionId });
-  }, []);
+  const selectSession = useCallback(
+    (sessionId: string) => {
+      dispatch({ type: "session/select", sessionId });
+      void hydrateSession(sessionId);
+    },
+    [hydrateSession],
+  );
 
-  const send = useCallback(async (text: string, sessionId?: string) => {
-    const trimmed = text.trim();
-    if (trimmed.length === 0) return;
-    const deps = sendDepsRef.current;
+  const send = useCallback(
+    async (text: string, sessionId?: string) => {
+      const trimmed = text.trim();
+      if (trimmed.length === 0) return;
+      const deps = sendDepsRef.current;
 
-    const targetSession =
-      sessionId ?? stateRef.current.activeSessionId ?? PENDING_SESSION;
-    const userMessageId = newId();
-    const assistantMessageId = newId();
+      const targetSession =
+        sessionId ?? stateRef.current.activeSessionId ?? PENDING_SESSION;
+      const userMessageId = newId();
+      const assistantMessageId = newId();
 
-    // Optimistic bubbles appear synchronously — never wiped by a session swap.
-    dispatch({
-      type: "message/send",
-      sessionId: targetSession,
-      userMessageId,
-      assistantMessageId,
-      content: trimmed,
-    });
-
-    if (!deps || !deps.askCesare) {
+      // Optimistic bubbles appear synchronously — never wiped by a session swap.
       dispatch({
-        type: "message/delivered",
+        type: "message/send",
         sessionId: targetSession,
         userMessageId,
         assistantMessageId,
-        content:
-          "Cesare non è ancora disponibile su questa sezione. Tornerà presto.",
+        content: trimmed,
       });
-      return;
-    }
 
-    const { askCesare, pageContext, onAssistantResponse } = deps;
-    const history = threadFor(stateRef.current, targetSession)
-      .filter((m) => m.id !== userMessageId && m.id !== assistantMessageId)
-      .filter((m) => m.content.length > 0)
-      .map((m) => ({ role: m.role, content: m.content }));
-
-    const { projectId, ...pc } = pageContext;
-    const streamInput: StreamCesareInput = {
-      projectId,
-      message: trimmed,
-      pageContext: pc,
-      conversationHistory: history,
-    };
-
-    let finalReply: string | null = null;
-    let streamFailed = false;
-    try {
-      await streamCesare(streamInput, (event) => {
-        if (event._tag === "done") {
-          finalReply = event.result;
-          return;
-        }
-        if (event._tag === "error") {
-          streamFailed = true;
-          return;
-        }
+      if (!deps || !deps.askCesare) {
         dispatch({
-          type: "stream/step",
+          type: "message/delivered",
           sessionId: targetSession,
+          userMessageId,
           assistantMessageId,
-          event,
+          content:
+            "Cesare non è ancora disponibile su questa sezione. Tornerà presto.",
         });
-      });
-    } catch {
-      streamFailed = true;
-    }
-
-    if (finalReply === null || streamFailed) {
-      const shape = await askCesare({
-        data: {
-          projectId: streamInput.projectId,
-          message: streamInput.message,
-          pageContext: { ...streamInput.pageContext },
-          conversationHistory: streamInput.conversationHistory.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        },
-      }).catch(() => null);
-      if (shape && shape.isOk) {
-        finalReply = shape.value;
-        streamFailed = false;
+        return;
       }
-    }
 
-    if (finalReply !== null && !streamFailed) {
-      dispatch({
-        type: "message/delivered",
-        sessionId: targetSession,
-        userMessageId,
-        assistantMessageId,
-        content: finalReply,
-      });
-      onAssistantResponse?.(finalReply);
-    } else {
-      dispatch({
-        type: "message/failed",
-        sessionId: targetSession,
-        userMessageId,
-        assistantMessageId,
-        content: FAILURE_TEXT,
-      });
-    }
-  }, []);
+      const { askCesare, pageContext, onAssistantResponse } = deps;
+      const history = threadFor(stateRef.current, targetSession)
+        .filter((m) => m.id !== userMessageId && m.id !== assistantMessageId)
+        .filter((m) => m.content.length > 0)
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const { projectId, ...pc } = pageContext;
+      const streamInput: StreamCesareInput = {
+        projectId,
+        message: trimmed,
+        pageContext: pc,
+        conversationHistory: history,
+      };
+
+      let finalReply: string | null = null;
+      let streamFailed = false;
+      try {
+        await streamCesare(streamInput, (event) => {
+          if (event._tag === "done") {
+            finalReply = event.result;
+            return;
+          }
+          if (event._tag === "error") {
+            streamFailed = true;
+            return;
+          }
+          dispatch({
+            type: "stream/step",
+            sessionId: targetSession,
+            assistantMessageId,
+            event,
+          });
+        });
+      } catch {
+        streamFailed = true;
+      }
+
+      if (finalReply === null || streamFailed) {
+        const shape = await askCesare({
+          data: {
+            projectId: streamInput.projectId,
+            message: streamInput.message,
+            pageContext: { ...streamInput.pageContext },
+            conversationHistory: streamInput.conversationHistory.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          },
+        }).catch(() => null);
+        if (shape && shape.isOk) {
+          finalReply = shape.value;
+          streamFailed = false;
+        }
+      }
+
+      if (finalReply !== null && !streamFailed) {
+        dispatch({
+          type: "message/delivered",
+          sessionId: targetSession,
+          userMessageId,
+          assistantMessageId,
+          content: finalReply,
+        });
+        onAssistantResponse?.(finalReply);
+        // Persist the turn so the conversation survives reload. Best-effort: a
+        // failed persist never breaks the live UI (the bubble is already shown).
+        // Only real (UUID) sessions are persisted — the synthetic pending session
+        // has no row to attach to. The assistant message in current state carries
+        // the accumulated live trace; we pair it with the marker-bearing reply to
+        // derive the metadata (trace + edit version ids) for the transcript.
+        if (targetSession !== PENDING_SESSION) {
+          const assistantInState = threadFor(
+            stateRef.current,
+            targetSession,
+          ).find((m) => m.id === assistantMessageId);
+          const metadata = buildAssistantMetadata({
+            id: assistantMessageId,
+            role: "assistant",
+            content: finalReply,
+            status: "delivered",
+            trace: assistantInState?.trace ?? [],
+          });
+          void persistTurn({
+            data: {
+              projectId,
+              sessionId: targetSession,
+              userContent: trimmed,
+              assistantContent: finalReply,
+              metadata,
+            },
+          })
+            .then(() => {
+              // The persisted thread is now authoritative for a future reload —
+              // drop the stale cache so the next open refetches the saved turn.
+              void queryClient.invalidateQueries({
+                queryKey: ["cesare-messages", projectId, targetSession],
+              });
+            })
+            .catch(() => undefined);
+        }
+      } else {
+        dispatch({
+          type: "message/failed",
+          sessionId: targetSession,
+          userMessageId,
+          assistantMessageId,
+          content: FAILURE_TEXT,
+        });
+      }
+    },
+    [queryClient],
+  );
 
   const store = useMemo<CesareChatStore>(
     () => ({

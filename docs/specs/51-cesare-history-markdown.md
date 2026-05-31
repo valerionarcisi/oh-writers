@@ -1,6 +1,28 @@
 # Spec 51 — Cesare history as generated markdown (edits + sessions)
 
-Status: **Planned** · Decided 2026-05-31 (PO) · Build AFTER the merge to main.
+Status: **Built** · Decided 2026-05-31 (PO) · Implemented 2026-05-31.
+
+## Implementation notes (2026-05-31)
+
+- **Messages persisted** in a new `cesare_messages` table (migration `0035_cesare_messages.sql`):
+  `id`, `session_id` (FK → `cesare_sessions`, cascade), `role`, `content`, `metadata` (jsonb:
+  the live step trace + the per-edit version markers), `created_at`. Persisted in the send path
+  (`cesare-chat-store.tsx` calls `persistTurn` after a turn settles) and re-hydrated on session
+  open (`thread/hydrate` reducer action, no-op if the thread already has bubbles so an in-flight
+  turn is never clobbered). Server fns live in `features/predictions/messages/messages.server.ts`
+  (neverthrow CRUD per the Spec 48 boundary — no LLM/external resource).
+- **Pure md builders** live in `packages/domain/src/cesare-history/`: `buildEditChangelogMarkdown`
+  / `buildEditChangelogListMarkdown` (changelog), `buildSessionTranscriptMarkdown` (transcript),
+  `buildHistoryContextSummary` (bounded context). Framework-agnostic, no Effect/Drizzle/browser.
+  Additions render `**bold**`, removals `~~strikethrough~~` — no raw HTML.
+- **Effect loaders** in `features/predictions/messages/cesare-history.effect.ts` gather the
+  DERIVED sources from `cesare_messages` + `document_versions` (the changelog diff is RECOMPUTED
+  via `buildWordDiffSegments` from the two version rows — nothing reads stored markdown). Exposed
+  through `cesare-history.server.ts` (`getSessionChangelogMarkdown`, `getSessionTranscriptMarkdown`)
+  returning `ResultShape`. No cache table — the markdown is regenerable (unit-tested).
+- **Context reuse**: `loadHistoryContextSummary` appends a bounded "CRONOLOGIA MODIFICHE" block
+  (capped to the most recent edits) to the system prompt via `assembleSystemPromptV2`'s optional
+  `historyContext` arg in the V2 handler. Degrades to null on any failure — never breaks a turn.
 
 ## Context
 
@@ -24,7 +46,7 @@ markdown changelog entry capturing **what changed**:
   (additions/removals) so the change is readable without the live UI.
 
 This makes the "Mostra/Nascondi" history durable: today the diff is computed at click time and the
-flash is transient (spec 47e). The markdown changelog is the *persistent* record behind it — open it
+flash is transient (spec 47e). The markdown changelog is the _persistent_ record behind it — open it
 later, feed it back as context, or diff a chain of edits.
 
 ### 2. Per-session transcript markdown
@@ -50,14 +72,31 @@ session" — surfaced on the session route (spec 46), reusable as context for a 
    Cesare changed" and "what happened this session".
 
 **Architecture decision (non-negotiable): the markdown is a DERIVED VIEW, never a separate store.**
-We already hold the single source of truth — the `messages` (sessions), `documentVersions` + version
-ids (W-E4), and the `diff_segments` (47d). The markdown is **generated on-read from that data** (with
-an optional cache that is regenerable, never authoritative). NO `cesare_edit_log` /
-`cesare_session_markdown` table that lives its own life — that would be a second source of truth that
-drifts (the classic anti-pattern; violates DRY and "the documents are the state"). If a cache is
-added, deleting it must reproduce identical markdown.
+The markdown is **generated on-read** from the single source of truth (with an optional cache that is
+regenerable, never authoritative). NO `cesare_edit_log` / `cesare_session_markdown` table that lives
+its own life — that would be a second source of truth that drifts (the classic anti-pattern; violates
+DRY and "the documents are the state"). If a cache is added, deleting it must reproduce identical
+markdown.
+
+### Prerequisite discovered (2026-05-31): chat messages are NOT persisted yet
+
+Codebase reality check before building: the source of truth differs per surface.
+
+- **Per-edit changelog MD — derivable NOW.** `documentVersions` + version ids (W-E4) + the
+  `diff_segments`/`ohw:doc-applied` data (47d) are already persisted. The changelog MD derives from
+  these immediately.
+- **Per-session transcript MD — needs message persistence first.** Today only `cesare_sessions`
+  (id/title/timestamps, `packages/db/src/schema/cesare-sessions.ts`) exists — there is **no messages
+  table**; the conversation lives in-memory in `useCesareChat`. To derive a session transcript we must
+  FIRST persist the messages (a `cesare_messages` table FK'd to `cesare_sessions`: role, content,
+  step-trace metadata, timestamp). This is a real prerequisite, not optional.
+
+**Build order within Spec 51:** (1) persist chat messages (the missing source of truth), (2) per-edit
+changelog MD from versions+diff, (3) per-session transcript MD from the now-persisted messages, (4)
+feed bounded history MD back as context. Step 1 is the gate for step 3.
 
 ## Design questions to resolve before building
+
 - **Granularity / linking**: per-edit MD entries linked from the session MD; the session MD linked
   from the session route. Deep-linkable.
 - **Reuse as context**: the markdown plugs into the existing context-assembly (spec 38/40 local
