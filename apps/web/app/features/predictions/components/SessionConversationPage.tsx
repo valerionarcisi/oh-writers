@@ -48,13 +48,21 @@ export function SessionConversationPage({
   const session = sessionQuery.data;
   const confirmedSessionId = session?.id ?? null;
 
+  // `store` is a `useMemo` keyed on the chat state, so its reference changes on
+  // every message/selection. Reading it through a ref keeps the focus/select
+  // effect depending ONLY on the stable `confirmedSessionId` — listing `store`
+  // as a dep made the effect re-fire on every state change, call `selectSession`
+  // again, mutate the state, and loop ("Maximum update depth exceeded").
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
   // Once the session is confirmed owned, focus it so the floating drawer and
   // this page agree on the active session (shared store, single source).
   useEffect(() => {
     if (!confirmedSessionId) return;
     setFocusedSessionId(confirmedSessionId);
-    store?.selectSession(confirmedSessionId);
-  }, [confirmedSessionId, setFocusedSessionId, store]);
+    storeRef.current?.selectSession(confirmedSessionId);
+  }, [confirmedSessionId, setFocusedSessionId]);
 
   useEffect(() => {
     return () => setFocusedSessionId(null);
