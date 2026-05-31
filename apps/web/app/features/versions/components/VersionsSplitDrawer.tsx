@@ -24,6 +24,7 @@ import type { DiffRow, DiffSegment } from "@oh-writers/utils";
 import { Skeleton, SegmentedControl } from "@oh-writers/ui";
 import type { VersionsCompare } from "~/features/app-shell";
 import { useDocumentVersions } from "~/features/documents";
+import { resolveCurrentVersionId } from "../vs-current-baseline";
 import styles from "./VersionsSplitDrawer.module.css";
 
 export interface VersionsSplitDrawerProps {
@@ -132,6 +133,17 @@ export function VersionsSplitDrawer({
     [versions],
   );
 
+  // The "vs current" baseline. `currentVersionId` arrives from the optional
+  // `?vcur=` companion and is `null` on a bare `?versions=` deep-link. In that
+  // case resolve the baseline to the document's CURRENT active version (the most
+  // recent one) so the vs-current diff renders immediately on a bare deep-link
+  // instead of stalling on "Seleziona una versione" (audit F-A1). A `?vcur=`
+  // override that resolves to a real version always wins (Spec 49).
+  const effectiveCurrentVersionId = useMemo<string | null>(
+    () => resolveCurrentVersionId(versions, currentVersionId),
+    [versions, currentVersionId],
+  );
+
   // The `?compare=` pair is honoured only when BOTH ids resolve to versions of
   // THIS document (the same-document guard the param itself cannot enforce). An
   // unresolved pair is dropped → fall back to "vs current". We wait for the
@@ -148,9 +160,11 @@ export function VersionsSplitDrawer({
   // it is the only one.
   const defaultSelectedId = useMemo(() => {
     if (versions.length === 0) return null;
-    const firstNonCurrent = versions.find((v) => v.id !== currentVersionId);
+    const firstNonCurrent = versions.find(
+      (v) => v.id !== effectiveCurrentVersionId,
+    );
     return (firstNonCurrent ?? versions[0])?.id ?? null;
-  }, [versions, currentVersionId]);
+  }, [versions, effectiveCurrentVersionId]);
 
   const [selectedId, setSelectedId] = useState<string | null>(
     defaultSelectedId,
@@ -210,7 +224,8 @@ export function VersionsSplitDrawer({
 
   // ── Diff sources ─────────────────────────────────────────────────────────────
   const selected = versions.find((v) => v.id === selectedId) ?? null;
-  const current = versions.find((v) => v.id === currentVersionId) ?? null;
+  const current =
+    versions.find((v) => v.id === effectiveCurrentVersionId) ?? null;
   // In compare mode the rendered pair comes from the LOCAL picks (ordered
   // old → new), so the diff appears as soon as two rows are chosen — independent
   // of the URL write. The URL only mirrors a completed pair for deep-linking.
@@ -275,7 +290,7 @@ export function VersionsSplitDrawer({
         {!isLoading && versions.length > 0 && (
           <ul className={styles.versionList}>
             {versions.map((v) => {
-              const isCurrent = v.id === currentVersionId;
+              const isCurrent = v.id === effectiveCurrentVersionId;
               const isActive = isRowActive(v.id);
               const idx = mode === "compare" ? pickIndex(v.id) : -1;
               return (

@@ -180,7 +180,10 @@ describe("[OHW-048] auto-version acquireRelease — version-before-apply", () =>
     }
   });
 
-  it("no previous content → empty diff segments (first write)", async () => {
+  // [OHW-audit-F-versions] F-M3: a first generation (no prior content) must
+  // still surface what Cesare wrote — the whole new content renders as additions
+  // (green), never an empty flash.
+  it("no previous content → whole new content as additions (first write)", async () => {
     const mock = makeMockDb({ currentVersionId: null, currentContent: "" });
     const exit = await Effect.runPromiseExit(
       Effect.provide(
@@ -197,7 +200,11 @@ describe("[OHW-048] auto-version acquireRelease — version-before-apply", () =>
     expect(Exit.isSuccess(exit)).toBe(true);
     if (Exit.isSuccess(exit)) {
       expect(exit.value.previousVersionId).toBe(null);
-      expect(exit.value.diffSegments).toEqual([]);
+      const segments = exit.value.diffSegments;
+      expect(segments.length).toBeGreaterThan(0);
+      // Every segment is an addition: nothing was removed and nothing pre-existed.
+      expect(segments.every((s) => s.op === "add")).toBe(true);
+      expect(segments.map((s) => s.text).join("")).toBe(NEXT);
     }
   });
 });
