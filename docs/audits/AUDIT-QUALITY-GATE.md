@@ -59,3 +59,11 @@ multiple unconfirmed/false-positive bugs goes back.
 Once the consolidated list is produced and the audit worktrees/branches are no longer needed, run the
 worktree/branch cleanup (per the agent-fleet skill: only when no agent is in flight) — remove the
 audit agents' worktrees and delete their merged/abandoned branches.
+
+## Lesson (2026-05-31): run re-audits SERIALLY
+
+Better Auth's session cookie is `localhost`-scoped, NOT port-scoped. Running multiple auditors in
+parallel on different ports made them steal each other's sessions (mid-audit logouts → false
+"silent logout" findings). In the iterated fix→audit loop, run re-audits ONE AT A TIME on a single
+port. (The first-pass 5-parallel audit was acceptable because the gate's live spot-checks caught the
+session-artifact findings — but serial is the clean default.)
