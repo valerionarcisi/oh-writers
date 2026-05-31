@@ -50,12 +50,28 @@ session" — surfaced on the session route (spec 46), reusable as context for a 
    Cesare changed" and "what happened this session".
 
 **Architecture decision (non-negotiable): the markdown is a DERIVED VIEW, never a separate store.**
-We already hold the single source of truth — the `messages` (sessions), `documentVersions` + version
-ids (W-E4), and the `diff_segments` (47d). The markdown is **generated on-read from that data** (with
-an optional cache that is regenerable, never authoritative). NO `cesare_edit_log` /
-`cesare_session_markdown` table that lives its own life — that would be a second source of truth that
-drifts (the classic anti-pattern; violates DRY and "the documents are the state"). If a cache is
-added, deleting it must reproduce identical markdown.
+The markdown is **generated on-read** from the single source of truth (with an optional cache that is
+regenerable, never authoritative). NO `cesare_edit_log` / `cesare_session_markdown` table that lives
+its own life — that would be a second source of truth that drifts (the classic anti-pattern; violates
+DRY and "the documents are the state"). If a cache is added, deleting it must reproduce identical
+markdown.
+
+### Prerequisite discovered (2026-05-31): chat messages are NOT persisted yet
+
+Codebase reality check before building: the source of truth differs per surface.
+
+- **Per-edit changelog MD — derivable NOW.** `documentVersions` + version ids (W-E4) + the
+  `diff_segments`/`ohw:doc-applied` data (47d) are already persisted. The changelog MD derives from
+  these immediately.
+- **Per-session transcript MD — needs message persistence first.** Today only `cesare_sessions`
+  (id/title/timestamps, `packages/db/src/schema/cesare-sessions.ts`) exists — there is **no messages
+  table**; the conversation lives in-memory in `useCesareChat`. To derive a session transcript we must
+  FIRST persist the messages (a `cesare_messages` table FK'd to `cesare_sessions`: role, content,
+  step-trace metadata, timestamp). This is a real prerequisite, not optional.
+
+**Build order within Spec 51:** (1) persist chat messages (the missing source of truth), (2) per-edit
+changelog MD from versions+diff, (3) per-session transcript MD from the now-persisted messages, (4)
+feed bounded history MD back as context. Step 1 is the gate for step 3.
 
 ## Design questions to resolve before building
 - **Granularity / linking**: per-edit MD entries linked from the session MD; the session MD linked
