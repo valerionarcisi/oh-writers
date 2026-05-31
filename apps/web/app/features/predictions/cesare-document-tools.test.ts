@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DocumentTypes } from "@oh-writers/domain";
 import {
   buildDraftLabel,
+  formatUpstreamSource,
   isDocumentGenToolName,
   parseScalettaList,
   resolveLoglineMode,
@@ -218,5 +219,48 @@ describe("isDocumentGenToolName", () => {
   it("rejects unknown tool names", () => {
     expect(isDocumentGenToolName("rewrite_scene")).toBe(false);
     expect(isDocumentGenToolName("")).toBe(false);
+  });
+});
+
+describe("formatUpstreamSource (Bug #3 — derive from upstream narrative)", () => {
+  it("builds a labelled block from the nearest non-empty narrative source", () => {
+    const out = formatUpstreamSource([
+      { label: "LOGLINE", content: "Un detective insonne caccia un killer." },
+      { label: "SCENEGGIATURA", content: "" },
+    ]);
+    expect(out.label).toBe("LOGLINE");
+    expect(out.text).toContain("LOGLINE:");
+    expect(out.text).toContain("Un detective insonne caccia un killer.");
+    // The empty screenplay source is dropped, not labelled.
+    expect(out.text).not.toContain("SCENEGGIATURA");
+  });
+
+  it("joins multiple non-empty sources nearest-first", () => {
+    const out = formatUpstreamSource([
+      { label: "SOGGETTO", content: "Il soggetto." },
+      { label: "LOGLINE", content: "La logline." },
+    ]);
+    expect(out.label).toBe("SOGGETTO + LOGLINE");
+    expect(out.text.indexOf("SOGGETTO")).toBeLessThan(
+      out.text.indexOf("LOGLINE"),
+    );
+  });
+
+  it("falls back to the screenplay when no narrative doc has content", () => {
+    const out = formatUpstreamSource([
+      { label: "LOGLINE", content: "   " },
+      { label: "SCENEGGIATURA", content: "INT. CASA - GIORNO\nMarco entra." },
+    ]);
+    expect(out.label).toBe("SCENEGGIATURA");
+    expect(out.text).toContain("Marco entra.");
+  });
+
+  it("returns an empty source when nothing upstream has content (no no-op success)", () => {
+    const out = formatUpstreamSource([
+      { label: "LOGLINE", content: "" },
+      { label: "SCENEGGIATURA", content: "   " },
+    ]);
+    expect(out.text).toBe("");
+    expect(out.label).toBe("");
   });
 });

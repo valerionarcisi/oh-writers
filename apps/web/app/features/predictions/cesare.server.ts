@@ -1654,6 +1654,28 @@ const SCREENPLAY_PROPOSE_TOOLS = new Set<string>([
   "delete_scene",
 ]);
 
+// Bug #4 — the document-generation tools the intent classifier may force on a
+// narrative document page. Universal dispatch (spec 47b) exposes these on every
+// page; the classifier nudge only forces one when the request clearly asks to
+// write/generate a document, so free natural-language requests dispatch reliably.
+const DOCUMENT_GEN_TOOLS = new Set<string>([
+  "write_logline",
+  "propose_soggetto_v2",
+  "propose_synopsis_from_screenplay",
+  "propose_scaletta_from_soggetto",
+]);
+
+// Pages on which the intent classifier runs (it is a no-op elsewhere): the
+// screenplay page (mutations) and the narrative document pages (generation).
+const CLASSIFIER_TOOLS_BY_PAGE: Readonly<Record<string, ReadonlySet<string>>> =
+  {
+    screenplay: SCREENPLAY_PROPOSE_TOOLS,
+    soggetto: DOCUMENT_GEN_TOOLS,
+    synopsis: DOCUMENT_GEN_TOOLS,
+    outline: DOCUMENT_GEN_TOOLS,
+    treatment: DOCUMENT_GEN_TOOLS,
+  };
+
 const callCesareWithScreenplayTools = (
   systemPrompt: SystemPromptBlock[],
   conversationHistory: ConversationMessage[],
@@ -2014,20 +2036,22 @@ const callCesareV2 = (
       abortSignal,
     );
 
-  // Intent classifier hint. The classifier only fires on the screenplay page —
-  // that is where the inline-instead-of-tool bug bites and where the prompt is
-  // framed. Universal dispatch exposes the screenplay propose_* tools on every
-  // page, but we deliberately do NOT run the screenplay-framed classifier from
-  // other pages: it would add a Haiku call to pages that never had one and could
-  // force a screenplay tool onto an unrelated domain request. On other pages we
-  // let `tool_choice: "auto"` choose. On any error / low confidence / MOCK_AI it
-  // falls back to "auto" too.
-  if (page !== "screenplay") return run();
+  // Intent classifier hint. The classifier fires on the screenplay page
+  // (mutations) and on the narrative document pages (generation — Bug #4: free
+  // natural-language writing requests must reliably select a generator instead
+  // of falling through to "no tools to invoke"). Universal dispatch exposes the
+  // tools on every page; the classifier only FORCES one when the request clearly
+  // asks for that mutation/generation, so a genuine chat question still answers
+  // in chat. Other pages (budget, schedule, locations) keep good adherence with
+  // their narrower scope, so we skip the extra Haiku call there. On any error /
+  // low confidence / MOCK_AI the classifier falls back to "auto" too.
+  const classifierTools = CLASSIFIER_TOOLS_BY_PAGE[page];
+  if (!classifierTools) return run();
 
   return classifyIntent({
     userMessage: message,
-    page: "screenplay",
-    availableTools: SCREENPLAY_PROPOSE_TOOLS,
+    page,
+    availableTools: classifierTools,
   })
     .map((intent) => intent.suggestedTool)
     .orElse(() =>

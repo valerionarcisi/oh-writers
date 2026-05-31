@@ -363,6 +363,61 @@ interface DocumentRowForGen {
   ownerId: string | null;
 }
 
+// ─── Upstream narrative chain ─────────────────────────────────────────────────
+//
+// Bug #3 (write-from-zero) — the post-logline generators used to read ONLY the
+// screenplay, so on a from-scratch project (no screenplay yet) they no-op'd and
+// the chain dead-ended after the logline. The chain is actually narrative:
+//
+//   logline → soggetto → sinossi → scaletta → trattamento → sceneggiatura
+//
+// so each generator must derive from the nearest UPSTREAM narrative document
+// (the ones written before it), falling back to the screenplay only as one more
+// source. `UPSTREAM_SOURCES` lists, for the document a tool generates, the
+// upstream narrative document types to read — ordered nearest-first.
+
+const UPSTREAM_SOURCES: Partial<Record<DocumentType, readonly DocumentType[]>> =
+  {
+    soggetto: [DocumentTypes.LOGLINE],
+    synopsis: [DocumentTypes.SOGGETTO, DocumentTypes.LOGLINE],
+  };
+
+const docTypeLabelUpper = (type: DocumentType): string =>
+  docTypeLabel(type).toUpperCase();
+
+/**
+ * The narrative material a generator reads, with a human label of where it came
+ * from so the prompt can name it ("LOGLINE", "SOGGETTO + SCENEGGIATURA"). This
+ * is the single source of truth for "did we have anything upstream to build
+ * from" — when `text` is empty the generator must fail loudly, never no-op.
+ */
+export interface UpstreamSource {
+  readonly text: string;
+  readonly label: string;
+}
+
+interface UpstreamPart {
+  readonly label: string;
+  readonly content: string;
+}
+
+/**
+ * Joins the non-empty upstream parts into a single labelled block for the
+ * generation prompt. Returns an empty `text` when nothing upstream has content,
+ * so the caller can fail loudly instead of generating from thin air. Pure —
+ * covered by Vitest.
+ */
+export const formatUpstreamSource = (
+  parts: readonly UpstreamPart[],
+): UpstreamSource => {
+  const nonEmpty = parts.filter((p) => p.content.trim().length > 0);
+  if (nonEmpty.length === 0) return { text: "", label: "" };
+  const text = nonEmpty
+    .map((p) => `${p.label}:\n---\n${p.content.trim().slice(0, 18_000)}\n---`)
+    .join("\n\n");
+  return { text, label: nonEmpty.map((p) => p.label).join(" + ") };
+};
+
 const loadDocumentForType = (
   db: Db,
   projectId: string,
@@ -399,6 +454,38 @@ const loadDocumentForType = (
         `loadDocumentForType: ${e instanceof Error ? e.message : String(e)}`,
       ),
   );
+
+/**
+ * Loads the narrative material a generator should build from: the upstream
+ * narrative documents for `targetType` (per `UPSTREAM_SOURCES`, nearest-first)
+ * PLUS the screenplay as a final fallback. This is what makes the write-from-zero
+ * chain work — on a from-scratch project the soggetto derives from the logline,
+ * the sinossi from the soggetto, etc., even though no screenplay exists yet. On a
+ * screenplay-backed project the screenplay still contributes, so nothing
+ * regresses. Returns an empty `UpstreamSource` only when there is genuinely
+ * nothing to build from, so the caller fails loudly instead of no-op'ing.
+ */
+const loadUpstreamNarrative = (
+  db: Db,
+  projectId: string,
+  targetType: DocumentType,
+): ResultAsync<UpstreamSource, CesareError> => {
+  const upstreamTypes = UPSTREAM_SOURCES[targetType] ?? [];
+  const docLoads = upstreamTypes.map((type) =>
+    loadDocumentForType(db, projectId, type).map((doc) => ({
+      label: docTypeLabelUpper(type),
+      content: doc?.content ?? "",
+    })),
+  );
+  return ResultAsync.combine(docLoads).andThen((narrativeParts) =>
+    loadScreenplayContent(db, projectId).map((screenplay) =>
+      formatUpstreamSource([
+        ...narrativeParts,
+        { label: "SCENEGGIATURA", content: screenplay },
+      ]),
+    ),
+  );
+};
 
 // ─── Draft insertion ──────────────────────────────────────────────────────────
 //
@@ -684,50 +771,57 @@ const handleProposeSynopsis = (
   projectId: string,
   userIdFallback: string | null,
 ): ResultAsync<CreatedDraft, CesareError> =>
-  loadScreenplayContent(db, projectId).andThen((screenplay) => {
-    if (screenplay.trim().length === 0) {
-      return errAsync(
-        new CesareError(
-          "La sceneggiatura del progetto è vuota: aggiungi del testo prima di generare la sinossi.",
-        ),
-      );
-    }
-    const user = `${input.instruction ? `Istruzione: ${input.instruction}\n\n` : ""}Sceneggiatura:\n---\n${screenplay.slice(0, 18_000)}\n---`;
-    return runGeneration(SYNOPSIS_SYSTEM, user, 1200, "cesare.proposeSynopsis")
-      .map((s) => s.trim())
-      .andThen((synopsis) =>
-        loadDocumentForType(db, projectId, DocumentTypes.SYNOPSIS).andThen(
-          (doc) => {
-            if (!doc) {
-              return errAsync(
-                new CesareError(
-                  "Documento sinossi non trovato per il progetto.",
-                ),
-              );
-            }
-            const creator = doc.ownerId ?? userIdFallback;
-            if (!creator) {
-              return errAsync(
-                new CesareError(
-                  "Impossibile determinare l'autore della draft: documento senza createdBy.",
-                ),
-              );
-            }
-            return applyVersionLive(
-              db,
-              doc.id,
-              DocumentTypes.SYNOPSIS,
-              creator,
-              synopsis,
-              buildDraftLabel(
+  loadUpstreamNarrative(db, projectId, DocumentTypes.SYNOPSIS).andThen(
+    (upstream) => {
+      if (upstream.text.length === 0) {
+        return errAsync(
+          new CesareError(
+            "Non c'è ancora materiale da cui scrivere la sinossi: scrivi prima la logline o il soggetto (o aggiungi del testo alla sceneggiatura).",
+          ),
+        );
+      }
+      const user = `${input.instruction ? `Istruzione: ${input.instruction}\n\n` : ""}${upstream.text}`;
+      return runGeneration(
+        SYNOPSIS_SYSTEM,
+        user,
+        1200,
+        "cesare.proposeSynopsis",
+      )
+        .map((s) => s.trim())
+        .andThen((synopsis) =>
+          loadDocumentForType(db, projectId, DocumentTypes.SYNOPSIS).andThen(
+            (doc) => {
+              if (!doc) {
+                return errAsync(
+                  new CesareError(
+                    "Documento sinossi non trovato per il progetto.",
+                  ),
+                );
+              }
+              const creator = doc.ownerId ?? userIdFallback;
+              if (!creator) {
+                return errAsync(
+                  new CesareError(
+                    "Impossibile determinare l'autore della draft: documento senza createdBy.",
+                  ),
+                );
+              }
+              return applyVersionLive(
+                db,
+                doc.id,
                 DocumentTypes.SYNOPSIS,
-                input.instruction ?? null,
-              ),
-            );
-          },
-        ),
-      );
-  });
+                creator,
+                synopsis,
+                buildDraftLabel(
+                  DocumentTypes.SYNOPSIS,
+                  input.instruction ?? null,
+                ),
+              );
+            },
+          ),
+        );
+    },
+  );
 
 const handleProposeSoggettoV2 = (
   input: ProposeInput,
@@ -744,21 +838,35 @@ const handleProposeSoggettoV2 = (
   }
   const instruction = input.instruction;
   const label = input.label;
-  return loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO).andThen(
-    (doc) => {
-      if (!doc) {
-        return errAsync(
-          new CesareError("Documento soggetto non trovato per il progetto."),
-        );
-      }
-      if (doc.content.trim().length === 0) {
-        return errAsync(
-          new CesareError(
-            "Il soggetto è vuoto: scrivi un soggetto prima di chiederne una variante.",
-          ),
-        );
-      }
-      const user = `Stai riscrivendo IL SOGGETTO seguendo questa istruzione: ${instruction}.
+  return ResultAsync.combine([
+    loadDocumentForType(db, projectId, DocumentTypes.SOGGETTO),
+    loadUpstreamNarrative(db, projectId, DocumentTypes.SOGGETTO),
+  ]).andThen(([doc, upstream]) => {
+    if (!doc) {
+      return errAsync(
+        new CesareError("Documento soggetto non trovato per il progetto."),
+      );
+    }
+    const existing = doc.content.trim();
+    // Bug #3 — when the soggetto is still empty, WRITE it from the upstream
+    // narrative (the logline) instead of no-op'ing. Only when there is genuinely
+    // nothing upstream either do we ask the user to write a soggetto first.
+    if (existing.length === 0 && upstream.text.length === 0) {
+      return errAsync(
+        new CesareError(
+          "Non c'è ancora materiale da cui scrivere il soggetto: scrivi prima la logline (o aggiungi del testo alla sceneggiatura).",
+        ),
+      );
+    }
+    const user =
+      existing.length === 0
+        ? `Stai SCRIVENDO il soggetto da zero a partire dal materiale a monte, seguendo questa istruzione: ${instruction}.
+
+Espandi il materiale in un soggetto narrativo completo (premessa, protagonista, antagonista, conflitto, svolgimento, finale). Italiano, prosa, paragrafi separati da riga vuota.
+
+Materiale a monte:
+${upstream.text}`
+        : `Stai riscrivendo IL SOGGETTO seguendo questa istruzione: ${instruction}.
 
 REGOLA TASSATIVA: la tua versione DEVE essere diversa dal soggetto attuale. Non limitarti a riformattarlo. Cambia tono/struttura/dettagli secondo l'istruzione. Se non hai abbastanza informazione per cambiare nulla, espandi i dettagli sensoriali e drammatici delle scene esistenti.
 
@@ -766,44 +874,43 @@ Soggetto attuale (NON ritornarlo identico):
 ---
 ${doc.content.slice(0, 18_000)}
 ---`;
-      const previousContent = doc.content.trim();
-      return runGeneration(
-        SOGGETTO_SYSTEM,
-        user,
-        2000,
-        "cesare.proposeSoggettoV2",
-      )
-        .map((s) => s.trim())
-        .andThen((next) => {
-          // Guard against the model returning the input verbatim — happened
-          // when the instruction is vague and Sonnet falls back to "looks fine
-          // already". A draft identical to v1 is worse than no draft.
-          if (next === previousContent) {
-            return errAsync(
-              new CesareError(
-                "Il modello ha restituito un soggetto identico all'attuale. Riformula la richiesta con un'istruzione più specifica (es. 'più asciutto', 'tono noir', 'taglia la sequenza finale').",
-              ),
-            );
-          }
-          const creator = doc.ownerId ?? userIdFallback;
-          if (!creator) {
-            return errAsync(
-              new CesareError(
-                "Impossibile determinare l'autore della draft: documento senza createdBy.",
-              ),
-            );
-          }
-          return applyVersionLive(
-            db,
-            doc.id,
-            DocumentTypes.SOGGETTO,
-            creator,
-            next,
-            label.slice(0, 80),
+    return runGeneration(
+      SOGGETTO_SYSTEM,
+      user,
+      2000,
+      "cesare.proposeSoggettoV2",
+    )
+      .map((s) => s.trim())
+      .andThen((next) => {
+        // Guard against the model returning the input verbatim — happened
+        // when the instruction is vague and Sonnet falls back to "looks fine
+        // already". A draft identical to v1 is worse than no draft. (Only
+        // meaningful in rewrite mode; on a first write `existing` is empty.)
+        if (existing.length > 0 && next === existing) {
+          return errAsync(
+            new CesareError(
+              "Il modello ha restituito un soggetto identico all'attuale. Riformula la richiesta con un'istruzione più specifica (es. 'più asciutto', 'tono noir', 'taglia la sequenza finale').",
+            ),
           );
-        });
-    },
-  );
+        }
+        const creator = doc.ownerId ?? userIdFallback;
+        if (!creator) {
+          return errAsync(
+            new CesareError(
+              "Impossibile determinare l'autore della draft: documento senza createdBy.",
+            ),
+          );
+        }
+        return applyVersionLive(
+          db,
+          doc.id,
+          DocumentTypes.SOGGETTO,
+          creator,
+          next,
+          label.slice(0, 80),
+        );
+      });
+  });
 };
 
 const handleProposeScalettaFromSoggetto = (

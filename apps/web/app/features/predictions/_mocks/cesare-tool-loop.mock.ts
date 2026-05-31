@@ -921,6 +921,38 @@ const lastUserTextFromPrompt = (
   return "";
 };
 
+// Bug #4 / no-false-success — a scripted scenario's final turn is a fixed
+// success acknowledgement ("Ho aggiornato il soggetto…"). When the PRECEDING
+// tool actually errored (e.g. a from-scratch generator with no upstream to build
+// from), claiming success would be a fabricated result. We scan the latest
+// tool-result parts in the prompt for an `{ "error": … }` payload and, when
+// present, the model emits a faithful failure message instead of the scripted
+// success text. Model-independent: the real provider gets the same error
+// tool_result and is expected to report the failure too.
+const FAILURE_TEXT =
+  "Non sono riuscito a completare la modifica: non c'era abbastanza materiale da cui generare. Scrivi prima il passo precedente della catena.";
+
+const lastToolResultsErrored = (
+  prompt: MockDoGenerateOptions["prompt"],
+): boolean => {
+  for (let i = prompt.length - 1; i >= 0; i--) {
+    const msg = prompt[i];
+    if (!msg) continue;
+    if (msg.role !== "tool") continue;
+    const parts = msg.content as Array<{ type: string; output?: unknown }>;
+    let sawToolResult = false;
+    let allErrored = true;
+    for (const part of parts) {
+      if (part.type !== "tool-result") continue;
+      sawToolResult = true;
+      const text = JSON.stringify(part.output ?? "");
+      if (!/"error"\s*:/.test(text)) allErrored = false;
+    }
+    if (sawToolResult) return allErrored;
+  }
+  return false;
+};
+
 // The conversation key uses the first user message so subsequent tool-result
 // turns within the same loop advance the turn index correctly.
 const conversationKeyFromPrompt = (
@@ -1032,6 +1064,26 @@ export const createMockCesareModel = (): MockLanguageModelV3 =>
       // Reset so the scenario restarts cleanly on the next use.
       if (idx + 1 >= scenario.turns.length) {
         TURN_INDEX.delete(key);
+      }
+
+      // No false success on a no-op: if this turn would emit a scripted success
+      // text but the preceding tool errored, report the failure instead.
+      const isPlainTextTurn = !turn.tool_uses || turn.tool_uses.length === 0;
+      if (isPlainTextTurn && lastToolResultsErrored(options.prompt)) {
+        return {
+          content: [{ type: "text", text: FAILURE_TEXT }],
+          finishReason: { unified: "stop", raw: "end_turn" },
+          usage: {
+            inputTokens: {
+              total: 10,
+              noCache: 10,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: { total: 20, text: 20, reasoning: 0 },
+          },
+          warnings: [],
+        };
       }
 
       return buildGenerateResult(turn);
