@@ -45,6 +45,8 @@ import {
   decideShowChangesSurface,
   buildTargetPageRef,
 } from "../cesare-show-changes";
+import { useNarrativeNextStep } from "../use-narrative-next-step";
+import { NextStepChip } from "./NextStepChip";
 import styles from "./CesareSheet.module.css";
 
 /**
@@ -470,6 +472,21 @@ export function CesareSheet({
     [chat],
   );
 
+  // ── Next-step suggestion (Spec 50) ───────────────────────────────────────
+  // Derived purely from which documents already have content. Clicking the chip
+  // seeds the suggestion prompt through the SAME send path — exactly one
+  // generation, never an automatic chain. Suppressed while Cesare is generating.
+  const { suggestion: nextStep } = useNarrativeNextStep(projectId);
+  const handleNextStep = useCallback(
+    (prompt: string) => {
+      if (isLoading) return;
+      void chat.send(prompt);
+    },
+    [isLoading, chat],
+  );
+  const showInlineNextStep =
+    nextStep !== null && messages.length > 0 && !isLoading;
+
   // ── Scopes shown above the composer ─────────────────────────────────────
   const scopes = useMemo<ReadonlyArray<CesareDrawerScope>>(
     () => [
@@ -489,18 +506,34 @@ export function CesareSheet({
 
   // ── Body composition (shared conversation renderer) ──────────────────────
   const conversationBody: ReactNode = (
-    <CesareConversation
-      messages={messages}
-      page={page}
-      onShowChanges={handleShowChanges}
-      onHideChanges={handleHideChanges}
-      emptyState={
-        <>
-          <EmptyState page={page} />
-          <QuickPrompts page={page} onSelect={handleQuickPrompt} />
-        </>
-      }
-    />
+    <>
+      {showInlineNextStep && nextStep && (
+        <NextStepChip
+          suggestion={nextStep}
+          onPick={handleNextStep}
+          isDisabled={isLoading}
+        />
+      )}
+      <CesareConversation
+        messages={messages}
+        page={page}
+        onShowChanges={handleShowChanges}
+        onHideChanges={handleHideChanges}
+        emptyState={
+          <>
+            <EmptyState page={page} />
+            {nextStep && (
+              <NextStepChip
+                suggestion={nextStep}
+                onPick={handleNextStep}
+                isDisabled={isLoading}
+              />
+            )}
+            <QuickPrompts page={page} onSelect={handleQuickPrompt} />
+          </>
+        }
+      />
+    </>
   );
 
   const handleCycle = useCallback(() => {
