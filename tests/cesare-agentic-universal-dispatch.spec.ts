@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { resetCesareState } from "./helpers/cesare";
 
 /**
  * [Spec 47b] Universal dispatch in the active V2 path.
@@ -45,6 +46,15 @@ function parseNdjson(body: string): StreamEvent[] {
 }
 
 test.describe("[Spec 47b] Cesare universal dispatch — cross-page write", () => {
+  // Spec 51 persists the soggetto edit; the mock-ui project runs serially
+  // against one shared DB. This test asserts a NEW version was applied live
+  // (doc-applied marker) — but if a prior test already wrote the deterministic
+  // soggetto v2, applying it again is a no-op and emits no marker. Restore the
+  // seed soggetto + clear sessions before each test.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("[OHW-047-A7] a request on the Sceneggiatura page writes the Soggetto (writing{soggetto}, version applied live)", async ({
     authenticatedPage,
   }) => {

@@ -220,3 +220,71 @@ already `test.skip` before this work, pending MOCK_AI/seed fixtures.)
 
 No adjacent suite (`editor`/`documents`/`budget`/`schedule`) referenced these
 renamed testids — the bit-rot was isolated to `tests/breakdown/`.
+
+---
+
+## Iter 1 follow-up — Cesare-agentic cross-test isolation (Spec 51 fallout)
+
+### Symptom
+
+After Spec 51 made the Cesare chat **persistent** (`cesare_sessions` +
+`cesare_messages` rows per turn, and every agentic edit writes a new
+`document_versions` row + mutates the open document), the `mock-ui` agentic
+batch went red on CI ("QA / E2E Mock Playwright"). Several specs passed in
+isolation but failed in the batch.
+
+### Root cause
+
+The `mock-ui` project runs **serially against one shared test DB**
+(`workers:1`, `fullyParallel:false`). Before Spec 51 the chat was in-memory, so
+there was no cross-test state. After Spec 51 each agentic test **accumulated
+state**: the soggetto/logline left rewritten by an earlier test, and built-up
+session history. The polluted specs:
+
+- `documents-gen` OHW-575/577/578 — OHW-577 asserts the seed soggetto is in the
+  editor before the v2 lands.
+- `documents` OHW-541, `locations` OHW-540.
+- `logline-unified` OHW-047-A8 (×2) — assert the logline **changed** (`after !==
+before`); a prior test that wrote the same deterministic mock logline made
+  `before === after`.
+- `next-step` OHW-050.
+- `universal-dispatch` OHW-047-A7 and `show-changes` OHW-047-A6 — re-applying the
+  deterministic soggetto v2 against an already-v2 doc is a no-op, so no
+  `doc-applied` marker / no change trace.
+- `stream-roundtrip` OHW-047-A1/A2 — re-hydrating an accumulated session slows
+  the round-trip and a prior outline/soggetto write changes the streamed state.
+
+(The last-20 cap on `conversationHistory` already in `main` was a red herring —
+the pollution is in the document/session **state**, not the prompt length.)
+
+### Fix (test-harness only — no product behaviour changed)
+
+- New test-only API route `apps/web/app/routes/api/test/reset-cesare-state.ts`
+  (`MOCK_AI`/test-gated, 404 in prod, mirrors `reset-screenplay-state.ts` /
+  `set-narrative-state.ts`). For a project it: deletes all `cesare_sessions`
+  (cascade clears `cesare_messages`); restores the five narrative documents
+  (logline/soggetto/synopsis/outline/treatment) to **seed content**, drops any
+  extra versions, and rebuilds the seed "Versione 1" — reseeding only the
+  affected tables (fast), not a full global reseed.
+- New helper `resetCesareState(page, projectId)` in `tests/helpers/cesare.ts`.
+- `beforeEach` wiring in the affected specs: `cesare-agentic-documents`,
+  `-documents-gen`, `-locations`, `-logline-unified`, `-next-step`,
+  `-universal-dispatch`, `-show-changes`, `-stream-roundtrip`.
+
+### Proof — full agentic batch, 2 consecutive green runs
+
+`CI=1 pnpm test:e2e --project=mock-ui cesare-agentic` (Playwright manages its own
+server on 3002 against the test DB, `--retries=2` like CI). On this machine the
+seed:reset in `global-setup` **deadlocks** if a leftover dev server still holds
+test-DB connections — kill any port-3002 server and terminate stale
+`oh-writers_test` backends between runs.
+
+- Run 1: **47 passed, 2 flaky (recovered on retry), 1 skipped, 0 failed**, exit 0.
+- Run 2: **48 passed, 1 flaky (recovered on retry), 1 skipped, 0 failed**, exit 0.
+
+(The pass/flaky split shifts run-to-run only because a load-induced retry counts
+as "flaky"; both runs have **0 failed**.) The flakes (`locations` OHW-540,
+`next-step` OHW-050 click-generation) are load-induced timeouts on the heaviest
+120s generation tests — they recover within CI's `--retries=2` and are green.
+The 1 skip is the pre-existing conditional `test.skip()` in
+`context-engineering` OHW-038f-2.

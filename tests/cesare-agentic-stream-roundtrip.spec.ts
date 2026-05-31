@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { resetCesareState } from "./helpers/cesare";
 import { expect as pwExpect, type Page } from "@playwright/test";
 
 // The shell refactor relabelled the dock pill ("Apri Cesare") and the composer
@@ -52,6 +53,14 @@ async function waitForCesareReply(page: Page): Promise<string> {
  */
 
 test.describe("[Spec 47a] Cesare stream round-trip", () => {
+  // Spec 51 persists Cesare sessions + document edits; the mock-ui project runs
+  // serially against one shared DB. Re-hydrating a session built up by earlier
+  // tests slows the round-trip and a prior outline/soggetto write changes the
+  // doc state these tests stream against. Reset to the seed baseline before each.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("[OHW-047-A1] user bubble appears under 100ms on submit", async ({
     authenticatedPage,
   }) => {

@@ -9,6 +9,7 @@ import {
   sendCesareMessage,
   waitForCesareReply,
   setMockContext,
+  resetCesareState,
 } from "./helpers/cesare";
 
 /**
@@ -25,6 +26,13 @@ import {
  * scenario library.
  */
 test.describe("[Spec 34] Cesare Agentic — Locations", () => {
+  // Spec 51 persists Cesare sessions across the serial mock-ui run; clear them
+  // (and restore the narrative-doc baseline) before each test so a prior
+  // agentic test's session history never leaks into this one.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, LOCATIONS_PROJECT_ID);
+  });
+
   test("[OHW-540] Cesare adds a candidate via add_candidate tool", async ({
     authenticatedPage,
   }) => {
@@ -49,7 +57,10 @@ test.describe("[Spec 34] Cesare Agentic — Locations", () => {
       .count();
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Trova candidati per questa scena.");
+    await sendCesareMessage(
+      authenticatedPage,
+      "Trova candidati per questa scena.",
+    );
     const reply = await waitForCesareReply(authenticatedPage);
 
     expect(reply.length).toBeGreaterThan(10);
@@ -60,9 +71,7 @@ test.describe("[Spec 34] Cesare Agentic — Locations", () => {
     await expect
       .poll(
         async () =>
-          authenticatedPage
-            .locator('[data-testid^="candidate-card-"]')
-            .count(),
+          authenticatedPage.locator('[data-testid^="candidate-card-"]').count(),
         { timeout: 10_000 },
       )
       .toBeGreaterThan(cardsBefore);
