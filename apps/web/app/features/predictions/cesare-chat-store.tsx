@@ -35,6 +35,7 @@ import type { AskCesareFn } from "./components/CesareSheet";
 import type { CesarePage } from "./components/CesareConversation";
 import { persistTurn } from "./messages/messages.server";
 import { messagesQueryOptions } from "./messages/useMessages";
+import { sessionsQueryKey } from "./sessions/useSessions";
 import {
   buildAssistantMetadata,
   persistedToChatMessage,
@@ -274,6 +275,12 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
               // drop the stale cache so the next open refetches the saved turn.
               void queryClient.invalidateQueries({
                 queryKey: ["cesare-messages", projectId, targetSession],
+              });
+              // The first turn may have auto-named the session (Spec 53) and
+              // every turn bumps its lastMessageAt; refresh the rail/route list
+              // so the derived title + ordering reflect everywhere.
+              void queryClient.invalidateQueries({
+                queryKey: sessionsQueryKey(projectId),
               });
             })
             .catch(() => undefined);

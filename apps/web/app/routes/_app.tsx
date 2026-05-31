@@ -6,10 +6,11 @@ import {
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
+import { ConfirmDialog } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
 import {
@@ -21,7 +22,11 @@ import {
 } from "~/features/app-shell";
 import type { VersionsCompare } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
-import { useSessions as useCesareSessions } from "~/features/predictions";
+import {
+  useSessions as useCesareSessions,
+  useRenameSession as useRenameCesareSession,
+  useDeleteSession as useDeleteCesareSession,
+} from "~/features/predictions";
 import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
@@ -303,6 +308,51 @@ function AppLayout() {
     });
   };
 
+  // Spec 53 — inline rename + delete-with-modal. Rename commits through the
+  // existing mutation (which invalidates the list + the open-session query so
+  // the title reflects everywhere); the rail owns the in-place edit UX. Delete
+  // routes through a confirmation modal (DS Dialog) before the destructive
+  // mutation; if the open session is removed we navigate away.
+  const renameCesareSession = useRenameCesareSession(projectId ?? "");
+  const deleteCesareSession = useDeleteCesareSession(projectId ?? "");
+  // The session queued for deletion (drives the confirmation modal). `null`
+  // when the modal is closed.
+  const [sessionPendingDelete, setSessionPendingDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
+  const handleCesareSessionRename = (sessionId: string, title: string) => {
+    renameCesareSession.mutate({ id: sessionId, title });
+  };
+
+  const handleCesareSessionDeleteRequest = (sessionId: string) => {
+    const target = cesareSessionsQuery.data?.find((s) => s.id === sessionId);
+    if (!target) return;
+    setSessionPendingDelete({ id: target.id, title: target.title });
+  };
+
+  const handleCesareSessionDeleteCancel = () => setSessionPendingDelete(null);
+
+  const handleCesareSessionDeleteConfirm = () => {
+    const target = sessionPendingDelete;
+    if (!target) return;
+    const wasOpen = target.id === activeSessionIdFromRoute;
+    deleteCesareSession.mutate(target.id, {
+      onSuccess: () => {
+        // The deleted row leaves the list on invalidation. When it was the open
+        // session, drop the now-dangling route back to the sessions landing.
+        if (wasOpen && projectId) {
+          void navigate({
+            to: "/projects/$id/sessions",
+            params: { id: projectId },
+          });
+        }
+      },
+    });
+    setSessionPendingDelete(null);
+  };
+
   // The rail's dedicated "Cesare" entry opens the sessions landing.
   const handleCesareSessionsOpen = () => {
     if (!projectId) return;
@@ -344,35 +394,53 @@ function AppLayout() {
   ];
 
   return (
-    <AppShell
-      user={user}
-      projectName={projectName}
-      sectionName={sectionName}
-      activeSegment={activeSegment}
-      sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
-      projects={projectsList}
-      currentProjectId={projectId}
-      userMenuItems={userMenuItems}
-      projectId={projectId}
-      cesarePage={cesarePage}
-      cesareSessions={cesareSessionsForRail}
-      onCesareSessionSelect={handleCesareSessionSelect}
-      onCesareSessionNew={handleCesareSessionNew}
-      peek={peek ?? null}
-      onOpenCesarePeek={openCesarePeek}
-      onClosePeek={closePeek}
-      onCesareSessionsOpen={handleCesareSessionsOpen}
-      versionsParam={versions ?? null}
-      versionsStateParam={vstate ?? null}
-      versionsCurrentParam={vcur ?? null}
-      versionsCompareParam={compare ?? null}
-      onVersionsCompareChange={changeVersionsCompare}
-      onCloseVersions={closeVersions}
-      onExpandVersions={expandVersions}
-      onStepBackVersions={stepBackVersions}
-    >
-      <Outlet />
-    </AppShell>
+    <>
+      <AppShell
+        user={user}
+        projectName={projectName}
+        sectionName={sectionName}
+        activeSegment={activeSegment}
+        sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
+        projects={projectsList}
+        currentProjectId={projectId}
+        userMenuItems={userMenuItems}
+        projectId={projectId}
+        cesarePage={cesarePage}
+        cesareSessions={cesareSessionsForRail}
+        onCesareSessionSelect={handleCesareSessionSelect}
+        onCesareSessionRename={handleCesareSessionRename}
+        onCesareSessionDelete={handleCesareSessionDeleteRequest}
+        onCesareSessionNew={handleCesareSessionNew}
+        peek={peek ?? null}
+        onOpenCesarePeek={openCesarePeek}
+        onClosePeek={closePeek}
+        onCesareSessionsOpen={handleCesareSessionsOpen}
+        versionsParam={versions ?? null}
+        versionsStateParam={vstate ?? null}
+        versionsCurrentParam={vcur ?? null}
+        versionsCompareParam={compare ?? null}
+        onVersionsCompareChange={changeVersionsCompare}
+        onCloseVersions={closeVersions}
+        onExpandVersions={expandVersions}
+        onStepBackVersions={stepBackVersions}
+      >
+        <Outlet />
+      </AppShell>
+      <ConfirmDialog
+        isOpen={sessionPendingDelete !== null}
+        title="Elimina sessione"
+        message={
+          sessionPendingDelete
+            ? `Eliminare la sessione «${sessionPendingDelete.title}»? L'azione non è reversibile.`
+            : ""
+        }
+        confirmLabel="Elimina"
+        cancelLabel="Annulla"
+        destructive
+        onConfirm={handleCesareSessionDeleteConfirm}
+        onCancel={handleCesareSessionDeleteCancel}
+      />
+    </>
   );
 }
 

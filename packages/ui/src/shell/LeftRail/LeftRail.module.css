@@ -323,6 +323,98 @@
   font-weight: 500;
 }
 
+/* ── Session row: activate button + …-menu (Spec 53) ───────── */
+/* The row wraps the activate button and the hover-revealed … menu so the menu
+   never widens the button itself. The button keeps `inline-size: 100%` and the
+   menu overlaps its trailing edge. */
+.sessionRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sessionRow > .session {
+  /* leave room on the trailing edge for the …-menu so the title never sits
+     under the button */
+  padding-inline-end: 26px;
+}
+
+.sessionMoreBtn {
+  position: absolute;
+  inset-inline-end: 4px;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ds-text-faint);
+  cursor: pointer;
+  /* Hidden until the row is hovered/focused or the menu is open, so the rail
+     stays calm. Always reachable by keyboard via :focus-within. */
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    background: var(--ds-surface);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+    opacity: 1;
+  }
+
+  &[aria-expanded="true"] {
+    opacity: 1;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+  }
+}
+
+.sessionRow:hover .sessionMoreBtn,
+.sessionRow:focus-within .sessionMoreBtn {
+  opacity: 1;
+}
+
+.sessionMore {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ── Inline rename input (Spec 53) ─────────────────────────── */
+.sessionEditing {
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+  }
+}
+
+.sessionRename {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 1px 4px;
+  border: var(--border-width) solid var(--ds-action);
+  border-radius: var(--radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  font-size: 12.5px;
+  font-weight: 400;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
 /* ── Account row (footer) ──────────────────────────────────── */
 /* Spec 47b FIX 1: bell / avatar / gear live here — the single home for the
    account actions (no longer in the BottomDock or the Cesare header). */
