@@ -53,3 +53,17 @@ export interface CesareSession {
 }
 
 export const DEFAULT_NEW_SESSION_TITLE = "Nuova sessione";
+
+// The seed/default session created by the migration and by `ensureDefaultSession`.
+export const DEFAULT_PRIMARY_SESSION_TITLE = "Sessione principale";
+
+// Titles that auto-naming is allowed to overwrite (Spec 53): the two
+// system-provided placeholders. A title outside this set was set by the user
+// (rename) or already derived from a first message — never overwrite it.
+export const PLACEHOLDER_SESSION_TITLES: ReadonlySet<string> = new Set([
+  DEFAULT_NEW_SESSION_TITLE,
+  DEFAULT_PRIMARY_SESSION_TITLE,
+]);
+
+export const isPlaceholderSessionTitle = (title: string): boolean =>
+  PLACEHOLDER_SESSION_TITLES.has(title.trim());

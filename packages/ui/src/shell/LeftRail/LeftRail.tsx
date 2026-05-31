@@ -1,9 +1,10 @@
 // packages/ui/src/shell/LeftRail/LeftRail.tsx
-import { useRef } from "react";
-import { useButton, useHover, useOverlay } from "react-aria";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useButton, useHover, useOverlay, useTextField } from "react-aria";
 import type { ReactNode } from "react";
 import { Icon } from "../../icons/Icon";
 import type { IconName } from "../../icons/icon-names";
+import { DropdownMenu } from "../../components/DropdownMenu";
 import styles from "./LeftRail.module.css";
 
 export type RailNavItem = {
@@ -77,6 +78,14 @@ export type LeftRailProps = {
   sessions?: ReadonlyArray<CesareSessionItem>;
   /** Click handler when the user activates a session row. */
   onSessionSelect?: (sessionId: string) => void;
+  /** Commit a new title for a session (inline rename — Spec 53). When omitted,
+   *  the rename affordance is hidden. The rail owns the in-place edit state
+   *  (input, Enter/blur commit, Esc cancel); this just persists the result. */
+  onSessionRename?: (sessionId: string, title: string) => void;
+  /** Request deletion of a session (Spec 53). When omitted, the delete
+   *  affordance is hidden. The rail does NOT confirm — it asks the consumer to
+   *  open the confirmation modal (DS Dialog) and run the mutation. */
+  onSessionDelete?: (sessionId: string) => void;
   /** Click handler for the "+ Nuova" affordance in the sessions section
    *  label. Optional — when omitted, the affordance is hidden. */
   onSessionNew?: () => void;
@@ -158,14 +167,87 @@ function RailItemButton({
   );
 }
 
-function SessionItemButton({
+// Inline rename input (Spec 53). A controlled react-aria text field — keyboard
+// handling (Enter commits, Esc cancels) is wired here, with focus/aria managed
+// by `useTextField` so we never re-implement input semantics by hand. Commits on
+// blur as well, matching the Notion-style affordance.
+function SessionRenameInput({
+  initialTitle,
+  onCommit,
+  onCancel,
+}: {
+  initialTitle: string;
+  onCommit: (title: string) => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState(initialTitle);
+  // Guard so a blur fired by our own commit/cancel doesn't double-fire.
+  const settledRef = useRef(false);
+
+  const commit = () => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    const next = value.trim();
+    if (next.length > 0 && next !== initialTitle) onCommit(next);
+    else onCancel();
+  };
+  const cancel = () => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onCancel();
+  };
+
+  const { inputProps } = useTextField(
+    {
+      value,
+      onChange: setValue,
+      "aria-label": "Rinomina sessione",
+      onKeyDown: (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          cancel();
+        }
+      },
+      onBlur: commit,
+    },
+    ref,
+  );
+
+  // Focus + select on mount so the user can type over the placeholder title.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  }, []);
+
+  return (
+    <input
+      {...inputProps}
+      ref={ref}
+      className={styles.sessionRename}
+      data-testid="session-rename-input"
+    />
+  );
+}
+
+function SessionRow({
   session,
   onActivate,
+  onRename,
+  onDelete,
 }: {
   session: CesareSessionItem;
   onActivate: () => void;
+  onRename?: (title: string) => void;
+  onDelete?: () => void;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
+  const [isEditing, setEditing] = useState(false);
   const { buttonProps } = useButton(
     {
       onPress: onActivate,
@@ -177,17 +259,66 @@ function SessionItemButton({
   const cls = [styles.session, session.active ? styles.sessionActive : ""]
     .filter(Boolean)
     .join(" ");
+
+  // Build the …-menu items from the wired affordances. Rename starts the inline
+  // edit; delete asks the consumer to open the confirmation modal.
+  const menuItems = [
+    onRename ? { label: "Rinomina", onClick: () => setEditing(true) } : null,
+    onDelete ? { label: "Elimina", onClick: onDelete } : null,
+  ].filter((it): it is { label: string; onClick: () => void } => it !== null);
+  const hasMenu = menuItems.length > 0;
+
+  if (isEditing && onRename) {
+    return (
+      <div
+        className={[styles.session, styles.sessionEditing].join(" ")}
+        data-session-id={session.id}
+        data-editing="true"
+      >
+        <RailGlyph icon="agent-spark" />
+        <SessionRenameInput
+          initialTitle={session.title}
+          onCommit={(title) => {
+            setEditing(false);
+            onRename(title);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <button
-      ref={ref}
-      {...buttonProps}
-      className={cls}
-      data-session-id={session.id}
-    >
-      <RailGlyph icon="agent-spark" />
-      <span className={styles.itemLabel}>{session.title}</span>
-      <span className={styles.itemMeta}>{session.lastAt}</span>
-    </button>
+    <div className={styles.sessionRow} data-session-id={session.id}>
+      <button
+        ref={ref}
+        {...buttonProps}
+        className={cls}
+        // Double-click is the secondary rename affordance (the …-menu is the
+        // primary one). Only when renaming is wired.
+        onDoubleClick={onRename ? () => setEditing(true) : undefined}
+        data-session-button=""
+      >
+        <RailGlyph icon="agent-spark" />
+        <span className={styles.itemLabel}>{session.title}</span>
+        <span className={styles.itemMeta}>{session.lastAt}</span>
+      </button>
+      {hasMenu && (
+        <DropdownMenu
+          align="end"
+          trigger={
+            <span className={styles.sessionMore} aria-hidden="true">
+              ⋯
+            </span>
+          }
+          triggerLabel={`Azioni sessione: ${session.title}`}
+          triggerClassName={styles.sessionMoreBtn}
+          triggerTitle="Azioni sessione"
+          data-testid="session-actions-menu"
+          items={menuItems}
+        />
+      )}
+    </div>
   );
 }
 
@@ -365,6 +496,8 @@ export function LeftRail({
   sections,
   sessions,
   onSessionSelect,
+  onSessionRename,
+  onSessionDelete,
   onSessionNew,
   onSessionsOpen,
   onNavigate,
@@ -462,10 +595,18 @@ export function LeftRail({
         {hasSessions && (
           <div className={styles.sessions}>
             {sessions!.map((s) => (
-              <SessionItemButton
+              <SessionRow
                 key={s.id}
                 session={s}
                 onActivate={() => onSessionSelect?.(s.id)}
+                onRename={
+                  onSessionRename
+                    ? (title) => onSessionRename(s.id, title)
+                    : undefined
+                }
+                onDelete={
+                  onSessionDelete ? () => onSessionDelete(s.id) : undefined
+                }
               />
             ))}
           </div>

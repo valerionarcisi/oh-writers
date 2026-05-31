@@ -9,9 +9,13 @@ export {
   TouchSessionInput,
   GetSessionInput,
   DEFAULT_NEW_SESSION_TITLE,
+  DEFAULT_PRIMARY_SESSION_TITLE,
+  PLACEHOLDER_SESSION_TITLES,
+  isPlaceholderSessionTitle,
   SESSION_TITLE_MAX,
 } from "./sessions.schema";
 export type { CesareSession } from "./sessions.schema";
+export { deriveSessionTitle, DERIVED_TITLE_MAX } from "./derive-session-title";
 export { CesareSessionNotFoundError } from "./sessions.errors";
 export {
   sessionsQueryKey,

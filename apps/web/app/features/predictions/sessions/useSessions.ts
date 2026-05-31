@@ -93,7 +93,14 @@ export const useRenameSession = (projectId: string) => {
       title: string;
     }): Promise<CesareSession> =>
       unwrapResult(await renameSession({ data: input })),
-    onSuccess: () => invalidateSessions(qc, projectId),
+    onSuccess: (updated) => {
+      invalidateSessions(qc, projectId);
+      // The open central `/sessions/:id` route reads the single-session query,
+      // not the list — refresh it too so its title updates without a reload.
+      void qc.invalidateQueries({
+        queryKey: sessionQueryKey(projectId, updated.id),
+      });
+    },
   });
 };
 
