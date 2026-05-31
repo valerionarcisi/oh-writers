@@ -27,12 +27,21 @@ import { HAIKU_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
 
 export type IntentType =
+  // Screenplay intents
   | "macro_rewrite"
   | "micro_edit"
   | "rewrite_one_scene"
   | "merge_scenes"
   | "delete_scene"
   | "rename"
+  // Document (narrative chain) intents — Bug #4: free natural-language writing
+  // requests must reliably select the matching generator, not fall through to
+  // "no tools to invoke".
+  | "write_logline"
+  | "write_soggetto"
+  | "write_synopsis"
+  | "write_outline"
+  // Generic
   | "question"
   | "comment";
 
@@ -45,7 +54,7 @@ export interface IntentResult {
 const CONFIDENCE_THRESHOLD = 0.6;
 
 // Mapping from intent → tool the API must force. Only includes intents that
-// have a one-to-one mapping to a proper propose_* tool. Generic intents
+// have a one-to-one mapping to a proper propose_*/write_* tool. Generic intents
 // (question, comment) fall through to "auto".
 const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   macro_rewrite: "propose_screenplay_revision",
@@ -54,9 +63,13 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   merge_scenes: "merge_scenes",
   delete_scene: "delete_scene",
   rename: "propose_rename_entity",
+  write_logline: "write_logline",
+  write_soggetto: "propose_soggetto_v2",
+  write_synopsis: "propose_synopsis_from_screenplay",
+  write_outline: "propose_scaletta_from_soggetto",
 };
 
-const SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) sulla pagina "screenplay". Devi capire SE l'utente sta chiedendo una mutazione e DI CHE TIPO.
+const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) sulla pagina "screenplay". Devi capire SE l'utente sta chiedendo una mutazione e DI CHE TIPO.
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
@@ -102,6 +115,55 @@ Esempi:
 "chi è il protagonista?" → {"type":"question","confidence":0.98}
 "questa scena è piatta" → {"type":"comment","confidence":0.80}`;
 
+// Bug #4 — document (narrative chain) classifier. On a document page (soggetto,
+// sinossi, scaletta, trattamento) free natural-language writing requests used to
+// fall through to `tool_choice: "auto"` and often produced no tool call at all.
+// This prompt maps the request to the matching generator so the dispatch is
+// reliable. A genuine question still resolves to "question" → chat answer.
+const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) su una pagina di documento narrativo (soggetto, sinossi, scaletta, trattamento). Devi capire SE l'utente sta chiedendo di SCRIVERE/GENERARE un documento e QUALE.
+
+Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
+{
+  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "question" | "comment",
+  "confidence": <number tra 0 e 1>
+}
+
+Definizioni dei type:
+- write_logline: scrivere o modificare la logline da una premessa libera o un'istruzione. Include:
+    "scrivimi una logline su un detective", "scrivi la logline dallo spunto",
+    "rendi la logline più tesa", "cambia il protagonista della logline".
+- write_soggetto: scrivere o riscrivere il soggetto (anche a partire dalla logline). Include:
+    "scrivi il soggetto", "genera il soggetto dalla logline", "fammi un v2 del soggetto",
+    "riscrivi il soggetto più asciutto", "soggetto a partire dalla logline".
+- write_synopsis: scrivere o generare la sinossi (anche riassumendo ciò che è stato scritto). Include:
+    "scrivimi la sinossi", "genera la sinossi dal soggetto", "fai un riassunto di cosa abbiamo scritto",
+    "riassumi la storia", "dammi una sinossi".
+- write_outline: scrivere o generare la scaletta (lista di scene) dal soggetto. Include:
+    "fammi la scaletta", "genera la scaletta dal soggetto", "dividi la storia in scene",
+    "dammi la lista delle scene".
+- question: domanda informativa che NON richiede di scrivere un documento.
+    "di cosa parla la storia?", "chi è il protagonista?", "che ne pensi?".
+- comment: osservazione o feedback senza richiesta di scrittura.
+    "il soggetto è debole", "non mi convince il finale".
+
+REGOLA: se l'utente chiede chiaramente di SCRIVERE/GENERARE/RIASSUMERE un documento, scegli il write_* corrispondente con confidence alta. In caso di ambiguità con una domanda informativa, scegli question/comment con confidence ~0.5.
+
+Esempi:
+"scrivimi una logline su un detective che non dorme" → {"type":"write_logline","confidence":0.95}
+"genera il soggetto dalla logline" → {"type":"write_soggetto","confidence":0.95}
+"fai un riassunto di cosa abbiamo scritto finora" → {"type":"write_synopsis","confidence":0.9}
+"fammi la scaletta dal soggetto" → {"type":"write_outline","confidence":0.95}
+"di cosa parla la storia?" → {"type":"question","confidence":0.95}
+"il soggetto non mi convince" → {"type":"comment","confidence":0.8}`;
+
+// Document-narrative pages where the document classifier applies.
+const DOCUMENT_PAGES: ReadonlySet<string> = new Set([
+  "soggetto",
+  "synopsis",
+  "outline",
+  "treatment",
+]);
+
 const NO_OP_INTENT: IntentResult = { type: "question", confidence: 0 };
 
 const parseJsonResponse = (text: string): IntentResult | null => {
@@ -121,6 +183,10 @@ const parseJsonResponse = (text: string): IntentResult | null => {
       "merge_scenes",
       "delete_scene",
       "rename",
+      "write_logline",
+      "write_soggetto",
+      "write_synopsis",
+      "write_outline",
       "question",
       "comment",
     ];
@@ -143,20 +209,33 @@ export interface ClassifyOpts {
 }
 
 /**
- * Classify the user's last message into one of five intent buckets.
- * Returns `suggestedTool` only when the intent maps to a propose_* tool
- * registered for the current page and confidence clears the threshold.
+ * Resolves which classifier prompt (if any) applies to the page. The screenplay
+ * page uses the screenplay-mutation prompt; the narrative document pages use the
+ * document-generation prompt (Bug #4). Any other page returns null → the caller
+ * skips the classifier and lets `tool_choice: "auto"` choose.
+ */
+const promptForPage = (page: string): string | null => {
+  if (page === "screenplay") return SCREENPLAY_SYSTEM_PROMPT;
+  if (DOCUMENT_PAGES.has(page)) return DOCUMENT_SYSTEM_PROMPT;
+  return null;
+};
+
+/**
+ * Classify the user's last message into an intent bucket.
+ * Returns `suggestedTool` only when the intent maps to a registered generation
+ * or mutation tool and confidence clears the threshold.
  *
  * Uses callHaiku internally — no raw Anthropic SDK client needed.
  */
 export const classifyIntent = (
   opts: ClassifyOpts,
 ): ResultAsync<IntentResult, CesareError> => {
-  // Only run the classifier on the screenplay page for now — that's
-  // where the inline-instead-of-tool bug bites the most. Other pages
-  // (budget, schedule, locations) already have good tool adherence
-  // thanks to their narrower scope.
-  if (opts.page !== "screenplay") {
+  // Run the classifier on the screenplay page (screenplay mutations) and on the
+  // narrative document pages (document generation — Bug #4). On any other page
+  // (budget, schedule, locations) tool adherence is already good thanks to the
+  // narrower scope, so we skip the extra Haiku call and let "auto" choose.
+  const systemPrompt = promptForPage(opts.page);
+  if (!systemPrompt) {
     return ResultAsync.fromSafePromise(Promise.resolve(NO_OP_INTENT));
   }
 
@@ -170,7 +249,7 @@ export const classifyIntent = (
 
   return callHaiku(
     {
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       fewShot: [],
       user: opts.userMessage.slice(0, 800),
       model: HAIKU_MODEL,
