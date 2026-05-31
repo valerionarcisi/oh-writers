@@ -1,0 +1,107 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  align-items: flex-start;
+  max-inline-size: 720px;
+  margin-inline: auto;
+  padding-block: var(--ds-space-6);
+  padding-inline: var(--ds-space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.brandGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-agent);
+  font-size: 18px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: 20px;
+  color: var(--ds-text);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ds-text-3);
+}
+
+.lede {
+  margin: 0;
+  color: var(--ds-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Full-page composer (Spec 47b FIX 2). The conversation thread renders above;
+   this is the persistent send box at the bottom of the page. */
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-2);
+  inline-size: 100%;
+  padding: var(--ds-space-2);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+
+.composerInput {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: var(--ds-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  max-block-size: 40vh;
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--ds-text-faint);
+  }
+}
+
+.composerSend {
+  flex: 0 0 auto;
+  inline-size: 32px;
+  block-size: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+  cursor: pointer;
+  font-size: 15px;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}

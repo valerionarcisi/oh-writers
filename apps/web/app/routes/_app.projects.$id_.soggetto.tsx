@@ -1,16 +1,16 @@
 // IT is the default runtime language (Spec 04f). Hook up the shared i18n
 // layer later to surface English copy for non-IT users.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import { DocumentTypes } from "@oh-writers/domain";
-import { FloatingDock, Skeleton } from "@oh-writers/ui";
+import { ActionsMenu, Skeleton } from "@oh-writers/ui";
 import {
   DraftBanner,
   ExportPdfModal,
   ExportSiaeModal,
   FreeNarrativeEditor,
-  NarrativeCesarePanel,
+  MarginNotesColumn,
   NarrativeDocsShell,
   useAutoSave,
   useDocument,
@@ -19,13 +19,18 @@ import {
   useSiaeMetadata,
 } from "~/features/documents";
 import { useProject } from "~/features/projects";
-import { useVersionsDrawer } from "~/features/versions";
-import { useCesareOpen, useSetActiveDocument } from "~/features/app-shell";
+import {
+  useCesareOpen,
+  useSetActiveDocument,
+  useRoutedSurface,
+} from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
+import { titleHead } from "~/lib/document-title";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
 
 export const Route = createFileRoute("/_app/projects/$id_/soggetto")({
+  head: () => titleHead("Soggetto"),
   component: SoggettoPage,
 });
 
@@ -107,7 +112,9 @@ function SoggettoPageReady({
   loglineDoc,
 }: SoggettoPageReadyProps) {
   const [soggettoContent, setSoggettoContent] = useState(soggettoDoc.content);
-  const openCesare = useCesareOpen();
+  // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveDocument = useSetActiveDocument();
   const [loglineContent, setLoglineContent] = useState(loglineDoc.content);
 
@@ -153,26 +160,35 @@ function SoggettoPageReady({
   const saveSoggetto = useSaveDocument();
   const saveLogline = useSaveDocument();
   const exportDocx = useExportSubjectDocx();
-  const {
-    state: drawerState,
-    open: openDrawer,
-    close: closeDrawer,
-  } = useVersionsDrawer();
-  const isVersionsOpen =
-    drawerState.isOpen &&
-    drawerState.scope?.kind === "document" &&
-    drawerState.scope.documentId === soggettoDoc.id;
-  const toggleVersions = () => {
-    if (isVersionsOpen) closeDrawer();
-    else
-      openDrawer({
-        kind: "document",
-        documentId: soggettoDoc.id,
-        docType: DocumentTypes.SOGGETTO,
-        canEdit: soggettoDoc.canEdit,
-        currentVersionId: soggettoDoc.currentVersionId ?? null,
-      });
-  };
+  // Spec 49 W2: Versions open via the ROUTER (`?versions=<docId>`), not the
+  // legacy context drawer. The host page compresses beside the routed
+  // SplitDrawer. `vcur` carries the current-version baseline for the
+  // "vs current" diff so the surface stays deep-linkable.
+  const versionsSurface = useRoutedSurface({
+    param: "versions",
+    companions: ["vstate", "vcur"],
+  });
+  const isVersionsOpen = versionsSurface.value === soggettoDoc.id;
+  const versionsOpen = versionsSurface.open;
+  const versionsClose = versionsSurface.close;
+  const toggleVersions = useCallback(() => {
+    if (isVersionsOpen) {
+      versionsClose();
+      return;
+    }
+    versionsOpen(
+      soggettoDoc.id,
+      soggettoDoc.currentVersionId
+        ? { vcur: soggettoDoc.currentVersionId }
+        : undefined,
+    );
+  }, [
+    isVersionsOpen,
+    versionsOpen,
+    versionsClose,
+    soggettoDoc.id,
+    soggettoDoc.currentVersionId,
+  ]);
 
   useAutoSave(
     saveSoggetto,
@@ -191,6 +207,38 @@ function SoggettoPageReady({
       { onSuccess: () => setIsExportOpen(false) },
     );
   };
+
+  // Memoise the TopBar actions node: `useTopBarSlotPublisher` re-publishes on
+  // every new `value` reference, so an inline node here would loop the slot
+  // setState ("Maximum update depth"). All deps are stable (router-surface
+  // callbacks are useCallback'd; setters are stable).
+  const exportDocxPending = exportDocx.isPending;
+  const topBarActions = useMemo(
+    () => (
+      <ActionsMenu
+        data-testid="soggetto-actions-menu"
+        items={[
+          {
+            label: exportDocxPending ? "Esportazione…" : "Esporta DOCX",
+            onClick: () => {
+              if (isVersionsOpen) versionsClose();
+              setIsExportOpen(true);
+            },
+            disabled: exportDocxPending,
+          },
+          {
+            label: "Esporta SIAE",
+            onClick: () => {
+              if (isVersionsOpen) versionsClose();
+              setIsSiaeOpen(true);
+            },
+          },
+          { label: "Versioni", onClick: toggleVersions },
+        ]}
+      />
+    ),
+    [exportDocxPending, isVersionsOpen, versionsClose, toggleVersions],
+  );
 
   return (
     <div className={styles.page} data-testid="soggetto-page">
@@ -218,8 +266,9 @@ function SoggettoPageReady({
         canEditLogline={canEdit}
         onLoglineChange={setLoglineContent}
         onOpenVersions={toggleVersions}
+        topBarActions={topBarActions}
         rightAside={
-          <NarrativeCesarePanel
+          <MarginNotesColumn
             projectId={projectId}
             docType={DocumentTypes.SOGGETTO}
             content={soggettoContent}
@@ -240,30 +289,10 @@ function SoggettoPageReady({
             canEdit={canEdit}
             embedded
             testId="subject-editor"
+            diffDocumentType={DocumentTypes.SOGGETTO}
           />
         </div>
       </NarrativeDocsShell>
-
-      <FloatingDock
-        primaryAction={{
-          label: exportDocx.isPending ? "Esportazione…" : "Esporta DOCX",
-          hotkey: "⌘E",
-          onClick: () => {
-            if (isVersionsOpen) closeDrawer();
-            setIsExportOpen(true);
-          },
-        }}
-        secondaryActions={[
-          {
-            label: "Esporta SIAE",
-            onClick: () => {
-              if (isVersionsOpen) closeDrawer();
-              setIsSiaeOpen(true);
-            },
-          },
-        ]}
-        onCesareClick={openCesare}
-      />
     </div>
   );
 }

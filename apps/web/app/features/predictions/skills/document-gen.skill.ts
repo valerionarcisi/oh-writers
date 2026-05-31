@@ -1,0 +1,55 @@
+import {
+  CESARE_DOCUMENT_GEN_TOOLS,
+  executeDocumentGenTool,
+  isDocumentGenToolName,
+} from "../cesare-document-tools";
+import { okAsync } from "neverthrow";
+import type { Skill, SkillBuildContext, ToolResult } from "./types";
+
+// ─── document-gen skill ───────────────────────────────────────────────────────
+// Cross-domain document generation. Unlike `document-edit`, these tools resolve
+// their TARGET document by projectId + document type internally (see
+// executeDocumentGenTool) and auto-create a version via applyVersionLive, so
+// they need NO live DocumentContext. That makes them safe to expose from ANY
+// page: a request issued on the Sceneggiatura page can `propose_soggetto_v2`
+// and write the Soggetto, with a version auto-created first (agentic-edit
+// pattern). This is the universal-dispatch entry point for document writes
+// (spec 47b). The page-bound section tools (apply_text_edit / expand_section /
+// compress_section) stay in `document-edit` because they DO need the active
+// document content.
+
+const buildDocumentGenGuidance = (): string =>
+  `\n\nGENERAZIONE DOCUMENTI (cross-dominio, applica LIVE):
+Puoi generare o riscrivere un documento narrativo del progetto da qualunque pagina. Ogni tool risolve il documento bersaglio dal progetto, lo aggiorna live e crea automaticamente una versione (l'utente può ripristinare con "↩ Annulla").
+- "scrivimi una logline su [premessa]" / "rendi la logline più corta/tesa" / "cambia il protagonista della logline" → write_logline({ instruction, mode? }) (scrive o modifica la logline da istruzione libera, senza sceneggiatura)
+- "genera la logline DALLA sceneggiatura" / "estrai la logline" → propose_logline_from_screenplay({ instruction? })
+- "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
+- "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto" → propose_soggetto_v2({ instruction, label })
+- "dato il soggetto fammi la scaletta" → propose_scaletta_from_soggetto({ target_scene_count? })
+Non scrivere mai il documento intero nel chat: usa SEMPRE il tool, anche se sei su un'altra pagina (es. stai sulla Sceneggiatura e l'utente chiede il Soggetto). Conferma in italiano che l'hai aggiornato live.`;
+
+// requiredData: [] — these tools read what they need (screenplay / soggetto)
+// inside their own executor; they do not depend on buildLocalContext.
+
+export const buildDocumentGenSkill = (
+  _ctx: SkillBuildContext,
+  userIdFallback: string | null = null,
+): Skill => ({
+  id: "document-gen",
+  tools: [...CESARE_DOCUMENT_GEN_TOOLS] as Skill["tools"],
+  guidanceBlock: buildDocumentGenGuidance(),
+  executor: (block, db, projectId): ReturnType<Skill["executor"]> => {
+    if (isDocumentGenToolName(block.name)) {
+      return executeDocumentGenTool(block, db, projectId, userIdFallback);
+    }
+    const errorResult: ToolResult = {
+      type: "tool_result",
+      tool_use_id: block.id,
+      content: JSON.stringify({
+        error: `Unknown document-gen tool: ${block.name}`,
+      }),
+    };
+    return okAsync(errorResult);
+  },
+  requiredData: [],
+});

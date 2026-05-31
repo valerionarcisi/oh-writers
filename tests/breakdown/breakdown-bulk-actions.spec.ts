@@ -1,6 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
+import {
+  navigateToBreakdown,
+  switchBreakdownView,
+  TEAM_PROJECT_ID,
+} from "./helpers";
 
 /**
  * [Spec 10j — Bulk actions]
@@ -20,9 +24,7 @@ test.describe("[Spec 10j] Breakdown per-project — bulk action bar", () => {
     page: Parameters<typeof test>[1]["authenticatedPage"],
   ) {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    const perProjectTab = page.getByTestId("segmented-per-project");
-    await expect(perProjectTab).toBeVisible({ timeout: 10_000 });
-    await perProjectTab.click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });

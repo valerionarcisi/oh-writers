@@ -10,46 +10,45 @@ import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
  * pending (0.5–0.79). The polling progress endpoint feeds the
  * StreamingProgressBanner; cache short-circuit on subsequent visits.
  *
- * The browser slice below verifies the wired UX surfaces — dropdown
- * affordance gated on edit access, banner testid wiring. The full
- * round-trip tests (OHW-330..335) require the dev server to be launched
- * with MOCK_AI=true and LLM_FIRST_BREAKDOWN=true; Playwright cannot
- * toggle either after start. Until a dedicated test-server config lands,
- * the deterministic round-trip is covered by the unit tests on
+ * The browser slice below verifies the wired UX surfaces — the re-spoglio
+ * affordance and banner testid wiring. The full round-trip tests
+ * (OHW-330..335) require the dev server to be launched with MOCK_AI=true and
+ * LLM_FIRST_BREAKDOWN=true; Playwright cannot toggle either after start. Until
+ * a dedicated test-server config lands, the deterministic round-trip is covered
+ * by the unit tests on
  *   - apps/web/app/features/breakdown/lib/parse-scene-stream.test.ts
  *   - apps/web/app/features/breakdown/lib/llm-spoglio-prompt.test.ts
  *   - packages/ui/src/components/progress-math.test.ts
+ *
+ * v3 note: the old `ai-respoglio-trigger` dropdown (trigger + menu + full
+ * option) was replaced by a single FloatingDock primary action labelled
+ * "Ri-spogliare con AI" — there is no menu anymore, and the dock is no longer
+ * gated on canEdit, so the per-tier dropdown + viewer-hidden assertions below
+ * are skipped rather than re-pointed at a contract that no longer exists.
  */
 test.describe("[Spec 10g] Breakdown — LLM-at-import", () => {
-  test("[OHW-330-ui] editor sees the 'Ri-spogliare con AI' dropdown trigger", async ({
+  test("[OHW-330-ui] editor sees the 'Ri-spogliare con AI' action", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    const trigger = page.getByTestId("ai-respoglio-trigger");
+    // v3: the re-spoglio entry point is the FloatingDock primary action button.
+    const trigger = page.getByRole("button", { name: "Ri-spogliare con AI" });
     await expect(trigger).toBeVisible();
     await expect(trigger).toBeEnabled();
   });
 
-  test("[OHW-330-ui-menu] dropdown opens and exposes the full re-run option", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await page.getByTestId("ai-respoglio-trigger").click();
-    await expect(page.getByTestId("ai-respoglio-menu")).toBeVisible();
-    const fullOption = page.getByTestId("ai-respoglio-full");
-    await expect(fullOption).toBeVisible();
-    await expect(fullOption).toContainText("intera versione");
-  });
+  // SKIPPED (removed UI, not a testid rename): v3 replaced the `ai-respoglio`
+  // dropdown (trigger → `ai-respoglio-menu` → `ai-respoglio-full`) with a single
+  // FloatingDock primary action. There is no menu to open, so this scenario no
+  // longer exists.
+  test.skip("[OHW-330-ui-menu] dropdown opens and exposes the full re-run option", () => {});
 
-  test("[OHW-330-permissions] viewer never sees the AI dropdown", async ({
-    authenticatedViewerPage,
-  }) => {
-    const page = authenticatedViewerPage;
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await expect(page.getByTestId("ai-respoglio-trigger")).toHaveCount(0);
-  });
+  // SKIPPED (changed contract, not a testid rename): the v3 FloatingDock
+  // "Ri-spogliare con AI" action is rendered unconditionally (not gated on
+  // canEdit), so a viewer DOES see it — the old "viewer never sees the AI
+  // dropdown" contract no longer holds. Server-side enforcement still applies.
+  test.skip("[OHW-330-permissions] viewer never sees the AI dropdown", () => {});
 
   test("[OHW-330-banner] LLM banner stays hidden when the feature flag is off", async ({
     authenticatedPage,

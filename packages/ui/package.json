@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "react-aria": "3.48.0",
-    "react-stately": "3.46.0"
+    "react-stately": "3.46.0",
+    "ts-pattern": "5.5.0"
   }
 }

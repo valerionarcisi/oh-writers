@@ -1,0 +1,207 @@
+/* packages/ui/src/shell/BottomDock/BottomDock.module.css */
+
+/* Floating dock anchored bottom-right. Stays out of the way of the editor
+   and never reflows it. Hidden when Cesare is open (expanded/peek/full)
+   because Cesare's own header carries the bell/avatar/settings affordances
+   — keeping both visible would compete for the same actions. */
+.dock {
+  position: fixed;
+  inset-block-end: 18px;
+  inset-inline-end: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 6px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-pill);
+  box-shadow: var(--ds-shadow-4);
+  z-index: 300;
+  transition: opacity var(--ds-duration-2) var(--ds-ease);
+}
+
+/* Hide the dock when Cesare is non-closed. The Cesare header carries the
+   bell/avatar/settings group in that state so the user never has two
+   affordances for the same action competing for attention. */
+:global(body[data-cesare="expanded"]) .dock,
+:global(body[data-cesare="peek"]) .dock,
+:global(body[data-cesare="full"]) .dock,
+:global(body[data-shell="focus"]) .dock {
+  display: none;
+}
+
+.btn {
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--ds-text-2);
+  position: relative;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.avatar {
+  background: var(--ds-action-soft);
+  color: var(--ds-action);
+  font-family: var(--ds-font-sans);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+
+  &:hover {
+    background: var(--ds-action-soft);
+    color: var(--ds-action);
+    filter: brightness(0.96);
+  }
+}
+
+.avatarImg {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dot {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--ds-action);
+  border: 2px solid var(--ds-surface);
+}
+
+.divider {
+  inline-size: 1px;
+  block-size: 18px;
+  background: var(--ds-line);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* ── Cesare entry button ──────────────────────────────────────
+   A pill with an animated ✦ spark glyph and a halo. The halo's animation
+   speed accelerates while `body[data-cesare-thinking="true"]` — the
+   existing signal already broadcast by AppShell for the legacy dock pill.
+   The brand palette stays — `--ds-agent` is the teal-leaf for Cesare. */
+.cesare {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 6px 14px 6px 8px;
+  border: 0;
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  border-radius: var(--ds-radius-pill);
+  cursor: pointer;
+  font-family: var(--ds-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  margin-inline-start: 2px;
+
+  &:hover {
+    background: var(--ds-agent-soft);
+    filter: brightness(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.cesareLabel {
+  white-space: nowrap;
+}
+
+.cesareIcon {
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+  background: var(--ds-agent);
+  display: grid;
+  place-items: center;
+  color: var(--ds-agent-soft);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cesareIcon::before {
+  content: "\2726";
+  font-size: 11px;
+  display: block;
+  animation: dockSpark 2.4s ease-in-out infinite;
+  /* On reduced-motion the icon stays static; the rule lives at the bottom. */
+}
+
+.cesareIcon::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ds-agent) 50%, transparent) 0%,
+    transparent 70%
+  );
+  animation: dockHalo 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Speed the halo up when Cesare is thinking. Same selector pattern as the
+   legacy FloatingDock — the body flag is the global signal. */
+:global(body[data-cesare-thinking="true"]) .cesareIcon::after {
+  animation-duration: 1s;
+}
+
+@keyframes dockSpark {
+  0%,
+  100% {
+    transform: rotate(0) scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes dockHalo {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock {
+    transition: none;
+  }
+  .cesareIcon::before,
+  .cesareIcon::after {
+    animation: none;
+  }
+}

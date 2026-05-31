@@ -31,7 +31,13 @@ import {
 import { checkAndStampRateLimit } from "~/server/rate-limit";
 import { mockCesareBreakdownForScene } from "~/mocks/ai-responses";
 import { resolveBreakdownAccessByScene } from "./breakdown-access";
-import { callHaiku, extractToolUse } from "~/features/ai";
+import { Effect } from "effect";
+import {
+  extractToolUse,
+  type CallHaikuParams,
+  type AnthropicError,
+} from "~/features/ai";
+import { AiClient, AiClientLayer, toResultAsync } from "~/server/effect";
 
 export interface SuggestResult {
   newPending: number;
@@ -114,30 +120,44 @@ export const suggestBreakdownForScene = createServerFn({ method: "POST" })
     },
   );
 
-// Real Anthropic call via the shared helper. The helper lazy-imports the
-// SDK, so MOCK_AI environments without a key never load it. When MOCK_AI is
-// unset and the SDK is missing, the helper's underlying import throws and
-// the AnthropicError surfaces here as a thrown error — preserving the prior
-// "fail fast on missing setup" contract of this call site.
+// Spec 48 W-E6 — the breakdown-suggest model call routed through the `AiClient`
+// Layer, inheriting the shared W-E3 retry/timeout policy instead of calling
+// `callHaiku` raw. The forced tool input is validated with the same Zod schema.
+// The model error stays on Effect's typed channel; at the boundary below we
+// re-throw it as before, preserving the prior "fail fast" contract of this call
+// site (the helper lazy-imports the SDK, so MOCK_AI never loads it).
 const TOOL_NAME = "submit_breakdown_suggestions";
 
+const buildSuggestCallParams = (sceneText: string): CallHaikuParams => ({
+  system: CESARE_SYSTEM_PROMPT,
+  fewShot: FEW_SHOT_EXAMPLES,
+  user: sceneText,
+  maxTokens: 1024,
+  tools: [CESARE_TOOL_DEFINITION],
+  toolChoice: { type: "tool", name: TOOL_NAME },
+});
+
+export const suggestWithAiEffect = (
+  sceneText: string,
+): Effect.Effect<CesareSuggestion[], AnthropicError, AiClient> =>
+  Effect.gen(function* () {
+    const ai = yield* AiClient;
+    const result = yield* ai.callHaiku(
+      buildSuggestCallParams(sceneText),
+      "cesare/suggest",
+    );
+    const input = extractToolUse(result.content, TOOL_NAME);
+    if (input === null) return [];
+    const parsed = SuggestionListSchema.safeParse(input);
+    return parsed.success ? parsed.data.suggestions : [];
+  });
+
 const callCesare = async (sceneText: string): Promise<CesareSuggestion[]> => {
-  const result = await callHaiku(
-    {
-      system: CESARE_SYSTEM_PROMPT,
-      fewShot: FEW_SHOT_EXAMPLES,
-      user: sceneText,
-      maxTokens: 1024,
-      tools: [CESARE_TOOL_DEFINITION],
-      toolChoice: { type: "tool", name: TOOL_NAME },
-    },
-    "cesare/suggest",
+  const result = await toResultAsync(
+    suggestWithAiEffect(sceneText).pipe(Effect.provide(AiClientLayer)),
   );
   if (result.isErr()) throw new Error(result.error.message);
-  const input = extractToolUse(result.value.content, TOOL_NAME);
-  if (input === null) return [];
-  const parsed = SuggestionListSchema.safeParse(input);
-  return parsed.success ? parsed.data.suggestions : [];
+  return result.value;
 };
 
 /**

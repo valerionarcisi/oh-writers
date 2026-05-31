@@ -1,5 +1,7 @@
 # Spec 41 — Cesare Inline Edits
 
+> **Superseded for shell layout by [Spec 44](./44-shell-refactor-notion-style.md).** This spec remains authoritative for the inline edit proposal model and the screenplay diff overlay. The trace-flow integration with the SplitDrawer (`useShowChangesInSplitDrawer` → `TargetPagePreview`) ships with Spec 44.
+
 **Status:** ⬜ To do  
 **Scope:** Screenplay editor only  
 **Depends on:** Spec 38 (scene summaries), Spec 40 (local context)

@@ -1,11 +1,134 @@
+/* apps/web/app/features/app-shell/components/AppShell.module.css */
+
+/* Two-column shell — rail | main. Cesare is a floating sub-window owned by
+   the CesareSheet feature (WP-B); it never reflows the main column, so it
+   sits OUTSIDE this grid. The body[data-cesare] / data-shell flags below
+   drive the rail width and Focus mode visibility — both are CSS-only so
+   transitions stay cheap and there's a single source of truth. */
 .shell {
+  --cesare-peek-size: clamp(360px, 42vw, 560px);
+  /* Versions split lane width. AppShell writes the live drag width to
+     `--versions-split-size` on <body>; this falls back when the drag has not
+     run yet. Clamped so it stays usable and never starves the main lane. */
+  --versions-split-track: clamp(360px, var(--versions-split-size, 480px), 60vw);
+
+  display: grid;
+  grid-template-columns: 240px 1fr;
   min-block-size: 100vh;
   background: var(--ds-bg);
+  transition: grid-template-columns var(--ds-duration-3) var(--ds-ease);
+}
+
+/* Collapsed rail — Notion model: the rail column collapses to 0 so the main
+   column (TopBar + content) reaches the left edge. The rail itself becomes a
+   fixed overlay (see LeftRail.module.css) toggled by the top-left hamburger;
+   it never reserves layout width, so the editor never reflows when it opens. */
+:global(body[data-shell="collapsed"]) .shell {
+  grid-template-columns: 0 1fr;
+}
+
+/* Focus mode — rail + top strip + dock hidden so the editor takes the
+   entire viewport. Cesare can still be opened on top via its own state. */
+:global(body[data-shell="focus"]) .shell {
+  grid-template-columns: 0 1fr;
+}
+
+/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). The shell grows a third
+   track for the peek lane; the main lane (`minmax(0, 1fr)`) reflows narrower so
+   the page COLLAPSES beside Cesare instead of being overlaid. This is the
+   deliberate difference from the floating drawer, which never reflows the page.
+   The grid-template-columns transition animates the collapse smoothly. */
+:global(body[data-cesare-split="open"]) .shell {
+  grid-template-columns: 240px minmax(0, 1fr) var(--cesare-peek-size);
+}
+
+:global(body[data-cesare-split="open"][data-shell="collapsed"]) .shell,
+:global(body[data-cesare-split="open"][data-shell="focus"]) .shell {
+  grid-template-columns: 0 minmax(0, 1fr) var(--cesare-peek-size);
+}
+
+/* Versions split column (Spec 49 W1 + W2). Same grid mechanism as the Cesare
+   split: the shell grows a third track for the Versions lane and the main lane
+   (`minmax(0, 1fr)`) reflows narrower so the host page COMPRESSES beside it.
+   The track is drag-resizable via `--versions-split-size`. */
+:global(body[data-versions-split="open"]) .shell {
+  grid-template-columns: 240px minmax(0, 1fr) var(--versions-split-track);
+}
+
+:global(body[data-versions-split="open"][data-shell="collapsed"]) .shell,
+:global(body[data-versions-split="open"][data-shell="focus"]) .shell {
+  grid-template-columns: 0 minmax(0, 1fr) var(--versions-split-track);
+}
+
+.rail {
+  min-width: 0;
+}
+
+:global(body[data-shell="focus"]) .rail {
+  display: none;
 }
 
 .main {
-  min-block-size: calc(100vh - 48px);
-  /* The window is the scroll container, not main. Keep main as a normal
-     flow block so sticky positioning inside (Viewbar, TopBar) anchors to
-     the viewport instead of a nested scroll context. */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-block-size: 100vh;
+  transition: box-shadow var(--ds-duration-3) var(--ds-ease);
+}
+
+/* Live-doc inline diff (Spec 47e). Cesare edits always land on the open
+   document(s); "Mostra / Nascondi modifiche" is a TRANSIENT FLASH painted
+   per-document by <CesareLiveDiff/> (green additions / red previous text) that
+   fades out — there is no persistent body[data-cesare-diff] mode and no
+   standing ring on the main lane. */
+
+/* ── Focus toggle (top-left chevron) ──────────────────────────
+   A small floating button anchored to the top-left of the main column. It
+   slides with the rail so its left edge follows the rail boundary. Used
+   to enter/leave Focus mode; also keyboard-bound to ⌃⌥F (handled in JS). */
+.focusToggle {
+  position: fixed;
+  inset-block-start: 14px;
+  inset-inline-start: 248px;
+  inline-size: 28px;
+  block-size: 28px;
+  display: grid;
+  place-items: center;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: 50%;
+  color: var(--ds-text-2);
+  cursor: pointer;
+  box-shadow: var(--ds-shadow-1);
+  z-index: 350;
+  transition: inset-inline-start var(--ds-duration-3) var(--ds-ease);
+  font-size: 12px;
+  padding: 0;
+}
+
+.focusToggle:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.focusToggle:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
+/* Collapsed mode: the top-left hamburger owns re-expand, so hide the rail
+   boundary chevron to avoid two competing affordances (Notion model). */
+:global(body[data-shell="collapsed"]) .focusToggle {
+  display: none;
+}
+
+:global(body[data-shell="focus"]) .focusToggle {
+  inset-inline-start: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .focusToggle {
+    transition: none;
+  }
 }

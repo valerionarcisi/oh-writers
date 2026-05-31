@@ -1,14 +1,16 @@
 import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
-import { eq, inArray } from "drizzle-orm";
-import { ResultAsync, okAsync, errAsync } from "neverthrow";
+import { eq } from "drizzle-orm";
+import { ResultAsync, okAsync } from "neverthrow";
+import { Effect } from "effect";
 import {
   locationRequirements,
   locationRequirementScenes,
   scenes,
 } from "@oh-writers/db/schema";
 import { toShape, type ResultShape } from "@oh-writers/utils";
-import { callHaiku, extractToolUse } from "~/features/ai";
+import { extractToolUse, type CallHaikuParams } from "~/features/ai";
+import { AiClient, AiClientLayer, toResultAsync } from "~/server/effect";
 import { withProjectAccess } from "~/server/pipeline";
 import type { ProjectAccessError } from "~/server/access";
 import type { Db } from "~/server/db";
@@ -113,30 +115,50 @@ const buildUserMessage = (
   return `SCENA:\n${sceneText}\n\nPOSTI:\n${placeLines}`;
 };
 
+const buildRankCallParams = (
+  sceneText: string,
+  places: RankablePlace[],
+): CallHaikuParams => ({
+  system: RANK_SYSTEM_PROMPT,
+  fewShot: {},
+  user: buildUserMessage(sceneText, places),
+  maxTokens: 1024,
+  tools: [RANK_TOOL],
+  toolChoice: { type: "tool", name: RANK_TOOL_NAME },
+});
+
+// Spec 48 W-E6 — the ranking model call routed through the `AiClient` Layer, so
+// it inherits the shared W-E3 retry/timeout policy instead of hitting `callHaiku`
+// raw (which had none). The model error is re-tagged into `LocationRankError`,
+// keeping the failure channel byte-identical. Same Zod validation, same descending
+// sort by score.
+export const rankWithAiEffect = (
+  requirementId: string,
+  sceneText: string,
+  places: RankablePlace[],
+): Effect.Effect<RankVerdict[], LocationRankError, AiClient> =>
+  Effect.gen(function* () {
+    const ai = yield* AiClient;
+    const result = yield* ai
+      .callHaiku(buildRankCallParams(sceneText, places), "rankPlacesForScene")
+      .pipe(Effect.mapError((e) => new LocationRankError(requirementId, e)));
+    const raw = extractToolUse(result.content, RANK_TOOL_NAME);
+    const parsed = RankOutputSchema.safeParse(raw);
+    return parsed.success
+      ? [...parsed.data.rankings].sort((a, b) => b.score - a.score)
+      : yield* Effect.fail(new LocationRankError(requirementId, parsed.error));
+  });
+
 const rankWithAI = (
   requirementId: string,
   sceneText: string,
   places: RankablePlace[],
 ): ResultAsync<RankVerdict[], LocationRankError> =>
-  callHaiku(
-    {
-      system: RANK_SYSTEM_PROMPT,
-      fewShot: {},
-      user: buildUserMessage(sceneText, places),
-      maxTokens: 1024,
-      tools: [RANK_TOOL],
-      toolChoice: { type: "tool", name: RANK_TOOL_NAME },
-    },
-    "rankPlacesForScene",
-  )
-    .mapErr((e) => new LocationRankError(requirementId, e))
-    .andThen((result) => {
-      const raw = extractToolUse(result.content, RANK_TOOL_NAME);
-      const parsed = RankOutputSchema.safeParse(raw);
-      return parsed.success
-        ? okAsync([...parsed.data.rankings].sort((a, b) => b.score - a.score))
-        : errAsync(new LocationRankError(requirementId, parsed.error));
-    });
+  toResultAsync(
+    rankWithAiEffect(requirementId, sceneText, places).pipe(
+      Effect.provide(AiClientLayer),
+    ),
+  );
 
 /**
  * Rank discovered places by how well they fit the selected scene's mood

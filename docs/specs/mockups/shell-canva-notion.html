@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>OHW — Shell mockup (Canva + Notion)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --linen-50:#f5f3ee; --linen-100:#ebe9e3; --linen-200:#e2dfd6;
+    --linen-300:#d8d6cd; --linen-400:#c4c2b9; --linen-500:#88867e;
+    --linen-600:#6e6c66; --linen-700:#44413c; --linen-800:#1c1a17;
+    --white:#fff; --clay-50:#f4dccb; --clay-500:#8b3a1a; --clay-600:#75301a;
+    --leaf-50:#e5e9d8; --leaf-500:#5a6b3c;
+    --cat-cast:#6b3e7a; --cat-locations:#9a5128; --cat-props:#7a7a2a;
+    --cat-sound:#5a6b25; --cat-vehicles:#2c6168; --cat-extras:#7a5524;
+    --cat-atmo:#34487a;
+    --font-sans:"Inter",system-ui,sans-serif;
+    --font-display:"Fraunces",Georgia,serif;
+    --font-mono:"Courier Prime",monospace;
+    --shadow-1:0 2px 4px rgba(28,26,23,.06);
+    --shadow-2:0 8px 24px -8px rgba(28,26,23,.12);
+    --shadow-3:0 12px 32px -8px rgba(28,26,23,.18);
+    --shadow-4:0 24px 64px -12px rgba(28,26,23,.3);
+    --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-pill:100px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;background:var(--linen-50);color:var(--linen-800);font-family:var(--font-sans);font-size:14px}
+  button{font:inherit}
+
+  /* ── Shell grid ── */
+  /* Cesare is ALWAYS a Notion-style floating sub-window — the editor never
+     reflows. Only `expanded-split` (transient cross-flow with SplitDrawer)
+     reserves a right column. */
+  .shell{display:grid;grid-template-columns:240px 1fr 0;min-height:100vh;transition:grid-template-columns .25s cubic-bezier(.2,.7,.2,1)}
+  /* expanded-split: Cesare anchored as a slim right column, full-height — runtime-only state for the SplitDrawer cross-flow. */
+  body[data-cesare="expanded-split"] .shell{grid-template-columns:240px 1fr 480px}
+  /* AppShell collapse: rail hidden (overlay on hover-reveal) */
+  body[data-shell="collapsed"] .shell{grid-template-columns:0 1fr 0}
+  body[data-shell="collapsed"][data-cesare="expanded-split"] .shell{grid-template-columns:0 1fr 480px}
+  body[data-shell="focus"] .shell{grid-template-columns:0 1fr 0}
+
+  /* ── Left rail ── */
+  .rail{background:var(--linen-100);border-right:1px solid var(--linen-300);padding:14px 10px;display:flex;flex-direction:column;gap:16px;overflow:auto;height:100vh;position:sticky;top:0;grid-column:1}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 8px}
+  .brand-mark{width:26px;height:26px;border-radius:50%;background:var(--linen-800);color:var(--linen-50);font-family:var(--font-display);display:grid;place-items:center;font-weight:600}
+  .brand-name{font-family:var(--font-display);font-size:15px}
+  .rail-project{padding:4px 8px;display:flex;align-items:center;justify-content:space-between}
+  .project-title{font-family:var(--font-display);font-size:15px;font-style:italic}
+  .chev{color:var(--linen-500);font-size:10px}
+  .rail-section{display:flex;flex-direction:column;gap:1px}
+  .rail-section-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--linen-500);padding:6px 10px 4px;display:flex;align-items:center;justify-content:space-between}
+  .rail-section-label .new{font-size:11px;color:var(--linen-600);cursor:pointer;text-transform:none;letter-spacing:0}
+  .rail-section-label .new:hover{color:var(--clay-500)}
+  .rail-item{display:flex;align-items:center;gap:9px;padding:5px 10px;border-radius:6px;color:var(--linen-700);cursor:pointer;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rail-item:hover{background:var(--linen-200)}
+  .rail-item.active{background:var(--white);color:var(--linen-800);box-shadow:var(--shadow-1);font-weight:500}
+  .rail-item .glyph{width:14px;text-align:center;color:var(--linen-500);font-size:12px;flex-shrink:0}
+  .rail-item.active .glyph{color:var(--clay-500)}
+  .rail-item .meta{margin-left:auto;font-size:11px;color:var(--linen-500)}
+  .rail-spacer{flex:1;min-height:8px}
+
+  /* Collapsed rail — hidden by default (grid column is 0) and revealed
+     as an overlay when data-rail-overlay="open" (set by the hamburger
+     button at top-left, dismissed by outside-click / ESC / hamburger
+     again). No hover sentinel — Notion's actual collapsed-sidebar
+     behaviour does not auto-reveal on edge hover. */
+  body[data-shell="collapsed"] .rail,
+  body[data-shell="focus"] .rail{display:none}
+  body[data-shell="collapsed"][data-rail-overlay="open"] .rail{
+    display:flex;position:fixed;top:0;left:0;height:100vh;width:240px;z-index:320;
+    box-shadow:var(--shadow-3);background:var(--linen-100);
+    border-right:1px solid var(--linen-300);padding:14px 10px;gap:16px;
+    animation:rail-slide-in .25s cubic-bezier(.2,.7,.2,1) both
+  }
+  @keyframes rail-slide-in{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
+  body[data-shell="collapsed"] .topstrip{padding:8px 14px}
+
+  /* Lock-open chip (» in the rail header) — only visible when the rail
+     overlay is shown. Clicking it dismisses the overlay and switches the
+     shell back to `full`. */
+  .rail-lock-open{position:absolute;top:14px;right:10px;width:24px;height:24px;
+    display:none;place-items:center;background:transparent;border:none;color:var(--linen-600);
+    cursor:pointer;border-radius:6px;font-size:14px;z-index:1}
+  .rail-lock-open:hover{background:var(--linen-200);color:var(--linen-800)}
+  body[data-shell="collapsed"][data-rail-overlay="open"] .rail-lock-open{display:grid}
+
+  /* Hamburger button — visible whenever shell is collapsed (open OR closed
+     overlay state); hidden otherwise. Position never changes. */
+  .hamburger{position:fixed;top:12px;left:12px;width:32px;height:32px;display:none;place-items:center;
+    background:var(--white);border:1px solid var(--linen-300);border-radius:6px;color:var(--linen-700);
+    cursor:pointer;box-shadow:var(--shadow-1);z-index:340;font-size:14px}
+  body[data-shell="collapsed"] .hamburger{display:grid}
+  .hamburger:hover{background:var(--linen-100)}
+  .rail-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 4px;border-top:1px solid var(--linen-300)}
+  .tool-btn{aspect-ratio:1;display:grid;place-items:center;border-radius:6px;color:var(--linen-600);cursor:pointer;font-size:13px}
+  .tool-btn:hover{background:var(--linen-200);color:var(--linen-800)}
+
+  /* Sessioni Cesare — visible only when Cesare expanded */
+  .rail-sessions{display:none}
+  body[data-cesare="expanded"] .rail-sessions{display:flex;flex-direction:column;gap:1px}
+  .rail-sessions .session{display:flex;align-items:center;gap:9px;padding:5px 10px;border-radius:6px;color:var(--linen-700);cursor:pointer;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rail-sessions .session:hover{background:var(--linen-200)}
+  .rail-sessions .session.active{background:var(--leaf-50);color:var(--leaf-500);font-weight:500}
+  .rail-sessions .session .glyph{color:var(--leaf-500);font-size:11px}
+
+  /* ── Main column ── */
+  .main{display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden;grid-column:2}
+  .topstrip{display:flex;align-items:center;justify-content:space-between;padding:10px 22px;border-bottom:1px solid var(--linen-300);background:var(--linen-50);flex-shrink:0}
+  .ts-left{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--linen-700)}
+  .ts-left .crumb{font-family:var(--font-display);font-weight:500;font-size:15px}
+  .scope-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--radius-pill);background:var(--linen-100);font-size:11px;color:var(--linen-700);letter-spacing:.04em}
+  .ts-right{display:flex;align-items:center;gap:10px}
+  .version-pill{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:var(--radius-pill);background:var(--white);border:1px solid var(--linen-300);font-size:11.5px;color:var(--linen-700)}
+  .save-state{font-size:11px;color:var(--leaf-500);display:flex;align-items:center;gap:5px}
+  .save-state::before{content:"\25CF";font-size:8px}
+
+  /* ── Editor area ── */
+  .editor-area{flex:1;overflow:auto;padding:24px 22px 120px;display:flex;justify-content:center;gap:18px}
+  .editor-area.with-side{justify-content:flex-start;padding-inline:48px 22px}
+  .page{max-width:780px;width:100%;background:var(--white);border:1px solid var(--linen-300);padding:48px 56px;box-shadow:var(--shadow-3);font-family:var(--font-mono);font-size:13px;line-height:1.65}
+  .page.prose{font-family:var(--font-display);font-size:15px;line-height:1.7;padding:56px 64px}
+  .page.prose p{margin:0 0 14px}
+  .scene-num{color:var(--linen-500);font-size:11px;margin-block:18px 6px}
+  .scene-head{font-weight:700;letter-spacing:.04em}
+  .scene-head .loc{background:var(--clay-50);padding:1px 4px;border-radius:3px}
+  .action{margin-block:10px 0}
+  .character{margin-block:14px 0;margin-inline-start:120px;font-weight:700}
+  .paren{margin-inline-start:90px;color:var(--linen-600);font-style:italic}
+  .dialogue{margin-inline-start:60px;margin-inline-end:60px}
+  .tag{background:var(--leaf-50);padding:1px 4px;border-radius:3px}
+  .tag-cast{background:#ead7ef}.tag-prop{background:#ecead0}.tag-loc{background:var(--clay-50)}
+  .green-prop{background:#dbe5c5;outline:1px dashed var(--leaf-500);padding:0 2px;border-radius:2px}
+
+  /* ── Section tabs (some pages) ── */
+  .subtabs{display:flex;gap:18px;padding:8px 22px 0;border-bottom:1px solid var(--linen-200);background:var(--linen-50);flex-shrink:0}
+  .subtab{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-500);padding:8px 0;cursor:pointer;border-bottom:2px solid transparent}
+  .subtab.active{color:var(--linen-800);border-color:var(--clay-500)}
+
+  /* ── Margin Notes (right side of writing pages) ── */
+  .notes-col{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;padding-top:8px}
+  .note{background:var(--white);border:1px solid var(--linen-300);border-radius:var(--radius-md);padding:10px 12px;font-size:12.5px;color:var(--linen-700);cursor:pointer;box-shadow:var(--shadow-1);transition:box-shadow .2s}
+  .note:hover{box-shadow:var(--shadow-2)}
+  .note .kind{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--leaf-500);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+  .note .kind .chev{font-size:9px;color:var(--linen-500)}
+  .note .body{display:none;line-height:1.55;color:var(--linen-700)}
+  .note.open .body{display:block;margin-top:6px;padding-top:6px;border-top:1px solid var(--linen-200)}
+  .note.open .chev{transform:rotate(180deg)}
+  .note .head-title{font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--linen-800)}
+  .note.cesare{border-left:3px solid var(--leaf-500)}
+  .note.cesare .kind{color:var(--leaf-500)}
+  .note.user .kind{color:var(--clay-500)}
+
+  /* ── Breakdown recap strip (shown above editor when Cesare closed) ── */
+  .recap{background:var(--white);border:1px solid var(--linen-300);border-radius:var(--radius-md);padding:10px 14px;margin:14px 22px 0;display:flex;align-items:center;gap:16px;font-size:12.5px;box-shadow:var(--shadow-1)}
+  .recap .label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--linen-500)}
+  .recap .cost{font-family:var(--font-display);font-size:18px;font-weight:600}
+  .recap .cost small{font-family:var(--font-sans);font-size:11px;color:var(--linen-500);font-weight:400;margin-left:4px}
+  .recap .cats{display:flex;gap:5px;flex-wrap:wrap}
+  .recap .cat{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:var(--radius-pill);background:var(--linen-100);font-size:11px}
+  .recap .cat .dot{width:7px;height:7px;border-radius:50%}
+  .recap .spacer{flex:1}
+  .recap .btn-ghost{padding:5px 11px;border:1px solid var(--linen-300);background:transparent;border-radius:var(--radius-sm);font-size:11.5px;color:var(--linen-700);cursor:pointer}
+
+  /* ── Budget table mock ── */
+  .budget-wrap{max-width:1000px;width:100%;padding:6px 0}
+  .budget-grid{background:var(--white);border:1px solid var(--linen-300);border-radius:var(--radius-md);padding:0;box-shadow:var(--shadow-1);overflow:hidden}
+  .budget-row{display:grid;grid-template-columns:1.6fr 80px 80px 80px 120px;gap:0;border-bottom:1px solid var(--linen-200);padding:9px 14px;font-size:13px;align-items:center}
+  .budget-row.head{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--linen-500);background:var(--linen-50)}
+  .budget-row.total{font-weight:600;background:var(--linen-50);border-top:1px solid var(--linen-300);border-bottom:0}
+  .budget-row .right{text-align:right;font-variant-numeric:tabular-nums}
+  .budget-row .bar{height:5px;border-radius:3px;background:var(--linen-200);position:relative;overflow:hidden}
+  .budget-row .bar span{position:absolute;inset:0;background:var(--leaf-500);width:60%}
+  .budget-row .bar.warn span{background:var(--clay-500);width:92%}
+
+  /* ── Bottom dock (bottom-RIGHT) ── */
+  .dock{position:fixed;right:22px;bottom:18px;display:flex;align-items:center;gap:6px;padding:6px;background:var(--white);border-radius:var(--radius-pill);box-shadow:var(--shadow-4);border:1px solid var(--linen-300);z-index:300;transition:right .25s cubic-bezier(.2,.7,.2,1)}
+  /* Dock hides whenever Cesare ≠ closed — the drawer header carries the same affordances. */
+  body[data-cesare="expanded"] .dock,
+  body[data-cesare="peek"] .dock,
+  body[data-cesare="full"] .dock,
+  body[data-shell="focus"] .dock{display:none}
+  .dock-btn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--linen-700);position:relative;font-size:13px;background:transparent;border:0}
+  .dock-btn:hover{background:var(--linen-100)}
+  .dock-btn.avatar{background:var(--clay-50);color:var(--clay-500);font-weight:600;font-size:13px}
+  .dock-btn.bell .dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--clay-500);border:2px solid var(--white)}
+  .dock-divider{width:1px;height:18px;background:var(--linen-300);margin:0 2px}
+  .dock-cesare{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:var(--radius-pill);background:var(--leaf-50);color:var(--leaf-500);cursor:pointer;font-weight:500;font-size:13px;border:0;margin-left:2px}
+  .ces-icon{width:22px;height:22px;border-radius:50%;background:var(--leaf-500);display:grid;place-items:center;color:var(--leaf-50);position:relative;overflow:hidden}
+  .ces-icon::before{content:"\2726";font-size:11px;animation:spark 2.4s ease-in-out infinite}
+  .ces-icon::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:radial-gradient(circle,rgba(155,179,122,.6) 0%,transparent 70%);animation:halo 2.4s ease-in-out infinite;pointer-events:none}
+  body[data-cesare-thinking="true"] .ces-icon::after{animation-duration:1s}
+  @keyframes spark{0%,100%{transform:rotate(0) scale(1);opacity:.95}50%{transform:rotate(180deg) scale(1.1);opacity:1}}
+  @keyframes halo{0%,100%{opacity:.4;transform:scale(.9)}50%{opacity:.85;transform:scale(1.1)}}
+  @keyframes pulse{0%,100%{opacity:.7}50%{opacity:1}}
+
+  /* ── Cesare Panel ── */
+  /* Default — Notion-style floating sub-window bottom-right (shipped behaviour).
+     The drawer is always floating: editor never reflows except for the
+     transient `expanded-split` state below. */
+  .cesare{background:var(--white);display:none;flex-direction:column;overflow:hidden;position:fixed;right:18px;bottom:18px;top:auto;left:auto;width:min(480px,40vw);height:min(640px,76vh);border:1px solid var(--linen-300);border-radius:var(--radius-lg);box-shadow:var(--shadow-4);z-index:310;animation:drawer-expand-in .25s cubic-bezier(.2,.7,.2,1) both;transform-origin:bottom right}
+  body[data-cesare="expanded"] .cesare{display:flex}
+  .cesare .ces-head{border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+  /* EXPANDED-SPLIT — transient state used during the SplitDrawer cross-flow.
+     The drawer narrows from floating to an anchored right column with a
+     left-edge drag handle so the SplitDrawer can co-exist on the right side
+     of the viewport. NOTE: this state is internal — `body[data-cesare]`
+     never persists it; it is only ever set during a runtime cross-flow. */
+  body[data-cesare="expanded-split"] .cesare{display:flex;position:sticky;top:0;right:auto;bottom:auto;height:100vh;width:100%;max-width:none;background:var(--white);border:0;border-left:1px solid var(--linen-300);border-radius:0;box-shadow:var(--shadow-2);animation:drawer-slide-from-right .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-cesare="expanded-split"] .cesare .ces-head{border-radius:0}
+  body[data-cesare="expanded-split"] .dock{display:none}
+  /* FULL-PAGE — Cesare drawer expands over the whole viewport (Notion ↗) */
+  body[data-cesare="full"] .cesare{display:flex;position:fixed;inset:0;width:auto;height:100vh;border:0;border-radius:0;box-shadow:none;background:var(--linen-50);z-index:500;animation:drawer-scale-up .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-cesare="full"] .cesare .ces-head{border-radius:0;padding:14px 28px}
+  body[data-cesare="full"] .ces-body{max-width:780px;margin:0 auto;padding:28px 32px}
+  body[data-cesare="full"] .ces-quick,
+  body[data-cesare="full"] .ces-foot{max-width:780px;margin:0 auto;width:100%}
+  body[data-cesare="full"] .dock,
+  body[data-cesare="full"] .rail,
+  body[data-cesare="full"] .main,
+  body[data-cesare="full"] .shell-collapse,
+  body[data-cesare="full"] .cesare-min{display:none}
+  /* The ↗ button in Cesare header triggers full-page */
+  .ces-iconbtn.expand-fullpage:hover{background:var(--leaf-50);color:var(--leaf-500)}
+
+  /* ── Drawer animations ── */
+  @keyframes drawer-expand-in{from{opacity:0;transform:scale(.85) translate(8%,12%)}to{opacity:1;transform:scale(1) translate(0,0)}}
+  @keyframes drawer-slide-from-right{from{opacity:0;transform:translateX(8%)}to{opacity:1;transform:translateX(0)}}
+  @keyframes drawer-scale-up{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+  /* ── Drag handles ── */
+  /* Top edge — height resize in expanded */
+  .drag-handle-top{position:absolute;top:-3px;left:0;right:0;height:6px;cursor:ns-resize;z-index:2;background:transparent;display:none}
+  body[data-cesare="expanded"] .drag-handle-top{display:block}
+  .drag-handle-top::after{content:"";position:absolute;left:50%;top:2px;transform:translateX(-50%);width:36px;height:3px;border-radius:2px;background:var(--linen-300);opacity:0;transition:opacity .15s ease}
+  .drag-handle-top:hover::after{opacity:1}
+  /* Left edge — width resize in expanded-split */
+  .drag-handle-left{position:absolute;top:0;bottom:0;left:-3px;width:6px;cursor:ew-resize;z-index:2;background:transparent;display:none}
+  body[data-cesare="expanded-split"] .drag-handle-left{display:block}
+  .drag-handle-left::after{content:"";position:absolute;top:50%;left:2px;transform:translateY(-50%);height:36px;width:3px;border-radius:2px;background:var(--linen-300);opacity:0;transition:opacity .15s ease}
+  .drag-handle-left:hover::after{opacity:1}
+
+  @media (prefers-reduced-motion: reduce){
+    .cesare{animation:none !important}
+    body[data-shell="collapsed"][data-rail-overlay="open"] .rail{animation:none}
+  }
+  .ces-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--linen-200);background:var(--linen-50);flex-shrink:0}
+  .ces-head-l{display:flex;align-items:center;gap:8px}
+  .ces-agent{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--leaf-500);font-weight:600}
+  .ces-agent::before{content:"\2726"}
+  .ces-context{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--linen-600);padding:2px 8px;background:var(--linen-100);border-radius:var(--radius-pill)}
+  .ces-head-r{display:flex;align-items:center;gap:2px}
+  .ces-iconbtn{width:24px;height:24px;display:grid;place-items:center;color:var(--linen-600);border-radius:5px;cursor:pointer;font-size:13px;background:transparent;border:0}
+  .ces-iconbtn:hover{background:var(--linen-100)}
+  .ces-body{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+  .msg-user{align-self:flex-end;max-width:80%;background:var(--clay-50);color:var(--linen-800);padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:13px}
+  .msg-assistant{max-width:94%;font-size:13.5px;color:var(--linen-800);line-height:1.55}
+  .steps{margin-block:6px 0;border-left:2px solid var(--linen-300);padding:4px 0 4px 12px;display:flex;flex-direction:column;gap:4px}
+  .step-head{font-size:12px;color:var(--linen-600);display:flex;align-items:center;gap:6px;cursor:pointer}
+  .step-line{font-size:12.5px;color:var(--linen-700);display:flex;align-items:center;gap:6px}
+  .step-line::before{content:"\25E6";color:var(--linen-500)}
+  .step-line.done{color:var(--leaf-500)}
+  .step-line.done::before{content:"\2713"}
+  .action-block{margin-top:10px;padding:9px 12px;background:var(--leaf-50);border:1px solid color-mix(in srgb,var(--leaf-500) 20%,transparent);border-radius:var(--radius-md);display:flex;align-items:center;gap:8px;font-size:12.5px}
+  .action-block .lbl{flex:1;color:var(--linen-700)}
+  .action-block button{color:var(--leaf-500);background:transparent;border:1px solid color-mix(in srgb,var(--leaf-500) 35%,transparent);padding:3px 9px;border-radius:5px;cursor:pointer;font-size:12px}
+  .action-block button.ghost{border-color:transparent;color:var(--linen-600)}
+
+  /* Breakdown recap inside Cesare panel */
+  .ces-recap{background:var(--white);border:1px solid var(--linen-300);border-radius:var(--radius-md);padding:12px;font-size:12.5px;box-shadow:var(--shadow-1)}
+  .ces-recap .label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--linen-500);margin-bottom:6px}
+  .ces-recap .cost{font-family:var(--font-display);font-size:22px;font-weight:600}
+  .ces-recap .cost small{font-family:var(--font-sans);font-size:11px;color:var(--linen-500);font-weight:400;margin-left:6px}
+  .ces-recap .rows{margin-top:8px;display:flex;flex-direction:column;gap:4px;color:var(--linen-700)}
+  .ces-recap .rows .r{display:flex;justify-content:space-between;font-size:12px}
+  .ces-recap .rows .r .v{font-variant-numeric:tabular-nums;color:var(--linen-800)}
+  .ces-recap .diff{margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px}
+  .ces-recap .diff .dots{display:flex;gap:3px}
+  .ces-recap .diff .d{width:8px;height:8px;border-radius:50%;background:var(--linen-300)}
+  .ces-recap .diff .d.on{background:var(--clay-500)}
+
+  .ces-quick{flex-shrink:0;padding:0 16px 8px;display:flex;flex-wrap:wrap;gap:6px}
+  .ces-quick button{font-size:11.5px;padding:5px 10px;background:var(--linen-100);border:none;border-radius:var(--radius-pill);color:var(--linen-700);cursor:pointer}
+  .ces-quick button:hover{background:var(--linen-200)}
+  .ces-foot{flex-shrink:0;padding:8px 12px 12px;border-top:1px solid var(--linen-200);background:var(--linen-50)}
+  .ces-input-wrap{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--linen-300);border-radius:10px;padding:8px 10px}
+  .ces-input-wrap input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:13px;color:var(--linen-800)}
+  .ces-input-wrap input::placeholder{color:var(--linen-500)}
+  .ces-send{width:28px;height:28px;display:grid;place-items:center;background:var(--leaf-500);color:var(--white);border:0;border-radius:7px;cursor:pointer}
+
+  /* Peek */
+  .cesare-min{position:fixed;right:22px;bottom:18px;background:var(--white);border:1px solid var(--linen-300);border-radius:var(--radius-pill);box-shadow:var(--shadow-3);display:none;align-items:center;gap:10px;padding:8px 14px;z-index:320;font-size:12.5px;cursor:pointer}
+  body[data-cesare="peek"] .cesare-min{display:flex}
+  body[data-cesare="peek"] .dock{display:none}
+  .cesare-min .glow{width:8px;height:8px;border-radius:50%;background:var(--leaf-500)}
+  .cesare-min .label{color:var(--leaf-500);font-weight:600}
+  .cesare-min .sub{color:var(--linen-600)}
+
+  /* Demo toolbar */
+  .demo-bar{position:fixed;top:14px;right:14px;display:flex;flex-direction:column;gap:6px;z-index:400}
+  .demo-row{display:flex;gap:4px;background:var(--linen-800);color:var(--linen-50);padding:4px;border-radius:var(--radius-pill);font-size:11px;align-items:center}
+  .demo-row .lbl{padding:5px 10px;opacity:.55}
+  .demo-row button{background:transparent;color:inherit;border:0;padding:5px 10px;border-radius:var(--radius-pill);cursor:pointer;opacity:.55;font:inherit}
+  .demo-row button.on{background:var(--clay-500);opacity:1}
+
+  /* Focus / Shell-collapse FAB — top-left of topstrip */
+  .shell-collapse{position:fixed;top:14px;left:248px;width:28px;height:28px;display:grid;place-items:center;background:var(--white);border:1px solid var(--linen-300);border-radius:50%;color:var(--linen-700);cursor:pointer;box-shadow:var(--shadow-1);z-index:350;transition:left .25s cubic-bezier(.2,.7,.2,1);font-size:12px}
+  body[data-shell="collapsed"] .shell-collapse{left:62px}
+  .shell-collapse:hover{background:var(--linen-100)}
+
+  /* ── Screenplay element legend (top strip second row) ── */
+  .elem-legend{display:flex;align-items:center;gap:18px;padding:6px 22px;background:var(--linen-50);border-bottom:1px solid var(--linen-200);font-size:11px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;overflow-x:auto}
+  .elem-legend .el{display:inline-flex;align-items:center;gap:6px;color:var(--linen-500);cursor:pointer;white-space:nowrap}
+  .elem-legend .el .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.8}
+  .elem-legend .el.scene{color:#8b3a1a}
+  .elem-legend .el.action{color:#44413c}
+  .elem-legend .el.char{color:#6b3e7a}
+  .elem-legend .el.dial{color:#5a6b3c}
+  .elem-legend .el.paren{color:#88867e}
+  .elem-legend .el.trans{color:#34487a}
+  .elem-legend .el.active{color:var(--linen-800);font-weight:600}
+  .elem-legend .sep{flex:1}
+  .elem-legend .index-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--radius-pill);background:var(--white);border:1px solid var(--linen-300);font-size:10.5px;color:var(--linen-700);text-transform:none;letter-spacing:0}
+
+  /* ── Locations view ── */
+  .loc-wrap{flex:1;display:grid;grid-template-columns:340px 1fr;gap:0;overflow:hidden}
+  .loc-list{background:var(--linen-50);border-right:1px solid var(--linen-300);overflow:auto;padding:10px}
+  .loc-card{background:var(--white);border:1px solid var(--linen-300);border-radius:var(--radius-md);padding:12px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow-1)}
+  .loc-card:hover{box-shadow:var(--shadow-2)}
+  .loc-card .name{font-family:var(--font-display);font-size:14px;font-weight:600;margin-bottom:2px}
+  .loc-card .addr{font-size:11.5px;color:var(--linen-600);margin-bottom:8px}
+  .loc-card .meta{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--linen-700)}
+  .loc-card .meta .tag{background:var(--linen-100);padding:2px 7px;border-radius:var(--radius-pill)}
+  .loc-card .scenes{display:inline-block;background:var(--clay-50);color:var(--clay-500);padding:2px 7px;border-radius:var(--radius-pill);font-weight:500}
+  .loc-card.match{border-color:var(--leaf-500);border-width:2px}
+  .loc-card.match .name::after{content:" \2713";color:var(--leaf-500);font-weight:600}
+  .loc-map{position:relative;background:linear-gradient(135deg,#e2dfd6 0%,#d8d6cd 100%);display:flex;align-items:center;justify-content:center;color:var(--linen-500);font-size:13px;overflow:hidden}
+  .loc-map::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);background-size:24px 24px}
+  .pin{position:absolute;width:24px;height:24px;display:grid;place-items:center;font-size:18px;color:var(--clay-500);transform:translate(-50%,-100%);text-shadow:0 2px 4px rgba(0,0,0,.25)}
+  .pin.leaf{color:var(--leaf-500)}
+
+  /* Page swap */
+  .view{display:none}
+  body[data-view="screenplay"]   .view-screenplay{display:contents}
+  body[data-view="soggetto"]     .view-soggetto{display:contents}
+  body[data-view="breakdown"]    .view-breakdown{display:contents}
+  body[data-view="budget"]       .view-budget{display:contents}
+  body[data-view="locations"]    .view-locations{display:contents}
+
+  /* ── SplitDrawer (Notion `»` pattern) ── */
+  /* Diff tokens used inside the trace overlay */
+  :root{
+    --diff-add-bg:rgba(90,107,60,.13);--diff-add-fg:var(--leaf-500);
+    --diff-remove-bg:rgba(179,58,40,.10);--diff-remove-fg:#b33a28;
+    --diff-change-bg:rgba(139,58,26,.10);--diff-intra:rgba(139,58,26,.28);
+  }
+  .split-drawer{position:fixed;inset-block:0;inset-inline-end:0;width:480px;background:var(--white);border-inline-start:1px solid var(--linen-300);box-shadow:var(--shadow-2);z-index:305;display:none;flex-direction:column;overflow:hidden;font-family:var(--font-sans);color:var(--linen-800);transition:width .25s cubic-bezier(.2,.7,.2,1)}
+  body[data-split-drawer="open"] .split-drawer{display:flex;animation:split-slide-in .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-split-drawer="full"] .split-drawer{display:flex;inset:0;width:100vw;background:var(--linen-50);border-inline-start:none;box-shadow:none;z-index:500;animation:split-scale-up .25s cubic-bezier(.2,.7,.2,1) both}
+  body[data-split-drawer="full"] .rail,body[data-split-drawer="full"] .topstrip,body[data-split-drawer="full"] .dock,body[data-split-drawer="full"] .shell-collapse{display:none}
+  /* When a SplitDrawer is open alongside full-page Cesare, Cesare narrows */
+  body[data-split-drawer="open"][data-cesare="full"] .cesare{width:calc(100vw - 480px);left:auto;right:480px;inset-inline-end:480px}
+  body[data-split-drawer="full"][data-cesare="full"] .cesare{display:none}
+  @keyframes split-slide-in{from{opacity:0;transform:translateX(8%)}to{opacity:1;transform:translateX(0)}}
+  @keyframes split-scale-up{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  .split-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-block-end:1px solid var(--linen-300);background:var(--linen-50);flex-shrink:0}
+  .split-head h2{margin:0;font-family:var(--font-display);font-size:14px;color:var(--linen-800);font-weight:600}
+  .split-head .badge{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-600);padding:2px 8px;background:var(--linen-100);border-radius:var(--radius-pill)}
+  .split-head-l{display:flex;align-items:center;gap:8px}
+  .split-head-r{display:flex;align-items:center;gap:2px}
+  .split-iconbtn{width:24px;height:24px;display:grid;place-items:center;color:var(--linen-600);border-radius:5px;cursor:pointer;font-size:13px;background:transparent;border:0}
+  .split-iconbtn:hover{background:var(--linen-100)}
+  .split-body{flex:1;overflow:hidden auto;background:var(--white);display:grid;grid-template-columns:152px 1fr;gap:12px}
+  .split-timeline{display:flex;flex-direction:column;gap:2px;padding:12px 8px;border-inline-end:1px solid var(--linen-200);overflow-y:auto;background:var(--linen-50)}
+  .split-timeline-lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--linen-500);padding:4px 8px}
+  .split-marker{display:flex;align-items:center;gap:6px;padding:5px 8px;border:0;background:transparent;border-radius:5px;color:var(--linen-700);font:inherit;font-size:12px;cursor:pointer;text-align:start}
+  .split-marker:hover{background:var(--linen-100);color:var(--linen-800)}
+  .split-marker .g{width:14px;text-align:center;color:var(--leaf-500)}
+  .split-marker.replace .g{color:var(--clay-500)}
+  .split-marker.delete .g{color:#b33a28}
+  .split-preview{padding:14px 16px 24px;overflow-y:auto}
+  .split-marker-block{padding:6px 10px;margin:10px 0;border-radius:var(--radius-sm);font-size:13px;line-height:1.55;scroll-margin-block-start:80px}
+  .split-marker-block.append{background:var(--diff-add-bg);border-inline-start:3px solid var(--diff-add-fg)}
+  .split-marker-block.delete{background:var(--diff-remove-bg);border-inline-start:3px solid var(--diff-remove-fg);text-decoration:line-through;color:var(--linen-700)}
+  .split-marker-block.replace,.split-marker-block.rename{background:var(--diff-change-bg);border-inline-start:3px solid var(--diff-intra);display:flex;flex-direction:column;gap:4px}
+  .split-marker-block .hd{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--linen-500);display:flex;gap:6px;align-items:center}
+  .split-marker-block .before{text-decoration:line-through;color:var(--linen-600);opacity:.75}
+  .split-marker-block .after{color:var(--linen-800)}
+  .split-marker-block .actions{display:flex;gap:6px;margin-top:6px}
+  .split-marker-block .actions button{font-size:11.5px;padding:3px 10px;border-radius:5px;background:transparent;cursor:pointer}
+  .split-marker-block .actions .accept{border:1px solid var(--diff-add-fg);color:var(--leaf-500)}
+  .split-marker-block .actions .accept:hover{background:var(--diff-add-bg)}
+  .split-marker-block .actions .reject{border:1px solid var(--diff-remove-fg);color:#b33a28}
+  .split-marker-block .actions .reject:hover{background:var(--diff-remove-bg)}
+  .split-foot{flex-shrink:0;padding:10px 16px;border-block-start:1px solid var(--linen-300);background:var(--linen-50);display:flex;align-items:center;gap:10px}
+  .split-foot button{font-size:12px;padding:5px 12px;border-radius:5px;background:transparent;cursor:pointer}
+  .split-foot .accept-all{border:1px solid var(--diff-add-fg);color:var(--leaf-500)}
+  .split-foot .accept-all:hover{background:var(--diff-add-bg)}
+  .split-foot .reject-all{border:1px solid var(--linen-300);color:var(--linen-700)}
+  .split-foot .reject-all:hover{background:var(--linen-200)}
+  .split-foot .count{margin-inline-start:auto;color:var(--linen-500);font-size:11.5px}
+  .split-stub-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--linen-100);border-radius:5px;margin-block-end:12px;font-size:12px;color:var(--linen-600)}
+  .split-stub-header strong{color:var(--linen-800);font-family:var(--font-display)}
+  @media (prefers-reduced-motion: reduce){
+    .split-drawer{animation:none !important}
+  }
+</style>
+</head>
+<body data-cesare="expanded" data-view="breakdown" data-shell="full" data-split-drawer="closed">
+
+<!-- DEMO TOOLBAR -->
+<div class="demo-bar">
+  <div class="demo-row">
+    <span class="lbl">View</span>
+    <button data-view="screenplay">Sceneggiatura</button>
+    <button data-view="soggetto">Soggetto</button>
+    <button data-view="breakdown" class="on">Breakdown</button>
+    <button data-view="budget">Budget</button>
+    <button data-view="locations">Location</button>
+  </div>
+  <div class="demo-row">
+    <span class="lbl">Cesare</span>
+    <button data-cesare="closed">Closed</button>
+    <button data-cesare="expanded" class="on">Expanded</button>
+    <button data-cesare="expanded-split">Expanded-split</button>
+    <button data-cesare="peek">Peek</button>
+    <button data-cesare="full">Full-page</button>
+  </div>
+  <div class="demo-row">
+    <span class="lbl">Shell</span>
+    <button data-shell="full" class="on">Full</button>
+    <button data-shell="collapsed">Collapsed</button>
+    <button data-shell="focus">Focus</button>
+  </div>
+  <div class="demo-row">
+    <span class="lbl">Split</span>
+    <button data-split-drawer="closed" class="on">Closed</button>
+    <button data-split-drawer="open">Open</button>
+    <button data-split-drawer="full">Full</button>
+    <button id="trace-flow-btn" style="margin-inline-start:6px">★ Trace flow</button>
+  </div>
+</div>
+
+<!-- Hamburger button — visible only in collapsed mode (full and focus hide it).
+     Position is fixed top-left, never changes between open/closed overlay states. -->
+<button class="hamburger" id="hamburger" title="Apri sidebar" aria-label="Apri sidebar">&#9776;</button>
+
+<!-- Shell collapse button (always available) -->
+<button class="shell-collapse" id="shell-collapse-btn" title="Collassa AppShell (Focus)">&laquo;</button>
+
+<div class="shell">
+
+  <!-- ─── LEFT RAIL ─────────────────────────────────────────────── -->
+  <aside class="rail" id="rail">
+    <button class="rail-lock-open" id="rail-lock-open" title="Mantieni sidebar aperta">&raquo;</button>
+    <div class="rail-brand">
+      <div class="brand-mark">O</div>
+      <div class="brand-name">Oh Writers</div>
+    </div>
+    <div class="rail-project">
+      <span class="project-title">Non fa ridere</span>
+      <span class="chev">&#x25BE;</span>
+    </div>
+
+    <!-- Cesare sessions (only when expanded) -->
+    <div class="rail-section">
+      <div class="rail-section-label rail-sessions-label" style="display:none">
+        Sessioni Cesare <span class="new">+ Nuova</span>
+      </div>
+      <div class="rail-sessions">
+        <div class="session active"><span class="glyph">&#x2726;</span>Breakdown Sc.2<span class="meta">ora</span></div>
+        <div class="session"><span class="glyph">&#x2726;</span>Riscrivi Atto II<span class="meta">2h</span></div>
+        <div class="session"><span class="glyph">&#x2726;</span>Costi scena 5<span class="meta">ieri</span></div>
+        <div class="session"><span class="glyph">&#x2726;</span>Logline alt.<span class="meta">3g</span></div>
+      </div>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-section-label">Sviluppo</div>
+      <div class="rail-item"  data-go="screenplay-no"><span class="glyph">&#9733;</span>Logline</div>
+      <div class="rail-item"  data-go="soggetto"><span class="glyph">&para;</span>Soggetto</div>
+      <div class="rail-item"><span class="glyph">&para;</span>Sinossi</div>
+      <div class="rail-item"><span class="glyph">&equiv;</span>Scaletta</div>
+      <div class="rail-item"><span class="glyph">&#9636;</span>Trattamento</div>
+      <div class="rail-item" data-go="screenplay"><span class="glyph">&#9635;</span>Sceneggiatura</div>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-section-label">Produzione</div>
+      <div class="rail-item active" data-go="breakdown"><span class="glyph">&#9703;</span>Breakdown</div>
+      <div class="rail-item" data-go="budget"><span class="glyph">&euro;</span>Budget</div>
+      <div class="rail-item"><span class="glyph">&#9707;</span>Calendario</div>
+      <div class="rail-item" data-go="locations"><span class="glyph">&#8982;</span>Location</div>
+      <div class="rail-item"><span class="glyph">&#9638;</span>Inquadrature</div>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-section-label">Recenti</div>
+      <div class="rail-item"><span class="glyph">&#9673;</span>Caramella</div>
+      <div class="rail-item"><span class="glyph">&#9673;</span>Fantasma</div>
+      <div class="rail-item"><span class="glyph">&#9673;</span>Money&hellip;</div>
+    </div>
+
+    <div class="rail-spacer"></div>
+    <div class="rail-tools">
+      <div class="tool-btn" title="Cerca">&#8981;</div>
+      <div class="tool-btn" title="Nuovo">&#65291;</div>
+      <div class="tool-btn" title="Cambia">&#8646;</div>
+      <div class="tool-btn" title="More">&hellip;</div>
+    </div>
+  </aside>
+
+
+  <!-- ─── MAIN COLUMN — swappable views ────────────────────────── -->
+  <div class="main">
+
+    <!-- ===== VIEW: SCREENPLAY ===== -->
+    <div class="view view-screenplay">
+      <div class="topstrip">
+        <div class="ts-left">
+          <span class="crumb">Sceneggiatura</span>
+        </div>
+        <div class="ts-right">
+          <span class="save-state">Salvato 12&Prime; fa</span>
+          <span class="version-pill">BIANCO (1&ordf; stesura) &middot; 2026-05-18</span>
+          <span class="version-pill" style="background:var(--linen-100)">VERSIONI &#x25BE;</span>
+        </div>
+      </div>
+      <!-- Element legend (Fountain handlers) — sopra editor, sotto topstrip -->
+      <div class="elem-legend">
+        <span class="el scene active"><span class="dot"></span>Scene</span>
+        <span class="el action"><span class="dot"></span>Action</span>
+        <span class="el char"><span class="dot"></span>Character</span>
+        <span class="el dial"><span class="dot"></span>Dialogue</span>
+        <span class="el paren"><span class="dot"></span>Paren</span>
+        <span class="el trans"><span class="dot"></span>Transition</span>
+        <span class="sep"></span>
+        <span class="index-chip">&#9636; Indice &middot; 1 / 10 &#x25BE;</span>
+        <span class="index-chip">Focus &#8963;&#8997;F</span>
+        <span class="index-chip">Esporta PDF &#8984;E</span>
+      </div>
+      <div class="editor-area">
+        <div class="page">
+          <div class="scene-num">1</div>
+          <div class="scene-head">EXT. <span class="loc">SESTO SAN GIOVANNI</span> - NOTTE</div>
+          <div class="action">Una villetta liberty stretta tra due palazzi di cemento anni Sessanta. Freddo di novembre. L'insegna del RADICE &egrave; al neon &mdash; met&agrave; lettere spente, le altre arancioni, sufficienti.</div>
+          <div class="action">Sul marciapiede, qualcuno fuma e ride prima di rientrare.</div>
+          <div class="action">Un cartello plastificato male &egrave; agganciato al cancelletto:</div>
+          <div class="action">OPEN GREZZO un open mic provinciale ingresso libero / consumazione obbligatoria. La porta si apre. Entra calore, luce gialla, il rumore sordo di qualcuno che parla in un microfono.</div>
+
+          <div class="scene-num">2</div>
+          <div class="scene-head">INT. <span class="loc">RADICE, SALA PRINCIPALE</span> - NOTTE</div>
+          <div class="action">Soffitto basso. Luci gialle, un po' fiacche &mdash; quelle che c'erano gi&agrave;. Il <span class="green-prop">microfono</span> &egrave; storto su un'asta telescopica che non si blocca bene. Dietro, uno <span class="green-prop">striscione</span> fatto con un lenzuolo e dei pennarelli neri: OPEN GREZZO.</div>
+          <div class="character">MARCO</div>
+          <div class="paren">(al microfono)</div>
+          <div class="dialogue">Allora mio padre esce dalla Brambilla dopo sedici anni di cassa integrazione. Sedici anni. E mia madre gli chiede: "Come ti senti?"</div>
+          <div class="action">Pausa. In fondo alla sala, FILIPPO (40) osserva dal bancone.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: SOGGETTO (writing — margin notes) ===== -->
+    <div class="view view-soggetto">
+      <div class="topstrip">
+        <div class="ts-left">
+          <span class="crumb">Soggetto</span>
+        </div>
+        <div class="ts-right">
+          <span class="save-state">Salvato or ora</span>
+          <span class="version-pill">VERSIONI &#x25BE;</span>
+        </div>
+      </div>
+      <div class="subtabs">
+        <span class="subtab">Logline</span>
+        <span class="subtab active">Soggetto</span>
+        <span class="subtab">Sinossi</span>
+        <span class="subtab">Scaletta</span>
+        <span class="subtab">Trattamento</span>
+      </div>
+      <div class="editor-area with-side">
+        <div class="page prose">
+          <p>Filippo ha quarant'anni e li porta come si porta un cappotto comprato in saldo: gli sta, pi&ugrave; o meno, ma si vede che non &egrave; il suo. Lavora al Ferretti, pub milanese di via Argelati, zona Navigli, locale che esiste da quando la zona non era ancora diventata una cartolina.</p>
+          <p>L'insegna fuori &egrave; al neon, met&agrave; lettere spente da tre anni, e nessuno le ha mai cambiate perch&eacute; Giulio Ferretti sostiene che chi sa dove si trova il Ferretti non ha bisogno di leggerlo. Il bancone &egrave; lungo, di laminato color mogano finto, segnato da cerchi di birra e da qualche bruciatura di sigaretta sopravvissuta al divieto.</p>
+          <p>Filippo non &egrave; il ma&icirc;tre di niente. &Egrave; il barman e il responsabile di sala, che in un posto come questo significa che apre, chiude, gestisce i fornitori, sente le lamentele e di tanto in tanto asciuga i banconi con uno straccio che profuma di ammoniaca.</p>
+          <p>Giulio Ferretti ha sessantadue anni, schiena larga, voce che arriva prima di lui quando sale dal magazzino. Ha costruito questo posto negli anni Ottanta con i soldi del padre e la testardaggine di chi non aveva un piano B.</p>
+        </div>
+
+        <!-- Margin notes — stacked, click to expand -->
+        <aside class="notes-col">
+          <div class="note cesare open">
+            <div class="kind">Cesare &middot; Struttura <span class="chev">&#x25BE;</span></div>
+            <div class="head-title">Terzo atto incompiuto</div>
+            <div class="body">Il monologo di Filippo si interrompe bruscamente ('a un certo'). Definisci come finisce: continua? Crolla? Raggiunge una verit&agrave;? Senza chiusura, il soggetto rimane incompiuto.</div>
+          </div>
+          <div class="note cesare">
+            <div class="kind">Cesare &middot; Arco protagonista <span class="chev">&#x25BE;</span></div>
+            <div class="head-title">Scena di catalisi</div>
+            <div class="body">Filippo sale sul palco con le note, poi le abbandona. Manca una ragione esterna che lo scatena: il nonno &egrave; visione interiore.</div>
+          </div>
+          <div class="note cesare">
+            <div class="kind">Cesare &middot; Premessa narrativa <span class="chev">&#x25BE;</span></div>
+            <div class="head-title">Chiarisci l'intento</div>
+            <div class="body">Open Grezzo &egrave; una sfida consapevole a Giulio o una fuga dal Ferretti? Chiarire l'intento primario rende il conflitto interno pi&ugrave; acuto.</div>
+          </div>
+          <div class="note user">
+            <div class="kind">Tu &middot; Nota personale <span class="chev">&#x25BE;</span></div>
+            <div class="head-title">Tea va sviluppata di pi&ugrave;</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: BREAKDOWN (production — recap strip) ===== -->
+    <div class="view view-breakdown">
+      <div class="topstrip">
+        <div class="ts-left">
+          <span class="crumb">Breakdown</span>
+          <span class="scope-chip">SOTTOLINEA &middot; 3</span>
+        </div>
+        <div class="ts-right">
+          <span class="save-state">Salvato 2&prime; fa</span>
+          <span class="version-pill">BIANCO (1&ordf; stesura) &middot; 2026-05-18</span>
+          <span class="version-pill" style="background:var(--linen-100)">FIRST DRAFT &#x25BE;</span>
+        </div>
+      </div>
+
+      <!-- Recap strip (visible always — Cesare panel hosts the deep dive) -->
+      <div class="recap">
+        <div>
+          <div class="label">Sc. 2 INT. RADICE</div>
+          <div class="cost">&euro; 3.380<small>/ giornata</small></div>
+        </div>
+        <div class="cats">
+          <span class="cat"><span class="dot" style="background:var(--cat-cast)"></span>Cast 6</span>
+          <span class="cat"><span class="dot" style="background:var(--cat-locations)"></span>Location 3</span>
+          <span class="cat"><span class="dot" style="background:var(--cat-props)"></span>Oggetti 7</span>
+          <span class="cat"><span class="dot" style="background:var(--cat-sound)"></span>Suono 4</span>
+          <span class="cat"><span class="dot" style="background:var(--cat-vehicles)"></span>Veicoli 1</span>
+          <span class="cat"><span class="dot" style="background:var(--cat-extras)"></span>Comparse 1</span>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn-ghost">Aggiungi al budget</button>
+      </div>
+
+      <div class="editor-area">
+        <div class="page">
+          <div class="scene-num">2</div>
+          <div class="scene-head">INT. <span class="loc">RADICE, SALA PRINCIPALE</span> - NOTTE</div>
+          <div class="action">Soffitto basso. Luci gialle, un po' fiacche &mdash; quelle che c'erano gi&agrave;. Il <span class="tag tag-prop">microfono</span> &egrave; storto su un'<span class="tag tag-prop">asta telescopica</span> che non si blocca bene. Dietro, uno <span class="tag tag-prop">striscione</span> fatto con un lenzuolo e dei pennarelli neri: OPEN GREZZO.</div>
+          <div class="action">Al microfono c'&egrave; <span class="tag tag-cast">MARCO</span> (38), magazziniere di Pioltello, giacca di pile, la faccia di chi non dorme abbastanza da anni.</div>
+          <div class="character">MARCO</div>
+          <div class="dialogue">Allora mio padre esce dalla Brambilla dopo sedici anni di cassa integrazione. Sedici anni.</div>
+          <div class="action">In fondo alla sala, <span class="tag tag-cast">FILIPPO</span> (40) osserva dal bancone. Polo scura con il logo del Radice ricamato sul petto: una <span class="tag tag-prop">radice</span> stilizzata.</div>
+          <div class="action">Ha uno <span class="tag tag-prop">strofinaccio</span> in mano. Non lo sta usando.</div>
+          <div class="action">Accanto a lui, per un momento, c'&egrave; il <span class="tag tag-cast">NONNO</span> &mdash; maniche arrotolate, il <span class="tag tag-prop">vaso di terracotta</span> screpolato tra le mani.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: LOCATIONS (production — list + map) ===== -->
+    <div class="view view-locations">
+      <div class="topstrip">
+        <div class="ts-left">
+          <span class="crumb">Location</span>
+          <span class="scope-chip">REQUISITO &middot; PUB INTERNO</span>
+        </div>
+        <div class="ts-right">
+          <span class="save-state">Salvato 30&Prime; fa</span>
+          <span class="version-pill" style="background:var(--linen-100)">7 candidati &#x25BE;</span>
+        </div>
+      </div>
+      <div class="loc-wrap">
+        <div class="loc-list">
+          <div class="loc-card match">
+            <div class="name">Bar Argelati 38</div>
+            <div class="addr">Via Argelati 38, Milano &middot; Navigli</div>
+            <div class="meta">
+              <span class="scenes">Sc. 2, 5, 9</span>
+              <span class="tag">Interno</span>
+              <span class="tag">Notte</span>
+              <span class="tag">Notte 22-04</span>
+            </div>
+          </div>
+          <div class="loc-card">
+            <div class="name">Birreria del Borgo</div>
+            <div class="addr">Via Montegani 24, Milano</div>
+            <div class="meta">
+              <span class="scenes">Sc. 2, 5</span>
+              <span class="tag">Interno</span>
+              <span class="tag">Banco lungo</span>
+            </div>
+          </div>
+          <div class="loc-card">
+            <div class="name">Osteria Sant&rsquo;Ambrogio</div>
+            <div class="addr">Corso S. Gottardo 4, Milano</div>
+            <div class="meta">
+              <span class="scenes">Sc. 5</span>
+              <span class="tag">Interno</span>
+              <span class="tag">Insegna neon</span>
+            </div>
+          </div>
+          <div class="loc-card">
+            <div class="name">Pub Ferdy</div>
+            <div class="addr">Via Tortona 9, Milano</div>
+            <div class="meta">
+              <span class="scenes">Sc. 2</span>
+              <span class="tag">Interno</span>
+              <span class="tag">Costo basso</span>
+            </div>
+          </div>
+        </div>
+        <div class="loc-map">
+          <span style="z-index:1;background:var(--white);padding:6px 12px;border-radius:var(--radius-pill);border:1px solid var(--linen-300);font-size:12px">Milano &middot; mappa scouting</span>
+          <span class="pin leaf" style="left:30%;top:48%">&#9698;</span>
+          <span class="pin" style="left:42%;top:55%">&#9698;</span>
+          <span class="pin" style="left:50%;top:40%">&#9698;</span>
+          <span class="pin" style="left:60%;top:52%">&#9698;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: BUDGET (production — table) ===== -->
+    <div class="view view-budget">
+      <div class="topstrip">
+        <div class="ts-left">
+          <span class="crumb">Budget</span>
+          <span class="scope-chip">CAP TOTALE &middot; &euro; 480.000</span>
+        </div>
+        <div class="ts-right">
+          <span class="save-state">Salvato 8&Prime; fa</span>
+          <span class="version-pill">v1.4 &middot; 2026-05-22</span>
+        </div>
+      </div>
+      <div class="editor-area">
+        <div class="budget-wrap">
+          <div class="budget-grid">
+            <div class="budget-row head">
+              <div>Categoria</div><div class="right">Pianificato</div><div class="right">Speso</div><div class="right">%</div><div>Andamento</div>
+            </div>
+            <div class="budget-row">
+              <div><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cat-cast);margin-right:8px"></span>Cast</div>
+              <div class="right">&euro; 120.000</div><div class="right">&euro; 71.500</div><div class="right">60%</div>
+              <div class="bar"><span style="width:60%"></span></div>
+            </div>
+            <div class="budget-row">
+              <div><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cat-locations);margin-right:8px"></span>Location</div>
+              <div class="right">&euro; 56.000</div><div class="right">&euro; 51.300</div><div class="right">92%</div>
+              <div class="bar warn"><span></span></div>
+            </div>
+            <div class="budget-row">
+              <div><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cat-props);margin-right:8px"></span>Scenografia</div>
+              <div class="right">&euro; 34.000</div><div class="right">&euro; 18.700</div><div class="right">55%</div>
+              <div class="bar"><span style="width:55%"></span></div>
+            </div>
+            <div class="budget-row">
+              <div><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cat-sound);margin-right:8px"></span>Suono</div>
+              <div class="right">&euro; 22.000</div><div class="right">&euro; 9.200</div><div class="right">42%</div>
+              <div class="bar"><span style="width:42%"></span></div>
+            </div>
+            <div class="budget-row">
+              <div><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cat-vehicles);margin-right:8px"></span>Veicoli</div>
+              <div class="right">&euro; 18.000</div><div class="right">&euro; 0</div><div class="right">0%</div>
+              <div class="bar"><span style="width:0%"></span></div>
+            </div>
+            <div class="budget-row total">
+              <div>Totale</div><div class="right">&euro; 250.000</div><div class="right">&euro; 150.700</div><div class="right">60%</div>
+              <div class="bar"><span style="width:60%"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ─── CESARE PANEL ──────────────────────────────────────────── -->
+  <aside class="cesare">
+    <!-- Drag handles (only painted in the relevant state via CSS) -->
+    <div class="drag-handle-top" title="Trascina per ridimensionare altezza"></div>
+    <div class="drag-handle-left" title="Trascina per ridimensionare larghezza"></div>
+    <header class="ces-head">
+      <div class="ces-head-l">
+        <span class="ces-agent">Cesare</span>
+        <span class="ces-context" id="ces-ctx">BREAKDOWN</span>
+      </div>
+      <div class="ces-head-r">
+        <button class="ces-iconbtn expand-fullpage" title="Cycle (↗)" data-cesare-cycle>&#8599;</button>
+        <button class="ces-iconbtn" title="Step back (↙)" data-cesare-step>&#8601;</button>
+        <button class="ces-iconbtn" title="Minimizza" data-cesare="peek">&minus;</button>
+        <button class="ces-iconbtn" title="Chiudi" data-cesare="closed">&times;</button>
+      </div>
+    </header>
+
+    <div class="ces-body">
+      <!-- Context-aware recap (Breakdown) -->
+      <div class="ces-recap">
+        <div class="label">Costo stimato &middot; Sc. 2 INT. RADICE &mdash; Notte</div>
+        <div class="cost">&euro; 3.380<small>/ giornata</small></div>
+        <div class="rows">
+          <div class="r"><span>Crew (8 persone &times; 1.00g)</span><span class="v">&euro; 2.000</span></div>
+          <div class="r"><span>Location esterna (setup)</span><span class="v">&euro; 800</span></div>
+          <div class="r"><span>Attrezzatura + scenografia</span><span class="v">&euro; 400</span></div>
+          <div class="r"><span>Catering (9 pasti)</span><span class="v">&euro; 180</span></div>
+        </div>
+        <div class="diff">
+          <span style="color:var(--linen-500)">Difficolt&agrave;</span>
+          <span class="dots"><span class="d on"></span><span class="d on"></span><span class="d"></span><span class="d"></span><span class="d"></span></span>
+          <span style="margin-left:auto;color:var(--linen-600)">bassa</span>
+        </div>
+      </div>
+
+      <div class="msg-user">riesci a taggare gli oggetti mancanti nella scena 2?</div>
+      <div class="msg-assistant">
+        Ho ispezionato la scena e aggiunto tre oggetti mancanti al breakdown.
+        <div class="steps">
+          <div class="step-head"><span class="chev">&#x25BE;</span>3 passaggi</div>
+          <div class="step-line done">Letto Sc. 2 (sceneggiatura + breakdown)</div>
+          <div class="step-line done">Tag: <em>asta telescopica</em>, <em>striscione</em>, <em>polo Radice</em></div>
+          <div class="step-line done">Aggiornato breakdown</div>
+        </div>
+        <div class="action-block">
+          <span class="lbl">Aggiunti 3 oggetti al breakdown</span>
+          <button>Mostra modifiche</button>
+          <button class="ghost">Annulla</button>
+        </div>
+      </div>
+
+      <div class="msg-user">e il costo? &egrave; alto?</div>
+      <div class="msg-assistant">
+        Sc. 2 sta a <strong>&euro; 3.380 / giornata</strong> &mdash; sotto la media del progetto. Crew di 8 persone, location interna in riuso con la Sc. 1. Difficolt&agrave; bassa.
+        <br><br>Vuoi che la sposti accanto alla Sc. 1 nello schedule per girare in continuit&agrave;?
+      </div>
+    </div>
+
+    <div class="ces-quick">
+      <button>Aggiungi al budget</button>
+      <button>Sposta in continuit&agrave;</button>
+      <button>Confronta scene simili</button>
+    </div>
+
+    <footer class="ces-foot">
+      <div class="ces-input-wrap">
+        <input placeholder="Chiedi a Cesare&hellip;" />
+        <button class="ces-send" title="Invia">&uarr;</button>
+      </div>
+    </footer>
+  </aside>
+
+</div>
+
+<!-- ─── SPLIT DRAWER (Notion `»` pattern) ───────────────────────── -->
+<aside class="split-drawer" id="split-drawer" role="complementary" aria-label="Anteprima Soggetto - modalità trace">
+  <header class="split-head">
+    <div class="split-head-l">
+      <span class="badge">Soggetto · Atto II</span>
+      <h2>Anteprima Soggetto</h2>
+    </div>
+    <div class="split-head-r">
+      <button class="split-iconbtn" title="Espandi (↗)" id="split-cycle">&#8599;</button>
+      <button class="split-iconbtn" title="Step back (↙)" id="split-step">&#8601;</button>
+      <button class="split-iconbtn" title="Chiudi" data-split-drawer="closed">&times;</button>
+    </div>
+  </header>
+  <div class="split-body">
+    <aside class="split-timeline" aria-label="Trace timeline">
+      <span class="split-timeline-lbl">Modifiche</span>
+      <button class="split-marker replace" data-jump="m1"><span class="g">&#8634;</span>Atto II · §3</button>
+      <button class="split-marker append" data-jump="m2"><span class="g">+</span>Atto II · §5 (nuovo)</button>
+      <button class="split-marker rename" data-jump="m3"><span class="g">&#9998;</span>Personaggio · Tea</button>
+      <button class="split-marker delete" data-jump="m4"><span class="g">&minus;</span>Atto II · §7</button>
+    </aside>
+    <div class="split-preview" id="split-preview">
+      <div class="split-stub-header">
+        <span aria-hidden="true">&#10026;</span>
+        <strong>Soggetto · Atto II</strong>
+        <span>· modalità trace</span>
+      </div>
+
+      <div class="split-marker-block replace" id="trace-marker-m1">
+        <div class="hd"><span aria-hidden="true">&#8634;</span><span>replace</span><span>·</span><span>Atto II · §3</span></div>
+        <div class="before">Filippo guarda fuori, distratto. Pensa al nonno.</div>
+        <div class="after">Filippo guarda fuori, una mano appoggiata al vetro. Vede il riflesso del nonno alle sue spalle, sorride.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block append" id="trace-marker-m2">
+        <div class="hd"><span aria-hidden="true">+</span><span>append</span><span>·</span><span>Atto II · §5</span></div>
+        <div class="after">Tea entra, scuote la testa. "Stai parlando da solo, Filippo." Lui non risponde.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block rename" id="trace-marker-m3">
+        <div class="hd"><span aria-hidden="true">&#9998;</span><span>rename</span><span>·</span><span>Personaggio</span></div>
+        <div class="before">Teresa</div>
+        <div class="after">Tea</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+
+      <div class="split-marker-block delete" id="trace-marker-m4">
+        <div class="hd"><span aria-hidden="true">&minus;</span><span>delete</span><span>·</span><span>Atto II · §7</span></div>
+        <div class="before">Giulio entra, lo guarda, esce. Pausa lunga.</div>
+        <div class="actions"><button class="accept">Accetta</button><button class="reject">Rifiuta</button></div>
+      </div>
+    </div>
+  </div>
+  <footer class="split-foot">
+    <button class="accept-all">Accetta tutto</button>
+    <button class="reject-all">Rifiuta tutto</button>
+    <span class="count">4 modifiche in sospeso</span>
+  </footer>
+</aside>
+
+<!-- ─── BOTTOM DOCK (bottom-right) ──────────────────────────────── -->
+<div class="dock">
+  <button class="dock-btn bell" title="Notifiche">&#128276;<span class="dot"></span></button>
+  <button class="dock-btn avatar" title="Profilo">V</button>
+  <button class="dock-btn" title="Impostazioni">&#9881;</button>
+  <span class="dock-divider"></span>
+  <button class="dock-cesare" data-cesare="expanded"><span class="ces-icon"></span>Cesare</button>
+</div>
+
+<!-- ─── PEEK ────────────────────────────────────────────────────── -->
+<div class="cesare-min" data-cesare="expanded">
+  <span class="glow"></span>
+  <span class="label">Cesare</span>
+  <span class="sub">&middot; 3 passaggi &middot; mostra</span>
+</div>
+
+
+<script>
+  function setView(v){
+    document.body.dataset.view = v;
+    document.querySelectorAll('.demo-row [data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
+    document.querySelectorAll('.rail-item[data-go]').forEach(it=>it.classList.toggle('active', it.dataset.go===v));
+    // Update Cesare context chip
+    const map={screenplay:'SCENEGGIATURA',soggetto:'SOGGETTO',breakdown:'BREAKDOWN',budget:'BUDGET',locations:'LOCATION'};
+    const ctx=document.getElementById('ces-ctx'); if(ctx) ctx.textContent = map[v]||v.toUpperCase();
+    // Show/hide breakdown recap inside Cesare panel
+    document.querySelector('.ces-recap').style.display = v==='breakdown'?'block':'none';
+    // Show sessions label only when expanded
+    document.querySelector('.rail-sessions-label').style.display = document.body.dataset.cesare==='expanded'?'flex':'none';
+  }
+  function setCesare(c){
+    document.body.dataset.cesare = c;
+    document.querySelectorAll('.demo-row [data-cesare]').forEach(b=>b.classList.toggle('on', b.dataset.cesare===c));
+    const lbl = document.querySelector('.rail-sessions-label');
+    if(lbl) lbl.style.display = (c==='expanded'||c==='expanded-split'||c==='full')?'flex':'none';
+  }
+
+  /** Drawer state cycle: closed → expanded → expanded-split → full → expanded */
+  function cycleCesare(){
+    const cur = document.body.dataset.cesare;
+    const next = cur==='closed'?'expanded'
+               :cur==='peek'?'expanded'
+               :cur==='expanded'?'expanded-split'
+               :cur==='expanded-split'?'full'
+               :cur==='full'?'expanded'
+               :'expanded';
+    setCesare(next);
+  }
+  function stepBackCesare(){
+    const cur = document.body.dataset.cesare;
+    const prev = cur==='full'?'expanded-split'
+              :cur==='expanded-split'?'expanded'
+              :cur==='expanded'?'closed'
+              :cur==='peek'?'expanded'
+              :'closed';
+    setCesare(prev);
+  }
+
+  function setShell(s){
+    document.body.dataset.shell = s;
+    document.querySelectorAll('.demo-row [data-shell]').forEach(b=>b.classList.toggle('on', b.dataset.shell===s));
+    const btn=document.getElementById('shell-collapse-btn'); if(btn) btn.innerHTML = s==='collapsed' ? '&raquo;' : '&laquo;';
+    // Clear any lingering overlay when leaving collapsed.
+    if(s!=='collapsed') document.body.removeAttribute('data-rail-overlay');
+  }
+
+  // bind demo toggles
+  document.querySelectorAll('.demo-row [data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+  document.querySelectorAll('.demo-row [data-cesare]').forEach(b=>b.addEventListener('click',()=>setCesare(b.dataset.cesare)));
+  document.querySelectorAll('.demo-row [data-shell]').forEach(b=>b.addEventListener('click',()=>setShell(b.dataset.shell)));
+  document.getElementById('shell-collapse-btn').addEventListener('click',()=>setShell(document.body.dataset.shell==='collapsed'?'full':'collapsed'));
+
+  // rail item nav
+  document.querySelectorAll('.rail-item[data-go]').forEach(it=>it.addEventListener('click',()=>setView(it.dataset.go)));
+
+  // Cesare in-panel header buttons + dock pill + peek
+  document.querySelectorAll('[data-cesare]:not(.demo-row [data-cesare])').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();setCesare(el.dataset.cesare)});
+  });
+  document.querySelectorAll('[data-cesare-cycle]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();cycleCesare()});
+  });
+  document.querySelectorAll('[data-cesare-step]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();stepBackCesare()});
+  });
+  document.querySelector('.dock-cesare').addEventListener('click',e=>{
+    e.stopPropagation();
+    setCesare(document.body.dataset.cesare==='expanded'?'closed':'expanded');
+  });
+
+  // margin notes — click expand/collapse
+  document.querySelectorAll('.note').forEach(n=>{
+    n.addEventListener('click',()=>n.classList.toggle('open'));
+  });
+
+  // ── Rail overlay (collapsed shell, Notion-compliant) ──
+  // No hover sentinel: the rail appears solely on hamburger click and is
+  // dismissed by outside-click, ESC, or hamburger again.
+  const railEl = document.getElementById('rail');
+
+  function isRailOverlayOpen(){
+    return document.body.getAttribute('data-rail-overlay') === 'open';
+  }
+  function openRailOverlay(){
+    if(document.body.dataset.shell!=='collapsed') return;
+    document.body.setAttribute('data-rail-overlay','open');
+  }
+  function closeRailOverlay(){
+    document.body.removeAttribute('data-rail-overlay');
+  }
+  function toggleRailOverlay(){
+    if(isRailOverlayOpen()) closeRailOverlay(); else openRailOverlay();
+  }
+
+  // ── Hamburger (collapsed mode) — toggles the rail overlay ──
+  const hamburger = document.getElementById('hamburger');
+  if(hamburger){
+    hamburger.addEventListener('click',e=>{
+      e.stopPropagation();
+      toggleRailOverlay();
+    });
+  }
+
+  // ── Lock-open chip (» inside the rail overlay) ──
+  const lockBtn = document.getElementById('rail-lock-open');
+  if(lockBtn){
+    lockBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      closeRailOverlay();
+      setShell('full');
+    });
+  }
+
+  // ── Outside-click dismiss ──
+  document.addEventListener('mousedown',e=>{
+    if(!isRailOverlayOpen()) return;
+    if(railEl && railEl.contains(e.target)) return;
+    if(hamburger && hamburger.contains(e.target)) return;
+    closeRailOverlay();
+  });
+
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown',e=>{
+    // ⌘\ — toggle full / collapsed
+    if((e.metaKey||e.ctrlKey) && e.key==='\\'){
+      e.preventDefault();
+      setShell(document.body.dataset.shell==='full'?'collapsed':'full');
+    }
+    // ⌃⌥F — focus mode
+    if(e.ctrlKey && e.altKey && (e.key==='f'||e.key==='F')){
+      e.preventDefault();
+      setShell(document.body.dataset.shell==='focus'?'full':'focus');
+    }
+    // ESC — dismiss the rail overlay if open
+    if(e.key==='Escape' && isRailOverlayOpen()){
+      e.preventDefault();
+      closeRailOverlay();
+    }
+  });
+
+  // ── SplitDrawer ─────────────────────────────────────────────
+  function setSplit(s){
+    document.body.dataset.splitDrawer = s;
+    document.querySelectorAll('.demo-row [data-split-drawer]').forEach(b=>b.classList.toggle('on', b.dataset.splitDrawer===s));
+    // When SplitDrawer goes full, retreat Cesare to peek so the user keeps a single command surface.
+    if(s==='full' && document.body.dataset.cesare==='full'){ setCesare('peek'); }
+  }
+  document.querySelectorAll('.demo-row [data-split-drawer]').forEach(b=>b.addEventListener('click',()=>setSplit(b.dataset.splitDrawer)));
+  document.querySelectorAll('[data-split-drawer]:not(.demo-row [data-split-drawer])').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();setSplit(el.dataset.splitDrawer)});
+  });
+  const splitCycle = document.getElementById('split-cycle');
+  if(splitCycle){
+    splitCycle.addEventListener('click',e=>{
+      e.stopPropagation();
+      const cur = document.body.dataset.splitDrawer || 'closed';
+      const next = cur==='closed'?'open':cur==='open'?'full':'open';
+      setSplit(next);
+    });
+  }
+  const splitStep = document.getElementById('split-step');
+  if(splitStep){
+    splitStep.addEventListener('click',e=>{
+      e.stopPropagation();
+      const cur = document.body.dataset.splitDrawer || 'closed';
+      const next = cur==='full'?'open':cur==='open'?'closed':'closed';
+      setSplit(next);
+    });
+  }
+  // Timeline jump-to-marker
+  document.querySelectorAll('[data-jump]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = btn.dataset.jump;
+      const node = document.getElementById('trace-marker-'+id);
+      if(node) node.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  // ── Trace flow demo: open Cesare to full + SplitDrawer open with Soggetto trace ──
+  const traceBtn = document.getElementById('trace-flow-btn');
+  if(traceBtn){
+    traceBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      setView('soggetto');
+      setCesare('full');
+      // Slight delay so the user sees the Cesare full-page transition before the split opens.
+      setTimeout(()=>setSplit('open'), 150);
+    });
+  }
+
+  // initial sync
+  setView(document.body.dataset.view);
+  setCesare(document.body.dataset.cesare);
+  setSplit(document.body.dataset.splitDrawer || 'closed');
+</script>
+</body>
+</html>

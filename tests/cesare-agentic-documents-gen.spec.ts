@@ -8,21 +8,19 @@ import {
 } from "./helpers/cesare";
 
 /**
- * [Spec 29] Cesare agentic — Document auto-generation (propose/accept)
+ * [Spec 44] Cesare agentic — Document generation lands LIVE on the open document
  *
- * The user asks Cesare to generate logline / synopsis / soggetto v2 / scaletta.
- * Each scripted scenario emits a `propose_*` tool_use; the real executor
- * inserts a DRAFT row in document_versions; the UI surfaces a banner above the
- * relevant editor with Compare / Promote / Discard actions.
+ * Canonical Notion pattern (Image 6): when the user asks Cesare to generate a
+ * document, the generated content is applied DIRECTLY to the open document (the
+ * editor updates live behind the floating chat) and a version is auto-created
+ * under the hood. There is NO "Bozze di Cesare" draft tray. The inline trace
+ * offers "Mostra modifiche" (a transient flash); rollback lives in the Versions
+ * SplitDrawer, not an inline Annulla (Spec 47e).
  */
-test.describe("[Spec 29] Cesare Agentic — Document auto-generation", () => {
-  test("[OHW-575] Cesare generates a logline draft from the screenplay", async ({
+test.describe("[Spec 44] Cesare Agentic — Document generation applies live", () => {
+  test("[OHW-575] Cesare applies a generated logline live (no draft tray)", async ({
     authenticatedPage,
   }) => {
-    // Logline lives in the viewbar pill, not on its own route; the user invokes
-    // Cesare from any narrative doc page and the draft is created server-side.
-    // We assert on the reply text — the server's invisible `<!--ohw:tools=N-->`
-    // marker is non-zero only when the executor inserted a real row.
     await authenticatedPage.goto(
       `${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`,
     );
@@ -35,29 +33,15 @@ test.describe("[Spec 29] Cesare Agentic — Document auto-generation", () => {
     );
     const reply = await waitForCesareReply(authenticatedPage);
 
-    expect(reply.toLowerCase()).toMatch(/logline|draft|bozza|generat/);
-  });
+    expect(reply.toLowerCase()).toMatch(/logline|aggiornat|applicat/);
 
-  test("[OHW-576] Cesare generates a synopsis draft from the screenplay", async ({
-    authenticatedPage,
-  }) => {
-    await authenticatedPage.goto(
-      `${BASE_URL}/projects/${TEAM_PROJECT_ID}/synopsis`,
-    );
-    await authenticatedPage.waitForLoadState("networkidle");
-
-    await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Scrivimi la sinossi.");
-    const reply = await waitForCesareReply(authenticatedPage);
-
-    expect(reply.toLowerCase()).toMatch(/sinossi|draft|bozza|generat/);
-
+    // The legacy draft tray must NOT appear — the edit lands live.
     await expect(
       authenticatedPage.getByTestId("document-draft-banner"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toHaveCount(0);
   });
 
-  test("[OHW-577] Cesare proposes a soggetto v2 with an instruction", async ({
+  test("[OHW-577] Cesare applies a soggetto v2 live to the open editor", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -65,21 +49,37 @@ test.describe("[Spec 29] Cesare Agentic — Document auto-generation", () => {
     );
     await authenticatedPage.waitForLoadState("networkidle");
 
+    const editor = authenticatedPage.getByTestId("rich-text-editor");
+    await expect(editor).toBeVisible({ timeout: 15_000 });
+
     await openCesareSheet(authenticatedPage);
     await sendCesareMessage(
       authenticatedPage,
       "Fammi un v2 del soggetto più asciutto.",
     );
     const reply = await waitForCesareReply(authenticatedPage);
+    expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat/);
 
-    expect(reply.toLowerCase()).toMatch(/soggetto|v2|draft|bozza/);
-
+    // The mock soggetto-v2 output is deterministic ("Marco torna a Falerone…").
+    // Assert it landed in the open editor — the live-doc contract — not a draft.
+    await expect(editor).toContainText("Marco torna a Falerone", {
+      timeout: 15_000,
+    });
     await expect(
       authenticatedPage.getByTestId("document-draft-banner"),
+    ).toHaveCount(0);
+
+    // The inline trace exposes the "Mostra modifiche" flash control — and, per
+    // Spec 47e, NO inline "Annulla" (rollback lives in the Versions SplitDrawer).
+    const trace = authenticatedPage.getByTestId("cesare-change-trace");
+    await expect(trace).toBeVisible({ timeout: 10_000 });
+    await expect(
+      trace.getByRole("button", { name: "Mostra modifiche" }),
     ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });
 
-  test("[OHW-578] Cesare generates a scaletta draft from the soggetto", async ({
+  test("[OHW-578] Cesare applies a generated scaletta live (no draft tray)", async ({
     authenticatedPage,
   }) => {
     await authenticatedPage.goto(
@@ -94,10 +94,10 @@ test.describe("[Spec 29] Cesare Agentic — Document auto-generation", () => {
     );
     const reply = await waitForCesareReply(authenticatedPage);
 
-    expect(reply.toLowerCase()).toMatch(/scaletta|draft|bozza|generat/);
+    expect(reply.toLowerCase()).toMatch(/scaletta|aggiornat|applicat/);
 
     await expect(
       authenticatedPage.getByTestId("document-draft-banner"),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toHaveCount(0);
   });
 });

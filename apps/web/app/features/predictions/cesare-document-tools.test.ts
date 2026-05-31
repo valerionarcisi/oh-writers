@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { DocumentTypes } from "@oh-writers/domain";
 import {
   buildDraftLabel,
+  isDocumentGenToolName,
   parseScalettaList,
+  resolveLoglineMode,
   scalettaToOutlineContent,
   sanitizeLogline,
 } from "./cesare-document-tools";
@@ -170,5 +172,51 @@ Ma il paese non vuole essere raccontato.`;
     expect(sanitizeLogline("Un\t\t  regista\n  torna.")).toBe(
       "Un regista torna.",
     );
+  });
+});
+
+describe("resolveLoglineMode (write_logline)", () => {
+  it("honours an explicit 'write' regardless of existing content", () => {
+    expect(resolveLoglineMode("write", "una logline esistente")).toBe("write");
+    expect(resolveLoglineMode("write", null)).toBe("write");
+  });
+
+  it("honours an explicit 'edit' regardless of existing content", () => {
+    expect(resolveLoglineMode("edit", "una logline esistente")).toBe("edit");
+    // The handler rejects edit-with-empty separately; the resolver still
+    // reports the requested intent.
+    expect(resolveLoglineMode("edit", "")).toBe("edit");
+  });
+
+  it("auto edits when a non-empty logline already exists", () => {
+    expect(resolveLoglineMode("auto", "una logline esistente")).toBe("edit");
+    expect(resolveLoglineMode(undefined, "  testo  ")).toBe("edit");
+  });
+
+  it("auto writes a fresh logline when none exists", () => {
+    expect(resolveLoglineMode("auto", null)).toBe("write");
+    expect(resolveLoglineMode("auto", "")).toBe("write");
+    expect(resolveLoglineMode("auto", "   ")).toBe("write");
+    expect(resolveLoglineMode(undefined, null)).toBe("write");
+  });
+});
+
+describe("isDocumentGenToolName", () => {
+  it("recognises write_logline (universal-dispatch wiring)", () => {
+    expect(isDocumentGenToolName("write_logline")).toBe(true);
+  });
+
+  it("still recognises the existing propose_* tools", () => {
+    expect(isDocumentGenToolName("propose_logline_from_screenplay")).toBe(true);
+    expect(isDocumentGenToolName("propose_synopsis_from_screenplay")).toBe(
+      true,
+    );
+    expect(isDocumentGenToolName("propose_soggetto_v2")).toBe(true);
+    expect(isDocumentGenToolName("propose_scaletta_from_soggetto")).toBe(true);
+  });
+
+  it("rejects unknown tool names", () => {
+    expect(isDocumentGenToolName("rewrite_scene")).toBe(false);
+    expect(isDocumentGenToolName("")).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
 # Spec 33 — Cesare: Screenplay Live Sidebar
 
+> **Superseded for shell layout by [Spec 44](./44-shell-refactor-notion-style.md).** The "Pannello collassabile a destra dell'editor" pattern below is replaced: there is no right-anchored Cesare column anymore. Cesare ships as the Notion-class floating drawer (Spec 44), so the live scene-aware analysis is delivered through the shell-level drawer (header context chip + Step Block) rather than a screenplay-only sidebar. The domain logic (trigger on scene change, debounce, prompt format) remains authoritative.
+
 ## Overview
 
 La sidebar Cesare nella sceneggiatura mostra suggerimenti contestuali alla
@@ -65,6 +67,7 @@ apps/web/app/features/screenplay-editor/components/CesareSidebarPanel.tsx
 ```
 
 Props:
+
 - `projectId: string`
 - `sceneId: string | null`
 - `sceneNumber: number | null`
@@ -72,6 +75,7 @@ Props:
 - `onToggle: () => void`
 
 Stato interno:
+
 - `bullets: string[]` — 3 bullet dall'analisi
 - `isLoading: boolean`
 - `lastSceneId: string | null` — per evitare ri-fetch sulla stessa scena

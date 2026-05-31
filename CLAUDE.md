@@ -111,6 +111,27 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never import browser-only or Monaco APIs** inside `packages/domain`, `packages/utils`, or any other shared package — those must stay framework-agnostic so the future mobile companion can consume them
 - **Never hard-couple auth to cookies** — Better Auth must remain able to issue bearer tokens for mobile clients
 - **Never write code in Italian** — every identifier (variables, functions, types, files), every comment, every log message, every internal error message MUST be in English. UI copy shown to the user is Italian (the product is IT-localised); everything else is English. A function named `caricaSceneggiatura` or a comment `// gestisce errore` is a hard NO. This rule is non-negotiable so that future contributors, AI tooling, and English-speaking collaborators can read the codebase.
+- **Never reintroduce a reserved-column Cesare** — Cesare is a floating Notion-style sub-window anchored bottom-right. The editor never reflows when Cesare opens, closes, or resizes. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md).
+- **Never duplicate the bell / avatar / gear icons** across both `BottomDock` and `CesareDrawer` header — they live in exactly one of the two surfaces depending on Cesare state (Dock when `closed`, Cesare header otherwise).
+- **Never read `body[data-cesare]` and expect 4 string values.** It only stores `closed` or `expanded`. Peek and full are runtime-only states inside the `CesareDrawer` reducer; `expanded-split` is internal to the SplitDrawer co-existence flow and is never persisted (it collapses to `expanded` for the body attribute and for the user-facing cycle).
+- **Never anchor a per-page action bar at bottom-right.** The shell-level `BottomDock` lives there. Use `<FloatingDock/>` (bottom-left by default) or migrate the CTAs into a TopBar action slot.
+- **Never park a Cesare edit in a side draft tray as the primary flow.** Every Cesare edit applies LIVE to the open entity. See [Agentic Edit Pattern](#agentic-edit-pattern-canonical) below — it is mandatory for all features.
+- **Never conflate `CesareDrawer` with `SplitDrawer`.** `CesareDrawer` is the floating bottom-right chat (no routing). `SplitDrawer` is the routed side-peek that injects a real page beside the current one via the `?peek=` search param and compresses the main lane. Cesare sessions open as a real central route (`/projects/:id/sessions/:sessionId`), not a peek. See [Spec 46](docs/specs/46-split-drawer.md).
+
+---
+
+## Agentic Edit Pattern (canonical)
+
+Every Cesare edit, in **every feature** (Soggetto, Sinossi, Scaletta, Trattamento, Sceneggiatura, Breakdown, Budget, Calendario, Location — no exceptions), follows the same contract. Modeled on Notion AI.
+
+1. Chat stays a **floating bottom-right drawer** — never a fullscreen takeover, never reflows the editor.
+2. The **open entity updates LIVE behind the chat** while the trace renders. The visible document is the preview; there is no detached drawer for the edit itself.
+3. A **version is auto-created** before the change is applied (so every AI mutation is revertible).
+4. The chat renders an **inline compact trace**: `N passaggi › → reasoning/Thought › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff) and **↩ Annulla** (revert).
+
+When you add a Cesare tool that mutates any entity, reuse this flow — do not invent a per-feature variant. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md#agentic-edit-pattern) and the QA contract in `docs/specs/44-qa-iter-1-report.md`.
+
+**Tracer is mandatory — product invariant.** Cesare must ALWAYS give the user live visibility into what it is seeing and doing. Every turn renders a streamed step trace as it happens — `reading{entity}` (cosa sta leggendo) → `reasoning`/Thought → `writing{entity}` (cosa sta scrivendo, anche cross-domain) → `tool{name}` → `done`/Fatto → result card. No silent action, no mute spinner, no "loading…" without a step trace behind it. This holds for every feature, every page, every request type, and every future surface (including the Effect refactor in Spec 48 and the routed surfaces in Spec 49). The transport is the streamed step events (Spec 47a / `cesare-stream-events.ts`); if a tool runs without emitting a step, that is a bug. Any new AI capability that does not surface its trace to the user fails review.
 
 ---
 

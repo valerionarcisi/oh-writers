@@ -4,17 +4,28 @@ import {
   redirect,
   useMatches,
   useLocation,
+  useNavigate,
 } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { createServerFn } from "@tanstack/start";
 import type { UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "~/features/app-shell";
+import {
+  peekSearchSchema,
+  CESARE_PEEK_TOKEN,
+  versionsSearchSchema,
+  serializeVersionsCompare,
+  useRoutedSurface,
+} from "~/features/app-shell";
+import type { VersionsCompare } from "~/features/app-shell";
 import type { CesarePage } from "~/features/predictions";
 import {
-  useProject,
-  personalProjectsQueryOptions,
-} from "~/features/projects";
+  useSessions as useCesareSessions,
+  useCreateSession as useCreateCesareSession,
+} from "~/features/predictions";
+import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
 
@@ -29,7 +40,15 @@ const fetchUser = createServerFn({ method: "GET" }).handler(
   },
 );
 
+// The shell layout carries every routed auxiliary surface as search params:
+// `?peek=` (Spec 46 Cesare/page side-peek) and
+// `?versions=`/`?vstate=`/`?vcur=`/`?compare=` (Spec 49 Versions SplitDrawer +
+// W3 Confronta). Shape-only validation here so the params survive navigation;
+// content validation (fail-closed) lives in the parsers inside AppShell.
+const appSearchSchema = peekSearchSchema.merge(versionsSearchSchema);
+
 export const Route = createFileRoute("/_app")({
+  validateSearch: appSearchSchema,
   loader: async (): Promise<{ user: AppUser }> => {
     const user = await fetchUser();
     if (!user) throw redirect({ to: "/login" });
@@ -53,6 +72,7 @@ const SECTION_LABELS: Record<string, string> = {
   treatment: "Trattamento",
   settings: "Impostazioni",
   "title-page": "Frontespizio",
+  sessions: "Cesare",
   dashboard: "Progetti",
 };
 
@@ -132,17 +152,29 @@ function activeSegmentFromRouteId(routeId: string): string {
   return "";
 }
 
+// Route segment → Cesare page. The app navigates with English slugs, but we
+// also recognise the Italian deep-link aliases (e.g. /sinossi, /location): the
+// Cesare context chip + prompt suggestions must reflect the page the user is
+// actually on even when a localized URL was typed directly, instead of falling
+// back to the default and going stale (Spec 44 context-chip reactivity).
 const CESARE_PAGE_SEGMENTS: Array<{ segment: string; page: CesarePage }> = [
   { segment: "/shooting-plan", page: "shooting-plan" },
+  { segment: "/inquadrature", page: "shooting-plan" },
   { segment: "/screenplay", page: "screenplay" },
+  { segment: "/sceneggiatura", page: "screenplay" },
   { segment: "/breakdown", page: "breakdown" },
   { segment: "/budget", page: "budget" },
   { segment: "/schedule", page: "schedule" },
+  { segment: "/calendario", page: "schedule" },
   { segment: "/treatment", page: "treatment" },
+  { segment: "/trattamento", page: "treatment" },
   { segment: "/outline", page: "outline" },
+  { segment: "/scaletta", page: "outline" },
   { segment: "/synopsis", page: "synopsis" },
+  { segment: "/sinossi", page: "synopsis" },
   { segment: "/soggetto", page: "soggetto" },
   { segment: "/locations", page: "locations" },
+  { segment: "/location", page: "locations" },
 ];
 
 function deriveCesarePage(pathname: string): CesarePage {
@@ -156,9 +188,66 @@ function AppLayout() {
   const { user } = Route.useLoaderData();
   const matches = useMatches();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const search = Route.useSearch();
+  const { peek, versions, vstate, vcur, compare } = search;
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
+
+  // `?peek=` open/close are pure search-param mutations on the CURRENT host
+  // path — we target the live `pathname` so the host page stays mounted (it
+  // only compresses) and only the search param changes. Browser-back then
+  // closes the peek (the param pops). Each open is a distinct history entry.
+  const openCesarePeek = useCallback(() => {
+    void navigate({
+      to: pathname,
+      search: { ...search, peek: CESARE_PEEK_TOKEN },
+    });
+  }, [navigate, pathname, search]);
+  const closePeek = useCallback(() => {
+    const { peek: _dropped, ...rest } = search;
+    void navigate({ to: pathname, search: rest });
+  }, [navigate, pathname, search]);
+
+  // Versions SplitDrawer (Spec 49). `useRoutedSurface` owns the URL ↔ surface
+  // mapping so this layout never hand-rolls the param mutation. `vstate`/`vcur`/
+  // `compare` are companions cleared together with `versions` on close.
+  const versionsSurface = useRoutedSurface({
+    param: "versions",
+    companions: ["vstate", "vcur", "compare"],
+  });
+  const closeVersions = versionsSurface.close;
+  // `↗` expand → real navigation to the full-screen versions route (new history
+  // entry; browser-back / `↙` returns to the split). The doc + baseline + the
+  // active compare are preserved so the full route stays deep-linkable.
+  const expandVersions = useCallback(() => {
+    if (versions == null) return;
+    const companions: Record<string, string> = { vstate: "full" };
+    if (vcur != null) companions["vcur"] = vcur;
+    if (compare != null) companions["compare"] = compare;
+    versionsSurface.navigateState(versions, companions);
+  }, [versionsSurface, versions, vcur, compare]);
+  // `↙` step-back → drop `vstate` (back to the split) as a real navigation.
+  const stepBackVersions = useCallback(() => {
+    if (versions == null) return;
+    const companions: Record<string, string> = {};
+    if (vcur != null) companions["vcur"] = vcur;
+    if (compare != null) companions["compare"] = compare;
+    versionsSurface.navigateState(versions, companions);
+  }, [versionsSurface, versions, vcur, compare]);
+  // W3 Confronta: patch the `?compare=` companion in place (replace, no history
+  // entry — an in-surface toggle shouldn't stack a back step). `null` drops it,
+  // returning the drawer to the default "vs current".
+  const changeVersionsCompare = useCallback(
+    (next: VersionsCompare | null) => {
+      versionsSurface.setParam(
+        "compare",
+        next ? serializeVersionsCompare(next) : null,
+      );
+    },
+    [versionsSurface],
+  );
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
@@ -184,10 +273,72 @@ function AppLayout() {
     title: p.title,
   }));
 
+  // Cesare sessions for the LeftRail "Sessioni Cesare" slot. Loaded only when
+  // we have a project (the rail simply hides the section when sessions is
+  // undefined). Active session is the most recently used one — re-deriving
+  // here keeps the rail aligned with the chat surface which defaults the same
+  // way.
+  const cesareSessionsQuery = useCesareSessions(projectId);
+  const createCesareSession = useCreateCesareSession(projectId ?? "");
+  // Highlight the session the user is currently viewing on the central
+  // `/sessions/:sessionId` route (when on it), else fall back to most-recent.
+  const activeSessionIdFromRoute = (
+    matches.find((m) => m.routeId.includes("/sessions/$sessionId"))?.params as
+      | { sessionId?: string }
+      | undefined
+  )?.sessionId;
+  const cesareSessionsForRail = cesareSessionsQuery.data?.map((s, idx) => ({
+    id: s.id,
+    title: s.title,
+    lastAt: formatSessionRelative(s.lastMessageAt),
+    active: activeSessionIdFromRoute
+      ? s.id === activeSessionIdFromRoute
+      : idx === 0,
+  }));
+
+  // Spec 47-A5 — clicking a session row opens its full conversation at the
+  // central, deep-linkable route (NOT a peek). The shell-level session focus
+  // context (read by CesareSheet) then aligns the authoritative floating drawer.
+  const handleCesareSessionSelect = (sessionId: string) => {
+    if (!projectId) return;
+    void navigate({
+      to: "/projects/$id/sessions/$sessionId",
+      params: { id: projectId, sessionId },
+    });
+  };
+
+  // The rail's dedicated "Cesare" entry opens the sessions landing.
+  const handleCesareSessionsOpen = () => {
+    if (!projectId) return;
+    void navigate({
+      to: "/projects/$id/sessions",
+      params: { id: projectId },
+    });
+  };
+
+  // "+ Nuova" creates a session and lands the user straight on its central
+  // conversation route.
+  const handleCesareSessionNew = () => {
+    if (!projectId) return;
+    void createCesareSession
+      .mutateAsync(undefined)
+      .then((session) => {
+        void navigate({
+          to: "/projects/$id/sessions/$sessionId",
+          params: { id: projectId, sessionId: session.id },
+        });
+      })
+      // The mutation records its own error state; swallow the floating
+      // rejection so it doesn't surface as an unhandled promise rejection.
+      .catch(() => undefined);
+  };
+
   const userMenuItems: DropdownMenuItem[] = [
     {
       label: "Impostazioni account",
-      onClick: () => { window.location.href = "/settings"; },
+      onClick: () => {
+        window.location.href = "/settings";
+      },
     },
     {
       label: "Presentazione",
@@ -207,14 +358,45 @@ function AppLayout() {
       user={user}
       projectName={projectName}
       sectionName={sectionName}
+      activeSegment={activeSegment}
       sectionGroups={sectionGroups.length > 0 ? sectionGroups : undefined}
       projects={projectsList}
       currentProjectId={projectId}
       userMenuItems={userMenuItems}
       projectId={projectId}
       cesarePage={cesarePage}
+      cesareSessions={cesareSessionsForRail}
+      onCesareSessionSelect={handleCesareSessionSelect}
+      onCesareSessionNew={handleCesareSessionNew}
+      peek={peek ?? null}
+      onOpenCesarePeek={openCesarePeek}
+      onClosePeek={closePeek}
+      onCesareSessionsOpen={handleCesareSessionsOpen}
+      versionsParam={versions ?? null}
+      versionsStateParam={vstate ?? null}
+      versionsCurrentParam={vcur ?? null}
+      versionsCompareParam={compare ?? null}
+      onVersionsCompareChange={changeVersionsCompare}
+      onCloseVersions={closeVersions}
+      onExpandVersions={expandVersions}
+      onStepBackVersions={stepBackVersions}
     >
       <Outlet />
     </AppShell>
   );
+}
+
+// Relative "lastAt" formatter shared with the Cesare drawer's session selector.
+// Kept simple so the rail shows recognisable buckets ("ora" / "2h" / "ieri").
+function formatSessionRelative(iso: string): string {
+  const ts = new Date(iso).getTime();
+  const diff = Date.now() - ts;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return "ora";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "ieri";
+  return `${days}g`;
 }

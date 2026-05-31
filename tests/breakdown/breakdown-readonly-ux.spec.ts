@@ -16,54 +16,12 @@ test.describe("[Spec 10h] Breakdown read-only UX", () => {
     await expect(page.getByTestId("scene-menu-trigger")).toHaveCount(0);
   });
 
-  test("[OHW-10h-2] reader scroll updates active TOC item", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    // Shrink viewport so the reader overflows by more than one scene height.
-    await page.setViewportSize({ width: 1280, height: 400 });
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await expect(page.getByTestId("readonly-screenplay-view")).toBeVisible();
-
-    const tocItems = page.getByTestId("breakdown-toc").locator("button");
-    const itemCount = await tocItems.count();
-    if (itemCount < 2) test.skip(true, "Needs at least 2 scenes seeded");
-
-    // Wait for PM to render headings and for breakdown-script to become scrollable.
-    await page
-      .locator('[data-testid="readonly-screenplay-view"] .pm-heading')
-      .first()
-      .waitFor({ state: "visible" });
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector(
-          '[data-testid="breakdown-script"]',
-        ) as HTMLElement | null;
-        return !!el && el.scrollHeight > el.clientHeight + 200;
-      },
-      null,
-      { timeout: 5000 },
-    );
-
-    await page.evaluate(() => {
-      const script = document.querySelector(
-        '[data-testid="breakdown-script"]',
-      ) as HTMLElement;
-      script.scrollTop = script.scrollHeight;
-      script.dispatchEvent(new Event("scroll", { bubbles: true }));
-    });
-
-    // Wait past the 150 ms debounce in ScriptReader.
-    await page.waitForTimeout(400);
-
-    // After scrolling past scene 1 the first TOC item must no longer be active.
-    const firstIsActive = await tocItems
-      .first()
-      .evaluate((el) =>
-        el.classList.toString().toLowerCase().includes("active"),
-      );
-    expect(firstIsActive).toBe(false);
-  });
+  // SKIPPED (removed UI, not a testid rename): same root cause as inline-tagging
+  // OHW-287. v3 removed the SceneTOC sidebar (`breakdown-toc`) and its dedicated
+  // scroll container (`breakdown-script`) — the window now scrolls and there is
+  // no visible active-TOC-item to assert. The active-scene-on-scroll logic still
+  // runs inside ScriptReader (driving the RecapStrip) but has no TOC surface.
+  test.skip("[OHW-10h-2] reader scroll updates active TOC item", () => {});
 
   test("[OHW-10h-3] regression: heading in screenplay editor shows menu trigger", async ({
     authenticatedPage,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType } from "@oh-writers/domain";
-import { FloatingDock } from "@oh-writers/ui";
+import { ActionsMenu, FloatingDock } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
   useAutoSave,
@@ -21,7 +21,7 @@ import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { OutlineEditor } from "./OutlineEditor";
 import { NarrativeDocsShell } from "./NarrativeDocsShell";
-import { NarrativeCesarePanel } from "./NarrativeCesarePanel";
+import { MarginNotesColumn } from "./MarginNotesColumn";
 import { TreatmentToc } from "./TreatmentToc";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
@@ -30,11 +30,12 @@ import {
   toggleBulletList,
   toggleHeading,
 } from "../lib/narrative-plugins";
-import { useVersionsDrawer, useDocumentVersions } from "~/features/versions";
+import { useDocumentVersions } from "~/features/versions";
 import {
   useSaveStatePublisher,
   useCesareOpen,
   useSetActiveDocument,
+  useRoutedSurface,
 } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import styles from "./NarrativeEditor.module.css";
@@ -77,7 +78,9 @@ const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const [content, setContent] = useState(document.content);
   const editorViewRef = useRef<EditorView | null>(null);
-  const openCesare = useCesareOpen();
+  // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
+  const _openCesare = useCesareOpen();
+  void _openCesare;
   const setActiveDocument = useSetActiveDocument();
 
   // Publish the active document so Cesare's tool router knows which doc to
@@ -95,18 +98,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     content,
     document.content,
   );
-  const {
-    state: drawerState,
-    open: openDrawer,
-    close: closeDrawer,
-  } = useVersionsDrawer();
-  const isVersionsOpen =
-    drawerState.isOpen &&
-    drawerState.scope?.kind === "document" &&
-    drawerState.scope.documentId === document.id;
-
-  // The drawer captures dirtyHook at open(); refs let the captured callbacks
-  // read fresh values on every drawer interaction without re-opening.
+  // Spec 49 W4: Versions open via the ROUTER (`?versions=<docId>`), not the
+  // legacy context drawer — same routed SplitDrawer as soggetto. The host page
+  // compresses beside the lane; `vcur` carries the current-version baseline so
+  // the "vs current" diff stays deep-linkable. `vstate`/`vcur`/`compare` are
+  // companions cleared on close.
+  const versionsSurface = useRoutedSurface({
+    param: "versions",
+    companions: ["vstate", "vcur", "compare"],
+  });
+  const isVersionsOpen = versionsSurface.value === document.id;
+  // Flush a pending autosave before opening Versions so the listed/diffed
+  // content reflects the latest edit, not a stale debounce window.
   const isDirtyRef = useRef(isDirty);
   const flushRef = useRef(flush);
   isDirtyRef.current = isDirty;
@@ -116,6 +119,9 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   const isLogline = type === DocumentTypes.LOGLINE;
   const isSynopsis = type === DocumentTypes.SYNOPSIS;
   const isTreatment = type === DocumentTypes.TREATMENT;
+  // Pages that promote the logline to the TopBar center and host the unified
+  // "…" actions menu in the TopBar right slot (Soggetto parity for Scaletta).
+  const hasTopBarDocActions = isSynopsis || isTreatment || isOutline;
   const isReadOnly = !document.canEdit;
 
   // Track whether the user has actually edited (vs just loaded an empty doc).
@@ -182,14 +188,35 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     type === DocumentTypes.TREATMENT;
   const { data: docVersionsResult } = useDocumentVersions(document.id);
   const loglineQuery = useDocument(document.projectId, DocumentTypes.LOGLINE);
-  const loglineContent =
+  const loglineDoc =
     loglineQuery.data && loglineQuery.data.isOk
-      ? loglineQuery.data.value.content
-      : "";
+      ? loglineQuery.data.value
+      : null;
+  const persistedLogline = loglineDoc?.content ?? "";
+  // The logline is the shared PROJECT logline (a sibling document), surfaced in
+  // the TopBar pill on every narrative page. Edits made from here apply LIVE to
+  // that logline document and autosave, so the pill stays editable+persistent on
+  // synopsis/outline/treatment (not just soggetto). canEdit mirrors the page's
+  // edit permission.
+  const canEditLogline = document.canEdit && !isReadOnly && loglineDoc !== null;
+  const [loglineDraft, setLoglineDraft] = useState(persistedLogline);
+  useEffect(() => {
+    setLoglineDraft(persistedLogline);
+  }, [persistedLogline]);
+  const saveLogline = useSaveDocument();
+  useAutoSave(
+    saveLogline,
+    loglineDoc?.id ?? "",
+    loglineDraft,
+    persistedLogline,
+  );
+  const handleLoglineChange = canEditLogline
+    ? (next: string) => setLoglineDraft(next)
+    : undefined;
   const exportPdf = useExportNarrativePdf();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const handleExport = () => {
-    if (isVersionsOpen) closeDrawer();
+    if (isVersionsOpen) versionsSurface.close();
     setIsExportModalOpen(true);
   };
   const handleGenerate = ({
@@ -204,20 +231,17 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   };
 
   const openVersionsDrawer = () => {
-    openDrawer(
-      {
-        kind: "document",
-        documentId: document.id,
-        docType: type,
-        canEdit: document.canEdit,
-        currentVersionId: document.currentVersionId ?? null,
-      },
-      {
-        dirtyHook: {
-          isDirty: () => isDirtyRef.current,
-          flush: () => flushRef.current(),
-        },
-      },
+    if (isVersionsOpen) {
+      versionsSurface.close();
+      return;
+    }
+    // Flush any pending autosave so the drawer lists the latest content.
+    if (isDirtyRef.current) flushRef.current();
+    versionsSurface.open(
+      document.id,
+      document.currentVersionId
+        ? { vcur: document.currentVersionId }
+        : undefined,
     );
   };
 
@@ -378,6 +402,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         placeholder={DOCUMENT_PLACEHOLDERS[type]}
         readOnly={isReadOnly}
         enableHeadings={isTreatment}
+        diffDocumentType={type}
         onReady={(view) => {
           editorViewRef.current = view;
           // Re-render the toolbar on every transaction so the active
@@ -434,6 +459,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onGenerate={handleGenerate}
           />
         )}
+        {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left; Cesare → BottomDock. */}
         <FloatingDock
           primaryAction={{
             label:
@@ -444,7 +470,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
             onClick: handleExport,
           }}
           secondaryActions={[]}
-          onCesareClick={openCesare}
         />
       </div>
     );
@@ -452,7 +477,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
 
   const layout = layoutForType(type);
   const rightAside = (
-    <NarrativeCesarePanel
+    <MarginNotesColumn
       projectId={document.projectId}
       docType={type}
       content={plainContent}
@@ -462,6 +487,25 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     <TreatmentToc content={content} />
   ) : undefined;
 
+  // Unified "…" actions menu for narrative doc pages (Soggetto-style). PDF
+  // export is gated to the narrative export route (logline/synopsis/treatment);
+  // on Scaletta it stays present but disabled. Versioni is always actionable.
+  const docActionsMenu = hasTopBarDocActions ? (
+    <ActionsMenu
+      data-testid="narrative-actions-menu"
+      items={[
+        {
+          label: exportPdf.isPending ? "Esportazione…" : "Esporta PDF",
+          onClick: handleExport,
+          disabled: !isNarrative || exportPdf.isPending,
+        },
+        { label: "Versioni", onClick: openVersionsDrawer },
+        { label: "Importa", onClick: () => {}, disabled: true },
+        { label: "Frontespizio", onClick: () => {}, disabled: true },
+      ]}
+    />
+  ) : undefined;
+
   return (
     <div className={styles.page}>
       {readOnlyBadge}
@@ -469,13 +513,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         projectId={document.projectId}
         docType={type}
         layout={layout}
-        logline={loglineContent}
-        canEditLogline={false}
+        logline={loglineDraft}
+        canEditLogline={canEditLogline}
+        onLoglineChange={handleLoglineChange}
         versionLabel={currentVersionLabel ?? undefined}
         versionMenuItems={versionMenuItems}
         onOpenVersions={openVersionsDrawer}
         leftAside={leftAside}
         rightAside={rightAside}
+        topBarActions={docActionsMenu}
       >
         {draftBanner}
         {editorBody}
@@ -488,16 +534,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           onGenerate={handleGenerate}
         />
       )}
-      <FloatingDock
-        primaryAction={{
-          label:
-            isNarrative && exportPdf.isPending ? "Esportando…" : "Esporta PDF",
-          hotkey: "⌘E",
-          onClick: handleExport,
-        }}
-        secondaryActions={[]}
-        onCesareClick={openCesare}
-      />
     </div>
   );
 }

@@ -53,6 +53,7 @@ export type SkillId =
   | "schedule"
   | "shooting-plan"
   | "document-edit"
+  | "document-gen"
   | "screenplay-edit"
   | "read-scene"
   | "read-document";
@@ -108,7 +109,13 @@ export type PageType =
 
 export interface SkillRegistry {
   get(id: SkillId): Skill | undefined;
+  /** Universal dispatch (spec 47b): returns the FULL skill superset with the
+   *  page-primary skills leading. The page is context, not a gate. */
   selectForPage(page: PageType, intent: IntentResult | null): Skill[];
+  /** The page-primary skills only — used to scope `buildLocalContext` data
+   *  loading so DB round-trips stay proportional to the page, not the whole
+   *  universal toolset. */
+  primarySkillsForPage(page: PageType): Skill[];
   allTools(skills: readonly Skill[]): readonly AnthropicTool[];
   combinedExecutor(skills: readonly Skill[]): SkillExecutor;
 }

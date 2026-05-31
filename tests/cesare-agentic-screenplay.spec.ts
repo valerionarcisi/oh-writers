@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
+  closeCesareSheet,
   openCesareSheet,
   resetScreenplayState,
   sendCesareMessage,
@@ -44,6 +45,11 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     await sendCesareMessage(authenticatedPage, "Rendi questa scena più tesa.");
     const reply = await waitForCesareReply(authenticatedPage);
     expect(reply.toLowerCase()).toMatch(/propost|modifica|scena/);
+
+    // The edit applies live in the editor; the accept widget lives in-page.
+    // Dismiss the floating Cesare drawer (bottom-right) so it can't intercept
+    // the click on the inline accept widget — the real user flow.
+    await closeCesareSheet(authenticatedPage);
 
     // The PM plugin renders a widget with accept/reject buttons next to the
     // matched range. The widget carries data-testid="proposal-accept" /

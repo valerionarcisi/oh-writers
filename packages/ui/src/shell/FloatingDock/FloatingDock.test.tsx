@@ -9,14 +9,14 @@ const primary = { label: "Rigenera", hotkey: "⌘R", onClick: vi.fn() };
 describe("FloatingDock", () => {
   it("renders page label", () => {
     const { getByText } = render(
-      <FloatingDock label="BUDGET" primaryAction={primary} />
+      <FloatingDock label="BUDGET" primaryAction={primary} />,
     );
     expect(getByText("BUDGET")).toBeTruthy();
   });
 
   it("renders primary action", () => {
     const { getByText } = render(
-      <FloatingDock label="BUDGET" primaryAction={primary} />
+      <FloatingDock label="BUDGET" primaryAction={primary} />,
     );
     expect(getByText("Rigenera")).toBeTruthy();
   });
@@ -27,7 +27,7 @@ describe("FloatingDock", () => {
       <FloatingDock
         label="BUDGET"
         primaryAction={{ label: "Rigenera", onClick }}
-      />
+      />,
     );
     fireEvent.click(getByText("Rigenera"));
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -39,20 +39,24 @@ describe("FloatingDock", () => {
         label="BUDGET"
         primaryAction={primary}
         secondaryActions={[{ label: "Esporta", onClick: vi.fn() }]}
-      />
+      />,
     );
     expect(getByText("Esporta")).toBeTruthy();
   });
 
   it("shows cesare note count when > 0", () => {
-    const { getByText } = render(
+    const { getByRole } = render(
       <FloatingDock
         label="BUDGET"
         primaryAction={primary}
         cesareNoteCount={3}
-      />
+        onCesareClick={vi.fn()}
+      />,
     );
-    expect(getByText("3")).toBeTruthy();
+    // The numeric badge is aria-hidden — the count is announced via the
+    // Cesare button's aria-label instead.
+    const cesareBtn = getByRole("button", { name: /3 note su questa pagina/i });
+    expect(cesareBtn).toBeTruthy();
   });
 
   it("calls onCesareClick when Cesare pill clicked", () => {
@@ -62,7 +66,7 @@ describe("FloatingDock", () => {
         label="BUDGET"
         primaryAction={primary}
         onCesareClick={onCesareClick}
-      />
+      />,
     );
     fireEvent.click(getByRole("button", { name: /Cesare/i }));
     expect(onCesareClick).toHaveBeenCalledTimes(1);
@@ -70,7 +74,7 @@ describe("FloatingDock", () => {
 
   it("has role=toolbar", () => {
     const { getByRole } = render(
-      <FloatingDock label="BUDGET" primaryAction={primary} />
+      <FloatingDock label="BUDGET" primaryAction={primary} />,
     );
     expect(getByRole("toolbar")).toBeTruthy();
   });

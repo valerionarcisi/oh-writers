@@ -1,141 +1,69 @@
-import { createHash } from "node:crypto";
-import { ResultAsync, okAsync, errAsync } from "neverthrow";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { Effect, Layer } from "effect";
+import type { ResultAsync } from "neverthrow";
+import { okAsync } from "neverthrow";
+import { eq } from "drizzle-orm";
 import { scenes } from "@oh-writers/db/schema";
 import { SceneSummarySchema, type SceneSummary } from "@oh-writers/domain";
-import { callHaiku, extractToolUse } from "~/features/ai";
 import type { Db } from "~/server/db";
 import { DbError } from "@oh-writers/utils";
-import { findSceneSummaryFixture } from "./_mocks/scene-summary.fixtures";
-import { logger } from "~/server/logger";
+import {
+  AiClient,
+  AiClientLayer,
+  DbService,
+  toResultAsync,
+} from "~/server/effect";
+import {
+  SceneSummaryError,
+  fingerprintBody,
+  generateSceneSummaryEffect,
+  refreshStaleSceneSummariesEffect,
+} from "./scene-summary.effect";
 
-// ─── Errors ───────────────────────────────────────────────────────────────────
+// ─── Spec 48 W-E5 ──────────────────────────────────────────────────────────────
+//
+// This module is the neverthrow-facing seam for the scene-summary distiller. The
+// real logic now lives in `scene-summary.effect.ts` (model call routed through
+// the `AiClient` Layer, db from the `DbService` Layer, bounded-concurrency
+// refresh). Here we provide those Layers around an existing `db` handle and
+// bridge the Effect result back to the canonical `ResultAsync` so every caller
+// (`screenplay.server.ts`) is untouched. Re-exports keep the public surface
+// (`SceneSummaryError`, `fingerprintBody`) byte-identical.
 
-export class SceneSummaryError {
-  readonly _tag = "SceneSummaryError" as const;
-  readonly message: string;
-  constructor(
-    readonly operation: string,
-    cause: unknown,
-  ) {
-    this.message = `Scene summary failed in ${operation}: ${cause instanceof Error ? cause.message : String(cause)}`;
-  }
-}
+export { SceneSummaryError, fingerprintBody };
+export type { SceneSummary };
 
-// ─── Fingerprint ──────────────────────────────────────────────────────────────
+// Bind an AI distiller Effect to a concrete `db` handle + the AiClient Layer and
+// surface it as a `ResultAsync`. The Db Layer is `Layer.succeed` over the passed
+// handle (the caller owns the connection); the AiClient Layer carries the W-E3
+// retry/timeout policy. This is the one place the Effect↔neverthrow boundary is
+// crossed for this distiller.
+const runWithDb = <A, E>(
+  db: Db,
+  effect: Effect.Effect<A, E, AiClient | DbService>,
+): ResultAsync<A, E> =>
+  toResultAsync(
+    effect.pipe(
+      Effect.provide(
+        Layer.mergeAll(Layer.succeed(DbService, { db }), AiClientLayer),
+      ),
+    ),
+  );
 
-export const fingerprintBody = (body: string): string =>
-  createHash("sha256").update(body).digest("hex").slice(0, 16);
-
-// ─── Tool definition ──────────────────────────────────────────────────────────
-
-const EMIT_TOOL_NAME = "emit_scene_summary";
-
-const EMIT_TOOL = {
-  name: EMIT_TOOL_NAME,
-  description: "Emit a structured summary of the screenplay scene.",
-  input_schema: {
-    type: "object",
-    properties: {
-      sceneNumber: { type: "integer", minimum: 1 },
-      heading: { type: "string" },
-      settingDescription: { type: "string" },
-      timeOfDay: { type: ["string", "null"] },
-      presentCharacters: {
-        type: "array",
-        items: { type: "string" },
-        maxItems: 20,
-      },
-      keyActions: { type: "array", items: { type: "string" }, maxItems: 5 },
-      productionNotes: {
-        type: "array",
-        items: { type: "string" },
-        maxItems: 10,
-      },
-    },
-    required: [
-      "sceneNumber",
-      "heading",
-      "settingDescription",
-      "timeOfDay",
-      "presentCharacters",
-      "keyActions",
-      "productionNotes",
-    ],
-  },
-} as const;
-
-const SYSTEM_PROMPT = `You are a film production analyst.
-Given the Fountain-formatted body of a screenplay scene, emit a structured JSON summary
-that captures the physical setting, characters present, the key dramatic actions (≤5 bullets),
-and any production notes that affect logistics (stunts, SFX, vehicles, night exterior, etc.).
-Be concise. The settingDescription should be a 1-sentence description of the physical place.`;
-
-// ─── Core generation ─────────────────────────────────────────────────────────
-
-const generateWithAI = (
-  sceneNumber: number,
-  heading: string,
-  body: string,
-): ResultAsync<SceneSummary, SceneSummaryError> =>
-  callHaiku(
-    {
-      system: SYSTEM_PROMPT,
-      fewShot: {},
-      user: `SCENE ${sceneNumber}: ${heading}\n\n${body}`,
-      maxTokens: 512,
-      tools: [EMIT_TOOL],
-      toolChoice: { type: "tool", name: EMIT_TOOL_NAME },
-    },
-    "generateSceneSummary",
-  )
-    .mapErr((e) => new SceneSummaryError("generateSceneSummary.haiku", e))
-    .andThen((result) => {
-      const raw = extractToolUse(result.content, EMIT_TOOL_NAME);
-      const parsed = SceneSummarySchema.safeParse(raw);
-      return parsed.success
-        ? okAsync(parsed.data)
-        : errAsync(
-            new SceneSummaryError("generateSceneSummary.parse", parsed.error),
-          );
-    });
-
-const generateWithMock = (
-  sceneNumber: number,
-  heading: string,
-  _body: string,
-): ResultAsync<SceneSummary, SceneSummaryError> =>
-  okAsync(findSceneSummaryFixture(sceneNumber, heading));
-
+/**
+ * Generate one structured scene summary. Same external contract as before:
+ * `ResultAsync<SceneSummary, SceneSummaryError>`, mock fixture under `MOCK_AI`,
+ * same Zod validation and logging — now routed through the AiClient Layer.
+ */
 export const generateSceneSummary = (
   sceneNumber: number,
   heading: string,
   body: string,
-): ResultAsync<SceneSummary, SceneSummaryError> => {
-  const startMs = Date.now();
-  const result =
-    process.env["MOCK_AI"] === "true"
-      ? generateWithMock(sceneNumber, heading, body)
-      : generateWithAI(sceneNumber, heading, body);
-  return result
-    .map((summary) => {
-      console.info(
-        JSON.stringify({
-          event: "cesare.scene_summary.generated",
-          sceneNumber,
-          durationMs: Date.now() - startMs,
-        }),
-      );
-      return summary;
-    })
-    .mapErr((err) => {
-      logger.error(
-        { err: err.message, sceneNumber },
-        "scene summary generation failed",
-      );
-      return err;
-    });
-};
+): ResultAsync<SceneSummary, SceneSummaryError> =>
+  toResultAsync(
+    generateSceneSummaryEffect(sceneNumber, heading, body).pipe(
+      Effect.provide(AiClientLayer),
+    ),
+  );
 
 // ─── Debounce guard ───────────────────────────────────────────────────────────
 
@@ -143,20 +71,12 @@ export const generateSceneSummary = (
 // for the same screenplay. Simple Set — good enough for a single Node.js process.
 const inFlight = new Set<string>();
 
-// ─── Bulk refresh ────────────────────────────────────────────────────────────
-
-type SceneRow = {
-  id: string;
-  number: number;
-  heading: string;
-  notes: string | null;
-  sceneSummaryFingerprint: string | null;
-};
-
 /**
  * Find every scene in the screenplay whose body hash differs from the stored
- * fingerprint (or has no summary yet) and regenerate those summaries.
- * Fire-and-forget from the save path — errors are logged, not thrown.
+ * fingerprint (or has no summary yet) and regenerate those summaries with
+ * bounded concurrency. Fire-and-forget from the save path — errors are logged,
+ * not thrown. External contract unchanged:
+ * `ResultAsync<number, DbError | SceneSummaryError>`.
  */
 export const refreshStaleSceneSummaries = (
   db: Db,
@@ -165,63 +85,7 @@ export const refreshStaleSceneSummaries = (
   if (inFlight.has(screenplayId)) return okAsync(0);
   inFlight.add(screenplayId);
 
-  return ResultAsync.fromPromise(
-    db
-      .select({
-        id: scenes.id,
-        number: scenes.number,
-        heading: scenes.heading,
-        notes: scenes.notes,
-        sceneSummaryFingerprint: scenes.sceneSummaryFingerprint,
-      })
-      .from(scenes)
-      .where(eq(scenes.screenplayId, screenplayId)),
-    (e) => new DbError("refreshStaleSceneSummaries.load", e),
-  )
-    .andThen((rows: SceneRow[]) => {
-      const stale = rows.filter((r) => {
-        if (!r.notes || r.notes.trim().length === 0) return false;
-        const fp = fingerprintBody(r.notes);
-        return r.sceneSummaryFingerprint !== fp;
-      });
-
-      if (stale.length === 0) return okAsync(0);
-
-      const updates = stale.map((row) => {
-        const fp = fingerprintBody(row.notes!);
-        const prevFp = row.sceneSummaryFingerprint;
-        return generateSceneSummary(
-          row.number,
-          row.heading,
-          row.notes!,
-        ).andThen((summary) =>
-          // Anti-stale guard: only write if no previous summary exists or if
-          // the stored fingerprint still matches what we read before generating
-          // (another concurrent save may have already written a newer summary).
-          ResultAsync.fromPromise(
-            db
-              .update(scenes)
-              .set({
-                sceneSummary: summary,
-                sceneSummaryFingerprint: fp,
-              })
-              .where(
-                and(
-                  eq(scenes.id, row.id),
-                  prevFp === null
-                    ? isNull(scenes.sceneSummaryFingerprint)
-                    : eq(scenes.sceneSummaryFingerprint, prevFp),
-                ),
-              ),
-            (e) => new DbError("refreshStaleSceneSummaries.update", e),
-          ).map(() => 1 as const),
-        );
-      });
-
-      return ResultAsync.combine(updates).map((results) =>
-        results.reduce((sum, v) => sum + v, 0),
-      );
-    })
+  return runWithDb(db, refreshStaleSceneSummariesEffect(screenplayId))
     .map((count) => {
       inFlight.delete(screenplayId);
       return count;
@@ -233,6 +97,10 @@ export const refreshStaleSceneSummaries = (
 };
 
 // ─── Load summaries for distillation ─────────────────────────────────────────
+//
+// A plain DB read (no LLM, no concurrency to win) — stays on neverthrow per the
+// ADR boundary rule (simple CRUD reads do not move to Effect). Kept here as a
+// thin Effect-bridged read so the whole distiller speaks one error model.
 
 export interface SceneSummaryWithFingerprint {
   readonly sceneId: string;
@@ -244,35 +112,40 @@ export const loadSceneSummaries = (
   db: Db,
   screenplayId: string,
 ): ResultAsync<SceneSummaryWithFingerprint[], DbError> =>
-  ResultAsync.fromPromise(
-    db
-      .select({
-        id: scenes.id,
-        sceneSummary: scenes.sceneSummary,
-        sceneSummaryFingerprint: scenes.sceneSummaryFingerprint,
-      })
-      .from(scenes)
-      .where(eq(scenes.screenplayId, screenplayId)),
-    (e) => new DbError("loadSceneSummaries", e),
-  ).map((rows) =>
-    rows
-      .filter(
-        (
-          r,
-        ): r is typeof r & {
-          sceneSummary: unknown;
-          sceneSummaryFingerprint: string;
-        } => r.sceneSummary !== null && r.sceneSummaryFingerprint !== null,
-      )
-      .flatMap((r) => {
-        const parsed = SceneSummarySchema.safeParse(r.sceneSummary);
-        if (!parsed.success) return [];
-        return [
-          {
-            sceneId: r.id,
-            summary: parsed.data,
-            fingerprint: r.sceneSummaryFingerprint,
-          },
-        ];
-      }),
+  toResultAsync(
+    Effect.tryPromise({
+      try: () =>
+        db
+          .select({
+            id: scenes.id,
+            sceneSummary: scenes.sceneSummary,
+            sceneSummaryFingerprint: scenes.sceneSummaryFingerprint,
+          })
+          .from(scenes)
+          .where(eq(scenes.screenplayId, screenplayId)),
+      catch: (e) => new DbError("loadSceneSummaries", e),
+    }).pipe(
+      Effect.map((rows) =>
+        rows
+          .filter(
+            (
+              r,
+            ): r is typeof r & {
+              sceneSummary: unknown;
+              sceneSummaryFingerprint: string;
+            } => r.sceneSummary !== null && r.sceneSummaryFingerprint !== null,
+          )
+          .flatMap((r) => {
+            const parsed = SceneSummarySchema.safeParse(r.sceneSummary);
+            if (!parsed.success) return [];
+            return [
+              {
+                sceneId: r.id,
+                summary: parsed.data,
+                fingerprint: r.sceneSummaryFingerprint,
+              },
+            ];
+          }),
+      ),
+    ),
   );

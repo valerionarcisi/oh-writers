@@ -2,6 +2,7 @@ import { ResultAsync } from "neverthrow";
 import { getDb, type Db } from "~/server/db";
 import {
   requireProjectAccess,
+  requireProjectAccessWithHeaders,
   type AccessLevel,
   type ProjectAccess,
   type ProjectAccessError,
@@ -44,5 +45,23 @@ export const withProjectAccess = <T, E>(
   ResultAsync.fromSafePromise(getDb()).andThen((db) =>
     requireProjectAccess(db, projectId, level).andThen((access) =>
       body({ db, access }),
+    ),
+  );
+
+/**
+ * Headers-explicit variant of {@link withProjectAccess} for API file routes
+ * (e.g. `/api/cesare/stream`) that pass `request.headers` directly rather than
+ * relying on the ambient `getWebRequest()`, which is not reliably populated in
+ * an API route's POST handler.
+ */
+export const withProjectAccessHeaders = <T, E>(
+  projectId: string,
+  level: AccessLevel,
+  headers: Headers,
+  body: (ctx: WithProjectAccessCtx) => ResultAsync<T, E>,
+): ResultAsync<T, E | ProjectAccessError> =>
+  ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+    requireProjectAccessWithHeaders(db, projectId, level, headers).andThen(
+      (access) => body({ db, access }),
     ),
   );

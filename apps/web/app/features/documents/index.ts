@@ -11,20 +11,18 @@ export {
   promoteDocumentDraft,
   discardDocumentDraft,
 } from "./server/drafts.server";
+export { switchToVersion } from "./server/versions.server";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
 export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
 export { TextEditor } from "./components/TextEditor";
-export { LoglineBlock } from "./components/LoglineBlock";
-export type {
-  LoglineBlockProps,
-  LoglineBlockLabels,
-} from "./components/LoglineBlock";
 export { OutlineEditor } from "./components/OutlineEditor";
 export { AIAssistantPanel } from "./components/AIAssistantPanel";
 export { NarrativeDocsShell } from "./components/NarrativeDocsShell";
 export type { NarrativeDocsShellProps } from "./components/NarrativeDocsShell";
 export { NarrativeCesarePanel } from "./components/NarrativeCesarePanel";
+export { MarginNotesColumn } from "./components/MarginNotesColumn";
+export type { MarginNotesColumnProps } from "./components/MarginNotesColumn";
 export { LoglinePill } from "./components/LoglinePill";
 export type { LoglinePillProps } from "./components/LoglinePill";
 export { TreatmentToc } from "./components/TreatmentToc";
@@ -38,7 +36,6 @@ export type {
   ExportSiaeModalLabels,
 } from "./components/ExportSiaeModal";
 export * from "./hooks/useExportSubjectSiae";
-export * from "./hooks/useExtractLoglineFromSubject";
 export * from "./documents.errors";
 export * from "./documents.schema";
 export type {

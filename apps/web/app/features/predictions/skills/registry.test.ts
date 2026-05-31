@@ -64,101 +64,149 @@ const STUB_ACCESS = {} as ProjectAccess;
 
 // ─── selectForPage ────────────────────────────────────────────────────────────
 
-describe("SkillRegistry.selectForPage", () => {
-  it("returns the correct skill set for the locations page", () => {
+// Universal dispatch (spec 47b): `selectForPage` returns the FULL skill
+// superset on every page — the page only orders which guidance leads. These
+// tests prove a foreign-domain skill (and therefore its tools) is selectable
+// from any page, while the page-primary skill still leads.
+
+const UNIVERSAL_BASE_IDS: SkillId[] = [
+  "locations",
+  "breakdown",
+  "budget",
+  "schedule",
+  "shooting-plan",
+  "screenplay-edit",
+  "document-gen",
+  "read-scene",
+  "read-document",
+];
+
+describe("SkillRegistry.selectForPage — universal dispatch", () => {
+  it("exposes the full skill superset on the screenplay page", () => {
     const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("locations", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("locations");
-    expect(ids).toContain("read-scene");
-    expect(ids).toContain("read-document");
-    expect(ids).toHaveLength(3);
+    const ids = registry.selectForPage("screenplay", null).map((s) => s.id);
+    for (const id of UNIVERSAL_BASE_IDS) expect(ids).toContain(id);
   });
 
-  it("returns the correct skill set for the screenplay page", () => {
+  it("makes a foreign-domain skill selectable from the screenplay page", () => {
     const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("screenplay", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("screenplay-edit");
-    expect(ids).toContain("read-scene");
-    expect(ids).toHaveLength(2);
+    const ids = registry.selectForPage("screenplay", null).map((s) => s.id);
+    // The cross-domain document-write skill must be reachable from the
+    // Sceneggiatura page so a request there can write the Soggetto.
+    expect(ids).toContain("document-gen");
   });
 
-  it("returns the correct skill set for the budget page", () => {
+  it("exposes the full superset on the budget page too", () => {
     const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("budget", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("budget");
-    expect(ids).toContain("read-scene");
-    expect(ids).toHaveLength(2);
+    const ids = registry.selectForPage("budget", null).map((s) => s.id);
+    for (const id of UNIVERSAL_BASE_IDS) expect(ids).toContain(id);
   });
 
-  it("returns the correct skill set for the schedule page", () => {
-    const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("schedule", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("schedule");
-    expect(ids).toContain("read-scene");
-    expect(ids).toHaveLength(2);
-  });
-
-  it("returns the correct skill set for the breakdown page", () => {
-    const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("breakdown", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("breakdown");
-    expect(ids).toContain("read-scene");
-    expect(ids).toHaveLength(2);
-  });
-
-  it("returns the correct skill set for the shooting-plan page", () => {
-    const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("shooting-plan", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("shooting-plan");
-    expect(ids).toContain("read-scene");
-    expect(ids).toHaveLength(2);
-  });
-
-  it("returns document-edit skill when injected via overrides for soggetto page", () => {
-    const docSkill = makeSkill("document-edit", ["apply_text_edit"]);
-    const registry = buildSkillRegistry(makeCtx(), {
-      "document-edit": docSkill,
-    });
-    const skills = registry.selectForPage("soggetto", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("document-edit");
-    expect(ids).toContain("read-document");
-  });
-
-  it("omits document-edit from soggetto page when no override is injected", () => {
-    const registry = buildSkillRegistry(makeCtx());
-    const skills = registry.selectForPage("soggetto", null);
-    const ids = skills.map((s) => s.id);
-    // document-edit is not in base skills — should be absent
-    expect(ids).not.toContain("document-edit");
-  });
-
-  it("returns document-edit skill for synopsis page when injected", () => {
-    const docSkill = makeSkill("document-edit", ["apply_text_edit"]);
-    const registry = buildSkillRegistry(makeCtx(), {
-      "document-edit": docSkill,
-    });
-    const skills = registry.selectForPage("synopsis", null);
-    const ids = skills.map((s) => s.id);
-    expect(ids).toContain("document-edit");
-  });
-
-  it("skill order puts primary skill first on the locations page", () => {
+  it("leads with the page-primary skill on the locations page", () => {
     const registry = buildSkillRegistry(makeCtx());
     const skills = registry.selectForPage("locations", null);
     expect(skills[0]?.id).toBe("locations");
+    const ids = skills.map((s) => s.id);
+    expect(ids.slice(0, 3)).toEqual([
+      "locations",
+      "read-scene",
+      "read-document",
+    ]);
   });
 
-  it("skill order puts primary skill first on the screenplay page", () => {
+  it("leads with the page-primary skill on the screenplay page", () => {
     const registry = buildSkillRegistry(makeCtx());
     const skills = registry.selectForPage("screenplay", null);
     expect(skills[0]?.id).toBe("screenplay-edit");
+  });
+
+  it("includes document-edit AND drops standalone document-gen when injected on a doc page", () => {
+    const docSkill = makeSkill("document-edit", [
+      "apply_text_edit",
+      // document-edit already bundles the document-gen tools in production
+      "propose_soggetto_v2",
+    ]);
+    const registry = buildSkillRegistry(makeCtx(), {
+      "document-edit": docSkill,
+    });
+    const ids = registry.selectForPage("soggetto", null).map((s) => s.id);
+    expect(ids[0]).toBe("document-edit");
+    expect(ids).not.toContain("document-gen");
+  });
+
+  it("keeps document-gen on a doc page when document-edit is NOT injected", () => {
+    const registry = buildSkillRegistry(makeCtx());
+    const ids = registry.selectForPage("soggetto", null).map((s) => s.id);
+    expect(ids).not.toContain("document-edit");
+    // Falls back to the always-available cross-domain document-gen skill.
+    expect(ids).toContain("document-gen");
+  });
+});
+
+// ─── primarySkillsForPage ──────────────────────────────────────────────────────
+// The page-primary subset that scopes buildLocalContext data loading. It must
+// stay narrow (the page's own skills) even though selectForPage is universal.
+
+describe("SkillRegistry.primarySkillsForPage", () => {
+  it("returns only the page-primary skills for locations", () => {
+    const registry = buildSkillRegistry(makeCtx());
+    const ids = registry.primarySkillsForPage("locations").map((s) => s.id);
+    expect(ids).toEqual(["locations", "read-scene", "read-document"]);
+  });
+
+  it("returns only the page-primary skills for budget", () => {
+    const registry = buildSkillRegistry(makeCtx());
+    const ids = registry.primarySkillsForPage("budget").map((s) => s.id);
+    expect(ids).toEqual(["budget", "read-scene"]);
+  });
+
+  it("stays narrower than the universal selectForPage set", () => {
+    const registry = buildSkillRegistry(makeCtx());
+    const primary = registry.primarySkillsForPage("screenplay");
+    const universal = registry.selectForPage("screenplay", null);
+    expect(primary.length).toBeLessThan(universal.length);
+  });
+});
+
+// ─── Cross-domain dispatch (spec 47b) ──────────────────────────────────────────
+// The keystone of the fix: a tool whose domain is NOT the current page must be
+// both exposed by selectForPage and routable by combinedExecutor. This proves
+// `propose_soggetto_v2` (a Soggetto write) is reachable from the Sceneggiatura
+// page through the real registry, end to end at the dispatch layer.
+
+describe("SkillRegistry — cross-domain dispatch from a foreign page", () => {
+  const CROSS_DOMAIN_TOOL = "propose_soggetto_v2";
+
+  it("exposes the Soggetto-write tool in the screenplay tool surface", () => {
+    const registry = buildSkillRegistry(makeCtx(), {}, "user-1");
+    const skills = registry.selectForPage("screenplay", null);
+    const toolNames = registry.allTools(skills).map((t) => t.name);
+    expect(toolNames).toContain(CROSS_DOMAIN_TOOL);
+  });
+
+  it("routes the Soggetto-write tool to an owning skill from the screenplay page", () => {
+    const registry = buildSkillRegistry(makeCtx(), {}, "user-1");
+    const skills = registry.selectForPage("screenplay", null);
+    const owner = skills.find((s) =>
+      s.tools.some((t) => t.name === CROSS_DOMAIN_TOOL),
+    );
+    expect(owner).toBeDefined();
+    // The combinedExecutor must resolve the owner without erroring on lookup.
+    const executor = registry.combinedExecutor(skills);
+    expect(typeof executor).toBe("function");
+  });
+
+  it("does NOT route an unknown tool (guard intact)", async () => {
+    const registry = buildSkillRegistry(makeCtx(), {}, "user-1");
+    const skills = registry.selectForPage("screenplay", null);
+    const executor = registry.combinedExecutor(skills);
+    const result = await executor(
+      makeBlock("tool_that_does_not_exist"),
+      STUB_DB,
+      "proj-1",
+      STUB_ACCESS,
+    );
+    expect(result.isErr()).toBe(true);
   });
 });
 
@@ -206,6 +254,28 @@ describe("SkillRegistry.allTools", () => {
   it("returns an empty array for an empty skill list", () => {
     const registry = buildSkillRegistry(makeCtx());
     expect(registry.allTools([])).toHaveLength(0);
+  });
+
+  it("dedups tools by name across overlapping skills (first wins)", () => {
+    const skillA = makeSkill("locations" as SkillId, ["shared_tool", "a_only"]);
+    const skillB = makeSkill("read-scene" as SkillId, [
+      "shared_tool",
+      "b_only",
+    ]);
+    const registry = buildSkillRegistry(makeCtx());
+    const tools = registry.allTools([skillA, skillB]);
+    expect(tools.map((t) => t.name)).toEqual([
+      "shared_tool",
+      "a_only",
+      "b_only",
+    ]);
+  });
+
+  it("produces no duplicate tool names across the full universal screenplay set", () => {
+    const registry = buildSkillRegistry(makeCtx());
+    const skills = registry.selectForPage("screenplay", null);
+    const names = registry.allTools(skills).map((t) => t.name);
+    expect(new Set(names).size).toBe(names.length);
   });
 });
 

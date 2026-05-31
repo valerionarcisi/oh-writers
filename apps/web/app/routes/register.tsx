@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { titleHead } from "~/lib/document-title";
 import { createServerFn } from "@tanstack/start";
 import { RegisterForm } from "~/features/auth";
 import styles from "./_auth.module.css";
@@ -12,6 +13,7 @@ const fetchIsAuthenticated = createServerFn({ method: "GET" }).handler(
 );
 
 export const Route = createFileRoute("/register")({
+  head: () => titleHead("Registrati"),
   loader: async () => {
     const isAuthenticated = await fetchIsAuthenticated();
     if (isAuthenticated) throw redirect({ to: "/dashboard" });

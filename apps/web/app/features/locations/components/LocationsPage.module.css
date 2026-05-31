@@ -9,8 +9,9 @@
 .layout {
   flex: 1;
   display: grid;
-  /* list left, map right — immobiliare.it-style split */
-  grid-template-columns: var(--list-width, 420px) 1fr;
+  /* list left (340px per Spec 44 mockup), map right — keeps the immobiliare-style
+   * split but trims the list track so the map dominates. */
+  grid-template-columns: var(--list-width, 340px) 1fr;
   overflow: hidden;
   /* Reserve space for the FloatingDock (28px pill + 20px bottom + 20px gap) */
   padding-block-end: 68px;
@@ -35,4 +36,12 @@
 .mapColumn > :first-child {
   flex: 1 1 auto;
   min-inline-size: 0;
+}
+
+/* Server / pre-mount placeholder for the client-only Leaflet map. Fills the
+   column so the layout doesn't jump when the real map mounts. */
+.mapPlaceholder {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  background: var(--ds-surface-alt);
 }

@@ -1,8 +1,12 @@
 /* packages/ui/src/shell/FloatingDock/FloatingDock.module.css */
+/* Legacy per-page action bar (primary + secondary CTAs, page-scoped).
+   Anchored bottom-LEFT by default so it never collides with the shell-level
+   BottomDock (bell / avatar / gear / Cesare pill) which lives bottom-right.
+   Hidden whenever Cesare is open so its header carries the same affordances. */
 .dock {
   position: fixed;
   bottom: 20px;
-  inset-inline-end: 20px;
+  inset-inline-start: 20px;
   display: flex;
   align-items: center;
   gap: var(--ds-space-1);
@@ -13,10 +17,25 @@
   box-shadow: var(--ds-shadow-3);
   z-index: 30;
 
+  /* Opt-in: place on the right when the page wants the historical anchor. */
+  &[data-position="bottom-right"] {
+    inset-inline-start: unset;
+    inset-inline-end: 20px;
+  }
+
+  /* Backward-compat with old explicit bottom-left consumers. */
   &[data-position="bottom-left"] {
     inset-inline-end: unset;
     inset-inline-start: 20px;
   }
+}
+
+/* Hide when Cesare ≠ closed or shell is in focus — same rule as BottomDock. */
+:global(body[data-cesare="expanded"]) .dock,
+:global(body[data-cesare="peek"]) .dock,
+:global(body[data-cesare="full"]) .dock,
+:global(body[data-shell="focus"]) .dock {
+  display: none;
 }
 
 .infoChipGroup {

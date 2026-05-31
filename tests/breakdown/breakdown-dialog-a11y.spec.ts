@@ -1,6 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
+import {
+  navigateToBreakdown,
+  switchBreakdownView,
+  TEAM_PROJECT_ID,
+} from "./helpers";
 
 /**
  * [Spec UI — Dialog a11y]
@@ -22,13 +26,13 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
    * Helper: navigate to per-project breakdown and select at least one row
    * so the bulk action bar appears. Returns false if skipping is needed.
    */
-  async function setupBulkSelection(page: Parameters<typeof test>[1]["authenticatedPage"]) {
+  async function setupBulkSelection(
+    page: Parameters<typeof test>[1]["authenticatedPage"],
+  ) {
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
     // Switch to per-project view where bulk actions live
-    const perProjectTab = page.getByTestId("segmented-per-project");
-    await expect(perProjectTab).toBeVisible({ timeout: 10_000 });
-    await perProjectTab.click();
+    await switchBreakdownView(page, "per-project");
     await expect(page.getByTestId("project-breakdown-table")).toBeVisible({
       timeout: 10_000,
     });
@@ -47,7 +51,9 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     }
 
     // Check the first row checkbox
-    const firstCheckbox = page.locator('tbody tr input[type="checkbox"]').first();
+    const firstCheckbox = page
+      .locator('tbody tr input[type="checkbox"]')
+      .first();
     if (!(await firstCheckbox.isVisible())) return false;
     await firstCheckbox.check();
 
@@ -71,10 +77,11 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     // Click the archive button to trigger the ConfirmDialog
     await page.getByTestId("bulk-archive-btn").click();
 
-    // The native <dialog> element rendered by Dialog/ConfirmDialog
-    // does not have a data-testid by default, but it contains the
-    // confirm button and the title text
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+    // The v3 Dialog renders a native <dialog open> that also hosts a
+    // react-aria content node with role="dialog" — so getByRole("dialog")
+    // matches two elements (strict-mode violation). Anchor on the native
+    // <dialog open> element, which is the canonical "modal is showing" signal.
+    await expect(page.locator("dialog[open]")).toBeVisible({ timeout: 5_000 });
   });
 
   test("[OHW-411] Escape key closes the ConfirmDialog", async ({
@@ -88,13 +95,15 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     }
 
     await page.getByTestId("bulk-archive-btn").click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("dialog[open]")).toBeVisible({ timeout: 5_000 });
 
     // Native <dialog> handles Escape automatically via the browser
     await page.keyboard.press("Escape");
 
     // The dialog must be closed
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3_000 });
+    await expect(page.locator("dialog[open]")).not.toBeVisible({
+      timeout: 3_000,
+    });
 
     // Selection should be preserved (Escape = cancel, not archive)
     await expect(page.getByTestId("bulk-action-bar")).toBeVisible();
@@ -114,13 +123,19 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     const rowsBefore = await page.locator("tbody tr").count();
 
     await page.getByTestId("bulk-archive-btn").click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("dialog[open]")).toBeVisible({ timeout: 5_000 });
 
-    // ConfirmDialog renders cancelLabel button ("Annulla")
-    await page.getByRole("button", { name: "Annulla" }).click();
+    // ConfirmDialog renders cancelLabel button ("Annulla"). Scope to the open
+    // dialog — the bulk action bar also has its own "Annulla" (clear selection).
+    await page
+      .locator("dialog[open]")
+      .getByRole("button", { name: "Annulla" })
+      .click();
 
     // Dialog must be gone
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3_000 });
+    await expect(page.locator("dialog[open]")).not.toBeVisible({
+      timeout: 3_000,
+    });
 
     // Row count must be unchanged (nothing was archived)
     const rowsAfter = await page.locator("tbody tr").count();
@@ -138,17 +153,22 @@ test.describe("[Spec UI] Dialog a11y — native <dialog> focus and keyboard", ()
     }
 
     await page.getByTestId("bulk-archive-btn").click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("dialog[open]")).toBeVisible({ timeout: 5_000 });
 
     // ConfirmDialog passes autoFocus to the confirm button, so it should
     // receive focus when the dialog opens. Verify it is the focused element.
-    const confirmBtn = page.getByRole("button", { name: "Archivia" });
+    // Scope to the open dialog to avoid colliding with other page buttons.
+    const confirmBtn = page
+      .locator("dialog[open]")
+      .getByRole("button", { name: "Archivia" });
     await expect(confirmBtn).toBeFocused({ timeout: 3_000 });
 
     // Confirm the action
     await confirmBtn.click();
 
     // Dialog should close after confirming
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("dialog[open]")).not.toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

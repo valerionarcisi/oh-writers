@@ -13,6 +13,7 @@ import { callHaiku, extractText } from "~/features/ai";
 import { repairMojibake } from "@oh-writers/utils";
 import { SONNET_MODEL } from "./cesare-model-router";
 import { CesareError } from "./cesare.errors";
+import { applyVersionLive, type CreatedDraft } from "./auto-version.effect";
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -20,10 +21,11 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
   {
     name: "propose_logline_from_screenplay",
     description:
-      "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
-      "Crea una versione DRAFT del documento logline che l'utente può accettare o scartare " +
-      "tramite il banner che appare sopra l'editor. Usa SEMPRE questo tool quando l'utente " +
-      "chiede di 'generare la logline' o 'scrivimi una logline'.",
+      "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
+      "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
+      "L'utente può ripristinare con Annulla. Usa questo tool SOLO quando l'utente chiede esplicitamente " +
+      "di derivare/estrarre la logline DALLA sceneggiatura (es. 'genera la logline dalla sceneggiatura'). " +
+      "Per scrivere una logline da un'istruzione libera o per modificare quella esistente usa invece write_logline.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -36,10 +38,37 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     },
   },
   {
+    name: "write_logline",
+    description:
+      "Scrive o modifica la logline del progetto (max 200 caratteri) da un'istruzione in linguaggio naturale, " +
+      "SENZA bisogno della sceneggiatura. Applica live la nuova logline al documento e crea automaticamente una versione " +
+      "(l'utente può ripristinare con ↩ Annulla). Usa questo tool quando l'utente: " +
+      "(a) chiede di SCRIVERE una logline da una premessa ('scrivimi una logline su un detective che…'), oppure " +
+      "(b) chiede di MODIFICARE la logline esistente ('rendila più corta', 'più tesa', 'cambia il protagonista'). " +
+      "Disponibile da qualunque pagina.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        instruction: {
+          type: "string",
+          description:
+            "L'istruzione in linguaggio naturale: la premessa da cui scrivere la logline, oppure la modifica da applicare a quella esistente.",
+        },
+        mode: {
+          type: "string",
+          enum: ["auto", "write", "edit"],
+          description:
+            "Opzionale. 'write' = scrivi una logline nuova ignorando l'esistente; 'edit' = riscrivi quella esistente seguendo l'istruzione; 'auto' (default) = modifica se ne esiste già una, altrimenti ne scrive una nuova.",
+        },
+      },
+      required: ["instruction"],
+    },
+  },
+  {
     name: "propose_synopsis_from_screenplay",
     description:
       "Genera una sinossi (2-3 paragrafi, circa 400 parole) dalla sceneggiatura corrente del " +
-      "progetto. Crea una versione DRAFT del documento sinossi. Usa SEMPRE questo tool quando " +
+      "progetto. Applica live la nuova sinossi al documento e crea automaticamente una versione. Usa SEMPRE questo tool quando " +
       "l'utente chiede 'scrivimi la sinossi' o 'genera la sinossi'.",
     input_schema: {
       type: "object" as const,
@@ -55,7 +84,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
   {
     name: "propose_soggetto_v2",
     description:
-      "Riscrive il soggetto del progetto in una nuova versione DRAFT seguendo l'istruzione " +
+      "Riscrive il soggetto del progetto applicandolo live al documento (crea automaticamente una versione) seguendo l'istruzione " +
       "fornita. Usa quando l'utente vuole una variante del soggetto (es. 'più asciutto', " +
       "'più tematico', 'fammi un v2 con focus su X').",
     input_schema: {
@@ -79,7 +108,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     name: "propose_scaletta_from_soggetto",
     description:
       "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
-      "Crea una versione DRAFT del documento scaletta. Usa quando l'utente chiede 'dato il " +
+      "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
       "soggetto fammi la scaletta' o simile.",
     input_schema: {
       type: "object" as const,
@@ -289,6 +318,24 @@ export const sanitizeLogline = (raw: string): string => {
   return noQuotes.slice(0, LOGLINE_HARD_CAP);
 };
 
+export type LoglineWriteMode = "write" | "edit";
+
+/**
+ * Resolves the effective write/edit mode for `write_logline`. The model may
+ * pass an explicit `mode`; otherwise `"auto"` (the default) edits when a
+ * non-empty logline already exists and writes a fresh one otherwise. Keeping
+ * this as a pure function lets the unit test pin every branch without a DB.
+ */
+export const resolveLoglineMode = (
+  requested: "auto" | "write" | "edit" | undefined,
+  existing: string | null,
+): LoglineWriteMode => {
+  if (requested === "write") return "write";
+  if (requested === "edit") return "edit";
+  const hasExisting = (existing ?? "").trim().length > 0;
+  return hasExisting ? "edit" : "write";
+};
+
 // ─── Source content loaders ───────────────────────────────────────────────────
 
 const loadScreenplayContent = (
@@ -354,68 +401,13 @@ const loadDocumentForType = (
   );
 
 // ─── Draft insertion ──────────────────────────────────────────────────────────
-
-interface CreatedDraft {
-  versionId: string;
-  documentType: DocumentType;
-  label: string;
-}
-
-const insertDraftVersion = (
-  db: Db,
-  documentId: string,
-  documentType: DocumentType,
-  createdBy: string,
-  content: string,
-  label: string,
-): ResultAsync<CreatedDraft, CesareError> =>
-  ResultAsync.fromPromise(
-    db.transaction(async (tx) => {
-      const trimmed = content.trim();
-      if (!trimmed) {
-        throw new Error("Il modello ha restituito un contenuto vuoto.");
-      }
-      // Guard against the LLM returning the previous active content verbatim
-      // (or an existing draft byte-identical to it). A draft equal to the
-      // current version is useless — the user can't tell what changed and
-      // promoting it would be a no-op. Block at the DB boundary so every
-      // propose_* tool inherits the protection.
-      const existing = await tx
-        .select({ content: documentVersions.content })
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId));
-      const isDuplicate = existing.some((e) => e.content.trim() === trimmed);
-      if (isDuplicate) {
-        throw new Error(
-          "Il modello ha restituito un testo identico a una versione esistente. Riformula la richiesta con un'istruzione più specifica (tono, struttura, lunghezza).",
-        );
-      }
-      const [maxRow] = await tx
-        .select({
-          max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
-        })
-        .from(documentVersions)
-        .where(eq(documentVersions.documentId, documentId));
-      const nextNum = (maxRow?.max ?? 0) + 1;
-      const [inserted] = await tx
-        .insert(documentVersions)
-        .values({
-          documentId,
-          number: nextNum,
-          label,
-          content,
-          isDraft: true,
-          createdBy,
-        })
-        .returning({ id: documentVersions.id });
-      if (!inserted) throw new Error("insertDraftVersion returned no rows");
-      return inserted.id;
-    }),
-    (e) =>
-      new CesareError(
-        e instanceof Error ? e.message : `insertDraftVersion: ${String(e)}`,
-      ),
-  ).map((versionId) => ({ versionId, documentType, label }));
+//
+// Auto-versioning (create-version-before-apply + rollback-on-error) now lives in
+// `auto-version.effect.ts`, where the invariant is made explicit with Effect's
+// `acquireRelease` (Spec 48 W-E4). `applyVersionLive` keeps the same
+// `ResultAsync<CreatedDraft, CesareError>` boundary, so every handler below is
+// untouched. `CreatedDraft` (incl. the Spec 47d `diffSegments`) is re-exported
+// from that module.
 
 // ─── Generators ───────────────────────────────────────────────────────────────
 
@@ -424,6 +416,26 @@ const LOGLINE_SYSTEM = `Sei Cesare, editor narrativo italiano. Stai leggendo una
 REGOLE:
 - Massimo 200 caratteri, una sola frase.
 - Struttura "protagonista + obiettivo + ostacolo".
+- Italiano, registro asciutto e specifico.
+- NIENTE virgolette di apertura/chiusura, NIENTE commenti, NIENTE preamboli.
+- Output: SOLO la logline, su una sola riga.`;
+
+const LOGLINE_WRITE_SYSTEM = `Sei Cesare, editor narrativo italiano. Devi scrivere UNA logline efficace a partire dall'istruzione dell'autore.
+
+REGOLE:
+- Massimo 200 caratteri, una sola frase.
+- Struttura "protagonista + obiettivo + ostacolo".
+- Italiano, registro asciutto e specifico.
+- Usa SOLO ciò che è nell'istruzione: non inventare titoli o dettagli non richiesti.
+- NIENTE virgolette di apertura/chiusura, NIENTE commenti, NIENTE preamboli.
+- Output: SOLO la logline, su una sola riga.`;
+
+const LOGLINE_EDIT_SYSTEM = `Sei Cesare, editor narrativo italiano. Devi RISCRIVERE una logline esistente seguendo l'istruzione dell'autore.
+
+REGOLE:
+- Massimo 200 caratteri, una sola frase.
+- Applica fedelmente l'istruzione (es. più corta, più tesa, cambia protagonista) mantenendo il nucleo della logline a meno che l'istruzione non chieda di cambiarlo.
+- La tua versione DEVE essere diversa dalla logline attuale.
 - Italiano, registro asciutto e specifico.
 - NIENTE virgolette di apertura/chiusura, NIENTE commenti, NIENTE preamboli.
 - Output: SOLO la logline, su una sola riga.`;
@@ -457,6 +469,10 @@ REGOLE:
 const MOCK_OUTPUTS: Record<string, string> = {
   "cesare.proposeLogline":
     "Un giovane regista torna nel paese d'origine per girare il film che lo ossessiona da anni, ma scopre che il suo passato non vuole essere raccontato.",
+  "cesare.writeLogline":
+    "Un detective insonne insegue un killer che lascia indizi solo a chi non dorme, e per fermarlo deve restare sveglio più a lungo della propria sanità mentale.",
+  "cesare.editLogline":
+    "Un detective insonne dà la caccia a un killer in una città che non dorme mai, sapendo che il primo a chiudere gli occhi sarà la prossima vittima.",
   "cesare.proposeSynopsis": `Quando Marco torna a Falerone per girare il suo primo lungometraggio, il paese accoglie la troupe con una freddezza inattesa. La protagonista della sua storia — la madre, morta vent'anni prima — è ancora un nervo scoperto per chi l'ha conosciuta, e ogni inquadratura sembra disturbare qualcosa.
 
 Tea, l'attrice scelta per il ruolo, intuisce che Marco non sta raccontando un personaggio ma sé stesso. Tra lei e il regista si crea un'intimità che cresce in parallelo al film: ogni nuova scena costringe Marco a confessare un dettaglio in più. L'antagonista non è una persona ma un silenzio collettivo che il paese ha eretto per proteggersi.
@@ -479,6 +495,12 @@ Il film finito è diverso da quello immaginato. Marco lo proietta in piazza, dav
 10. INT. CASA DI MARCO - ALBA — Marco scrive una lettera alla madre.`,
 };
 
+// Monotonic counter that keeps each MOCK_AI document generation distinct, so the
+// applyVersionLive duplicate guard never trips when an E2E suite exercises the
+// same project repeatedly (e.g. A6 + A7 both applying propose_soggetto_v2).
+// Mock-only; never used on the real generation path.
+let mockGenerationNonce = 0;
+
 const runGeneration = (
   systemPrompt: string,
   userPrompt: string,
@@ -489,7 +511,22 @@ const runGeneration = (
   // API key is missing. Keeps Vitest + Playwright deterministic and free.
   if (process.env["MOCK_AI"] === "true" || !process.env["ANTHROPIC_API_KEY"]) {
     const text = MOCK_OUTPUTS[operation] ?? "Bozza generata da Cesare (mock).";
-    return okAsync(text);
+    // Any document-generation op can be exercised repeatedly across E2E cases
+    // against the same project (e.g. show-changes [A6] and universal-dispatch
+    // [A7] both apply `propose_soggetto_v2`). `applyVersionLive` rejects content
+    // identical to an existing version (no-op guard), so a fixed mock string
+    // would make the 2nd apply fail. Append a tiny unique suffix so every mock
+    // generation is a real, distinct version. Logline stays within its hard cap.
+    mockGenerationNonce += 1;
+    const suffix = ` (#${Date.now().toString(36).slice(-4)}-${mockGenerationNonce})`;
+    const isLogline =
+      operation === "cesare.writeLogline" || operation === "cesare.editLogline";
+    if (isLogline) {
+      return okAsync(
+        `${text.slice(0, LOGLINE_HARD_CAP - suffix.length)}${suffix}`,
+      );
+    }
+    return okAsync(`${text}${suffix}`);
   }
   return callHaiku(
     {
@@ -514,6 +551,7 @@ interface ProposeInput {
   instruction?: string;
   label?: string;
   target_scene_count?: number;
+  mode?: "auto" | "write" | "edit";
 }
 
 const handleProposeLogline = (
@@ -551,7 +589,7 @@ const handleProposeLogline = (
                 ),
               );
             }
-            return insertDraftVersion(
+            return applyVersionLive(
               db,
               doc.id,
               DocumentTypes.LOGLINE,
@@ -563,6 +601,82 @@ const handleProposeLogline = (
         ),
       );
   });
+
+/**
+ * Writes or edits the logline document from a FREE natural-language instruction,
+ * without needing the screenplay. Mode resolution (write vs edit) is decided by
+ * `resolveLoglineMode` against the document's current content. Both paths apply
+ * LIVE via `applyVersionLive` (auto-version first), so the agentic-edit pattern
+ * is identical to the screenplay-extraction path — no per-feature variant.
+ */
+const handleWriteLogline = (
+  input: ProposeInput,
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+): ResultAsync<CreatedDraft, CesareError> => {
+  const instruction = (input.instruction ?? "").trim();
+  if (instruction.length === 0) {
+    return errAsync(
+      new CesareError(
+        "write_logline richiede un'istruzione: descrivi la logline da scrivere o la modifica da applicare.",
+      ),
+    );
+  }
+  return loadDocumentForType(db, projectId, DocumentTypes.LOGLINE).andThen(
+    (doc) => {
+      if (!doc) {
+        return errAsync(
+          new CesareError("Documento logline non trovato per il progetto."),
+        );
+      }
+      const existing = doc.content.trim();
+      const mode = resolveLoglineMode(input.mode, existing);
+      if (mode === "edit" && existing.length === 0) {
+        return errAsync(
+          new CesareError(
+            "Non c'è ancora una logline da modificare. Dammi una premessa e la scrivo da zero.",
+          ),
+        );
+      }
+      const systemPrompt =
+        mode === "edit" ? LOGLINE_EDIT_SYSTEM : LOGLINE_WRITE_SYSTEM;
+      const operation =
+        mode === "edit" ? "cesare.editLogline" : "cesare.writeLogline";
+      const user =
+        mode === "edit"
+          ? `Istruzione: ${instruction}\n\nLogline attuale (NON ritornarla identica):\n---\n${existing}\n---`
+          : `Istruzione: ${instruction}\n\nScrivi la logline.`;
+      return runGeneration(systemPrompt, user, 200, operation)
+        .map(sanitizeLogline)
+        .andThen((logline) => {
+          if (logline.length === 0) {
+            return errAsync(
+              new CesareError(
+                "Il modello ha restituito una logline vuota. Riformula l'istruzione.",
+              ),
+            );
+          }
+          const creator = doc.ownerId ?? userIdFallback;
+          if (!creator) {
+            return errAsync(
+              new CesareError(
+                "Impossibile determinare l'autore della draft: documento senza createdBy.",
+              ),
+            );
+          }
+          return applyVersionLive(
+            db,
+            doc.id,
+            DocumentTypes.LOGLINE,
+            creator,
+            logline,
+            buildDraftLabel(DocumentTypes.LOGLINE, instruction),
+          );
+        });
+    },
+  );
+};
 
 const handleProposeSynopsis = (
   input: ProposeInput,
@@ -599,7 +713,7 @@ const handleProposeSynopsis = (
                 ),
               );
             }
-            return insertDraftVersion(
+            return applyVersionLive(
               db,
               doc.id,
               DocumentTypes.SYNOPSIS,
@@ -679,7 +793,7 @@ ${doc.content.slice(0, 18_000)}
               ),
             );
           }
-          return insertDraftVersion(
+          return applyVersionLive(
             db,
             doc.id,
             DocumentTypes.SOGGETTO,
@@ -734,7 +848,7 @@ const handleProposeScalettaFromSoggetto = (
                 ),
               );
             }
-            return insertDraftVersion(
+            return applyVersionLive(
               db,
               outlineDoc.id,
               DocumentTypes.OUTLINE,
@@ -758,9 +872,16 @@ const successResult = (id: string, payload: unknown): ToolResult => ({
 const draftPayload = (draft: CreatedDraft) => ({
   ok: true as const,
   version_id: draft.versionId,
+  previous_version_id: draft.previousVersionId,
   document_type: draft.documentType,
   label: draft.label,
-  toast: `✦ Cesare ha generato una draft di ${docTypeLabel(draft.documentType)} — vai sulla pagina per accettarla.`,
+  applied_live: true as const,
+  // Word-level diff segments so the marker emitter (cesare-tools.ts) can ship
+  // the `ohw:live-diff-b64` marker and the client renders the coloured inline
+  // diff for "Mostra modifiche" on document-gen edits (Spec 47b FIX 4).
+  diff_segments: draft.diffSegments,
+  diff_label: draft.label,
+  toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Usa ↩ Annulla per ripristinare.`,
 });
 
 export const executeDocumentGenTool = (
@@ -772,6 +893,11 @@ export const executeDocumentGenTool = (
   const input = block.input as ProposeInput;
   if (block.name === "propose_logline_from_screenplay") {
     return handleProposeLogline(input, db, projectId, userIdFallback).map(
+      (draft) => successResult(block.id, draftPayload(draft)),
+    );
+  }
+  if (block.name === "write_logline") {
+    return handleWriteLogline(input, db, projectId, userIdFallback).map(
       (draft) => successResult(block.id, draftPayload(draft)),
     );
   }
@@ -808,6 +934,7 @@ export const executeDocumentGenTool = (
  */
 export const isDocumentGenToolName = (name: string): boolean =>
   name === "propose_logline_from_screenplay" ||
+  name === "write_logline" ||
   name === "propose_synopsis_from_screenplay" ||
   name === "propose_soggetto_v2" ||
   name === "propose_scaletta_from_soggetto";
@@ -821,10 +948,10 @@ export const createDocumentGenTools = (
 ) => ({
   propose_logline_from_screenplay: tool({
     description:
-      "Genera una logline (max 200 caratteri) dalla sceneggiatura corrente del progetto. " +
-      "Crea una versione DRAFT del documento logline che l'utente può accettare o scartare " +
-      "tramite il banner che appare sopra l'editor. Usa SEMPRE questo tool quando l'utente " +
-      "chiede di 'generare la logline' o 'scrivimi una logline'.",
+      "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
+      "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
+      "L'utente può ripristinare con Annulla. Usa SOLO quando l'utente chiede di derivare la logline DALLA sceneggiatura. " +
+      "Per scrivere da un'istruzione libera o modificare l'esistente usa write_logline.",
     inputSchema: z.object({
       instruction: z
         .string()
@@ -844,10 +971,39 @@ export const createDocumentGenTools = (
       return draftPayload(result.value);
     },
   }),
+  write_logline: tool({
+    description:
+      "Scrive o modifica la logline del progetto (max 200 caratteri) da un'istruzione in linguaggio naturale, " +
+      "senza bisogno della sceneggiatura. Applica live al documento e crea automaticamente una versione (↩ Annulla per ripristinare). " +
+      "Usa quando l'utente chiede di SCRIVERE una logline da una premessa o di MODIFICARE quella esistente. Disponibile da qualunque pagina.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .describe(
+          "L'istruzione: la premessa da cui scrivere la logline, oppure la modifica da applicare a quella esistente.",
+        ),
+      mode: z
+        .enum(["auto", "write", "edit"])
+        .optional()
+        .describe(
+          "Opzionale. 'write' = scrivi nuova; 'edit' = riscrivi l'esistente; 'auto' (default) = modifica se esiste già, altrimenti scrive nuova.",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleWriteLogline(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
   propose_synopsis_from_screenplay: tool({
     description:
       "Genera una sinossi (2-3 paragrafi, circa 400 parole) dalla sceneggiatura corrente del " +
-      "progetto. Crea una versione DRAFT del documento sinossi. Usa SEMPRE questo tool quando " +
+      "progetto. Applica live la nuova sinossi al documento e crea automaticamente una versione. Usa SEMPRE questo tool quando " +
       "l'utente chiede 'scrivimi la sinossi' o 'genera la sinossi'.",
     inputSchema: z.object({
       instruction: z
@@ -870,7 +1026,7 @@ export const createDocumentGenTools = (
   }),
   propose_soggetto_v2: tool({
     description:
-      "Riscrive il soggetto del progetto in una nuova versione DRAFT seguendo l'istruzione " +
+      "Riscrive il soggetto del progetto applicandolo live al documento (crea automaticamente una versione) seguendo l'istruzione " +
       "fornita. Usa quando l'utente vuole una variante del soggetto (es. 'più asciutto', " +
       "'più tematico', 'fammi un v2 con focus su X').",
     inputSchema: z.object({
@@ -899,7 +1055,7 @@ export const createDocumentGenTools = (
   propose_scaletta_from_soggetto: tool({
     description:
       "Genera la scaletta (lista numerata di scene/sequenze) a partire dal soggetto corrente. " +
-      "Crea una versione DRAFT del documento scaletta. Usa quando l'utente chiede 'dato il " +
+      "Applica live la nuova scaletta al documento e crea automaticamente una versione. Usa quando l'utente chiede 'dato il " +
       "soggetto fammi la scaletta' o simile.",
     inputSchema: z.object({
       target_scene_count: z

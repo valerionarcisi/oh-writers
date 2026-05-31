@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { titleHead } from "~/lib/document-title";
 import { z } from "zod";
 import { BreakdownPage } from "~/features/breakdown";
 
@@ -8,6 +9,7 @@ const BreakdownSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_app/projects/$id_/breakdown")({
+  head: () => titleHead("Breakdown"),
   validateSearch: BreakdownSearchSchema,
   component: BreakdownRoute,
 });

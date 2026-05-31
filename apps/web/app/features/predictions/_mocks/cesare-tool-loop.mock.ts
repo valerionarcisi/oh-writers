@@ -161,6 +161,32 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Documents — apply_text_edit (deterministic find/replace; no LLM call).
+  // Used by the [OHW-047-A6] word-level live-diff E2E: the soggetto seed
+  // contains "traduttrice freelance", so this produces a real before→after diff.
+  {
+    match:
+      /sostituisci .*traduttrice|cambia traduttrice|interprete simultanea/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "apply_text_edit",
+            input: {
+              find: "traduttrice freelance",
+              replace: "interprete simultanea",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiornato il soggetto sostituendo la professione di Marta. Il documento è stato aggiornato.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Documents — compress_section
   {
     match: /accorcia|riassumi|comprimi/i,
@@ -338,10 +364,60 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
+  // Documents — write_logline EDIT existing (OHW-047-A8).
+  // "rendi la logline più corta/tesa", "cambia il protagonista della logline".
+  // Placed before the WRITE + propose_* scenarios so the edit verbs win.
+  {
+    match:
+      /rendi la logline|logline più corta|logline piu corta|logline più tesa|logline piu tesa|cambia il protagonista della logline|modifica la logline/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "write_logline",
+            input: { instruction: "rendila più corta e tesa", mode: "edit" },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho modificato la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — write_logline WRITE from a free instruction (OHW-047-A8).
+  // "scrivimi una logline su un detective che…" — no screenplay needed.
+  // Matched before propose_logline_from_screenplay; the "dalla sceneggiatura"
+  // wording (below) is the only path that still routes to the extraction tool.
+  {
+    match:
+      /scrivimi una logline su|scrivimi una logline per|logline su un|logline su una|scrivi una logline su/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "write_logline",
+            input: {
+              instruction: "un detective insonne che insegue un killer",
+              mode: "write",
+            },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho scritto la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
   // Documents — propose_logline_from_screenplay (OHW-575)
   {
     match:
-      /genera la logline|generare la logline|scrivimi la logline|scrivimi una logline|fammi una logline/i,
+      /logline dalla sceneggiatura|estrai la logline|genera la logline|generare la logline|scrivimi la logline|fammi una logline/i,
     turns: [
       {
         tool_uses: [
@@ -353,7 +429,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una logline draft. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor.",
+        text: "Ho aggiornato la logline: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],
@@ -373,7 +449,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una sinossi draft. Vai sulla pagina sinossi per accettarla o scartarla dal banner sopra l'editor.",
+        text: "Ho aggiornato la sinossi: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],
@@ -397,7 +473,37 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una bozza v2 del soggetto. La trovi nel banner sopra l'editor del soggetto, puoi confrontarla, promuoverla o scartarla.",
+        text: "Ho aggiornato il soggetto con una nuova versione v2: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — cross-entity edit (Spec 47d). A single turn touches BOTH the
+  // soggetto AND the sinossi, so the server emits one live-diff marker per
+  // document. Used by the [OHW-047d] cross-entity test to assert each touched
+  // doc paints its own green inline highlight when opened.
+  {
+    match: /aggiorna soggetto e sinossi|allinea soggetto e sinossi/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_soggetto_v2",
+            input: {
+              instruction: "più asciutto e tematico",
+              label: "v2 cross",
+            },
+          },
+          {
+            name: "propose_synopsis_from_screenplay",
+            input: { instruction: "allinea al nuovo soggetto" },
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho aggiornato soggetto e sinossi e li ho applicati direttamente ai documenti. Se non ti convincono usa Annulla.",
         stop_reason: "end_turn",
       },
     ],
@@ -418,7 +524,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho generato una scaletta draft dal soggetto. Vai sulla pagina scaletta per confrontarla e promuoverla.",
+        text: "Ho aggiornato la scaletta dal soggetto: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
         stop_reason: "end_turn",
       },
     ],

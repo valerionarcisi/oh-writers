@@ -30,6 +30,7 @@ export const ICON_NAMES = [
   "file-text",
   "help",
   "close",
+  "more",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

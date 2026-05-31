@@ -6,10 +6,20 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ToastProvider, ConfirmDialogProvider, SpriteLoader } from "@oh-writers/ui";
+import {
+  ToastProvider,
+  ConfirmDialogProvider,
+  SpriteLoader,
+} from "@oh-writers/ui";
 import "../styles/global.css";
 
 export const Route = createRootRoute({
+  // Default document title for every route. Leaf routes override `title` via
+  // their own `head` (TanStack merges matched-route meta, last wins) so the tab
+  // is never blank — the pre-main audit found `document.title` empty everywhere.
+  head: () => ({
+    meta: [{ title: "Oh Writers" }],
+  }),
   component: RootLayout,
 });
 

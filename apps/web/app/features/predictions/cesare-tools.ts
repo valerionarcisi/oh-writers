@@ -1,10 +1,12 @@
 import { type Tool, tool, generateText, stepCountIs, jsonSchema } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { repairMojibake } from "@oh-writers/utils";
+import { Effect } from "effect";
+import { repairMojibake, buildWordDiffSegments } from "@oh-writers/utils";
 import { z } from "zod";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
+import { aiTelemetry } from "~/server/langfuse-config";
 import {
   locationCandidates,
   locationPhotos,
@@ -34,6 +36,8 @@ import {
   type MissingLineProposal,
 } from "./cesare-budget-intelligence";
 import type { DocumentType } from "@oh-writers/domain";
+import type { CesareStreamEvent } from "./cesare-stream-events";
+import { mappingForTool, entityRefForDomain } from "./cesare-tool-entity-map";
 import {
   estimateSceneCost,
   DEFAULT_PRODUCTION_RATES,
@@ -42,6 +46,7 @@ import {
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
 import { callHaiku, extractText } from "~/features/ai";
+import { fromResultAsync } from "~/server/effect/interop";
 import type { SkillExecutor, AnthropicTool } from "./skills/types";
 import { CesareError } from "./cesare.errors";
 import {
@@ -435,7 +440,11 @@ export const CESARE_DOCUMENT_TOOLS = [
 
 // ─── Document tools factory (AI SDK v5 format) ────────────────────────────────
 
-export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
+export const createDocumentTools = (
+  db: Db,
+  docContext: DocumentContext,
+  userIdFallback: string | null = null,
+) => ({
   apply_text_edit: tool({
     description:
       "Sostituisce una stringa esatta nel documento attivo (soggetto / sinossi / scaletta / trattamento). " +
@@ -455,6 +464,7 @@ export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
         input as ApplyTextEditInput,
         db,
         docContext,
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -490,6 +500,7 @@ export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
         ),
         800,
         "espanso",
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -525,6 +536,7 @@ export const createDocumentTools = (db: Db, docContext: DocumentContext) => ({
         ),
         600,
         "compresso",
+        userIdFallback,
       );
       if (result.isErr()) return { error: result.error.message };
       return result.value;
@@ -1273,43 +1285,89 @@ interface SectionRange {
   headingText: string;
 }
 
-// Updates documents.content and the active version row in one transaction.
-// Mirrors the persistence pattern in saveDocument so the Versions popover
-// stays consistent and onSuccess invalidations on the client pick up the new
-// content via the standard ["documents", projectId, type] query key.
-const persistDocumentContent = (
+/**
+ * Result of a live document apply: the freshly created version plus the one
+ * that was active before it. The client wires `previousVersionId` into the
+ * inline trace's "↩ Annulla" so the user can revert the live document. Null
+ * when the document had no active version yet (first content ever written).
+ */
+export interface AppliedDocumentEdit {
+  versionId: string;
+  previousVersionId: string | null;
+}
+
+// Applies new content LIVE to the open document following the canonical Spec 44
+// Agentic Edit Pattern: every Cesare edit auto-creates a NEW non-draft version,
+// repoints documents.current_version_id at it, and mirrors the content onto the
+// document row so the open editor reflects it. The previous active version stays
+// in history so the inline trace can offer "↩ Annulla". We must NOT update the
+// active version row in place — that would erase history and leave nothing to
+// revert to (the iter-1 regression). `createdBy` falls back to the supplied
+// `userIdFallback` when the document row carries no creator.
+export const persistDocumentContent = (
   db: Db,
   documentId: string,
   nextContent: string,
-): ResultAsync<void, CesareError> =>
+  userIdFallback: string | null,
+): ResultAsync<AppliedDocumentEdit, CesareError> =>
   ResultAsync.fromPromise(
-    db.transaction(async (tx) => {
+    db.transaction(async (tx): Promise<AppliedDocumentEdit> => {
       const [doc] = await tx
         .select({
           id: documents.id,
           currentVersionId: documents.currentVersionId,
+          createdBy: documents.createdBy,
         })
         .from(documents)
         .where(eq(documents.id, documentId))
         .limit(1);
       if (!doc) throw new Error(`Document ${documentId} not found`);
 
-      if (doc.currentVersionId) {
-        await tx
-          .update(documentVersions)
-          .set({ content: nextContent, updatedAt: new Date() })
-          .where(eq(documentVersions.id, doc.currentVersionId));
+      const previousVersionId = doc.currentVersionId ?? null;
+      const creator = doc.createdBy ?? userIdFallback;
+      if (!creator) {
+        throw new Error(
+          "Cannot determine the version author: document has no createdBy and no fallback user.",
+        );
       }
+
+      const [maxRow] = await tx
+        .select({
+          max: sql<number>`coalesce(max(${documentVersions.number}), 0)`,
+        })
+        .from(documentVersions)
+        .where(eq(documentVersions.documentId, documentId));
+      const nextNum = (maxRow?.max ?? 0) + 1;
+
+      const [inserted] = await tx
+        .insert(documentVersions)
+        .values({
+          documentId,
+          number: nextNum,
+          label: `Cesare · modifica ${nextNum}`,
+          content: nextContent,
+          isDraft: false,
+          createdBy: creator,
+        })
+        .returning({ id: documentVersions.id });
+      if (!inserted) throw new Error("persistDocumentContent returned no rows");
+
       await tx
         .update(documents)
-        .set({ content: nextContent, updatedAt: new Date() })
+        .set({
+          currentVersionId: inserted.id,
+          content: nextContent,
+          updatedAt: new Date(),
+        })
         .where(eq(documents.id, doc.id));
+
+      return { versionId: inserted.id, previousVersionId };
     }),
     (e) =>
       new CesareError(
         `persistDocumentContent failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
-  ).map(() => undefined);
+  );
 
 const normalizeHeading = (raw: string): string =>
   raw
@@ -1408,14 +1466,26 @@ const docTypeLabel = (type: DocumentType): string => {
   }
 };
 
+interface DocumentEditResult {
+  ok: boolean;
+  reason?: string;
+  toast?: string;
+  applied_live?: true;
+  document_type?: DocumentType;
+  version_id?: string;
+  previous_version_id?: string | null;
+  /** Spec 47b FIX 4 — precomputed word-level diff segments (before → after) so
+   *  the client can render the inline coloured live diff without a round-trip. */
+  diff_label?: string;
+  diff_segments?: ReadonlyArray<{ op: "eq" | "add" | "del"; text: string }>;
+}
+
 const executeApplyTextEdit = (
   input: ApplyTextEditInput,
   db: Db,
   doc: DocumentContext,
-): ResultAsync<
-  { ok: boolean; reason?: string; toast?: string },
-  CesareError
-> => {
+  userIdFallback: string | null,
+): ResultAsync<DocumentEditResult, CesareError> => {
   if (!input.find) {
     return okAsync({ ok: false, reason: "empty find string" });
   }
@@ -1426,16 +1496,25 @@ const executeApplyTextEdit = (
         "`find` string not found verbatim in the document — re-read the document and use an exact substring",
     });
   }
-  const next = doc.content.replace(input.find, input.replace);
-  return persistDocumentContent(db, doc.documentId, next).map(() => {
-    // Mutate the in-memory copy so subsequent tool calls in the same turn
-    // see the updated content.
-    doc.content = next;
-    return {
-      ok: true,
-      toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
-    };
-  });
+  const previousContent = doc.content;
+  const next = previousContent.replace(input.find, input.replace);
+  return persistDocumentContent(db, doc.documentId, next, userIdFallback).map(
+    (applied) => {
+      // Mutate the in-memory copy so subsequent tool calls in the same turn
+      // see the updated content.
+      doc.content = next;
+      return {
+        ok: true,
+        applied_live: true as const,
+        document_type: doc.documentType,
+        version_id: applied.versionId,
+        previous_version_id: applied.previousVersionId,
+        diff_label: docTypeLabel(doc.documentType),
+        diff_segments: buildWordDiffSegments(previousContent, next),
+        toast: `✦ Cesare ha aggiornato il ${docTypeLabel(doc.documentType)}`,
+      };
+    },
+  );
 };
 
 const EXPAND_SECTION_MODEL = "claude-haiku-4-5";
@@ -1505,10 +1584,8 @@ const generateAndReplaceSection = (
   prompt: string,
   maxTokens: number,
   toastVerb: string,
-): ResultAsync<
-  { ok: boolean; reason?: string; toast?: string },
-  CesareError
-> => {
+  userIdFallback: string | null,
+): ResultAsync<DocumentEditResult, CesareError> => {
   const range = findSection(doc.content, heading);
   if (!range) {
     return okAsync({
@@ -1536,11 +1613,23 @@ const generateAndReplaceSection = (
           new CesareError("Haiku returned no text for section generation"),
         );
       }
-      const nextContent = replaceSection(doc.content, range, newText);
-      return persistDocumentContent(db, doc.documentId, nextContent).map(() => {
+      const previousContent = doc.content;
+      const nextContent = replaceSection(previousContent, range, newText);
+      return persistDocumentContent(
+        db,
+        doc.documentId,
+        nextContent,
+        userIdFallback,
+      ).map((applied) => {
         doc.content = nextContent;
         return {
           ok: true,
+          applied_live: true as const,
+          document_type: doc.documentType,
+          version_id: applied.versionId,
+          previous_version_id: applied.previousVersionId,
+          diff_label: range.headingText.replace(/^#+\s*/, "").trim(),
+          diff_segments: buildWordDiffSegments(previousContent, nextContent),
           toast: `✦ Cesare ha ${toastVerb} "${range.headingText.replace(/^#+\s*/, "").trim()}"`,
         };
       });
@@ -1551,6 +1640,7 @@ export const executeDocumentTool = (
   block: ToolUseBlock,
   db: Db,
   docContext: DocumentContext,
+  userIdFallback: string | null = null,
 ): ResultAsync<ToolResult, CesareError> => {
   const successResult = (id: string, payload: unknown): ToolResult => ({
     type: "tool_result",
@@ -1560,8 +1650,8 @@ export const executeDocumentTool = (
 
   if (block.name === "apply_text_edit") {
     const input = block.input as ApplyTextEditInput;
-    return executeApplyTextEdit(input, db, docContext).map((res) =>
-      successResult(block.id, res),
+    return executeApplyTextEdit(input, db, docContext, userIdFallback).map(
+      (res) => successResult(block.id, res),
     );
   }
 
@@ -1581,6 +1671,7 @@ export const executeDocumentTool = (
       ),
       800,
       "espanso",
+      userIdFallback,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -1601,6 +1692,7 @@ export const executeDocumentTool = (
       ),
       600,
       "compresso",
+      userIdFallback,
     ).map((res) => successResult(block.id, res));
   }
 
@@ -2168,7 +2260,7 @@ export const runDocumentToolLoop = (
     projectId,
     model,
     sdkTools: {
-      ...createDocumentTools(db, docContext),
+      ...createDocumentTools(db, docContext, userIdFallback),
       ...createDocumentGenTools(db, projectId, userIdFallback),
       ...createReadTools(db, projectId),
     },
@@ -2190,7 +2282,7 @@ export const runDocumentToolLoop = (
           userIdFallback,
         );
       }
-      return executeDocumentTool(block, dbArg, docContext);
+      return executeDocumentTool(block, dbArg, docContext, userIdFallback);
     },
   });
 
@@ -2347,6 +2439,7 @@ export const runUniversalToolLoop = (
             documentType: "logline",
             content: "",
           },
+          ctx.userIdFallback,
         );
       }
 
@@ -2433,7 +2526,48 @@ interface RunToolLoopArgs {
   legacyMockClient?: LegacyAnthropicClient;
   /** Legacy tool definitions array — required only alongside legacyMockClient. */
   legacyTools?: readonly unknown[];
+  /**
+   * Spec 47a (A2) — optional sink for live step events. When provided, the loop
+   * emits `reasoning | reading | writing | tool` events as steps finish, then a
+   * terminal `done`. The streaming route (`/api/cesare/stream`) supplies this;
+   * the non-streaming `askCesare` path leaves it undefined so behaviour is
+   * identical to before.
+   */
+  onStreamEvent?: (event: CesareStreamEvent) => void;
+  /**
+   * Spec 48 (W-E2) — optional abort signal bridged from the Effect fiber that
+   * orchestrates the streamed run. When the client aborts the fetch (drawer
+   * closed / navigation / connection drop), the stream's `cancel` interrupts the
+   * fiber, which aborts this signal; the AI SDK `generateText` call honours it
+   * and tears the model request down, so no server-side work leaks. Undefined on
+   * the non-streaming path, where behaviour is identical to before.
+   */
+  abortSignal?: AbortSignal;
 }
+
+/**
+ * Spec 47a (A2) — translate one completed tool call into a step event and push
+ * it to the sink. A `read_*` tool emits `reading{entity}`, a mutating tool emits
+ * `writing{entity}`, and an unmapped tool falls back to a raw `tool` event. The
+ * entity is the tool's TARGET domain (cross-domain aware), not the page.
+ */
+const emitToolStep = (
+  toolName: string,
+  onStreamEvent: ((event: CesareStreamEvent) => void) | undefined,
+): void => {
+  if (!onStreamEvent) return;
+  const mapping = mappingForTool(toolName);
+  if (!mapping) {
+    onStreamEvent({ _tag: "tool", name: toolName });
+    return;
+  }
+  const entity = entityRefForDomain(mapping.domain);
+  onStreamEvent(
+    mapping.access === "read"
+      ? { _tag: "reading", entity }
+      : { _tag: "writing", entity },
+  );
+};
 
 // ─── Legacy client interface (MOCK_AI=true only) ──────────────────────────────
 
@@ -2484,99 +2618,221 @@ const extractSideChannelMarkers = (
       // ignore malformed payloads — the marker is best-effort
     }
   }
+  // Document tools apply the new content LIVE to the open document (Spec 44
+  // canonical pattern) — both the whole-document generators (propose_*) and the
+  // in-place edits (apply_text_edit / expand_section / compress_section). We
+  // surface a marker carrying the version that was active before the apply so
+  // the client can render an "↩ Annulla" that reverts the live document to its
+  // previous state.
+  if (
+    toolName === "propose_logline_from_screenplay" ||
+    toolName === "write_logline" ||
+    toolName === "propose_synopsis_from_screenplay" ||
+    toolName === "propose_soggetto_v2" ||
+    toolName === "propose_scaletta_from_soggetto" ||
+    toolName === "apply_text_edit" ||
+    toolName === "expand_section" ||
+    toolName === "compress_section"
+  ) {
+    try {
+      const payload = JSON.parse(toolResultContent) as Record<string, unknown>;
+      if (payload && payload["applied_live"] === true) {
+        accumulator.push(
+          `<!--ohw:doc-applied:${JSON.stringify({
+            document_type: payload["document_type"],
+            version_id: payload["version_id"],
+            previous_version_id: payload["previous_version_id"],
+          })}-->`,
+        );
+        // Spec 47d — when the edit carries precomputed word-diff segments, emit
+        // them base64-encoded so the client renders the inline coloured live
+        // diff INSIDE the document (no overlay) for "Mostra modifiche" without
+        // an extra round-trip. One marker per touched document; the payload
+        // carries the `document_type` so the shell keys the highlight per doc
+        // (a cross-entity edit emits several markers, one per touched entity).
+        const segments = payload["diff_segments"];
+        if (Array.isArray(segments) && segments.length > 0) {
+          const diffJson = JSON.stringify({
+            documentType: payload["document_type"] ?? "",
+            label: payload["diff_label"] ?? "",
+            segments,
+          });
+          const b64 = Buffer.from(diffJson, "utf-8").toString("base64");
+          accumulator.push(`<!--ohw:live-diff-b64:${b64}-->`);
+        }
+      }
+    } catch {
+      // ignore malformed payloads — the marker is best-effort
+    }
+  }
 };
+
+// ─── Effect ⇄ neverthrow seam for the tool loop (Spec 48 W-E3) ────────────────
+//
+// The tool loop is modelled as an `Effect` internally (typed errors, structured
+// concurrency, interruption inherited from the W-E2 stream fiber via the bridged
+// AbortSignal). The PUBLIC functions still return `ResultAsync<string,
+// CesareError>` so the frozen W-E2 seam (`CesareStreamRun.handle`) and the
+// non-streaming `askCesare` path are byte-identical. This local bridge is the
+// single translation point Effect → neverthrow for this module — the mirror of
+// the global ACL (`runAiEffect`), kept local because the loop runs as a fiber
+// the stream already provided, not under the foundation Layers here.
+//
+// Faithful equivalent of the previous `ResultAsync.fromPromise(asyncIIFE, …)`:
+// that bridge funnelled EVERY thrown error (typed or not) into a `CesareError`.
+// Here a defect (an unexpected synchronous throw — e.g. inside a marker
+// extraction) is first folded into the typed channel via `catchAllDefect`, so
+// the whole turn always settles as a `CesareError` rather than rejecting the
+// promise. `Effect.either` then reifies the typed failure into the success
+// channel; `fromSafePromise` is safe because the promise can no longer reject.
+const toolLoopEffectToResult = (
+  effect: Effect.Effect<string, CesareError>,
+): ResultAsync<string, CesareError> =>
+  ResultAsync.fromSafePromise(
+    Effect.runPromise(
+      effect.pipe(
+        Effect.catchAllDefect((defect) =>
+          Effect.fail(
+            new CesareError(
+              `Tool loop failed: ${defect instanceof Error ? defect.message : String(defect)}`,
+            ),
+          ),
+        ),
+        Effect.either,
+      ),
+    ),
+  ).andThen((either) =>
+    either._tag === "Right" ? okAsync(either.right) : errAsync(either.left),
+  );
 
 // ─── Legacy manual tool loop (MOCK_AI=true) ───────────────────────────────────
 // Keeps the Playwright test suite working: the mock client emits Anthropic-style
 // `tool_use` blocks, and the real executors run against the test DB. Once we
 // have a mock LanguageModel provider, this path can be removed.
+//
+// Modelled as an `Effect`: the outer turn iteration stays an ordered, imperative
+// `for` loop INSIDE `Effect.gen` (each iteration depends on the previous turn's
+// messages — it is inherently sequential, never a candidate for `Effect.all`).
+// Tool blocks within a turn execute STRICTLY SERIALLY (`Effect.forEach` with
+// `concurrency: 1`) on purpose: the tracer invariant (CLAUDE.md) requires the
+// `reading/writing` step events to surface in the model's intended order, and
+// the agentic-edit pattern auto-versions then applies each mutation live — both
+// would be corrupted by parallel execution against the same entity. Correctness
+// over speed.
 
-const runLegacyToolLoop = (
+const runLegacyToolLoopEffect = (
   args: RunToolLoopArgs & { legacyMockClient: LegacyAnthropicClient },
-): ResultAsync<string, CesareError> =>
-  ResultAsync.fromPromise(
-    (async (): Promise<string> => {
-      const MAX_ITERATIONS = 5;
-      const currentMessages: Message[] = [...args.messages];
-      const textAccumulator: string[] = [];
-      let toolsExecuted = 0;
-      let maxStepsHit = false;
+): Effect.Effect<string, CesareError> =>
+  Effect.gen(function* () {
+    const MAX_ITERATIONS = 5;
+    const currentMessages: Message[] = [...args.messages];
+    const textAccumulator: string[] = [];
+    let toolsExecuted = 0;
+    let maxStepsHit = false;
 
-      for (let i = 0; i < MAX_ITERATIONS; i++) {
-        const toolChoice =
-          i === 0 && args.forcedFirstTool
-            ? ({ type: "tool", name: args.forcedFirstTool } as const)
-            : ({ type: "auto" } as const);
-        const response = await args.legacyMockClient.messages.create({
-          model: args.model,
-          max_tokens: 1500,
-          system: args.systemPrompt,
-          messages: currentMessages,
-          tools: args.legacyTools ?? [],
-          tool_choice: toolChoice,
-        });
-
-        const toolBlocks = response.content.filter(isToolUseBlock);
-        const textBlocks = response.content.filter(
-          (b): b is { type: "text"; text: string } =>
-            typeof b === "object" &&
-            b !== null &&
-            (b as { type: string }).type === "text",
-        );
-
-        for (const tb of textBlocks) {
-          if (tb.text.trim()) textAccumulator.push(tb.text.trim());
-        }
-
-        if (response.stop_reason !== "tool_use" || toolBlocks.length === 0) {
-          break;
-        }
-
-        if (i === MAX_ITERATIONS - 1) maxStepsHit = true;
-
-        const toolResults: ToolResult[] = [];
-        for (const block of toolBlocks) {
-          const result = await args.executor(block, args.db, args.projectId);
-          if (result.isErr()) {
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: block.id,
-              content: JSON.stringify({ error: result.error.message }),
-            });
-          } else {
-            toolsExecuted += 1;
-            toolResults.push(result.value);
-            extractSideChannelMarkers(
-              block.name,
-              result.value.content,
-              textAccumulator,
-            );
-          }
-        }
-
-        currentMessages.push({ role: "assistant", content: response.content });
-        currentMessages.push({ role: "user", content: toolResults });
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      // Spec 48 (W-E2/W-E3) — honour interruption between iterations on the mock
+      // path too: when the orchestrating fiber is interrupted, the bridged
+      // signal aborts, and we stop the loop rather than leak further work. As an
+      // Effect, raising the AbortError as a CesareError on the typed channel
+      // mirrors the previous thrown DOMException (which `ResultAsync.fromPromise`
+      // mapped to a CesareError), so the bridge sees the same failure.
+      if (args.abortSignal?.aborted) {
+        return yield* Effect.fail(new CesareError("Tool loop failed: aborted"));
       }
-
-      if (maxStepsHit) {
-        logger.warn(
-          {
-            stepCount: MAX_ITERATIONS,
+      const toolChoice =
+        i === 0 && args.forcedFirstTool
+          ? ({ type: "tool", name: args.forcedFirstTool } as const)
+          : ({ type: "auto" } as const);
+      const response = yield* Effect.tryPromise({
+        try: () =>
+          args.legacyMockClient.messages.create({
             model: args.model,
-            projectId: args.projectId,
-          },
-          "cesare.tool_loop.max_steps_hit",
-        );
+            max_tokens: 1500,
+            system: args.systemPrompt,
+            messages: currentMessages,
+            tools: args.legacyTools ?? [],
+            tool_choice: toolChoice,
+          }),
+        catch: (e) =>
+          new CesareError(
+            `Tool loop failed: ${e instanceof Error ? e.message : String(e)}`,
+          ),
+      });
+
+      const toolBlocks = response.content.filter(isToolUseBlock);
+      const textBlocks = response.content.filter(
+        (b): b is { type: "text"; text: string } =>
+          typeof b === "object" &&
+          b !== null &&
+          (b as { type: string }).type === "text",
+      );
+
+      for (const tb of textBlocks) {
+        if (tb.text.trim()) {
+          textAccumulator.push(tb.text.trim());
+          args.onStreamEvent?.({ _tag: "reasoning", text: tb.text.trim() });
+        }
       }
 
-      const marker = `<!--ohw:tools=${toolsExecuted}-->`;
-      return `${repairMojibake(textAccumulator.join("\n\n"))}\n${marker}`;
-    })(),
-    (e) =>
-      new CesareError(
-        `Tool loop failed: ${e instanceof Error ? e.message : String(e)}`,
-      ),
-  );
+      if (response.stop_reason !== "tool_use" || toolBlocks.length === 0) {
+        break;
+      }
+
+      if (i === MAX_ITERATIONS - 1) maxStepsHit = true;
+
+      // Tool blocks within a turn run STRICTLY SERIALLY (`concurrency: 1`). This
+      // is deliberate, not an oversight: parallelising them would scramble the
+      // tracer step order (the `reading/writing` events the user watches live)
+      // and race the agentic-edit auto-version+apply against the same entity.
+      // Each step's side-effects (counter, `emitToolStep`, marker extraction)
+      // therefore happen in the model's intended order. Correctness over speed.
+      const toolResults: ToolResult[] = yield* Effect.forEach(
+        toolBlocks,
+        (block) =>
+          fromResultAsync(args.executor(block, args.db, args.projectId)).pipe(
+            Effect.map((value): ToolResult => {
+              toolsExecuted += 1;
+              emitToolStep(block.name, args.onStreamEvent);
+              extractSideChannelMarkers(
+                block.name,
+                value.content,
+                textAccumulator,
+              );
+              return value;
+            }),
+            // A tool error is not a turn failure: it becomes a `tool_result`
+            // carrying the error so the model can recover — identical to the
+            // previous `result.isErr()` branch.
+            Effect.catchAll((error: CesareError) =>
+              Effect.succeed<ToolResult>({
+                type: "tool_result",
+                tool_use_id: block.id,
+                content: JSON.stringify({ error: error.message }),
+              }),
+            ),
+          ),
+        { concurrency: 1 },
+      );
+
+      currentMessages.push({ role: "assistant", content: response.content });
+      currentMessages.push({ role: "user", content: toolResults });
+    }
+
+    if (maxStepsHit) {
+      logger.warn(
+        {
+          stepCount: MAX_ITERATIONS,
+          model: args.model,
+          projectId: args.projectId,
+        },
+        "cesare.tool_loop.max_steps_hit",
+      );
+    }
+
+    const marker = `<!--ohw:tools=${toolsExecuted}-->`;
+    return `${repairMojibake(textAccumulator.join("\n\n"))}\n${marker}`;
+  });
 
 // ─── AI SDK generateText tool loop (production) ───────────────────────────────
 // Converts the SystemPromptBlock[] (with cache_control) to the AI SDK
@@ -2611,27 +2867,24 @@ const toSystemMessages = (
   }));
 };
 
-const runGenericToolLoop = (
+// ─── Production tool loop (AI SDK generateText) ───────────────────────────────
+//
+// Modelled as an `Effect` over a SINGLE `generateText` call. There is no manual
+// await-loop to parallelise here: the AI SDK owns the multi-step tool loop
+// (`stopWhen: stepCountIs(5)`) AND already runs a step's independent tool
+// `execute` callbacks concurrently itself. Wrapping it in `Effect.all` would be
+// wrong — it is one async call — so this is `Effect.tryPromise`. The win at this
+// layer is the typed error channel + interruption (the bridged AbortSignal),
+// not concurrency; concurrency belongs to context assembly (W-E5), not the loop.
+const runProductionToolLoopEffect = (
   args: RunToolLoopArgs,
-): ResultAsync<string, CesareError> => {
-  // MOCK_AI path (legacy): fall back to the manual loop only when no mock
-  // model was provided. This branch will be removed once all callers pass
-  // mockModel.
-  if (!args.mockModel && args.legacyMockClient) {
-    return runLegacyToolLoop(
-      args as RunToolLoopArgs & { legacyMockClient: LegacyAnthropicClient },
-    );
-  }
-
+): Effect.Effect<string, CesareError> => {
   // Resolve the language model: mock model when MOCK_AI=true, real Anthropic
   // model otherwise. Both paths go through the same generateText call.
   const resolvedModel = args.mockModel ?? anthropic(args.model);
 
-  // Production path (and MOCK_AI-with-mockModel path): delegate to generateText
-  // which manages the multi-step tool loop internally. The `executor` is called
-  // via tool.execute() in each AI SDK tool definition — no manual wiring needed.
-  return ResultAsync.fromPromise(
-    (async (): Promise<string> => {
+  return Effect.tryPromise({
+    try: async (): Promise<string> => {
       const textAccumulator: string[] = [];
       let toolsExecuted = 0;
 
@@ -2653,24 +2906,37 @@ const runGenericToolLoop = (
           : "auto",
         stopWhen: stepCountIs(5),
         maxOutputTokens: 1500,
-        experimental_telemetry: {
-          isEnabled: true,
-          functionId: "cesare-tool-loop",
-        },
+        // Spec 48 (W-E2/W-E3) — when the orchestrating Effect fiber is
+        // interrupted (client aborted the fetch), this signal aborts and the AI
+        // SDK tears down the in-flight model request so no work leaks server-side.
+        ...(args.abortSignal ? { abortSignal: args.abortSignal } : {}),
+        // Spec 47e FIX 5 — telemetry gated on Langfuse being configured so dev
+        // stays clean ("Not found" noise) when it isn't.
+        experimental_telemetry: aiTelemetry("cesare-tool-loop"),
         onStepFinish: (stepResult) => {
           // Collect text produced in each step
           for (const part of stepResult.text
             ? [{ text: stepResult.text }]
             : []) {
-            if (part.text.trim()) textAccumulator.push(part.text.trim());
+            if (part.text.trim()) {
+              textAccumulator.push(part.text.trim());
+              // Spec 47a — surface the model's planning text as a live
+              // `reasoning` step so the trace shows progress before any tool
+              // resolves.
+              args.onStreamEvent?.({
+                _tag: "reasoning",
+                text: part.text.trim(),
+              });
+            }
           }
-          // Count tool invocations and extract side-channel markers
+          // Count tool invocations, emit live step events, extract markers.
           for (const toolCall of stepResult.toolCalls ?? []) {
             const toolResult = (stepResult.toolResults ?? []).find(
               (r) => r.toolCallId === toolCall.toolCallId,
             );
             if (toolResult) {
               toolsExecuted += 1;
+              emitToolStep(toolCall.toolName, args.onStreamEvent);
               extractSideChannelMarkers(
                 toolCall.toolName,
                 JSON.stringify(toolResult.output),
@@ -2695,13 +2961,30 @@ const runGenericToolLoop = (
 
       const marker = `<!--ohw:tools=${toolsExecuted}-->`;
       return `${repairMojibake(textAccumulator.join("\n\n"))}\n${marker}`;
-    })(),
-    (e) =>
+    },
+    catch: (e) =>
       new CesareError(
         `Tool loop failed: ${e instanceof Error ? e.message : String(e)}`,
       ),
-  );
+  });
 };
+
+// Dispatch the tool loop as an `Effect`: the legacy manual loop (MOCK_AI without
+// a mock model) or the production `generateText` loop. Internal to this module;
+// the public `runGenericToolLoop` bridges it back to `ResultAsync` at the seam.
+const runToolLoopEffect = (
+  args: RunToolLoopArgs,
+): Effect.Effect<string, CesareError> =>
+  !args.mockModel && args.legacyMockClient
+    ? runLegacyToolLoopEffect(
+        args as RunToolLoopArgs & { legacyMockClient: LegacyAnthropicClient },
+      )
+    : runProductionToolLoopEffect(args);
+
+const runGenericToolLoop = (
+  args: RunToolLoopArgs,
+): ResultAsync<string, CesareError> =>
+  toolLoopEffectToResult(runToolLoopEffect(args));
 
 // ─── Budget tool definitions ──────────────────────────────────────────────────
 
@@ -4068,6 +4351,9 @@ export const runUnifiedToolLoop = (
   projectId: string,
   access: ProjectAccess,
   model: string,
+  onStreamEvent?: (event: CesareStreamEvent) => void,
+  forcedFirstTool?: string,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   const sdkTools = bridgeLegacyTools(
     tools as readonly AnthropicTool[],
@@ -4086,5 +4372,8 @@ export const runUnifiedToolLoop = (
     mockModel: resolveMockModel(),
     executor: (block, dbArg, projectIdArg) =>
       executor(block, dbArg, projectIdArg, access),
+    ...(onStreamEvent ? { onStreamEvent } : {}),
+    ...(forcedFirstTool ? { forcedFirstTool } : {}),
+    ...(abortSignal ? { abortSignal } : {}),
   });
 };

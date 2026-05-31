@@ -39,12 +39,12 @@
 }
 
 .filterChipActive {
-  background: #8b3a1a;
-  border-color: #8b3a1a;
-  color: #fff;
+  background: var(--ds-action);
+  border-color: var(--ds-action);
+  color: var(--ds-text-on-dark);
 
   &:hover {
-    background: #75301a;
+    background: var(--ds-action-hover);
   }
 }
 
@@ -111,7 +111,7 @@
 
 .progressFill {
   height: 100%;
-  background: #2d6a4f;
+  background: var(--ds-success);
   border-radius: var(--radius-pill);
   transition: width 400ms ease;
 }

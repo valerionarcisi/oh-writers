@@ -1,0 +1,49 @@
+/* apps/web/app/features/app-shell/components/CesarePeekLane.module.css
+ *
+ * The Cesare split lane — a real grid column (Spec 46 ?peek=, Spec 47 A4). It
+ * lives INSIDE the shell grid as the third column, so the main lane reflows
+ * narrower beside it (the page collapses). NOT fixed/absolute: this is the
+ * deliberate difference from the floating Cesare drawer. */
+
+.lane {
+  /* Token-driven column width, clamped so it stays usable on small viewports
+     and never starves the main lane. AppShell sets the grid track to this same
+     width via the `--cesare-peek-size` custom property. */
+  --cesare-peek-size: clamp(360px, 42vw, 560px);
+
+  grid-column: 3;
+  min-inline-size: 0;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--ds-surface);
+  border-inline-start: 1px solid var(--ds-line);
+  box-shadow: var(--ds-shadow-2);
+  overflow: hidden;
+  contain: layout style;
+  animation: cesare-peek-slide-in var(--ds-duration-3) var(--ds-ease) both;
+}
+
+/* The split CesareSheet fills the lane. The drawer's own `[data-surface="split"]`
+   rule already flows it (position: relative, 100% of the lane). */
+.lane > * {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+@keyframes cesare-peek-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(4%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane {
+    animation: none;
+  }
+}

@@ -60,8 +60,10 @@ export default defineConfig({
     {
       command: `PORT=${TEST_PORT} BETTER_AUTH_URL=${TEST_BASE_URL} DATABASE_URL=${TEST_DB_URL} LLM_FIRST_BREAKDOWN=false MOCK_AI=true CRON_SECRET=test-cron-secret pnpm --filter @oh-writers/web dev`,
       url: TEST_BASE_URL,
-      // Always start a dedicated test server so it uses the test DB, never the dev DB.
-      reuseExistingServer: false,
+      // Always start a dedicated test server so it uses the test DB, never the
+      // dev DB. Locally a warm server (already bound to the test DB) can be
+      // reused by exporting PW_REUSE_SERVER=1 — never set in CI.
+      reuseExistingServer: process.env["PW_REUSE_SERVER"] === "1",
       // CI cold starts (vinxi + Vite) routinely exceed 60s on GitHub runners;
       // 180s gives headroom without hiding real start-up issues.
       timeout: 180_000,

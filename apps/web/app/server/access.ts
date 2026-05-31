@@ -5,7 +5,11 @@ import type { Project, TeamMember } from "@oh-writers/db/schema";
 import type { TeamRole } from "@oh-writers/domain";
 import { DbError, ForbiddenError } from "@oh-writers/utils";
 import { ProjectNotFoundError } from "~/features/projects";
-import { requireUser, type AppUser } from "~/server/context";
+import {
+  requireUser,
+  getUserFromHeaders,
+  type AppUser,
+} from "~/server/context";
 import { canEdit, getMembership } from "~/server/permissions";
 import type { Db } from "~/server/db";
 
@@ -86,15 +90,44 @@ const checkAccess = (
   return ResultAsync.fromSafePromise(Promise.resolve(access));
 };
 
+const resolveAccessForUser = (
+  db: Db,
+  projectId: string,
+  level: AccessLevel,
+  user: AppUser,
+): ResultAsync<ProjectAccess, ProjectAccessError> =>
+  loadProject(db, projectId).andThen((project) =>
+    loadMembership(db, project, user.id).andThen((membership) =>
+      checkAccess(user, project, membership, level),
+    ),
+  );
+
 export const requireProjectAccess = (
   db: Db,
   projectId: string,
   level: AccessLevel,
 ): ResultAsync<ProjectAccess, ProjectAccessError> =>
   ResultAsync.fromPromise(requireUser(), (e) => e as never).andThen((user) =>
-    loadProject(db, projectId).andThen((project) =>
-      loadMembership(db, project, user.id).andThen((membership) =>
-        checkAccess(user, project, membership, level),
-      ),
-    ),
+    resolveAccessForUser(db, projectId, level, user),
+  );
+
+// Headers-explicit variant for API file routes (e.g. `/api/cesare/stream`),
+// where the ambient `getWebRequest()` is not reliably populated. The caller
+// passes `request.headers` from its handler argument so the Better Auth session
+// resolves the same way `createServerFn` does. Absent session → ForbiddenError
+// (returned as a value, not thrown).
+export const requireProjectAccessWithHeaders = (
+  db: Db,
+  projectId: string,
+  level: AccessLevel,
+  headers: Headers,
+): ResultAsync<ProjectAccess, ProjectAccessError> =>
+  ResultAsync.fromPromise(getUserFromHeaders(headers), (e) => e as never).andThen(
+    (user) =>
+      user
+        ? resolveAccessForUser(db, projectId, level, user)
+        : ResultAsync.fromPromise(
+            Promise.reject(new ForbiddenError("read project")),
+            (e) => e as ForbiddenError,
+          ),
   );

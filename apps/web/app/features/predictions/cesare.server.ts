@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/start";
 import { z } from "zod";
 import { eq, and, isNull, count, gte, lte, inArray } from "drizzle-orm";
 import { logger } from "~/server/logger";
+import { aiTelemetry } from "~/server/langfuse-config";
 import { ResultAsync } from "neverthrow";
 import {
   screenplays,
@@ -23,7 +24,11 @@ import {
 } from "@oh-writers/db/schema";
 import type { DocumentType } from "@oh-writers/domain";
 import { toShape, repairMojibake } from "@oh-writers/utils";
-import { withProjectAccess } from "~/server/pipeline";
+import {
+  withProjectAccess,
+  withProjectAccessHeaders,
+  type WithProjectAccessCtx,
+} from "~/server/pipeline";
 import type { Db } from "~/server/db";
 import type { ProjectAccess } from "~/server/access";
 import { generateText } from "ai";
@@ -57,6 +62,7 @@ import { buildDocumentEditSkill } from "./skills/document-edit.skill";
 import type { SkillBuildContext } from "./skills/types";
 import { buildGlobalContext, assembleSystemPromptV2 } from "./context";
 import { buildLocalContext } from "./context/local-context.server";
+import type { CesareStreamEvent } from "./cesare-stream-events";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
 
@@ -1104,7 +1110,8 @@ GENERAZIONE DOCUMENTI (propose/accept):
 Per richieste che generano un documento intero (logline, sinossi, soggetto v2, scaletta) USA I TOOLS dedicati. Tutto crea una DRAFT visibile in un banner sopra l'editor con i pulsanti "Promuovi a attiva" / "Scarta".
 
 WORKFLOW:
-- "genera la logline" / "scrivimi la logline" → propose_logline_from_screenplay({ instruction? })
+- "scrivimi una logline su [premessa]" / "rendi la logline più corta/tesa" / "cambia il protagonista della logline" → write_logline({ instruction, mode? })
+- "genera la logline DALLA sceneggiatura" / "estrai la logline" → propose_logline_from_screenplay({ instruction? })
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
 - "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
@@ -1592,10 +1599,7 @@ const callCesare = (
       system: systemPrompt.map((b) => b.text).join("\n\n"),
       messages,
       maxOutputTokens: 1024,
-      experimental_telemetry: {
-        isEnabled: true,
-        functionId: "cesare-text-only",
-      },
+      experimental_telemetry: aiTelemetry("cesare-text-only"),
     }).then((r) => repairMojibake(r.text)),
     (e) =>
       new CesareError(
@@ -1978,21 +1982,52 @@ const callCesareV2 = (
   executor: import("./skills/types").SkillExecutor,
   tools: readonly import("./skills/types").AnthropicTool[],
   model: string,
+  page: string,
+  onStreamEvent?: (event: CesareStreamEvent) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   const messages = [
     ...conversationHistory.map((m) => ({ role: m.role, content: m.content })),
     { role: "user" as const, content: message },
   ];
-  return runUnifiedToolLoop(
-    systemPrompt,
-    messages,
-    tools as readonly unknown[],
-    executor,
-    db,
-    projectId,
-    access,
-    model,
-  );
+
+  const run = (forcedFirstTool?: string): ResultAsync<string, CesareError> =>
+    runUnifiedToolLoop(
+      systemPrompt,
+      messages,
+      tools as readonly unknown[],
+      executor,
+      db,
+      projectId,
+      access,
+      model,
+      onStreamEvent,
+      forcedFirstTool,
+      abortSignal,
+    );
+
+  // Intent classifier hint. The classifier only fires on the screenplay page —
+  // that is where the inline-instead-of-tool bug bites and where the prompt is
+  // framed. Universal dispatch exposes the screenplay propose_* tools on every
+  // page, but we deliberately do NOT run the screenplay-framed classifier from
+  // other pages: it would add a Haiku call to pages that never had one and could
+  // force a screenplay tool onto an unrelated domain request. On other pages we
+  // let `tool_choice: "auto"` choose. On any error / low confidence / MOCK_AI it
+  // falls back to "auto" too.
+  if (page !== "screenplay") return run();
+
+  return classifyIntent({
+    userMessage: message,
+    page: "screenplay",
+    availableTools: SCREENPLAY_PROPOSE_TOOLS,
+  })
+    .map((intent) => intent.suggestedTool)
+    .orElse(() =>
+      ResultAsync.fromSafePromise(
+        Promise.resolve<string | undefined>(undefined),
+      ),
+    )
+    .andThen((forcedFirstTool) => run(forcedFirstTool));
 };
 
 // ─── V2 handler — stratified context (spec 39) ────────────────────────────────
@@ -2001,6 +2036,8 @@ const handleAskCesareV2 = (
   data: CesareInput,
   db: Db,
   access: ProjectAccess,
+  onStreamEvent?: (event: CesareStreamEvent) => void,
+  abortSignal?: AbortSignal,
 ): ResultAsync<string, CesareError> => {
   if (
     process.env["MOCK_AI"] === "true" &&
@@ -2048,11 +2085,22 @@ const handleAskCesareV2 = (
         requirementId: data.pageContext.requirementId ?? null,
       };
 
-      // Step 3: preliminary registry + skills (no document-edit override)
-      const prelimRegistry = buildSkillRegistry(prelimBuildCtx);
+      // Step 3: preliminary registry. `selectForPage` now returns the FULL
+      // universal skill superset (spec 47b) so any tool is dispatchable from any
+      // page; the page only orders which guidance leads. `userIdFallback` lets
+      // the always-available document-gen skill attribute auto-created versions.
+      const prelimRegistry = buildSkillRegistry(
+        prelimBuildCtx,
+        {},
+        access.user.id,
+      );
       const prelimSkills = prelimRegistry.selectForPage(page, null);
 
-      // Step 4: lean local context — only loads data declared by active skills
+      // Step 4: lean local context. We scope DB loading to the PAGE-PRIMARY
+      // skills (not the universal set) so round-trips stay proportional to the
+      // page. Cross-domain write tools (e.g. propose_soggetto_v2) resolve their
+      // own target data inside the executor, so they need no pre-loaded context.
+      const contextSkills = prelimRegistry.primarySkillsForPage(page);
       const pageCtx = {
         sceneId: data.pageContext.sceneId ?? null,
         sceneNumber: data.pageContext.sceneNumber ?? null,
@@ -2062,7 +2110,7 @@ const handleAskCesareV2 = (
         shootingDayNumber: data.pageContext.shootingDayNumber ?? null,
       };
 
-      return buildLocalContext(db, data.projectId, pageCtx, prelimSkills, page)
+      return buildLocalContext(db, data.projectId, pageCtx, contextSkills, page)
         .mapErr(
           (e) =>
             new CesareError(
@@ -2088,9 +2136,11 @@ const handleAskCesareV2 = (
               docCtx,
               access.user.id,
             );
-            finalRegistry = buildSkillRegistry(prelimBuildCtx, {
-              "document-edit": docEditSkill,
-            });
+            finalRegistry = buildSkillRegistry(
+              prelimBuildCtx,
+              { "document-edit": docEditSkill },
+              access.user.id,
+            );
             finalSkills = finalRegistry.selectForPage(page, null);
           }
 
@@ -2116,6 +2166,9 @@ const handleAskCesareV2 = (
             executor,
             tools,
             model,
+            data.pageContext.page,
+            onStreamEvent,
+            abortSignal,
           ).map((reply) => {
             emitCesareMetricEvent(
               data.pageContext.page,
@@ -2206,6 +2259,42 @@ export const askCesare = createServerFn({ method: "POST" })
       ),
     ),
   );
+
+// ─── Streaming entry (spec 47a / A2) ──────────────────────────────────────────
+// Shared by the `/api/cesare/stream` route. Re-exports the input schema so the
+// route validates against the same contract `askCesare` uses, and runs the SAME
+// V2 handler with a live step-event sink. Auth is gated through
+// `withProjectAccess` exactly like `askCesare`, so the Anthropic key never
+// reaches the client and project access is enforced identically.
+export { CesareInputSchema };
+
+// The ambient request context (`getWebRequest`) is only available while the
+// route handler is executing — NOT inside the `ReadableStream.start` callback,
+// which the runtime pulls asynchronously after the Response is returned. So the
+// route resolves project access eagerly (`resolveCesareStreamAccess`) WHILE the
+// context is live, then runs the tool loop with the resolved handle inside the
+// stream (`runCesareStreamWithAccess`). This keeps auth identical to `askCesare`
+// without leaking the request context into the stream body.
+export type CesareStreamAccess = WithProjectAccessCtx;
+
+export const resolveCesareStreamAccess = (
+  projectId: string,
+  headers: Headers,
+): ResultAsync<
+  CesareStreamAccess,
+  import("~/server/access").ProjectAccessError
+> =>
+  withProjectAccessHeaders(projectId, "view", headers, (ctx) =>
+    ResultAsync.fromSafePromise(Promise.resolve(ctx)),
+  );
+
+export const runCesareStreamWithAccess = (
+  data: CesareInput,
+  access: CesareStreamAccess,
+  onStreamEvent: (event: CesareStreamEvent) => void,
+  abortSignal?: AbortSignal,
+): ResultAsync<string, CesareError> =>
+  handleAskCesareV2(data, access.db, access.access, onStreamEvent, abortSignal);
 
 // Test-only mock-context setter lives in the API route
 // `/api/test/mock-context` so it can be hit from Playwright without going

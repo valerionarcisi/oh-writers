@@ -44,6 +44,9 @@ export type {
   DropdownMenuItem,
   DropdownMenuAlign,
 } from "./components/DropdownMenu";
+
+export { ActionsMenu } from "./shell/TopBar/ActionsMenu";
+export type { ActionsMenuProps } from "./shell/TopBar/ActionsMenu";
 export { DataTable } from "./components/DataTable";
 export type { DataTableProps, Column } from "./components/DataTable";
 export { EditableCell } from "./components/EditableCell";
@@ -166,6 +169,19 @@ export type {
   DockAction,
 } from "./shell/FloatingDock/FloatingDock";
 
+export { LeftRail } from "./shell/LeftRail/LeftRail";
+export type {
+  LeftRailProps,
+  RailNavItem,
+  RailSection,
+  RailToolItem,
+  RailAccountActions,
+  CesareSessionItem,
+} from "./shell/LeftRail/LeftRail";
+
+export { BottomDock } from "./shell/BottomDock/BottomDock";
+export type { BottomDockProps } from "./shell/BottomDock/BottomDock";
+
 export { CommandPalette } from "./shell/CommandPalette/CommandPalette";
 export type {
   CommandPaletteProps,
@@ -184,3 +200,97 @@ export type {
   MarginNoteProps,
   MarginNoteKind,
 } from "./composites/MarginNote/MarginNote";
+
+// ─── CesareDrawer (Notion-class) ─────────────────────────────
+export { CesareDrawer } from "./composites/CesareDrawer/CesareDrawer";
+export type {
+  CesareDrawerProps,
+  CesareDrawerSession,
+  CesareDrawerScope,
+  CesareDrawerContextTag,
+  CesareDrawerComposerProps,
+} from "./composites/CesareDrawer/CesareDrawer";
+export {
+  useDrawerState,
+  drawerReducer,
+} from "./composites/CesareDrawer/use-drawer-state";
+export type {
+  CesareDrawerState,
+  UseDrawerStateOptions,
+  UseDrawerStateResult,
+} from "./composites/CesareDrawer/use-drawer-state";
+export {
+  useDrawerResize,
+  readPersistedSize,
+  DRAWER_SIZE_STORAGE_KEYS,
+} from "./composites/CesareDrawer/use-drawer-resize";
+export type {
+  ResizeAxis,
+  UseDrawerResizeOptions,
+  UseDrawerResizeResult,
+} from "./composites/CesareDrawer/use-drawer-resize";
+
+// ─── Rail collapse overlay (Notion hamburger pattern) ────────
+export { RailHamburger } from "./shell/LeftRail/RailHamburger";
+export type { RailHamburgerProps } from "./shell/LeftRail/RailHamburger";
+export { useRailOverlay } from "./shell/LeftRail/use-rail-overlay";
+export type {
+  UseRailOverlayOptions,
+  UseRailOverlayResult,
+} from "./shell/LeftRail/use-rail-overlay";
+
+// ─── CollapsibleNote (shared margin notes + Step Blocks) ─────
+export { CollapsibleNote } from "./composites/CollapsibleNote/CollapsibleNote";
+export type {
+  CollapsibleNoteProps,
+  CollapsibleNoteKind,
+} from "./composites/CollapsibleNote/CollapsibleNote";
+
+// ─── ChangeTrace (Notion-style step block + Mostra modifiche) ─
+export { ChangeTrace } from "./composites/ChangeTrace/ChangeTrace";
+export type {
+  ChangeTraceProps,
+  ChangeUpdate,
+  ChangeUpdateKind,
+} from "./composites/ChangeTrace/ChangeTrace";
+
+// ─── SplitDrawer (Notion `»` pattern) ───────────────────────
+export { SplitDrawer } from "./composites/SplitDrawer/SplitDrawer";
+export type {
+  SplitDrawerProps,
+  SplitDrawerSize,
+} from "./composites/SplitDrawer/SplitDrawer";
+export {
+  useSplitDrawerState,
+  splitDrawerReducer,
+} from "./composites/SplitDrawer/use-split-drawer-state";
+export type {
+  SplitDrawerState,
+  UseSplitDrawerStateOptions,
+  UseSplitDrawerStateResult,
+} from "./composites/SplitDrawer/use-split-drawer-state";
+export {
+  useSplitDrawerResize,
+  readPersistedSplitSize,
+  SPLIT_DRAWER_STORAGE_KEYS,
+} from "./composites/SplitDrawer/use-split-drawer-resize";
+export type {
+  UseSplitDrawerResizeOptions,
+  UseSplitDrawerResizeResult,
+} from "./composites/SplitDrawer/use-split-drawer-resize";
+
+// ─── TargetPagePreview (trace overlay inside SplitDrawer) ───
+export {
+  TargetPagePreview,
+  registerPageTraceView,
+  getPageTraceView,
+} from "./composites/TargetPagePreview/TargetPagePreview";
+export type {
+  TargetPagePreviewProps,
+  TargetPageRef,
+  TargetPageKind,
+  TraceMarker,
+  TraceMarkerKind,
+  PageTraceViewProps,
+  PageTraceViewComponent,
+} from "./composites/TargetPagePreview/TargetPagePreview";

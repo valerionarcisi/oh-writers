@@ -37,6 +37,11 @@ export interface DropdownMenuProps {
   "data-testid"?: string;
   /** Extra className applied to the wrapper <button> — use to override width/layout. */
   triggerClassName?: string;
+  /** Accessible label for the trigger button. Required when the trigger is
+   *  icon-only (e.g. the "…" more button) so screen readers announce it. */
+  triggerLabel?: string;
+  /** Native tooltip text for the trigger button. */
+  triggerTitle?: string;
 }
 
 // ─── MenuItemInternal ────────────────────────────────────────────────────────
@@ -250,6 +255,8 @@ export function DropdownMenu({
   items,
   align = "start",
   triggerClassName,
+  triggerLabel,
+  triggerTitle,
   ...rest
 }: DropdownMenuProps) {
   const menuId = useId();
@@ -275,6 +282,8 @@ export function DropdownMenu({
         {...buttonProps}
         ref={triggerRef}
         type="button"
+        aria-label={triggerLabel}
+        title={triggerTitle}
         className={[styles.triggerWrap, triggerClassName].filter(Boolean).join(" ")}
       >
         {trigger}

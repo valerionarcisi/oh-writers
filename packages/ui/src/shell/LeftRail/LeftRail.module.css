@@ -1,0 +1,510 @@
+/* packages/ui/src/shell/LeftRail/LeftRail.module.css */
+
+/* Canva-style left rail. Width is driven from the AppShell grid, not from
+   here, so the column can transition between 240px (full) and 56px
+   (collapsed) without the rail itself needing to know its width. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  padding: 14px 10px;
+  background: var(--ds-surface-alt);
+  border-inline-end: 1px solid var(--ds-line);
+  block-size: 100vh;
+  inline-size: 100%;
+  overflow: hidden auto;
+  position: sticky;
+  inset-block-start: 0;
+  min-width: 0;
+}
+
+/* ── Brand + project header ───────────────────────────────── */
+/* Brand label sits left; the pin (lock-open) sits at the opposite edge and
+   only reveals on hover/focus of the rail. */
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.brandRow .brand {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ds-text);
+  text-align: start;
+  inline-size: 100%;
+
+  &:hover {
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.brandMark {
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  background: var(--ds-text);
+  color: var(--ds-text-on-dark);
+  font-family: var(--ds-font-display);
+  font-weight: 600;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.brandName {
+  font-family: var(--ds-font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding: 4px var(--ds-space-2);
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+
+  &:hover {
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.projectTitle {
+  font-family: var(--ds-font-display);
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ds-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projectChev {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+/* ── Sections ──────────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 4px;
+  font-family: var(--ds-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ds-text-faint);
+}
+
+.newSession {
+  border: none;
+  background: transparent;
+  color: var(--ds-text-3);
+  font: inherit;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--ds-radius-sm);
+
+  &:hover {
+    color: var(--ds-action);
+    background: var(--ds-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+/* Clickable "Cesare" entry in the sessions section title. Inherits the
+   uppercase label look but adds the agent glyph + hover/focus affordance so it
+   reads as the dedicated entry into the full Cesare page. */
+.sessionsTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--ds-text-faint);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--ds-radius-sm);
+
+  & > .glyph {
+    color: var(--ds-agent);
+  }
+
+  &:hover {
+    color: var(--ds-action);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.sectionItems {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* ── Nav item ──────────────────────────────────────────────── */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 13.5px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
+.itemActive {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-weight: 500;
+  box-shadow: var(--ds-shadow-1);
+}
+
+.itemLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  margin-inline-start: auto;
+  font-size: 11px;
+  color: var(--ds-text-faint);
+  flex-shrink: 0;
+}
+
+.glyph {
+  inline-size: 14px;
+  text-align: center;
+  color: var(--ds-text-faint);
+  font-size: 12px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemActive .glyph {
+  color: var(--ds-action);
+}
+
+.spacer {
+  flex: 1;
+  min-block-size: var(--ds-space-2);
+}
+
+/* ── Sessions ──────────────────────────────────────────────── */
+/* The sessions slot is always visible (Spec 44 F1): the "Sessioni Cesare"
+   section is a permanent navigation surface, independent of whether the Cesare
+   drawer is open. The slot self-hides via `renderSessions` returning null when
+   there are no sessions to show. */
+.sessionsSlot {
+  display: block;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-sans);
+  font-size: 12.5px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+
+  > .glyph {
+    color: var(--ds-agent);
+    font-size: 11px;
+  }
+}
+
+.sessionActive {
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-weight: 500;
+}
+
+/* ── Account row (footer) ──────────────────────────────────── */
+/* Spec 47b FIX 1: bell / avatar / gear live here — the single home for the
+   account actions (no longer in the BottomDock or the Cesare header). */
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 6px var(--ds-space-2);
+  border-block-start: 1px solid var(--ds-line);
+}
+
+.accountBtn {
+  position: relative;
+  inline-size: 30px;
+  block-size: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  color: var(--ds-text-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.accountAvatar {
+  margin-inline-start: auto;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--ds-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--ds-line);
+}
+
+.accountDot {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-end: 5px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--ds-danger);
+  border: 1.5px solid var(--ds-surface-alt);
+}
+
+/* ── Tools row ─────────────────────────────────────────────── */
+.tools {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--ds-space-1);
+  padding: 6px var(--ds-space-1);
+  border-block-start: 1px solid var(--ds-line);
+}
+
+.tool {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--ds-text-3);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: var(--ds-surface-deep);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: -2px;
+  }
+}
+
+/* ── Collapsed mode (data-shell="collapsed") ─────────────────
+   The shell grid collapses to 0px on the left (see AppShell.module.css)
+   so the rail's natural width is 0. The rail is then promoted to a
+   fixed-position overlay only while `data-rail-overlay="open"`.
+
+   No hover-reveal sentinel: the rail appears solely on hamburger click,
+   outside-click / ESC / close-button dismiss it. */
+:global(body[data-shell="collapsed"]) .rail {
+  position: fixed;
+  inset-block-start: 56px;
+  inset-inline-start: var(--space-2);
+  block-size: calc(100vh - 64px);
+  inline-size: 260px;
+  padding: 14px 10px;
+  background: var(--ds-surface-alt);
+  box-shadow: var(--ds-shadow-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg, var(--radius-lg));
+  z-index: 320;
+  /* Hidden by default — slides fully off the left edge (including its own
+     inset margin) while staying mounted so the react-aria overlay listeners
+     stay wired. */
+  transform: translateX(calc(-100% - var(--space-2)));
+  visibility: hidden;
+  transition:
+    transform var(--ds-duration-3) var(--ds-ease),
+    visibility 0s linear var(--ds-duration-3);
+}
+
+:global(body[data-shell="collapsed"][data-rail-overlay="open"]) .rail {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform var(--ds-duration-3) var(--ds-ease),
+    visibility 0s;
+}
+
+/* Hide the rail entirely (and all its descendants) in focus mode. The shell
+   grid already collapses the column to 0, but the overlay rules above
+   would otherwise still let the rail slide in if data-rail-overlay leaked. */
+:global(body[data-shell="focus"]) .rail {
+  display: none;
+}
+
+/* ── Brand-row trailing buttons (pin / collapse) ──────────────
+   Both sit at the opposite edge of the brand label and stay hidden until the
+   rail (or the button itself) is hovered/focused. The pin (`«` → `»`) shows
+   only in the collapsed overlay; the collapse `«` shows only in full mode.
+   They never coexist, so they share the same visual slot. */
+.lockOpen,
+.collapse {
+  flex: 0 0 auto;
+  inline-size: 26px;
+  block-size: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--ds-text-faint);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  opacity: 0;
+  transition:
+    opacity var(--ds-duration-2, 120ms) var(--ds-ease, ease),
+    background var(--ds-duration-2, 120ms) var(--ds-ease, ease),
+    color var(--ds-duration-2, 120ms) var(--ds-ease, ease);
+
+  &:hover {
+    background: var(--ds-surface);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+    opacity: 1;
+  }
+}
+
+.rail:hover .lockOpen,
+.brandRow:hover .lockOpen,
+.rail:hover .collapse,
+.brandRow:hover .collapse {
+  opacity: 1;
+}
+
+/* ── Reduced motion ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .rail {
+    scroll-behavior: auto;
+  }
+
+  :global(body[data-shell="collapsed"]) .rail {
+    transition: none;
+  }
+}

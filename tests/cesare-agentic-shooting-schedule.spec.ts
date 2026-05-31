@@ -5,6 +5,7 @@ import {
 } from "./shooting-plan/helpers";
 import { navigateToSchedule, SCHEDULE_PROJECT_ID } from "./schedule/helpers";
 import {
+  closeCesareSheet,
   openCesareSheet,
   sendCesareMessage,
   waitForCesareReply,
@@ -45,6 +46,10 @@ test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule po
     const panel = page.getByTestId("blocking-proposal-panel");
     await expect(panel).toBeVisible({ timeout: 15_000 });
     await expect(panel.getByText(/Suggerimento Cesare/i)).toBeVisible();
+
+    // Dismiss the floating Cesare drawer so it can't intercept the click on the
+    // in-page accept button — the real user flow once the proposal has landed.
+    await closeCesareSheet(page);
 
     // Accept-all button is exposed via react-aria
     const acceptAll = panel.getByRole("button", {

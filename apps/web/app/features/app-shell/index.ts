@@ -1,11 +1,67 @@
 export { AppShell } from "./components/AppShell";
 export { SaveStatusIndicator } from "./components/SaveStatusIndicator";
+export { CesareLiveDiff } from "./components/CesareLiveDiff";
+export {
+  getLiveDiffState,
+  flashLiveDiff,
+  subscribeLiveDiff,
+} from "./cesare-live-diff-store";
+export type {
+  LiveDiffState,
+  LiveDiffFlash,
+  LiveDiffMode,
+  LiveDiffSegment,
+} from "./cesare-live-diff-store";
+export {
+  peekSearchSchema,
+  parseCesarePeek,
+  isCesarePeek,
+  CESARE_PEEK_TOKEN,
+  InvalidPeekError,
+} from "./cesare-peek";
+export type { CesarePeek, PeekSearch } from "./cesare-peek";
+export {
+  versionsSearchSchema,
+  parseVersionsPeek,
+  parseVersionsCompare,
+  serializeVersionsCompare,
+  InvalidVersionsPeekError,
+  InvalidVersionsCompareError,
+  VERSIONS_SURFACE_STATES,
+} from "./versions-peek";
+export type {
+  VersionsPeek,
+  VersionsCompare,
+  VersionsSearch,
+  VersionsSurfaceState,
+} from "./versions-peek";
+export { useRoutedSurface } from "./use-routed-surface";
+export type {
+  UseRoutedSurfaceResult,
+  UseRoutedSurfaceOptions,
+} from "./use-routed-surface";
 export {
   SaveStateProvider,
   useSaveStatePublisher,
   useSaveStateValue,
 } from "./save-state-context";
+export {
+  TopBarSlotsProvider,
+  useTopBarSlots,
+  useTopBarSlotPublisher,
+} from "./top-bar-slots-context";
 export { useCesareOpen } from "./cesare-context";
+export { useCesareSessionFocus } from "./cesare-session-focus-context";
+export {
+  SplitDrawerProvider,
+  useSplitDrawer,
+  useBellOpener,
+} from "./split-drawer-context";
+export type {
+  SplitDrawerPayload,
+  SplitDrawerTracePayload,
+  SplitDrawerNotificationsPayload,
+} from "./split-drawer-context";
 export {
   ActiveSceneProvider,
   useActiveScene,
