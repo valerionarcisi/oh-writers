@@ -42,6 +42,13 @@ export type {
   DocumentView,
   DocumentViewWithPermission,
 } from "./server/documents.server";
+export {
+  getNarrativeProgress,
+  narrativeProgressQueryKey,
+  narrativeProgressQueryOptions,
+  NarrativePresenceSchema,
+} from "./server/narrative-progress.server";
+export type { NarrativePresenceShape } from "./server/narrative-progress.server";
 export { VersionCompareModal } from "./components/VersionCompareModal";
 export type { VersionCompareItem } from "./components/VersionCompareModal";
 export {
