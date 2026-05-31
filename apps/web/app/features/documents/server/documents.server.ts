@@ -5,7 +5,11 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { documents, documentVersions, projects } from "@oh-writers/db/schema";
 import type { Document } from "@oh-writers/db";
-import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  DOCUMENT_TYPE_LABELS_IT,
+  type DocumentType,
+} from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -136,7 +140,7 @@ export const getDocument = createServerFn({ method: "GET" })
               .values({
                 projectId: data.projectId,
                 type: docType,
-                title: docType.charAt(0).toUpperCase() + docType.slice(1),
+                title: DOCUMENT_TYPE_LABELS_IT[docType],
                 content: "",
                 createdBy: user.id,
               })

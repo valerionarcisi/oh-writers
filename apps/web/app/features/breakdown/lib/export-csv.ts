@@ -12,12 +12,12 @@ const escapeCsv = (s: string): string =>
   /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 
 export const breakdownToCsv = (rows: ExportRow[]): string => {
-  const header = ["Category", "Name", "Description", "Total", "Scenes"].join(
+  const header = ["Categoria", "Nome", "Descrizione", "Totale", "Scene"].join(
     ",",
   );
   const lines = rows.map((r) =>
     [
-      escapeCsv(CATEGORY_META[r.category].labelEn),
+      escapeCsv(CATEGORY_META[r.category].labelIt),
       escapeCsv(r.name),
       escapeCsv(r.description ?? ""),
       String(r.totalQuantity),

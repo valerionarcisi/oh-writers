@@ -1169,10 +1169,10 @@ Quando l'utente chiede di riorganizzare lo schedule, USA i tools — non limitar
 
 const TOP_SHEET_LABEL_IT: Record<string, string> = {
   above_the_line: "Above the line",
-  production: "Production",
+  production: "Produzione",
   crew: "Troupe",
   post_production: "Post-produzione",
-  contingency: "Contingenza",
+  contingency: "Imprevisti",
 };
 
 const MAX_BUDGET_LINES_IN_PROMPT = 60;

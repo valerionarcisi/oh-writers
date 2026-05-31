@@ -38,16 +38,16 @@ export const buildScheduleCsvRows = (
 
 export const scheduleToCsv = (days: ShootingDayView[]): string => {
   const header = [
-    "Day",
-    "Date",
-    "Scene",
-    "Heading",
-    "INT/EXT",
-    "Day/Night",
+    "Giorno",
+    "Data",
+    "Scena",
+    "Intestazione",
+    "INT/EST",
+    "Giorno/Notte",
     "Location",
     "Cast",
-    "Pages",
-    "Notes",
+    "Pagine",
+    "Note",
   ].join(",");
 
   const rows = buildScheduleCsvRows(days).map((r) =>

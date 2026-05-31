@@ -1,6 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { DocumentSummary } from "../../server/project-overview.server";
-import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  DOCUMENT_TYPE_LABELS_IT,
+  type DocumentType,
+} from "@oh-writers/domain";
 import styles from "./NarrativeCardGrid.module.css";
 
 interface NarrativeCardGridProps {
@@ -8,17 +12,14 @@ interface NarrativeCardGridProps {
   readonly documents: DocumentSummary[];
 }
 
-const TYPE_LABEL: Record<DocumentType, string> = {
-  logline: "Logline",
-  soggetto: "Soggetto",
-  synopsis: "Sinossi",
-  outline: "Scaletta",
-  treatment: "Trattamento",
-};
+const TYPE_LABEL = DOCUMENT_TYPE_LABELS_IT;
 
 const DOC_ROUTE: Record<
   Exclude<DocumentType, "logline">,
-  "/projects/$id/soggetto" | "/projects/$id/synopsis" | "/projects/$id/outline" | "/projects/$id/treatment"
+  | "/projects/$id/soggetto"
+  | "/projects/$id/synopsis"
+  | "/projects/$id/outline"
+  | "/projects/$id/treatment"
 > = {
   soggetto: "/projects/$id/soggetto",
   synopsis: "/projects/$id/synopsis",
@@ -79,10 +80,9 @@ export function NarrativeCardGrid({
                 {doc.hasContent ? "Completo" : "Da iniziare"}
               </span>
             </div>
-            <h3 className={styles.cardTitle}>{doc.title}</h3>
+            <h3 className={styles.cardTitle}>{TYPE_LABEL[doc.type]}</h3>
             <p className={styles.preview}>
-              {doc.preview ||
-                "Nessun contenuto. Apri per iniziare a scrivere."}
+              {doc.preview || "Nessun contenuto. Apri per iniziare a scrivere."}
             </p>
             <div className={styles.foot}>
               {formatWords(doc.wordCount)} · {formatDate(doc.updatedAt)}

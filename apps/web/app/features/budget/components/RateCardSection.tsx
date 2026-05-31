@@ -159,9 +159,15 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
                       fmt(e.rateValue)
                     )}
                   </td>
-                  <td className={styles.numCell}>{fmt(e.mealAllowance) || "—"}</td>
-                  <td className={styles.numCell}>{fmt(e.accommodation) || "—"}</td>
-                  <td className={styles.muted}>{FISCAL_LABELS[e.fiscalRegime]}</td>
+                  <td className={styles.numCell}>
+                    {fmt(e.mealAllowance) || "—"}
+                  </td>
+                  <td className={styles.numCell}>
+                    {fmt(e.accommodation) || "—"}
+                  </td>
+                  <td className={styles.muted}>
+                    {FISCAL_LABELS[e.fiscalRegime]}
+                  </td>
                   <td className={styles.actions}>
                     <button
                       type="button"
@@ -199,8 +205,8 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
 
       {entries.length === 0 && !adding && (
         <p className={styles.empty}>
-          Aggiungi le tariffe prima di generare il budget per pre-popolare
-          cast e crew con i valori corretti.
+          Aggiungi le tariffe prima di generare il budget per pre-popolare cast
+          e troupe con i valori corretti.
         </p>
       )}
     </div>
@@ -224,8 +230,10 @@ function EditRow({
   saving,
   autoFocusName,
 }: EditRowProps) {
-  const set = (field: keyof DraftRow) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    onChange({ ...draft, [field]: e.target.value });
+  const set =
+    (field: keyof DraftRow) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      onChange({ ...draft, [field]: e.target.value });
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") onSave();

@@ -9,29 +9,29 @@ interface AIAssistantPanelProps {
 // Type-specific quick actions — wired to real AI calls in Spec 07
 const AI_ACTIONS: Record<DocumentType, string[]> = {
   [DocumentTypes.LOGLINE]: [
-    "Generate 3 alternatives",
-    "Make it more concise",
-    "Strengthen the conflict",
+    "Genera 3 alternative",
+    "Rendi più conciso",
+    "Rafforza il conflitto",
   ],
   [DocumentTypes.SOGGETTO]: [
-    "Expand a paragraph",
-    "Tighten the premise",
-    "Clarify the theme",
+    "Espandi un paragrafo",
+    "Stringi la premessa",
+    "Chiarisci il tema",
   ],
   [DocumentTypes.SYNOPSIS]: [
-    "Expand a paragraph",
-    "Suggest a scene to add",
-    "Check three-act structure",
+    "Espandi un paragrafo",
+    "Suggerisci una scena da aggiungere",
+    "Verifica la struttura in tre atti",
   ],
   [DocumentTypes.OUTLINE]: [
-    "Suggest a scene",
-    "Identify pacing issues",
-    "Suggest an alternative",
+    "Suggerisci una scena",
+    "Individua problemi di ritmo",
+    "Suggerisci un'alternativa",
   ],
   [DocumentTypes.TREATMENT]: [
-    "Expand a section",
-    "Suggest dialogue",
-    "Identify rhythm issues",
+    "Espandi una sezione",
+    "Suggerisci dialoghi",
+    "Individua problemi di ritmo",
   ],
 };
 
@@ -41,13 +41,13 @@ export function AIAssistantPanel({ type }: AIAssistantPanelProps) {
   return (
     <aside className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>AI Assistant</span>
+        <span className={styles.title}>Assistente AI</span>
         <span className={styles.badge}>Spec 07</span>
       </div>
 
       <p className={styles.notice}>
-        AI assistance is coming in Spec 07. Actions below will be active once
-        integrated.
+        L'assistenza AI arriverà con la Spec 07. Le azioni qui sotto saranno
+        attive una volta integrate.
       </p>
 
       <div className={styles.actions}>
@@ -56,7 +56,7 @@ export function AIAssistantPanel({ type }: AIAssistantPanelProps) {
             key={action}
             className={styles.actionBtn}
             disabled
-            title="Coming in Spec 07"
+            title="In arrivo con la Spec 07"
             type="button"
           >
             {action}
@@ -66,7 +66,7 @@ export function AIAssistantPanel({ type }: AIAssistantPanelProps) {
 
       <div className={styles.suggestionArea}>
         <p className={styles.suggestionPlaceholder}>
-          Suggestions will appear here after you run an action.
+          I suggerimenti compariranno qui dopo aver eseguito un'azione.
         </p>
       </div>
     </aside>

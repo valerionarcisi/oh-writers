@@ -27,7 +27,7 @@ describe("shotListToCsv", () => {
   it("emits the standard CSV header", () => {
     const csv = shotListToCsv([]);
     expect(csv).toBe(
-      "Scene,Heading,Shot #,Camera,Size,Movement,Est. Min,Notes",
+      "Scena,Intestazione,Inquadratura #,Camera,Campo,Movimento,Min. stim.,Note",
     );
   });
 

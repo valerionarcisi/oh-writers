@@ -380,8 +380,8 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
           <main className={styles.main}>
             <div className={styles.mainEmpty}>
               <p>
-                Seleziona una scena dalla lista per iniziare a pianificare gli
-                shot.
+                Seleziona una scena dalla lista per iniziare a pianificare le
+                inquadrature.
               </p>
             </div>
           </main>

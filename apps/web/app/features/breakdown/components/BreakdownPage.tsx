@@ -89,13 +89,13 @@ const UNDERLINE_CHIPS: ReadonlyArray<{
   { key: "cast", label: "Cast", color: "var(--ds-cat-cast)", defaultOn: true },
   {
     key: "locations",
-    label: "Locations",
+    label: "Location",
     color: "var(--ds-cat-locations)",
     defaultOn: true,
   },
   {
     key: "props",
-    label: "Props",
+    label: "Oggetti di scena",
     color: "var(--ds-cat-scenografia)",
     defaultOn: true,
   },

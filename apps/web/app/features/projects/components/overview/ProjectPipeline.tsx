@@ -95,7 +95,8 @@ export function ProjectPipeline({
   })();
 
   const breakdownStatus: NodeStatus = breakdown.hasAny
-    ? breakdown.scenesBrokenDown >= breakdown.totalScenes && breakdown.totalScenes > 0
+    ? breakdown.scenesBrokenDown >= breakdown.totalScenes &&
+      breakdown.totalScenes > 0
       ? "done"
       : "current"
     : screenplayStatus === "done"
@@ -128,7 +129,7 @@ export function ProjectPipeline({
     })),
     {
       key: "screenplay",
-      label: "Screenplay",
+      label: "Sceneggiatura",
       status: screenplayStatus,
       route: "/projects/$id/screenplay" as const,
     },

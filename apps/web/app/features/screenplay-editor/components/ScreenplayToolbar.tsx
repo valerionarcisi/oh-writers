@@ -7,12 +7,12 @@ interface ScreenplayToolbarProps {
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
-  scene: "Scene Heading",
-  action: "Action",
-  character: "Character",
-  dialogue: "Dialogue",
-  parenthetical: "Parenthetical",
-  transition: "Transition",
+  scene: "Intestazione scena",
+  action: "Azione",
+  character: "Personaggio",
+  dialogue: "Dialogo",
+  parenthetical: "Parentetica",
+  transition: "Transizione",
 };
 
 // Keyboard shortcuts shown in hover tooltips — Mod maps to ⌘ on Mac / Ctrl elsewhere.
@@ -61,7 +61,7 @@ export function ScreenplayToolbar({
       <div
         className={styles.elementStrip}
         role="toolbar"
-        aria-label="Convert current block"
+        aria-label="Converti blocco corrente"
       >
         {ELEMENT_ORDER.map((el) => (
           <button

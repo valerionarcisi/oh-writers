@@ -8,12 +8,12 @@ interface ScreenplayElementChipsProps {
 }
 
 const ELEMENT_LABELS: Record<ElementType, string> = {
-  scene: "Scene",
-  action: "Action",
-  character: "Character",
-  dialogue: "Dialogue",
-  parenthetical: "Paren",
-  transition: "Transition",
+  scene: "Scena",
+  action: "Azione",
+  character: "Personaggio",
+  dialogue: "Dialogo",
+  parenthetical: "Parentetica",
+  transition: "Transizione",
 };
 
 const ELEMENT_SHORTCUTS: Record<ElementType, string> = {

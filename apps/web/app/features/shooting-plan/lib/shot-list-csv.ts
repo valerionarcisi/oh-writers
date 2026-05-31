@@ -25,14 +25,14 @@ const formatMinutes = (m: number | null): string =>
  */
 export const shotListToCsv = (scenes: ShotListCsvScene[]): string => {
   const header = [
-    "Scene",
-    "Heading",
-    "Shot #",
+    "Scena",
+    "Intestazione",
+    "Inquadratura #",
     "Camera",
-    "Size",
-    "Movement",
-    "Est. Min",
-    "Notes",
+    "Campo",
+    "Movimento",
+    "Min. stim.",
+    "Note",
   ].join(",");
 
   const lines: string[] = [];
