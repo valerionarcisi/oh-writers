@@ -37,7 +37,11 @@ import {
 } from "./cesare-budget-intelligence";
 import type { DocumentType } from "@oh-writers/domain";
 import type { CesareStreamEvent } from "./cesare-stream-events";
-import { mappingForTool, entityRefForDomain } from "./cesare-tool-entity-map";
+import {
+  mappingForTool,
+  entityRefForDomain,
+  labelForDomain,
+} from "./cesare-tool-entity-map";
 import {
   estimateSceneCost,
   DEFAULT_PRODUCTION_RATES,
@@ -2584,7 +2588,7 @@ interface LegacyAnthropicClient {
 // Both the legacy and AI-SDK paths need to inspect certain tool results for
 // embedded HTML markers that the CesareSheet parses on the client.
 
-const extractSideChannelMarkers = (
+export const extractSideChannelMarkers = (
   toolName: string,
   toolResultContent: string,
   accumulator: string[],
@@ -2664,6 +2668,85 @@ const extractSideChannelMarkers = (
     } catch {
       // ignore malformed payloads — the marker is best-effort
     }
+    return;
+  }
+
+  // Honest success signal for the NON-document write tools — budget, location,
+  // schedule, breakdown and shooting-plan (F-A3). These don't carry a versioned
+  // document so they have no `doc-applied` marker; without a signal the client
+  // would have to guess "did anything change?" from the chat text, which is
+  // exactly the bug. We emit the marker ONLY when (a) the tool genuinely COMMITS
+  // a DB mutation — proposal tools (`propose_*`, which surface a suggestion for
+  // the user to accept) are deliberately excluded so the card never claims an
+  // edit that hasn't happened — AND (b) the result parses to a non-error object
+  // (a failed/no-op tool returns `{ error: … }`; the loop wraps thrown
+  // CesareErrors that way). The marker carries the entity the TOOL touched (not
+  // the page), so the card labels the real edited entity (F-M1).
+  if (APPLYING_NON_DOCUMENT_TOOLS.has(toolName)) {
+    const mapping = mappingForTool(toolName);
+    if (mapping && isSuccessfulToolResult(toolResultContent)) {
+      accumulator.push(
+        `<!--ohw:entity-applied:${JSON.stringify({
+          domain: mapping.domain,
+          label: labelForDomain(mapping.domain),
+        })}-->`,
+      );
+    }
+  }
+};
+
+// The non-document write tools that COMMIT a DB mutation directly (no proposal,
+// no document version). Kept explicit — not derived from the entity-map's
+// `access: "write"` — because several `propose_*` tools are classified write
+// but only SURFACE a suggestion; emitting an applied marker for them would
+// re-introduce the fabricated-success bug (F-A3). Document tools are handled by
+// the `doc-applied` branch above and are intentionally absent here.
+const APPLYING_NON_DOCUMENT_TOOLS: ReadonlySet<string> = new Set([
+  // budget
+  "set_budget_cap",
+  "update_budget_line",
+  "add_budget_line",
+  "add_to_budget",
+  "mark_line_actual",
+  "redistribute_topsheet",
+  "accept_ghost",
+  "reject_ghost",
+  // breakdown
+  "tag_element",
+  // schedule
+  "move_scene_to_day",
+  "swap_scenes",
+  "merge_days",
+  "lock_day",
+  "unlock_day",
+  // locations
+  "add_candidate",
+  "create_location_requirement",
+  "find_or_create_requirement_for_scene",
+  // shooting-plan
+  "add_shot_to_plan",
+  "update_shot",
+  "remove_shot",
+  "add_parallel_plan",
+  "set_active_plan",
+  "generate_plan_from_description",
+]);
+
+// A tool result is a genuine success when it parses to an object that does NOT
+// carry an `error` key. Failures (and the loop's error-recovery wrapper) always
+// produce `{ error: … }`; a no-op that throws becomes the same. Non-object or
+// unparseable content is treated as not-applied — we never claim success we
+// can't see.
+const isSuccessfulToolResult = (toolResultContent: string): boolean => {
+  try {
+    const parsed = JSON.parse(toolResultContent) as unknown;
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !("error" in (parsed as Record<string, unknown>))
+    );
+  } catch {
+    return false;
   }
 };
 

@@ -35,6 +35,7 @@ import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import {
   CesareSheet,
   parseToolsExecuted,
+  appliedEntityDomains,
   CesareChatStoreProvider,
 } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
@@ -602,16 +603,17 @@ function AppShellInner({
         });
       }
 
+      // F-A3 — the success TOAST, like the result card, must announce a change
+      // ONLY when one actually happened. We read the real apply markers, never
+      // the chat text: a failed/no-op tool whose reply merely SAYS "aggiornato"
+      // must not pop a "✦ Cesare ha aggiornato …" toast.
+      const applied = appliedEntityDomains(reply);
+
       if (cesarePage === "locations" && projectId) {
         void queryClient.invalidateQueries({
           queryKey: ["locations", projectId],
         });
-        const lc = reply.toLowerCase();
-        if (
-          lc.includes("aggiunto") ||
-          lc.includes("candidato") ||
-          lc.includes("trovato")
-        ) {
+        if (applied.has("locations")) {
           showToast({
             message: "✦ Cesare ha aggiornato le location",
             variant: "success",
@@ -644,27 +646,21 @@ function AppShellInner({
         void queryClient.invalidateQueries({
           queryKey: ["document-versions", activeDocument.id],
         });
-        const lc = reply.toLowerCase();
-        // Cesare now applies generation + edits LIVE to the document (Spec 44),
-        // so any of these action verbs means the open editor has changed.
-        if (
-          lc.includes("aggiornato") ||
-          lc.includes("espanso") ||
-          lc.includes("compresso") ||
-          lc.includes("riscritto") ||
-          lc.includes("modificato") ||
-          lc.includes("sostituito") ||
-          lc.includes("generato") ||
-          lc.includes("applicat")
-        ) {
-          const labels: Record<string, string> = {
-            soggetto: "il soggetto",
-            synopsis: "la sinossi",
-            outline: "la scaletta",
-            treatment: "il trattamento",
-          };
+        // Cesare applies generation + edits LIVE to the document (Spec 44). The
+        // toast names the entity the marker says was ACTUALLY edited — which may
+        // differ from the open page (a logline edit from the soggetto page is
+        // "la logline", not "il documento") — and pops only on a real apply.
+        const docLabels: Record<string, string> = {
+          logline: "la logline",
+          soggetto: "il soggetto",
+          synopsis: "la sinossi",
+          outline: "la scaletta",
+          treatment: "il trattamento",
+        };
+        const appliedDoc = Object.keys(docLabels).find((d) => applied.has(d));
+        if (appliedDoc) {
           showToast({
-            message: `✦ Cesare ha aggiornato ${labels[cesarePage] ?? "il documento"}`,
+            message: `✦ Cesare ha aggiornato ${docLabels[appliedDoc]}`,
             variant: "success",
           });
         }
@@ -678,14 +674,7 @@ function AppShellInner({
         void queryClient.invalidateQueries({
           queryKey: ["budget-overview", projectId],
         });
-        const lc = reply.toLowerCase();
-        if (
-          lc.includes("aggiornato") ||
-          lc.includes("aggiunto") ||
-          lc.includes("ridistribuito") ||
-          lc.includes("modificato") ||
-          lc.includes("spostato")
-        ) {
+        if (applied.has("budget")) {
           showToast({
             message: "✦ Cesare ha aggiornato il budget",
             variant: "success",
@@ -698,15 +687,7 @@ function AppShellInner({
           queryKey: ["shooting-plan", "scenes", projectId],
         });
         void queryClient.invalidateQueries({ queryKey: ["shot-plan"] });
-        const lc = reply.toLowerCase();
-        if (
-          lc.includes("creato") ||
-          lc.includes("aggiunto") ||
-          lc.includes("salvato") ||
-          lc.includes("aggiornato") ||
-          lc.includes("rimosso") ||
-          lc.includes("attivato")
-        ) {
+        if (applied.has("shooting-plan")) {
           showToast({
             message: "✦ Cesare ha aggiornato il piano inquadrature",
             variant: "success",

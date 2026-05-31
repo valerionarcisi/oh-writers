@@ -95,6 +95,42 @@ export function parseDocAppliedMarker(
   }
 }
 
+/**
+ * Honest success signal for the NON-document write tools (budget, location,
+ * schedule, shooting-plan). Emitted by the server ONLY when such a tool actually
+ * mutated the DB (F-A3). Each marker carries the entity the TOOL touched, so the
+ * card labels the real edited entity rather than the current page (F-M1).
+ */
+export interface EntityAppliedMarker {
+  readonly domain: string;
+  readonly label: string;
+}
+
+export function parseEntityAppliedMarkers(
+  content: string,
+): EntityAppliedMarker[] {
+  const pattern = /<!--ohw:entity-applied:([\s\S]*?)-->/g;
+  const markers: EntityAppliedMarker[] = [];
+  for (const m of content.matchAll(pattern)) {
+    if (!m[1]) continue;
+    try {
+      const parsed = JSON.parse(m[1]) as Record<string, unknown>;
+      const domain = parsed["domain"];
+      if (typeof domain !== "string" || domain.length === 0) continue;
+      markers.push({
+        domain,
+        label:
+          typeof parsed["label"] === "string" && parsed["label"].length > 0
+            ? parsed["label"]
+            : domain,
+      });
+    } catch {
+      // best-effort: a malformed marker is skipped, never throws
+    }
+  }
+  return markers;
+}
+
 export function parseRewriteSceneMarker(
   content: string,
 ): { scene_number: number; new_content: string } | null {
@@ -226,6 +262,7 @@ function stripToolCalls(content: string): string {
     .replace(/<!--ohw:blocking-proposal:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:rewrite-scene-b64:[A-Za-z0-9+/=]+-->/g, "")
     .replace(/<!--ohw:doc-applied:[\s\S]*?-->/g, "")
+    .replace(/<!--ohw:entity-applied:[\s\S]*?-->/g, "")
     .replace(/<!--ohw:live-diff-b64:[A-Za-z0-9+/=]+-->/g, "")
     .trim();
 }
@@ -306,6 +343,8 @@ export interface StepBlockMetadata {
   rewrite: { scene_number: number; new_content: string } | null;
   hasProposal: boolean;
   docApplied: DocAppliedMarker | null;
+  /** Generic applied-entity markers for non-document write tools (F-A3). */
+  entitiesApplied: ReadonlyArray<EntityAppliedMarker>;
   /** One live-diff per touched document (Spec 47d). Empty when none applied. */
   liveDiffs: ReadonlyArray<LiveDiffMarker>;
 }
@@ -316,35 +355,103 @@ export function extractStepBlockMetadata(content: string): StepBlockMetadata {
     rewrite: parseRewriteSceneMarker(content),
     hasProposal: parseBlockingProposalMarker(content) !== null,
     docApplied: parseDocAppliedMarker(content),
+    entitiesApplied: parseEntityAppliedMarkers(content),
     liveDiffs: parseLiveDiffMarkers(content),
   };
 }
 
-const PAGE_TO_UPDATE_KIND: Record<CesarePage, ChangeUpdate["kind"]> = {
-  soggetto: "doc",
-  synopsis: "doc",
-  outline: "doc",
-  treatment: "doc",
-  screenplay: "scene",
-  breakdown: "breakdown",
-  budget: "budget",
-  schedule: "schedule",
-  "shooting-plan": "scene",
-  locations: "location",
+/**
+ * Did the turn ACTUALLY apply an edit? The card may claim a change ONLY when a
+ * real apply signal is present. This is the tracer invariant in code: never
+ * fabricate a success from the page or from heuristics on the chat text. A
+ * chat-only reply, a no-op tool, or a failed tool yields `false` and the message
+ * renders as plain prose (the tool's own outcome text) — no success card, no
+ * "Mostra modifiche".
+ */
+export function hasAppliedEdit(meta: StepBlockMetadata): boolean {
+  return (
+    meta.docApplied !== null ||
+    meta.entitiesApplied.length > 0 ||
+    meta.rewrite !== null
+  );
+}
+
+/**
+ * The set of entity domains the turn ACTUALLY applied an edit to, read from the
+ * real markers (never from the page or the chat text). Empty when the turn
+ * changed nothing. Consumers (e.g. the shell's success toast) use this to avoid
+ * announcing a change that didn't happen — the same tracer invariant as the
+ * result card, applied to side effects.
+ */
+export function appliedEntityDomains(content: string): ReadonlySet<string> {
+  const meta = extractStepBlockMetadata(content);
+  const domains = new Set<string>();
+  if (meta.docApplied) domains.add(meta.docApplied.documentType);
+  for (const e of meta.entitiesApplied) domains.add(e.domain);
+  if (meta.rewrite) domains.add("screenplay");
+  return domains;
+}
+
+// Canonical per-entity presentation, keyed by the entity the TOOL actually
+// touched (the marker's domain / document_type), NOT by the current page. This
+// is the F-M1 fix: a logline edit issued from the Soggetto page must read
+// "logline", because the marker says `logline`. `StreamEntityDomain` and the
+// `DocumentType` strings carried by `doc-applied` share these keys.
+interface EntityDisplay {
+  readonly kind: ChangeUpdate["kind"];
+  readonly title: string;
+  readonly label: string;
+}
+
+const ENTITY_DISPLAY: Record<string, EntityDisplay> = {
+  logline: { kind: "doc", title: "Aggiornata Logline", label: "logline" },
+  soggetto: { kind: "doc", title: "Aggiornato Soggetto", label: "soggetto" },
+  synopsis: { kind: "doc", title: "Aggiornata Sinossi", label: "sinossi" },
+  outline: { kind: "doc", title: "Aggiornata Scaletta", label: "scaletta" },
+  treatment: {
+    kind: "doc",
+    title: "Aggiornato Trattamento",
+    label: "trattamento",
+  },
+  screenplay: {
+    kind: "scene",
+    title: "Aggiornata Sceneggiatura",
+    label: "sceneggiatura",
+  },
+  breakdown: {
+    kind: "breakdown",
+    title: "Aggiornato Breakdown",
+    label: "breakdown",
+  },
+  budget: { kind: "budget", title: "Aggiornato Budget", label: "budget" },
+  schedule: {
+    kind: "schedule",
+    title: "Aggiornato Calendario",
+    label: "calendario",
+  },
+  "shooting-plan": {
+    kind: "scene",
+    title: "Aggiornato Piano Inquadrature",
+    label: "piano inquadrature",
+  },
+  locations: {
+    kind: "location",
+    title: "Aggiornate Location",
+    label: "location",
+  },
 };
 
-const PAGE_TO_UPDATED_LABEL: Record<CesarePage, string> = {
-  soggetto: "Aggiornato Soggetto",
-  synopsis: "Aggiornata Sinossi",
-  outline: "Aggiornata Scaletta",
-  treatment: "Aggiornato Trattamento",
-  screenplay: "Aggiornata Sceneggiatura",
-  breakdown: "Aggiornato Breakdown",
-  budget: "Aggiornato Budget",
-  schedule: "Aggiornato Calendario",
-  "shooting-plan": "Aggiornato Piano Inquadrature",
-  locations: "Aggiornate Location",
+const FALLBACK_DISPLAY: EntityDisplay = {
+  kind: "doc",
+  title: "Modifica applicata",
+  label: "modifica",
 };
+
+const displayForEntity = (domain: string): EntityDisplay =>
+  ENTITY_DISPLAY[domain] ?? {
+    ...FALLBACK_DISPLAY,
+    label: domain,
+  };
 
 export interface ParsedToolUpdates {
   readonly title: string;
@@ -352,16 +459,18 @@ export interface ParsedToolUpdates {
   readonly thoughts: ReadonlyArray<string>;
 }
 
-export function parseToolUpdates(
-  content: string,
-  page: CesarePage,
-): ParsedToolUpdates {
+/**
+ * Builds the result-card model from the REAL apply signals in the turn — never
+ * from the page or from a text heuristic. Callers must first gate on
+ * `hasAppliedEdit(meta)`; this assumes at least one apply signal is present and
+ * returns the honest "what was edited" card keyed by the touched entity.
+ */
+export function parseToolUpdates(content: string): ParsedToolUpdates {
   const meta = extractStepBlockMetadata(content);
   const lc = content.toLowerCase();
-  const kind = PAGE_TO_UPDATE_KIND[page];
-  const baseLabel = PAGE_TO_UPDATED_LABEL[page];
 
   const updates: ChangeUpdate[] = [];
+  let title = "";
 
   if (meta.rewrite) {
     updates.push({
@@ -369,41 +478,32 @@ export function parseToolUpdates(
       kind: "scene",
       label: `Sc.${meta.rewrite.scene_number} riscritta`,
     });
+    title = `Aggiornata Sceneggiatura · Sc.${meta.rewrite.scene_number}`;
   }
 
-  const COUNT_PATTERNS: ReadonlyArray<{ re: RegExp; suffix: string }> = [
-    { re: /(\d+)\s+scene\s+rinominat/i, suffix: "scene rinominate" },
-    { re: /(\d+)\s+scene\s+aggiornat/i, suffix: "scene aggiornate" },
-    { re: /(\d+)\s+oggett/i, suffix: "oggetti" },
-    { re: /(\d+)\s+voc/i, suffix: "voci" },
-    { re: /(\d+)\s+righ/i, suffix: "righe" },
-    { re: /(\d+)\s+candidat/i, suffix: "candidati" },
-    { re: /(\d+)\s+strip/i, suffix: "strip spostate" },
-    { re: /(\d+)\s+shot/i, suffix: "shot" },
-  ];
-  let countSuffix: string | null = null;
-  for (const { re, suffix } of COUNT_PATTERNS) {
-    const m = content.match(re);
-    if (m) {
-      countSuffix = `${m[1]} ${suffix}`;
-      if (updates.length === 0) {
-        updates.push({ id: `${page}-batch`, kind, label: countSuffix });
-      }
-      break;
-    }
+  if (meta.docApplied) {
+    const display = displayForEntity(meta.docApplied.documentType);
+    updates.push({
+      id: `doc-${meta.docApplied.documentType}`,
+      kind: display.kind,
+      label: display.label,
+    });
+    if (!title) title = display.title;
   }
 
-  if (updates.length === 0) {
-    const pageLabel = PAGE_LABELS[page];
-    updates.push({ id: `${page}-page`, kind, label: pageLabel.toLowerCase() });
+  for (const entity of meta.entitiesApplied) {
+    const display = displayForEntity(entity.domain);
+    updates.push({
+      id: `entity-${entity.domain}`,
+      kind: display.kind,
+      label: display.label,
+    });
+    if (!title) title = display.title;
   }
 
-  const titleSuffix = countSuffix
-    ? ` · ${countSuffix}`
-    : meta.rewrite
-      ? ` · Sc.${meta.rewrite.scene_number}`
-      : "";
-  const title = `${baseLabel}${titleSuffix}`;
+  // Several entities touched in one turn — keep a single honest summary title.
+  if (updates.length > 1) title = "Modifiche applicate";
+  if (!title) title = FALLBACK_DISPLAY.title;
 
   const thoughts: string[] = [];
   if (lc.includes("leggo") || lc.includes("letto") || lc.includes("lettura")) {
@@ -455,7 +555,10 @@ export interface CesareConversationProps extends ConversationHandlers {
 
 export function CesareConversation({
   messages,
-  page,
+  // `page` is kept in the public prop contract (callers still pass the active
+  // page) but it no longer drives the result card — the card now reads the real
+  // tool markers (F-A3/F-M1), so the rendered entity is the one actually edited.
+  page: _page,
   emptyState,
   testId = "cesare-conversation",
   ...handlers
@@ -464,7 +567,7 @@ export function CesareConversation({
     <div className={styles.conversation} data-testid={testId}>
       {messages.length === 0 && emptyState}
       {messages.map((m) => (
-        <MessageView key={m.id} message={m} page={page} {...handlers} />
+        <MessageView key={m.id} message={m} {...handlers} />
       ))}
     </div>
   );
@@ -474,10 +577,9 @@ export function CesareConversation({
 
 export function MessageView({
   message,
-  page,
   onShowChanges,
   onHideChanges,
-}: { message: ChatMessage; page: CesarePage } & ConversationHandlers) {
+}: { message: ChatMessage } & ConversationHandlers) {
   const [isShowingDiff, setShowingDiff] = useState(false);
 
   if (message.role === "user") {
@@ -517,18 +619,23 @@ export function MessageView({
 
   const metadata = extractStepBlockMetadata(message.content);
   const rendered = renderMarkdown(message.content);
-  const hasStepBlock = metadata.toolCount > 0;
 
-  if (!hasStepBlock) {
+  // The result card may claim a change ONLY when the turn actually applied an
+  // edit (real apply signal: doc-applied / entity-applied / scene rewrite).
+  // Tools that only READ, no-op'd, or FAILED leave no apply signal: the turn
+  // renders as plain prose (the tool's own honest outcome text), never a
+  // "Aggiornato X · Mostra modifiche" card. This is the tracer invariant — no
+  // fabricated success. The `page` no longer drives the card.
+  if (!hasAppliedEdit(metadata)) {
     return (
-      <div className={styles.bubbleAssistant}>
+      <div className={styles.bubbleAssistant} data-testid="cesare-no-change">
         <div className={styles.bubbleMarkdown}>{rendered}</div>
       </div>
     );
   }
 
   const rewrite = metadata.rewrite;
-  const parsed = parseToolUpdates(message.content, page);
+  const parsed = parseToolUpdates(message.content);
 
   const traceMarkers: ReadonlyArray<TraceMarker> = parsed.updates.map((u) => ({
     id: u.id ?? u.label,

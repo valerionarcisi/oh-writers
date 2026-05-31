@@ -80,6 +80,7 @@ export type { CesarePage } from "./CesareConversation";
 export {
   parseToolsExecuted,
   parseRewriteSceneMarker,
+  appliedEntityDomains,
 } from "./CesareConversation";
 
 // ─── Server-side surface ───────────────────────────────────────────────────

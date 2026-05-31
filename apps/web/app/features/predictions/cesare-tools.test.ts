@@ -1,6 +1,72 @@
 import { describe, it, expect } from "vitest";
-import { findSection, parseHeading } from "./cesare-tools";
+import {
+  findSection,
+  parseHeading,
+  extractSideChannelMarkers,
+} from "./cesare-tools";
 import { parsePlanDescription } from "./cesare-shooting-plan-tools";
+
+// F-A3 — the server emits a success marker ONLY when a write tool genuinely
+// mutated the DB, so the client card can never fabricate success. For the
+// non-document write tools (budget/location/schedule/shooting) the honest
+// signal is a generic `entity-applied` marker carrying the entity the TOOL
+// touched (not the page), which fixes F-M1 at the source.
+describe("extractSideChannelMarkers — honest success for write tools", () => {
+  const markersFor = (toolName: string, content: string): string[] => {
+    const acc: string[] = [];
+    extractSideChannelMarkers(toolName, content, acc);
+    return acc;
+  };
+
+  it("emits an entity-applied marker when a budget write succeeds", () => {
+    const markers = markersFor(
+      "add_budget_line",
+      JSON.stringify({ id: "line-1", name: "Grip", topSheet: "below-line" }),
+    );
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toContain("ohw:entity-applied");
+    expect(markers[0]).toContain('"domain":"budget"');
+  });
+
+  it("does NOT emit a marker when a write tool FAILS (error result)", () => {
+    const markers = markersFor(
+      "add_budget_line",
+      JSON.stringify({ error: "Budget is locked" }),
+    );
+    expect(markers).toEqual([]);
+  });
+
+  it("does NOT emit a marker for a READ tool", () => {
+    const markers = markersFor(
+      "read_budget_lines",
+      JSON.stringify({ lines: [] }),
+    );
+    expect(markers).toEqual([]);
+  });
+
+  it("does NOT emit a marker when the result is not a JSON object", () => {
+    expect(markersFor("move_scene_to_day", "not-json")).toEqual([]);
+    expect(markersFor("move_scene_to_day", "null")).toEqual([]);
+  });
+
+  it("carries the entity the TOOL touched, not the page (F-M1)", () => {
+    const markers = markersFor(
+      "create_location_requirement",
+      JSON.stringify({ requirement_id: "r-1", created: true }),
+    );
+    expect(markers[0]).toContain('"domain":"locations"');
+  });
+
+  it("does NOT emit an applied marker for a proposal tool", () => {
+    // propose_* tools only surface a suggestion to accept — they apply nothing,
+    // so claiming an edit would be the F-A3 bug.
+    const markers = markersFor(
+      "propose_missing_lines",
+      JSON.stringify({ proposals: [{ id: "g-1" }] }),
+    );
+    expect(markers).toEqual([]);
+  });
+});
 
 describe("parseHeading", () => {
   it("parses a standard INT slugline", () => {
