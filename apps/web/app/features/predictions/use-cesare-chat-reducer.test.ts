@@ -4,6 +4,7 @@ import {
   initialChatState,
   activeThread,
   threadFor,
+  type ChatMessage,
   type ChatState,
 } from "./use-cesare-chat-reducer";
 
@@ -167,5 +168,55 @@ describe("chatReducer — live trace (A2)", () => {
       event: { _tag: "done", result: "ok", toolsExecuted: 1 },
     });
     expect(activeThread(state)[1]?.trace).toHaveLength(0);
+  });
+});
+
+// [OHW-051] — hydration of a session thread from persisted history.
+
+const persisted = (id: string, content: string): ChatMessage => ({
+  id,
+  role: "user",
+  content,
+  status: "delivered",
+  trace: [],
+});
+
+describe("chatReducer — thread/hydrate (Spec 51)", () => {
+  it("fills an empty thread with the persisted messages", () => {
+    const state = chatReducer(initialChatState(SESSION_A), {
+      type: "thread/hydrate",
+      sessionId: SESSION_A,
+      messages: [persisted("m1", "Ciao"), persisted("m2", "Come va")],
+    });
+    expect(threadFor(state, SESSION_A)).toHaveLength(2);
+    expect(threadFor(state, SESSION_A)[0]).toMatchObject({
+      id: "m1",
+      content: "Ciao",
+      status: "delivered",
+    });
+  });
+
+  it("is a no-op when the thread already has messages (never clobbers in-flight)", () => {
+    const withBubble = send(initialChatState(SESSION_A), SESSION_A, "live", {
+      user: "u1",
+      assistant: "a1",
+    });
+    const after = chatReducer(withBubble, {
+      type: "thread/hydrate",
+      sessionId: SESSION_A,
+      messages: [persisted("m1", "stale persisted")],
+    });
+    expect(after).toBe(withBubble);
+    expect(threadFor(after, SESSION_A)).toHaveLength(2);
+  });
+
+  it("hydrates a non-active session without changing the active one", () => {
+    const state = chatReducer(initialChatState(SESSION_A), {
+      type: "thread/hydrate",
+      sessionId: SESSION_B,
+      messages: [persisted("m1", "altro")],
+    });
+    expect(state.activeSessionId).toBe(SESSION_A);
+    expect(threadFor(state, SESSION_B)).toHaveLength(1);
   });
 });

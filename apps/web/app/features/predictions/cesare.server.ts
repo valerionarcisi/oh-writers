@@ -62,6 +62,7 @@ import { buildDocumentEditSkill } from "./skills/document-edit.skill";
 import type { SkillBuildContext } from "./skills/types";
 import { buildGlobalContext, assembleSystemPromptV2 } from "./context";
 import { buildLocalContext } from "./context/local-context.server";
+import { loadHistoryContextSummary } from "./messages/cesare-history.server";
 import type { CesareStreamEvent } from "./cesare-stream-events";
 
 // ─── System prompt blocks ─────────────────────────────────────────────────────
@@ -2144,41 +2145,48 @@ const handleAskCesareV2 = (
             finalSkills = finalRegistry.selectForPage(page, null);
           }
 
-          // Step 6: assemble stratified system prompt
-          const systemPrompt = assembleSystemPromptV2(
-            globalCtx,
-            finalSkills,
-            localCtx,
+          // Step 6: load the bounded "what we changed before" history (Spec 51,
+          // DERIVED). It degrades to null on any failure, so it never breaks a
+          // turn; assemble the stratified system prompt with it appended.
+          return loadHistoryContextSummary(db, data.projectId).andThen(
+            (historyContext) => {
+              const systemPrompt = assembleSystemPromptV2(
+                globalCtx,
+                finalSkills,
+                localCtx,
+                historyContext,
+              );
+
+              const tools = finalRegistry.allTools(finalSkills);
+              const executor = finalRegistry.combinedExecutor(finalSkills);
+
+              // Step 7: invoke the unified tool loop
+              const startMs = Date.now();
+              return callCesareV2(
+                systemPrompt,
+                data.conversationHistory,
+                data.message,
+                db,
+                data.projectId,
+                access,
+                executor,
+                tools,
+                model,
+                data.pageContext.page,
+                onStreamEvent,
+                abortSignal,
+              ).map((reply) => {
+                emitCesareMetricEvent(
+                  data.pageContext.page,
+                  data.projectId,
+                  model,
+                  Date.now() - startMs,
+                  reply,
+                );
+                return reply;
+              });
+            },
           );
-
-          const tools = finalRegistry.allTools(finalSkills);
-          const executor = finalRegistry.combinedExecutor(finalSkills);
-
-          // Step 7: invoke the unified tool loop
-          const startMs = Date.now();
-          return callCesareV2(
-            systemPrompt,
-            data.conversationHistory,
-            data.message,
-            db,
-            data.projectId,
-            access,
-            executor,
-            tools,
-            model,
-            data.pageContext.page,
-            onStreamEvent,
-            abortSignal,
-          ).map((reply) => {
-            emitCesareMetricEvent(
-              data.pageContext.page,
-              data.projectId,
-              model,
-              Date.now() - startMs,
-              reply,
-            );
-            return reply;
-          });
         });
     });
 };

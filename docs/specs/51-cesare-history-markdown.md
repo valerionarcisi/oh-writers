@@ -1,6 +1,28 @@
 # Spec 51 — Cesare history as generated markdown (edits + sessions)
 
-Status: **Planned** · Decided 2026-05-31 (PO) · Build AFTER the merge to main.
+Status: **Built** · Decided 2026-05-31 (PO) · Implemented 2026-05-31.
+
+## Implementation notes (2026-05-31)
+
+- **Messages persisted** in a new `cesare_messages` table (migration `0035_cesare_messages.sql`):
+  `id`, `session_id` (FK → `cesare_sessions`, cascade), `role`, `content`, `metadata` (jsonb:
+  the live step trace + the per-edit version markers), `created_at`. Persisted in the send path
+  (`cesare-chat-store.tsx` calls `persistTurn` after a turn settles) and re-hydrated on session
+  open (`thread/hydrate` reducer action, no-op if the thread already has bubbles so an in-flight
+  turn is never clobbered). Server fns live in `features/predictions/messages/messages.server.ts`
+  (neverthrow CRUD per the Spec 48 boundary — no LLM/external resource).
+- **Pure md builders** live in `packages/domain/src/cesare-history/`: `buildEditChangelogMarkdown`
+  / `buildEditChangelogListMarkdown` (changelog), `buildSessionTranscriptMarkdown` (transcript),
+  `buildHistoryContextSummary` (bounded context). Framework-agnostic, no Effect/Drizzle/browser.
+  Additions render `**bold**`, removals `~~strikethrough~~` — no raw HTML.
+- **Effect loaders** in `features/predictions/messages/cesare-history.effect.ts` gather the
+  DERIVED sources from `cesare_messages` + `document_versions` (the changelog diff is RECOMPUTED
+  via `buildWordDiffSegments` from the two version rows — nothing reads stored markdown). Exposed
+  through `cesare-history.server.ts` (`getSessionChangelogMarkdown`, `getSessionTranscriptMarkdown`)
+  returning `ResultShape`. No cache table — the markdown is regenerable (unit-tested).
+- **Context reuse**: `loadHistoryContextSummary` appends a bounded "CRONOLOGIA MODIFICHE" block
+  (capped to the most recent edits) to the system prompt via `assembleSystemPromptV2`'s optional
+  `historyContext` arg in the V2 handler. Degrades to null on any failure — never breaks a turn.
 
 ## Context
 
@@ -24,7 +46,7 @@ markdown changelog entry capturing **what changed**:
   (additions/removals) so the change is readable without the live UI.
 
 This makes the "Mostra/Nascondi" history durable: today the diff is computed at click time and the
-flash is transient (spec 47e). The markdown changelog is the *persistent* record behind it — open it
+flash is transient (spec 47e). The markdown changelog is the _persistent_ record behind it — open it
 later, feed it back as context, or diff a chain of edits.
 
 ### 2. Per-session transcript markdown
@@ -74,6 +96,7 @@ changelog MD from versions+diff, (3) per-session transcript MD from the now-pers
 feed bounded history MD back as context. Step 1 is the gate for step 3.
 
 ## Design questions to resolve before building
+
 - **Granularity / linking**: per-edit MD entries linked from the session MD; the session MD linked
   from the session route. Deep-linkable.
 - **Reuse as context**: the markdown plugs into the existing context-assembly (spec 38/40 local

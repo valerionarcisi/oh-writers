@@ -35,4 +35,7 @@ export {
   DEFAULT_NEW_SESSION_TITLE,
 } from "./sessions";
 export type { CesareSession } from "./sessions";
-// askCesare is a server function — import directly from ./cesare.server, never from this barrel
+export { messagesQueryKey, messagesQueryOptions } from "./messages";
+export type { CesareMessage } from "./messages";
+// askCesare + message/history server functions are server functions — import
+// directly from their *.server modules, never from this barrel.
