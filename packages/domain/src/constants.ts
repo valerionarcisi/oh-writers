@@ -6,6 +6,17 @@ export const TeamRoles = {
 
 export type TeamRole = (typeof TeamRoles)[keyof typeof TeamRoles];
 
+/**
+ * User-facing Italian labels for team roles. Single source of truth for every
+ * surface (dashboard filter, project card badges, settings team list) so the
+ * raw English enum value never reaches the IT-localised UI.
+ */
+export const TEAM_ROLE_LABELS_IT: Record<TeamRole, string> = {
+  owner: "Proprietario",
+  editor: "Editor",
+  viewer: "Visualizzatore",
+} as const;
+
 export const Genres = {
   DRAMA: "drama",
   COMEDY: "comedy",
@@ -37,6 +48,19 @@ export const DocumentTypes = {
 } as const;
 
 export type DocumentType = (typeof DocumentTypes)[keyof typeof DocumentTypes];
+
+/**
+ * User-facing Italian labels for each document type. Single source of truth for
+ * every surface (overview cards, seed titles, new-project document titles) so a
+ * stored English `title` never leaks to the IT-localised UI.
+ */
+export const DOCUMENT_TYPE_LABELS_IT: Record<DocumentType, string> = {
+  logline: "Logline",
+  soggetto: "Soggetto",
+  synopsis: "Sinossi",
+  outline: "Scaletta",
+  treatment: "Trattamento",
+} as const;
 
 export const Locales = {
   IT: "it",

@@ -259,7 +259,7 @@ export function CesareDrawer({
   children,
   peekSubtitle = "in attesa",
   className,
-  ariaLabel = "Cesare assistant",
+  ariaLabel = "Assistente Cesare",
 }: CesareDrawerProps) {
   // ─── Resize state ────────────────────────────────────────────────────────
   const isExpanded = state === "expanded";

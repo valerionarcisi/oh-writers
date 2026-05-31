@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@oh-writers/ui";
-import { TeamRoles } from "@oh-writers/domain";
+import { TEAM_ROLE_LABELS_IT } from "@oh-writers/domain";
 import type { DashboardProject } from "../../dashboard.schema";
 import { ProjectCoverGradient } from "./ProjectCoverGradient";
 import styles from "./ProjectCardCompact.module.css";
@@ -27,11 +27,7 @@ const GENRE_LABELS: Record<string, string> = {
   other: "Altro",
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  [TeamRoles.OWNER]: "Owner",
-  [TeamRoles.EDITOR]: "Editor",
-  [TeamRoles.VIEWER]: "Viewer",
-};
+const ROLE_LABELS = TEAM_ROLE_LABELS_IT;
 
 const MAX_AVATARS = 3;
 

@@ -46,19 +46,19 @@ function ScreenplayVersionsList({
   const loadError: string | null =
     result && !result.isOk
       ? match(result.error)
-          .with({ _tag: "VersionNotFoundError" }, () => "Version not found.")
+          .with({ _tag: "VersionNotFoundError" }, () => "Versione non trovata.")
           .with(
             { _tag: "ScreenplayNotFoundError" },
-            () => "Screenplay not found.",
+            () => "Sceneggiatura non trovata.",
           )
-          .with({ _tag: "ProjectNotFoundError" }, () => "Project not found.")
+          .with({ _tag: "ProjectNotFoundError" }, () => "Progetto non trovato.")
           .with(
             { _tag: "ForbiddenError" },
-            () => "You cannot access these versions.",
+            () => "Non hai accesso a queste versioni.",
           )
           .with(
             { _tag: "DbError" },
-            () => "Could not load versions. Please retry.",
+            () => "Impossibile caricare le versioni. Riprova.",
           )
           .exhaustive()
       : null;

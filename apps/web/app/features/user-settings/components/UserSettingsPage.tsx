@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Button, Input, FormField } from "@oh-writers/ui";
 import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
+import { TEAM_ROLE_LABELS_IT } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
 import {
   updateUserProfile,
@@ -377,7 +378,9 @@ function TeamsSection() {
                 </div>
               )}
               <span className={styles.teamName}>{team.name}</span>
-              <span className={styles.roleBadge}>{team.role}</span>
+              <span className={styles.roleBadge}>
+                {TEAM_ROLE_LABELS_IT[team.role]}
+              </span>
             </div>
           ))}
         </div>

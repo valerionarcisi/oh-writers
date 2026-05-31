@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<WeeklyCategory, string> = {
   locations: "Location",
   vehicles: "Veicoli",
   other: "Altro",
-  contingency: "Contingenza",
+  contingency: "Imprevisti",
 };
 
 const CATEGORY_VAR: Record<WeeklyCategory, string> = {

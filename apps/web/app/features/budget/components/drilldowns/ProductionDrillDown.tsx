@@ -20,7 +20,7 @@ const eurAmount = (n: number) => eur.format(Math.round(n));
 const PRODUCTION_TABS = [
   {
     id: "locations",
-    label: "Locations",
+    label: "Location",
     categories: ["locations"],
     colorVar: "--ds-cat-locations",
   },
@@ -155,7 +155,8 @@ export function ProductionDrillDown({
     onSuccess: invalidate,
   });
 
-  const activeTab = PRODUCTION_TABS.find((t) => t.id === tab) ?? PRODUCTION_TABS[0]!;
+  const activeTab =
+    PRODUCTION_TABS.find((t) => t.id === tab) ?? PRODUCTION_TABS[0]!;
 
   const tabLines = useMemo(() => {
     return budget.lines.filter(
@@ -247,10 +248,7 @@ export function ProductionDrillDown({
                     {eurAmount(lineEffective(line))}
                   </td>
                   <td>
-                    <span
-                      className={styles.statusPill}
-                      data-status={status}
-                    >
+                    <span className={styles.statusPill} data-status={status}>
                       {statusLabel(status)}
                     </span>
                   </td>

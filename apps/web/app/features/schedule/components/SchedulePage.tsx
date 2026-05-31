@@ -53,7 +53,7 @@ import styles from "./SchedulePage.module.css";
 type ViewTab = "strip" | "day" | "days" | "weeks";
 
 const TABS: ReadonlyArray<{ id: ViewTab; label: string }> = [
-  { id: "strip", label: "Strip Board" },
+  { id: "strip", label: "Spannografo" },
   { id: "day", label: "Giornata" },
   { id: "days", label: "Giorni" },
   { id: "weeks", label: "Settimane" },

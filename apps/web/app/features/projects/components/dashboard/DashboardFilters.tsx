@@ -1,4 +1,5 @@
 import { Input } from "@oh-writers/ui";
+import { TEAM_ROLE_LABELS_IT } from "@oh-writers/domain";
 import {
   DashboardSortKeys,
   DashboardViewModes,
@@ -7,7 +8,12 @@ import {
 } from "../../dashboard.schema";
 import styles from "./DashboardFilters.module.css";
 
-export type FormatFilter = "all" | "feature" | "short" | "series_episode" | "pilot";
+export type FormatFilter =
+  | "all"
+  | "feature"
+  | "short"
+  | "series_episode"
+  | "pilot";
 export type GenreFilter = "all" | string;
 export type RoleFilter = "all" | "owner" | "editor" | "viewer";
 
@@ -48,9 +54,9 @@ const GENRES: ReadonlyArray<{ id: GenreFilter; label: string }> = [
 
 const ROLES: ReadonlyArray<{ id: RoleFilter; label: string }> = [
   { id: "all", label: "Tutti i ruoli" },
-  { id: "owner", label: "Owner" },
-  { id: "editor", label: "Editor" },
-  { id: "viewer", label: "Viewer" },
+  { id: "owner", label: TEAM_ROLE_LABELS_IT.owner },
+  { id: "editor", label: TEAM_ROLE_LABELS_IT.editor },
+  { id: "viewer", label: TEAM_ROLE_LABELS_IT.viewer },
 ];
 
 const SORTS: ReadonlyArray<{ id: DashboardSortKey; label: string }> = [

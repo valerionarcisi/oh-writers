@@ -107,7 +107,11 @@ describe("buildScheduleCsvRows", () => {
 describe("scheduleToCsv", () => {
   it("starts with the correct header row", () => {
     const csv = scheduleToCsv([]);
-    expect(csv.startsWith("Day,Date,Scene,Heading,INT/EXT,Day/Night,Location,Cast,Pages,Notes")).toBe(true);
+    expect(
+      csv.startsWith(
+        "Giorno,Data,Scena,Intestazione,INT/EST,Giorno/Notte,Location,Cast,Pagine,Note",
+      ),
+    ).toBe(true);
   });
 
   it("produces one data row per strip", () => {

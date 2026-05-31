@@ -67,12 +67,12 @@ export function TitlePageForm({
       <form
         className={styles.form}
         onSubmit={handleSubmit}
-        aria-label="Title page settings"
+        aria-label="Impostazioni frontespizio"
       >
         <fieldset className={styles.fieldset} disabled={!canEdit}>
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Title</span>
+              <span className={styles.labelText}>Titolo</span>
               <input
                 className={styles.input}
                 value={projectTitle}
@@ -80,7 +80,7 @@ export function TitlePageForm({
                 data-testid="title-page-title"
               />
               <span className={styles.hint}>
-                Edit the project title in Settings.
+                Modifica il titolo del progetto nelle Impostazioni.
               </span>
             </label>
           </div>
@@ -100,7 +100,7 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Based on</span>
+              <span className={styles.labelText}>Tratto da</span>
               <input
                 className={styles.input}
                 value={toInputValue(values.basedOn)}
@@ -113,7 +113,7 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Contact</span>
+              <span className={styles.labelText}>Contatti</span>
               <textarea
                 className={styles.textarea}
                 value={toInputValue(values.contact)}
@@ -127,7 +127,7 @@ export function TitlePageForm({
 
           <div className={styles.rowGrid}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Draft date</span>
+              <span className={styles.labelText}>Data bozza</span>
               <input
                 type="date"
                 className={styles.input}
@@ -143,7 +143,7 @@ export function TitlePageForm({
             </label>
 
             <label className={styles.label}>
-              <span className={styles.labelText}>Draft color</span>
+              <span className={styles.labelText}>Colore bozza</span>
               <select
                 className={styles.input}
                 value={values.draftColor ?? ""}
@@ -167,13 +167,13 @@ export function TitlePageForm({
             </label>
 
             <label className={styles.label}>
-              <span className={styles.labelText}>Notes</span>
+              <span className={styles.labelText}>Note</span>
               <input
                 className={styles.input}
                 value={toInputValue(values.notes)}
                 onChange={(e) => update("notes", toNullable(e.target.value))}
                 maxLength={200}
-                placeholder="e.g. FIRST DRAFT"
+                placeholder="es. PRIMA BOZZA"
                 data-testid="title-page-notes"
               />
             </label>
@@ -181,7 +181,7 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>WGA registration #</span>
+              <span className={styles.labelText}>Registrazione WGA</span>
               <input
                 className={styles.input}
                 value={toInputValue(values.wgaRegistration)}
@@ -203,7 +203,7 @@ export function TitlePageForm({
                 disabled={!isDirty || isSubmitting}
                 data-testid="title-page-save"
               >
-                {isSubmitting ? "Saving…" : "Save"}
+                {isSubmitting ? "Salvataggio…" : "Salva"}
               </Button>
             </div>
           )}
@@ -234,7 +234,7 @@ function TitlePagePreview({ projectTitle, titlePage }: TitlePagePreviewProps) {
   const hasDraftInfo = draftDate || draftColor || notes || wgaRegistration;
 
   return (
-    <aside className={styles.preview} aria-label="Title page preview">
+    <aside className={styles.preview} aria-label="Anteprima frontespizio">
       <div className={styles.page} data-testid="title-page-preview">
         <div className={styles.pageCenter}>
           <h2 className={styles.pageTitle}>{projectTitle.toUpperCase()}</h2>

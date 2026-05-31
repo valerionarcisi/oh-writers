@@ -97,7 +97,8 @@ export function OverviewSection({
             </span>
           )}
           <div className={styles.heroSub}>
-            contingency {overview.grandTotal > 0
+            imprevisti{" "}
+            {overview.grandTotal > 0
               ? Math.round(
                   (overview.contingencyAmount / overview.grandTotal) * 100,
                 )
@@ -136,13 +137,13 @@ export function OverviewSection({
           />
           <KpiCell
             kind="prod"
-            label="Production"
+            label="Produzione"
             value={eurCompact(overview.productionTotal)}
             foot={`${overview.grandTotal > 0 ? Math.round((overview.productionTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.filter((c) => c.id !== "cast" && c.id !== "crew").length} reparti`}
           />
           <KpiCell
             kind="cont"
-            label="Contingency"
+            label="Imprevisti"
             value={eurCompact(overview.contingencyAmount)}
             foot={`${overview.grandTotal > 0 ? Math.round((overview.contingencyAmount / overview.grandTotal) * 100) : 0}% imp.`}
           />
@@ -150,9 +151,7 @@ export function OverviewSection({
             kind="days"
             label="Costo / giornata"
             value={overview.perDay !== null ? eurCompact(overview.perDay) : "—"}
-            foot={
-              overview.shootingDays ? `${overview.shootingDays} gg` : "n/d"
-            }
+            foot={overview.shootingDays ? `${overview.shootingDays} gg` : "n/d"}
           />
           <KpiCell
             kind="scene"
@@ -212,8 +211,8 @@ export function OverviewSection({
                 <li className={styles.alert} data-tone="ok">
                   <div className={styles.alertTag}>Pronto</div>
                   <div>
-                    <strong>Tutte le categorie sono coperte</strong> — il
-                    budget è pronto per il lock.
+                    <strong>Tutte le categorie sono coperte</strong> — il budget
+                    è pronto per il lock.
                   </div>
                 </li>
               )}
@@ -241,9 +240,7 @@ export function OverviewSection({
             >
               <div className={styles.catTop}>
                 <span className={styles.catName}>{c.label}</span>
-                <span className={styles.catShare}>
-                  {c.percent.toFixed(0)}%
-                </span>
+                <span className={styles.catShare}>{c.percent.toFixed(0)}%</span>
               </div>
               <div className={styles.catAmount}>
                 {c.total > 0 ? eurCompact(c.total) : "—"}
@@ -255,7 +252,8 @@ export function OverviewSection({
               />
               <div className={styles.catFoot}>
                 <span>
-                  {c.resourceCount} {c.id === "cast" || c.id === "crew" ? "ruoli" : "voci"}
+                  {c.resourceCount}{" "}
+                  {c.id === "cast" || c.id === "crew" ? "ruoli" : "voci"}
                 </span>
                 <StatusBadge status={c.status} reason={c.statusReason} />
               </div>

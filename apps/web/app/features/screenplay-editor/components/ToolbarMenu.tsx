@@ -163,7 +163,7 @@ export function ToolbarMenu({
               type="button"
               role="menuitem"
               className={styles.item}
-              title="Renumber every scene based on document order"
+              title="Rinumera tutte le scene secondo l'ordine del documento"
               onClick={runAndClose(onResequenceAll)}
               data-testid="menu-item-renumber"
             >

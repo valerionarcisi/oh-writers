@@ -7,10 +7,10 @@ interface TeamPresenceProps {
 }
 
 const ROLE_LABEL: Record<string, string> = {
-  owner: "Autore · Owner",
+  owner: "Autore · Proprietario",
   editor: "Editor",
   viewer: "Lettore",
-  ai: "AI assistant",
+  ai: "Assistente AI",
 };
 
 export function TeamPresence({ collaborators }: TeamPresenceProps) {

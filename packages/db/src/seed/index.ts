@@ -294,21 +294,21 @@ export async function seed() {
       {
         projectId: TEST_PROJECT_ID,
         type: "synopsis" as const,
-        title: "Synopsis",
+        title: "Sinossi",
         content: NON_FA_RIDERE_SYNOPSIS,
         createdBy: TEST_USER_ID,
       },
       {
         projectId: TEST_PROJECT_ID,
         type: "outline" as const,
-        title: "Outline",
+        title: "Scaletta",
         content: "",
         createdBy: TEST_USER_ID,
       },
       {
         projectId: TEST_PROJECT_ID,
         type: "treatment" as const,
-        title: "Treatment",
+        title: "Trattamento",
         content: "",
         createdBy: TEST_USER_ID,
       },
@@ -466,21 +466,21 @@ export async function seed() {
       {
         projectId: TEST_TEAM_PROJECT_ID,
         type: "synopsis" as const,
-        title: "Synopsis",
+        title: "Sinossi",
         content: "",
         createdBy: TEST_USER_ID,
       },
       {
         projectId: TEST_TEAM_PROJECT_ID,
         type: "outline" as const,
-        title: "Outline",
+        title: "Scaletta",
         content: "",
         createdBy: TEST_USER_ID,
       },
       {
         projectId: TEST_TEAM_PROJECT_ID,
         type: "treatment" as const,
-        title: "Treatment",
+        title: "Trattamento",
         content: "",
         createdBy: TEST_USER_ID,
       },
@@ -593,14 +593,14 @@ export async function seed() {
       {
         projectId: VALERIO_PERSONAL_PROJECT_ID,
         type: "synopsis" as const,
-        title: "Synopsis",
+        title: "Sinossi",
         content: NON_FA_RIDERE_SYNOPSIS,
         createdBy: VALERIO_USER_ID,
       },
       {
         projectId: VALERIO_PERSONAL_PROJECT_ID,
         type: "outline" as const,
-        title: "Outline",
+        title: "Scaletta",
         content:
           "ATTO I\n- Filippo prepara l'Open Grezzo di nascosto.\n- Giulio ignora tutto; Tea sospetta.\n\nATTO II\n- La serata va fuori controllo.\n- Il nonno morto appare.\n\nATTO III\n- Filippo sale sul palco e si libera.\n- Giulio lo colpisce; il nonno ride.",
         createdBy: VALERIO_USER_ID,
@@ -608,7 +608,7 @@ export async function seed() {
       {
         projectId: VALERIO_PERSONAL_PROJECT_ID,
         type: "treatment" as const,
-        title: "Treatment",
+        title: "Trattamento",
         content:
           "Filippo ha quarant'anni e cammina tra i tavoli della pizzeria del suocero come se fosse una condanna. Stasera, però, ha un piano: ha trasformato la sala in un open mic comedy senza dirlo a nessuno, l'Open Grezzo...",
         createdBy: VALERIO_USER_ID,
@@ -737,7 +737,7 @@ export async function seed() {
       {
         projectId: VALERIO_TEAM_PROJECT_ID,
         type: "synopsis" as const,
-        title: "Synopsis",
+        title: "Sinossi",
         content:
           "In una metropoli governata dal silenzio, Alma Ricci è l'unica poliziotta che ancora parla.",
         createdBy: VALERIO_USER_ID,
@@ -745,14 +745,14 @@ export async function seed() {
       {
         projectId: VALERIO_TEAM_PROJECT_ID,
         type: "outline" as const,
-        title: "Outline",
+        title: "Scaletta",
         content: "",
         createdBy: VALERIO_USER_ID,
       },
       {
         projectId: VALERIO_TEAM_PROJECT_ID,
         type: "treatment" as const,
-        title: "Treatment",
+        title: "Trattamento",
         content: "",
         createdBy: VALERIO_USER_ID,
       },

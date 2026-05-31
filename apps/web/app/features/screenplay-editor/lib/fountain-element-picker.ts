@@ -27,12 +27,12 @@ interface PickerItem {
 }
 
 const PICKER_ITEMS: PickerItem[] = [
-  { label: "Scene", shortcut: "S", target: "scene" },
-  { label: "Action", shortcut: "A", target: "action" },
-  { label: "Character", shortcut: "C", target: "character" },
-  { label: "Dialogue", shortcut: "D", target: "dialogue" },
-  { label: "Paren", shortcut: "P", target: "parenthetical" },
-  { label: "Trans", shortcut: "T", target: "transition" },
+  { label: "Scena", shortcut: "S", target: "scene" },
+  { label: "Azione", shortcut: "A", target: "action" },
+  { label: "Personaggio", shortcut: "C", target: "character" },
+  { label: "Dialogo", shortcut: "D", target: "dialogue" },
+  { label: "Parentetica", shortcut: "P", target: "parenthetical" },
+  { label: "Transizione", shortcut: "T", target: "transition" },
 ];
 
 /**

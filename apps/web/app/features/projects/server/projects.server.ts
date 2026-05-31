@@ -3,7 +3,12 @@ import { ok, err, ResultAsync } from "neverthrow";
 import { eq, and, isNull } from "drizzle-orm";
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
-import { DocumentTypes, TeamRoles, Locales } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  DOCUMENT_TYPE_LABELS_IT,
+  TeamRoles,
+  Locales,
+} from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { projects, documents, screenplays } from "@oh-writers/db/schema";
@@ -121,7 +126,7 @@ export const getProjectById = createServerFn({ method: "GET" })
           Object.values(DocumentTypes).map((type) => ({
             projectId: project.id,
             type,
-            title: type.charAt(0).toUpperCase() + type.slice(1),
+            title: DOCUMENT_TYPE_LABELS_IT[type],
             content: "",
             createdBy: user.id,
           })),
@@ -215,7 +220,7 @@ export const createProject = createServerFn({ method: "POST" })
               Object.values(DocumentTypes).map((type) => ({
                 projectId: project.id,
                 type,
-                title: type.charAt(0).toUpperCase() + type.slice(1),
+                title: DOCUMENT_TYPE_LABELS_IT[type],
                 content: "",
                 createdBy: user.id,
               })),

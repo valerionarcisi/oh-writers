@@ -13,11 +13,11 @@ import { Decoration, DecorationSet } from "prosemirror-view";
 import type { Node as PMNode } from "prosemirror-model";
 
 const REGION_HINTS: Record<string, string> = {
-  title: "Click or tab to set the title",
-  centerBlock: "Author, Based on, Source material…",
-  footerLeft: "Draft date",
-  footerCenter: "Notes",
-  footerRight: "Contact info",
+  title: "Clicca o premi tab per impostare il titolo",
+  centerBlock: "Autore, Tratto da, Materiale di partenza…",
+  footerLeft: "Data bozza",
+  footerCenter: "Note",
+  footerRight: "Contatti",
 };
 
 const buildDecorations = (doc: PMNode): DecorationSet => {

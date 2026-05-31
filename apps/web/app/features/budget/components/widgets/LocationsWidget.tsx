@@ -182,7 +182,7 @@ function PerElementWidget({
 export function LocationsWidget(
   props: Omit<PerElementWidgetProps, "icon" | "title">,
 ) {
-  return <PerElementWidget icon="📍" title="Locations" {...props} />;
+  return <PerElementWidget icon="📍" title="Location" {...props} />;
 }
 
 export function VehiclesWidget(
