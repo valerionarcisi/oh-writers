@@ -129,7 +129,14 @@ const CesareInputSchema = z.object({
   projectId: z.string().uuid(),
   message: z.string().min(1).max(2000),
   pageContext: PageContextSchema,
-  conversationHistory: z.array(ConversationMessageSchema).max(20),
+  // Keep only the most recent 20 turns instead of REJECTING longer histories.
+  // Since spec 51 persists messages, a long session legitimately accumulates
+  // >20 turns; a hard `.max(20)` made every request from a long thread fail Zod
+  // (it broke all live edits in long sessions). Transform-cap is defensive: no
+  // client (UI, test, or future caller) can ever exceed the model's context cap.
+  conversationHistory: z
+    .array(ConversationMessageSchema)
+    .transform((h) => h.slice(-20)),
 });
 
 type CesareInput = z.infer<typeof CesareInputSchema>;
