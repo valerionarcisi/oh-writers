@@ -3,9 +3,23 @@ import {
   parseToolsExecuted,
   parseRewriteSceneMarker,
   parseDocAppliedMarker,
+  parseEntityAppliedMarkers,
   parseLiveDiffMarker,
   parseLiveDiffMarkers,
+  extractStepBlockMetadata,
+  hasAppliedEdit,
+  parseToolUpdates,
 } from "./CesareConversation";
+
+const docAppliedMarker = (documentType: string): string =>
+  `<!--ohw:doc-applied:${JSON.stringify({
+    document_type: documentType,
+    version_id: "v-new",
+    previous_version_id: "v-old",
+  })}-->`;
+
+const entityAppliedMarker = (domain: string, label: string): string =>
+  `<!--ohw:entity-applied:${JSON.stringify({ domain, label })}-->`;
 
 describe("parseToolsExecuted", () => {
   it("returns 0 when the marker is absent", () => {
@@ -105,6 +119,132 @@ const encodeLiveDiff = (obj: unknown): string => {
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin);
 };
+
+describe("parseEntityAppliedMarkers", () => {
+  it("returns an empty array when no marker is present", () => {
+    expect(parseEntityAppliedMarkers("just a reply")).toEqual([]);
+  });
+
+  it("parses a single entity-applied marker", () => {
+    const content = `ok ${entityAppliedMarker("budget", "Budget")}`;
+    expect(parseEntityAppliedMarkers(content)).toEqual([
+      { domain: "budget", label: "Budget" },
+    ]);
+  });
+
+  it("parses one marker per touched entity in a turn", () => {
+    const content = `${entityAppliedMarker(
+      "locations",
+      "Location",
+    )} ${entityAppliedMarker("schedule", "Calendario")}`;
+    expect(parseEntityAppliedMarkers(content).map((m) => m.domain)).toEqual([
+      "locations",
+      "schedule",
+    ]);
+  });
+
+  it("falls back to the domain when the label is missing", () => {
+    const content = `<!--ohw:entity-applied:${JSON.stringify({
+      domain: "budget",
+    })}-->`;
+    expect(parseEntityAppliedMarkers(content)).toEqual([
+      { domain: "budget", label: "budget" },
+    ]);
+  });
+
+  it("skips markers without a domain and malformed JSON", () => {
+    expect(
+      parseEntityAppliedMarkers(
+        `<!--ohw:entity-applied:${JSON.stringify({ label: "X" })}-->`,
+      ),
+    ).toEqual([]);
+    expect(
+      parseEntityAppliedMarkers("<!--ohw:entity-applied:{not json-->"),
+    ).toEqual([]);
+  });
+});
+
+// F-A3 — the result card may claim a change ONLY when a REAL apply signal is
+// present. A chat-only reply, a no-op, or a failed tool yields no success card.
+describe("hasAppliedEdit (honest success gate)", () => {
+  it("is false for a chat-only reply, even with tools executed", () => {
+    // tools ran (reads), but nothing was applied: no apply marker present
+    const content = "Ho letto il soggetto e ti rispondo. <!--ohw:tools=2-->";
+    expect(hasAppliedEdit(extractStepBlockMetadata(content))).toBe(false);
+  });
+
+  it("is false when the reply CLAIMS an update but no marker backs it", () => {
+    // This is the F-A3 bug shape: text says 'ho aggiornato' but the DB was not
+    // touched (no doc-applied / entity-applied marker).
+    const content =
+      "Ho aggiornato il budget come richiesto. <!--ohw:tools=1-->";
+    expect(hasAppliedEdit(extractStepBlockMetadata(content))).toBe(false);
+  });
+
+  it("is true when a doc-applied marker is present", () => {
+    const content = `Fatto. ${docAppliedMarker("soggetto")} <!--ohw:tools=1-->`;
+    expect(hasAppliedEdit(extractStepBlockMetadata(content))).toBe(true);
+  });
+
+  it("is true when an entity-applied marker is present", () => {
+    const content = `Fatto. ${entityAppliedMarker(
+      "budget",
+      "Budget",
+    )} <!--ohw:tools=1-->`;
+    expect(hasAppliedEdit(extractStepBlockMetadata(content))).toBe(true);
+  });
+});
+
+// F-M1 — the card label comes from the marker's entity (what was actually
+// edited), NOT from the current page.
+describe("parseToolUpdates (card from real markers)", () => {
+  it("labels the card from the doc-applied document_type, not the page", () => {
+    // A logline edit issued while on the Soggetto page must say 'logline'.
+    const content = `Fatto. ${docAppliedMarker("logline")} <!--ohw:tools=1-->`;
+    const parsed = parseToolUpdates(content);
+    expect(parsed.title).toBe("Aggiornata Logline");
+    expect(parsed.updates).toHaveLength(1);
+    expect(parsed.updates[0]!.label).toBe("logline");
+    expect(parsed.updates[0]!.kind).toBe("doc");
+  });
+
+  it("labels the card from the entity-applied domain for non-doc tools", () => {
+    const content = `Fatto. ${entityAppliedMarker(
+      "locations",
+      "Location",
+    )} <!--ohw:tools=1-->`;
+    const parsed = parseToolUpdates(content);
+    expect(parsed.title).toBe("Aggiornate Location");
+    expect(parsed.updates[0]!.kind).toBe("location");
+    expect(parsed.updates[0]!.label).toBe("location");
+  });
+
+  it("summarises a multi-entity turn with a single honest title", () => {
+    const content = `Fatto. ${docAppliedMarker("soggetto")} ${entityAppliedMarker(
+      "budget",
+      "Budget",
+    )} <!--ohw:tools=2-->`;
+    const parsed = parseToolUpdates(content);
+    expect(parsed.title).toBe("Modifiche applicate");
+    expect(parsed.updates.map((u) => u.label)).toEqual(["soggetto", "budget"]);
+  });
+
+  it("uses the scene rewrite as the card subject", () => {
+    const encode = (obj: unknown): string => {
+      const bytes = new TextEncoder().encode(JSON.stringify(obj));
+      let bin = "";
+      for (const b of bytes) bin += String.fromCharCode(b);
+      return btoa(bin);
+    };
+    const content = `Fatto. <!--ohw:rewrite-scene-b64:${encode({
+      scene_number: 4,
+      new_content: "INT. CASA - NOTTE",
+    })}--> <!--ohw:tools=1-->`;
+    const parsed = parseToolUpdates(content);
+    expect(parsed.title).toBe("Aggiornata Sceneggiatura · Sc.4");
+    expect(parsed.updates[0]!.label).toBe("Sc.4 riscritta");
+  });
+});
 
 describe("parseLiveDiffMarker", () => {
   it("returns null when no marker is present", () => {

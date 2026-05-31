@@ -2,6 +2,7 @@ export {
   CesareSheet,
   parseToolsExecuted,
   parseRewriteSceneMarker,
+  appliedEntityDomains,
   useShowChangesInSplitDrawer,
 } from "./components/CesareSheet";
 export type {

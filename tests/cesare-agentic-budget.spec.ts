@@ -5,30 +5,31 @@ import {
   sendCesareMessage,
   waitForCesareReply,
   setMockContext,
+  resetCesareState,
 } from "./helpers/cesare";
 
 /**
- * [Spec 34] Cesare agentic — Budget
+ * [Spec 34 + Audit F-A3] Cesare agentic — Budget, honest success only.
  *
- * The user asks Cesare to lower a budget line by 200€. The scripted scenario
- * emits an `update_budget_line` tool_use; the executor attempts the update
- * (it may fail if the line UUID is unknown for the test project — that's OK,
- * we only verify the scenario fired and the AppShell toast handler surfaced
- * "✦ Cesare ha aggiornato il budget" because the reply mentions "aggiornato").
- *
- * Verifying the actual DB write is the job of a Vitest unit test against
- * `executeUpdateBudgetLine`; here we exercise the Cesare wire-up only.
+ * The user asks Cesare to lower a budget line. The scripted scenario emits an
+ * `update_budget_line` tool_use; with an unknown line UUID the executor surfaces
+ * a typed error — a genuine no-op against the DB. The success TOAST must then
+ * NOT appear: it is bound to the real `entity-applied` marker, not to the reply
+ * text. (The DB-write path is covered by the `executeUpdateBudgetLine` Vitest
+ * and by the marker-emission unit test in cesare-tools.test.ts.)
  */
 test.describe("[Spec 34] Cesare Agentic — Budget", () => {
-  test("[OHW-546] Cesare updates a budget line via update_budget_line tool", async ({
+  test("[OHW-546] a failed budget update shows NO false success toast (F-A3)", async ({
     authenticatedPage,
   }) => {
+    // Start from a clean conversation so no prior successful turn's card leaks
+    // into this assertion.
+    await resetCesareState(authenticatedPage, BUDGET_PROJECT_ID);
     await navigateToBudget(authenticatedPage, BUDGET_PROJECT_ID);
 
-    // The team-project budget may not be generated. The Cesare flow still
-    // works because the LLM is mocked — we don't need a real row to verify
-    // the agentic path. Use a placeholder UUID so the executor surfaces a
-    // typed error inside Cesare's reply rather than crashing the loop.
+    // Placeholder UUID: the executor returns a typed error, so nothing is
+    // written. The reply may still mention "aggiornato" — the toast must NOT
+    // fire off that text any more.
     await setMockContext(authenticatedPage, {
       BUDGET_LINE_ID: "00000000-0000-4000-a000-0000000aaaaa",
       NEW_RATE: 100,
@@ -36,13 +37,15 @@ test.describe("[Spec 34] Cesare Agentic — Budget", () => {
 
     await openCesareSheet(authenticatedPage);
     await sendCesareMessage(authenticatedPage, "Abbassa la voce di 200€.");
-    const reply = await waitForCesareReply(authenticatedPage);
+    await waitForCesareReply(authenticatedPage);
 
-    // The scripted scenario emits the tool_use then a confirmation text.
-    expect(reply.toLowerCase()).toMatch(/aggiornato|modificat|rate|voce/);
-
+    // No fabricated success: the toast keyed to a real apply must stay absent,
+    // and so must the result card claiming a change.
     await expect(
       authenticatedPage.getByText("✦ Cesare ha aggiornato il budget"),
-    ).toBeVisible({ timeout: 5_000 });
+    ).toHaveCount(0);
+    await expect(
+      authenticatedPage.getByTestId("cesare-change-trace"),
+    ).toHaveCount(0);
   });
 });
