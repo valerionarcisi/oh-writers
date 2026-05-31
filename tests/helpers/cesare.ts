@@ -22,6 +22,30 @@ export async function openCesareSheet(page: Page): Promise<void> {
   await page.waitForTimeout(400);
 }
 
+/**
+ * Close the floating Cesare drawer. After the Notion v3 shell refactor (Spec
+ * 44) Cesare is a floating bottom-right surface (`data-surface="floating"`)
+ * that overlays the page. When a flow opens Cesare to send a prompt and then
+ * needs to interact with an in-page accept affordance (a screenplay
+ * proposal-accept widget, a blocking-proposal panel button), the open drawer
+ * can geometrically intercept the click — exactly as a user would dismiss the
+ * chat to act on the proposal, the test closes the drawer first.
+ */
+export async function closeCesareSheet(page: Page): Promise<void> {
+  const drawer = page.getByTestId("cesare-drawer");
+  // The expanded drawer header exposes a close control labelled "Chiudi"
+  // (the peek row uses "Chiudi Cesare"); match either, scoped to the drawer.
+  const closeBtn = drawer
+    .getByRole("button", { name: /^Chiudi( Cesare)?$/ })
+    .first();
+  if (await closeBtn.isVisible().catch(() => false)) {
+    await closeBtn.click();
+    await expect(drawer).toHaveAttribute("data-state", "closed", {
+      timeout: 5_000,
+    });
+  }
+}
+
 export async function sendCesareMessage(
   page: Page,
   text: string,

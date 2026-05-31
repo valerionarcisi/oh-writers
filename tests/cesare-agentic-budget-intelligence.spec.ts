@@ -15,14 +15,18 @@ import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
  * Tests share `BUDGET_PROJECT_ID`. The LLM is mocked via MOCK_AI=true.
  */
 
-// Multi-turn-safe reply waiter (mirrors cost-foundation spec).
-const ASSISTANT_BUBBLE = '[class*="bubbleAssistant"]:not([aria-busy="true"])';
+// Multi-turn-safe reply waiter (mirrors cost-foundation spec). Match the
+// assistant markdown body, present in both the plain and tool-using bubble
+// shapes; the skeleton LoadingIndicator carries no `bubbleMarkdown`.
+const ASSISTANT_BUBBLE = '[class*="bubbleMarkdown"]';
 
 async function sendAndWaitForReply(
   page: Page,
   prompt: string,
 ): Promise<string> {
-  const log = page.getByRole("log", { name: /Cesare/i });
+  // The floating drawer renders `<div data-testid="cesare-conversation">`; the
+  // legacy `role="log"` wrapper now lives only on the routed session page.
+  const log = page.getByTestId("cesare-conversation");
   const before = await log.locator(ASSISTANT_BUBBLE).count();
   await sendCesareMessage(page, prompt);
   await expect
