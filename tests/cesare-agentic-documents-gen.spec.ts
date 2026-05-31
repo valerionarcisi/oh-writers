@@ -5,6 +5,7 @@ import {
   openCesareSheet,
   sendCesareMessage,
   waitForCesareReply,
+  resetCesareState,
 } from "./helpers/cesare";
 
 /**
@@ -18,6 +19,14 @@ import {
  * SplitDrawer, not an inline Annulla (Spec 47e).
  */
 test.describe("[Spec 44] Cesare Agentic — Document generation applies live", () => {
+  // Spec 51 persists Cesare sessions + document edits; the mock-ui project runs
+  // serially against one shared DB. OHW-577 asserts the soggetto editor still
+  // holds the seed text before the v2 lands, so each test must start from the
+  // seed baseline — reset sessions + restore the narrative docs.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("[OHW-575] Cesare applies a generated logline live (no draft tray)", async ({
     authenticatedPage,
   }) => {

@@ -5,6 +5,7 @@ import {
   openCesareSheet,
   sendCesareMessage,
   waitForCesareReply,
+  resetCesareState,
 } from "./helpers/cesare";
 
 /**
@@ -16,6 +17,13 @@ import {
  * toast.
  */
 test.describe("[Spec 34] Cesare Agentic — Documents", () => {
+  // Spec 51 persists Cesare sessions + document edits; the mock-ui project runs
+  // serially against one shared DB, so reset to the seed baseline before each
+  // test to keep this spec's writes from leaking into (or out of) its neighbours.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("[OHW-541] Cesare expands a section via expand_section tool", async ({
     authenticatedPage,
   }) => {
@@ -25,10 +33,7 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
     await authenticatedPage.waitForLoadState("networkidle");
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(
-      authenticatedPage,
-      "Espandi la sezione Atto II.",
-    );
+    await sendCesareMessage(authenticatedPage, "Espandi la sezione Atto II.");
     const reply = await waitForCesareReply(authenticatedPage);
 
     // The mock scenario replies with text containing "aggiornato" so the

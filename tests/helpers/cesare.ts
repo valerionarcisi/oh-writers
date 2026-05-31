@@ -194,3 +194,30 @@ export async function resetScreenplayState(
     );
   }
 }
+
+/**
+ * Restore a project to a clean Cesare-agentic baseline between Playwright
+ * tests. Since Spec 51 the Cesare chat persists `cesare_sessions` /
+ * `cesare_messages`, and every agentic edit mutates the open document + a new
+ * `document_versions` row. The mock-ui project runs serially against one shared
+ * test DB, so a prior agentic test would otherwise leak its document mutations
+ * and built-up session history into the next test. Call this in `beforeEach` of
+ * every cesare-agentic spec so each test starts from the seed state.
+ */
+export async function resetCesareState(
+  page: Page,
+  projectId: string,
+): Promise<void> {
+  const response = await page.request.post(
+    `${BASE_URL}/api/test/reset-cesare-state`,
+    {
+      data: { projectId },
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  if (!response.ok()) {
+    throw new Error(
+      `resetCesareState failed: ${response.status()} ${response.statusText()}`,
+    );
+  }
+}

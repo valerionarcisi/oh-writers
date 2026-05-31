@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { resetCesareState } from "./helpers/cesare";
 
 /**
  * [Spec 47c] Logline unified + Cesare write/edit (A8).
@@ -83,6 +84,15 @@ function parseNdjson(body: string): StreamEvent[] {
 }
 
 test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
+  // Spec 51 persists the logline document edits + Cesare sessions; the mock-ui
+  // project runs serially against one shared DB. These tests assert the logline
+  // CHANGED (after !== before), so a prior test that already wrote the same mock
+  // logline would make `before === after` and break the assertion. Restore the
+  // seed logline + clear sessions before each test.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   // ── HAPPY: edit the logline by hand persists across reload ─────────────────
   test("[OHW-047-A8] editing the logline by hand persists across reload (single source of truth)", async ({
     authenticatedPage: page,

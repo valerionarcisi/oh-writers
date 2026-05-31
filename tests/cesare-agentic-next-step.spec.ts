@@ -2,7 +2,11 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
-import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
+import {
+  openCesareSheet,
+  sendCesareMessage,
+  resetCesareState,
+} from "./helpers/cesare";
 
 /**
  * [Spec 50] Write-from-zero with Cesare — next-step suggestion (NO wizard).
@@ -51,6 +55,14 @@ async function setNarrativeState(
 const chip = (page: Page) => page.getByTestId("cesare-next-step-chip");
 
 test.describe("[Spec 50] Cesare next-step suggestion", () => {
+  // Spec 51 persists Cesare sessions + document edits across the serial mock-ui
+  // run. Each test sets its own narrative-doc state via setNarrativeState, but
+  // reset first so a prior test's session history (and its synopsis generation)
+  // never leaks in. setNarrativeState then overrides the doc content as needed.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   // ── Empty project → the suggestion is "scrivi una logline" ─────────────────
   test("[OHW-050] an empty project suggests writing a logline", async ({
     authenticatedPage: page,

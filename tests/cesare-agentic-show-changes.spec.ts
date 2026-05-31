@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { resetCesareState } from "./helpers/cesare";
 
 /**
  * [Spec 47-A6 / 47e] "Mostra / Nascondi modifiche" end-to-end.
@@ -63,6 +64,14 @@ async function sendV2AndWaitForTrace(page: Page) {
 }
 
 test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => {
+  // Spec 51 persists the soggetto edit; the mock-ui project runs serially
+  // against one shared DB. These tests apply the deterministic soggetto v2 live
+  // and assert the change trace + flash render — which only happens when the v2
+  // is a genuine change. Restore the seed soggetto + clear sessions before each.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("[OHW-047-A6/047e] floating flashes a transient diff; full opens the split drawer; no Annulla", async ({
     authenticatedPage,
   }) => {
