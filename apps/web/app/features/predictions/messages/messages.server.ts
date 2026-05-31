@@ -21,6 +21,8 @@ import {
   DbError,
 } from "../sessions/sessions.errors";
 import { ownsSession } from "../sessions/sessions.server";
+import { isPlaceholderSessionTitle } from "../sessions/sessions.schema";
+import { deriveSessionTitle } from "../sessions/derive-session-title";
 import {
   PersistTurnInput,
   ListMessagesInput,
@@ -93,6 +95,20 @@ const parseMetadata = (raw: unknown): MessageMetadata | null => {
   return parsed.success ? parsed.data : null;
 };
 
+// The post-turn session update. Always bumps `lastMessageAt` (rail ordering);
+// additionally folds in the auto-derived title when the session still carries a
+// system placeholder AND the derivation yields a non-empty summary. Pure — no
+// I/O — so the "first-turn-only" naming rule lives in one testable place.
+const buildSessionUpdate = (
+  currentTitle: string,
+  firstUserContent: string,
+): { lastMessageAt: Date; title?: string } => {
+  const base = { lastMessageAt: new Date() };
+  if (!isPlaceholderSessionTitle(currentTitle)) return base;
+  const derived = deriveSessionTitle(firstUserContent);
+  return derived.length > 0 ? { ...base, title: derived } : base;
+};
+
 const toWire = (row: CesareMessageRow): CesareMessage => ({
   id: row.id,
   sessionId: row.sessionId,
@@ -116,46 +132,61 @@ export const persistTurn = createServerFn({ method: "POST" })
       ResultShape<{ userId: string; assistantId: string }, MessageError>
     > =>
       toShape(
-        await withOwnedSession(data.projectId, data.sessionId, ({ db }) =>
-          ResultAsync.fromPromise(
-            db
-              .insert(cesareMessages)
-              .values([
-                {
-                  sessionId: data.sessionId,
-                  role: "user" as const,
-                  content: data.userContent,
-                  metadata: null,
-                },
-                {
-                  sessionId: data.sessionId,
-                  role: "assistant" as const,
-                  content: data.assistantContent,
-                  metadata: data.metadata ?? null,
-                },
-              ])
-              .returning({ id: cesareMessages.id, role: cesareMessages.role }),
-            (e) => toMessageError(new DbError("persistTurn", e)),
-          )
-            .andThen((rows) => {
-              const userRow = rows.find((r) => r.role === "user");
-              const assistantRow = rows.find((r) => r.role === "assistant");
-              return userRow && assistantRow
-                ? okAsync({ userId: userRow.id, assistantId: assistantRow.id })
-                : errAsync(
-                    toMessageError(new DbError("persistTurn:noReturn", null)),
-                  );
-            })
-            .andThen((ids) =>
-              // Keep the session's last_message_at fresh for rail ordering.
-              ResultAsync.fromPromise(
-                db
-                  .update(cesareSessions)
-                  .set({ lastMessageAt: new Date() })
-                  .where(eq(cesareSessions.id, data.sessionId)),
-                (e) => toMessageError(new DbError("persistTurn:touch", e)),
-              ).map(() => ids),
-            ),
+        await withOwnedSession(
+          data.projectId,
+          data.sessionId,
+          ({ db, session }) =>
+            ResultAsync.fromPromise(
+              db
+                .insert(cesareMessages)
+                .values([
+                  {
+                    sessionId: data.sessionId,
+                    role: "user" as const,
+                    content: data.userContent,
+                    metadata: null,
+                  },
+                  {
+                    sessionId: data.sessionId,
+                    role: "assistant" as const,
+                    content: data.assistantContent,
+                    metadata: data.metadata ?? null,
+                  },
+                ])
+                .returning({
+                  id: cesareMessages.id,
+                  role: cesareMessages.role,
+                }),
+              (e) => toMessageError(new DbError("persistTurn", e)),
+            )
+              .andThen((rows) => {
+                const userRow = rows.find((r) => r.role === "user");
+                const assistantRow = rows.find((r) => r.role === "assistant");
+                return userRow && assistantRow
+                  ? okAsync({
+                      userId: userRow.id,
+                      assistantId: assistantRow.id,
+                    })
+                  : errAsync(
+                      toMessageError(new DbError("persistTurn:noReturn", null)),
+                    );
+              })
+              .andThen((ids) =>
+                // Keep last_message_at fresh for rail ordering, and — only on the
+                // very first turn, while the title is still a system placeholder —
+                // derive a Notion-style title from this first request (Spec 53).
+                // No extra LLM call: the title is a deterministic summary of the
+                // user's own words. A user-renamed title (not a placeholder) is
+                // never overwritten; once derived it is no longer a placeholder,
+                // so this applies exactly once.
+                ResultAsync.fromPromise(
+                  db
+                    .update(cesareSessions)
+                    .set(buildSessionUpdate(session.title, data.userContent))
+                    .where(eq(cesareSessions.id, data.sessionId)),
+                  (e) => toMessageError(new DbError("persistTurn:touch", e)),
+                ).map(() => ids),
+              ),
         ),
       ),
   );

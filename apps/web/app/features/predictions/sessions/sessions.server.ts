@@ -21,6 +21,7 @@ import {
   TouchSessionInput,
   GetSessionInput,
   DEFAULT_NEW_SESSION_TITLE,
+  DEFAULT_PRIMARY_SESSION_TITLE,
   type CesareSession,
 } from "./sessions.schema";
 import { CesareSessionNotFoundError, DbError } from "./sessions.errors";
@@ -82,7 +83,7 @@ const ensureDefaultSession = (
       .values({
         projectId,
         userId,
-        title: "Sessione principale",
+        title: DEFAULT_PRIMARY_SESSION_TITLE,
       })
       .returning(),
     (e) => new DbError("ensureDefaultSession", e),

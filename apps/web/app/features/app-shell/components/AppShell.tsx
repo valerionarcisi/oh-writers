@@ -146,6 +146,10 @@ interface AppShellProps {
    *  visible regardless of Cesare drawer state (Spec 44 F1). */
   cesareSessions?: ReadonlyArray<CesareSessionItem>;
   onCesareSessionSelect?: (sessionId: string) => void;
+  /** Commit an inline rename for a session (Spec 53). */
+  onCesareSessionRename?: (sessionId: string, title: string) => void;
+  /** Request deletion of a session (Spec 53) — opens the confirmation modal. */
+  onCesareSessionDelete?: (sessionId: string) => void;
   onCesareSessionNew?: () => void;
   /** Raw `?peek` search param (Spec 46). `null` when absent. AppShell
    *  validates it (same-project guard, fail closed) before acting. */
@@ -236,6 +240,8 @@ function AppShellInner({
   cesarePage,
   cesareSessions,
   onCesareSessionSelect,
+  onCesareSessionRename,
+  onCesareSessionDelete,
   onCesareSessionNew,
   peek = null,
   onOpenCesarePeek,
@@ -977,6 +983,8 @@ function AppShellInner({
               sections={fullSections}
               sessions={cesareSessions}
               onSessionSelect={onCesareSessionSelect}
+              onSessionRename={onCesareSessionRename}
+              onSessionDelete={onCesareSessionDelete}
               onSessionNew={onCesareSessionNew}
               onSessionsOpen={onCesareSessionsOpen}
               account={railAccount}
