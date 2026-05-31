@@ -1,10 +1,4 @@
-import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import {
-  navigateToBreakdown,
-  openSceneInBreakdown,
-  TEAM_PROJECT_ID,
-} from "./helpers";
 
 /**
  * [Spec 10 — E2/E4] Cesare browser flow
@@ -13,24 +7,15 @@ import {
  * `apps/web/app/mocks/ai-responses.test.ts` (OHW-257). The
  * `checkAndStampRateLimit` helper is unit-tested at
  * `apps/web/app/features/breakdown/lib/rate-limit.test.ts` (OHW-259).
- *
- * The browser slice below verifies the wired UX: the suggest button is
- * present and disables itself while the mutation is pending. The full
- * round-trip (click → assert 5 ghost tags → click again → assert
- * rate-limit toast) requires the dev server to run with MOCK_AI=true and
- * a seeded warehouse scene; both are documented in README.
  */
 
 test.describe("[Spec 10] Breakdown — Cesare", () => {
-  test("[OHW-257-ui] suggest button visible and operable for editor", async ({
-    authenticatedPage,
-  }) => {
-    await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(authenticatedPage, 1);
-    const suggest = authenticatedPage.getByTestId("cesare-suggest-scene");
-    await expect(suggest).toBeVisible();
-    await expect(suggest).toBeEnabled();
-  });
+  // SKIPPED (removed UI, not a v3 testid rename): this asserted the per-scene
+  // "Suggerisci" button (`cesare-suggest-scene`) on the BreakdownPanel. The v3
+  // redesign removed the BreakdownPanel and its suggest button — breakdown
+  // suggestions now surface as inline ghosts auto-generated on mount (no manual
+  // per-scene trigger). There is no rendered `cesare-suggest-scene` to test.
+  test.skip("[OHW-257-ui] suggest button visible and operable for editor", () => {});
 
   test.skip("[OHW-258] re-run Cesare on already-breakdown scene preserves accepted/ignored states", () => {
     // Pending: requires a seeded scene with a mix of pending/accepted/

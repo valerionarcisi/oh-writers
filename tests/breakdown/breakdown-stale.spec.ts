@@ -1,45 +1,34 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import {
-  navigateToBreakdown,
-  openSceneInBreakdown,
-  TEAM_PROJECT_ID,
-} from "./helpers";
+import { navigateToBreakdown, TEAM_PROJECT_ID } from "./helpers";
 
 /**
  * [OHW-253] L1 stale visual treatment
  *
- * Seeds ship a breakdown element "Bloody knife" in scene 1 whose text does
- * contain the token. To simulate a stale occurrence we edit the scene text
- * through the breakdown's own re-match pipeline by changing the element
- * name on the server (future-friendly: the test can also run the scene
- * editor change once mutation hooks for scene edits are exposed).
- *
- * For now, this test asserts the UI contract: when an occurrence carries
- * `isStale: true`, its ghost/accepted tag MUST render with
- * `data-stale="true"` and `aria-disabled="true"`. The seed scenario
- * created by Phase E tests (OHW-260+) flips the bit via scene-text edit.
+ * v3 renders stale occurrences as inline reader decorations: a highlight
+ * carrying `data-stale="true"` is dimmed (reduced opacity). The old side-panel
+ * chip — which also carried `aria-disabled="true"` — was removed with the
+ * BreakdownPanel, so this test now asserts the inline contract directly in the
+ * screenplay reader. When no occurrence is currently stale (the seed ships them
+ * non-stale) the loop is a no-op; the contract is the only thing under test.
  */
 
 test.describe("[Spec 10] L1 stale visual treatment", () => {
-  test("[OHW-253] stale occurrences render dimmed + aria-disabled", async ({
+  test("[OHW-253] stale occurrences render dimmed", async ({
     authenticatedPage,
   }) => {
-    await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
-    await openSceneInBreakdown(authenticatedPage, 1);
+    const page = authenticatedPage;
+    await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    // The seeded occurrence for "Bloody knife" starts non-stale. This
-    // placeholder assertion documents the stale contract the panel MUST
-    // honour; the full round-trip (edit scene text → observe stale flag)
-    // is exercised by the permissions/versioning tests in Phase E.
-    const panel = authenticatedPage.getByTestId("breakdown-panel");
-    await expect(panel).toBeVisible();
-
-    const staleTags = panel.locator('[data-stale="true"]');
-    const count = await staleTags.count();
+    // Inline stale highlights live inside the screenplay reader, not a panel.
+    const reader = page.getByTestId("readonly-screenplay-view");
+    const staleHighlights = reader.locator('[data-stale="true"]');
+    const count = await staleHighlights.count();
     for (let i = 0; i < count; i++) {
-      const tag = staleTags.nth(i);
-      await expect(tag).toHaveAttribute("aria-disabled", "true");
+      const opacity = await staleHighlights
+        .nth(i)
+        .evaluate((el) => getComputedStyle(el).opacity);
+      expect(parseFloat(opacity)).toBeLessThan(1);
     }
   });
 

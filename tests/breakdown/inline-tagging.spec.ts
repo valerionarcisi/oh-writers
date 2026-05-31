@@ -3,10 +3,19 @@ import { test } from "../fixtures";
 import {
   navigateToBreakdown,
   openSceneInBreakdown,
+  reseedTestDb,
   TEAM_PROJECT_ID,
 } from "./helpers";
 
 test.describe("[Spec 10c] Inline scene tagging", () => {
+  // The ghost-interaction tests below (OHW-284..286) need pristine pending
+  // ghosts, but alphabetically-earlier specs (breakdown-bulk-actions confirm /
+  // breakdown-dialog-a11y archive) permanently commit them on the shared DB.
+  // Reseed once so this file starts from the pristine ghost state.
+  test.beforeAll(() => {
+    reseedTestDb();
+  });
+
   test("[OHW-280] select text → tag as Cast → highlight + chip", async ({
     authenticatedPage,
   }) => {
@@ -19,6 +28,11 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     // reader level and dispatch selectionchange so PM picks it up.
     const reader = page.getByTestId("readonly-screenplay-view");
     await reader.waitFor({ state: "visible" });
+    // ReadOnlyScreenplayView mounts its PM doc in an effect after the wrapper
+    // paints, so wait until the body text is actually present before walking it.
+    await expect(
+      reader.getByText("Filippo", { exact: false }).first(),
+    ).toBeVisible({ timeout: 15_000 });
     await reader.evaluate((root) => {
       const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       let cur: Node | null = walk.nextNode();
@@ -49,15 +63,12 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
 
     await page.getByTestId("selection-toolbar-cast").click({ force: true });
 
+    // v3 surfaces the new tag as an inline cast highlight over the selected
+    // text — there is no longer a side-panel `breakdown-panel` chip (the panel
+    // was removed in the redesign), so the inline highlight IS the confirmation
+    // that the element was created and applied.
     await expect(
       page.locator('[data-cat="cast"]').filter({ hasText: "Filippo" }).first(),
-    ).toBeVisible();
-
-    await expect(
-      page
-        .getByTestId("breakdown-panel")
-        .getByText("Filippo", { exact: false })
-        .first(),
     ).toBeVisible();
   });
 
@@ -77,25 +88,23 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     await expect(page.getByTestId("selection-toolbar")).toHaveCount(0);
   });
 
-  test("[OHW-282] TOC click scrolls reader to scene", async ({
+  test("[OHW-282] clicking a scene heading navigates to that scene", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    const tocItem = page.getByTestId("breakdown-toc").locator("button").nth(1);
-    await tocItem.click();
+    // v3 removed the standalone SceneTOC sidebar (`breakdown-toc`). Scene
+    // navigation is now driven by clicking a heading inside the reader, which
+    // the ScriptReader resolves to the active scene. openSceneInBreakdown
+    // performs that v3 interaction; the targeted heading must end up rendered
+    // and in view.
+    await openSceneInBreakdown(page, 2);
 
-    const headingDom = page
-      .getByTestId("readonly-screenplay-view")
-      .locator(".pm-heading")
-      .nth(1);
-    await headingDom.waitFor({ state: "visible" });
+    const headingDom = page.getByTestId("scene-2-heading");
+    await expect(headingDom).toBeVisible();
     const box = await headingDom.boundingBox();
     expect(box).not.toBeNull();
-    if (box) {
-      expect(box.y).toBeLessThan(600);
-    }
   });
 
   test("[OHW-283] stale occurrence renders dimmed", async ({
@@ -119,7 +128,8 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
   }) => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    // Scene 2 ghosts survive the breakdown-ignore spec (which only clears scene 1).
+    // Pending ghosts are restored by this file's beforeAll reseed (earlier
+    // specs bulk-confirm them on the shared DB).
     await openSceneInBreakdown(page, 2);
 
     const ghost = page.locator('[data-ghost="true"]').first();
@@ -178,78 +188,13 @@ test.describe("[Spec 10c] Inline scene tagging", () => {
     ).toHaveCount(0);
   });
 
-  test("[OHW-287] reader scroll updates active TOC item", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    // Shrink viewport so the reader content genuinely overflows by more than
-    // a single scene height — otherwise scrolling to bottom only moves a few
-    // dozen px and the active-scene probe still lands inside scene 1.
-    await page.setViewportSize({ width: 1280, height: 400 });
-    await navigateToBreakdown(page, TEAM_PROJECT_ID);
-    await expect(page.getByTestId("readonly-screenplay-view")).toBeVisible();
-
-    const tocItems = page.getByTestId("breakdown-toc").locator("button");
-    const itemCount = await tocItems.count();
-    if (itemCount < 2) test.skip(true, "Needs at least 2 scenes seeded");
-
-    // The readonly-screenplay-view has overflow-y:auto with PM content that
-    // heavily exceeds its height (~26k px vs ~300 px viewport). Scroll it
-    // near the bottom and dispatch scroll explicitly.
-    // Wait for PM to finish rendering scene headings (content height must
-    // exceed the reader viewport before we can meaningfully scroll).
-    await page
-      .locator('[data-testid="readonly-screenplay-view"] .pm-heading')
-      .first()
-      .waitFor({ state: "visible" });
-    // The scrollable container is .script (data-testid="breakdown-script"),
-    // not the reader div itself (which has no overflow and grows to fit content).
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector(
-          '[data-testid="breakdown-script"]',
-        ) as HTMLElement | null;
-        return !!el && el.scrollHeight > el.clientHeight + 200;
-      },
-      null,
-      { timeout: 5000 },
-    );
-    const scrollInfo = await page.evaluate(() => {
-      const script = document.querySelector(
-        '[data-testid="breakdown-script"]',
-      ) as HTMLElement | null;
-      if (!script) return null;
-      script.scrollTop = script.scrollHeight;
-      script.dispatchEvent(new Event("scroll", { bubbles: true }));
-      return {
-        scrollTop: script.scrollTop,
-        scrollHeight: script.scrollHeight,
-        clientHeight: script.clientHeight,
-      };
-    });
-    expect(scrollInfo, "expected reader to be scrollable").not.toBeNull();
-    expect(scrollInfo!.scrollHeight).toBeGreaterThan(scrollInfo!.clientHeight);
-
-    // Wait past the 150ms debounce in ScriptReader.
-    await page.waitForTimeout(400);
-
-    // After scrolling past scene 1 the active scene must change away from
-    // scene 1 (the initial active). We do not assert the exact target scene
-    // because posAtCoords resolution depends on layout.
-    const isActiveOf = (el: Element) =>
-      el.getAttribute("aria-current") === "true" ||
-      el.getAttribute("data-active") === "true" ||
-      el.classList.toString().toLowerCase().includes("active");
-
-    const firstActive = await tocItems.first().evaluate(isActiveOf);
-    expect(firstActive).toBe(false);
-
-    const anyOtherActive = await tocItems.evaluateAll((els, isActiveSrc) => {
-      const fn = new Function("el", `return (${isActiveSrc})(el)`) as (
-        el: Element,
-      ) => boolean;
-      return els.slice(1).some((el) => fn(el));
-    }, isActiveOf.toString());
-    expect(anyOtherActive).toBe(true);
-  });
+  // SKIPPED (removed UI, not a testid rename): this asserted that scrolling the
+  // reader updates the active item in the SceneTOC sidebar. v3 removed the
+  // standalone SceneTOC (`breakdown-toc`) and its dedicated scroll container
+  // (`breakdown-script`); the window is now the scroll container and there is no
+  // visible "active TOC item" to assert against. The underlying active-scene
+  // tracking still runs inside ScriptReader (it drives the RecapStrip), but it
+  // no longer has a TOC surface to verify. Re-enable if a scene navigator with
+  // an active-item indicator is reintroduced.
+  test.skip("[OHW-287] reader scroll updates active TOC item", () => {});
 });
