@@ -1123,6 +1123,7 @@ WORKFLOW:
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto in modo [X]" → propose_soggetto_v2({ instruction: "...", label: "v2 [hint]" })
 - "dato il soggetto fammi la scaletta" / "genera la scaletta dal soggetto" → propose_scaletta_from_soggetto({ target_scene_count? })
+- "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
 
 ❌ SBAGLIATO:
 "Ora ti scrivo la logline: …"
@@ -1134,7 +1135,7 @@ WORKFLOW:
 [propose_logline_from_screenplay({ instruction: "più commerciale" })]
 "Ho generato una logline draft per il progetto. Vai sulla pagina logline per accettarla o scartarla dal banner sopra l'editor."
 
-REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti e quattro i tool sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
+REGOLA FORTE: se il documento attivo è VUOTO o l'utente chiede "scrivi/genera/crea il [documento]", DEVI chiamare il tool propose_*. Mai scrivere il documento intero nel chat. Sei attualmente sul documento ${label}. Tutti i tool di generazione sono comunque disponibili: se l'utente chiede un documento diverso, eseguilo lo stesso e indica nel messaggio finale dove vedere la draft.`;
 };
 
 const buildBreakdownToolsGuidance = (_page: PageContext["page"]): string => {
@@ -1663,6 +1664,7 @@ const DOCUMENT_GEN_TOOLS = new Set<string>([
   "propose_soggetto_v2",
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
+  "propose_treatment_from_narrative",
 ]);
 
 // Pages on which the intent classifier runs (it is a no-op elsewhere): the

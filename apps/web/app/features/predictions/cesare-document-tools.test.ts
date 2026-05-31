@@ -1,7 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { DocumentTypes } from "@oh-writers/domain";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
+import { documents, screenplays } from "@oh-writers/db/schema";
+import type { Db } from "~/server/db";
 import {
   buildDraftLabel,
+  executeDocumentGenTool,
   formatUpstreamSource,
   isDocumentGenToolName,
   parseScalettaList,
@@ -214,6 +217,9 @@ describe("isDocumentGenToolName", () => {
     );
     expect(isDocumentGenToolName("propose_soggetto_v2")).toBe(true);
     expect(isDocumentGenToolName("propose_scaletta_from_soggetto")).toBe(true);
+    expect(isDocumentGenToolName("propose_treatment_from_narrative")).toBe(
+      true,
+    );
   });
 
   it("rejects unknown tool names", () => {
@@ -262,5 +268,165 @@ describe("formatUpstreamSource (Bug #3 — derive from upstream narrative)", () 
     ]);
     expect(out.text).toBe("");
     expect(out.label).toBe("");
+  });
+});
+
+// ─── propose_treatment_from_narrative executor (F-A2 audit fix) ───────────────
+//
+// A minimal Drizzle-shaped fake that serves the exact queries the treatment
+// generator + applyVersionLive issue, dispatched by TABLE identity. It lets the
+// executor run end-to-end without Postgres so we can assert: (a) the treatment
+// derives from the upstream narrative (scaletta/sinossi/soggetto), (b) on
+// success the tool_result payload carries the live-applied marker fields the
+// `ohw:doc-applied` emitter reads, and (c) on a genuinely empty upstream the
+// tool fails — no fabricated success.
+
+interface TreatmentMockState {
+  /** Live content per document type (empty string ⇒ absent). */
+  readonly contentByType: Partial<Record<DocumentType, string>>;
+  readonly screenplay: string;
+}
+
+const makeTreatmentMockDb = (state: TreatmentMockState): Db => {
+  // documents row id per type, so loadDocumentForType resolves a row with a
+  // createdBy and the inner version select can be skipped (currentVersionId null
+  // means content comes straight from the documents row).
+  const docRow = (type: DocumentType) => ({
+    id: `doc-${type}`,
+    content: state.contentByType[type] ?? "",
+    currentVersionId: null,
+    createdBy: "owner-1",
+  });
+
+  // The query builder is intentionally permissive: every terminal (`limit`,
+  // awaiting `where`, `returning`) resolves rows derived from the table + the
+  // requested columns. `tableForType` is inferred from the `sql` filter the
+  // loader passes, so we key resolution on a per-select "current type" captured
+  // from the select columns instead — simpler: documents selects always carry
+  // `createdBy`, version selects carry only `content`.
+  let pendingDocType: DocumentType | null = null;
+
+  const select = (columns: Record<string, unknown>) => ({
+    from: (table: unknown) => {
+      const resolve = (): unknown[] => {
+        if (table === screenplays) return [{ content: state.screenplay }];
+        if (table === documents && pendingDocType) {
+          return [docRow(pendingDocType)];
+        }
+        // documentVersions content select / max(number) select
+        if ("max" in columns) return [{ max: 0 }];
+        return [];
+      };
+      const whereResult = {
+        then: (r: (rows: unknown[]) => void) => r(resolve()),
+        limit: () => Promise.resolve(resolve()),
+      };
+      return {
+        where: (filter: unknown) => {
+          // loadDocumentForType passes a `sql` filter that stringifies the type;
+          // capture which document type this select targets so `resolve()`
+          // returns the right row.
+          const text = String(
+            (filter as { queryChunks?: unknown[] })?.queryChunks ?? filter,
+          );
+          pendingDocType =
+            (
+              [
+                "logline",
+                "soggetto",
+                "synopsis",
+                "outline",
+                "treatment",
+              ] as DocumentType[]
+            ).find((t) => text.includes(t)) ?? pendingDocType;
+          return whereResult;
+        },
+      };
+    },
+  });
+
+  // applyVersionLive runs inside db.transaction; the tx reuses the same select +
+  // supports insert(...).values(...).returning(...) and update(...).set(...).where().
+  const insert = () => ({
+    values: () => ({
+      returning: () => Promise.resolve([{ id: "version-new" }]),
+    }),
+  });
+  const update = () => ({
+    set: () => ({ where: () => Promise.resolve() }),
+  });
+
+  const db = {
+    select,
+    insert,
+    update,
+    transaction: async (fn: (tx: Db) => Promise<unknown>) => fn(db),
+  } as unknown as Db;
+  return db;
+};
+
+const block = (input: Record<string, unknown> = {}) => ({
+  type: "tool_use" as const,
+  id: "tu-1",
+  name: "propose_treatment_from_narrative",
+  input,
+});
+
+describe("executeDocumentGenTool — propose_treatment_from_narrative (F-A2)", () => {
+  beforeEach(() => {
+    process.env["MOCK_AI"] = "true";
+  });
+  afterEach(() => {
+    delete process.env["MOCK_AI"];
+  });
+
+  it("derives the treatment from the upstream narrative and applies it live", async () => {
+    const db = makeTreatmentMockDb({
+      contentByType: {
+        treatment: "",
+        outline: '{"acts":[{"title":"Atto unico"}]}',
+        synopsis: "Una sinossi di prova.",
+        soggetto: "Un soggetto di prova.",
+        logline: "Una logline di prova.",
+      },
+      screenplay: "",
+    });
+
+    const result = await executeDocumentGenTool(
+      block(),
+      db,
+      "project-1",
+      "owner-1",
+    );
+    expect(result.isOk()).toBe(true);
+    const payload = JSON.parse(result._unsafeUnwrap().content) as Record<
+      string,
+      unknown
+    >;
+    // The success marker the `ohw:doc-applied` emitter reads: applied live, the
+    // treatment entity, and a real version id.
+    expect(payload["applied_live"]).toBe(true);
+    expect(payload["document_type"]).toBe("treatment");
+    expect(payload["version_id"]).toBe("version-new");
+    expect(payload["error"]).toBeUndefined();
+  });
+
+  it("fails (no fabricated success) when there is nothing upstream to build from", async () => {
+    const db = makeTreatmentMockDb({
+      contentByType: { treatment: "" },
+      screenplay: "",
+    });
+
+    const result = await executeDocumentGenTool(
+      block(),
+      db,
+      "project-1",
+      "owner-1",
+    );
+    // The generator fails loudly on the err channel — it does NOT produce a
+    // success tool_result, so the `ohw:doc-applied` marker is never emitted and
+    // the honest card never claims a change happened.
+    expect(result.isErr()).toBe(true);
+    expect(result._unsafeUnwrapErr().message).toMatch(/materiale|trattamento/i);
   });
 });

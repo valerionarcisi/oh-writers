@@ -23,7 +23,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     description:
       "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
       "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
-      "L'utente può ripristinare con Annulla. Usa questo tool SOLO quando l'utente chiede esplicitamente " +
+      "L'utente può ripristinare la versione precedente dal pannello Versioni. Usa questo tool SOLO quando l'utente chiede esplicitamente " +
       "di derivare/estrarre la logline DALLA sceneggiatura (es. 'genera la logline dalla sceneggiatura'). " +
       "Per scrivere una logline da un'istruzione libera o per modificare quella esistente usa invece write_logline.",
     input_schema: {
@@ -42,7 +42,7 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
     description:
       "Scrive o modifica la logline del progetto (max 200 caratteri) da un'istruzione in linguaggio naturale, " +
       "SENZA bisogno della sceneggiatura. Applica live la nuova logline al documento e crea automaticamente una versione " +
-      "(l'utente può ripristinare con ↩ Annulla). Usa questo tool quando l'utente: " +
+      "(l'utente può ripristinare la versione precedente dal pannello Versioni). Usa questo tool quando l'utente: " +
       "(a) chiede di SCRIVERE una logline da una premessa ('scrivimi una logline su un detective che…'), oppure " +
       "(b) chiede di MODIFICARE la logline esistente ('rendila più corta', 'più tesa', 'cambia il protagonista'). " +
       "Disponibile da qualunque pagina.",
@@ -117,6 +117,24 @@ export const CESARE_DOCUMENT_GEN_TOOLS = [
           type: "integer",
           description:
             "Numero approssimativo di scene desiderate (default 40).",
+        },
+      },
+    },
+  },
+  {
+    name: "propose_treatment_from_narrative",
+    description:
+      "Scrive il TRATTAMENTO del film derivandolo dal materiale narrativo a monte (scaletta, " +
+      "sinossi, soggetto, logline). Applica live il nuovo trattamento al documento e crea automaticamente " +
+      "una versione. Usa quando l'utente chiede 'scrivi il trattamento', 'genera il trattamento dalla scaletta' " +
+      "o simile. Se il trattamento esiste già lo riscrive seguendo l'istruzione.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        instruction: {
+          type: "string",
+          description:
+            "Istruzione opzionale per orientare tono/struttura del trattamento (es. 'più dettagliato sull'Atto II', 'tono cupo').",
         },
       },
     },
@@ -380,6 +398,12 @@ const UPSTREAM_SOURCES: Partial<Record<DocumentType, readonly DocumentType[]>> =
   {
     soggetto: [DocumentTypes.LOGLINE],
     synopsis: [DocumentTypes.SOGGETTO, DocumentTypes.LOGLINE],
+    treatment: [
+      DocumentTypes.OUTLINE,
+      DocumentTypes.SYNOPSIS,
+      DocumentTypes.SOGGETTO,
+      DocumentTypes.LOGLINE,
+    ],
   };
 
 const docTypeLabelUpper = (type: DocumentType): string =>
@@ -553,6 +577,16 @@ REGOLE:
 - Italiano, headings in maiuscolo, descrizioni concise.
 - Nessun preambolo, nessuna chiusura, solo la lista numerata.`;
 
+const TREATMENT_SYSTEM = `Sei Cesare, editor narrativo italiano. Stai scrivendo il TRATTAMENTO di un film a partire dal materiale narrativo a monte (scaletta, sinossi, soggetto, logline).
+
+REGOLE:
+- Prosa narrativa al presente, italiano, in scene/sequenze nell'ordine della storia.
+- Racconta l'azione visibile scena per scena, senza dialoghi formattati.
+- Mantieni protagonista, antagonista, conflitto e finale coerenti col materiale a monte.
+- Paragrafi separati da riga vuota; nessun elenco numerato, nessun heading di scena tecnico.
+- NIENTE titoli, NIENTE meta-commenti, NIENTE preamboli.
+- Output: SOLO il testo del trattamento.`;
+
 const MOCK_OUTPUTS: Record<string, string> = {
   "cesare.proposeLogline":
     "Un giovane regista torna nel paese d'origine per girare il film che lo ossessiona da anni, ma scopre che il suo passato non vuole essere raccontato.",
@@ -580,6 +614,13 @@ Il film finito è diverso da quello immaginato. Marco lo proietta in piazza, dav
 8. INT. SET - SCENA SETTE - NOTTE — La scena chiave. Marco improvvisa.
 9. EXT. PIAZZA - NOTTE — Proiezione finale. Il paese guarda.
 10. INT. CASA DI MARCO - ALBA — Marco scrive una lettera alla madre.`,
+  "cesare.proposeTreatment": `Marco torna a Falerone una notte di fine estate. Nella casa dell'infanzia rilegge il copione del film che vuole girare su sua madre, e gli appunti ai margini lo riportano a un dolore mai chiuso.
+
+La mattina dopo la troupe arriva in una piazza semivuota. Il paese osserva la macchina da presa con diffidenza: nessuno qui vuole essere filmato. Marco riconosce un volto della sua infanzia al bar del corso, e capisce che ogni inquadratura riaprirà una ferita collettiva.
+
+Sul set, Tea — l'attrice scelta per interpretare la madre — non rispetta la battuta. Lo costringe a riscrivere ogni scena prima di girarla. Marco resiste, poi cede: il film che stava immaginando non è quello che la verità gli chiede di girare.
+
+La notte della scena chiave, Marco improvvisa. Davanti alla troupe e a un paese che gli aveva chiesto di tacere, proietta in piazza la versione che Tea gli ha permesso di trovare. All'alba scrive una lettera alla madre.`,
 };
 
 // Monotonic counter that keeps each MOCK_AI document generation distinct, so the
@@ -968,6 +1009,80 @@ const handleProposeScalettaFromSoggetto = (
       );
   });
 
+/**
+ * Writes (or rewrites) the treatment from the upstream NARRATIVE chain
+ * (scaletta → sinossi → soggetto → logline, nearest-first), with the screenplay
+ * as a final fallback. This is the F-A2 fix: the "Scrivi il trattamento dalla
+ * scaletta" next-step chip used to dead-end because no treatment generator
+ * existed. Like the other generators it auto-versions before applying live and
+ * fails loudly when there is genuinely nothing upstream to build from, so the
+ * honest card never reports a fabricated success.
+ */
+const handleProposeTreatment = (
+  input: ProposeInput,
+  db: Db,
+  projectId: string,
+  userIdFallback: string | null,
+): ResultAsync<CreatedDraft, CesareError> =>
+  ResultAsync.combine([
+    loadDocumentForType(db, projectId, DocumentTypes.TREATMENT),
+    loadUpstreamNarrative(db, projectId, DocumentTypes.TREATMENT),
+  ]).andThen(([doc, upstream]) => {
+    if (!doc) {
+      return errAsync(
+        new CesareError("Documento trattamento non trovato per il progetto."),
+      );
+    }
+    if (upstream.text.length === 0) {
+      return errAsync(
+        new CesareError(
+          "Non c'è ancora materiale da cui scrivere il trattamento: scrivi prima la scaletta, la sinossi o il soggetto (o aggiungi del testo alla sceneggiatura).",
+        ),
+      );
+    }
+    const existing = doc.content.trim();
+    const instructionLine = input.instruction
+      ? `Istruzione: ${input.instruction}\n\n`
+      : "";
+    const existingBlock =
+      existing.length > 0
+        ? `\n\nTrattamento attuale (riscrivilo seguendo l'istruzione, NON ritornarlo identico):\n---\n${existing.slice(0, 18_000)}\n---`
+        : "";
+    const user = `${instructionLine}Materiale a monte:\n${upstream.text}${existingBlock}`;
+    return runGeneration(
+      TREATMENT_SYSTEM,
+      user,
+      3000,
+      "cesare.proposeTreatment",
+    )
+      .map((s) => s.trim())
+      .andThen((treatment) => {
+        if (treatment.length === 0) {
+          return errAsync(
+            new CesareError(
+              "Il modello ha restituito un trattamento vuoto. Riformula l'istruzione.",
+            ),
+          );
+        }
+        const creator = doc.ownerId ?? userIdFallback;
+        if (!creator) {
+          return errAsync(
+            new CesareError(
+              "Impossibile determinare l'autore della draft: documento senza createdBy.",
+            ),
+          );
+        }
+        return applyVersionLive(
+          db,
+          doc.id,
+          DocumentTypes.TREATMENT,
+          creator,
+          treatment,
+          buildDraftLabel(DocumentTypes.TREATMENT, input.instruction ?? null),
+        );
+      });
+  });
+
 // ─── Public executor ──────────────────────────────────────────────────────────
 
 const successResult = (id: string, payload: unknown): ToolResult => ({
@@ -988,7 +1103,7 @@ const draftPayload = (draft: CreatedDraft) => ({
   // diff for "Mostra modifiche" on document-gen edits (Spec 47b FIX 4).
   diff_segments: draft.diffSegments,
   diff_label: draft.label,
-  toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Usa ↩ Annulla per ripristinare.`,
+  toast: `✦ Cesare ha aggiornato ${docTypeLabel(draft.documentType)} — il documento è aggiornato. Apri il pannello Versioni per ripristinare la versione precedente.`,
 });
 
 export const executeDocumentGenTool = (
@@ -1026,6 +1141,11 @@ export const executeDocumentGenTool = (
       userIdFallback,
     ).map((draft) => successResult(block.id, draftPayload(draft)));
   }
+  if (block.name === "propose_treatment_from_narrative") {
+    return handleProposeTreatment(input, db, projectId, userIdFallback).map(
+      (draft) => successResult(block.id, draftPayload(draft)),
+    );
+  }
   return okAsync(
     successResult(block.id, {
       ok: false,
@@ -1044,7 +1164,8 @@ export const isDocumentGenToolName = (name: string): boolean =>
   name === "write_logline" ||
   name === "propose_synopsis_from_screenplay" ||
   name === "propose_soggetto_v2" ||
-  name === "propose_scaletta_from_soggetto";
+  name === "propose_scaletta_from_soggetto" ||
+  name === "propose_treatment_from_narrative";
 
 // ─── Document generation tools factory (AI SDK v5 format) ────────────────────
 
@@ -1057,7 +1178,7 @@ export const createDocumentGenTools = (
     description:
       "Estrae una logline (max 200 caratteri) DALLA SCENEGGIATURA esistente del progetto. " +
       "Applica live una nuova logline al documento (si aggiorna nell'editor) e crea automaticamente una versione. " +
-      "L'utente può ripristinare con Annulla. Usa SOLO quando l'utente chiede di derivare la logline DALLA sceneggiatura. " +
+      "L'utente può ripristinare la versione precedente dal pannello Versioni. Usa SOLO quando l'utente chiede di derivare la logline DALLA sceneggiatura. " +
       "Per scrivere da un'istruzione libera o modificare l'esistente usa write_logline.",
     inputSchema: z.object({
       instruction: z
@@ -1081,7 +1202,7 @@ export const createDocumentGenTools = (
   write_logline: tool({
     description:
       "Scrive o modifica la logline del progetto (max 200 caratteri) da un'istruzione in linguaggio naturale, " +
-      "senza bisogno della sceneggiatura. Applica live al documento e crea automaticamente una versione (↩ Annulla per ripristinare). " +
+      "senza bisogno della sceneggiatura. Applica live al documento e crea automaticamente una versione (ripristinabile dal pannello Versioni). " +
       "Usa quando l'utente chiede di SCRIVERE una logline da una premessa o di MODIFICARE quella esistente. Disponibile da qualunque pagina.",
     inputSchema: z.object({
       instruction: z
@@ -1173,6 +1294,30 @@ export const createDocumentGenTools = (
     }),
     execute: async (input, _opts) => {
       const result = await handleProposeScalettaFromSoggetto(
+        input as ProposeInput,
+        db,
+        projectId,
+        userIdFallback,
+      );
+      if (result.isErr()) return { error: result.error.message };
+      return draftPayload(result.value);
+    },
+  }),
+  propose_treatment_from_narrative: tool({
+    description:
+      "Scrive il trattamento del film derivandolo dal materiale narrativo a monte (scaletta, sinossi, soggetto, logline). " +
+      "Applica live il nuovo trattamento al documento e crea automaticamente una versione. Usa quando l'utente chiede " +
+      "'scrivi il trattamento' o 'genera il trattamento dalla scaletta'. Se il trattamento esiste già lo riscrive seguendo l'istruzione.",
+    inputSchema: z.object({
+      instruction: z
+        .string()
+        .optional()
+        .describe(
+          "Istruzione opzionale per orientare tono/struttura del trattamento (es. 'più dettagliato sull'Atto II', 'tono cupo').",
+        ),
+    }),
+    execute: async (input, _opts) => {
+      const result = await handleProposeTreatment(
         input as ProposeInput,
         db,
         projectId,

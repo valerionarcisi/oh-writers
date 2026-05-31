@@ -66,6 +66,34 @@ describe("extractSideChannelMarkers — honest success for write tools", () => {
     );
     expect(markers).toEqual([]);
   });
+
+  it("emits a doc-applied marker for the treatment generator (F-A2)", () => {
+    // propose_treatment_from_narrative applies LIVE + auto-versions, so it must
+    // emit the `ohw:doc-applied` marker the honest card reads — exactly like the
+    // other document generators.
+    const markers = markersFor(
+      "propose_treatment_from_narrative",
+      JSON.stringify({
+        ok: true,
+        applied_live: true,
+        document_type: "treatment",
+        version_id: "v-1",
+        previous_version_id: null,
+      }),
+    );
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toContain("ohw:doc-applied");
+    expect(markers[0]).toContain('"document_type":"treatment"');
+    expect(markers[0]).toContain('"version_id":"v-1"');
+  });
+
+  it("does NOT emit a doc-applied marker when the treatment generator fails", () => {
+    const markers = markersFor(
+      "propose_treatment_from_narrative",
+      JSON.stringify({ error: "Non c'è ancora materiale da cui scrivere" }),
+    );
+    expect(markers).toEqual([]);
+  });
 });
 
 describe("parseHeading", () => {

@@ -41,6 +41,7 @@ export type IntentType =
   | "write_soggetto"
   | "write_synopsis"
   | "write_outline"
+  | "write_treatment"
   // Generic
   | "question"
   | "comment";
@@ -67,6 +68,7 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   write_soggetto: "propose_soggetto_v2",
   write_synopsis: "propose_synopsis_from_screenplay",
   write_outline: "propose_scaletta_from_soggetto",
+  write_treatment: "propose_treatment_from_narrative",
 };
 
 const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) sulla pagina "screenplay". Devi capire SE l'utente sta chiedendo una mutazione e DI CHE TIPO.
@@ -124,7 +126,7 @@ const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. 
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "question" | "comment",
+  "type": "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 
@@ -141,6 +143,9 @@ Definizioni dei type:
 - write_outline: scrivere o generare la scaletta (lista di scene) dal soggetto. Include:
     "fammi la scaletta", "genera la scaletta dal soggetto", "dividi la storia in scene",
     "dammi la lista delle scene".
+- write_treatment: scrivere o generare il trattamento dal materiale a monte (scaletta, sinossi, soggetto). Include:
+    "scrivi il trattamento", "genera il trattamento dalla scaletta", "fammi il trattamento",
+    "trattamento a partire dalla scaletta".
 - question: domanda informativa che NON richiede di scrivere un documento.
     "di cosa parla la storia?", "chi è il protagonista?", "che ne pensi?".
 - comment: osservazione o feedback senza richiesta di scrittura.
@@ -153,6 +158,7 @@ Esempi:
 "genera il soggetto dalla logline" → {"type":"write_soggetto","confidence":0.95}
 "fai un riassunto di cosa abbiamo scritto finora" → {"type":"write_synopsis","confidence":0.9}
 "fammi la scaletta dal soggetto" → {"type":"write_outline","confidence":0.95}
+"scrivi il trattamento dalla scaletta" → {"type":"write_treatment","confidence":0.95}
 "di cosa parla la storia?" → {"type":"question","confidence":0.95}
 "il soggetto non mi convince" → {"type":"comment","confidence":0.8}`;
 
@@ -187,6 +193,7 @@ const parseJsonResponse = (text: string): IntentResult | null => {
       "write_soggetto",
       "write_synopsis",
       "write_outline",
+      "write_treatment",
       "question",
       "comment",
     ];
