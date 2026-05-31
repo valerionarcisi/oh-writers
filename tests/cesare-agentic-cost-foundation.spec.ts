@@ -23,24 +23,28 @@ import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
 // version polls for `paragraph count >= 2` which immediately resolves on the
 // second turn (the user paragraph alone bumps the count past 2). Here we
 // count assistant bubbles directly — they grow by exactly one per Cesare
-// roundtrip. The transient LoadingIndicator also has the "bubbleAssistant"
-// class, so we filter it out via `:not([aria-busy="true"])`.
+// roundtrip.
 //
-// CSS module class names are hashed by Vite as `<original>_<hash>` (default
-// `generateScopedName`), so `[class*="bubbleAssistant"]` survives the hash.
-const ASSISTANT_BUBBLE = '[class*="bubbleAssistant"]:not([aria-busy="true"])';
+// We match the assistant markdown body, which is present in BOTH bubble
+// shapes: a plain reply (`bubbleAssistant` → `bubbleMarkdown`) and a
+// tool-using reply with a step trace (`assistantWithSteps` → `bubbleMarkdown`).
+// The transient LoadingIndicator renders a skeleton (no `bubbleMarkdown`), so
+// it is naturally excluded. CSS module class names are hashed by Vite as
+// `<original>_<hash>`, so `[class*="bubbleMarkdown"]` survives the hash.
+const ASSISTANT_BUBBLE = '[class*="bubbleMarkdown"]';
 
 async function sendAndWaitForReply(
   page: Page,
   prompt: string,
 ): Promise<string> {
-  // Use a DOM attribute selector, not `getByRole`. CesareSheet wraps its
-  // body in `aria-hidden={!isOpen}` during the open animation; on slow CI
-  // runners the accessibility-tree query races the transition and returns
-  // zero matches even when the messages are in the DOM.
-  const log = page.locator(
-    '[role="log"][aria-label="Conversazione con Cesare"]',
-  );
+  // Anchor on the conversation test-id, not the legacy
+  // `[role="log"][aria-label="Conversazione con Cesare"]` markup. That ARIA
+  // wrapper now lives only on the routed SessionConversationPage; the floating
+  // drawer renders `<div data-testid="cesare-conversation">` (see
+  // CesareConversation.tsx). A raw test-id query also dodges the aria-hidden
+  // race on the drawer's `role="complementary"` ancestor during the open
+  // transition.
+  const log = page.getByTestId("cesare-conversation");
   const before = await log.locator(ASSISTANT_BUBBLE).count();
   await sendCesareMessage(page, prompt);
   // 60s mirrors `waitForCesareReply` in tests/helpers/cesare.ts — the
@@ -91,9 +95,13 @@ test.describe("[Spec 29] Cesare cost foundation — regression guards", () => {
     // team project and the mock's follow-up turn cites a string from the
     // notes so we can assert end-to-end.
     await navigateToBreakdown(authenticatedPage, TEAM_PROJECT_ID);
-    await expect(authenticatedPage.getByTestId("scene-cost-panel")).toBeVisible(
-      { timeout: 20_000 },
-    );
+    // The breakdown v3 redesign (spec-44 WP-C) replaced the legacy
+    // SceneCostPanel with the RecapStrip (`recap-strip`) above the script
+    // reader. Its presence confirms the breakdown data for the auto-selected
+    // scene has loaded before we engage Cesare.
+    await expect(authenticatedPage.getByTestId("recap-strip")).toBeVisible({
+      timeout: 20_000,
+    });
 
     await openCesareSheet(authenticatedPage);
     const reply = await sendAndWaitForReply(
