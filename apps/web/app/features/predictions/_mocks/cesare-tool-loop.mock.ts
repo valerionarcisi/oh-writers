@@ -381,7 +381,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho modificato la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla.",
+        text: "Ho modificato la logline: l'ho applicata direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
         stop_reason: "end_turn",
       },
     ],
@@ -408,7 +408,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho scritto la logline: l'ho applicata direttamente al documento. Se non ti convince usa ↩ Annulla.",
+        text: "Ho scritto la logline: l'ho applicata direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
         stop_reason: "end_turn",
       },
     ],
@@ -429,7 +429,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho aggiornato la logline: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
+        text: "Ho aggiornato la logline: l'ho applicata direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
         stop_reason: "end_turn",
       },
     ],
@@ -449,7 +449,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho aggiornato la sinossi: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
+        text: "Ho aggiornato la sinossi: l'ho applicata direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
         stop_reason: "end_turn",
       },
     ],
@@ -473,7 +473,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho aggiornato il soggetto con una nuova versione v2: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
+        text: "Ho aggiornato il soggetto con una nuova versione v2: l'ho applicata direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
         stop_reason: "end_turn",
       },
     ],
@@ -503,7 +503,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho aggiornato soggetto e sinossi e li ho applicati direttamente ai documenti. Se non ti convincono usa Annulla.",
+        text: "Ho aggiornato soggetto e sinossi e li ho applicati direttamente ai documenti. Apri il pannello Versioni per ripristinare le versioni precedenti.",
         stop_reason: "end_turn",
       },
     ],
@@ -524,7 +524,31 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
         stop_reason: "tool_use",
       },
       {
-        text: "Ho aggiornato la scaletta dal soggetto: l'ho applicata direttamente al documento. Se non ti convince usa Annulla.",
+        text: "Ho aggiornato la scaletta dal soggetto: l'ho applicata direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
+        stop_reason: "end_turn",
+      },
+    ],
+  },
+
+  // Documents — propose_treatment_from_narrative (F-A2 audit fix).
+  // The "Scrivi il trattamento dalla scaletta" next-step chip seeds
+  // "Scrivi il trattamento a partire dalla scaletta…", and a free
+  // "genera il trattamento dalla scaletta" request also dispatches here.
+  {
+    match:
+      /scrivi il trattamento|genera il trattamento|fammi il trattamento|trattamento (a partire|dalla scaletta|dal soggetto)/i,
+    turns: [
+      {
+        tool_uses: [
+          {
+            name: "propose_treatment_from_narrative",
+            input: {},
+          },
+        ],
+        stop_reason: "tool_use",
+      },
+      {
+        text: "Ho scritto il trattamento dal materiale a monte: l'ho applicato direttamente al documento. Apri il pannello Versioni per ripristinare la versione precedente.",
         stop_reason: "end_turn",
       },
     ],

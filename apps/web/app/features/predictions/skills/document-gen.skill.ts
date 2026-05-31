@@ -20,12 +20,13 @@ import type { Skill, SkillBuildContext, ToolResult } from "./types";
 
 const buildDocumentGenGuidance = (): string =>
   `\n\nGENERAZIONE DOCUMENTI (cross-dominio, applica LIVE):
-Puoi generare o riscrivere un documento narrativo del progetto da qualunque pagina. Ogni tool risolve il documento bersaglio dal progetto, lo aggiorna live e crea automaticamente una versione (l'utente può ripristinare con "↩ Annulla").
+Puoi generare o riscrivere un documento narrativo del progetto da qualunque pagina. Ogni tool risolve il documento bersaglio dal progetto, lo aggiorna live e crea automaticamente una versione (l'utente può ripristinare la versione precedente dal pannello Versioni).
 - "scrivimi una logline su [premessa]" / "rendi la logline più corta/tesa" / "cambia il protagonista della logline" → write_logline({ instruction, mode? }) (scrive o modifica la logline da istruzione libera, senza sceneggiatura)
 - "genera la logline DALLA sceneggiatura" / "estrai la logline" → propose_logline_from_screenplay({ instruction? })
 - "scrivimi la sinossi" / "genera la sinossi" → propose_synopsis_from_screenplay({ instruction? })
 - "fammi un v2 del soggetto più [X]" / "riscrivi il soggetto" → propose_soggetto_v2({ instruction, label })
 - "dato il soggetto fammi la scaletta" → propose_scaletta_from_soggetto({ target_scene_count? })
+- "scrivi il trattamento" / "genera il trattamento dalla scaletta" → propose_treatment_from_narrative({ instruction? })
 Non scrivere mai il documento intero nel chat: usa SEMPRE il tool, anche se sei su un'altra pagina (es. stai sulla Sceneggiatura e l'utente chiede il Soggetto). Conferma in italiano che l'hai aggiornato live.`;
 
 // requiredData: [] — these tools read what they need (screenplay / soggetto)

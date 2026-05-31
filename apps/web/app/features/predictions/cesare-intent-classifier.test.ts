@@ -27,6 +27,7 @@ const DOC_TOOLS = new Set([
   "propose_soggetto_v2",
   "propose_synopsis_from_screenplay",
   "propose_scaletta_from_soggetto",
+  "propose_treatment_from_narrative",
 ]);
 
 const SCREENPLAY_TOOLS = new Set([
@@ -108,6 +109,20 @@ describe("classifyIntent — document generation intents (Bug #4)", () => {
       availableTools: DOC_TOOLS,
     });
     expect(result._unsafeUnwrap().suggestedTool).toBe("propose_soggetto_v2");
+  });
+
+  it("maps a treatment request to propose_treatment_from_narrative (F-A2)", async () => {
+    callHaikuMock.mockReturnValue(
+      okAsync(haikuJson('{"type":"write_treatment","confidence":0.95}')),
+    );
+    const result = await classifyIntent({
+      userMessage: "scrivi il trattamento dalla scaletta",
+      page: "treatment",
+      availableTools: DOC_TOOLS,
+    });
+    expect(result._unsafeUnwrap().suggestedTool).toBe(
+      "propose_treatment_from_narrative",
+    );
   });
 
   it("does NOT force a tool for a genuine chat question", async () => {
