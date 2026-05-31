@@ -145,10 +145,15 @@ const useLocalCesareChat = (
         return;
       }
 
+      // Cap to the most recent 20 turns: spec 51 persists messages, so a long
+      // session can exceed the server's `max(20)` on `conversationHistory`.
+      // Send only the latest 20 (newest context) so a long thread never fails
+      // Zod validation.
       const history = activeThread(stateRef.current)
         .filter((m) => m.id !== userMessageId && m.id !== assistantMessageId)
         .filter((m) => m.content.length > 0)
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: m.content }))
+        .slice(-20);
 
       const { projectId, ...pc } = pageContext;
       const streamInput: StreamCesareInput = {
