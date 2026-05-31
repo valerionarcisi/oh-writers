@@ -127,31 +127,29 @@ test("[OHW-104] Import PDF menu item opens the system file picker", async ({
   expect(chooser).toBeTruthy();
 });
 
-// ─── OHW-105  Versioni toggles inline panel (does not navigate) ──────────────
+// ─── OHW-105  Importa Fountain item opens the system file picker ─────────────
 
-test("[OHW-105] Versioni menu item toggles the inline panel", async ({
+test("[OHW-105] Importa Fountain menu item opens the system file picker", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
-  const urlBefore = page.url();
   await page.getByTestId("toolbar-menu-trigger").click();
-  await page.getByTestId("menu-item-versions").click();
-  await expect(page.getByTestId("versions-drawer")).toBeVisible();
-  expect(page.url()).toBe(urlBefore);
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByTestId("menu-item-import-fountain").click();
+  const chooser = await fileChooserPromise;
+  expect(chooser).toBeTruthy();
 });
 
-// ─── OHW-106  Placeholder items render as disabled ───────────────────────────
+// ─── OHW-106  Resequence is reachable and enabled ────────────────────────────
 
-test("[OHW-106] Export and Ricalcola render disabled with 'soon' marker", async ({
+test("[OHW-106] Ricalcola numerazione is rendered and enabled", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
   await page.getByTestId("toolbar-menu-trigger").click();
-  for (const id of ["menu-item-export-pdf", "menu-item-renumber"]) {
-    const item = page.getByTestId(id);
-    await expect(item).toBeDisabled();
-    await expect(item).toContainText(/soon/i);
-  }
+  const item = page.getByTestId("menu-item-renumber");
+  await expect(item).toBeVisible();
+  await expect(item).toBeEnabled();
 });
 
 // ─── OHW-FP11  Frontespizio is visible to owners ─────────────────────────────

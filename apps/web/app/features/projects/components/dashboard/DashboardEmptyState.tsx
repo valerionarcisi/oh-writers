@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
+import { DashboardImportFountainButton } from "./DashboardImportFountainButton";
 import styles from "./DashboardEmptyState.module.css";
 
 export function DashboardEmptyState() {
@@ -65,9 +66,7 @@ export function DashboardEmptyState() {
         >
           Crea il primo progetto
         </Button>
-        <Button variant="secondary" type="button" disabled>
-          Importa Fountain
-        </Button>
+        <DashboardImportFountainButton />
         <Button variant="ghost" type="button" disabled>
           Parti da template
         </Button>

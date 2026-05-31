@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
+import { DashboardImportFountainButton } from "./DashboardImportFountainButton";
 import styles from "./DashboardHero.module.css";
 
 interface HeroStats {
@@ -27,9 +28,7 @@ export function DashboardHero({ stats }: Props) {
         </div>
       </div>
       <div className={styles.actions}>
-        <Button variant="secondary" type="button" disabled>
-          Importa Fountain
-        </Button>
+        <DashboardImportFountainButton />
         <Button
           variant="primary"
           type="button"
