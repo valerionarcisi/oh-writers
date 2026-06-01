@@ -790,8 +790,8 @@ function AppShellInner({
     window.location.href = "/settings";
   }, []);
 
-  const paletteItems = useMemo<CommandPaletteItem[]>(
-    () => [
+  const paletteItems = useMemo<CommandPaletteItem[]>(() => {
+    const items: CommandPaletteItem[] = [
       {
         id: "nav:dashboard",
         label: "Vai alla Dashboard",
@@ -800,9 +800,47 @@ function AppShellInner({
         keywords: ["home", "progetti", "start"],
         onSelect: () => void router.navigate({ to: "/dashboard" }),
       },
-    ],
-    [router],
-  );
+    ];
+
+    // Section jumps are derived from the same nav source the rail renders,
+    // so the palette can never drift from the rail's section list.
+    if (projectId) {
+      const nav = buildRailNav({ projectId, currentSegment: activeSegment });
+      for (const section of [nav.sviluppo, nav.produzione]) {
+        for (const entry of section.items) {
+          items.push({
+            id: `nav:${entry.id}`,
+            label: `Vai a ${entry.label}`,
+            group: "Sezioni progetto",
+            icon: "file-text",
+            keywords: [entry.label.toLowerCase(), section.label.toLowerCase()],
+            onSelect: () => void router.navigate({ to: entry.href }),
+          });
+        }
+      }
+
+      items.push(
+        {
+          id: "cesare:open",
+          label: "Apri Cesare",
+          group: "Cesare",
+          icon: "comment",
+          keywords: ["assistente", "chat", "ai"],
+          onSelect: () => openCesare(),
+        },
+        {
+          id: "cesare:new-session",
+          label: "Nuova sessione Cesare",
+          group: "Cesare",
+          icon: "plus",
+          keywords: ["sessione", "session", "nuova", "chat"],
+          onSelect: () => onCesareSessionNew?.(),
+        },
+      );
+    }
+
+    return items;
+  }, [router, projectId, activeSegment, openCesare, onCesareSessionNew]);
 
   // ── Rail tools (search + new + switch + more) ────────────────
   const railTools = useMemo<RailToolItem[]>(

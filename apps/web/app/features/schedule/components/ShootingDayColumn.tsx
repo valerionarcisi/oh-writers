@@ -156,17 +156,11 @@ export function ShootingDayColumn({
             <DropdownMenu
               align="end"
               data-testid={`add-scene-${day.dayNumber}`}
-              trigger={
-                <button
-                  type="button"
-                  className={styles.actionBtn}
-                  title="Aggiungi scena alla giornata"
-                  aria-label="Aggiungi scena"
-                  disabled={unscheduledStrips.length === 0}
-                >
-                  <Plus size={12} strokeWidth={2} />
-                </button>
-              }
+              triggerClassName={styles.actionBtn}
+              triggerLabel="Aggiungi scena"
+              triggerTitle="Aggiungi scena alla giornata"
+              triggerDisabled={unscheduledStrips.length === 0}
+              trigger={<Plus size={12} strokeWidth={2} aria-hidden="true" />}
               items={
                 unscheduledStrips.length === 0
                   ? [
@@ -188,17 +182,11 @@ export function ShootingDayColumn({
             <DropdownMenu
               align="end"
               data-testid={`remove-scene-${day.dayNumber}`}
-              trigger={
-                <button
-                  type="button"
-                  className={styles.actionBtn}
-                  title="Rimuovi scena dalla giornata"
-                  aria-label="Rimuovi scena"
-                  disabled={day.strips.length === 0}
-                >
-                  <Minus size={12} strokeWidth={2} />
-                </button>
-              }
+              triggerClassName={styles.actionBtn}
+              triggerLabel="Rimuovi scena"
+              triggerTitle="Rimuovi scena dalla giornata"
+              triggerDisabled={day.strips.length === 0}
+              trigger={<Minus size={12} strokeWidth={2} aria-hidden="true" />}
               items={
                 day.strips.length === 0
                   ? [
