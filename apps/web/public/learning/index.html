@@ -47,6 +47,19 @@
       }
       .topnav a.navlink:hover { color: var(--text); background: var(--surface-2); }
       .topnav a.navlink.active { color: var(--accent); background: rgba(76,196,176,0.10); }
+      @media (max-width: 720px) {
+        .topnav .inner {
+          gap: 10px;
+          padding: 10px 14px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .topnav .inner::-webkit-scrollbar { display: none; }
+        .topnav .spacer { display: none; }
+        .topnav .brand { flex: 0 0 auto; }
+        .topnav a.navlink { flex: 0 0 auto; white-space: nowrap; padding: 6px 8px; }
+      }
       .progress {
         position: fixed; top: 0; left: 0; right: 0; height: 3px;
         z-index: 60; pointer-events: none;
