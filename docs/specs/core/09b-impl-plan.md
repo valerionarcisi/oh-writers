@@ -1,5 +1,26 @@
 # Spec 09b — Yjs Real-time Collaboration (Phase 1)
 
+> **As-built deviations (2026-06-01)** — this plan is the design intent; where the
+> implementation diverged it is recorded here (the rest of the doc is kept for
+> rationale):
+>
+> 1. **Auth validation (supersedes D5 line 51).** `auth-bridge.ts` does NOT call
+>    `auth.api.getSession` — a cross-origin WebSocket upgrade can't carry the signed
+>    session cookie that API expects. Instead the client passes its raw session token
+>    (`?token=`) and the ws-server validates it directly: **Redis first** (Better Auth
+>    `secondaryStorage`, keyed by token, where active sessions live), **DB `sessions`
+>    fallback** second. The shared `@oh-writers/auth` package (Redis secondaryStorage)
+>    is still used by the **web app**; the ws-server does not depend on it.
+> 2. **Test coverage (supersedes line 102).** The ws-server integration suite
+>    (`apps/ws-server/src/ws-integration.test.ts`) boots a real ws-server child + raw
+>    `ws` clients and covers: editor accepted, invalid token → 4001, no access → 4003,
+>    unknown room → 4004, and viewer write → `WRITE_FORBIDDEN`. The two-editor relay,
+>    presence, and viewer read-only are covered by the Playwright E2E
+>    (`tests/realtime-collab.spec.ts`). The flush-on-disconnect/reconnect round-trip is
+>    verified manually (DB `yjs_state` non-null after edits); a dedicated
+>    `persistence.test.ts` is deferred to Phase 2.
+> 3. `ioredis` pinned `5.9.3` (lockfile actual), not `5.4.1`.
+
 ## Context
 
 Spec 09b (`docs/specs/core/09b-ws-server.md`) describes a Hono WebSocket server that

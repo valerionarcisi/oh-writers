@@ -1,6 +1,9 @@
 import type { IncomingMessage, Server as HttpServer } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
+
+// The `upgrade` handler receives the raw socket as a Duplex; we never write to
+// it directly (handleUpgrade owns it), the type is just for the listener arg.
 import { validateSession } from "./auth-bridge.js";
 import { parseRoomId, resolveRoomAccess } from "./room.js";
 import { getYWebsocketUtils } from "./persistence-binding.js";
@@ -28,23 +31,43 @@ export const attachWsServer = (server: HttpServer): void => {
   server.on(
     "upgrade",
     (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-      // Run the async auth/access gate, then either complete the upgrade or
-      // reject the raw socket with the right code.
+      // We always complete the WS handshake first, then close with a specific
+      // code on rejection. A pre-handshake socket.destroy() would only surface
+      // as an abnormal 1006 on the client — completing the upgrade lets us send
+      // a real close frame (4001/4003/4004) the client can act on.
       void (async () => {
         const roomId = roomIdFromUrl(req.url);
         const room = parseRoomId(roomId);
-        if (!room) return rejectSocket(socket, CLOSE_NOT_FOUND);
+        const session = room ? await validateSession(req) : null;
+        const access =
+          room && session ? await resolveRoomAccess(room, session.userId) : null;
 
-        const session = await validateSession(req);
-        if (!session) return rejectSocket(socket, CLOSE_UNAUTHORIZED);
-
-        const access = await resolveRoomAccess(room, session.userId);
-        if (access.isErr() || access.value === null) {
-          return rejectSocket(socket, CLOSE_FORBIDDEN);
+        let rejectCode: number | null = null;
+        let canWrite = false;
+        if (!room) {
+          rejectCode = CLOSE_NOT_FOUND;
+        } else if (!session) {
+          rejectCode = CLOSE_UNAUTHORIZED;
+        } else if (!access || access.isErr()) {
+          rejectCode = CLOSE_FORBIDDEN;
+        } else if (access.value.kind === "not-found") {
+          rejectCode = CLOSE_NOT_FOUND;
+        } else if (access.value.kind === "forbidden") {
+          rejectCode = CLOSE_FORBIDDEN;
+        } else {
+          canWrite = access.value.access.canWrite;
         }
 
-        const canWrite = access.value.canWrite;
         wss.handleUpgrade(req, socket, head, (conn) => {
+          if (rejectCode !== null) {
+            // Close with the application code only once the socket is OPEN, so
+            // the close frame is actually transmitted (closing during CONNECTING
+            // drops the frame and the client sees a bare 1006).
+            const closeWithCode = (): void => conn.close(rejectCode);
+            if (conn.readyState === conn.OPEN) closeWithCode();
+            else conn.once("open", closeWithCode);
+            return;
+          }
           void onConnection(conn, roomId, canWrite);
         });
       })();
@@ -87,16 +110,4 @@ const onConnection = async (
     conn,
     doc as unknown as Parameters<typeof attachViewerConnection>[1],
   );
-};
-
-const rejectSocket = (socket: Duplex, code: number): void => {
-  // We have not completed the WS handshake, so respond at the HTTP layer.
-  const reason =
-    code === CLOSE_UNAUTHORIZED
-      ? "401 Unauthorized"
-      : code === CLOSE_FORBIDDEN
-        ? "403 Forbidden"
-        : "404 Not Found";
-  socket.write(`HTTP/1.1 ${reason.slice(0, 3)} ${reason.slice(4)}\r\n\r\n`);
-  socket.destroy();
 };

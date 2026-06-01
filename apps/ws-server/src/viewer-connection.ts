@@ -56,13 +56,19 @@ export const attachViewerConnection = (conn: WebSocket, doc: SharedDoc): void =>
       case MESSAGE_SYNC: {
         const syncType = decoding.readVarUint(decoder);
         if (syncType === SYNC_STEP_1) {
-          // Allowed: the client asks for our state; reply with step 2.
+          // Allowed: the client sent its state vector and wants ours. Read the
+          // SV from the message and reply with the matching step 2 so the
+          // viewer's decoder gets a well-formed frame.
+          const stateVector = decoding.readVarUint8Array(decoder);
           encoding.writeVarUint(encoder, MESSAGE_SYNC);
-          // Re-emit a fresh step-1 reply path by writing step 2 from the doc.
-          syncProtocol.writeSyncStep2(encoder, doc);
+          syncProtocol.writeSyncStep2(encoder, doc, stateVector);
           send(encoding.toUint8Array(encoder));
-        } else if (syncType === SYNC_STEP_2 || syncType === SYNC_UPDATE) {
-          // Blocked: viewers cannot mutate the document.
+        } else if (syncType === SYNC_STEP_2) {
+          // The viewer's step-2 reply to our step-1 is part of the handshake,
+          // not an edit — it carries their (empty) state. Ignore it; do NOT
+          // apply it (that's the write block) and do NOT treat it as forbidden.
+        } else if (syncType === SYNC_UPDATE) {
+          // A genuine edit from the user — blocked for viewers.
           sendWriteForbidden();
         }
         break;

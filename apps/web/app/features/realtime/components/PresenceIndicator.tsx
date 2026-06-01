@@ -30,9 +30,10 @@ export function PresenceIndicator({ status, peers }: PresenceIndicatorProps) {
   }
 
   const online = peers.length + 1;
+  const label = online === 1 ? "1 persona online" : `${online} persone online`;
 
   return (
-    <div className={styles.root} aria-label={`${online} persone online`}>
+    <div className={styles.root} aria-label={label}>
       <div className={styles.avatars}>
         {peers.slice(0, 4).map((peer) => (
           <span

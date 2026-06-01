@@ -70,6 +70,17 @@ export interface RoomAccess {
 }
 
 /**
+ * Outcome of an access check. We distinguish "the entity does not exist"
+ * (→ 4004) from "it exists but you can't see it" (→ 4003) so the close code is
+ * meaningful, and never leak existence: a non-member of a real project still
+ * gets `forbidden`, only a genuinely missing row is `not-found`.
+ */
+export type RoomAccessOutcome =
+  | { kind: "ok"; access: RoomAccess }
+  | { kind: "not-found" }
+  | { kind: "forbidden" };
+
+/**
  * Resolve the user's effective role on the project that owns the room, reusing
  * the same predicates the web server functions use so the two can never drift.
  * `role` is null for a personal-owner (no team) — `canWrite`/`canView` already
@@ -78,18 +89,20 @@ export interface RoomAccess {
 export const resolveRoomAccess = (
   room: ParsedRoom,
   userId: string,
-): ResultAsync<RoomAccess | null, RoomAccessError> =>
+): ResultAsync<RoomAccessOutcome, RoomAccessError> =>
   projectIdForRoom(room).andThen((projectId) => {
     if (!projectId) {
-      return ResultAsync.fromSafePromise(Promise.resolve(null));
+      return ResultAsync.fromSafePromise(
+        Promise.resolve<RoomAccessOutcome>({ kind: "not-found" }),
+      );
     }
 
-    const load = async (): Promise<RoomAccess | null> => {
+    const load = async (): Promise<RoomAccessOutcome> => {
       const project = await db.query.projects.findFirst({
         where: eq(projects.id, projectId),
         columns: { ownerId: true, teamId: true },
       });
-      if (!project) return null;
+      if (!project) return { kind: "not-found" };
 
       const isPersonalOwner =
         project.teamId === null && project.ownerId === userId;
@@ -107,13 +120,17 @@ export const resolveRoomAccess = (
       }
 
       const ctx: ProjectAccessContext = { isPersonalOwner, teamRole };
-      if (!canViewProject(ctx)) return null;
+      if (!canViewProject(ctx)) return { kind: "forbidden" };
 
       return {
-        projectId,
-        role: teamRole,
-        canView: true,
-        canWrite: isPersonalOwner || teamRole === "owner" || teamRole === "editor",
+        kind: "ok",
+        access: {
+          projectId,
+          role: teamRole,
+          canView: true,
+          canWrite:
+            isPersonalOwner || teamRole === "owner" || teamRole === "editor",
+        },
       };
     };
 

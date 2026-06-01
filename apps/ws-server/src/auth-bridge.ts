@@ -15,9 +15,16 @@ const tokenFromRequest = (req: IncomingMessage): string | null => {
   return token && token.length > 0 ? token : null;
 };
 
-// Better Auth's secondaryStorage stores the live session in Redis keyed by the
-// session token. We read the same key so validation matches wherever the web
-// app wrote the session (Redis is authoritative for active sessions).
+// Deliberate deviation from Spec 09b D5 ("validate via the shared
+// auth.api.getSession"): `getSession` is built for an HTTP request carrying the
+// signed session cookie, which a cross-origin WebSocket upgrade cannot provide.
+// The client therefore hands us the raw session token (`?token=`), and we
+// validate it directly against the same stores Better Auth writes to —
+// Redis first (where active sessions live once secondaryStorage is enabled,
+// keyed by token), then the DB `sessions` table as a fallback. This keeps the
+// ws-server decoupled from Better Auth's request/cookie plumbing; the only
+// coupling is the secondaryStorage value shape, asserted by the integration
+// test (ws-integration.test.ts).
 const redisUrl = process.env["REDIS_URL"];
 const redis = redisUrl ? new Redis(redisUrl, { lazyConnect: true }) : null;
 redis?.on("error", () => undefined);

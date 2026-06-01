@@ -263,9 +263,6 @@ importers:
       '@hono/node-server':
         specifier: 1.19.9
         version: 1.19.9(hono@4.12.2)
-      '@oh-writers/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
       '@oh-writers/db':
         specifier: workspace:*
         version: link:../../packages/db
