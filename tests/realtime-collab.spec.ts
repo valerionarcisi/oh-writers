@@ -88,19 +88,30 @@ test.describe("[OHW-09b] realtime collaboration — live sync", () => {
     const bob = await signInPage(browser, COLLAB_EMAIL, COLLAB_PASSWORD);
 
     await alice.goto(SCREENPLAY_URL);
+    await expect(alice.locator("[data-pm-screenplay]")).toBeVisible({
+      timeout: 20_000,
+    });
     await bob.goto(SCREENPLAY_URL);
-    await expect(alice.locator("[data-pm-screenplay]")).toBeVisible();
-    await expect(bob.locator("[data-pm-screenplay]")).toBeVisible();
+    await expect(bob.locator("[data-pm-screenplay]")).toBeVisible({
+      timeout: 20_000,
+    });
 
-    // Both reach "2 online" once awareness propagates (poll — the count rises
-    // from 1 to 2 as the second peer's awareness arrives).
+    // Once the second peer's awareness propagates the count is >= 2. We assert
+    // >= 2 (not exactly 2) and read the dedicated count span — a shared dev
+    // ws-server can carry ghost awareness from prior runs, and the root element
+    // also contains avatar initials, so an exact substring match is brittle.
     await expect
       .poll(
-        async () =>
-          (await alice.locator("[aria-label*='online']").textContent()) ?? "",
+        async () => {
+          const text =
+            (await alice
+              .locator("[data-testid='presence-count']")
+              .textContent()) ?? "";
+          return Number(text.match(/(\d+)/)?.[1] ?? "0");
+        },
         { timeout: 15_000 },
       )
-      .toContain("2");
+      .toBeGreaterThanOrEqual(2);
 
     // Bob types a unique marker; Alice mirrors it (proves CRDT round-trip
     // through the nested scene schema). Unique per run so it doesn't collide
@@ -138,7 +149,9 @@ test.describe("[OHW-09b] realtime collaboration — live sync", () => {
       "viewerpassword123",
     );
     await viewer.goto(SCREENPLAY_URL);
-    await expect(viewer.locator("[data-pm-screenplay]")).toBeVisible();
+    await expect(viewer.locator("[data-pm-screenplay]")).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Viewer receives the live content…
     await expect

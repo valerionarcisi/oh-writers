@@ -46,7 +46,9 @@ export function PresenceIndicator({ status, peers }: PresenceIndicatorProps) {
           </span>
         ))}
       </div>
-      <span className={styles.count}>{online} online</span>
+      <span className={styles.count} data-testid="presence-count">
+        {online} online
+      </span>
     </div>
   );
 }
