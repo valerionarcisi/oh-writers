@@ -1667,11 +1667,25 @@ const DOCUMENT_GEN_TOOLS = new Set<string>([
   "propose_treatment_from_narrative",
 ]);
 
+// The screenplay page is ALSO the page a Cesare SESSION resolves to by default
+// (`deriveCesarePage` falls back to "screenplay" on /sessions/*). A session is the
+// primary surface for a Cesare-only writer, who freely asks for any document
+// there. So the classifier on the screenplay page must be able to force BOTH the
+// screenplay propose_* tools AND the document generators — universal dispatch
+// (spec 47b) already exposes the document generators on every page, so forcing one
+// is safe. The union keeps screenplay mutations working while making
+// free-language document requests from a session dispatch reliably.
+const SCREENPLAY_PAGE_CLASSIFIER_TOOLS = new Set<string>([
+  ...SCREENPLAY_PROPOSE_TOOLS,
+  ...DOCUMENT_GEN_TOOLS,
+]);
+
 // Pages on which the intent classifier runs (it is a no-op elsewhere): the
-// screenplay page (mutations) and the narrative document pages (generation).
+// screenplay page (screenplay mutations + document generation — sessions default
+// here) and the narrative document pages (generation).
 const CLASSIFIER_TOOLS_BY_PAGE: Readonly<Record<string, ReadonlySet<string>>> =
   {
-    screenplay: SCREENPLAY_PROPOSE_TOOLS,
+    screenplay: SCREENPLAY_PAGE_CLASSIFIER_TOOLS,
     soggetto: DOCUMENT_GEN_TOOLS,
     synopsis: DOCUMENT_GEN_TOOLS,
     outline: DOCUMENT_GEN_TOOLS,

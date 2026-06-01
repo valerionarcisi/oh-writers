@@ -52,7 +52,19 @@ export interface IntentResult {
   readonly suggestedTool?: string;
 }
 
-const CONFIDENCE_THRESHOLD = 0.6;
+// Clearly-actionable write/edit/mutation requests must dispatch reliably: a
+// writer phrases "scrivimi la scaletta" a hundred different ways and every one
+// of them should reach the right generator. We keep the gate at 0.55 — below
+// that the request is genuinely ambiguous and we let `tool_choice: "auto"`
+// decide (or Cesare asks a clarifying question). This is deliberately lower than
+// a "force a destructive op" threshold would be: the document generators and the
+// screenplay propose_* tools all auto-create a revertible version BEFORE applying
+// (Agentic Edit Pattern), so a borderline-but-wrong dispatch is cheap to undo,
+// while a borderline-but-missed dispatch silently breaks the persona's only
+// input channel. Questions/comments map to the `question`/`comment` intents,
+// which have NO tool in TOOL_BY_INTENT, so they always stay a chat answer
+// regardless of this threshold.
+const CONFIDENCE_THRESHOLD = 0.55;
 
 // Mapping from intent → tool the API must force. Only includes intents that
 // have a one-to-one mapping to a proper propose_*/write_* tool. Generic intents
@@ -71,15 +83,47 @@ const TOOL_BY_INTENT: Partial<Record<IntentType, string>> = {
   write_treatment: "propose_treatment_from_narrative",
 };
 
-const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) sulla pagina "screenplay". Devi capire SE l'utente sta chiedendo una mutazione e DI CHE TIPO.
+// Shared catalogue of the many Italian ways a writer phrases a WRITE / DERIVE /
+// EDIT request for a narrative document. Reused by both prompts so the screenplay
+// page (which, in a Cesare SESSION, is the page the shell defaults to — see
+// `deriveCesarePage`) and the document pages classify document requests with the
+// same breadth. Keeping it in one constant avoids the two prompts drifting apart.
+const DOCUMENT_INTENT_DEFINITIONS = `- write_logline: scrivere, generare o modificare la LOGLINE. Verbi/giri di frase: "scrivimi/scrivi/buttami giù/butta giù/fammi/abbozza/abbozzami/metti giù/mettimi giù/dammi/sviluppa/genera/generami/crea/preparami la logline", "una logline su/per/di…", oppure modifiche: "rendi la logline più tesa/corta/asciutta/incisiva", "accorcia la logline", "cambia il protagonista della logline", "riscrivi la logline".
+- write_soggetto: scrivere, generare, derivare o modificare il SOGGETTO. Frasi: "scrivimi/scrivi/buttami giù/fammi/abbozza/metti giù/dammi/sviluppa/genera/crea il soggetto", "fammi un v2 del soggetto", derivazioni: "genera il soggetto dalla logline", "dato lo spunto fammi il soggetto", modifiche: "rendi il soggetto più asciutto/corto/teso", "riscrivi il soggetto", "espandi il soggetto".
+- write_synopsis: scrivere, generare, derivare o RIASSUMERE la SINOSSI. Frasi: "scrivimi/scrivi/fammi/dammi/genera/buttami giù/abbozza la sinossi", derivazioni: "genera la sinossi dal soggetto", "dato il soggetto fammi la sinossi", riassunti: "fai un riassunto di cosa abbiamo scritto", "riassumi la storia", modifiche: "rendi la sinossi più commovente/asciutta", "accorcia la sinossi".
+- write_outline: scrivere, generare o derivare la SCALETTA (lista di scene/sequenze). Frasi: "fammi/scrivimi/dammi/genera/buttami giù/abbozza la scaletta", derivazioni: "genera la scaletta dal soggetto", "dato il soggetto fammi la scaletta", "dividi la storia in scene", "dammi la lista delle scene", modifiche: "espandi l'atto II della scaletta", "accorcia la scaletta".
+- write_treatment: scrivere, generare o derivare il TRATTAMENTO dal materiale a monte (scaletta, sinossi, soggetto). Frasi: "scrivi/scrivimi/fammi/dammi/genera/buttami giù/abbozza il trattamento", derivazioni: "genera il trattamento dalla scaletta", "trattamento a partire dalla scaletta/dal soggetto", modifiche: "espandi l'Atto II del trattamento", "rendi il trattamento più dettagliato".`;
+
+const DOCUMENT_INTENT_EXAMPLES = `"scrivimi una logline su un detective che non dorme" → {"type":"write_logline","confidence":0.95}
+"buttami giù una logline" → {"type":"write_logline","confidence":0.9}
+"rendi la logline più tesa" → {"type":"write_logline","confidence":0.9}
+"accorcia la logline" → {"type":"write_logline","confidence":0.88}
+"cambia il protagonista della logline" → {"type":"write_logline","confidence":0.9}
+"scrivi il soggetto" → {"type":"write_soggetto","confidence":0.92}
+"genera il soggetto dalla logline" → {"type":"write_soggetto","confidence":0.95}
+"fammi un v2 del soggetto più asciutto" → {"type":"write_soggetto","confidence":0.95}
+"sviluppa il soggetto" → {"type":"write_soggetto","confidence":0.85}
+"scrivimi la sinossi" → {"type":"write_synopsis","confidence":0.92}
+"genera la sinossi dal soggetto" → {"type":"write_synopsis","confidence":0.95}
+"fai un riassunto di cosa abbiamo scritto finora" → {"type":"write_synopsis","confidence":0.85}
+"rendi la sinossi più commovente" → {"type":"write_synopsis","confidence":0.88}
+"fammi la scaletta" → {"type":"write_outline","confidence":0.9}
+"dato il soggetto fammi la scaletta" → {"type":"write_outline","confidence":0.95}
+"dividi la storia in scene" → {"type":"write_outline","confidence":0.85}
+"espandi l'atto II" → {"type":"write_outline","confidence":0.7}
+"scrivi il trattamento" → {"type":"write_treatment","confidence":0.92}
+"genera il trattamento dalla scaletta" → {"type":"write_treatment","confidence":0.95}
+"buttami giù il trattamento" → {"type":"write_treatment","confidence":0.88}`;
+
+const SCREENPLAY_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg). La pagina di contesto è "screenplay", ma in una SESSIONE Cesare questa è anche la pagina di default: l'utente può chiederti di scrivere QUALSIASI documento narrativo (logline, soggetto, sinossi, scaletta, trattamento) oltre a mutare la sceneggiatura. Devi capire SE l'utente sta chiedendo un'azione (mutazione sceneggiatura O scrittura/derivazione/modifica di un documento) e DI CHE TIPO.
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
-  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "question" | "comment",
+  "type": "macro_rewrite" | "micro_edit" | "rewrite_one_scene" | "merge_scenes" | "delete_scene" | "rename" | "write_logline" | "write_soggetto" | "write_synopsis" | "write_outline" | "write_treatment" | "question" | "comment",
   "confidence": <number tra 0 e 1>
 }
 
-Definizioni dei type:
+Definizioni dei type — SCENEGGIATURA:
 - macro_rewrite: riscrittura ampia di un range di scene (>1) o intera sceneggiatura. Include:
     "scrivi v2", "fai una versione 2", "traduci tutto in inglese",
     "ambienta in un ristorante stellato", "tutto al femminile",
@@ -98,13 +142,22 @@ Definizioni dei type:
     "rendi più asciutta questa battuta".
 - rename: rinomina di personaggio o location attraverso tutta la sceneggiatura.
     "rinomina Marco in Luca", "chiama la location Bar invece di Pizzeria".
-- question: domanda informativa che NON richiede mutazione.
-    "come si chiama il protagonista?", "quante scene ci sono?",
-    "che pensi del finale?".
-- comment: osservazione, feedback, brainstorm senza richiesta mutativa esplicita.
-    "questa scena è troppo lunga", "non mi convince Tea", "sembra debole".
 
-REGOLA: in caso di ambiguità tra question/comment e una mutation, scegli question/comment con confidence ~0.5 — il loop poi userà "auto" e Cesare farà la domanda di chiarimento.
+Definizioni dei type — DOCUMENTI NARRATIVI (valgono anche da questa pagina):
+${DOCUMENT_INTENT_DEFINITIONS}
+
+Definizioni dei type — GENERICI (NESSUNA azione, resta in chat):
+- question: domanda informativa che NON richiede un'azione.
+    "come si chiama il protagonista?", "quante scene ci sono?",
+    "di cosa parla questo soggetto?", "il conflitto è chiaro?",
+    "che pensi del finale?", "secondo te funziona la scaletta?".
+- comment: osservazione, feedback, brainstorm senza richiesta esecutiva esplicita.
+    "questa scena è troppo lunga", "non mi convince Tea", "il soggetto sembra debole".
+
+REGOLE:
+1. Se l'utente chiede CHIARAMENTE di scrivere/generare/derivare/modificare un documento o di mutare la sceneggiatura, scegli il type d'azione con confidence ALTA (>=0.8). Un imperativo ("scrivi", "fammi", "genera", "buttami giù", "rendi", "accorcia", "cambia", "sviluppa", "espandi") rivolto a un'entità è un'AZIONE, non una domanda — anche senza punto interrogativo.
+2. Una vera DOMANDA su cosa esiste/se funziona ("di cosa parla…?", "è chiaro il conflitto?", "che ne pensi?") è SEMPRE question, anche se nomina un documento. Non forzare un'azione su una domanda.
+3. Solo in caso di reale ambiguità (non capisci se è azione o domanda) scegli question/comment con confidence ~0.5 — il loop userà "auto" e Cesare chiederà chiarimenti.
 
 Esempi:
 "traduci tutta la sceneggiatura in inglese" → {"type":"macro_rewrite","confidence":0.95}
@@ -114,7 +167,10 @@ Esempi:
 "in 5 atti" → {"type":"macro_rewrite","confidence":0.85}
 "rinomina Marco in Luca" → {"type":"rename","confidence":0.99}
 "cambia 'ciao' con 'salve'" → {"type":"micro_edit","confidence":0.92}
+${DOCUMENT_INTENT_EXAMPLES}
 "chi è il protagonista?" → {"type":"question","confidence":0.98}
+"di cosa parla questo soggetto?" → {"type":"question","confidence":0.95}
+"il conflitto è chiaro?" → {"type":"question","confidence":0.9}
 "questa scena è piatta" → {"type":"comment","confidence":0.80}`;
 
 // Bug #4 — document (narrative chain) classifier. On a document page (soggetto,
@@ -122,7 +178,7 @@ Esempi:
 // fall through to `tool_choice: "auto"` and often produced no tool call at all.
 // This prompt maps the request to the matching generator so the dispatch is
 // reliable. A genuine question still resolves to "question" → chat answer.
-const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) su una pagina di documento narrativo (soggetto, sinossi, scaletta, trattamento). Devi capire SE l'utente sta chiedendo di SCRIVERE/GENERARE un documento e QUALE.
+const DOCUMENT_SYSTEM_PROMPT = `Sei un classificatore d'intento per Oh Writers. L'utente sta dialogando con Cesare (AI dramaturg) su una pagina di documento narrativo (soggetto, sinossi, scaletta, trattamento). Devi capire SE l'utente sta chiedendo di SCRIVERE/GENERARE/DERIVARE/MODIFICARE un documento e QUALE — oppure se sta solo facendo una domanda.
 
 Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
 {
@@ -130,36 +186,27 @@ Output: SOLO un oggetto JSON, niente prosa attorno. Schema:
   "confidence": <number tra 0 e 1>
 }
 
-Definizioni dei type:
-- write_logline: scrivere o modificare la logline da una premessa libera o un'istruzione. Include:
-    "scrivimi una logline su un detective", "scrivi la logline dallo spunto",
-    "rendi la logline più tesa", "cambia il protagonista della logline".
-- write_soggetto: scrivere o riscrivere il soggetto (anche a partire dalla logline). Include:
-    "scrivi il soggetto", "genera il soggetto dalla logline", "fammi un v2 del soggetto",
-    "riscrivi il soggetto più asciutto", "soggetto a partire dalla logline".
-- write_synopsis: scrivere o generare la sinossi (anche riassumendo ciò che è stato scritto). Include:
-    "scrivimi la sinossi", "genera la sinossi dal soggetto", "fai un riassunto di cosa abbiamo scritto",
-    "riassumi la storia", "dammi una sinossi".
-- write_outline: scrivere o generare la scaletta (lista di scene) dal soggetto. Include:
-    "fammi la scaletta", "genera la scaletta dal soggetto", "dividi la storia in scene",
-    "dammi la lista delle scene".
-- write_treatment: scrivere o generare il trattamento dal materiale a monte (scaletta, sinossi, soggetto). Include:
-    "scrivi il trattamento", "genera il trattamento dalla scaletta", "fammi il trattamento",
-    "trattamento a partire dalla scaletta".
-- question: domanda informativa che NON richiede di scrivere un documento.
-    "di cosa parla la storia?", "chi è il protagonista?", "che ne pensi?".
+Definizioni dei type d'azione:
+${DOCUMENT_INTENT_DEFINITIONS}
+
+Definizioni dei type generici (NESSUNA scrittura, resta in chat):
+- question: domanda informativa che NON richiede di scrivere/modificare un documento.
+    "di cosa parla la storia?", "di cosa parla questo soggetto?", "chi è il protagonista?",
+    "il conflitto è chiaro?", "la scaletta funziona?", "che ne pensi?".
 - comment: osservazione o feedback senza richiesta di scrittura.
     "il soggetto è debole", "non mi convince il finale".
 
-REGOLA: se l'utente chiede chiaramente di SCRIVERE/GENERARE/RIASSUMERE un documento, scegli il write_* corrispondente con confidence alta. In caso di ambiguità con una domanda informativa, scegli question/comment con confidence ~0.5.
+REGOLE:
+1. Un imperativo ("scrivi", "scrivimi", "fammi", "genera", "buttami giù", "dammi", "abbozza", "sviluppa", "rendi", "accorcia", "cambia", "espandi", "riassumi") rivolto a un'entità è un'AZIONE → scegli il write_* corrispondente con confidence ALTA (>=0.8), anche senza punto interrogativo.
+2. Una vera DOMANDA su cosa esiste / se funziona ("di cosa parla…?", "è chiaro il conflitto?", "che ne pensi?") è SEMPRE question, anche se nomina un documento. NON forzare un'azione su una domanda.
+3. Solo in caso di reale ambiguità scegli question/comment con confidence ~0.5.
 
 Esempi:
-"scrivimi una logline su un detective che non dorme" → {"type":"write_logline","confidence":0.95}
-"genera il soggetto dalla logline" → {"type":"write_soggetto","confidence":0.95}
-"fai un riassunto di cosa abbiamo scritto finora" → {"type":"write_synopsis","confidence":0.9}
-"fammi la scaletta dal soggetto" → {"type":"write_outline","confidence":0.95}
-"scrivi il trattamento dalla scaletta" → {"type":"write_treatment","confidence":0.95}
+${DOCUMENT_INTENT_EXAMPLES}
 "di cosa parla la storia?" → {"type":"question","confidence":0.95}
+"di cosa parla questo soggetto?" → {"type":"question","confidence":0.95}
+"il conflitto è chiaro?" → {"type":"question","confidence":0.9}
+"la scaletta funziona?" → {"type":"question","confidence":0.88}
 "il soggetto non mi convince" → {"type":"comment","confidence":0.8}`;
 
 // Document-narrative pages where the document classifier applies.
