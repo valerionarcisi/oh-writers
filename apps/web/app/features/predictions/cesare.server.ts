@@ -903,17 +903,30 @@ const assembleContext = (
                     loadShotPlansForScene(db, shotPlanSceneId).andThen(
                       (shotPlanSummaries) => {
                         const activeDocId = pageContext.documentId ?? null;
-                        const activeDocument: ActiveDocumentRow | null =
-                          activeDocId
-                            ? (() => {
-                                const found = projectDocuments.find(
-                                  (d) => d.id === activeDocId,
-                                );
-                                return found
-                                  ? { ...found, isActive: true }
-                                  : null;
-                              })()
-                            : null;
+                        // Resolve the active document from the client-sent
+                        // documentId. The shell sets that from `activeDocument`,
+                        // which it populates asynchronously after the editor
+                        // mounts — so a request fired during a slow page load can
+                        // arrive with a null documentId even though the user is
+                        // clearly on a document page. In that case, fall back to
+                        // the project document whose type matches the page (page
+                        // names are 1:1 with document types: soggetto / synopsis
+                        // / outline / treatment). This defines the race out of
+                        // existence: text tools like expand_section always see
+                        // the open document, never an empty context.
+                        const activeDocument: ActiveDocumentRow | null = (() => {
+                          const byId = activeDocId
+                            ? projectDocuments.find((d) => d.id === activeDocId)
+                            : undefined;
+                          const byPage =
+                            byId ??
+                            (isDocumentPage(pageContext.page)
+                              ? projectDocuments.find(
+                                  (d) => d.type === pageContext.page,
+                                )
+                              : undefined);
+                          return byPage ? { ...byPage, isActive: true } : null;
+                        })();
                         // Load bible lazily — never block on errors (return null on failure)
                         return loadFilmBible(db, projectId)
                           .map((bible) => ({
