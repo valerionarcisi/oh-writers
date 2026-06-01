@@ -76,6 +76,16 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
     );
     await authenticatedPage.waitForLoadState("networkidle");
 
+    // Wait for the editor to actually render the seeded content. Cesare reads
+    // the document from the request's `pageContext.documentId` (the open
+    // editor's active document); on a slow CI runner the editor can still be
+    // mounting when we send, leaving `documentContext` null so expand_section
+    // sees empty content and reports "section not found". Seeing "Atto II" in
+    // the editor proves the active document is loaded + registered.
+    await expect(
+      authenticatedPage.getByTestId("rich-text-editor"),
+    ).toContainText("Atto II", { timeout: 15_000 });
+
     await openCesareSheet(authenticatedPage);
     await sendCesareMessage(authenticatedPage, "Espandi la sezione Atto II.");
     const reply = await waitForCesareReply(authenticatedPage);
