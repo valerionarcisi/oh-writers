@@ -8,7 +8,14 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { useMenuTrigger, useMenu, useMenuItem, useButton, FocusScope, useInteractOutside } from "react-aria";
+import {
+  useMenuTrigger,
+  useMenu,
+  useMenuItem,
+  useButton,
+  FocusScope,
+  useInteractOutside,
+} from "react-aria";
 import { useMenuTriggerState, useTreeState, Item } from "react-stately";
 import type { TreeState, Node } from "react-stately";
 import styles from "./DropdownMenu.module.css";
@@ -42,6 +49,8 @@ export interface DropdownMenuProps {
   triggerLabel?: string;
   /** Native tooltip text for the trigger button. */
   triggerTitle?: string;
+  /** Disables the trigger button (greys it out, blocks opening the menu). */
+  triggerDisabled?: boolean;
 }
 
 // ─── MenuItemInternal ────────────────────────────────────────────────────────
@@ -56,7 +65,13 @@ interface MenuItemInternalProps {
   onAction: (label: string) => void;
 }
 
-function MenuItemInternal({ item, itemData, state, onClose, onAction }: MenuItemInternalProps) {
+function MenuItemInternal({
+  item,
+  itemData,
+  state,
+  onClose,
+  onAction,
+}: MenuItemInternalProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const { menuItemProps, isDisabled } = useMenuItem(
     {
@@ -122,7 +137,9 @@ function MenuList({
   triggerRef,
 }: MenuListProps) {
   const menuRef = useRef<HTMLUListElement>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+    null,
+  );
 
   // Build a lookup so we can fire the original onClick by label-key.
   const itemMapRef = useRef<Map<string, DropdownMenuItem>>(new Map());
@@ -141,7 +158,10 @@ function MenuList({
       align === "end" ? triggerRect.right - menuRect.width : triggerRect.left;
     const left = Math.max(
       VIEWPORT_MARGIN,
-      Math.min(desiredLeft, window.innerWidth - menuRect.width - VIEWPORT_MARGIN),
+      Math.min(
+        desiredLeft,
+        window.innerWidth - menuRect.width - VIEWPORT_MARGIN,
+      ),
     );
 
     let top = triggerRect.bottom + MENU_OFFSET;
@@ -257,6 +277,7 @@ export function DropdownMenu({
   triggerClassName,
   triggerLabel,
   triggerTitle,
+  triggerDisabled = false,
   ...rest
 }: DropdownMenuProps) {
   const menuId = useId();
@@ -272,7 +293,11 @@ export function DropdownMenu({
 
   // useButton handles cross-browser press, aria-expanded, aria-haspopup.
   const { buttonProps } = useButton(
-    { ...menuTriggerProps, "aria-controls": menuId },
+    {
+      ...menuTriggerProps,
+      "aria-controls": menuId,
+      isDisabled: triggerDisabled,
+    },
     triggerRef,
   );
 
@@ -284,7 +309,9 @@ export function DropdownMenu({
         type="button"
         aria-label={triggerLabel}
         title={triggerTitle}
-        className={[styles.triggerWrap, triggerClassName].filter(Boolean).join(" ")}
+        className={[styles.triggerWrap, triggerClassName]
+          .filter(Boolean)
+          .join(" ")}
       >
         {trigger}
       </button>
