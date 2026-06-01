@@ -2,7 +2,11 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { TEST_TEAM_PROJECT_ID } from "./fixtures";
-import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
+import {
+  openCesareSheet,
+  sendCesareMessage,
+  resetCesareState,
+} from "./helpers/cesare";
 
 /**
  * [Audit 2026-05-31 · ALTO #3 + #4] Write-from-zero + free-dispatch.
@@ -67,6 +71,13 @@ async function documentContentLength(
 const chip = (page: Page) => page.getByTestId("cesare-next-step-chip");
 
 test.describe("[Audit ALTO #3] write-from-zero chain", () => {
+  // Clear persisted Cesare chat (Spec 51) on the shared from-scratch project so
+  // a prior test's trace/result card does not bleed into this one in the serial
+  // mock-ui run.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, FROM_SCRATCH_PROJECT_ID);
+  });
+
   test("[OHW-AUDIT-3] from-scratch: generating the soggetto from the logline ACTUALLY writes content", async ({
     authenticatedPage: page,
   }) => {

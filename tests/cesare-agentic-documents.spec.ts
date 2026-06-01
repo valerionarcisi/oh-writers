@@ -8,6 +8,23 @@ import {
   resetCesareState,
 } from "./helpers/cesare";
 
+// Stand the synopsis at a known two-section state (the `set-narrative-state`
+// placeholder carries a "## Atto II" heading). This is the precondition for
+// expand_section and is pollution-proof: it does not depend on the seed
+// baseline surviving whatever ran earlier in the serial suite.
+async function seedSynopsisWithSections(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  const res = await page.request.post(
+    `${BASE_URL}/api/test/set-narrative-state`,
+    {
+      data: { projectId: TEAM_PROJECT_ID, present: ["synopsis"] },
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  expect(res.ok(), "set-narrative-state must succeed").toBe(true);
+}
+
 /**
  * [Spec 34] Cesare agentic — Documents (synopsis)
  *
@@ -27,6 +44,8 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
   test("[OHW-541] Cesare expands a section via expand_section tool", async ({
     authenticatedPage,
   }) => {
+    await seedSynopsisWithSections(authenticatedPage);
+
     await authenticatedPage.goto(
       `${BASE_URL}/projects/${TEAM_PROJECT_ID}/synopsis`,
     );

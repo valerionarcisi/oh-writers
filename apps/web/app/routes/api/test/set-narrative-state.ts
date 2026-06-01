@@ -41,7 +41,12 @@ const NARRATIVE_DOC_TYPES: ReadonlyArray<DocumentType> = [
 const PLACEHOLDER_BY_TYPE: Readonly<Record<DocumentType, string>> = {
   logline: "Un detective insonne insegue un killer in una città silenziosa.",
   soggetto: "Soggetto di prova per il test OHW-050.",
-  synopsis: "Sinossi di prova per il test OHW-050.",
+  // Two markdown sections: the "## Atto II" heading lets expand_section
+  // (OHW-541) find a real section to expand. Keeping a heading here makes the
+  // placeholder a valid precondition for section-targeting tools, not just a
+  // non-empty blob.
+  synopsis:
+    "## Atto I\n\nSinossi di prova per il test OHW-050.\n\n## Atto II\n\nSecondo atto di prova: la protagonista trova un manoscritto inedito.",
   outline: "1. Scena uno.\n2. Scena due.",
   treatment: "Trattamento di prova per il test OHW-050.",
 };

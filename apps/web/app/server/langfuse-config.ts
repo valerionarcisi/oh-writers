@@ -9,6 +9,13 @@
 // Server-only — reads process.env. Never import from client code.
 
 export function isLangfuseConfigured(): boolean {
+  // When the AI is mocked (E2E / `MOCK_AI=true`) there is no real model call to
+  // trace and the Langfuse endpoint is not running, so the OTEL exporter's
+  // flush is a `fetch` to a dead host. Those failed flushes surface as
+  // "[WebServer] TypeError: fetch failed" and, under the serial mock-ui suite,
+  // delay the streamed reply enough to flake text-asserting agentic tests.
+  // Force observability OFF whenever the AI is mocked, regardless of keys.
+  if (process.env["MOCK_AI"] === "true") return false;
   return Boolean(
     process.env["LANGFUSE_PUBLIC_KEY"] && process.env["LANGFUSE_SECRET_KEY"],
   );

@@ -1,7 +1,11 @@
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
-import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
+import {
+  openCesareSheet,
+  sendCesareMessage,
+  resetCesareState,
+} from "./helpers/cesare";
 
 /**
  * [Audit 2026-05-31 · F-A3 + F-M1] Cesare's result card must reflect the REAL
@@ -66,6 +70,15 @@ async function documentContentLength(
 }
 
 test.describe("[Audit F-A3] honest result card — no fabricated success", () => {
+  // Spec 51 persists Cesare chat across the serial mock-ui run, so a result
+  // card rendered by an EARLIER test on this same project stays in the DOM and
+  // makes the "no card" assertion see a stale `cesare-change-trace`. Wipe the
+  // project's sessions before each test (setNarrativeState only resets the
+  // documents, not the chat thread).
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, FROM_SCRATCH_PROJECT_ID);
+  });
+
   test("[OHW-AUDIT-FA3] a no-op tool shows NO success card and leaves the DB unchanged", async ({
     authenticatedPage: page,
   }) => {

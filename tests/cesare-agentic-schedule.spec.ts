@@ -3,8 +3,8 @@ import { navigateToSchedule, SCHEDULE_PROJECT_ID } from "./schedule/helpers";
 import {
   openCesareSheet,
   sendCesareMessage,
-  waitForCesareReply,
   setMockContext,
+  resetCesareState,
 } from "./helpers/cesare";
 
 /**
@@ -18,6 +18,13 @@ import {
  *   updates the schedule and Cesare confirms the action in the reply.
  */
 test.describe("[Spec 34] Cesare Agentic — Schedule", () => {
+  // Clear persisted Cesare chat (Spec 51) so a prior schedule turn's session
+  // does not leave a stale thread selected, which intermittently left the new
+  // turn's reply unrendered (OHW-545 flake in the serial mock-ui run).
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, SCHEDULE_PROJECT_ID);
+  });
+
   test("[OHW-544] DayDifficultyBadge shows difficulty + probability", async ({
     authenticatedPage,
   }) => {
@@ -46,9 +53,14 @@ test.describe("[Spec 34] Cesare Agentic — Schedule", () => {
       authenticatedPage,
       "Sposta la scena 3 al giorno 2.",
     );
-    const reply = await waitForCesareReply(authenticatedPage);
 
-    // Mock reply confirms "Ho spostato la scena al giorno richiesto."
-    expect(reply.toLowerCase()).toMatch(/spostat|giorno|schedule|aggiornato/);
+    // The strip board is a heavy surface; rather than rely on the generic
+    // "≥2 paragraphs" reply heuristic (which intermittently fired before the
+    // assistant turn had rendered on this page), poll the conversation directly
+    // for the move confirmation. Mock reply: "Ho spostato la scena al giorno
+    // richiesto. Lo schedule è stato aggiornato."
+    await expect(
+      authenticatedPage.getByTestId("cesare-conversation"),
+    ).toContainText(/spostat|giorno|schedule|aggiornato/i, { timeout: 30_000 });
   });
 });
