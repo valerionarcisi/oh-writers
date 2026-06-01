@@ -4,19 +4,23 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "dev": "tsx watch --env-file-if-exists=../web/.env src/index.ts",
+    "build": "echo 'ws-server runs via tsx; no build step (no deploy target yet — see infra/08b)'",
+    "start": "tsx --env-file-if-exists=../web/.env src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@hono/node-server": "1.19.9",
     "@oh-writers/auth": "workspace:*",
     "@oh-writers/db": "workspace:*",
+    "@oh-writers/domain": "workspace:*",
     "@oh-writers/utils": "workspace:*",
     "drizzle-orm": "0.45.1",
     "hono": "4.12.2",
     "ioredis": "5.9.3",
+    "lib0": "0.2.117",
+    "neverthrow": "8.2.0",
     "ws": "8.18.0",
     "y-protocols": "1.0.7",
     "y-websocket": "1.5.4",
@@ -26,6 +30,7 @@
     "@types/node": "22.14.0",
     "@types/ws": "8.5.13",
     "tsx": "4.19.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "2.1.9"
   }
 }
