@@ -11,10 +11,20 @@
   },
   "dependencies": {
     "@hono/node-server": "1.19.9",
-    "hono": "4.12.2"
+    "@oh-writers/auth": "workspace:*",
+    "@oh-writers/db": "workspace:*",
+    "@oh-writers/utils": "workspace:*",
+    "drizzle-orm": "0.45.1",
+    "hono": "4.12.2",
+    "ioredis": "5.9.3",
+    "ws": "8.18.0",
+    "y-protocols": "1.0.7",
+    "y-websocket": "1.5.4",
+    "yjs": "13.6.30"
   },
   "devDependencies": {
     "@types/node": "22.14.0",
+    "@types/ws": "8.5.13",
     "tsx": "4.19.2",
     "typescript": "5.9.3"
   }
