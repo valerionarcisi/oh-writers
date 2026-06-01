@@ -85,16 +85,20 @@ export class InvalidVersionsCompareError {
 
 /**
  * Schema for the routed Versions surface across every host route. Both params
- * are optional; `versions` is a non-empty string (content validated in
- * {@link parseVersionsPeek}), `vstate` is the tagged state union. We keep shape
- * validation here so the param survives navigation, and content validation in
- * the parser so the schema stays project-agnostic.
+ * are optional strings; content (uuid shape, same-document, etc.) is validated
+ * in {@link parseVersionsPeek}, which FAILS CLOSED on an empty/invalid value
+ * ("render host alone"). We must NOT use `.min(1)` here: this schema is merged
+ * into the `_app` layout route's `validateSearch`, and a `.min(1)` failure on a
+ * bare `?versions=` (empty string) throws on the layout route, so its `user`
+ * loader never resolves and the whole shell crashes ("Cannot destructure
+ * 'user'"). Keep shape validation permissive so the empty value survives router
+ * validation and the parser's documented fail-closed path runs.
  */
 export const versionsSearchSchema = z.object({
-  versions: z.string().min(1).optional(),
+  versions: z.string().optional(),
   vstate: z.enum(VERSIONS_SURFACE_STATES).optional(),
-  vcur: z.string().min(1).optional(),
-  compare: z.string().min(1).optional(),
+  vcur: z.string().optional(),
+  compare: z.string().optional(),
 });
 
 export type VersionsSearch = z.infer<typeof versionsSearchSchema>;

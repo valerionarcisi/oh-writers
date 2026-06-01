@@ -127,10 +127,15 @@ describe("versionsSearchSchema", () => {
     });
   });
 
-  it("rejects an empty-string versions param", () => {
-    expect(versionsSearchSchema.safeParse({ versions: "" }).success).toBe(
-      false,
-    );
+  it("ACCEPTS an empty-string versions param at the schema level (REG-1)", () => {
+    // The schema is merged into the `_app` layout route's `validateSearch`; a
+    // `.min(1)` reject on a bare `?versions=` throws there and crashes the whole
+    // shell ("Cannot destructure 'user'"). Shape validation MUST stay permissive
+    // so the empty value survives router validation; `parseVersionsPeek` is the
+    // one that fails closed on empty (asserted below).
+    const parsed = versionsSearchSchema.safeParse({ versions: "" });
+    expect(parsed.success).toBe(true);
+    expect(parseVersionsPeek("", undefined).isErr()).toBe(true);
   });
 
   it("rejects an unknown vstate value", () => {

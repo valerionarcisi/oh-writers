@@ -241,4 +241,26 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       /non trovat/i,
     );
   });
+
+  test("[OHW-049] a bare `?versions=` (empty value) does NOT crash the shell", async ({
+    authenticatedPage: page,
+  }) => {
+    // Regression (audit iter-4 REG-1): `versionsSearchSchema` used `.min(1)`, so
+    // an empty `?versions=` failed the `_app` layout route's `validateSearch`,
+    // the `user` loader never resolved, and the whole shell crashed with
+    // "Cannot destructure 'user'". The schema must be permissive (empty
+    // survives) and `parseVersionsPeek` fails closed → host renders alone.
+    await page.goto(`${SOGGETTO_PATH}?versions=`);
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("body")).not.toContainText(
+      /Something went wrong|Cannot destructure/i,
+    );
+    // The host page still renders; no Versions drawer is opened.
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect
+      .poll(() => page.evaluate(() => document.body.dataset.versionsSplit ?? ""))
+      .toBe("");
+  });
 });
