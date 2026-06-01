@@ -4,8 +4,12 @@ import { EditorView } from "prosemirror-view";
 import type { DocumentType } from "@oh-writers/domain";
 import { CesareLiveDiff } from "~/features/app-shell";
 import { getNarrativeSchema } from "../lib/narrative-schema";
-import { buildNarrativePlugins } from "../lib/narrative-plugins";
+import {
+  buildNarrativePlugins,
+  type NarrativeRealtime,
+} from "../lib/narrative-plugins";
 import { docToHtml, htmlToDoc } from "../lib/narrative-html";
+import "~/features/realtime/lib/cursor-styles.css";
 import styles from "./NarrativeProseMirrorView.module.css";
 
 interface NarrativeProseMirrorViewProps {
@@ -22,6 +26,8 @@ interface NarrativeProseMirrorViewProps {
    *  word highlight inside the real document. Absent for editors that never
    *  host a Cesare doc edit. */
   diffDocumentType?: DocumentType;
+  /** Yjs doc + provider for realtime collaboration. Null disables realtime. */
+  realtime?: NarrativeRealtime | null;
 }
 
 export function NarrativeProseMirrorView({
@@ -34,7 +40,9 @@ export function NarrativeProseMirrorView({
   readOnly = false,
   extraPlugins,
   diffDocumentType,
+  realtime = null,
 }: NarrativeProseMirrorViewProps) {
+  const isRealtime = !!realtime;
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const lastValueRef = useRef(value);
@@ -52,7 +60,7 @@ export function NarrativeProseMirrorView({
     const state = EditorState.create({
       doc: initialDoc,
       plugins: [
-        ...buildNarrativePlugins(schema, { placeholder }),
+        ...buildNarrativePlugins(schema, { placeholder, realtime }),
         ...(extraPlugins ?? []),
       ],
     });
@@ -98,9 +106,12 @@ export function NarrativeProseMirrorView({
     // Re-mount only on the structural toggles. value changes are handled by
     // the second effect below to avoid resetting the caret on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, enableHeadings, placeholder, extraPlugins]);
+  }, [readOnly, enableHeadings, placeholder, extraPlugins, isRealtime]);
 
   useEffect(() => {
+    // In realtime mode the CRDT is the source of truth; a replaceWith here
+    // would fight concurrent remote edits.
+    if (isRealtime) return;
     const view = viewRef.current;
     if (!view) return;
     if (value === lastValueRef.current) return;
@@ -115,7 +126,7 @@ export function NarrativeProseMirrorView({
       newDoc.content,
     );
     view.dispatch(tr);
-  }, [value, enableHeadings]);
+  }, [value, enableHeadings, isRealtime]);
 
   return (
     <div

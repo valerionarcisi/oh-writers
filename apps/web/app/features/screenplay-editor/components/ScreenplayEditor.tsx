@@ -22,6 +22,8 @@ import { estimatePageCount } from "../lib/page-counter";
 import type { ElementType } from "../lib/fountain-element-detector";
 import { setElement } from "../lib/schema-commands";
 import { ProseMirrorView } from "./ProseMirrorView";
+import { useYjsRoom, PresenceIndicator } from "~/features/realtime";
+import { useSession } from "~/lib/auth-client";
 import {
   cesareAppliedHighlightKey,
   highlightAppliedRange,
@@ -245,6 +247,22 @@ export const ScreenplayEditor = forwardRef<
   const viewRef = useRef<EditorView | null>(null);
 
   const isViewing = viewing.kind === "viewing";
+
+  // ─── Realtime collaboration ────────────────────────────────────────────
+  // A version snapshot is read-only and must never connect. Viewers connect
+  // read-only (writes are blocked server-side); editors get full sync.
+  const canEditScreenplay = screenplay.canEdit ?? false;
+  const { data: sessionData } = useSession();
+  const realtimeUser = sessionData?.user
+    ? { id: sessionData.user.id, name: sessionData.user.name }
+    : null;
+  const {
+    ydoc: realtimeDoc,
+    provider: realtimeProvider,
+    status: realtimeStatus,
+    peers: realtimePeers,
+  } = useYjsRoom(`screenplay:${screenplay.id}`, realtimeUser, !isViewing);
+  const realtimeWritable = realtimeStatus === "connected" && canEditScreenplay;
 
   // ─── Cesare propose/accept wiring ──────────────────────────────────────
   // Proposals live in a server-side in-memory store; the chat hook
@@ -1023,6 +1041,7 @@ export const ScreenplayEditor = forwardRef<
 
       {!isFocusMode && (
         <div className={styles.actionsBar} data-testid="screenplay-actions-bar">
+          <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
           {hasContent && !exportPdf.isPending ? (
             <DropdownMenu
               align="start"
@@ -1073,6 +1092,9 @@ export const ScreenplayEditor = forwardRef<
             onSceneIndexChange={setCurrentSceneIndex}
             onPageChange={(current, total) => setPageInfo({ current, total })}
             readOnly={isViewing || !(screenplay.canEdit ?? false)}
+            ydoc={realtimeDoc}
+            provider={realtimeProvider}
+            realtime={realtimeWritable}
             pluginsExtra={pluginsExtraRef.current ?? undefined}
             onReady={(view) => {
               viewRef.current = view;

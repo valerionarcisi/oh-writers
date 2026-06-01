@@ -28,6 +28,10 @@ import { fountainToDoc } from "../lib/fountain-to-doc";
 import { docToFountain } from "../lib/doc-to-fountain";
 import { migratePmDoc } from "@oh-writers/domain";
 import type { ElementType } from "../lib/fountain-element-detector";
+import type * as Y from "yjs";
+import type { WebsocketProvider } from "y-websocket";
+import { buildYjsPlugins, isFragmentEmpty } from "~/features/realtime";
+import "~/features/realtime/lib/cursor-styles.css";
 
 interface ProseMirrorViewProps {
   /** Fountain text — source of truth for version restore and external imports. */
@@ -77,6 +81,12 @@ interface ProseMirrorViewProps {
    *  ScreenplayEditor to install the Cesare propose/accept decoration plugin
    *  without coupling ProseMirrorView to the agentic layer. */
   pluginsExtra?: Plugin[];
+  /** Shared Yjs doc for realtime collaboration. Null when realtime is off. */
+  ydoc?: Y.Doc | null;
+  /** WebSocket provider backing `ydoc` — drives remote cursors/awareness. */
+  provider?: WebsocketProvider | null;
+  /** When true, swap prosemirror-history for the Yjs sync/undo/cursor plugins. */
+  realtime?: boolean;
 }
 
 // Maps PM node type names to the ElementType the toolbar understands.
@@ -106,7 +116,11 @@ export function ProseMirrorView({
   onReady,
   readOnly = false,
   pluginsExtra,
+  ydoc = null,
+  provider = null,
+  realtime = false,
 }: ProseMirrorViewProps) {
+  const isRealtime = realtime && !!ydoc && !!provider;
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   // Track the last fountain string we fed in so we don't re-parse on our own
@@ -126,10 +140,18 @@ export function ProseMirrorView({
       ? schema.nodeFromJSON(migratePmDoc(initialDoc))
       : fountainToDoc(value);
 
+    // Realtime mode swaps prosemirror-history for the Yjs sync/undo/cursor
+    // plugins (history and ySyncPlugin are incompatible). When the shared
+    // fragment is empty this is the first client, so we let ySyncPlugin seed it
+    // from `initialPmDoc`; otherwise the doc loads from the CRDT and we ignore
+    // `initialPmDoc` to avoid a double-seed.
+    const seedFromInitial = !isRealtime || isFragmentEmpty(ydoc!);
+    const yjsPlugins = isRealtime ? buildYjsPlugins(ydoc!, provider!) : [];
+
     const state = EditorState.create({
-      doc: initialPmDoc,
+      ...(seedFromInitial ? { doc: initialPmDoc } : { schema }),
       plugins: [
-        history(),
+        ...(isRealtime ? [] : [history()]),
         // Scene-heading pickers: each fires only when the cursor is inside
         // its respective slot, offering values the writer has already used
         // elsewhere in the doc (rankByFrequency, filterSuggestions). First
@@ -140,11 +162,15 @@ export function ProseMirrorView({
         // Character / transition autocomplete — unchanged.
         buildAutocompletePlugin(),
         fountainKeymap,
-        keymap({
-          "Mod-z": undo,
-          "Mod-y": redo,
-          "Mod-Shift-z": redo,
-        }),
+        ...(isRealtime
+          ? []
+          : [
+              keymap({
+                "Mod-z": undo,
+                "Mod-y": redo,
+                "Mod-Shift-z": redo,
+              }),
+            ]),
         // Delete / Backspace — only the safe commands. We deliberately omit
         // `selectNodeBackward` / `selectNodeForward` from the default baseKeymap
         // chain because at scene-heading boundaries they "select the whole
@@ -166,6 +192,7 @@ export function ProseMirrorView({
         }),
         buildPaginatorPlugin(),
         buildCesareAppliedHighlightPlugin(),
+        ...yjsPlugins,
         ...(pluginsExtra ?? []),
       ],
     });
@@ -291,10 +318,13 @@ export function ProseMirrorView({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly]);
+  }, [readOnly, isRealtime]);
 
-  // Sync external value changes (e.g. version restore, import)
+  // Sync external value changes (e.g. version restore, import). Disabled in
+  // realtime mode: the CRDT is the source of truth and a replaceWith here would
+  // fight concurrent remote edits.
   useEffect(() => {
+    if (isRealtime) return;
     const view = viewRef.current;
     if (!view) return;
     if (value === lastValueRef.current) return;
@@ -308,7 +338,7 @@ export function ProseMirrorView({
       newDoc.content,
     );
     view.dispatch(tr);
-  }, [value]);
+  }, [value, isRealtime]);
 
   return (
     <div

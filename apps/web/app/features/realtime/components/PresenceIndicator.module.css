@@ -1,0 +1,42 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avatars {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--ds-surface);
+  margin-inline-start: -0.4rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--ds-surface);
+  font-family: var(--ds-font-sans);
+}
+
+.avatar:first-child {
+  margin-inline-start: 0;
+}
+
+.count {
+  font-size: 0.75rem;
+  color: var(--ds-text-3);
+  font-family: var(--ds-font-sans);
+  white-space: nowrap;
+}
+
+.offline {
+  font-size: 0.75rem;
+  color: var(--ds-text-faint);
+  font-family: var(--ds-font-sans);
+}
