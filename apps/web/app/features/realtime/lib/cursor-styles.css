@@ -1,0 +1,29 @@
+/* Remote collaborator carets + name labels (y-prosemirror yCursorPlugin). */
+.ProseMirror-yjs-cursor {
+  position: relative;
+  margin-inline: -1px;
+  border-inline-start: 1px solid;
+  border-inline-end: 1px solid;
+  border-color: currentColor;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.ProseMirror-yjs-cursor > .ProseMirror-yjs-cursor-label {
+  position: absolute;
+  inset-block-start: -1.4em;
+  inset-inline-start: -1px;
+  font-size: 0.6875rem;
+  font-family: var(--ds-font-sans);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ds-surface);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ProseMirror-yjs-selection {
+  opacity: 0.35;
+}

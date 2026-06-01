@@ -21,6 +21,14 @@ import {
 import { inputRules, wrappingInputRule } from "prosemirror-inputrules";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import { Schema } from "prosemirror-model";
+import type * as Y from "yjs";
+import type { WebsocketProvider } from "y-websocket";
+import { buildYjsPlugins } from "~/features/realtime";
+
+export interface NarrativeRealtime {
+  ydoc: Y.Doc;
+  provider: WebsocketProvider;
+}
 
 const placeholderKey = new PluginKey("narrativePlaceholder");
 
@@ -63,9 +71,10 @@ const enterCommand = (schema: Schema) => {
 
 export const buildNarrativePlugins = (
   schema: Schema,
-  options: { placeholder?: string } = {},
+  options: { placeholder?: string; realtime?: NarrativeRealtime | null } = {},
 ): Plugin[] => {
   const plugins: Plugin[] = [];
+  const realtime = options.realtime ?? null;
 
   const bulletList = schema.nodes["bullet_list"];
   const listItem = schema.nodes["list_item"];
@@ -78,16 +87,22 @@ export const buildNarrativePlugins = (
     );
   }
 
-  plugins.push(history());
-
-  plugins.push(
-    keymap({
-      "Mod-z": undo,
-      "Mod-y": redo,
-      "Mod-Shift-z": redo,
-      "Mod-a": selectAll,
-    }),
-  );
+  // Realtime swaps prosemirror-history (incompatible with ySyncPlugin) for the
+  // Yjs sync/undo/cursor plugins, which carry their own ⌘Z/⌘Y handling.
+  if (realtime) {
+    plugins.push(...buildYjsPlugins(realtime.ydoc, realtime.provider));
+    plugins.push(keymap({ "Mod-a": selectAll }));
+  } else {
+    plugins.push(history());
+    plugins.push(
+      keymap({
+        "Mod-z": undo,
+        "Mod-y": redo,
+        "Mod-Shift-z": redo,
+        "Mod-a": selectAll,
+      }),
+    );
+  }
 
   if (bulletList && listItem) {
     plugins.push(

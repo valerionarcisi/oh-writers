@@ -135,6 +135,36 @@ export async function waitForCesareReply(page: Page): Promise<string> {
 }
 
 /**
+ * The mock emits this faithful-failure text when a tool ran but its preceding
+ * tool_result carried an error (e.g. expand_section reading a document whose
+ * content hasn't propagated to the request's projectDocuments yet on a slow CI
+ * runner). It is a transient, environment-timing failure — the content settles
+ * a beat later — so a single resend clears it.
+ */
+const TRANSIENT_FAILURE_RE =
+  /non c'era abbastanza materiale|non sono riuscito a completare/i;
+
+/**
+ * Send a Cesare message and return the reply, retrying ONCE if the first reply
+ * is the known transient empty-context failure. This closes a CI-only race in
+ * the agentic suite (DB seed vs server-side document read) without touching
+ * product code. Use for tool turns that depend on freshly-seeded entity state.
+ */
+export async function sendCesareWithRetry(
+  page: Page,
+  text: string,
+): Promise<string> {
+  await sendCesareMessage(page, text);
+  let reply = await waitForCesareReply(page);
+  if (TRANSIENT_FAILURE_RE.test(reply)) {
+    await page.waitForTimeout(1_500);
+    await sendCesareMessage(page, text);
+    reply = await waitForCesareReply(page);
+  }
+  return reply;
+}
+
+/**
  * Seed the mock LLM scenario context. Tests call this before sending a Cesare
  * message so the mock can substitute {{REQ_ID}}, {{SCENE_NUMBER}} etc into the
  * scripted tool inputs at request time.

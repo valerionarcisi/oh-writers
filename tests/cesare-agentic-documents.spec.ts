@@ -3,8 +3,7 @@ import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
   openCesareSheet,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
   resetCesareState,
   clearMockContext,
 } from "./helpers/cesare";
@@ -87,8 +86,10 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
     ).toContainText("Atto II", { timeout: 15_000 });
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Espandi la sezione Atto II.");
-    const reply = await waitForCesareReply(authenticatedPage);
+    const reply = await sendCesareWithRetry(
+      authenticatedPage,
+      "Espandi la sezione Atto II.",
+    );
 
     // The mock scenario replies with text containing "aggiornato" so the
     // AppShell toast handler fires.

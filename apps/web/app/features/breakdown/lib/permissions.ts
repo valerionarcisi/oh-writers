@@ -1,12 +1,13 @@
-import type { TeamRole } from "@oh-writers/domain";
+import {
+  canEditProject,
+  canViewProject,
+  type ProjectAccessContext,
+} from "@oh-writers/utils";
 
-export interface BreakdownPermissionContext {
-  isPersonalOwner: boolean;
-  teamRole: TeamRole | null;
-}
+export type BreakdownPermissionContext = ProjectAccessContext;
 
 export const canEditBreakdown = (ctx: BreakdownPermissionContext): boolean =>
-  ctx.isPersonalOwner || ctx.teamRole === "owner" || ctx.teamRole === "editor";
+  canEditProject(ctx);
 
 export const canViewBreakdown = (ctx: BreakdownPermissionContext): boolean =>
-  ctx.isPersonalOwner || ctx.teamRole !== null;
+  canViewProject(ctx);

@@ -19,6 +19,8 @@ import { ExportPdfModal } from "./ExportPdfModal";
 import { DraftBanner } from "./DraftBanner";
 import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
+import { useYjsRoom, PresenceIndicator } from "~/features/realtime";
+import { useSession } from "~/lib/auth-client";
 import { OutlineEditor } from "./OutlineEditor";
 import { NarrativeDocsShell } from "./NarrativeDocsShell";
 import { MarginNotesColumn } from "./MarginNotesColumn";
@@ -123,6 +125,22 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   // "…" actions menu in the TopBar right slot (Soggetto parity for Scaletta).
   const hasTopBarDocActions = isSynopsis || isTreatment || isOutline;
   const isReadOnly = !document.canEdit;
+
+  // ─── Realtime collaboration ────────────────────────────────────────────
+  const { data: sessionData } = useSession();
+  const realtimeUser = sessionData?.user
+    ? { id: sessionData.user.id, name: sessionData.user.name }
+    : null;
+  const {
+    ydoc: realtimeDoc,
+    provider: realtimeProvider,
+    status: realtimeStatus,
+    peers: realtimePeers,
+  } = useYjsRoom(`document:${document.id}`, realtimeUser, !isReadOnly);
+  const narrativeRealtime =
+    realtimeStatus === "connected" && realtimeDoc && realtimeProvider
+      ? { ydoc: realtimeDoc, provider: realtimeProvider }
+      : null;
 
   // Track whether the user has actually edited (vs just loaded an empty doc).
   // We only publish a saveState after the first real edit — otherwise the
@@ -308,6 +326,11 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     </div>
   ) : (
     <div className={styles.pageShell}>
+      {realtimeStatus !== "disabled" && (
+        <div className={styles.presenceRow}>
+          <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
+        </div>
+      )}
       {isTreatment && !isReadOnly && (
         <div className={styles.editorToolbar}>
           <button
@@ -403,6 +426,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         readOnly={isReadOnly}
         enableHeadings={isTreatment}
         diffDocumentType={type}
+        realtime={narrativeRealtime}
         onReady={(view) => {
           editorViewRef.current = view;
           // Re-render the toolbar on every transaction so the active

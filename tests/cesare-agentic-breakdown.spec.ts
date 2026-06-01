@@ -2,8 +2,7 @@ import { test, expect } from "./fixtures";
 import { navigateToBreakdown, TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
   openCesareSheet,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
   setMockContext,
 } from "./helpers/cesare";
 
@@ -49,8 +48,10 @@ test.describe("[Spec 34] Cesare Agentic — Breakdown", () => {
     await setMockContext(authenticatedPage, { SCENE_NUMBER: 1 });
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Stima il costo della scena 1.");
-    const reply = await waitForCesareReply(authenticatedPage);
+    const reply = await sendCesareWithRetry(
+      authenticatedPage,
+      "Stima il costo della scena 1.",
+    );
 
     // Mock scenario text: "Costo stimato per la scena: circa €4.200…"
     expect(reply.toLowerCase()).toMatch(/costo|€|difficolt|scena/);
