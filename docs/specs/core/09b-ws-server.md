@@ -1,5 +1,16 @@
 # Spec 09 — WebSocket Server (Yjs Real-time Collaboration)
 
+> **Status: IMPLEMENTED (Phase 1) — 2026-06-01.** Live-verified two-browser sync on
+> both the screenplay (nested scene schema) and narrative editors, with remote cursors +
+> presence count, viewer read-only enforcement, and DB persistence. E2E: `tests/realtime-collab.spec.ts`
+> (`[OHW-09b]`). See `docs/specs/core/09b-impl-plan.md` for the as-built design.
+>
+> **Auth correction vs the original draft below:** the client passes its Better Auth
+> session token as `?token=`; the ws-server validates it against **Redis first**
+> (Better Auth `secondaryStorage`, where active sessions live) with a DB `sessions`
+> fallback — not a raw cookie lookup. Better Auth gained Redis `secondaryStorage`
+> (`packages/auth`). The shared auth config lives in `@oh-writers/auth`.
+
 ## Overview
 
 The `ws-server` is a standalone Hono process that acts as the Yjs sync provider between clients. It handles document rooms for screenplays and narrative documents, authenticates connections against Better Auth sessions, and persists Yjs state back to PostgreSQL.
