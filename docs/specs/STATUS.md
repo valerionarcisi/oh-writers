@@ -1,6 +1,6 @@
 # Oh Writers — Stato delle Spec
 
-Aggiornato: 2026-06-01 (Spec 41–53 verificate: Cesare shell Notion-style, streaming, diff inline, sessioni, Effect-TS AI engine)
+Aggiornato: 2026-06-01 (scansione completa del codice + Spec 09b realtime DONE).
 
 Legenda della classificazione:
 
@@ -8,6 +8,29 @@ Legenda della classificazione:
 - **PARTIAL** — feature folder + route esistono, ma la spec indica gap o la spec stessa elenca cose mancanti
 - **SPEC ONLY** — spec scritta, nessun codice corrispondente
 - **NO SPEC** — implementazione presente senza una spec numerata dedicata
+
+---
+
+## Roadmap (verificata sul codice 2026-06-01)
+
+**Costruito e funzionante** (feature folder + route + verifica codice): Auth, Teams (creazione/inviti/ruoli/settings), Projects, Dashboard, Narrative editor (logline/sinossi/scaletta/trattamento) + Soggetto free editor + export PDF/DOCX/SIAE, Screenplay editor (ProseMirror, autocomplete, scene numbering, PDF/Fountain import+export, revision color), Versioning universale, Breakdown (auto-spoglio + LLM), Budget (rule-based + rate card + categorie), Schedule (strip board + calendario + export), Shooting plan + blocking 2D, Locations (Places API + discovery scene-aware + atmosphere), Fundraising/Opportunities, Cesare (shell Notion, streaming, diff inline, sessioni, Effect-TS engine, agentic edit universale), Realtime collaboration (Spec 09b — Yjs sync + cursori + presenza).
+
+**Prossimo — coda decisa**
+
+| Pri | Item | Spec | Note |
+| --- | --- | --- | --- |
+| 1 | **i18n (IT/EN)** | 18 | Il prodotto deve girare anche in inglese. Estrarre le stringhe UI, scegliere la lib (da decidere), e — regola chiave — **in modalità EN le funzionalità specifiche del mercato italiano (SIAE export, bandi/fundraising IT, terminologia IT) vanno nascoste** dietro un gate di locale/mercato. |
+| 2 | **DS Primitives → react-aria** | 12d | Debito tecnico: i primitivi in `packages/ui/src/primitives/` (Button, Popover, Drawer, Modal, SegmentedControl…) NON usano react-aria, mentre `packages/ui/src/components/` sì. Due livelli coesistono → viola la regola hard di CLAUDE.md (react-aria mandatory). Migrare + unificare. |
+| 3 | **09b Phase 2** | 09b | `persistence.test.ts` (flush/reconnect), presenza nella project overview, multi-istanza ws-server (Redis pub/sub), realtime sul Soggetto free editor. |
+| 4 | **Timeline Scaletta verticale** | 15 | La scaletta usa ancora `OutlineEditor` (card-grid). La spec 15 prevede una timeline verticale stile DaVinci Resolve. Feature di prodotto, non bug. |
+
+**Più avanti (non v1)**
+
+| Item | Spec | Note |
+| --- | --- | --- |
+| Moodboard / Storyboard | 19 | "Farò" — non per la prima versione. |
+| Billing & Multi-Tenancy | 16-core | Layer di monetizzazione SaaS: Stripe, piani (free/pro/studio), feature gating/paywall, limiti per piano. Zero codice oggi. Serve quando si monetizza, non per l'MVP. |
+| AI auto-gen da screenplay | 14/14b/16-ai | Generare logline/sinossi/scaletta a partire dal testo della sceneggiatura importata (oggi solo da soggetto). |
 
 ---
 
