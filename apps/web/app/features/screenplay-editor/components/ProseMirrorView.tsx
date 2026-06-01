@@ -203,9 +203,13 @@ export function ProseMirrorView({
       nodeViews: {
         heading: (node, v, getPos) => createHeadingNodeView(node, v, getPos),
       },
-      dispatchTransaction(tr) {
-        const newState = view.state.apply(tr);
-        view.updateState(newState);
+      dispatchTransaction(this: EditorView, tr) {
+        // PM invokes this with the view as `this`. We read from `this` (never
+        // the outer `view`) because `ySyncPlugin` can dispatch its seeding
+        // transaction synchronously during `new EditorView(...)`, before the
+        // `view` binding is assigned.
+        const newState = this.state.apply(tr);
+        this.updateState(newState);
 
         // Emit the block type at cursor on every transaction (doc or selection change).
         if (onElementChange) {

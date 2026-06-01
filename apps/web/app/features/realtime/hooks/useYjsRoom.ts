@@ -47,6 +47,9 @@ export const useYjsRoom = (
   // Keep the latest user without re-opening the room when only the name changes.
   const userRef = useRef(user);
   userRef.current = user;
+  // The session resolves asynchronously, so the room must (re)open once the
+  // user id is known — hence userId is an effect dependency below.
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     if (!enabled || !isRealtimeEnabled() || !userRef.current) {
@@ -122,7 +125,7 @@ export const useYjsRoom = (
     // room.status intentionally excluded — it would re-open the room on every
     // connection-state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, enabled]);
+  }, [roomId, enabled, userId]);
 
   return room;
 };

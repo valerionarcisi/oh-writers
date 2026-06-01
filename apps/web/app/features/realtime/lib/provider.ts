@@ -6,7 +6,7 @@ import { WebsocketProvider } from "y-websocket";
  * deploy without a ws-server), realtime is disabled and the editor falls back
  * to the HTTP autosave path — see `isRealtimeEnabled`.
  */
-const WS_URL = import.meta.env["VITE_WS_URL"] as string | undefined;
+const WS_URL = import.meta.env.VITE_WS_URL as string | undefined;
 
 export const isRealtimeEnabled = (): boolean =>
   typeof WS_URL === "string" && WS_URL.length > 0;

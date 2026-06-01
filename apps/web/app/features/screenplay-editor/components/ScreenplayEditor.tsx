@@ -251,7 +251,6 @@ export const ScreenplayEditor = forwardRef<
   // ─── Realtime collaboration ────────────────────────────────────────────
   // A version snapshot is read-only and must never connect. Viewers connect
   // read-only (writes are blocked server-side); editors get full sync.
-  const canEditScreenplay = screenplay.canEdit ?? false;
   const { data: sessionData } = useSession();
   const realtimeUser = sessionData?.user
     ? { id: sessionData.user.id, name: sessionData.user.name }
@@ -262,7 +261,10 @@ export const ScreenplayEditor = forwardRef<
     status: realtimeStatus,
     peers: realtimePeers,
   } = useYjsRoom(`screenplay:${screenplay.id}`, realtimeUser, !isViewing);
-  const realtimeWritable = realtimeStatus === "connected" && canEditScreenplay;
+  // Realtime sync is active for ANY connected user (viewers included — they
+  // receive live content + cursors but the editor stays readOnly and the
+  // ws-server drops their writes). It is NOT tied to write permission.
+  const realtimeActive = realtimeStatus === "connected";
 
   // ─── Cesare propose/accept wiring ──────────────────────────────────────
   // Proposals live in a server-side in-memory store; the chat hook
@@ -1094,7 +1096,7 @@ export const ScreenplayEditor = forwardRef<
             readOnly={isViewing || !(screenplay.canEdit ?? false)}
             ydoc={realtimeDoc}
             provider={realtimeProvider}
-            realtime={realtimeWritable}
+            realtime={realtimeActive}
             pluginsExtra={pluginsExtraRef.current ?? undefined}
             onReady={(view) => {
               viewRef.current = view;
