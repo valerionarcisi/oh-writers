@@ -42,10 +42,19 @@ import { getDb } from "~/server/db";
 const SOGGETTO_INITIAL_TEMPLATE =
   "Milano, fine anni Novanta. Marta, trentacinque anni, traduttrice freelance, vive sola in un bilocale che le sta troppo stretto. Ha smesso da tempo di credere di poter cambiare qualcosa: lavora, paga l'affitto, evita di pensare a suo padre — un uomo che non vede da quindici anni e di cui ha appena ricevuto la notizia della morte.\n\nTornata al paese per il funerale, Marta scopre che il padre le ha lasciato in eredità una vecchia libreria. Decide di venderla in fretta e ripartire. Ma il giorno prima della firma, tra gli scatoloni, trova un manoscritto inedito firmato da sua madre — morta quando lei aveva sette anni.\n\nLeggendolo, Marta capisce che la storia di sua madre era ben diversa da quella che le era stata raccontata. Decide di restare un altro giorno. Poi un altro. Riapre la libreria, cerca chi ha conosciuto sua madre, ricostruisce un'identità che non sapeva di aver perso. La firma del rogito le scivola di mano: la libreria non si vende più.\n\nCancella questo testo e scrivi il tuo soggetto. Puoi usare i titoli (H1) per dividere atti o capitoli, oppure scrivere tutto di seguito — il formato è libero.\n";
 
+// Two-section synopsis baseline so `expand_section` (OHW-541) has a real
+// "## Atto II" heading to find + expand — without it the tool is a (correct)
+// no-op and emits no result card. MUST stay in lockstep with the global seed's
+// TEST_TEAM_SYNOPSIS_SEED (packages/db/src/seed/index.ts); the db package does
+// not export the seed module, so it is mirrored here by value, exactly as
+// SOGGETTO_INITIAL_TEMPLATE is.
+const SYNOPSIS_INITIAL_TEMPLATE =
+  "## Atto I\n\nMarta torna al paese per il funerale del padre e scopre di aver ereditato una vecchia libreria. Vuole solo venderla e ripartire.\n\n## Atto II\n\nTra gli scatoloni trova un manoscritto inedito di sua madre. Quello che legge rimette in discussione tutto ciò che credeva di sapere sulla propria famiglia.\n";
+
 const SEED_CONTENT_BY_TYPE: Readonly<Record<DocumentType, string>> = {
   logline: "A detective chases a killer through a silent city.",
   soggetto: SOGGETTO_INITIAL_TEMPLATE,
-  synopsis: "",
+  synopsis: SYNOPSIS_INITIAL_TEMPLATE,
   outline: "",
   treatment: "",
 };
