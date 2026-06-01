@@ -365,11 +365,12 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
   },
 
   // Documents — write_logline EDIT existing (OHW-047-A8).
-  // "rendi la logline più corta/tesa", "cambia il protagonista della logline".
-  // Placed before the WRITE + propose_* scenarios so the edit verbs win.
+  // "rendi la logline più corta/tesa", "accorcia la logline",
+  // "cambia il protagonista della logline". Placed before the WRITE + propose_*
+  // scenarios so the edit verbs win.
   {
     match:
-      /rendi la logline|logline più corta|logline piu corta|logline più tesa|logline piu tesa|cambia il protagonista della logline|modifica la logline/i,
+      /rendi la logline|logline più corta|logline piu corta|logline più tesa|logline piu tesa|logline più asciutta|logline piu asciutta|logline più incisiva|logline piu incisiva|accorcia la logline|cambia il protagonista della logline|modifica la logline|riscrivi la logline/i,
     turns: [
       {
         tool_uses: [
@@ -387,13 +388,14 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Documents — write_logline WRITE from a free instruction (OHW-047-A8).
-  // "scrivimi una logline su un detective che…" — no screenplay needed.
-  // Matched before propose_logline_from_screenplay; the "dalla sceneggiatura"
-  // wording (below) is the only path that still routes to the extraction tool.
+  // Documents — write_logline WRITE from a free instruction (OHW-047-A8 + R3).
+  // Covers the many ways a writer asks to write a logline from scratch:
+  // "scrivimi/buttami giù/abbozza/metti giù/dammi/sviluppa una logline (su…)".
+  // Matched before propose_logline_from_screenplay; only the explicit "dalla
+  // sceneggiatura" / "estrai" wording (below) routes to the extraction tool.
   {
     match:
-      /scrivimi una logline su|scrivimi una logline per|logline su un|logline su una|scrivi una logline su/i,
+      /scrivimi una logline|scrivi una logline|scrivimi la logline|scrivi la logline|buttami giù (una|la) logline|buttami giu (una|la) logline|butta giù (una|la) logline|butta giu (una|la) logline|abbozza(mi)? (una|la) logline|metti giù (una|la) logline|metti giu (una|la) logline|dammi (una|la) logline|sviluppa la logline|logline su un|logline su una|logline dallo spunto|logline da questo spunto/i,
     turns: [
       {
         tool_uses: [
@@ -414,10 +416,12 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Documents — propose_logline_from_screenplay (OHW-575)
+  // Documents — propose_logline_from_screenplay (OHW-575).
+  // Only the explicit "derive from the screenplay" wording routes here; the
+  // generic write phrasings above route to write_logline (from-zero capable).
   {
     match:
-      /logline dalla sceneggiatura|estrai la logline|genera la logline|generare la logline|scrivimi la logline|fammi una logline/i,
+      /logline dalla sceneggiatura|estrai la logline|genera la logline dalla sceneggiatura/i,
     turns: [
       {
         tool_uses: [
@@ -435,9 +439,11 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Documents — propose_synopsis_from_screenplay (OHW-576)
+  // Documents — propose_synopsis_from_screenplay (OHW-576 + R3).
+  // All the ways a writer asks for the synopsis, including "riassumi".
   {
-    match: /scrivimi la sinossi|genera la sinossi|fammi la sinossi/i,
+    match:
+      /scrivimi la sinossi|scrivi la sinossi|genera la sinossi|generami la sinossi|fammi la sinossi|dammi (una|la) sinossi|buttami giù la sinossi|buttami giu la sinossi|abbozza(mi)? la sinossi|fai un riassunto|rendi la sinossi più|rendi la sinossi piu|sinossi dal soggetto/i,
     turns: [
       {
         tool_uses: [
@@ -455,10 +461,13 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Documents — propose_soggetto_v2 (OHW-577)
+  // Documents — propose_soggetto_v2 (OHW-577 + R3).
+  // Write-from-zero, derive-from-logline, and edit phrasings for the soggetto.
+  // The cross-entity "aggiorna/allinea soggetto e sinossi" scenario below uses
+  // different verbs, so there is no collision.
   {
     match:
-      /v2 del soggetto|riscrivi il soggetto|fammi un v2|soggetto piu asciutto|soggetto più asciutto/i,
+      /scrivi(mi)? il soggetto|genera(mi)? il soggetto|fammi il soggetto|dammi il soggetto|buttami giù il soggetto|buttami giu il soggetto|abbozza(mi)? il soggetto|metti giù il soggetto|metti giu il soggetto|sviluppa il soggetto|soggetto dalla logline|soggetto dallo spunto|v2 del soggetto|riscrivi il soggetto|fammi un v2|soggetto piu asciutto|soggetto più asciutto|rendi il soggetto più|rendi il soggetto piu/i,
     turns: [
       {
         tool_uses: [
@@ -509,10 +518,11 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
     ],
   },
 
-  // Documents — propose_scaletta_from_soggetto (OHW-578)
+  // Documents — propose_scaletta_from_soggetto (OHW-578 + R3).
+  // Write/derive phrasings for the scaletta (list of scenes).
   {
     match:
-      /dato il soggetto fammi la scaletta|genera la scaletta dal soggetto|fammi la scaletta dal soggetto|scaletta dal soggetto/i,
+      /dato il soggetto fammi la scaletta|genera(mi)? la scaletta|fammi la scaletta|scrivimi la scaletta|scrivi la scaletta|dammi la scaletta|buttami giù la scaletta|buttami giu la scaletta|abbozza(mi)? la scaletta|scaletta dal soggetto|dividi la storia in scene|lista delle scene/i,
     turns: [
       {
         tool_uses: [
@@ -536,7 +546,7 @@ export const MOCK_SCENARIOS: ReadonlyArray<MockScenario> = [
   // "genera il trattamento dalla scaletta" request also dispatches here.
   {
     match:
-      /scrivi il trattamento|genera il trattamento|fammi il trattamento|trattamento (a partire|dalla scaletta|dal soggetto)/i,
+      /scrivi(mi)? il trattamento|genera(mi)? il trattamento|fammi il trattamento|dammi il trattamento|buttami giù il trattamento|buttami giu il trattamento|abbozza(mi)? il trattamento|metti giù il trattamento|metti giu il trattamento|trattamento (a partire|dalla scaletta|dal soggetto)/i,
     turns: [
       {
         tool_uses: [
