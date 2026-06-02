@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Button, Input, FormField, SegmentedControl } from "@oh-writers/ui";
 import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
-import { TEAM_ROLE_LABELS_IT, type Locale } from "@oh-writers/domain";
+import { teamRoleLabel, type Locale } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
 import { useLocale, useTranslation } from "~/features/i18n";
 import {
@@ -318,9 +318,7 @@ function PasswordSection() {
         revokeOtherSessions: false,
       });
       if (result.error) {
-        setApiError(
-          result.error.message ?? t("settings.password.changeError"),
-        );
+        setApiError(result.error.message ?? t("settings.password.changeError"));
       } else {
         setSuccess(true);
         setFields({ current: "", next: "", confirm: "" });
@@ -423,13 +421,16 @@ function PasswordSection() {
 
 function TeamsSection() {
   const { t } = useTranslation();
+  const locale = useLocale();
   const teamsQuery = useQuery(userTeamsQueryOptions());
 
   const teamList = teamsQuery.data?.isOk ? teamsQuery.data.value : [];
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>{t("settings.teams.sectionTitle")}</h2>
+      <h2 className={styles.sectionTitle}>
+        {t("settings.teams.sectionTitle")}
+      </h2>
 
       {teamsQuery.isLoading ? null : teamList.length === 0 ? (
         <p className={styles.emptyState} data-testid="teams-empty-state">
@@ -452,7 +453,7 @@ function TeamsSection() {
               )}
               <span className={styles.teamName}>{team.name}</span>
               <span className={styles.roleBadge}>
-                {TEAM_ROLE_LABELS_IT[team.role]}
+                {teamRoleLabel(team.role, locale)}
               </span>
             </div>
           ))}

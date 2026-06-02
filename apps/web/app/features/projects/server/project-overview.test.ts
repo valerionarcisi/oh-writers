@@ -92,6 +92,7 @@ describe("buildNextStep", () => {
         budget: emptyBudget,
         idleDays: 0,
         projectId: "p1",
+        locale: "it",
       }),
     ).toBeNull();
   });
@@ -105,10 +106,26 @@ describe("buildNextStep", () => {
       budget: emptyBudget,
       idleDays: 4,
       projectId: "p1",
+      locale: "it",
     });
     expect(step?.actionLabel).toBe("Avvia spoglio");
     expect(step?.actionHref).toBe("/projects/p1/breakdown");
     expect(step?.suggestion).toContain("4 giorni");
+  });
+
+  it("localises the breakdown suggestion in English", () => {
+    const step = buildNextStep({
+      hasScreenplay: true,
+      pageCount: 9,
+      sceneCount: 12,
+      breakdown: { scenesBrokenDown: 0, totalScenes: 12, hasAny: false },
+      budget: emptyBudget,
+      idleDays: 4,
+      projectId: "p1",
+      locale: "en",
+    });
+    expect(step?.actionLabel).toBe("Start breakdown");
+    expect(step?.suggestion).toContain("idle for 4 days at page 9");
   });
 
   it("suggests generating budget when breakdown exists but no budget", () => {
@@ -120,6 +137,7 @@ describe("buildNextStep", () => {
       budget: emptyBudget,
       idleDays: 1,
       projectId: "p1",
+      locale: "it",
     });
     expect(step?.actionLabel).toBe("Genera budget");
     expect(step?.actionHref).toBe("/projects/p1/budget");
@@ -134,6 +152,7 @@ describe("buildNextStep", () => {
       budget: { totalEUR: 1000, lineCount: 5, status: "draft", hasAny: true },
       idleDays: 0,
       projectId: "p1",
+      locale: "it",
     });
     expect(step).toBeNull();
   });

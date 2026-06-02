@@ -69,6 +69,33 @@ export const Locales = {
 
 export type Locale = (typeof Locales)[keyof typeof Locales];
 
+/**
+ * English team-role labels. The `_IT` map above stays the canonical IT source;
+ * `teamRoleLabel` picks the right one for the active locale. Display surfaces
+ * call the accessor; persisted data (DB titles) may still use the IT map at the
+ * creator's locale.
+ */
+export const TEAM_ROLE_LABELS_EN: Record<TeamRole, string> = {
+  owner: "Owner",
+  editor: "Editor",
+  viewer: "Viewer",
+} as const;
+
+export const teamRoleLabel = (role: TeamRole, locale: Locale): string =>
+  (locale === "it" ? TEAM_ROLE_LABELS_IT : TEAM_ROLE_LABELS_EN)[role];
+
+/** English document-type labels (counterpart to `DOCUMENT_TYPE_LABELS_IT`). */
+export const DOCUMENT_TYPE_LABELS_EN: Record<DocumentType, string> = {
+  logline: "Logline",
+  soggetto: "Treatment outline",
+  synopsis: "Synopsis",
+  outline: "Outline",
+  treatment: "Treatment",
+} as const;
+
+export const documentTypeLabel = (type: DocumentType, locale: Locale): string =>
+  (locale === "it" ? DOCUMENT_TYPE_LABELS_IT : DOCUMENT_TYPE_LABELS_EN)[type];
+
 export const DOCUMENT_PIPELINE = [
   DocumentTypes.SOGGETTO,
   DocumentTypes.SYNOPSIS,

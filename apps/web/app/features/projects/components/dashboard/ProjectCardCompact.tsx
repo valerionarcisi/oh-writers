@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@oh-writers/ui";
-import { TEAM_ROLE_LABELS_IT, type TranslationKey } from "@oh-writers/domain";
+import { teamRoleLabel, type TranslationKey } from "@oh-writers/domain";
 import type { DashboardProject } from "../../dashboard.schema";
 import { ProjectCoverGradient } from "./ProjectCoverGradient";
 import { useTranslation } from "~/features/i18n";
@@ -28,12 +28,10 @@ const GENRE_LABEL_KEYS: Record<string, TranslationKey> = {
   other: "dashboard.card.genreOther",
 };
 
-const ROLE_LABELS = TEAM_ROLE_LABELS_IT;
-
 const MAX_AVATARS = 3;
 
 export function ProjectCardCompact({ project }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const formatKey = FORMAT_LABEL_KEYS[project.format];
   const genreKey = project.genre ? GENRE_LABEL_KEYS[project.genre] : undefined;
   const visibleAvatars = project.collaborators.slice(0, MAX_AVATARS);
@@ -55,9 +53,7 @@ export function ProjectCardCompact({ project }: Props) {
         <span className={styles.title}>{project.title}</span>
         <span className={styles.meta}>
           {formatKey ? t(formatKey) : project.format}
-          {project.genre
-            ? ` · ${genreKey ? t(genreKey) : project.genre}`
-            : ""}
+          {project.genre ? ` · ${genreKey ? t(genreKey) : project.genre}` : ""}
         </span>
       </div>
       <span className={styles.cellNum} data-num>
@@ -97,7 +93,9 @@ export function ProjectCardCompact({ project }: Props) {
       ) : (
         <span className={styles.solo}>{t("dashboard.card.solo")}</span>
       )}
-      <span className={styles.roleTag}>{ROLE_LABELS[project.role]}</span>
+      <span className={styles.roleTag}>
+        {teamRoleLabel(project.role, locale)}
+      </span>
       <Link
         to="/projects/$id/screenplay"
         params={{ id: project.id }}

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { DocumentSummary } from "../../server/project-overview.server";
 import {
   DocumentTypes,
-  DOCUMENT_TYPE_LABELS_IT,
+  documentTypeLabel,
   type DocumentType,
   type TranslationKey,
 } from "@oh-writers/domain";
@@ -15,8 +15,6 @@ interface NarrativeCardGridProps {
   readonly projectId: string;
   readonly documents: DocumentSummary[];
 }
-
-const TYPE_LABEL = DOCUMENT_TYPE_LABELS_IT;
 
 const DOC_ROUTE: Record<
   Exclude<DocumentType, "logline">,
@@ -46,7 +44,7 @@ export function NarrativeCardGrid({
   projectId,
   documents,
 }: NarrativeCardGridProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const orderedTypes: DocumentType[] = [
     DocumentTypes.SOGGETTO,
     DocumentTypes.SYNOPSIS,
@@ -78,7 +76,9 @@ export function NarrativeCardGrid({
             className={styles.card}
           >
             <div className={styles.cardHead}>
-              <span className={styles.eyebrow}>{TYPE_LABEL[doc.type]}</span>
+              <span className={styles.eyebrow}>
+                {documentTypeLabel(doc.type, locale)}
+              </span>
               <span
                 className={`${styles.status} ${
                   doc.hasContent ? styles.statusDone : styles.statusDraft
@@ -89,7 +89,9 @@ export function NarrativeCardGrid({
                   : t("projects.narrative.toStart")}
               </span>
             </div>
-            <h3 className={styles.cardTitle}>{TYPE_LABEL[doc.type]}</h3>
+            <h3 className={styles.cardTitle}>
+              {documentTypeLabel(doc.type, locale)}
+            </h3>
             <p className={styles.preview}>
               {doc.preview || t("projects.narrative.emptyPreview")}
             </p>

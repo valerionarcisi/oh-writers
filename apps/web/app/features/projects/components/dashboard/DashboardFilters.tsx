@@ -1,5 +1,5 @@
 import { Input } from "@oh-writers/ui";
-import { TEAM_ROLE_LABELS_IT, type TranslationKey } from "@oh-writers/domain";
+import { teamRoleLabel, type TranslationKey } from "@oh-writers/domain";
 import {
   DashboardSortKeys,
   DashboardViewModes,
@@ -74,12 +74,12 @@ export function DashboardFilters({
   view,
   onViewChange,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const roles: ReadonlyArray<{ id: RoleFilter; label: string }> = [
     { id: "all", label: t("dashboard.filter.roleAll") },
-    { id: "owner", label: TEAM_ROLE_LABELS_IT.owner },
-    { id: "editor", label: TEAM_ROLE_LABELS_IT.editor },
-    { id: "viewer", label: TEAM_ROLE_LABELS_IT.viewer },
+    { id: "owner", label: teamRoleLabel("owner", locale) },
+    { id: "editor", label: teamRoleLabel("editor", locale) },
+    { id: "viewer", label: teamRoleLabel("viewer", locale) },
   ];
   return (
     <>

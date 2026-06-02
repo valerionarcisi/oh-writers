@@ -7,7 +7,7 @@ import { documents, documentVersions, projects } from "@oh-writers/db/schema";
 import type { Document } from "@oh-writers/db";
 import {
   DocumentTypes,
-  DOCUMENT_TYPE_LABELS_IT,
+  documentTypeLabel,
   type DocumentType,
 } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
@@ -140,7 +140,7 @@ export const getDocument = createServerFn({ method: "GET" })
               .values({
                 projectId: data.projectId,
                 type: docType,
-                title: DOCUMENT_TYPE_LABELS_IT[docType],
+                title: documentTypeLabel(docType, user.locale),
                 content: "",
                 createdBy: user.id,
               })

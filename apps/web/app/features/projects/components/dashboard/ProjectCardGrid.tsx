@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@oh-writers/ui";
-import { TEAM_ROLE_LABELS_IT, type TranslationKey } from "@oh-writers/domain";
+import { teamRoleLabel, type TranslationKey } from "@oh-writers/domain";
 import type { DashboardProject } from "../../dashboard.schema";
 import { ProjectCoverGradient } from "./ProjectCoverGradient";
 import { useTranslation } from "~/features/i18n";
@@ -28,18 +28,16 @@ const GENRE_LABEL_KEYS: Record<string, TranslationKey> = {
   other: "dashboard.card.genreOther",
 };
 
-const ROLE_LABELS = TEAM_ROLE_LABELS_IT;
-
 const MAX_AVATARS = 3;
 
 export function ProjectCardGrid({ project }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const formatKey = FORMAT_LABEL_KEYS[project.format];
   const genreKey = project.genre ? GENRE_LABEL_KEYS[project.genre] : undefined;
   const meta = [
     formatKey ? t(formatKey) : project.format,
     project.genre ? (genreKey ? t(genreKey) : project.genre) : null,
-    ROLE_LABELS[project.role],
+    teamRoleLabel(project.role, locale),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -63,7 +61,7 @@ export function ProjectCardGrid({ project }: Props) {
           size="md"
         />
         <span className={styles.roleTag} aria-hidden="true">
-          {ROLE_LABELS[project.role]}
+          {teamRoleLabel(project.role, locale)}
         </span>
       </header>
 
