@@ -1,6 +1,6 @@
 # Spec 25b — Primitives → react-aria migration & Button unification
 
-> Status: active · Date: 2026-06-02 · Owner: Valerio
+> Status: DONE (2026-06-02, branch `feat/primitives-react-aria`) · Owner: Valerio
 > Extends: [25 — React Aria adoption](./25-react-aria-adoption.md)
 > Roadmap: STATUS.md Priority 2 (labelled "12d" historically; the *visual* 12d
 > spec `12d-ds-primitives-unification.md` is already DONE/closed at `de6dd5d`.
@@ -182,6 +182,18 @@ Reference implementation to mirror: `packages/ui/src/components/Button.tsx`
   toggle chip; version/view menus arrow-key nav. Screenshots per surface.
 - No behavioural regression in the app: Cesare drawer, command palette, export
   modals, dashboard filters, breakdown chips, viewbar version pills all still work.
+
+## 6b. Known pre-existing flake (NOT introduced here)
+
+`tests/breakdown/breakdown-bulk-actions.spec.ts` (OHW-421/422/424/426) and
+`breakdown-per-project-view` (OHW-404/405) are intermittently flaky: after
+`switchBreakdownView` the per-project table renders behind nested Suspense
+boundaries and can race (`project-breakdown-table` not yet visible). Confirmed
+pre-existing (the SegmentedControl is now a *controlled* radio group, so the
+view switch fires on `activeId`; `toBeChecked` passing means the app state
+already flipped — the gap is the downstream Suspense render). CI's `retries: 2`
+absorbs it (runs come up "flaky → passed"). Own ticket to stabilise the
+breakdown Suspense settling; out of scope for 25b.
 
 ## 7. Out of scope
 
