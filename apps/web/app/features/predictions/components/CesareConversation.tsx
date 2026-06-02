@@ -674,6 +674,8 @@ export function MessageView({
           setShowingDiff(false);
           onHideChanges({ liveDiffs: metadata.liveDiffs });
         }}
+        showChangesLabel={t("shell.changeTrace.show")}
+        hideChangesLabel={t("shell.changeTrace.hide")}
         defaultStepsOpen={false}
         testId="cesare-change-trace"
       />

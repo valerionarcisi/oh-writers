@@ -77,6 +77,10 @@ export interface ChangeTraceProps {
    *  Drives the button label (`Mostra` ↔ `Nascondi`). When omitted the
    *  component holds its own state. */
   readonly isShowingChanges?: boolean;
+  /** Label for the "show diff" toggle (defaults to IT "Mostra modifiche"). */
+  readonly showChangesLabel?: string;
+  /** Label for the "hide diff" toggle (defaults to IT "Nascondi modifiche"). */
+  readonly hideChangesLabel?: string;
   /** Defaults to false: the steps list opens collapsed; `true` opens expanded. */
   readonly defaultStepsOpen?: boolean;
   /** Optional className passed to the outer `<article/>`. */
@@ -105,6 +109,8 @@ export function ChangeTrace({
   onShowChanges,
   onHideChanges,
   isShowingChanges,
+  showChangesLabel = "Mostra modifiche",
+  hideChangesLabel = "Nascondi modifiche",
   defaultStepsOpen = false,
   className,
   testId,
@@ -153,7 +159,7 @@ export function ChangeTrace({
   );
 
   const stepLabel = stepCount === 1 ? "1 passaggio" : `${stepCount} passaggi`;
-  const showLabel = showing ? "Nascondi modifiche" : "Mostra modifiche";
+  const showLabel = showing ? hideChangesLabel : showChangesLabel;
   const updatesLabel =
     updates.length === 1 ? "1 modifica" : `${updates.length} modifiche`;
 

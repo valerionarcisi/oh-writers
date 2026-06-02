@@ -68,6 +68,11 @@ export interface SplitDrawerProps {
   /** Accessible label for the drawer landmark. */
   ariaLabel?: string;
 
+  /** Aria-label + title for the expand control (defaults to IT "Espandi"). */
+  expandLabel?: string;
+  /** Aria-label + title for the close control (defaults to IT "Chiudi"). */
+  closeLabel?: string;
+
   /**
    * Where the drawer sits in the layout.
    *   - `"overlay"` (default): `position: fixed`, right-anchored. The host page
@@ -129,6 +134,8 @@ export function SplitDrawer({
   onSizeChange,
   className,
   ariaLabel = "Split drawer",
+  expandLabel = "Espandi",
+  closeLabel = "Chiudi",
   placement = "overlay",
   testId,
 }: SplitDrawerProps) {
@@ -206,7 +213,7 @@ export function SplitDrawer({
             {onCycle && (
               <HeaderButton
                 onPress={onCycle}
-                label="Espandi"
+                label={expandLabel}
                 icon={<span aria-hidden="true">↗</span>}
               />
             )}
@@ -219,7 +226,7 @@ export function SplitDrawer({
             )}
             <HeaderButton
               onPress={onClose}
-              label="Chiudi"
+              label={closeLabel}
               icon={<span aria-hidden="true">×</span>}
               isDanger
             />

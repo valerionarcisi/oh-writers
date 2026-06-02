@@ -176,6 +176,7 @@ export type {
   RailSection,
   RailToolItem,
   RailAccountActions,
+  RailLabels,
   CesareSessionItem,
 } from "./shell/LeftRail/LeftRail";
 
@@ -205,6 +206,7 @@ export type {
 export { CesareDrawer } from "./composites/CesareDrawer/CesareDrawer";
 export type {
   CesareDrawerProps,
+  CesareDrawerLabels,
   CesareDrawerSession,
   CesareDrawerScope,
   CesareDrawerContextTag,

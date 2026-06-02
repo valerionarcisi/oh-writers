@@ -40,6 +40,28 @@ export type RailToolItem = {
   onPress: () => void;
 };
 
+// User-facing labels for the rail chrome. Every field is optional with its
+// current IT value as default so `packages/ui` stays framework-agnostic (no
+// i18n import); the app passes translated values via `useTranslation`.
+export type RailLabels = {
+  /** Section title for the Cesare sessions slot. */
+  sessionsTitle?: string;
+  /** Aria-label for the clickable sessions title (opens the sessions page). */
+  sessionsOpen?: string;
+  /** Aria-label + title for the notifications bell. */
+  notifications?: string;
+  /** Aria-label for the notifications bell when there are unread items. */
+  notificationsUnread?: string;
+  /** Aria-label + title for the settings gear. */
+  settings?: string;
+  /** Aria-label for the project header button when no project is set. */
+  projectFallback?: string;
+  /** Aria-label for the "new Cesare session" affordance. */
+  newSession?: string;
+  /** Aria-label for the rail navigation landmark. */
+  nav?: string;
+};
+
 // Account row that lives in the rail FOOTER (Spec 47b FIX 1): notifications /
 // profile / settings. These used to sit in the BottomDock + the Cesare header
 // overflow; they now have a single home here so neither surface duplicates them.
@@ -107,6 +129,9 @@ export type LeftRailProps = {
   tools?: ReadonlyArray<RailToolItem>;
   /** Optional aria-label override for the rail nav landmark. */
   ariaLabel?: string;
+  /** Translated chrome labels. Optional — each field defaults to its IT value
+   *  so the rail renders correctly without a translator. */
+  labels?: RailLabels;
   /** Collapse the shell from inside the rail. When provided (full mode only),
    *  the brand row surfaces a hover-revealed `«` button at its trailing edge.
    *  Mutually exclusive with `overlay` — `overlay` is only supplied in the
@@ -337,7 +362,15 @@ function SessionRow({
 // The "Sessioni Cesare" section title. When `onOpen` is provided it is a
 // react-aria button that navigates to the full Cesare sessions page; otherwise
 // it is plain, non-interactive text.
-function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
+function SessionsSectionTitle({
+  onOpen,
+  title,
+  openLabel,
+}: {
+  onOpen?: () => void;
+  title: string;
+  openLabel: string;
+}) {
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
@@ -346,13 +379,12 @@ function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
       // opens the full sessions page, the dock pill opens the floating chat.
       // A shared accessible name would make both ambiguous to assistive tech
       // and to E2E locators.
-      "aria-label": "Apri sessioni Cesare",
+      "aria-label": openLabel,
       isDisabled: !onOpen,
     },
     ref,
   );
-  if (!onOpen)
-    return <span data-testid="rail-sessions-title">Sessioni Cesare</span>;
+  if (!onOpen) return <span data-testid="rail-sessions-title">{title}</span>;
   return (
     <button
       ref={ref}
@@ -361,7 +393,7 @@ function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
       data-testid="rail-cesare-entry"
     >
       <RailGlyph icon="agent-spark" />
-      <span data-testid="rail-sessions-title">Sessioni Cesare</span>
+      <span data-testid="rail-sessions-title">{title}</span>
     </button>
   );
 }
@@ -411,7 +443,17 @@ function GearGlyph() {
 
 // Account footer row — bell / avatar / gear. Each is a react-aria button so
 // keyboard + focus handling matches the rest of the rail.
-function AccountRow({ account }: { account: RailAccountActions }) {
+function AccountRow({
+  account,
+  notificationsLabel,
+  notificationsUnreadLabel,
+  settingsLabel,
+}: {
+  account: RailAccountActions;
+  notificationsLabel: string;
+  notificationsUnreadLabel: string;
+  settingsLabel: string;
+}) {
   const bellRef = useRef<HTMLButtonElement>(null);
   const avatarRef = useRef<HTMLButtonElement>(null);
   const gearRef = useRef<HTMLButtonElement>(null);
@@ -419,8 +461,8 @@ function AccountRow({ account }: { account: RailAccountActions }) {
     {
       onPress: account.onBell,
       "aria-label": account.hasUnreadNotifications
-        ? "Notifiche — nuove"
-        : "Notifiche",
+        ? notificationsUnreadLabel
+        : notificationsLabel,
     },
     bellRef,
   );
@@ -429,7 +471,7 @@ function AccountRow({ account }: { account: RailAccountActions }) {
     avatarRef,
   );
   const { buttonProps: gearProps } = useButton(
-    { onPress: account.onGear, "aria-label": "Impostazioni" },
+    { onPress: account.onGear, "aria-label": settingsLabel },
     gearRef,
   );
   return (
@@ -443,7 +485,7 @@ function AccountRow({ account }: { account: RailAccountActions }) {
         ref={bellRef}
         {...bellProps}
         className={styles.accountBtn}
-        title="Notifiche"
+        title={notificationsLabel}
         data-rail-account="bell"
         data-testid="notifications-btn"
       >
@@ -466,7 +508,7 @@ function AccountRow({ account }: { account: RailAccountActions }) {
         ref={gearRef}
         {...gearProps}
         className={styles.accountBtn}
-        title="Impostazioni"
+        title={settingsLabel}
         data-rail-account="gear"
         data-testid="settings-btn"
       >
@@ -520,9 +562,19 @@ export function LeftRail({
   account,
   tools,
   ariaLabel,
+  labels,
   overlay,
   onCollapse,
 }: LeftRailProps) {
+  const sessionsTitleLabel = labels?.sessionsTitle ?? "Sessioni Cesare";
+  const sessionsOpenLabel = labels?.sessionsOpen ?? "Apri sessioni Cesare";
+  const notificationsLabel = labels?.notifications ?? "Notifiche";
+  const notificationsUnreadLabel =
+    labels?.notificationsUnread ?? "Notifiche — nuove";
+  const settingsLabel = labels?.settings ?? "Impostazioni";
+  const projectFallbackLabel = labels?.projectFallback ?? "Progetto";
+  const newSessionLabel = labels?.newSession ?? "Nuova sessione Cesare";
+  const navLabel = labels?.nav ?? "Navigazione progetto";
   const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: brandBtnProps } = useButton(
@@ -533,7 +585,9 @@ export function LeftRail({
   const { buttonProps: projectBtnProps } = useButton(
     {
       onPress: project?.onPress ?? (() => undefined),
-      "aria-label": project ? `Progetto: ${project.title}` : "Progetto",
+      "aria-label": project
+        ? `Progetto: ${project.title}`
+        : projectFallbackLabel,
       isDisabled: !project?.onPress,
     },
     projectRef,
@@ -596,13 +650,17 @@ export function LeftRail({
     return (
       <section className={styles.section} data-rail-section="sessions">
         <header className={styles.sectionLabel}>
-          <SessionsSectionTitle onOpen={onSessionsOpen} />
+          <SessionsSectionTitle
+            onOpen={onSessionsOpen}
+            title={sessionsTitleLabel}
+            openLabel={sessionsOpenLabel}
+          />
           {onSessionNew && (
             <button
               type="button"
               className={styles.newSession}
               onClick={onSessionNew}
-              aria-label="Nuova sessione Cesare"
+              aria-label={newSessionLabel}
               data-testid="new-session-btn"
             >
               + Nuova
@@ -638,7 +696,7 @@ export function LeftRail({
       {...overlayProps}
       {...railHoverProps}
       className={styles.rail}
-      aria-label={ariaLabel ?? "Navigazione progetto"}
+      aria-label={ariaLabel ?? navLabel}
       data-testid="left-rail"
     >
       <div className={styles.brandRow}>
@@ -718,7 +776,14 @@ export function LeftRail({
 
       <div className={styles.spacer} />
 
-      {account && <AccountRow account={account} />}
+      {account && (
+        <AccountRow
+          account={account}
+          notificationsLabel={notificationsLabel}
+          notificationsUnreadLabel={notificationsUnreadLabel}
+          settingsLabel={settingsLabel}
+        />
+      )}
 
       {tools && tools.length > 0 && (
         <div className={styles.tools} role="toolbar" aria-label="Strumenti">

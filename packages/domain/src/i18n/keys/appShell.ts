@@ -142,6 +142,49 @@ export const appShellKeys = {
     "shell.derived.screenplayNewVersion": "Cesare prepared a new version",
     "shell.derived.screenplayRename": "Cesare proposed a rename",
     "shell.derived.screenplayProposal": "Cesare proposed a change",
+    // LeftRail chrome (Spec 18b PR-7)
+    "shell.rail.sessionsTitle": "Cesare sessions",
+    "shell.rail.sessionsOpen": "Open Cesare sessions",
+    "shell.rail.notifications": "Notifications",
+    "shell.rail.notificationsUnread": "Notifications — new",
+    "shell.rail.settings": "Settings",
+    "shell.rail.projectFallback": "Project",
+    "shell.rail.newSession": "New Cesare session",
+    "shell.rail.nav": "Project navigation",
+    "shell.rail.openSidebar": "Open sidebar",
+    // Project switcher popover
+    "shell.projectSwitcher.switch": "Switch project",
+    "shell.projectSwitcher.empty": "No project",
+    "shell.projectSwitcher.current": "Current project",
+    // Command palette listbox
+    "shell.palette.empty": "No results",
+    "shell.palette.results": "Results",
+    // BottomDock Cesare launcher
+    "shell.dock.openCesare": "Open Cesare",
+    // ChangeTrace toggle
+    "shell.changeTrace.show": "Show changes",
+    "shell.changeTrace.hide": "Hide changes",
+    // SplitDrawer window controls
+    "shell.splitDrawer.expand": "Expand",
+    "shell.splitDrawer.close": "Close",
+    // MarginNote suggestion actions
+    "shell.marginNote.accept": "Accept Cesare's suggestion",
+    "shell.marginNote.ignore": "Dismiss Cesare's suggestion",
+    // TargetPagePreview
+    "shell.targetPreview.empty": "No change",
+    "shell.targetPreview.stubTitle": "Trace preview",
+    // CesareDrawer window controls
+    "shell.cesareDrawer.peekExpand": "Expand Cesare",
+    "shell.cesareDrawer.peekClose": "Close Cesare",
+    "shell.cesareDrawer.expand": "Expand",
+    "shell.cesareDrawer.openAsColumn": "Open as column",
+    "shell.cesareDrawer.minimize": "Minimise",
+    "shell.cesareDrawer.close": "Close",
+    // Banner dismiss
+    "shell.banner.dismiss": "Close",
+    // ConfirmDialog default actions
+    "shell.confirmDialog.confirm": "Confirm",
+    "shell.confirmDialog.cancel": "Cancel",
   },
   it: {
     // Cesare success toasts (live-apply markers)
@@ -282,5 +325,48 @@ export const appShellKeys = {
     "shell.derived.screenplayNewVersion": "Cesare ha preparato una nuova versione",
     "shell.derived.screenplayRename": "Cesare ha proposto una rinomina",
     "shell.derived.screenplayProposal": "Cesare ha proposto una modifica",
+    // LeftRail chrome (Spec 18b PR-7)
+    "shell.rail.sessionsTitle": "Sessioni Cesare",
+    "shell.rail.sessionsOpen": "Apri sessioni Cesare",
+    "shell.rail.notifications": "Notifiche",
+    "shell.rail.notificationsUnread": "Notifiche — nuove",
+    "shell.rail.settings": "Impostazioni",
+    "shell.rail.projectFallback": "Progetto",
+    "shell.rail.newSession": "Nuova sessione Cesare",
+    "shell.rail.nav": "Navigazione progetto",
+    "shell.rail.openSidebar": "Apri sidebar",
+    // Project switcher popover
+    "shell.projectSwitcher.switch": "Cambia progetto",
+    "shell.projectSwitcher.empty": "Nessun progetto",
+    "shell.projectSwitcher.current": "Progetto corrente",
+    // Command palette listbox
+    "shell.palette.empty": "Nessun risultato",
+    "shell.palette.results": "Risultati",
+    // BottomDock Cesare launcher
+    "shell.dock.openCesare": "Apri Cesare",
+    // ChangeTrace toggle
+    "shell.changeTrace.show": "Mostra modifiche",
+    "shell.changeTrace.hide": "Nascondi modifiche",
+    // SplitDrawer window controls
+    "shell.splitDrawer.expand": "Espandi",
+    "shell.splitDrawer.close": "Chiudi",
+    // MarginNote suggestion actions
+    "shell.marginNote.accept": "Accetta suggerimento di Cesare",
+    "shell.marginNote.ignore": "Ignora suggerimento di Cesare",
+    // TargetPagePreview
+    "shell.targetPreview.empty": "Nessuna modifica",
+    "shell.targetPreview.stubTitle": "Anteprima trace",
+    // CesareDrawer window controls
+    "shell.cesareDrawer.peekExpand": "Espandi Cesare",
+    "shell.cesareDrawer.peekClose": "Chiudi Cesare",
+    "shell.cesareDrawer.expand": "Espandi",
+    "shell.cesareDrawer.openAsColumn": "Apri come colonna",
+    "shell.cesareDrawer.minimize": "Minimizza",
+    "shell.cesareDrawer.close": "Chiudi",
+    // Banner dismiss
+    "shell.banner.dismiss": "Chiudi",
+    // ConfirmDialog default actions
+    "shell.confirmDialog.confirm": "Conferma",
+    "shell.confirmDialog.cancel": "Annulla",
   },
 } as const satisfies LocaleDict;

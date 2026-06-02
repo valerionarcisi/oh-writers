@@ -37,6 +37,7 @@ export function CesareSuggestionBanner({
         },
       ]}
       onDismiss={onDismiss}
+      dismissLabel={t("shell.banner.dismiss")}
     />
   );
 }

@@ -111,6 +111,8 @@ export function VersionsSplitLane({
           size={{ width }}
           onSizeChange={({ width: next }) => onWidthChange(next)}
           ariaLabel={t("shell.versionsLane.frameAria")}
+          expandLabel={t("shell.splitDrawer.expand")}
+          closeLabel={t("shell.splitDrawer.close")}
           testId="versions-split-drawer-frame"
         >
           <VersionsSplitDrawer

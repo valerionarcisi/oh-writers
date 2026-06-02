@@ -39,6 +39,7 @@ export function VersionImportBanner({ versionId }: Props) {
           : t("breakdown.importBanner.scenePluralSuffix")
       }`}
       onDismiss={handleDismiss}
+      dismissLabel={t("shell.banner.dismiss")}
     />
   );
 }

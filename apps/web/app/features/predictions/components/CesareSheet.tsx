@@ -588,6 +588,14 @@ export function CesareSheet({
       peekSubtitle={
         isLoading ? t("cesare.peek.thinking") : t("cesare.peek.waiting")
       }
+      labels={{
+        peekExpand: t("shell.cesareDrawer.peekExpand"),
+        peekClose: t("shell.cesareDrawer.peekClose"),
+        expand: t("shell.cesareDrawer.expand"),
+        openAsColumn: t("shell.cesareDrawer.openAsColumn"),
+        minimize: t("shell.cesareDrawer.minimize"),
+        close: t("shell.cesareDrawer.close"),
+      }}
     >
       {conversationBody}
       {isSessionPopoverOpen && (
