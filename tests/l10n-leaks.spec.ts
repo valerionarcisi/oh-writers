@@ -1,13 +1,20 @@
 // tests/l10n-leaks.spec.ts
 //
-// [OHW-l10n] Italian localisation guard.
+// [OHW-l10n] Italian localisation guard — IT-LOCALE SCOPED.
 //
-// The product is for Italian screenwriters / directors: every user-facing
-// string must be Italian. This suite walks the pages flagged in
-// docs/audits/2026-05-31/audit-C-l10n-bugs.md (L1–L23) and asserts that none
-// of the previously-leaked English labels are visible, while the correct
-// Italian replacement is present. Identifiers, enum values and testids stay
-// English and are deliberately NOT asserted on.
+// This suite asserts the IT rendering of the UI: it walks the pages flagged in
+// docs/audits/2026-05-31/audit-C-l10n-bugs.md (L1–L23) and asserts that none of
+// the previously-leaked English labels are visible, while the correct Italian
+// replacement is present. Identifiers, enum values and testids stay English and
+// are deliberately NOT asserted on.
+//
+// SCOPE (Spec 18b): with i18n the UI is no longer Italian-only. This guard is
+// meaningful ONLY for an Italian-locale user — it uses the default `test`
+// fixture, whose seeded user has `locale='it'` (see packages/db seed + the 0036
+// backfill). It must NOT be run under an English-locale fixture (that would be a
+// false guard). When the EN-locale fixture is added (PR-4 locale selector), keep
+// this suite on the IT user and add a separate EN suite if an EN-copy guard is
+// wanted.
 //
 // Each leak is matched as a whole word against the rendered page text so we
 // catch the visible label without tripping on English that legitimately lives
