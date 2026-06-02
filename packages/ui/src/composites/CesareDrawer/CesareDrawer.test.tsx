@@ -306,6 +306,25 @@ describe("CesareDrawer", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
+  it("composer submits on plain Enter and inserts a newline on Shift+Enter", () => {
+    const onSubmit = vi.fn();
+    const { getByLabelText } = render(
+      <CesareDrawer
+        {...baseProps}
+        composer={{
+          value: "ciao",
+          onChange: () => undefined,
+          onSubmit,
+        }}
+      />,
+    );
+    const input = getByLabelText("Composer Cesare") as HTMLTextAreaElement;
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(1); // shift+enter does not submit
+  });
+
   it("renders peek row in peek state and hides the frame", () => {
     const { getAllByText, getByText, queryByLabelText, getByTestId } = render(
       <CesareDrawer {...baseProps} state="peek" peekSubtitle="3 passaggi" />,

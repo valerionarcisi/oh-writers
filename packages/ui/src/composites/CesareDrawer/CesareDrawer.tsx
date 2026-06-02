@@ -399,11 +399,12 @@ export function CesareDrawer({
   const handleComposerKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (!composer) return;
-      // cmd+enter or ctrl+enter submits.
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        composer.onSubmit();
-      }
+      // Chat convention: Enter sends, Shift+Enter inserts a newline.
+      // Cmd/Ctrl+Enter also sends (kept for muscle memory).
+      if (e.key !== "Enter") return;
+      if (e.shiftKey) return;
+      e.preventDefault();
+      composer.onSubmit();
     },
     [composer],
   );

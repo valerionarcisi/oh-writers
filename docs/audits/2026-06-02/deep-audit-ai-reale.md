@@ -92,7 +92,7 @@ vero vive nel drawer Versioni**, sostenuto dalla **versione auto-creata** prima 
 CLAUDE.md (punto 4 del contratto Agentic Edit) elencava ancora "↩ Annulla". **FIX (fatto):**
 aggiornato CLAUDE.md per riflettere Spec 47e (no undo inline; rollback via Versioni).
 
-## 🟡 BASSO-3 — Invio Cesare: Enter inserisce newline invece di inviare
+## ✅ BASSO-3 (FIXATO) — Cesare: Enter invia, Shift+Enter newline
 
 Nella textarea "Chiedi a Cesare…", premere **Enter** aggiunge un a-capo invece di inviare;
 l'invio funziona solo col bottone **↑**. Per una chat è atteso che Enter invii (Shift+Enter =
