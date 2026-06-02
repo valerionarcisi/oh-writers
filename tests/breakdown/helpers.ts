@@ -78,11 +78,12 @@ export const switchBreakdownView = async (
   page: Page,
   view: "per-scene" | "per-project" | "matrice",
 ) => {
+  // SegmentedControl is a radio group (react-aria useRadioGroup): each option is
+  // a radio input carrying data-testid="segmented-<id>"; selection is the native
+  // `checked` state, not aria-selected.
   const tab = page.getByTestId(`segmented-${view}`);
   await expect(async () => {
     await tab.click();
-    await expect(tab).toHaveAttribute("aria-selected", "true", {
-      timeout: 1_000,
-    });
+    await expect(tab).toBeChecked({ timeout: 1_000 });
   }).toPass({ timeout: 15_000 });
 };

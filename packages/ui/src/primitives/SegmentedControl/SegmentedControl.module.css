@@ -8,7 +8,6 @@
 }
 
 .option {
-  all: unset;
   display: inline-flex;
   align-items: center;
   padding: 4px 4px 6px;
@@ -24,11 +23,23 @@
   transition: color 120ms ease;
 }
 
+/* Native radio input drives a11y + keyboard/roving focus (react-aria useRadio);
+ * hide its native chrome and stretch it over the label so the whole pill is the
+ * click + focus target while the label paints the visible style. */
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  appearance: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .option:hover {
   color: var(--ds-text);
 }
 
-.option:focus-visible {
+.option:has(.input:focus-visible) {
   outline: 2px solid var(--ds-action);
   outline-offset: 4px;
   border-radius: 2px;
