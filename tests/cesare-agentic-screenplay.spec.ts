@@ -5,8 +5,7 @@ import {
   closeCesareSheet,
   openCesareSheet,
   resetScreenplayState,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
 } from "./helpers/cesare";
 
 /**
@@ -42,8 +41,10 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     );
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Rendi questa scena più tesa.");
-    const reply = await waitForCesareReply(authenticatedPage);
+    const reply = await sendCesareWithRetry(
+      authenticatedPage,
+      "Rendi questa scena più tesa.",
+    );
     expect(reply.toLowerCase()).toMatch(/propost|modifica|scena/);
 
     // The edit applies live in the editor; the accept widget lives in-page.
@@ -94,8 +95,10 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     );
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Fammi una v2 più corta.");
-    const reply = await waitForCesareReply(authenticatedPage);
+    const reply = await sendCesareWithRetry(
+      authenticatedPage,
+      "Fammi una v2 più corta.",
+    );
     expect(reply.toLowerCase()).toMatch(/preparat|v2|versione|draft|diff/);
 
     // The banner appears once the proposals query refetches after Cesare's
@@ -135,8 +138,10 @@ test.describe("[Spec 34] Cesare Agentic — Screenplay", () => {
     }
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(authenticatedPage, "Rinomina Giulio in Lucia.");
-    const reply = await waitForCesareReply(authenticatedPage);
+    const reply = await sendCesareWithRetry(
+      authenticatedPage,
+      "Rinomina Giulio in Lucia.",
+    );
     expect(reply.toLowerCase()).toMatch(/rinomina|propost/);
 
     // Bulk-accept the single proposal — the PM plugin replaces every

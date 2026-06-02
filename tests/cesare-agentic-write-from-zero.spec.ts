@@ -5,6 +5,7 @@ import { TEST_TEAM_PROJECT_ID } from "./fixtures";
 import {
   openCesareSheet,
   sendCesareMessage,
+  sendCesareWithRetry,
   resetCesareState,
 } from "./helpers/cesare";
 
@@ -179,7 +180,7 @@ test.describe("[Audit ALTO #4] free natural-language dispatch", () => {
 
     await openCesareSheet(page);
 
-    await sendCesareMessage(
+    await sendCesareWithRetry(
       page,
       "scrivimi una logline su un detective che non dorme mai",
     );

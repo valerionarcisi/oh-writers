@@ -7,8 +7,7 @@ import { navigateToSchedule, SCHEDULE_PROJECT_ID } from "./schedule/helpers";
 import {
   closeCesareSheet,
   openCesareSheet,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
 } from "./helpers/cesare";
 
 /**
@@ -30,21 +29,23 @@ test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule po
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
+    // 30s preconditions: the shooting-plan route + blocking canvas JIT-compile
+    // on first hit on a cold CI dev server, which can exceed 15s on a 2-core
+    // runner (this is page-load latency, not a Cesare turn).
     const scenes = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
-    await expect(scenes.first()).toBeVisible({ timeout: 15_000 });
+    await expect(scenes.first()).toBeVisible({ timeout: 30_000 });
     await scenes.first().click();
 
     await expect(page.getByText(/ANTEPRIMA BLOCKING/)).toBeVisible({
-      timeout: 15_000,
+      timeout: 30_000,
     });
 
     await openCesareSheet(page);
-    await sendCesareMessage(page, "Suggerisci blocking per questa scena.");
-    await waitForCesareReply(page);
+    await sendCesareWithRetry(page, "Suggerisci blocking per questa scena.");
 
     // The proposal panel appears anchored to the canvas
     const panel = page.getByTestId("blocking-proposal-panel");
-    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel).toBeVisible({ timeout: 20_000 });
     await expect(panel.getByText(/Suggerimento Cesare/i)).toBeVisible();
 
     // Dismiss the floating Cesare drawer so it can't intercept the click on the
