@@ -49,6 +49,12 @@
   }
 }
 
+/* react-aria overlay/dialog props need a real element; display:contents keeps
+   the drawer's own layout (header/body as direct children) byte-identical. */
+.content {
+  display: contents;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -100,11 +106,19 @@
 }
 
 @keyframes backdropIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .drawer { transition: none; }
-  .drawer::backdrop { animation: none; }
+  .drawer {
+    transition: none;
+  }
+  .drawer::backdrop {
+    animation: none;
+  }
 }

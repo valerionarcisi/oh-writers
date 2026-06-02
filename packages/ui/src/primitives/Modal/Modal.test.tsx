@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
 import { render, fireEvent, cleanup, act } from "@testing-library/react";
-import { Drawer } from "./Drawer";
+import { Modal } from "./Modal";
 
 // jsdom doesn't implement the native <dialog> modal API; stub showModal/close
-// so the component can drive the [open] state the CSS slide-in relies on.
+// so the component can drive the [open] state the CSS relies on.
 beforeAll(() => {
   Object.defineProperty(window.HTMLDialogElement.prototype, "showModal", {
     configurable: true,
@@ -20,6 +20,7 @@ beforeAll(() => {
   });
 });
 
+// FocusScope restores focus inside a requestAnimationFrame on unmount.
 const flushRaf = () =>
   act(
     () =>
@@ -35,75 +36,64 @@ const ariaDialog = () =>
     (el) => el.tagName !== "DIALOG",
   )!;
 
-describe("Drawer", () => {
-  it("renders title and children when open", () => {
+describe("Modal", () => {
+  it("renders title, description, children and footer when open", () => {
     const { getByText } = render(
-      <Drawer isOpen onClose={() => {}} title="Il Manifesto">
-        <p>Drawer body</p>
-      </Drawer>,
+      <Modal
+        isOpen
+        onClose={() => {}}
+        title="Esporta PDF"
+        description="Scegli il formato"
+        footer={<button type="button">Conferma</button>}
+      >
+        <p>Body content</p>
+      </Modal>,
     );
-    expect(getByText("Il Manifesto")).toBeTruthy();
-    expect(getByText("Drawer body")).toBeTruthy();
+    expect(getByText("Esporta PDF")).toBeTruthy();
+    expect(getByText("Scegli il formato")).toBeTruthy();
+    expect(getByText("Body content")).toBeTruthy();
+    expect(getByText("Conferma")).toBeTruthy();
   });
 
-  it("calls onClose when the close button is pressed", () => {
-    const onClose = vi.fn();
-    const { getByLabelText } = render(
-      <Drawer isOpen onClose={onClose} title="Test">
-        <p>Content</p>
-      </Drawer>,
-    );
-    fireEvent.click(getByLabelText("Chiudi"));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("close button keeps the Italian aria-label Chiudi", () => {
-    const { getByLabelText } = render(
-      <Drawer isOpen onClose={() => {}} title="Test">
-        <p>Body</p>
-      </Drawer>,
-    );
-    expect(getByLabelText("Chiudi")).toBeTruthy();
-  });
-
-  it("dialog has aria-labelledby pointing to the title", () => {
+  it("wires aria-labelledby and aria-describedby to title/description", () => {
     render(
-      <Drawer isOpen onClose={() => {}} title="Manifesto">
+      <Modal isOpen onClose={() => {}} title="Titolo" description="Desc">
         <p>Body</p>
-      </Drawer>,
+      </Modal>,
     );
     const dialog = ariaDialog();
-    const titleId = dialog.getAttribute("aria-labelledby");
-    expect(titleId).toBeTruthy();
-    expect(document.getElementById(titleId!)?.textContent).toBe("Manifesto");
+    const labelId = dialog.getAttribute("aria-labelledby");
+    const descId = dialog.getAttribute("aria-describedby");
+    expect(document.getElementById(labelId!)?.textContent).toBe("Titolo");
+    expect(document.getElementById(descId!)?.textContent).toBe("Desc");
   });
 
-  it("renders the native dialog element in the DOM regardless of isOpen", () => {
-    const { container } = render(
-      <Drawer isOpen={false} onClose={() => {}} title="Test">
-        <p>Content</p>
-      </Drawer>,
-    );
-    expect(container.querySelector("dialog")).toBeTruthy();
-  });
-
-  it("applies the left side class and --drawer-width", () => {
-    const { container } = render(
-      <Drawer isOpen onClose={() => {}} title="T" side="left" width={520}>
+  it("omits aria-describedby when no description is given", () => {
+    render(
+      <Modal isOpen onClose={() => {}} title="Solo titolo">
         <p>Body</p>
-      </Drawer>,
+      </Modal>,
     );
-    const dialog = container.querySelector("dialog")!;
-    expect(dialog.className).toMatch(/left/);
-    expect(dialog.getAttribute("style")).toContain("--drawer-width: 520px");
+    expect(ariaDialog().getAttribute("aria-describedby")).toBeNull();
+  });
+
+  it("applies data-size", () => {
+    const { container } = render(
+      <Modal isOpen onClose={() => {}} title="T" size="lg">
+        <p>Body</p>
+      </Modal>,
+    );
+    expect(container.querySelector("dialog")?.getAttribute("data-size")).toBe(
+      "lg",
+    );
   });
 
   it("closes on Escape", () => {
     const onClose = vi.fn();
     render(
-      <Drawer isOpen onClose={onClose} title="T">
+      <Modal isOpen onClose={onClose} title="T">
         <p>Body</p>
-      </Drawer>,
+      </Modal>,
     );
     fireEvent.keyDown(ariaDialog(), { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -112,25 +102,42 @@ describe("Drawer", () => {
   it("closes on backdrop (dialog element) click", () => {
     const onClose = vi.fn();
     const { container } = render(
-      <Drawer isOpen onClose={onClose} title="T">
+      <Modal isOpen onClose={onClose} title="T">
         <p>Body</p>
-      </Drawer>,
+      </Modal>,
     );
-    fireEvent.click(container.querySelector("dialog")!);
+    const dialog = container.querySelector("dialog")!;
+    fireEvent.click(dialog);
     expect(onClose).toHaveBeenCalled();
   });
 
   it("does not close when clicking content inside", () => {
     const onClose = vi.fn();
     const { getByText } = render(
-      <Drawer isOpen onClose={onClose} title="T">
+      <Modal isOpen onClose={onClose} title="T">
         <p>Inside</p>
-      </Drawer>,
+      </Modal>,
     );
     fireEvent.mouseDown(getByText("Inside"));
     fireEvent.mouseUp(getByText("Inside"));
     fireEvent.click(getByText("Inside"));
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("honours initialFocusRef on open", () => {
+    function Harness() {
+      const focusRef = useRef<HTMLButtonElement>(null);
+      return (
+        <Modal isOpen onClose={() => {}} title="T" initialFocusRef={focusRef}>
+          <button type="button">first</button>
+          <button type="button" ref={focusRef} data-testid="target">
+            target
+          </button>
+        </Modal>
+      );
+    }
+    const { getByTestId } = render(<Harness />);
+    expect(document.activeElement).toBe(getByTestId("target"));
   });
 
   it("restores focus to the opener when closed", async () => {
@@ -146,11 +153,11 @@ describe("Drawer", () => {
             open
           </button>
           {open ? (
-            <Drawer isOpen onClose={() => setOpen(false)} title="T">
+            <Modal isOpen onClose={() => setOpen(false)} title="T">
               <button type="button" data-testid="inside">
                 inside
               </button>
-            </Drawer>
+            </Modal>
           ) : null}
         </div>
       );

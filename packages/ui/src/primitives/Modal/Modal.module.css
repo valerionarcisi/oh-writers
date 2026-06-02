@@ -21,10 +21,24 @@
   animation: modalPanelIn 160ms ease-out;
 }
 
-.dialog[data-size="sm"] { --modal-width: 360px; }
-.dialog[data-size="md"] { --modal-width: 480px; }
-.dialog[data-size="lg"] { --modal-width: 640px; }
-.dialog[data-size="xl"] { --modal-width: 880px; }
+/* react-aria overlay/dialog props need a real element; display:contents keeps
+   the dialog's flex layout (header/body/footer as direct flex children) intact. */
+.content {
+  display: contents;
+}
+
+.dialog[data-size="sm"] {
+  --modal-width: 360px;
+}
+.dialog[data-size="md"] {
+  --modal-width: 480px;
+}
+.dialog[data-size="lg"] {
+  --modal-width: 640px;
+}
+.dialog[data-size="xl"] {
+  --modal-width: 880px;
+}
 
 .dialog::backdrop {
   background: oklch(0% 0 0 / 0.35);
@@ -69,8 +83,12 @@
 }
 
 @keyframes modalBackdropFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalPanelIn {
