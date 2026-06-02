@@ -16,6 +16,7 @@ import {
   VersionTrigger,
   Viewbar,
   ViewbarSep,
+  useConfirmDialog,
 } from "@oh-writers/ui";
 import { useVersionsDrawer } from "~/features/versions";
 import {
@@ -36,6 +37,7 @@ import {
   breakdownForSceneOptions,
   projectBreakdownOptions,
   useRunAutoSpoglio,
+  useStreamFullSpoglio,
   useSetOccurrenceStatus,
   useArchiveBreakdownElement,
   useUpdateBreakdownElement,
@@ -217,6 +219,20 @@ function BreakdownPageContent({ projectId }: Props) {
   // races the Cesare sheet interaction. The dedicated auto-spoglio specs
   // exercise this path explicitly on a real-AI build.
   const autoSpoglio = useRunAutoSpoglio(projectId, versionId);
+  const fullSpoglio = useStreamFullSpoglio(versionId);
+  const { confirm } = useConfirmDialog();
+  // Manual re-run of the AI breakdown (force=true overwrites the prior pass).
+  // Guard behind a confirm because it regenerates the whole breakdown.
+  const handleRespoglio = () => {
+    if (versionId.length === 0 || fullSpoglio.isPending) return;
+    void confirm({
+      title: t("breakdown.respoglio.confirmTitle"),
+      message: t("breakdown.respoglio.confirmMessage"),
+      confirmLabel: t("breakdown.respoglio.confirmAction"),
+    }).then((ok) => {
+      if (ok) fullSpoglio.mutate({ force: true });
+    });
+  };
   const autoSpoglioStartedRef = useRef(false);
   useEffect(() => {
     if (import.meta.env.MOCK_AI) return;
@@ -1122,9 +1138,7 @@ function BreakdownPageContent({ projectId }: Props) {
         primaryAction={{
           label: t("breakdown.respoglioWithAi"),
           hotkey: "⌘R",
-          onClick: () => {
-            /* TODO wire — same as v1 streamFullSpoglio */
-          },
+          onClick: handleRespoglio,
         }}
         secondaryActions={[
           {

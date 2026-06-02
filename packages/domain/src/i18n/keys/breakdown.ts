@@ -65,6 +65,10 @@ export const breakdownKeys = {
 
     // FloatingDock
     "breakdown.respoglioWithAi": "Re-run breakdown with AI",
+    "breakdown.respoglio.confirmTitle": "Re-run the AI breakdown?",
+    "breakdown.respoglio.confirmMessage":
+      "This regenerates the breakdown for every scene. Elements you confirmed manually are kept; the AI pass re-runs over the script.",
+    "breakdown.respoglio.confirmAction": "Re-run",
     "breakdown.export": "Export",
 
     // Common actions
@@ -348,6 +352,10 @@ export const breakdownKeys = {
 
     // FloatingDock
     "breakdown.respoglioWithAi": "Ri-spogliare con AI",
+    "breakdown.respoglio.confirmTitle": "Ri-eseguire lo spoglio con l'AI?",
+    "breakdown.respoglio.confirmMessage":
+      "Rigenera lo spoglio per tutte le scene. Gli elementi che hai confermato a mano restano; la passata AI viene rieseguita sullo script.",
+    "breakdown.respoglio.confirmAction": "Ri-spoglia",
     "breakdown.export": "Esporta",
 
     // Common actions

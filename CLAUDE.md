@@ -83,7 +83,7 @@ When in doubt about an architectural decision, stop and ask.
 | Data fetching  | TanStack Query (via `queryOptions` + `useSuspenseQuery`) |
 | ORM            | Drizzle + PostgreSQL                                     |
 | Auth           | Better Auth (team/org support)                           |
-| Editor         | Monaco (screenplay editing)                              |
+| Editor         | ProseMirror (screenplay + narrative editing)             |
 | Collaboration  | Yjs + y-websocket (real-time sync)                       |
 | Styling        | CSS Modules — zero Tailwind, zero CSS-in-JS              |
 | Validation     | Zod — single source of truth for all types               |
@@ -110,7 +110,7 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never expose the Anthropic API key** to the client
 - **Never log** tokens, passwords, or API keys
 - **Never add AI signatures** to commits (`Co-Authored-By: Claude` or similar)
-- **Never import browser-only or Monaco APIs** inside `packages/domain`, `packages/utils`, or any other shared package — those must stay framework-agnostic so the future mobile companion can consume them
+- **Never import browser-only or editor (ProseMirror/Monaco) APIs** inside `packages/domain`, `packages/utils`, or any other shared package — those must stay framework-agnostic so the future mobile companion can consume them
 - **Never hard-couple auth to cookies** — Better Auth must remain able to issue bearer tokens for mobile clients
 - **Never write code in Italian** — every identifier (variables, functions, types, files), every comment, every log message, every internal error message MUST be in English. UI copy shown to the user is Italian (the product is IT-localised); everything else is English. A function named `caricaSceneggiatura` or a comment `// gestisce errore` is a hard NO. This rule is non-negotiable so that future contributors, AI tooling, and English-speaking collaborators can read the codebase.
 - **Never reintroduce a reserved-column Cesare** — Cesare is a floating Notion-style sub-window anchored bottom-right. The editor never reflows when Cesare opens, closes, or resizes. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md).
@@ -128,8 +128,8 @@ Every Cesare edit, in **every feature** (Soggetto, Sinossi, Scaletta, Trattament
 
 1. Chat stays a **floating bottom-right drawer** — never a fullscreen takeover, never reflows the editor.
 2. The **open entity updates LIVE behind the chat** while the trace renders. The visible document is the preview; there is no detached drawer for the edit itself.
-3. A **version is auto-created** before the change is applied (so every AI mutation is revertible).
-4. The chat renders an **inline compact trace**: `N passaggi › → reasoning/Thought › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff) and **↩ Annulla** (revert).
+3. A **version is auto-created** before the change is applied (so every AI mutation is revertible). The "before" snapshot is captured by `auto-version.effect.ts`.
+4. The chat renders an **inline compact trace**: `N passaggi › → reasoning/Thought › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff). Per **Spec 47e** the inline **↩ Annulla** affordance was intentionally removed — the edit is always applied and the toggle is a transient flash, not a revert; **true rollback lives in the Versions SplitDrawer** (backed by the auto-created version from point 3). Do not re-add an inline undo to the result card.
 
 When you add a Cesare tool that mutates any entity, reuse this flow — do not invent a per-feature variant. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md#agentic-edit-pattern) and the QA contract in `docs/specs/44-qa-iter-1-report.md`.
 

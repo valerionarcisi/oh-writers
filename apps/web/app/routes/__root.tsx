@@ -27,6 +27,9 @@ export const Route = createRootRoute({
   // so `<html lang>`, the first paint, and feature/route gates are correct and
   // the client never has to re-detect (which would flip lang on hydration).
   loader: async (): Promise<{ locale: Locale }> => {
+    // resolveLocale is a createServerFn: on client-side navigation TanStack
+    // re-runs this loader, and the server fn is invoked via RPC instead of
+    // calling getWebRequest() directly (which throws off-server). See ALTO-1.
     const { resolveLocale } = await import("~/features/i18n/resolve-locale.server");
     return { locale: await resolveLocale() };
   },

@@ -116,6 +116,23 @@ export const screenplayKeys = {
 
     // VersionsList (legacy)
     "screenplay.versionsList.unnamed": "Unnamed",
+    "screenplay.versionsList.loading": "Loading versions…",
+    "screenplay.versionsList.backToEditor": "← Back to editor",
+    "screenplay.versionsList.title": "Versions",
+    "screenplay.versionsList.save": "+ Save version",
+    "screenplay.versionsList.labelPlaceholder": "Version label (e.g. Draft 1)",
+    "screenplay.versionsList.saving": "Saving…",
+    "screenplay.versionsList.saveAction": "Save",
+    "screenplay.versionsList.cancel": "Cancel",
+    "screenplay.versionsList.deleteFailed": "Delete failed",
+    "screenplay.versionsList.empty":
+      "No versions yet. Save a version to keep a snapshot.",
+    "screenplay.versionsList.page": "page",
+    "screenplay.versionsList.pages": "pages",
+    "screenplay.versionsList.view": "View",
+    "screenplay.versionsList.diffVsCurrent": "Diff vs current",
+    "screenplay.versionsList.restore": "Restore",
+    "screenplay.versionsList.delete": "Delete",
 
     // ScreenplayCesarePanel
     "screenplay.cesare.notesAria": "Cesare notes",
@@ -303,6 +320,23 @@ export const screenplayKeys = {
 
     // VersionsList (legacy)
     "screenplay.versionsList.unnamed": "Senza nome",
+    "screenplay.versionsList.loading": "Caricamento versioni…",
+    "screenplay.versionsList.backToEditor": "← Torna all'editor",
+    "screenplay.versionsList.title": "Versioni",
+    "screenplay.versionsList.save": "+ Salva versione",
+    "screenplay.versionsList.labelPlaceholder": "Etichetta versione (es. Bozza 1)",
+    "screenplay.versionsList.saving": "Salvataggio…",
+    "screenplay.versionsList.saveAction": "Salva",
+    "screenplay.versionsList.cancel": "Annulla",
+    "screenplay.versionsList.deleteFailed": "Eliminazione fallita",
+    "screenplay.versionsList.empty":
+      "Nessuna versione. Salva una versione per conservare uno snapshot.",
+    "screenplay.versionsList.page": "pagina",
+    "screenplay.versionsList.pages": "pagine",
+    "screenplay.versionsList.view": "Apri",
+    "screenplay.versionsList.diffVsCurrent": "Confronta con attuale",
+    "screenplay.versionsList.restore": "Ripristina",
+    "screenplay.versionsList.delete": "Elimina",
 
     // ScreenplayCesarePanel
     "screenplay.cesare.notesAria": "Note di Cesare",
