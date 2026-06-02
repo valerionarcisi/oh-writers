@@ -12,6 +12,7 @@ import {
   FloatingDock,
   HeroKPI,
   MarginNote,
+  Tooltip,
 } from "@oh-writers/ui";
 
 export const Route = createFileRoute("/dev/tokens")({
@@ -278,7 +279,11 @@ function TokensPlayground() {
           Fraunces italic · display
         </div>
         <div
-          style={{ fontFamily: "var(--ds-font-sans)", fontSize: 14, marginBottom: 8 }}
+          style={{
+            fontFamily: "var(--ds-font-sans)",
+            fontSize: 14,
+            marginBottom: 8,
+          }}
         >
           Inter · UI body text — qui vive il 90% del testo dell&apos;app.
         </div>
@@ -372,7 +377,14 @@ function TokensPlayground() {
           onAvatarClick={() => {}}
         />
       </div>
-      <p style={{ fontFamily: "var(--ds-font-mono)", fontSize: 10, color: "var(--ds-text-mute)", marginBottom: 24 }}>
+      <p
+        style={{
+          fontFamily: "var(--ds-font-mono)",
+          fontSize: 10,
+          color: "var(--ds-text-mute)",
+          marginBottom: 24,
+        }}
+      >
         TopBar · FloatingDock is fixed bottom-right on this page ↗
       </p>
 
@@ -389,15 +401,56 @@ function TokensPlayground() {
         }}
       >
         <div>
-          <p style={{ fontFamily: "var(--ds-font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ds-text-mute)", margin: "0 0 16px" }}>HeroKPI</p>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 16px",
+            }}
+          >
+            HeroKPI
+          </p>
           <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
-            <HeroKPI eyebrow="Totale preventivo" value="€ 1.247.000" delta="+4,2%" deltaDirection="negative" sub="Media mercato: € 1.190.000" />
-            <HeroKPI eyebrow="Giorni di riprese" value="32" delta="-2" deltaDirection="positive" size="sm" />
+            <HeroKPI
+              eyebrow="Totale preventivo"
+              value="€ 1.247.000"
+              delta="+4,2%"
+              deltaDirection="negative"
+              sub="Media mercato: € 1.190.000"
+            />
+            <HeroKPI
+              eyebrow="Giorni di riprese"
+              value="32"
+              delta="-2"
+              deltaDirection="positive"
+              size="sm"
+            />
           </div>
         </div>
         <div>
-          <p style={{ fontFamily: "var(--ds-font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ds-text-mute)", margin: "0 0 16px" }}>MarginNote</p>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", maxWidth: 600 }}>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 16px",
+            }}
+          >
+            MarginNote
+          </p>
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              flexWrap: "wrap",
+              maxWidth: 600,
+            }}
+          >
             <div style={{ flex: 1, minWidth: 240 }}>
               <MarginNote
                 kind="dramaturg"
@@ -509,6 +562,43 @@ function TokensPlayground() {
             ToggleChip
           </p>
           <ToggleChipDemo />
+        </div>
+
+        {/* Tooltip */}
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--ds-font-mono)",
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "var(--ds-text-mute)",
+              margin: "0 0 12px",
+            }}
+          >
+            Tooltip
+          </p>
+          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+            <Tooltip content="Tooltip scuro in alto" placement="top">
+              <button type="button" data-testid="tip-top">
+                Hover/Focus top
+              </button>
+            </Tooltip>
+            <Tooltip
+              content="Tooltip info a destra"
+              kind="info"
+              placement="right"
+            >
+              <button type="button" data-testid="tip-info">
+                Info right
+              </button>
+            </Tooltip>
+            <Tooltip content="In basso" placement="bottom">
+              <button type="button" data-testid="tip-bottom">
+                Bottom
+              </button>
+            </Tooltip>
+          </div>
         </div>
 
         {/* SavePill */}

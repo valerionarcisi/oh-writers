@@ -22,8 +22,8 @@ test.describe("[Spec 10j] Breakdown — per-project view", () => {
     const page = authenticatedPage;
     await navigateToBreakdown(page, TEAM_PROJECT_ID);
 
-    // The SegmentedControl renders data-testid="segmented-per-project" and
-    // role="tab"; switchBreakdownView clicks it and waits for the switch to
+    // The SegmentedControl renders data-testid="segmented-per-project" as a
+    // radio input; switchBreakdownView clicks it and waits for the switch to
     // take effect (the sticky viewbar re-mounts while Suspense settles).
     await switchBreakdownView(page, "per-project");
 

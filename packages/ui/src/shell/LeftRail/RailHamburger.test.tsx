@@ -20,7 +20,7 @@ describe("RailHamburger", () => {
       <RailHamburger onPress={vi.fn()} isOverlayOpen={true} />,
     );
     const btn = getByTestId("rail-hamburger");
-    expect(btn.getAttribute("aria-label")).toBe("Chiudi sidebar");
+    expect(btn.getAttribute("aria-label")).toBe("Fissa sidebar (⌘\\)");
     expect(btn.getAttribute("aria-expanded")).toBe("true");
   });
 

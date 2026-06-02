@@ -37,12 +37,28 @@
   border-radius: var(--ds-radius-sm);
 }
 
+.lg {
+  height: 40px;
+  padding: 0 var(--ds-space-4);
+  font-size: 14px;
+}
+
 .primary {
   background: var(--ds-action);
   color: var(--ds-text-on-dark);
 
   &:hover:not(:disabled) {
     background: var(--ds-action-hover);
+  }
+}
+
+.secondary {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  border-color: var(--ds-line);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-surface-alt);
   }
 }
 
@@ -74,5 +90,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .button { transition: none; }
+  .button {
+    transition: none;
+  }
 }

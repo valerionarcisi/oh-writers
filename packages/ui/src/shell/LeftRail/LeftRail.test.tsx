@@ -354,7 +354,10 @@ describe("LeftRail", () => {
     expect(queryByTestId("rail-lock-open")).toBeNull();
   });
 
-  it("renders the close button when overlay prop is supplied", () => {
+  // The standalone «/» close button was removed in 27d1c6f (Spec 44 Notion
+  // sidebar): in overlay mode dismissal is keyboard/outside-click via
+  // react-aria's useOverlay, not a dedicated button. Assert ESC fires onDismiss.
+  it("dismisses the overlay on Escape when overlay prop is supplied", () => {
     const onDismiss = vi.fn();
     const { getByTestId } = render(
       <LeftRail
@@ -364,7 +367,7 @@ describe("LeftRail", () => {
         overlay={{ isOpen: true, onDismiss }}
       />,
     );
-    fireEvent.click(getByTestId("rail-close"));
+    fireEvent.keyDown(getByTestId("left-rail"), { key: "Escape" });
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 

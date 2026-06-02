@@ -127,7 +127,7 @@ test.describe("[OHW-l10n] no leaked English on user-facing pages", () => {
     const text = await pageText(page);
 
     expectNoLeaks(text, ["Strip Board"]);
-    await expect(page.getByRole("tab", { name: "Spannografo" })).toBeVisible({
+    await expect(page.getByRole("radio", { name: "Spannografo" })).toBeVisible({
       timeout: 15_000,
     });
   });
