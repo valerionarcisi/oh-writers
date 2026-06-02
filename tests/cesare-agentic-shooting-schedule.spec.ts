@@ -29,12 +29,15 @@ test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule po
     const page = authenticatedPage;
     await navigateToShootingPlan(page, SHOOTING_PLAN_PROJECT_ID);
 
+    // 30s preconditions: the shooting-plan route + blocking canvas JIT-compile
+    // on first hit on a cold CI dev server, which can exceed 15s on a 2-core
+    // runner (this is page-load latency, not a Cesare turn).
     const scenes = page.getByRole("button").filter({ hasText: /SC\.\d+/ });
-    await expect(scenes.first()).toBeVisible({ timeout: 15_000 });
+    await expect(scenes.first()).toBeVisible({ timeout: 30_000 });
     await scenes.first().click();
 
     await expect(page.getByText(/ANTEPRIMA BLOCKING/)).toBeVisible({
-      timeout: 15_000,
+      timeout: 30_000,
     });
 
     await openCesareSheet(page);

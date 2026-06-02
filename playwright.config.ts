@@ -48,8 +48,16 @@ export default defineConfig({
       },
     },
     {
+      // Pre-compiles the heavy authenticated routes so the agentic suite's
+      // first navigation to each doesn't pay the cold JIT compile (the cause of
+      // the rotating page-load-precondition timeouts on CI). See warmup.setup.ts.
+      name: "warmup",
+      testMatch: /warmup\.setup\.ts$/,
+    },
+    {
       name: "mock-ui",
       testMatch: /cesare-agentic-.*\.spec\.ts$/,
+      dependencies: ["warmup"],
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },
