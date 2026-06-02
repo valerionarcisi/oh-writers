@@ -182,9 +182,6 @@ export const daysSince = (iso: string, now: Date = new Date()): number => {
 export const estimateMinutes = (pageCount: number): number =>
   Math.max(0, Math.floor(pageCount));
 
-// Mock generator for the Cesare next-step. The suggestion is derived from
-// real signals (page count, breakdown state, idle time) so the heuristic is
-// stable; the surface stays mock until Spec 11 wires the LLM in.
 // Server-side translator: same `{token}` interpolation contract as the client
 // `t().replace(...)` call sites, so generated copy localises by the request locale.
 const tr = (
@@ -200,6 +197,9 @@ const tr = (
   );
 };
 
+// Mock generator for the Cesare next-step. The suggestion is derived from
+// real signals (page count, breakdown state, idle time) so the heuristic is
+// stable; the surface stays mock until Spec 11 wires the LLM in.
 export const buildNextStep = (input: {
   hasScreenplay: boolean;
   pageCount: number;
