@@ -2,6 +2,11 @@ import { applyUpdate } from "./yjs-shared.js";
 import type { Doc as YDoc } from "./yjs-shared.js";
 import { parseRoomId } from "./room-id.js";
 import { flushRoom, loadYjsState } from "./persistence.js";
+import { registerRoom } from "./redis-sync.js";
+
+// y-websocket attaches an `awareness` to each managed doc (WSSharedDoc); the
+// Redis fan-out needs both the doc and its awareness, so we widen the type.
+type SharedAwarenessDoc = Parameters<typeof registerRoom>[1];
 
 // y-websocket's bin/utils is CommonJS; under NodeNext we reach it via a
 // dynamic import and read the named exports off the module record.
@@ -51,6 +56,13 @@ export const installPersistence = async (): Promise<void> => {
       ydoc.on("update", () => {
         dirtyRooms.add(docName);
       });
+
+      // Cross-instance fan-out (no-op unless REDIS_URL is set): publish this
+      // room's local updates + awareness to peers and apply theirs back. Full-
+      // state `encodeStateAsUpdate` flushes converge under last-writer-wins, so
+      // multiple instances persisting the same room stays benign — `flushRoom`
+      // is unchanged.
+      registerRoom(docName, ydoc as SharedAwarenessDoc);
     },
     writeState: async (docName, ydoc) => {
       const room = parseRoomId(docName);
