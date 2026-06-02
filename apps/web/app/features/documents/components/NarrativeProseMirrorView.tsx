@@ -65,12 +65,16 @@ export function NarrativeProseMirrorView({
       ],
     });
 
-    const view = new EditorView(mountRef.current, {
+    const view: EditorView = new EditorView(mountRef.current, {
       state,
       editable: () => !readOnly,
-      dispatchTransaction(tr) {
-        const newState = view.state.apply(tr);
-        view.updateState(newState);
+      // `ySyncPlugin` dispatches a transaction synchronously during the
+      // EditorView constructor (initial CRDT → doc reconciliation), before the
+      // outer `view` binding is assigned — so we read state off the instance
+      // ProseMirror hands us (`this`) instead of the still-uninitialised const.
+      dispatchTransaction(this: EditorView, tr) {
+        const newState = this.state.apply(tr);
+        this.updateState(newState);
 
         if (tr.docChanged) {
           const html = docToHtml(newState.doc, schema);
@@ -109,14 +113,28 @@ export function NarrativeProseMirrorView({
   }, [readOnly, enableHeadings, placeholder, extraPlugins, isRealtime]);
 
   useEffect(() => {
-    // In realtime mode the CRDT is the source of truth; a replaceWith here
-    // would fight concurrent remote edits.
-    if (isRealtime) return;
     const view = viewRef.current;
     if (!view) return;
     if (value === lastValueRef.current) return;
 
+    // An incoming `value` that differs from what the editor last emitted is an
+    // AUTHORITATIVE document replacement from outside the editor — a Cesare
+    // agentic edit or a version restore, never a local keystroke (those flow
+    // through `dispatchTransaction` and keep `lastValueRef` in sync). We apply
+    // it through a ProseMirror transaction so that in realtime mode the change
+    // is carried into the shared CRDT by `ySyncPlugin` (the Cesare live-diff
+    // highlight and "Mostra modifiche" then paint against the applied doc).
     const schema = getNarrativeSchema(enableHeadings);
+
+    // In realtime mode the CRDT is the source of truth. Only replace when the
+    // editor's CURRENT doc actually differs from the incoming value — a remote
+    // peer edit may have already advanced the doc past a now-stale `value`
+    // prop, and re-applying it would clobber the concurrent change.
+    if (isRealtime && docToHtml(view.state.doc, schema) === value) {
+      lastValueRef.current = value;
+      return;
+    }
+
     const newDoc = htmlToDoc(value, schema);
     lastValueRef.current = value;
 

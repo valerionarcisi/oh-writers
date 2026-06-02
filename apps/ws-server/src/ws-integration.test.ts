@@ -6,8 +6,14 @@ import { randomUUID } from "node:crypto";
 import WebSocket from "ws";
 import * as encoding from "lib0/encoding";
 import { inArray } from "drizzle-orm";
-import { db } from "@oh-writers/db";
 import { sessions } from "@oh-writers/db/schema";
+
+// `@oh-writers/db`'s client throws "DATABASE_URL is required" at import time, so
+// we load it lazily and ONLY when a DB is present. Eager top-level import would
+// crash the pure-unit CI lane (no Postgres) even though this whole suite is
+// `describe.skip` there. Resolved once in `beforeAll`.
+type Db = (typeof import("@oh-writers/db"))["db"];
+let db: Db;
 
 // Integration tests for the ws-server auth/access/persistence boundary.
 // They boot a real ws-server child process and drive raw `ws` clients, so they
@@ -68,6 +74,7 @@ const settle = (ws: WebSocket): Promise<number> =>
   });
 
 beforeAll(async () => {
+  ({ db } = await import("@oh-writers/db"));
   server = spawn("npx", ["tsx", "src/index.ts"], {
     cwd: resolve(here, ".."),
     env: { ...process.env, WS_PORT: String(PORT) },

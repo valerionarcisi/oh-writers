@@ -309,6 +309,7 @@ function SoggettoPageReady({
             embedded
             testId="subject-editor"
             diffDocumentType={DocumentTypes.SOGGETTO}
+            documentId={soggettoDoc.id}
           />
         </div>
       </NarrativeDocsShell>
