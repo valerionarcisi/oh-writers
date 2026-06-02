@@ -1,5 +1,6 @@
 // packages/ui/src/primitives/Popover/Popover.tsx
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { DismissButton, FocusScope, useOverlay } from "react-aria";
 import styles from "./Popover.module.css";
 
 export type PopoverPlacement = "bottom-start" | "bottom-end" | "bottom-center";
@@ -29,39 +30,36 @@ export function Popover({
 }: PopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler, true);
-    return () => document.removeEventListener("mousedown", handler, true);
-  }, [isOpen, onClose]);
+  // useOverlay provides Esc, outside-click, and blur dismissal for this
+  // non-modal popover. shouldCloseOnBlur closes it when focus leaves the
+  // overlay (e.g. tabbing past the last item).
+  const { overlayProps } = useOverlay(
+    { isOpen, onClose, isDismissable: true, shouldCloseOnBlur: true },
+    ref,
+  );
 
   if (!isOpen) return null;
 
+  // autoFocus moves focus into the popover on open so react-aria's keyboard
+  // dismiss (Esc, bound to the overlay element via overlayProps.onKeyDown)
+  // fires even when the trigger lives outside the overlay; restoreFocus then
+  // returns focus to the trigger on close.
   return (
-    <div
-      ref={ref}
-      role="dialog"
-      aria-modal="false"
-      className={[styles.popover, placementClass[placement], className]
-        .filter(Boolean)
-        .join(" ")}
-      style={width != null ? { width } : undefined}
-    >
-      {children}
-    </div>
+    <FocusScope restoreFocus autoFocus>
+      <div
+        {...overlayProps}
+        ref={ref}
+        role="dialog"
+        aria-modal="false"
+        className={[styles.popover, placementClass[placement], className]
+          .filter(Boolean)
+          .join(" ")}
+        style={width != null ? { width } : undefined}
+      >
+        <DismissButton onDismiss={onClose} />
+        {children}
+        <DismissButton onDismiss={onClose} />
+      </div>
+    </FocusScope>
   );
 }
