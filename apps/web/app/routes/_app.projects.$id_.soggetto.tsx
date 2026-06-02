@@ -27,6 +27,8 @@ import {
   useRoutedSurface,
 } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
+import { useFeature } from "~/features/feature-flags";
+import { Features } from "@oh-writers/domain";
 import { titleHead } from "~/lib/document-title";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -145,6 +147,8 @@ function SoggettoPageReady({
   }, [soggettoDoc.id, setActiveDocument]);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSiaeOpen, setIsSiaeOpen] = useState(false);
+  // SIAE is the Italian copyright registry — hidden on the international market.
+  const siaeEnabled = useFeature(Features.SIAE_EXPORT);
   const projectQuery = useProject(projectId);
   const projectOk =
     projectQuery.data && projectQuery.data.isOk
@@ -230,18 +234,29 @@ function SoggettoPageReady({
             },
             disabled: exportDocxPending,
           },
-          {
-            label: "Esporta SIAE",
-            onClick: () => {
-              if (isVersionsOpen) versionsClose();
-              setIsSiaeOpen(true);
-            },
-          },
+          ...(siaeEnabled
+            ? [
+                {
+                  label: "Esporta SIAE",
+                  testId: "action-export-siae",
+                  onClick: () => {
+                    if (isVersionsOpen) versionsClose();
+                    setIsSiaeOpen(true);
+                  },
+                },
+              ]
+            : []),
           { label: "Versioni", onClick: toggleVersions },
         ]}
       />
     ),
-    [exportDocxPending, isVersionsOpen, versionsClose, toggleVersions],
+    [
+      exportDocxPending,
+      isVersionsOpen,
+      versionsClose,
+      toggleVersions,
+      siaeEnabled,
+    ],
   );
 
   return (
