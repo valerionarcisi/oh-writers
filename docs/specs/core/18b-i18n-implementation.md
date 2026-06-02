@@ -36,10 +36,12 @@ hidden** (SIAE export, bandi/fundraising), because they are meaningless outside 
   provider initialises from that exact value — never re-detects on mount (avoids `<html lang>`
   hydration mismatch). `navigator.language` is read server-side via `Accept-Language`, not at
   client mount.
-- **Market gate is a deep module / narrow interface.** `Market = "it" | "intl"`,
-  `marketFromLocale(locale)` + `isItalianMarket(locale)` in domain; `useMarket()` /
-  `useIsItalianMarket()` in web. Components ask "am I in the Italian market?", never check the
-  locale directly. Gated: SIAE export menu item, the Opportunities/fundraising route + nav entry.
+- **Market gate is the first consumer of the feature-flag framework ([Spec 54](../54-feature-flags.md)).**
+  Rather than a one-off market helper, the IT-only features are gated through
+  `resolveFeatures({ market, plan })` / `useFeature("siaeExport"|"fundraising")`. `Market = "it" | "intl"`
+  + `marketFromLocale(locale)` still live in domain and feed the resolver. Components ask
+  `useFeature(...)`, never the locale. OFF = hidden (no upsell). Building the resolver here means
+  plan-gating and the future Cesare user-toggle slot in without re-work.
 - **testid-first.** A prep phase swaps the ~232 text-coupled locators to `data-testid` BEFORE
   any string is extracted, so the i18n PRs touch zero test files and the suite stays green.
 
@@ -74,8 +76,10 @@ Verify DS primitives forward `data-testid`. Leave `l10n-leaks.spec.ts` copy-asse
 (labels + `title`). Keys `nav.*`, `navGroup.*`, `status.*`, `action.*`. **Migrate
 `l10n-leaks.spec.ts` to be `it`-fixture-scoped here.**
 
-**PR-3 — market gating.** `useIsItalianMarket()` hides: the "Esporta SIAE" ActionsMenu item
-(`routes/_app.projects.$id_.soggetto.tsx`), the Opportunità nav entry (`Sidebar.tsx`), and a
+**PR-3 — feature flags + market gating ([Spec 54](../54-feature-flags.md)).** Build the
+`resolveFeatures` resolver + `FeatureProvider`/`useFeature` (loader-fed, server-resolved), then
+gate through it: `useFeature("siaeExport")` hides the "Esporta SIAE" ActionsMenu item
+(`routes/_app.projects.$id_.soggetto.tsx`), `useFeature("fundraising")` hides the Opportunità nav entry (`Sidebar.tsx`), and a
 `beforeLoad` redirect on `routes/_app.projects.$id_.opportunities.tsx` when market is `intl`
 (server-side so SSR/direct-nav redirects before render — no IT flash). + `tests/market-gate.spec.ts`.
 
