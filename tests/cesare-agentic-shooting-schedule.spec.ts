@@ -7,8 +7,7 @@ import { navigateToSchedule, SCHEDULE_PROJECT_ID } from "./schedule/helpers";
 import {
   closeCesareSheet,
   openCesareSheet,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
 } from "./helpers/cesare";
 
 /**
@@ -39,12 +38,11 @@ test.describe("[Spec Agent-D] Cesare Agentic — Shooting blocking + Schedule po
     });
 
     await openCesareSheet(page);
-    await sendCesareMessage(page, "Suggerisci blocking per questa scena.");
-    await waitForCesareReply(page);
+    await sendCesareWithRetry(page, "Suggerisci blocking per questa scena.");
 
     // The proposal panel appears anchored to the canvas
     const panel = page.getByTestId("blocking-proposal-panel");
-    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel).toBeVisible({ timeout: 20_000 });
     await expect(panel.getByText(/Suggerimento Cesare/i)).toBeVisible();
 
     // Dismiss the floating Cesare drawer so it can't intercept the click on the

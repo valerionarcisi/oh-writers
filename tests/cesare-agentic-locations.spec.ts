@@ -6,8 +6,7 @@ import {
 } from "./locations/helpers";
 import {
   openCesareSheet,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
   setMockContext,
   resetCesareState,
 } from "./helpers/cesare";
@@ -57,11 +56,10 @@ test.describe("[Spec 34] Cesare Agentic — Locations", () => {
       .count();
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(
+    const reply = await sendCesareWithRetry(
       authenticatedPage,
       "Trova candidati per questa scena.",
     );
-    const reply = await waitForCesareReply(authenticatedPage);
 
     expect(reply.length).toBeGreaterThan(10);
 

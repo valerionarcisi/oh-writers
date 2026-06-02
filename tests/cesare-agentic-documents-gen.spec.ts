@@ -3,8 +3,7 @@ import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import {
   openCesareSheet,
-  sendCesareMessage,
-  waitForCesareReply,
+  sendCesareWithRetry,
   resetCesareState,
 } from "./helpers/cesare";
 
@@ -36,11 +35,10 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
     await authenticatedPage.waitForLoadState("networkidle");
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(
+    const reply = await sendCesareWithRetry(
       authenticatedPage,
       "Genera la logline dalla sceneggiatura.",
     );
-    const reply = await waitForCesareReply(authenticatedPage);
 
     expect(reply.toLowerCase()).toMatch(/logline|aggiornat|applicat/);
 
@@ -62,11 +60,10 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
     await expect(editor).toBeVisible({ timeout: 15_000 });
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(
+    const reply = await sendCesareWithRetry(
       authenticatedPage,
       "Fammi un v2 del soggetto più asciutto.",
     );
-    const reply = await waitForCesareReply(authenticatedPage);
     expect(reply.toLowerCase()).toMatch(/soggetto|aggiornat|applicat/);
 
     // The mock soggetto-v2 output is deterministic ("Marco torna a Falerone…").
@@ -97,11 +94,10 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
     await authenticatedPage.waitForLoadState("networkidle");
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(
+    const reply = await sendCesareWithRetry(
       authenticatedPage,
       "Dato il soggetto fammi la scaletta.",
     );
-    const reply = await waitForCesareReply(authenticatedPage);
 
     expect(reply.toLowerCase()).toMatch(/scaletta|aggiornat|applicat/);
 

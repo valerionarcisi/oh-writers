@@ -85,18 +85,37 @@ test.describe("[Spec 34] Cesare Agentic — Documents", () => {
       authenticatedPage.getByTestId("rich-text-editor"),
     ).toContainText("Atto II", { timeout: 15_000 });
 
+    const synopsisLength = async (): Promise<number> => {
+      const check = await authenticatedPage.request.get(
+        `${BASE_URL}/api/test/set-narrative-state?projectId=${TEAM_PROJECT_ID}&type=synopsis`,
+      );
+      if (!check.ok()) return 0;
+      const body = (await check.json()) as { content: string };
+      return body.content.length;
+    };
+    const seedLength = await synopsisLength();
+
     await openCesareSheet(authenticatedPage);
     const reply = await sendCesareWithRetry(
       authenticatedPage,
       "Espandi la sezione Atto II.",
     );
 
-    // The mock scenario replies with text containing "aggiornato" so the
-    // AppShell toast handler fires.
+    // Cesare confirms the expansion in its reply ("Ho espanso la sezione Atto
+    // II con due paragrafi aggiuntivi.").
     expect(reply.toLowerCase()).toMatch(/aggiornato|espan|sezione/);
 
-    await expect(
-      authenticatedPage.getByText("✦ Cesare ha aggiornato la sinossi"),
-    ).toBeVisible({ timeout: 5_000 });
+    // Durable proof the edit actually applied: the live synopsis content now
+    // contains the expanded body. We assert this instead of the success toast
+    // because the toast auto-dismisses after 4s (ToastProvider durationMs) and
+    // can appear+expire during the variable-latency Cesare reply wait above —
+    // a hard `toBeVisible` on it races the dismiss on slow CI. The document
+    // content is the race-free outcome the user actually keeps.
+    await expect
+      .poll(synopsisLength, { timeout: 10_000 })
+      // expand_section rewrites the section with additional paragraphs, so the
+      // stored content grows past the seed. A no-op failure would leave it
+      // unchanged — this catches that regression race-free.
+      .toBeGreaterThan(seedLength);
   });
 });

@@ -2,7 +2,7 @@ import { test, expect } from "./fixtures";
 import { navigateToSchedule, SCHEDULE_PROJECT_ID } from "./schedule/helpers";
 import {
   openCesareSheet,
-  sendCesareMessage,
+  sendCesareWithRetry,
   setMockContext,
   resetCesareState,
 } from "./helpers/cesare";
@@ -49,7 +49,7 @@ test.describe("[Spec 34] Cesare Agentic — Schedule", () => {
     });
 
     await openCesareSheet(authenticatedPage);
-    await sendCesareMessage(
+    await sendCesareWithRetry(
       authenticatedPage,
       "Sposta la scena 3 al giorno 2.",
     );

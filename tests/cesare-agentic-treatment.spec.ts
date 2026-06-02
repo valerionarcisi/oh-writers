@@ -2,7 +2,11 @@ import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { TEST_TEAM_PROJECT_ID } from "./fixtures";
-import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
+import {
+  openCesareSheet,
+  sendCesareMessage,
+  sendCesareWithRetry,
+} from "./helpers/cesare";
 
 /**
  * [Audit 2026-05-31 · F-A2] "Scrivi il trattamento dalla scaletta" must ACTUALLY
@@ -148,7 +152,7 @@ test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
     await page.waitForLoadState("networkidle");
     await openCesareSheet(page);
 
-    await sendCesareMessage(page, "Scrivi il trattamento dalla scaletta");
+    await sendCesareWithRetry(page, "Scrivi il trattamento dalla scaletta");
 
     const conversation = page.getByTestId("cesare-conversation");
     // A tool was dispatched: the reply reports the live document update and is

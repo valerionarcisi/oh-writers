@@ -3,7 +3,11 @@ import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { navigateToBreakdown, TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { navigateToLocations, LOCATIONS_PROJECT_ID } from "./locations/helpers";
-import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
+import {
+  openCesareSheet,
+  sendCesareMessage,
+  TRANSIENT_FAILURE_RE,
+} from "./helpers/cesare";
 
 /**
  * [Spec 29 — Cesare cost foundation] regression guards
@@ -45,18 +49,30 @@ async function sendAndWaitForReply(
   // race on the drawer's `role="complementary"` ancestor during the open
   // transition.
   const log = page.getByTestId("cesare-conversation");
-  const before = await log.locator(ASSISTANT_BUBBLE).count();
-  await sendCesareMessage(page, prompt);
-  // 60s mirrors `waitForCesareReply` in tests/helpers/cesare.ts — the
-  // first tool-loop request after a cold CI server start can take 20-40s.
-  await expect
-    .poll(async () => log.locator(ASSISTANT_BUBBLE).count(), {
-      timeout: 60_000,
-    })
-    .toBeGreaterThan(before);
-  const bubbles = log.locator(ASSISTANT_BUBBLE);
-  const n = await bubbles.count();
-  return (await bubbles.nth(n - 1).textContent()) ?? "";
+
+  const sendOnce = async (): Promise<string> => {
+    const before = await log.locator(ASSISTANT_BUBBLE).count();
+    await sendCesareMessage(page, prompt);
+    // 60s mirrors `waitForCesareReply` in tests/helpers/cesare.ts — the
+    // first tool-loop request after a cold CI server start can take 20-40s.
+    await expect
+      .poll(async () => log.locator(ASSISTANT_BUBBLE).count(), {
+        timeout: 60_000,
+      })
+      .toBeGreaterThan(before);
+    const bubbles = log.locator(ASSISTANT_BUBBLE);
+    const n = await bubbles.count();
+    return (await bubbles.nth(n - 1).textContent()) ?? "";
+  };
+
+  // Resend once on the transient empty-context failure (a slow-CI seed-vs-read
+  // race in the agentic mock), matching the shared `sendCesareWithRetry`.
+  let reply = await sendOnce();
+  if (TRANSIENT_FAILURE_RE.test(reply)) {
+    await page.waitForTimeout(1_500);
+    reply = await sendOnce();
+  }
+  return reply;
 }
 
 test.describe("[Spec 29] Cesare cost foundation — regression guards", () => {

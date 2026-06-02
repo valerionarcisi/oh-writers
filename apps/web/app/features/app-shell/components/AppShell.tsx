@@ -106,6 +106,14 @@ type CesareState = "closed" | "expanded" | "peek" | "full";
 const SHELL_STORAGE_KEY = "ohw.shell.state";
 const CESARE_STORAGE_KEY = "ohw.cesare.state";
 
+// Cesare success toasts auto-dismiss after the default 4s in production. Under
+// MOCK_AI (E2E) we hold them far longer: a Cesare turn on a slow CI runner can
+// take several seconds, so the toast could appear AND expire before the test's
+// visibility assertion runs — the root cause of the agentic suite's toast
+// flakiness. Extending the duration in test mode only (never in production)
+// makes those assertions race-free without weakening them.
+const CESARE_TOAST_DURATION_MS = import.meta.env.MOCK_AI ? 60_000 : undefined;
+
 function readPersistedShell(): ShellState {
   if (typeof window === "undefined") return "full";
   const raw = window.localStorage.getItem(SHELL_STORAGE_KEY);
@@ -617,6 +625,7 @@ function AppShellInner({
           showToast({
             message: "✦ Cesare ha aggiornato le location",
             variant: "success",
+            durationMs: CESARE_TOAST_DURATION_MS,
           });
         }
         return;
@@ -662,6 +671,7 @@ function AppShellInner({
           showToast({
             message: `✦ Cesare ha aggiornato ${docLabels[appliedDoc]}`,
             variant: "success",
+            durationMs: CESARE_TOAST_DURATION_MS,
           });
         }
       }
@@ -678,6 +688,7 @@ function AppShellInner({
           showToast({
             message: "✦ Cesare ha aggiornato il budget",
             variant: "success",
+            durationMs: CESARE_TOAST_DURATION_MS,
           });
         }
       }
@@ -691,6 +702,7 @@ function AppShellInner({
           showToast({
             message: "✦ Cesare ha aggiornato il piano inquadrature",
             variant: "success",
+            durationMs: CESARE_TOAST_DURATION_MS,
           });
         }
       }

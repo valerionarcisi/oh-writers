@@ -141,7 +141,7 @@ export async function waitForCesareReply(page: Page): Promise<string> {
  * runner). It is a transient, environment-timing failure — the content settles
  * a beat later — so a single resend clears it.
  */
-const TRANSIENT_FAILURE_RE =
+export const TRANSIENT_FAILURE_RE =
   /non c'era abbastanza materiale|non sono riuscito a completare/i;
 
 /**

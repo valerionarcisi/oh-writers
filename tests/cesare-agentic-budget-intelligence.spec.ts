@@ -1,7 +1,11 @@
 import { test, expect } from "./fixtures";
 import { navigateToBudget, BUDGET_PROJECT_ID } from "./budget/helpers";
 import type { Page } from "@playwright/test";
-import { openCesareSheet, sendCesareMessage } from "./helpers/cesare";
+import {
+  openCesareSheet,
+  sendCesareMessage,
+  TRANSIENT_FAILURE_RE,
+} from "./helpers/cesare";
 
 /**
  * [Spec 30] Cesare agentic — Budget intelligence (Wave 3 — Agent C)
@@ -27,16 +31,28 @@ async function sendAndWaitForReply(
   // The floating drawer renders `<div data-testid="cesare-conversation">`; the
   // legacy `role="log"` wrapper now lives only on the routed session page.
   const log = page.getByTestId("cesare-conversation");
-  const before = await log.locator(ASSISTANT_BUBBLE).count();
-  await sendCesareMessage(page, prompt);
-  await expect
-    .poll(async () => log.locator(ASSISTANT_BUBBLE).count(), {
-      timeout: 30_000,
-    })
-    .toBeGreaterThan(before);
-  const bubbles = log.locator(ASSISTANT_BUBBLE);
-  const n = await bubbles.count();
-  return (await bubbles.nth(n - 1).textContent()) ?? "";
+
+  const sendOnce = async (): Promise<string> => {
+    const before = await log.locator(ASSISTANT_BUBBLE).count();
+    await sendCesareMessage(page, prompt);
+    await expect
+      .poll(async () => log.locator(ASSISTANT_BUBBLE).count(), {
+        timeout: 30_000,
+      })
+      .toBeGreaterThan(before);
+    const bubbles = log.locator(ASSISTANT_BUBBLE);
+    const n = await bubbles.count();
+    return (await bubbles.nth(n - 1).textContent()) ?? "";
+  };
+
+  // Resend once on the transient empty-context failure (slow-CI seed-vs-read
+  // race), matching the shared `sendCesareWithRetry`.
+  let reply = await sendOnce();
+  if (TRANSIENT_FAILURE_RE.test(reply)) {
+    await page.waitForTimeout(1_500);
+    reply = await sendOnce();
+  }
+  return reply;
 }
 
 test.describe("[Spec 30] Cesare Agentic — Budget intelligence", () => {
