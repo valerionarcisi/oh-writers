@@ -21,7 +21,7 @@ Legenda della classificazione:
 | --- | --- | --- | --- |
 | 1 | **i18n (IT/EN)** | 18 | Il prodotto deve girare anche in inglese. Estrarre le stringhe UI, scegliere la lib (da decidere), e — regola chiave — **in modalità EN le funzionalità specifiche del mercato italiano (SIAE export, bandi/fundraising IT, terminologia IT) vanno nascoste** dietro un gate di locale/mercato. |
 | 2 | ~~**DS Primitives → react-aria**~~ | 25b | **DONE** (2026-06-02, branch `feat/primitives-react-aria`). Tutti i primitivi interattivi (Button, Popover, Drawer, Modal, Tooltip, SegmentedControl, ToggleChip, VersionTrigger, ViewSwitcher) ora usano react-aria; Button unificato (`Button`/`DsButton` su un solo `BaseButton`). Spec `25b-primitives-react-aria-migration.md`. |
-| 3 | **09b Phase 2** | 09b | `persistence.test.ts` (flush/reconnect), presenza nella project overview, multi-istanza ws-server (Redis pub/sub), realtime sul Soggetto free editor. |
+| 3 | ~~**09b Phase 2**~~ | 09b-phase2 | **DONE** (2026-06-02, branch `feat/09b-phase2-realtime`). `persistence.test.ts` + binding tests (e fix gap CI: ws-server tests ora girano in `test:unit`); presenza live nella project overview; multi-istanza ws-server via Redis pub/sub (opt-in su `REDIS_URL`, no-op senza); realtime sul Soggetto free editor (+ fix TDZ e Cesare-diff condivisi in `NarrativeProseMirrorView`). Spec `09b-phase2-realtime.md`. |
 | 4 | **Timeline Scaletta verticale** | 15 | La scaletta usa ancora `OutlineEditor` (card-grid). La spec 15 prevede una timeline verticale stile DaVinci Resolve. Feature di prodotto, non bug. |
 
 **Più avanti (non v1)**

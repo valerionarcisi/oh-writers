@@ -1,6 +1,6 @@
 # Spec 09b Phase 2 — realtime hardening, presence, Soggetto, multi-instance
 
-> Status: active · Date: 2026-06-02 · Owner: Valerio
+> Status: DONE (2026-06-02, branch `feat/09b-phase2-realtime`) · Owner: Valerio
 > Extends: [09b — ws-server / Yjs realtime](./09b-ws-server.md) (Phase 1 DONE)
 
 Phase 1 shipped real-time collab on the screenplay + narrative editors (Yjs over
@@ -57,6 +57,15 @@ Today one ws-server holds rooms in-process; two instances behind a load balancer
 - Soggetto free editor syncs char-by-char between two contexts + shows presence; degrades to HTTP autosave when `VITE_WS_URL` unset.
 - With `REDIS_URL` set + two ws-server instances, an edit on instance A appears on a client connected to instance B (or the unit-level convergence test proves the fan-out). With `REDIS_URL` unset, single-instance behaviour is byte-identical to Phase 1.
 - Content bridge + versioning untouched (a version snapshot still captures `content`).
+
+## Known pre-existing gap (Phase 1, NOT addressed here)
+
+When a room first connects with an **empty CRDT**, `ySyncPlugin` syncs the empty
+doc and the HTTP `content` does NOT auto-seed the CRDT — a brand-new room starts
+empty until someone types. This affects `NarrativeEditor` equally (orthogonal to
+Phase 2). Phase 1 spec D3 intended client-side seeding behind a
+`yXmlFragment.length === 0` guard; it does not fire reliably for the narrative
+editors. Own ticket: seed the CRDT from `content`/`pmDoc` on first connect.
 
 ## Out of scope
 - Presence avatars in the LeftRail / global shell (overview + editors only).
