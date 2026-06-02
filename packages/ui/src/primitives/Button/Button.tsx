@@ -1,44 +1,24 @@
 // packages/ui/src/primitives/Button/Button.tsx
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { BaseButton } from "../../components/BaseButton";
+import type {
+  BaseButtonProps,
+  ButtonVariant as BaseButtonVariant,
+  ButtonSize as BaseButtonSize,
+} from "../../components/BaseButton";
 import styles from "./Button.module.css";
 
-export type ButtonVariant = "primary" | "ghost" | "danger";
-export type ButtonSize = "sm" | "md";
+// Backward-compatible type names. The merged button uses the superset of both
+// historical APIs; these aliases keep existing `DsButtonProps`/`ButtonVariant`/
+// `ButtonSize` imports working.
+export type ButtonVariant = BaseButtonVariant;
+export type ButtonSize = BaseButtonSize;
+export type ButtonProps = BaseButtonProps;
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  hotkey?: string;
-  children: ReactNode;
-};
-
-export function Button({
-  variant = "ghost",
-  size = "md",
-  hotkey,
-  className,
-  children,
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      type="button"
-      className={[
-        styles.button,
-        styles[variant],
-        size === "sm" ? styles.sm : "",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      {...props}
-    >
-      {children}
-      {hotkey && (
-        <span className={styles.hotkey} aria-hidden="true">
-          {hotkey}
-        </span>
-      )}
-    </button>
-  );
+/**
+ * Deprecated alias. `DsButton` is the default-`ghost` button (DS-v2 look
+ * family); it now delegates to the unified `BaseButton`. New code should import
+ * `Button` from the package root instead.
+ */
+export function Button({ variant = "ghost", ...props }: ButtonProps) {
+  return <BaseButton styles={styles} variant={variant} {...props} />;
 }
