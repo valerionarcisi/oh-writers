@@ -128,8 +128,8 @@ Every Cesare edit, in **every feature** (Soggetto, Sinossi, Scaletta, Trattament
 
 1. Chat stays a **floating bottom-right drawer** — never a fullscreen takeover, never reflows the editor.
 2. The **open entity updates LIVE behind the chat** while the trace renders. The visible document is the preview; there is no detached drawer for the edit itself.
-3. A **version is auto-created** before the change is applied (so every AI mutation is revertible).
-4. The chat renders an **inline compact trace**: `N passaggi › → reasoning/Thought › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff) and **↩ Annulla** (revert).
+3. A **version is auto-created** before the change is applied (so every AI mutation is revertible). The "before" snapshot is captured by `auto-version.effect.ts`.
+4. The chat renders an **inline compact trace**: `N passaggi › → reasoning/Thought › → Aggiornato <Entity> → Fatto → result card` with **Mostra/Nascondi modifiche** (toggle diff). Per **Spec 47e** the inline **↩ Annulla** affordance was intentionally removed — the edit is always applied and the toggle is a transient flash, not a revert; **true rollback lives in the Versions SplitDrawer** (backed by the auto-created version from point 3). Do not re-add an inline undo to the result card.
 
 When you add a Cesare tool that mutates any entity, reuse this flow — do not invent a per-feature variant. See [Spec 44](docs/specs/44-shell-refactor-notion-style.md#agentic-edit-pattern) and the QA contract in `docs/specs/44-qa-iter-1-report.md`.
 

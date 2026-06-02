@@ -83,14 +83,14 @@ Notion inline-trace canonico. "Mostra modifiche" apre il diff (3 add/del marks).
 aggiornato live dietro la chat. Invariante tracer rispettata (writing→done→result card).
 Screenshot: `/tmp/audit-03-cesare-soggetto.png`.
 
-## 🟠 MEDIO-2 — Manca il bottone "↩ Annulla" sulla result card di Cesare
+## ✅ MEDIO-2 (NON è un bug — by-design Spec 47e) — niente "↩ Annulla" inline
 
-Il pattern Agentic Edit canonico (CLAUDE.md §Agentic Edit Pattern punto 4) richiede su ogni
-result card **"Mostra/Nascondi modifiche" + "↩ Annulla"** (revert della mutazione, con versione
-auto-creata prima dell'edit). Osservato: "Mostra/Nascondi modifiche" c'è, **"↩ Annulla" NO**
-(nessun bottone annulla/revert/undo trovato sulla card). Da verificare se la versione è
-auto-creata (revert ancora possibile via drawer Versioni) — ma l'undo inline manca, è parte
-del contratto di prodotto. file: `packages/ui/src/composites/ChangeTrace/*` + la result card di Cesare.
+**Rettifica:** NON è un bug. Per **Spec 47e** l'affordance inline "↩ Annulla" è stata rimossa
+**di proposito**: l'edit è sempre applicato, il toggle è un flash transitorio, e il **rollback
+vero vive nel drawer Versioni**, sostenuto dalla **versione auto-creata** prima di ogni edit
+(`auto-version.effect.ts` cattura lo snapshot "before"). Il finding nasceva da **doc-drift**:
+CLAUDE.md (punto 4 del contratto Agentic Edit) elencava ancora "↩ Annulla". **FIX (fatto):**
+aggiornato CLAUDE.md per riflettere Spec 47e (no undo inline; rollback via Versioni).
 
 ## 🟡 BASSO-3 — Invio Cesare: Enter inserisce newline invece di inviare
 
