@@ -24,20 +24,23 @@ export const getUserFromHeaders = async (
   if (!session?.user) return null;
 
   // The Better Auth session user does not carry `locale`; read it from the
-  // users row. Default to 'en' if the row is somehow missing the column.
+  // users row. A plain select (not the relational `db.query`) avoids Drizzle's
+  // "No fields selected"/buildRelationalQueryWithoutPK quirk when picking a
+  // single non-PK column. Default to 'en' if somehow absent.
   const { db } = await import("@oh-writers/db");
   const { users } = await import("@oh-writers/db/schema");
   const { eq } = await import("drizzle-orm");
-  const row = await db.query.users.findFirst({
-    where: eq(users.id, session.user.id),
-    columns: { locale: true },
-  });
+  const rows = await db
+    .select({ locale: users.locale })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
 
   return {
     id: session.user.id as UserId,
     name: session.user.name,
     email: session.user.email,
-    locale: (row?.locale ?? "en") as Locale,
+    locale: (rows[0]?.locale ?? "en") as Locale,
   };
 };
 
