@@ -1,81 +1,81 @@
 import type { Locale } from "../constants.js";
+import { commonKeys } from "./keys/common.js";
+import { budgetKeys } from "./keys/budget.js";
+import { breakdownKeys } from "./keys/breakdown.js";
+import { projectsKeys } from "./keys/projects.js";
+import { documentsKeys } from "./keys/documents.js";
+import { shootingPlanKeys } from "./keys/shootingPlan.js";
+import { screenplayKeys } from "./keys/screenplay.js";
+import { scheduleKeys } from "./keys/schedule.js";
+import { locationsKeys } from "./keys/locations.js";
+import { appShellKeys } from "./keys/appShell.js";
+import { fundraisingKeys } from "./keys/fundraising.js";
+import { predictionsKeys } from "./keys/predictions.js";
+import { teamsKeys } from "./keys/teams.js";
+import { authKeys } from "./keys/auth.js";
+import { userSettingsKeys } from "./keys/userSettings.js";
+import { versionsKeys } from "./keys/versions.js";
+import { dashboardKeys } from "./keys/dashboard.js";
 
 /**
- * UI translation dictionary. Values are user-facing copy (IT + EN); keys and
- * everything else stay English. A completeness test (keys.test.ts) enforces
- * that the two locales carry the exact same key set, so a missing translation
- * is a test failure, not a runtime fallback.
+ * UI translation dictionary, composed from per-feature-area key modules under
+ * `./keys/`. Values are user-facing copy (IT + EN); keys + everything else stay
+ * English. A completeness test (keys.test.ts) enforces EN key set == IT.
  *
- * Seeded here with the nav/shell/status/action keys (the first extraction
- * targets, Spec 18b PR-2); the remaining ~250 keys are added incrementally as
- * each feature's strings are extracted, guarded by the same test.
+ * Each area lives in its own module so the i18n bulk extraction (Spec 18b PR-5+)
+ * can run as a fleet without merge conflicts on a single file.
  */
-export const translations = {
-  en: {
-    // Navigation — document types
-    "nav.soggetto": "Treatment outline",
-    "nav.synopsis": "Synopsis",
-    "nav.outline": "Outline",
-    "nav.treatment": "Treatment",
-    "nav.screenplay": "Screenplay",
-    // Navigation — production
-    "nav.breakdown": "Breakdown",
-    "nav.budget": "Budget",
-    "nav.schedule": "Schedule",
-    "nav.locations": "Locations",
-    "nav.shootingPlan": "Shots",
-    "nav.opportunities": "Funding",
-    // Navigation — groups
-    "navGroup.development": "Development",
-    "navGroup.production": "Production",
-    // Common status
-    "status.saved": "Saved",
-    "status.saving": "Saving…",
-    "status.soon": "soon",
-    // Common actions
-    "action.save": "Save",
-    "action.export": "Export",
-    "action.newProject": "New project",
-    "action.cancel": "Cancel",
-    "action.delete": "Delete",
-    "action.settings": "Settings",
-    "action.overview": "Overview",
-    "action.signOut": "Sign out",
-  },
-  it: {
-    // Navigation — document types
-    "nav.soggetto": "Soggetto",
-    "nav.synopsis": "Sinossi",
-    "nav.outline": "Scaletta",
-    "nav.treatment": "Trattamento",
-    "nav.screenplay": "Sceneggiatura",
-    // Navigation — production
-    "nav.breakdown": "Breakdown",
-    "nav.budget": "Budget",
-    "nav.schedule": "Calendario",
-    "nav.locations": "Location",
-    "nav.shootingPlan": "Inquadrature",
-    "nav.opportunities": "Opportunità",
-    // Navigation — groups
-    "navGroup.development": "Sviluppo",
-    "navGroup.production": "Produzione",
-    // Common status
-    "status.saved": "Salvato",
-    "status.saving": "Salvataggio…",
-    "status.soon": "presto",
-    // Common actions
-    "action.save": "Salva",
-    "action.export": "Esporta",
-    "action.newProject": "Nuovo progetto",
-    "action.cancel": "Annulla",
-    "action.delete": "Elimina",
-    "action.settings": "Impostazioni",
-    "action.overview": "Panoramica",
-    "action.signOut": "Esci",
-  },
-} as const;
+const AREA_DICTS = [
+  commonKeys,
+  budgetKeys,
+  breakdownKeys,
+  projectsKeys,
+  documentsKeys,
+  shootingPlanKeys,
+  screenplayKeys,
+  scheduleKeys,
+  locationsKeys,
+  appShellKeys,
+  fundraisingKeys,
+  predictionsKeys,
+  teamsKeys,
+  authKeys,
+  userSettingsKeys,
+  versionsKeys,
+  dashboardKeys,
+] as const;
 
-export type TranslationKey = keyof (typeof translations)["en"];
+const mergeLocale = (locale: Locale): Record<string, string> =>
+  Object.assign({}, ...AREA_DICTS.map((d) => d[locale]));
+
+export const translations: Record<Locale, Record<string, string>> = {
+  en: mergeLocale("en"),
+  it: mergeLocale("it"),
+};
+
+// Strict key union: the keys of every area module's `en` side combined.
+// Intersecting the en OBJECT types yields the UNION of their keys, so adding a
+// key to any area module immediately makes `t("…")` typecheck-valid and a typo
+// a compile error — the typed-dict guarantee survives the per-area split.
+type AllEnKeys = (typeof commonKeys)["en"] &
+  (typeof budgetKeys)["en"] &
+  (typeof breakdownKeys)["en"] &
+  (typeof projectsKeys)["en"] &
+  (typeof documentsKeys)["en"] &
+  (typeof shootingPlanKeys)["en"] &
+  (typeof screenplayKeys)["en"] &
+  (typeof scheduleKeys)["en"] &
+  (typeof locationsKeys)["en"] &
+  (typeof appShellKeys)["en"] &
+  (typeof fundraisingKeys)["en"] &
+  (typeof predictionsKeys)["en"] &
+  (typeof teamsKeys)["en"] &
+  (typeof authKeys)["en"] &
+  (typeof userSettingsKeys)["en"] &
+  (typeof versionsKeys)["en"] &
+  (typeof dashboardKeys)["en"];
+
+export type TranslationKey = keyof AllEnKeys;
 
 export const translate = (locale: Locale, key: TranslationKey): string =>
-  translations[locale][key];
+  translations[locale][key as string] ?? (key as string);
