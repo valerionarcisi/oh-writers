@@ -5,8 +5,38 @@
 }
 
 .head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
   padding-block-end: var(--ds-space-2);
   border-block-end: 1px solid var(--ds-line-soft);
+}
+
+.onlineCount {
+  font-family: var(--ds-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-success);
+  white-space: nowrap;
+}
+
+.avatarWrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.onlineDot {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  background: var(--ds-success);
+  border: 2px solid var(--ds-surface);
 }
 
 .title {

@@ -161,6 +161,8 @@ export const projectsKeys = {
     "projects.team.roleAi": "AI assistant",
     "projects.team.invite": "Invite collaborator",
     "projects.team.inviteRole": "Viewer or editor",
+    "projects.team.online": "Online",
+    "projects.team.onlineCount": "{count} online",
 
     // Overview — next-step suggestions ({n}/{count} interpolated server-side)
     "projects.nextStep.idle":
@@ -340,6 +342,8 @@ export const projectsKeys = {
     "projects.team.roleAi": "Assistente AI",
     "projects.team.invite": "Invita collaboratore",
     "projects.team.inviteRole": "Lettore o editor",
+    "projects.team.online": "Online",
+    "projects.team.onlineCount": "{count} online",
 
     // Overview — next-step suggestions ({n}/{count} interpolated server-side)
     "projects.nextStep.idle":
