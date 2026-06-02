@@ -20,7 +20,7 @@ interface VersionsListProps {
 export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
   const { data: result, isLoading } = useVersions(screenplayId);
 
-  if (isLoading) return <div className={styles.status}>Loading versions…</div>;
+  if (isLoading) return <LoadingStatus />;
   if (!result) return null;
 
   return match(result)
@@ -35,6 +35,13 @@ export function VersionsList({ projectId, screenplayId }: VersionsListProps) {
     .exhaustive();
 }
 
+function LoadingStatus() {
+  const { t } = useTranslation();
+  return (
+    <div className={styles.status}>{t("screenplay.versionsList.loading")}</div>
+  );
+}
+
 interface VersionsListContentProps {
   projectId: string;
   screenplayId: string;
@@ -46,6 +53,7 @@ function VersionsListContent({
   screenplayId,
   versions,
 }: VersionsListContentProps) {
+  const { t } = useTranslation();
   const createVersion = useCreateManualVersion();
   const deleteVersion = useDeleteVersion(screenplayId);
   const restoreVersion = useRestoreVersion();
@@ -87,7 +95,11 @@ function VersionsListContent({
       { versionId },
       {
         onError: (e) => {
-          setDeleteError(e instanceof Error ? e.message : "Delete failed");
+          setDeleteError(
+            e instanceof Error
+              ? e.message
+              : t("screenplay.versionsList.deleteFailed"),
+          );
         },
       },
     );
@@ -101,15 +113,17 @@ function VersionsListContent({
           params={{ id: projectId }}
           className={styles.backLink}
         >
-          ← Back to Editor
+          {t("screenplay.versionsList.backToEditor")}
         </Link>
-        <span className={styles.title}>Versions</span>
+        <span className={styles.title}>
+          {t("screenplay.versionsList.title")}
+        </span>
         <button
           className={styles.createBtn}
           type="button"
           onClick={() => setIsCreating((v) => !v)}
         >
-          + Save Version
+          {t("screenplay.versionsList.save")}
         </button>
       </div>
 
@@ -118,7 +132,7 @@ function VersionsListContent({
           <input
             className={styles.labelInput}
             type="text"
-            placeholder="Version label (e.g. Draft 1)"
+            placeholder={t("screenplay.versionsList.labelPlaceholder")}
             value={labelInput}
             onChange={(e) => setLabelInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -131,7 +145,9 @@ function VersionsListContent({
             onClick={handleCreate}
             disabled={createVersion.isPending || !labelInput.trim()}
           >
-            {createVersion.isPending ? "Saving…" : "Save"}
+            {createVersion.isPending
+              ? t("screenplay.versionsList.saving")
+              : t("screenplay.versionsList.saveAction")}
           </button>
           <button
             className={styles.cancelBtn}
@@ -141,7 +157,7 @@ function VersionsListContent({
               setLabelInput("");
             }}
           >
-            Cancel
+            {t("screenplay.versionsList.cancel")}
           </button>
         </div>
       )}
@@ -150,12 +166,14 @@ function VersionsListContent({
 
       {versions.length === 0 ? (
         <div className={styles.empty}>
-          No versions yet. Save a version to keep a snapshot.
+          {t("screenplay.versionsList.empty")}
         </div>
       ) : (
         <div className={styles.sections}>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Versions</h2>
+            <h2 className={styles.sectionTitle}>
+              {t("screenplay.versionsList.title")}
+            </h2>
             <ul className={styles.list}>
               {versions.map((v) => (
                 <VersionRow
@@ -208,7 +226,10 @@ function VersionRow({
           {version.createdAt.toLocaleTimeString()}
         </span>
         <span className={styles.pages}>
-          {version.pageCount} {version.pageCount === 1 ? "page" : "pages"}
+          {version.pageCount}{" "}
+          {version.pageCount === 1
+            ? t("screenplay.versionsList.page")
+            : t("screenplay.versionsList.pages")}
         </span>
       </div>
       <div className={styles.rowActions}>
@@ -217,14 +238,14 @@ function VersionRow({
           params={{ id: projectId, vId: version.id }}
           className={styles.actionLink}
         >
-          View
+          {t("screenplay.versionsList.view")}
         </Link>
         <Link
           to="/projects/$id/screenplay/diff/$v1/$v2"
           params={{ id: projectId, v1: version.id, v2: "current" }}
           className={styles.actionLink}
         >
-          Diff vs current
+          {t("screenplay.versionsList.diffVsCurrent")}
         </Link>
         <button
           className={styles.actionBtn}
@@ -232,7 +253,7 @@ function VersionRow({
           onClick={() => onRestore(version.id)}
           disabled={isRestoring}
         >
-          Restore
+          {t("screenplay.versionsList.restore")}
         </button>
         <button
           className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
@@ -241,7 +262,7 @@ function VersionRow({
           disabled={isDeleting}
           data-testid={`delete-version-${version.id}`}
         >
-          Delete
+          {t("screenplay.versionsList.delete")}
         </button>
       </div>
     </li>
