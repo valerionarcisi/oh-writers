@@ -113,6 +113,7 @@ export function VersionsSplitLane({
           ariaLabel={t("shell.versionsLane.frameAria")}
           expandLabel={t("shell.splitDrawer.expand")}
           closeLabel={t("shell.splitDrawer.close")}
+          reduceLabel={t("shell.splitDrawer.reduce")}
           testId="versions-split-drawer-frame"
         >
           <VersionsSplitDrawer

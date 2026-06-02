@@ -72,6 +72,8 @@ export interface SplitDrawerProps {
   expandLabel?: string;
   /** Aria-label + title for the close control (defaults to IT "Chiudi"). */
   closeLabel?: string;
+  /** Aria-label + title for the step-back control (defaults to IT "Riduci"). */
+  reduceLabel?: string;
 
   /**
    * Where the drawer sits in the layout.
@@ -136,6 +138,7 @@ export function SplitDrawer({
   ariaLabel = "Split drawer",
   expandLabel = "Espandi",
   closeLabel = "Chiudi",
+  reduceLabel = "Riduci",
   placement = "overlay",
   testId,
 }: SplitDrawerProps) {
@@ -220,7 +223,7 @@ export function SplitDrawer({
             {state === "full" && onStepBack && (
               <HeaderButton
                 onPress={onStepBack}
-                label="Riduci"
+                label={reduceLabel}
                 icon={<span aria-hidden="true">↙</span>}
               />
             )}

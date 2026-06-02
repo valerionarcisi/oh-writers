@@ -161,12 +161,14 @@ export const appShellKeys = {
     "shell.palette.results": "Results",
     // BottomDock Cesare launcher
     "shell.dock.openCesare": "Open Cesare",
+    "shell.dock.actions": "Global actions",
     // ChangeTrace toggle
     "shell.changeTrace.show": "Show changes",
     "shell.changeTrace.hide": "Hide changes",
     // SplitDrawer window controls
     "shell.splitDrawer.expand": "Expand",
     "shell.splitDrawer.close": "Close",
+    "shell.splitDrawer.reduce": "Reduce",
     // MarginNote suggestion actions
     "shell.marginNote.accept": "Accept Cesare's suggestion",
     "shell.marginNote.ignore": "Dismiss Cesare's suggestion",
@@ -185,6 +187,18 @@ export const appShellKeys = {
     // ConfirmDialog default actions
     "shell.confirmDialog.confirm": "Confirm",
     "shell.confirmDialog.cancel": "Cancel",
+    // Rail secondary chrome
+    "shell.rail.newSessionShort": "+ New",
+    "shell.rail.profile": "Profile",
+    "shell.rail.account": "Account",
+    "shell.rail.tools": "Tools",
+    "shell.skipLink": "Skip to content",
+    // Relative time buckets for the session list ({n} = number)
+    "shell.relative.now": "now",
+    "shell.relative.minutes": "{n}m",
+    "shell.relative.hours": "{n}h",
+    "shell.relative.yesterday": "yesterday",
+    "shell.relative.days": "{n}d",
   },
   it: {
     // Cesare success toasts (live-apply markers)
@@ -344,12 +358,14 @@ export const appShellKeys = {
     "shell.palette.results": "Risultati",
     // BottomDock Cesare launcher
     "shell.dock.openCesare": "Apri Cesare",
+    "shell.dock.actions": "Azioni globali",
     // ChangeTrace toggle
     "shell.changeTrace.show": "Mostra modifiche",
     "shell.changeTrace.hide": "Nascondi modifiche",
     // SplitDrawer window controls
     "shell.splitDrawer.expand": "Espandi",
     "shell.splitDrawer.close": "Chiudi",
+    "shell.splitDrawer.reduce": "Riduci",
     // MarginNote suggestion actions
     "shell.marginNote.accept": "Accetta suggerimento di Cesare",
     "shell.marginNote.ignore": "Ignora suggerimento di Cesare",
@@ -368,5 +384,17 @@ export const appShellKeys = {
     // ConfirmDialog default actions
     "shell.confirmDialog.confirm": "Conferma",
     "shell.confirmDialog.cancel": "Annulla",
+    // Rail secondary chrome
+    "shell.rail.newSessionShort": "+ Nuova",
+    "shell.rail.profile": "Profilo",
+    "shell.rail.account": "Account",
+    "shell.rail.tools": "Strumenti",
+    "shell.skipLink": "Salta al contenuto",
+    // Relative time buckets for the session list ({n} = number)
+    "shell.relative.now": "ora",
+    "shell.relative.minutes": "{n}m",
+    "shell.relative.hours": "{n}h",
+    "shell.relative.yesterday": "ieri",
+    "shell.relative.days": "{n}g",
   },
 } as const satisfies LocaleDict;

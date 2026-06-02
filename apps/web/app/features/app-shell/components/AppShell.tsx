@@ -1004,7 +1004,7 @@ function AppShellInner({
     <VersionsDrawerProvider>
       <CesareProvider openCesare={openCesare}>
         <div className={styles.shell}>
-          <SkipLink targetId="main-content" />
+          <SkipLink targetId="main-content" label={t("shell.skipLink")} />
           <div className={styles.rail}>
             <LeftRail
               brand={{ label: "Oh Writers", onPress: handleBrandClick }}
@@ -1034,6 +1034,10 @@ function AppShellInner({
                 projectFallback: t("shell.rail.projectFallback"),
                 newSession: t("shell.rail.newSession"),
                 nav: t("shell.rail.nav"),
+                newSessionShort: t("shell.rail.newSessionShort"),
+                profile: t("shell.rail.profile"),
+                account: t("shell.rail.account"),
+                tools: t("shell.rail.tools"),
               }}
               onNavigate={handleNavigate}
               onCollapse={
@@ -1115,6 +1119,7 @@ function AppShellInner({
           <BottomDock
             onCesareToggle={toggleCesare}
             openCesareLabel={t("shell.dock.openCesare")}
+            actionsLabel={t("shell.dock.actions")}
           />
 
           <VersionsDrawer />
@@ -1197,6 +1202,7 @@ function SplitDrawerHost({
         ariaLabel={t("shell.splitDrawer.notificationsAria")}
         expandLabel={t("shell.splitDrawer.expand")}
         closeLabel={t("shell.splitDrawer.close")}
+        reduceLabel={t("shell.splitDrawer.reduce")}
         testId="notification-center-drawer"
       >
         <NotificationCenterDrawerContent onActivate={onNotificationActivate} />

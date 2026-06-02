@@ -15,6 +15,8 @@ export type BottomDockProps = {
   showCesareLabel?: boolean;
   /** Aria-label + title for the Cesare launcher (defaults to IT "Apri Cesare"). */
   openCesareLabel?: string;
+  /** Aria-label for the dock toolbar (defaults to IT "Azioni globali"). */
+  actionsLabel?: string;
 };
 
 function CesareButton({
@@ -53,12 +55,13 @@ export function BottomDock({
   onCesareToggle,
   showCesareLabel = true,
   openCesareLabel = "Apri Cesare",
+  actionsLabel = "Azioni globali",
 }: BottomDockProps) {
   return (
     <div
       className={styles.dock}
       role="toolbar"
-      aria-label="Azioni globali"
+      aria-label={actionsLabel}
       data-testid="bottom-dock"
     >
       <CesareButton

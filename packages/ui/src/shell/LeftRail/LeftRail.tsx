@@ -60,6 +60,12 @@ export type RailLabels = {
   newSession?: string;
   /** Aria-label for the rail navigation landmark. */
   nav?: string;
+  /** Visible label for the "new session" button (the "+ Nuova" pill). */
+  newSessionShort?: string;
+  /** Aria-labels for the footer account row + tools toolbar. */
+  profile?: string;
+  account?: string;
+  tools?: string;
 };
 
 // Account row that lives in the rail FOOTER (Spec 47b FIX 1): notifications /
@@ -448,11 +454,15 @@ function AccountRow({
   notificationsLabel,
   notificationsUnreadLabel,
   settingsLabel,
+  profileLabel,
+  accountLabel,
 }: {
   account: RailAccountActions;
   notificationsLabel: string;
   notificationsUnreadLabel: string;
   settingsLabel: string;
+  profileLabel: string;
+  accountLabel: string;
 }) {
   const bellRef = useRef<HTMLButtonElement>(null);
   const avatarRef = useRef<HTMLButtonElement>(null);
@@ -467,7 +477,7 @@ function AccountRow({
     bellRef,
   );
   const { buttonProps: avatarProps } = useButton(
-    { onPress: account.onAvatar, "aria-label": "Profilo" },
+    { onPress: account.onAvatar, "aria-label": profileLabel },
     avatarRef,
   );
   const { buttonProps: gearProps } = useButton(
@@ -478,7 +488,7 @@ function AccountRow({
     <div
       className={styles.account}
       role="toolbar"
-      aria-label="Account"
+      aria-label={accountLabel}
       data-testid="rail-account"
     >
       <button
@@ -498,7 +508,7 @@ function AccountRow({
         ref={avatarRef}
         {...avatarProps}
         className={[styles.accountBtn, styles.accountAvatar].join(" ")}
-        title="Profilo"
+        title={profileLabel}
         data-rail-account="avatar"
         data-testid="profile-btn"
       >
@@ -575,6 +585,10 @@ export function LeftRail({
   const projectFallbackLabel = labels?.projectFallback ?? "Progetto";
   const newSessionLabel = labels?.newSession ?? "Nuova sessione Cesare";
   const navLabel = labels?.nav ?? "Navigazione progetto";
+  const newSessionShortLabel = labels?.newSessionShort ?? "+ Nuova";
+  const profileLabel = labels?.profile ?? "Profilo";
+  const accountLabel = labels?.account ?? "Account";
+  const toolsLabel = labels?.tools ?? "Strumenti";
   const railRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: brandBtnProps } = useButton(
@@ -663,7 +677,7 @@ export function LeftRail({
               aria-label={newSessionLabel}
               data-testid="new-session-btn"
             >
-              + Nuova
+              {newSessionShortLabel}
             </button>
           )}
         </header>
@@ -782,11 +796,13 @@ export function LeftRail({
           notificationsLabel={notificationsLabel}
           notificationsUnreadLabel={notificationsUnreadLabel}
           settingsLabel={settingsLabel}
+          profileLabel={profileLabel}
+          accountLabel={accountLabel}
         />
       )}
 
       {tools && tools.length > 0 && (
-        <div className={styles.tools} role="toolbar" aria-label="Strumenti">
+        <div className={styles.tools} role="toolbar" aria-label={toolsLabel}>
           {tools.map((tool) => (
             <ToolButton key={tool.id} tool={tool} />
           ))}

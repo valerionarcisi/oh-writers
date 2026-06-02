@@ -8,7 +8,8 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { createServerFn } from "@tanstack/start";
-import type { Locale, UserId } from "@oh-writers/domain";
+import type { Locale, UserId, TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { ConfirmDialog } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -203,6 +204,7 @@ function deriveCesarePage(pathname: string): CesarePage {
 
 function AppLayout() {
   const { user } = Route.useLoaderData();
+  const { t } = useTranslation();
   const matches = useMatches();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -306,7 +308,7 @@ function AppLayout() {
   const cesareSessionsForRail = cesareSessionsQuery.data?.map((s, idx) => ({
     id: s.id,
     title: s.title,
-    lastAt: formatSessionRelative(s.lastMessageAt),
+    lastAt: formatSessionRelative(s.lastMessageAt, t),
     active: activeSessionIdFromRoute
       ? s.id === activeSessionIdFromRoute
       : idx === 0,
@@ -462,15 +464,20 @@ function AppLayout() {
 
 // Relative "lastAt" formatter shared with the Cesare drawer's session selector.
 // Kept simple so the rail shows recognisable buckets ("ora" / "2h" / "ieri").
-function formatSessionRelative(iso: string): string {
+function formatSessionRelative(
+  iso: string,
+  t: (key: TranslationKey) => string,
+): string {
   const ts = new Date(iso).getTime();
   const diff = Date.now() - ts;
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "ora";
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1) return t("shell.relative.now");
+  if (minutes < 60)
+    return t("shell.relative.minutes").replace("{n}", String(minutes));
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24)
+    return t("shell.relative.hours").replace("{n}", String(hours));
   const days = Math.floor(hours / 24);
-  if (days === 1) return "ieri";
-  return `${days}g`;
+  if (days === 1) return t("shell.relative.yesterday");
+  return t("shell.relative.days").replace("{n}", String(days));
 }
