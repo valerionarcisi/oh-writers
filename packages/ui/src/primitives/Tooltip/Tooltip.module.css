@@ -58,12 +58,14 @@
   translate: 0 -50%;
 }
 
-/* Show on hover OR focus-visible on the wrapper's child */
-.wrapper:hover .tip,
-.wrapper:focus-within .tip {
+/* react-aria drives open state (hover + keyboard focus + warmup delay);
+   the tip is only mounted while open, so reveal it once present. */
+.open {
   opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tip { transition: none; }
+  .tip {
+    transition: none;
+  }
 }
