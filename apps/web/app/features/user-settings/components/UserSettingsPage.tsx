@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Button, Input, FormField } from "@oh-writers/ui";
+import { Button, Input, FormField, SegmentedControl } from "@oh-writers/ui";
 import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
-import { TEAM_ROLE_LABELS_IT } from "@oh-writers/domain";
+import { TEAM_ROLE_LABELS_IT, type Locale } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
+import { useLocale } from "~/features/i18n";
 import {
   updateUserProfile,
+  updateUserLocale,
   userProfileQueryOptions,
   userAccountProvidersQueryOptions,
   userTeamsQueryOptions,
@@ -42,6 +44,8 @@ export function UserSettingsPage({
         email={email}
         initialAvatarUrl={avatarUrl}
       />
+
+      <LanguageSection />
 
       <PasswordSection />
 
@@ -209,6 +213,48 @@ const PasswordSchema = z
     message: "Le password non corrispondono",
     path: ["confirm"],
   });
+
+// ── Language ─────────────────────────────────────────────────────────────────
+
+const LOCALE_OPTIONS: ReadonlyArray<{ id: Locale; label: string }> = [
+  { id: "it", label: "Italiano" },
+  { id: "en", label: "English" },
+];
+
+function LanguageSection() {
+  const currentLocale = useLocale();
+  const [selected, setSelected] = useState<Locale>(currentLocale);
+
+  const mut = useMutation({
+    mutationFn: async (locale: Locale) =>
+      unwrapResult(await updateUserLocale({ data: { locale } })),
+    onSuccess: () => {
+      // Locale is resolved server-side in the root loader and rendered into
+      // `<html lang>`. React does not reconcile the `<html>` attribute on a
+      // client-side loader re-run, so a hard reload is the reliable way to
+      // re-resolve the locale end-to-end (lang, nav labels, market gates) from
+      // the freshly-persisted value with no SSR/client desync.
+      if (typeof window !== "undefined") window.location.reload();
+    },
+  });
+
+  const onSelect = (locale: Locale): void => {
+    setSelected(locale);
+    if (locale !== currentLocale) mut.mutate(locale);
+  };
+
+  return (
+    <section className={styles.section} data-testid="language-section">
+      <h2 className={styles.sectionTitle}>Lingua</h2>
+      <SegmentedControl<Locale>
+        options={LOCALE_OPTIONS}
+        activeId={selected}
+        onSelect={onSelect}
+        ariaLabel="Lingua dell'interfaccia"
+      />
+    </section>
+  );
+}
 
 function PasswordSection() {
   const providersQuery = useQuery(userAccountProvidersQueryOptions());

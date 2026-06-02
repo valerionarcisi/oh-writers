@@ -34,6 +34,28 @@ export const updateUserProfile = createServerFn({ method: "POST" })
     );
   });
 
+const UpdateLocaleSchema = z.object({
+  locale: z.enum(["it", "en"]),
+});
+
+export const updateUserLocale = createServerFn({ method: "POST" })
+  .validator(UpdateLocaleSchema)
+  .handler(async ({ data }) => {
+    const user = await requireUser();
+    return toShape(
+      await ResultAsync.fromSafePromise(getDb()).andThen((db) =>
+        ResultAsync.fromPromise(
+          db
+            .update(users)
+            .set({ locale: data.locale, updatedAt: new Date() })
+            .where(eq(users.id, user.id))
+            .returning({ locale: users.locale }),
+          (e) => new DbError("updateUserLocale", e),
+        ).andThen((rows) => ok({ locale: rows[0]!.locale })),
+      ),
+    );
+  });
+
 export const getUserAccountProviders = createServerFn({ method: "GET" }).handler(
   async () => {
     const user = await requireUser();
