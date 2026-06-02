@@ -11,6 +11,9 @@ import {
   ConfirmDialogProvider,
   SpriteLoader,
 } from "@oh-writers/ui";
+import type { Locale } from "@oh-writers/domain";
+import { LocaleProvider } from "~/features/i18n";
+import { FeatureProvider } from "~/features/feature-flags";
 import "../styles/global.css";
 
 export const Route = createRootRoute({
@@ -20,14 +23,22 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [{ title: "Oh Writers" }],
   }),
+  // Resolve the UI locale server-side (user.locale → Accept-Language → 'en')
+  // so `<html lang>`, the first paint, and feature/route gates are correct and
+  // the client never has to re-detect (which would flip lang on hydration).
+  loader: async (): Promise<{ locale: Locale }> => {
+    const { resolveLocale } = await import("~/features/i18n/resolve-locale.server");
+    return { locale: await resolveLocale() };
+  },
   component: RootLayout,
 });
 
 function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
+  const { locale } = Route.useLoaderData();
 
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -45,13 +56,17 @@ function RootLayout() {
       </head>
       <body>
         <SpriteLoader />
-        <QueryClientProvider client={queryClient}>
-          <ToastProvider>
-            <ConfirmDialogProvider>
-              <Outlet />
-            </ConfirmDialogProvider>
-          </ToastProvider>
-        </QueryClientProvider>
+        <LocaleProvider locale={locale}>
+          <FeatureProvider locale={locale}>
+            <QueryClientProvider client={queryClient}>
+              <ToastProvider>
+                <ConfirmDialogProvider>
+                  <Outlet />
+                </ConfirmDialogProvider>
+              </ToastProvider>
+            </QueryClientProvider>
+          </FeatureProvider>
+        </LocaleProvider>
         <Scripts />
       </body>
     </html>

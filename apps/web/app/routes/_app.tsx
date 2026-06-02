@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { createServerFn } from "@tanstack/start";
-import type { UserId } from "@oh-writers/domain";
+import type { Locale, UserId } from "@oh-writers/domain";
 import type { TopBarSectionGroup, DropdownMenuItem } from "@oh-writers/ui";
 import { ConfirmDialog } from "@oh-writers/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -31,14 +31,24 @@ import { useProject, personalProjectsQueryOptions } from "~/features/projects";
 import type { AppUser } from "~/server/context";
 import { signOut } from "~/lib/auth-client";
 
-type SerializableUser = { id: string; name: string; email: string };
+type SerializableUser = {
+  id: string;
+  name: string;
+  email: string;
+  locale: Locale;
+};
 
 const fetchUser = createServerFn({ method: "GET" }).handler(
   async (): Promise<SerializableUser | null> => {
     const { getUser } = await import("~/server/context");
     const user = await getUser();
     if (!user) return null;
-    return { id: user.id as string, name: user.name, email: user.email };
+    return {
+      id: user.id as string,
+      name: user.name,
+      email: user.email,
+      locale: user.locale,
+    };
   },
 );
 
@@ -55,7 +65,12 @@ export const Route = createFileRoute("/_app")({
     const user = await fetchUser();
     if (!user) throw redirect({ to: "/login" });
     return {
-      user: { id: user.id as UserId, name: user.name, email: user.email },
+      user: {
+        id: user.id as UserId,
+        name: user.name,
+        email: user.email,
+        locale: user.locale,
+      },
     };
   },
   component: AppLayout,

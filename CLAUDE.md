@@ -27,6 +27,7 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 - [Code Comments](docs/conventions/code-comments.md)
 - [Testing](docs/conventions/testing.md) — Vitest + Playwright + Vernissage + cost smoke
 - [Mock Mode](docs/conventions/mock-mode.md) — `MOCK_AI=true` agentic mock
+- [Feature Flags](docs/conventions/feature-flags.md) — `resolveFeatures`/`useFeature`, market·plan·user, OFF=hidden
 - [Security](docs/conventions/security.md)
 - [Observability](docs/conventions/observability.md) — Langfuse traces, JSON metrics, Pino logs
 - [Shared Infrastructure](docs/conventions/shared-infra.md) — centralized utilities table
@@ -97,6 +98,7 @@ Hard stops. If you are about to do any of these, stop and ask.
 
 - **Never use tRPC** — server calls go through `createServerFn` only
 - **Never run DB queries on the client** — all Drizzle calls are inside `createServerFn` handlers
+- **Never gate a feature on a raw `locale`/`plan`/market/user check inline** — every show/hide decision goes through `resolveFeatures`/`useFeature(Features.X)` (catalogue in `packages/domain/src/features/flags.ts`), resolved server-side, OFF=hidden. New gateable features must be added to the catalogue. See [Feature Flags](docs/conventions/feature-flags.md) + [Spec 54](docs/specs/54-feature-flags.md).
 - **Never use `try/catch`** for expected failures — use `ResultAsync.fromPromise` and typed errors
 - **Never mutate** state, arrays, or objects directly — always return new values
 - **Never write TypeScript types by hand** when they can be inferred from Zod or Drizzle
