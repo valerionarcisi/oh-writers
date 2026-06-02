@@ -6,4 +6,8 @@ export {
   type Peer,
 } from "./hooks/useYjsRoom";
 export { buildYjsPlugins, isFragmentEmpty } from "./lib/yjs-plugins";
+export {
+  buildConnectedRealtime,
+  type ConnectedRealtime,
+} from "./lib/build-realtime";
 export { PresenceIndicator } from "./components/PresenceIndicator";

@@ -3,6 +3,12 @@ import type { DocumentType } from "@oh-writers/domain";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { toCartelle } from "../lib/cartelle-counter";
 import { useTranslation } from "~/features/i18n";
+import {
+  useYjsRoom,
+  PresenceIndicator,
+  buildConnectedRealtime,
+} from "~/features/realtime";
+import { useSession } from "~/lib/auth-client";
 import styles from "./FreeNarrativeEditor.module.css";
 
 export interface FreeNarrativeEditorProps {
@@ -17,6 +23,10 @@ export interface FreeNarrativeEditorProps {
   readonly hideCounter?: boolean;
   /** Document type for the Cesare inline live-diff highlight (Spec 47d). */
   readonly diffDocumentType?: DocumentType;
+  /** Document id for the realtime collab room (`document:<id>`). When provided
+   *  and the user can edit, opens a Yjs room so edits sync between clients.
+   *  Omitted/empty → HTTP-only autosave (Phase 1 behaviour). */
+  readonly documentId?: string;
 }
 
 const stripHtmlTags = (html: string): string =>
@@ -33,6 +43,7 @@ export function FreeNarrativeEditor({
   embedded = false,
   hideCounter = false,
   diffDocumentType,
+  documentId,
 }: FreeNarrativeEditorProps) {
   const { t } = useTranslation();
   const { cartelle, chars } = useMemo(() => {
@@ -41,8 +52,29 @@ export function FreeNarrativeEditor({
     return { cartelle: toCartelle(c), chars: c };
   }, [content]);
 
+  // ─── Realtime collaboration ────────────────────────────────────────────
+  // Mirrors NarrativeEditor: open a Yjs room for the document, build the
+  // `realtime` object only when fully connected, and degrade silently when
+  // disabled (no VITE_WS_URL / no documentId / viewing read-only).
+  const { data: sessionData } = useSession();
+  const realtimeUser = sessionData?.user
+    ? { id: sessionData.user.id, name: sessionData.user.name }
+    : null;
+  const room = useYjsRoom(
+    documentId ? `document:${documentId}` : "",
+    realtimeUser,
+    canEdit && !!documentId,
+  );
+  const { status: realtimeStatus, peers: realtimePeers } = room;
+  const realtime = buildConnectedRealtime(room);
+
   const inner = (
     <>
+      {realtimeStatus !== "disabled" && (
+        <div className={styles.presenceRow}>
+          <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
+        </div>
+      )}
       <NarrativeProseMirrorView
         value={content}
         onChange={onChange}
@@ -50,6 +82,7 @@ export function FreeNarrativeEditor({
         readOnly={!canEdit}
         placeholder={t("documents.freeNarrative.placeholder")}
         diffDocumentType={diffDocumentType}
+        realtime={realtime}
       />
       {!hideCounter && (
         <div className={styles.counter} aria-live="polite">
