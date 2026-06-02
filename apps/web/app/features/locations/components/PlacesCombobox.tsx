@@ -1,7 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { usePlacesAutocomplete } from "../hooks/usePlacesAutocomplete";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import styles from "./PlacesCombobox.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 interface PlacesComboboxProps {
   value: string;
@@ -14,19 +18,19 @@ interface PlacesComboboxProps {
   autoFocus?: boolean;
 }
 
-const PLACE_TYPE_LABEL: Record<string, string> = {
-  restaurant: "ristorante",
-  bar: "bar",
-  cafe: "caffè",
-  park: "parco",
-  bakery: "forno",
-  lodging: "alloggio",
-  hotel: "hotel",
-  museum: "museo",
-  store: "negozio",
-  church: "chiesa",
-  hospital: "ospedale",
-  school: "scuola",
+const PLACE_TYPE_LABEL_KEYS: Record<string, TranslationKey> = {
+  restaurant: "locations.placeType.restaurant",
+  bar: "locations.placeType.bar",
+  cafe: "locations.placeType.cafe",
+  park: "locations.placeType.park",
+  bakery: "locations.placeType.bakery",
+  lodging: "locations.placeType.lodging",
+  hotel: "locations.placeType.hotel",
+  museum: "locations.placeType.museum",
+  store: "locations.placeType.store",
+  church: "locations.placeType.church",
+  hospital: "locations.placeType.hospital",
+  school: "locations.placeType.school",
 };
 
 const isMeaningfulType = (type: string): boolean =>
@@ -36,10 +40,11 @@ const isMeaningfulType = (type: string): boolean =>
   !type.startsWith("political") &&
   type !== "premise";
 
-const pickTypeLabel = (types: string[]): string | null => {
+const pickTypeLabel = (types: string[], t: Translate): string | null => {
   const meaningful = types.find(isMeaningfulType);
   if (!meaningful) return null;
-  return PLACE_TYPE_LABEL[meaningful] ?? meaningful.replace(/_/g, " ");
+  const key = PLACE_TYPE_LABEL_KEYS[meaningful];
+  return key ? t(key) : meaningful.replace(/_/g, " ");
 };
 
 export function PlacesCombobox({
@@ -52,6 +57,7 @@ export function PlacesCombobox({
   inputTestId,
   autoFocus,
 }: PlacesComboboxProps) {
+  const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const listboxId = useId();
   const optionIdPrefix = useId();
@@ -154,16 +160,16 @@ export function PlacesCombobox({
           {isLoading && suggestions.length === 0 && (
             <li className={styles.loading} aria-live="polite">
               <span className={styles.spinner} aria-hidden="true" />
-              Cerco location reali…
+              {t("locations.combobox.searchingRealPlaces")}
             </li>
           )}
           {!isLoading && suggestions.length === 0 && hasQuery && (
             <li className={styles.empty} aria-live="polite">
-              Nessun risultato
+              {t("locations.combobox.noResults")}
             </li>
           )}
           {suggestions.map((suggestion, index) => {
-            const typeLabel = pickTypeLabel(suggestion.types);
+            const typeLabel = pickTypeLabel(suggestion.types, t);
             const thumb = suggestion.photos[0]?.thumbnailUrl ?? null;
             const isActive = index === activeIndex;
             return (

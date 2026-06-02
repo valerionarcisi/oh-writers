@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DsButton, Modal } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import { useExportBreakdown } from "../hooks/useBreakdown";
 import { openPdfPreview } from "~/features/documents";
 import { downloadCsv } from "../lib/download-csv";
@@ -18,6 +19,7 @@ export function ExportBreakdownModal({
   projectId,
   versionId,
 }: Props) {
+  const { t } = useTranslation();
   const [format, setFormat] = useState<"pdf" | "csv">("pdf");
   const exportMut = useExportBreakdown();
 
@@ -45,11 +47,11 @@ export function ExportBreakdownModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Esporta breakdown"
+      title={t("breakdown.exportModal.title")}
       footer={
         <>
           <DsButton variant="ghost" onClick={onClose}>
-            Annulla
+            {t("breakdown.exportModal.cancel")}
           </DsButton>
           <DsButton
             variant="primary"
@@ -57,14 +59,18 @@ export function ExportBreakdownModal({
             onClick={handleGenerate}
             disabled={exportMut.isPending}
           >
-            {exportMut.isPending ? "Generazione…" : "Genera"}
+            {exportMut.isPending
+              ? t("breakdown.exportModal.generating")
+              : t("breakdown.exportModal.generate")}
           </DsButton>
         </>
       }
     >
       <div className={styles.body}>
         <label className={styles.field}>
-          <span className={styles.label}>Formato</span>
+          <span className={styles.label}>
+            {t("breakdown.exportModal.format")}
+          </span>
           <select
             className={styles.input}
             data-testid="breakdown-export-format"

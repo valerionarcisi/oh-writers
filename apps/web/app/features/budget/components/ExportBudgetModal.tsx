@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DsButton, Modal } from "@oh-writers/ui";
 import { openPdfPreview, downloadTextFile } from "~/features/documents";
+import { useTranslation } from "~/features/i18n";
 import { useExportBudget } from "../hooks/useExportBudget";
 import styles from "./ExportBudgetModal.module.css";
 
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ExportBudgetModal({ isOpen, onClose, projectId }: Props) {
+  const { t } = useTranslation();
   const [format, setFormat] = useState<"pdf" | "csv">("pdf");
   const exportMut = useExportBudget();
 
@@ -42,11 +44,11 @@ export function ExportBudgetModal({ isOpen, onClose, projectId }: Props) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Esporta budget"
+      title={t("budget.export.title")}
       footer={
         <>
           <DsButton variant="ghost" onClick={onClose}>
-            Annulla
+            {t("budget.export.cancel")}
           </DsButton>
           <DsButton
             variant="primary"
@@ -54,14 +56,16 @@ export function ExportBudgetModal({ isOpen, onClose, projectId }: Props) {
             onClick={handleGenerate}
             disabled={exportMut.isPending}
           >
-            {exportMut.isPending ? "Generazione…" : "Genera"}
+            {exportMut.isPending
+              ? t("budget.export.generating")
+              : t("budget.export.generate")}
           </DsButton>
         </>
       }
     >
       <div className={styles.body}>
         <label className={styles.field}>
-          <span className={styles.label}>Formato</span>
+          <span className={styles.label}>{t("budget.export.formatLabel")}</span>
           <select
             className={styles.input}
             data-testid="budget-export-format"

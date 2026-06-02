@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import {
   getBudgetWeeklyOverview,
   type WeekBucket,
@@ -19,13 +21,13 @@ const WEEKLY_CATEGORIES = [
 
 type WeeklyCategory = (typeof WEEKLY_CATEGORIES)[number];
 
-const CATEGORY_LABELS: Record<WeeklyCategory, string> = {
-  cast: "Cast",
-  crew: "Troupe",
-  locations: "Location",
-  vehicles: "Veicoli",
-  other: "Altro",
-  contingency: "Imprevisti",
+const CATEGORY_LABEL_KEYS: Record<WeeklyCategory, TranslationKey> = {
+  cast: "budget.weekly.cat.cast",
+  crew: "budget.weekly.cat.crew",
+  locations: "budget.weekly.cat.locations",
+  vehicles: "budget.weekly.cat.vehicles",
+  other: "budget.weekly.cat.other",
+  contingency: "budget.weekly.cat.contingency",
 };
 
 const CATEGORY_VAR: Record<WeeklyCategory, string> = {
@@ -83,6 +85,7 @@ interface BudgetWeeklyViewProps {
 }
 
 export function BudgetWeeklyView({ projectId }: BudgetWeeklyViewProps) {
+  const { t } = useTranslation();
   const { data: weeks } = useQuery(weeklyQueryOptions(projectId));
 
   const buckets = weeks ?? [];
@@ -90,9 +93,7 @@ export function BudgetWeeklyView({ projectId }: BudgetWeeklyViewProps) {
   if (buckets.length === 0) {
     return (
       <div className={styles.root} data-testid="budget-weekly-view">
-        <div className={styles.empty}>
-          Genera lo schedule e il budget per vedere la ripartizione settimanale.
-        </div>
+        <div className={styles.empty}>{t("budget.empty.weekly")}</div>
       </div>
     );
   }
@@ -102,7 +103,7 @@ export function BudgetWeeklyView({ projectId }: BudgetWeeklyViewProps) {
       <div
         className={styles.timeline}
         role="region"
-        aria-label="Timeline settimane di produzione"
+        aria-label={t("budget.weekly.timelineAriaLabel")}
       >
         {buckets.map((week) => (
           <WeekCard key={week.weekNumber} week={week} />
@@ -119,6 +120,7 @@ interface WeekCardProps {
 }
 
 function WeekCard({ week }: WeekCardProps) {
+  const { t } = useTranslation();
   const segments = useMemo(() => {
     return WEEKLY_CATEGORIES.map((cat) => {
       const entry = week.linesByCategory[cat];
@@ -136,7 +138,9 @@ function WeekCard({ week }: WeekCardProps) {
     <article className={styles.weekCard} data-testid="budget-week-card">
       <header className={styles.weekHeader}>
         <span className={styles.weekTitle}>
-          Settimana {week.weekNumber} · {week.dayCount} giornate
+          {t("budget.weekly.weekTitle")
+            .replace("{number}", String(week.weekNumber))
+            .replace("{days}", String(week.dayCount))}
         </span>
         <span className={styles.weekRange}>
           {formatDateRange(week.startDate, week.endDate)}
@@ -148,7 +152,10 @@ function WeekCard({ week }: WeekCardProps) {
       <div
         className={styles.weekBar}
         role="img"
-        aria-label={`Ripartizione costi settimana ${week.weekNumber}`}
+        aria-label={t("budget.weekly.weekBarAriaLabel").replace(
+          "{number}",
+          String(week.weekNumber),
+        )}
       >
         {segments.map((seg) => (
           <span
@@ -158,7 +165,7 @@ function WeekCard({ week }: WeekCardProps) {
               width: `${seg.percent}%`,
               ["--segment-color" as string]: `var(${CATEGORY_VAR[seg.cat]})`,
             }}
-            title={`${CATEGORY_LABELS[seg.cat]} — ${formatCents(seg.value)}`}
+            title={`${t(CATEGORY_LABEL_KEYS[seg.cat])} — ${formatCents(seg.value)}`}
           />
         ))}
       </div>
@@ -173,14 +180,19 @@ function WeekCard({ week }: WeekCardProps) {
               }}
               aria-hidden="true"
             />
-            <span>{CATEGORY_LABELS[seg.cat]}</span>
+            <span>{t(CATEGORY_LABEL_KEYS[seg.cat])}</span>
           </li>
         ))}
       </ul>
 
       {week.sceneIds.length > 0 && (
         <div className={styles.weekScenes}>
-          <span className={styles.sceneChip}>{week.sceneIds.length} scene</span>
+          <span className={styles.sceneChip}>
+            {t("budget.weekly.scenes").replace(
+              "{count}",
+              String(week.sceneIds.length),
+            )}
+          </span>
         </div>
       )}
     </article>
@@ -192,18 +204,19 @@ interface WeeklyTableProps {
 }
 
 function WeeklyTable({ buckets }: WeeklyTableProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th scope="col">Settimana</th>
+            <th scope="col">{t("budget.weekly.colWeek")}</th>
             {WEEKLY_CATEGORIES.map((cat) => (
               <th key={cat} scope="col">
-                {CATEGORY_LABELS[cat]}
+                {t(CATEGORY_LABEL_KEYS[cat])}
               </th>
             ))}
-            <th scope="col">Totale</th>
+            <th scope="col">{t("budget.weekly.colTotal")}</th>
           </tr>
         </thead>
         <tbody>
@@ -220,7 +233,7 @@ function WeeklyTable({ buckets }: WeeklyTableProps) {
             </tr>
           ))}
           <tr className={styles.totalRow}>
-            <th scope="row">Totale</th>
+            <th scope="row">{t("budget.weekly.rowTotal")}</th>
             {WEEKLY_CATEGORIES.map((cat) => {
               const sum = buckets.reduce(
                 (acc, w) => acc + (w.linesByCategory[cat]?.totalCents ?? 0),

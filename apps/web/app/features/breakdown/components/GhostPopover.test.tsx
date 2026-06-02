@@ -1,9 +1,21 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  cleanup,
+  fireEvent,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { LocaleProvider } from "~/features/i18n";
 import { GhostPopover } from "./GhostPopover";
 
 afterEach(cleanup);
+
+// GhostPopover calls `useTranslation`, which requires a LocaleProvider in the
+// tree. Wrap every render so the component resolves keys against the IT locale.
+const render = (ui: ReactElement) =>
+  rtlRender(<LocaleProvider locale="it">{ui}</LocaleProvider>);
 
 describe("GhostPopover", () => {
   it("renders Accept and Ignore buttons", () => {

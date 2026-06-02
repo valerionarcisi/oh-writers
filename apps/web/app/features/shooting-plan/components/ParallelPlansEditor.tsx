@@ -26,6 +26,7 @@ import {
   type ShotView,
 } from "../server/shooting-plan.server";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useTranslation } from "~/features/i18n";
 import { PlanPicker } from "./PlanPicker";
 import { PlanTrack } from "./PlanTrack";
 import { QuickAddToolbar } from "./QuickAddToolbar";
@@ -55,6 +56,7 @@ export function ParallelPlansEditor({
   sceneHasSpecialEffect,
   onShotListChanged,
 }: ParallelPlansEditorProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: planRes, isFetching } = useQuery({
     ...shotPlanQueryOptions(sceneId, projectId),
@@ -396,7 +398,7 @@ export function ParallelPlansEditor({
 
       {activeHidden && (
         <div className={styles.activeHiddenBanner} role="alert">
-          Il piano attivo è nascosto —{" "}
+          {t("shootingPlan.editor.activeHidden")}{" "}
           <button
             type="button"
             onClick={() => {
@@ -405,7 +407,7 @@ export function ParallelPlansEditor({
               }
             }}
           >
-            mostra
+            {t("shootingPlan.editor.show")}
           </button>
         </div>
       )}
@@ -426,7 +428,7 @@ export function ParallelPlansEditor({
       />
 
       <div className={styles.rulerRow}>
-        <div className={styles.rulerLabel}>Ore</div>
+        <div className={styles.rulerLabel}>{t("shootingPlan.editor.hours")}</div>
         <div className={styles.ruler}>
           {RULER_HOURS.map((h) => (
             <div
@@ -435,7 +437,7 @@ export function ParallelPlansEditor({
               data-end={h === 8 || undefined}
               style={{ insetInlineStart: `${(h / 8) * 100}%` }}
             >
-              <span>{h === 8 ? "8h fine GG" : `${h}h`}</span>
+              <span>{h === 8 ? t("shootingPlan.editor.endOfDay") : `${h}h`}</span>
             </div>
           ))}
         </div>

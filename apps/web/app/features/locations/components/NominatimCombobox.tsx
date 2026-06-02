@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useTranslation } from "~/features/i18n";
 import { useNominatimAutocomplete } from "../hooks/useNominatimAutocomplete";
 import type { NominatimSuggestion } from "../lib/boundary";
 import styles from "./NominatimCombobox.module.css";
@@ -24,6 +25,7 @@ export function NominatimCombobox({
   placeholder,
   inputTestId,
 }: NominatimComboboxProps) {
+  const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const listboxId = useId();
   const optionIdPrefix = useId();
@@ -122,12 +124,12 @@ export function NominatimCombobox({
           {isLoading && suggestions.length === 0 && (
             <li className={styles.loading} aria-live="polite">
               <span className={styles.spinner} aria-hidden="true" />
-              Cerco luoghi…
+              {t("locations.combobox.searchingPlaces")}
             </li>
           )}
           {!isLoading && suggestions.length === 0 && hasQuery && (
             <li className={styles.empty} aria-live="polite">
-              Nessun risultato
+              {t("locations.combobox.noResults")}
             </li>
           )}
           {suggestions.map((suggestion, index) => {
@@ -151,8 +153,8 @@ export function NominatimCombobox({
                   aria-hidden="true"
                   title={
                     suggestion.isAdministrative
-                      ? "Area amministrativa"
-                      : "Luogo"
+                      ? t("locations.combobox.administrativeArea")
+                      : t("locations.combobox.place")
                   }
                 >
                   {suggestion.isAdministrative ? "🏛" : "📍"}
@@ -164,7 +166,9 @@ export function NominatimCombobox({
                   </span>
                 </div>
                 {suggestion.isAdministrative && (
-                  <span className={styles.adminChip}>area</span>
+                  <span className={styles.adminChip}>
+                    {t("locations.combobox.areaChip")}
+                  </span>
                 )}
               </li>
             );

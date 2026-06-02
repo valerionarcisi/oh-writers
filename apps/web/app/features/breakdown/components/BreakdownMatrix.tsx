@@ -8,6 +8,7 @@ import {
   type MatrixColumn,
 } from "@oh-writers/ui";
 import { BREAKDOWN_CATEGORIES, CATEGORY_META } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   projectBreakdownOptions,
   useAddBreakdownOccurrence,
@@ -55,6 +56,7 @@ function CellPopover({
   currentQty,
   onClose,
 }: CellPopoverProps) {
+  const { t } = useTranslation();
   const [qty, setQty] = useState(currentQty ?? 1);
   const addOcc = useAddBreakdownOccurrence();
   const removeOcc = useRemoveBreakdownOccurrence();
@@ -83,11 +85,11 @@ function CellPopover({
     <div
       className={styles.popover}
       role="dialog"
-      aria-label="Modifica presenza"
+      aria-label={t("breakdown.matrix.editPresenceAria")}
     >
       <form onSubmit={onSubmit} className={styles.popoverForm}>
         <label className={styles.popoverLabel}>
-          Quantità
+          {t("breakdown.matrix.quantity")}
           <input
             type="number"
             min={1}
@@ -107,11 +109,11 @@ function CellPopover({
               disabled={removeOcc.isPending}
               data-testid="matrix-cell-remove"
             >
-              Rimuovi
+              {t("breakdown.matrix.remove")}
             </button>
           )}
           <button type="button" className={styles.cancelBtn} onClick={onClose}>
-            Annulla
+            {t("breakdown.matrix.cancel")}
           </button>
           <button
             type="submit"
@@ -119,7 +121,9 @@ function CellPopover({
             disabled={addOcc.isPending}
             data-testid="matrix-cell-submit"
           >
-            {currentQty ? "Aggiorna" : "Aggiungi"}
+            {currentQty
+              ? t("breakdown.matrix.update")
+              : t("breakdown.matrix.add")}
           </button>
         </div>
       </form>
@@ -135,6 +139,7 @@ export function BreakdownMatrix({
   scenes,
   canEdit,
 }: Props) {
+  const { t } = useTranslation();
   const { data: rows = [], isLoading } = useQuery(
     projectBreakdownOptions(projectId, versionId),
   );
@@ -225,16 +230,12 @@ export function BreakdownMatrix({
         <Skeleton
           lines={6}
           widths={["100%", "100%", "100%", "100%", "100%", "60%"]}
-          ariaLabel="Caricamento matrice spoglio"
+          ariaLabel={t("breakdown.loadingMatrix")}
         />
       </div>
     );
   if (rows.length === 0)
-    return (
-      <p className={styles.status}>
-        Nessun elemento nel breakdown. Avvia lo spoglio per popolare la matrice.
-      </p>
-    );
+    return <p className={styles.status}>{t("breakdown.matrix.empty")}</p>;
 
   return (
     <div className={styles.root}>
@@ -247,7 +248,7 @@ export function BreakdownMatrix({
           onClick={() => setHeatmap((h) => !h)}
           data-testid="matrix-heatmap-toggle"
         >
-          Heatmap
+          {t("breakdown.matrix.heatmap")}
         </button>
         <button
           type="button"
@@ -255,7 +256,7 @@ export function BreakdownMatrix({
             .filter(Boolean)
             .join(" ")}
           onClick={() => setCompact((c) => !c)}
-          title="Vista compatta"
+          title={t("breakdown.matrix.compactView")}
           aria-pressed={compact}
           data-testid="matrix-compact-toggle"
         >

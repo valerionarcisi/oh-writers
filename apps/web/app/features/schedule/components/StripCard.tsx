@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Lock, LockOpen } from "lucide-react";
 import type { StripView } from "../server/schedule.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./StripCard.module.css";
 
 interface StripCardProps {
@@ -24,6 +25,7 @@ export function StripCard({
   onLockToggle,
   onStripClick,
 }: StripCardProps) {
+  const { t } = useTranslation();
   const dragged = useRef(false);
   const hours = strip.resolvedHours;
   const slugMeta = [strip.timeOfDay, strip.intExt]
@@ -68,7 +70,17 @@ export function StripCard({
         {strip.pageCount} <small>p</small>
       </span>
 
-      <span className={styles.effort} title={`Effort: ${strip.sceneEffort}/5`} aria-label={`Effort ${strip.sceneEffort}`}>
+      <span
+        className={styles.effort}
+        title={t("schedule.stripCard.effortTitle").replace(
+          "{effort}",
+          String(strip.sceneEffort),
+        )}
+        aria-label={t("schedule.stripCard.effortAria").replace(
+          "{effort}",
+          String(strip.sceneEffort),
+        )}
+      >
         E{strip.sceneEffort}
       </span>
 
@@ -78,8 +90,16 @@ export function StripCard({
         type="button"
         className={styles.lockBtn}
         data-testid={`strip-lock-${strip.id}`}
-        title={strip.isLocked ? "Sblocca" : "Blocca"}
-        aria-label={strip.isLocked ? "Sblocca scena" : "Blocca scena"}
+        title={
+          strip.isLocked
+            ? t("schedule.stripCard.unlock")
+            : t("schedule.stripCard.lock")
+        }
+        aria-label={
+          strip.isLocked
+            ? t("schedule.stripCard.unlockScene")
+            : t("schedule.stripCard.lockScene")
+        }
         onClick={(e) => {
           e.stopPropagation();
           onLockToggle(strip.id);

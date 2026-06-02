@@ -1,4 +1,5 @@
 import { useState, forwardRef, type InputHTMLAttributes } from "react";
+import { useTranslation } from "~/features/i18n";
 import styles from "./PasswordInput.module.css";
 
 interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
@@ -7,6 +8,7 @@ interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
 
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ hasError, className, ...props }, ref) => {
+    const { t } = useTranslation();
     const [visible, setVisible] = useState(false);
 
     return (
@@ -22,7 +24,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           className={styles.toggle}
           onClick={() => setVisible((v) => !v)}
           tabIndex={-1}
-          aria-label={visible ? "Nascondi password" : "Mostra password"}
+          aria-label={visible ? t("auth.password.hide") : t("auth.password.show")}
         >
           {visible ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

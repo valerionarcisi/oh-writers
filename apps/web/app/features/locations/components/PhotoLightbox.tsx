@@ -5,6 +5,7 @@ import {
   useOverlay,
   usePreventScroll,
 } from "react-aria";
+import { useTranslation } from "~/features/i18n";
 import styles from "./PhotoLightbox.module.css";
 
 export interface LightboxPhoto {
@@ -33,6 +34,7 @@ export function PhotoLightbox({
   isOpen,
   onClose,
 }: PhotoLightboxProps) {
+  const { t } = useTranslation();
   const contentRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const [index, setIndex] = useState(initialIndex);
@@ -106,13 +108,13 @@ export function PhotoLightbox({
           {...dialogProps}
         >
           <h2 id={titleId} className={styles.srOnly}>
-            {current.caption ?? "Foto location"}
+            {current.caption ?? t("locations.lightbox.fallbackCaption")}
           </h2>
 
           <button
             type="button"
             className={styles.closeBtn}
-            aria-label="Chiudi anteprima"
+            aria-label={t("locations.lightbox.closeAria")}
             data-testid="photo-lightbox-close"
             onClick={onClose}
           >
@@ -123,7 +125,7 @@ export function PhotoLightbox({
             <button
               type="button"
               className={`${styles.navBtn} ${styles.navPrev}`}
-              aria-label="Foto precedente"
+              aria-label={t("locations.lightbox.prevAria")}
               data-testid="photo-lightbox-prev"
               onClick={handlePrev}
             >
@@ -133,7 +135,7 @@ export function PhotoLightbox({
 
           <img
             src={current.url}
-            alt={current.caption ?? "Foto location"}
+            alt={current.caption ?? t("locations.lightbox.fallbackCaption")}
             className={styles.image}
             draggable={false}
           />
@@ -142,7 +144,7 @@ export function PhotoLightbox({
             <button
               type="button"
               className={`${styles.navBtn} ${styles.navNext}`}
-              aria-label="Foto successiva"
+              aria-label={t("locations.lightbox.nextAria")}
               data-testid="photo-lightbox-next"
               onClick={handleNext}
             >

@@ -22,10 +22,14 @@ import { match } from "ts-pattern";
 import { buildSideBySideDiff } from "@oh-writers/utils";
 import type { DiffRow, DiffSegment } from "@oh-writers/utils";
 import { Skeleton, SegmentedControl } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
 import type { VersionsCompare } from "~/features/app-shell";
 import { useDocumentVersions } from "~/features/documents";
+import { useTranslation } from "~/features/i18n";
 import { resolveCurrentVersionId } from "../vs-current-baseline";
 import styles from "./VersionsSplitDrawer.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 export interface VersionsSplitDrawerProps {
   /** The document whose versions are listed. */
@@ -64,15 +68,10 @@ const formatCreatedAt = (iso: string): string =>
     minute: "2-digit",
   });
 
-const versionTitle = (v: VersionRow): string =>
+const versionTitle = (v: VersionRow, t: Translate): string =>
   v.label && v.label.length > 0
     ? `${v.label} (v${v.number})`
-    : `Versione ${v.number}`;
-
-const MODE_OPTIONS: ReadonlyArray<{ id: CompareMode; label: string }> = [
-  { id: "current", label: "Attuale" },
-  { id: "compare", label: "Confronta" },
-];
+    : `${t("versions.split.versionPrefix")} ${v.number}`;
 
 /**
  * Order a picked pair chronologically (older `a` → newer `b`) using the version
@@ -91,23 +90,23 @@ export function VersionsSplitDrawer({
   compare = null,
   onCompareChange,
 }: VersionsSplitDrawerProps) {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useDocumentVersions(documentId);
+  const modeOptions: ReadonlyArray<{ id: CompareMode; label: string }> = [
+    { id: "current", label: t("versions.split.modeCurrent") },
+    { id: "compare", label: t("versions.split.modeCompare") },
+  ];
 
   const loadError: string | null =
     result && !result.isOk
       ? match(result.error)
-          .with(
-            { _tag: "DocumentNotFoundError" },
-            () => "Documento non trovato.",
+          .with({ _tag: "DocumentNotFoundError" }, () =>
+            t("versions.split.docNotFound"),
           )
-          .with(
-            { _tag: "ForbiddenError" },
-            () => "Non hai accesso a queste versioni.",
+          .with({ _tag: "ForbiddenError" }, () =>
+            t("versions.split.forbidden"),
           )
-          .with(
-            { _tag: "DbError" },
-            () => "Impossibile caricare le versioni. Riprova.",
-          )
+          .with({ _tag: "DbError" }, () => t("versions.split.loadFailed"))
           .exhaustive()
       : null;
 
@@ -263,10 +262,10 @@ export function VersionsSplitDrawer({
         {!isLoading && !loadError && versions.length > 0 && (
           <div className={styles.modeBar}>
             <SegmentedControl<CompareMode>
-              options={MODE_OPTIONS}
+              options={modeOptions}
               activeId={mode}
               onSelect={handleModeChange}
-              ariaLabel="Modalità confronto versioni"
+              ariaLabel={t("versions.split.modeAria")}
             />
           </div>
         )}
@@ -275,7 +274,7 @@ export function VersionsSplitDrawer({
             <Skeleton
               lines={4}
               widths={["70%", "100%", "60%", "100%"]}
-              ariaLabel="Caricamento versioni"
+              ariaLabel={t("versions.split.loading")}
             />
           </div>
         )}
@@ -285,7 +284,7 @@ export function VersionsSplitDrawer({
           </div>
         )}
         {!isLoading && !loadError && versions.length === 0 && (
-          <div className={styles.empty}>Nessuna versione salvata.</div>
+          <div className={styles.empty}>{t("versions.split.empty")}</div>
         )}
         {!isLoading && versions.length > 0 && (
           <ul className={styles.versionList}>
@@ -318,14 +317,14 @@ export function VersionsSplitDrawer({
                       </span>
                     )}
                     <span className={styles.versionLabel}>
-                      {versionTitle(v)}
+                      {versionTitle(v, t)}
                     </span>
                     {isCurrent && (
                       <span
                         className={styles.badgeCurrent}
                         data-testid={`versions-split-current-${v.id}`}
                       >
-                        Attuale
+                        {t("versions.split.badgeCurrent")}
                       </span>
                     )}
                     <span className={styles.versionMeta}>
@@ -346,23 +345,24 @@ export function VersionsSplitDrawer({
             right={compareRight}
             picks={picks}
             rows={rows}
+            t={t}
           />
         ) : selected && current ? (
           <>
             <div className={styles.detailHeader}>
               <span className={styles.detailTitle}>
-                {versionTitle(selected)}
+                {versionTitle(selected, t)}
               </span>
               <span className={styles.detailMode}>
-                rispetto alla versione attuale
+                {t("versions.split.vsCurrent")}
               </span>
             </div>
             <div className={styles.diff} data-testid="versions-split-diff">
               {rows.length === 0 ? (
                 <p className={styles.empty}>
                   {selected.id === current.id
-                    ? "Questa è la versione attuale."
-                    : "Nessuna differenza."}
+                    ? t("versions.split.isCurrent")
+                    : t("versions.split.noDifference")}
                 </p>
               ) : (
                 <table className={styles.diffTable}>
@@ -378,7 +378,7 @@ export function VersionsSplitDrawer({
         ) : (
           !isLoading && (
             <p className={styles.empty}>
-              Seleziona una versione per confrontarla.
+              {t("versions.split.selectToCompare")}
             </p>
           )
         )}
@@ -392,28 +392,31 @@ interface CompareDetailProps {
   readonly right: VersionRow | null;
   readonly picks: readonly string[];
   readonly rows: DiffRow[];
+  readonly t: Translate;
 }
 
-function CompareDetail({ left, right, picks, rows }: CompareDetailProps) {
+function CompareDetail({ left, right, picks, rows, t }: CompareDetailProps) {
   if (!left || !right) {
     return (
       <p className={styles.empty} data-testid="versions-split-compare-prompt">
         {picks.length === 0
-          ? "Seleziona due versioni da confrontare."
-          : "Seleziona la seconda versione da confrontare."}
+          ? t("versions.split.selectTwo")
+          : t("versions.split.selectSecond")}
       </p>
     );
   }
   return (
     <>
       <div className={styles.detailHeader}>
-        <span className={styles.detailTitle}>{versionTitle(left)}</span>
-        <span className={styles.detailMode}>a confronto con</span>
-        <span className={styles.detailTitle}>{versionTitle(right)}</span>
+        <span className={styles.detailTitle}>{versionTitle(left, t)}</span>
+        <span className={styles.detailMode}>
+          {t("versions.split.comparedWith")}
+        </span>
+        <span className={styles.detailTitle}>{versionTitle(right, t)}</span>
       </div>
       <div className={styles.diff} data-testid="versions-split-diff">
         {rows.length === 0 ? (
-          <p className={styles.empty}>Nessuna differenza.</p>
+          <p className={styles.empty}>{t("versions.split.noDifference")}</p>
         ) : (
           <table className={styles.diffTable}>
             <tbody>

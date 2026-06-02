@@ -17,6 +17,7 @@ import { Skeleton } from "@oh-writers/ui";
 import type { TraceMarker } from "@oh-writers/ui";
 import { useButton } from "react-aria";
 import { useCesareSessionFocus } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import { useSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
 import { CesareConversation, type LiveDiffMarker } from "./CesareConversation";
@@ -36,6 +37,7 @@ export function SessionConversationPage({
   // A malformed param can't belong to anyone — short-circuit to not-found
   // before hitting the server (defence in depth; the server fn also rejects).
   const isValidParam = SessionIdParam.safeParse(sessionId).success;
+  const { t } = useTranslation();
 
   const sessionQuery = useSession(
     isValidParam ? projectId : null,
@@ -110,10 +112,8 @@ export function SessionConversationPage({
   if (!isValidParam || sessionQuery.isError) {
     return (
       <div className={styles.page} data-testid="cesare-session-not-found">
-        <h1 className={styles.title}>Sessione non trovata</h1>
-        <p className={styles.subtitle}>
-          Questa conversazione non esiste o non è accessibile.
-        </p>
+        <h1 className={styles.title}>{t("cesare.session.notFoundTitle")}</h1>
+        <p className={styles.subtitle}>{t("cesare.session.notFoundBody")}</p>
       </div>
     );
   }
@@ -125,7 +125,7 @@ export function SessionConversationPage({
           lines={3}
           widths={["60%", "80%", "45%"]}
           tone="agent"
-          ariaLabel="Caricamento sessione Cesare"
+          ariaLabel={t("cesare.session.loadingAria")}
         />
       </div>
     );
@@ -147,7 +147,7 @@ export function SessionConversationPage({
           <h1 className={styles.title} data-testid="session-title">
             {session.title}
           </h1>
-          <p className={styles.subtitle}>Conversazione con Cesare</p>
+          <p className={styles.subtitle}>{t("cesare.session.subtitle")}</p>
         </div>
       </header>
 
@@ -159,8 +159,7 @@ export function SessionConversationPage({
         onHideChanges={handleHideChanges}
         emptyState={
           <p className={styles.lede} data-testid="session-empty">
-            Nessun messaggio ancora in questa conversazione. Scrivi qui sotto
-            per iniziare.
+            {t("cesare.session.empty")}
           </p>
         }
       />
@@ -188,12 +187,13 @@ function SessionComposer({
   onSubmit: () => void;
   isThinking: boolean;
 }) {
+  const { t } = useTranslation();
   const sendRef = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
       onPress: onSubmit,
       isDisabled: value.trim().length === 0 || isThinking,
-      "aria-label": "Invia messaggio",
+      "aria-label": t("cesare.session.sendMessage"),
     },
     sendRef,
   );
@@ -209,10 +209,10 @@ function SessionComposer({
             onSubmit();
           }
         }}
-        placeholder="Chiedi a Cesare…"
+        placeholder={t("cesare.session.composerPlaceholder")}
         disabled={isThinking}
         rows={1}
-        aria-label="Composer Cesare"
+        aria-label={t("cesare.session.composerAria")}
         data-testid="cesare-composer-input"
       />
       <button

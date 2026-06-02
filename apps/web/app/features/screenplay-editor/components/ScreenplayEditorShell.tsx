@@ -13,6 +13,7 @@ import {
   SaveStatusIndicator,
   useTopBarSlotPublisher,
 } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ScreenplayEditorShell.module.css";
 
 // ─── Editor shell ──────────────────────────────────────────────────────────
@@ -36,9 +37,6 @@ type ActEntry = {
   scenes: SceneEntry[];
 };
 
-const FALLBACK_ACTS: ActEntry[] = [
-  { name: "Atto I", scenes: [{ number: "1.", title: "—", isCurrent: true }] },
-];
 
 export type ScreenplayEditorShellProps = {
   title: string;
@@ -93,6 +91,7 @@ export function ScreenplayEditorShell({
   onFocusToggle,
   isFocusMode = false,
 }: ScreenplayEditorShellProps) {
+  const { t } = useTranslation();
   const [isIndiceOpen, setIndiceOpen] = useState(false);
   const [indiceQuery, setIndiceQuery] = useState("");
   const [isScrolled, setScrolled] = useState(false);
@@ -118,7 +117,16 @@ export function ScreenplayEditorShell({
     };
   }, []);
 
-  const tocActs = useMemo(() => acts ?? FALLBACK_ACTS, [acts]);
+  const fallbackActs = useMemo<ActEntry[]>(
+    () => [
+      {
+        name: t("screenplay.shell.fallbackAct"),
+        scenes: [{ number: "1.", title: "—", isCurrent: true }],
+      },
+    ],
+    [t],
+  );
+  const tocActs = useMemo(() => acts ?? fallbackActs, [acts, fallbackActs]);
   const hasRealToc = acts !== undefined && acts.length > 0;
   void _title; // currently unused — kept for future TOC-driven indices
 
@@ -172,7 +180,9 @@ export function ScreenplayEditorShell({
     const items: DropdownMenuItem[] = [];
     if (onExport) {
       items.push({
-        label: isExporting ? "Esportazione…" : "Esporta PDF",
+        label: isExporting
+          ? t("screenplay.shell.exporting")
+          : t("screenplay.shell.exportPdf"),
         description: "⌘E",
         onClick: onExport,
         disabled: isExporting,
@@ -180,16 +190,18 @@ export function ScreenplayEditorShell({
     }
     if (onFocusToggle) {
       items.push({
-        label: isFocusMode ? "Esci da Focus" : "Focus",
+        label: isFocusMode
+          ? t("screenplay.shell.exitFocus")
+          : t("screenplay.shell.focus"),
         description: "⌃⌥F",
         onClick: onFocusToggle,
       });
     }
     if (onOpenVersions) {
-      items.push({ label: "Versioni", onClick: onOpenVersions });
+      items.push({ label: t("screenplay.shell.versions"), onClick: onOpenVersions });
     }
     return <ActionsMenu data-testid="screenplay-actions-menu" items={items} />;
-  }, [onExport, isExporting, onFocusToggle, isFocusMode, onOpenVersions]);
+  }, [onExport, isExporting, onFocusToggle, isFocusMode, onOpenVersions, t]);
   useTopBarSlotPublisher("actions", topBarActionsNode);
 
   function scrollToScene(domIndex: number) {
@@ -210,11 +222,11 @@ export function ScreenplayEditorShell({
             onClick={() => setIndiceOpen((v) => !v)}
             aria-haspopup="dialog"
             aria-expanded={isIndiceOpen}
-            aria-label="Apri indice scene"
+            aria-label={t("screenplay.shell.openSceneIndexAria")}
             data-testid="screenplay-indice-trigger"
           >
             <Icon name="book" size={14} aria-hidden />
-            <span>Indice</span>
+            <span>{t("screenplay.shell.index")}</span>
             <span className={styles.indiceBadge} data-num>
               {currentSceneIdx}/{totalScenes}
             </span>
@@ -235,8 +247,8 @@ export function ScreenplayEditorShell({
                 type="text"
                 value={indiceQuery}
                 onChange={(e) => setIndiceQuery(e.target.value)}
-                placeholder="Cerca scena o luogo…"
-                aria-label="Cerca scena o luogo"
+                placeholder={t("screenplay.shell.searchScenePlaceholder")}
+                aria-label={t("screenplay.shell.searchSceneAria")}
                 className={styles.popSearchInput}
                 autoFocus
               />
@@ -244,7 +256,9 @@ export function ScreenplayEditorShell({
             </div>
             <div className={styles.popList}>
               {filteredActs.length === 0 ? (
-                <p className={styles.popEmpty}>Nessuna scena trovata</p>
+                <p className={styles.popEmpty}>
+                  {t("screenplay.shell.noSceneFound")}
+                </p>
               ) : (
                 filteredActs.map((act) => (
                   <div key={act.name}>
@@ -295,7 +309,7 @@ export function ScreenplayEditorShell({
               : []),
             {
               id: "open-drawer",
-              label: "Apri Versioni →",
+              label: t("screenplay.shell.openVersions"),
               onSelect: onOpenVersions,
             },
           ]}
@@ -313,8 +327,16 @@ export function ScreenplayEditorShell({
               .filter(Boolean)
               .join(" ")}
             onClick={onToggleCesarePanel}
-            aria-label={isCesarePanelOpen ? "Chiudi Cesare" : "Apri Cesare"}
-            title={isCesarePanelOpen ? "Chiudi Cesare" : "Apri Cesare ✦"}
+            aria-label={
+              isCesarePanelOpen
+                ? t("screenplay.shell.closeCesare")
+                : t("screenplay.shell.openCesare")
+            }
+            title={
+              isCesarePanelOpen
+                ? t("screenplay.shell.closeCesare")
+                : t("screenplay.shell.openCesareTitle")
+            }
           >
             ✦
           </button>

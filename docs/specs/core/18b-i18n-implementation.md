@@ -99,6 +99,20 @@ Phase-0 testids decoupled the suite from copy.
 - `nav.ts` must stay framework-agnostic (pass translator/locale, no hook import).
 - Locale resolution must always return a concrete `Locale`, never `undefined` (CLAUDE.md null/undefined rule).
 
+## Follow-up — beyond component-string extraction (PR-6+)
+
+The bulk extraction (PR-5+) covers **component** copy. Two categories sit below the component layer and stay Italian until addressed:
+
+1. **Server-generated copy** — e.g. `features/projects/server/project-overview.server.ts` next-step
+   suggestions + action labels, activity-feed summaries ("Progetto creato.", default import title).
+   These are produced in `createServerFn` handlers with no `t`. Needs the request locale threaded
+   into the server fn (it's already resolvable server-side) and a server-side translator, OR these
+   strings moved to keys the client resolves. Architectural — own PR.
+2. **Domain label constants** — `TEAM_ROLE_LABELS_IT`, `DOCUMENT_TYPE_LABELS_IT` in
+   `packages/domain/src/constants.ts`. Shared across features; render IT in EN today. Generalise to
+   per-locale label maps in domain (same shape as the translations dict) — own PR, touches every
+   consumer, so coordinate.
+
 ## Verification
 
 1. `pnpm --filter @oh-writers/domain test` (completeness EN==IT, market, format).

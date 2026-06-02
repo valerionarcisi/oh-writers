@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { match } from "ts-pattern";
+import { useTranslation } from "~/features/i18n";
 import {
   SaveStatusValues,
   computeSaveStatus,
@@ -7,6 +8,8 @@ import {
   type SaveStatusValue,
 } from "../lib/save-status";
 import styles from "./SaveIndicator.module.css";
+
+type TranslateFn = ReturnType<typeof useTranslation>["t"];
 
 interface SaveIndicatorProps {
   isDirty: boolean;
@@ -20,36 +23,34 @@ interface SaveIndicatorProps {
 const labelFor = (
   status: SaveStatusValue,
   lastSavedAt: number | null,
+  t: TranslateFn,
 ): string =>
   match(status)
-    .with(SaveStatusValues.SAVING, () => "Salvataggio…")
-    .with(SaveStatusValues.DIRTY, () => "Non salvato")
-    .with(SaveStatusValues.ERROR, () => "Errore")
-    .with(SaveStatusValues.OFFLINE, () => "Offline")
+    .with(SaveStatusValues.SAVING, () => t("screenplay.save.label.saving"))
+    .with(SaveStatusValues.DIRTY, () => t("screenplay.save.label.dirty"))
+    .with(SaveStatusValues.ERROR, () => t("screenplay.save.label.error"))
+    .with(SaveStatusValues.OFFLINE, () => t("screenplay.save.label.offline"))
     .with(SaveStatusValues.SAVED, () =>
-      lastSavedAt ? `Salvato · ${formatRelativeTime(lastSavedAt)}` : "Salvato",
+      lastSavedAt
+        ? `${t("screenplay.save.label.savedRelativePrefix")}${formatRelativeTime(lastSavedAt)}`
+        : t("screenplay.save.label.saved"),
     )
     .exhaustive();
 
 const tooltipFor = (
   status: SaveStatusValue,
   lastSavedAt: number | null,
+  t: TranslateFn,
 ): string =>
   match(status)
-    .with(SaveStatusValues.SAVING, () => "Salvataggio in corso…")
-    .with(
-      SaveStatusValues.DIRTY,
-      () => "Modifiche non salvate — clicca per salvare ora",
-    )
-    .with(
-      SaveStatusValues.ERROR,
-      () => "Salvataggio fallito — clicca per riprovare",
-    )
-    .with(SaveStatusValues.OFFLINE, () => "Offline — le modifiche sono in coda")
+    .with(SaveStatusValues.SAVING, () => t("screenplay.save.tip.saving"))
+    .with(SaveStatusValues.DIRTY, () => t("screenplay.save.tip.dirty"))
+    .with(SaveStatusValues.ERROR, () => t("screenplay.save.tip.error"))
+    .with(SaveStatusValues.OFFLINE, () => t("screenplay.save.tip.offline"))
     .with(SaveStatusValues.SAVED, () =>
       lastSavedAt
-        ? `Salvato ${formatRelativeTime(lastSavedAt)} — clicca per salvare ora`
-        : "Tutte le modifiche salvate — clicca per salvare ora",
+        ? `${t("screenplay.save.tip.savedRelativePrefix")}${formatRelativeTime(lastSavedAt)}${t("screenplay.save.tip.savedRelativeSuffix")}`
+        : t("screenplay.save.tip.savedAll"),
     )
     .exhaustive();
 
@@ -76,6 +77,7 @@ export function SaveIndicator({
   lastSavedAt,
   onFlush,
 }: SaveIndicatorProps) {
+  const { t } = useTranslation();
   const status = computeSaveStatus({ isDirty, isSaving, isError, isOffline });
   const isClickable = status !== SaveStatusValues.OFFLINE;
   const needsGuard =
@@ -117,17 +119,17 @@ export function SaveIndicator({
     <button
       type="button"
       className={`${styles.pill} ${stateClass[status]}`}
-      title={tooltipFor(status, lastSavedAt)}
+      title={tooltipFor(status, lastSavedAt, t)}
       onClick={() => {
         if (isClickable) onFlush();
       }}
       disabled={!isClickable}
-      aria-label={tooltipFor(status, lastSavedAt)}
+      aria-label={tooltipFor(status, lastSavedAt, t)}
       data-status={status}
       data-testid="save-indicator"
     >
       <span className={styles.dot} aria-hidden="true" />
-      <span className={styles.label}>{labelFor(status, lastSavedAt)}</span>
+      <span className={styles.label}>{labelFor(status, lastSavedAt, t)}</span>
     </button>
   );
 }

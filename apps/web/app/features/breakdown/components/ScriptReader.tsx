@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
 import { ReadOnlyScreenplayView } from "~/features/screenplay-editor";
+import { useTranslation } from "~/features/i18n";
 import {
   useAddBreakdownElement,
   useSetOccurrenceStatus,
@@ -85,6 +86,7 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
       onActiveSceneChange,
     } = props;
 
+    const { t } = useTranslation();
     const viewRef = useRef<EditorView | null>(null);
     const add = useAddBreakdownElement(projectId, versionId);
     const setStatus = useSetOccurrenceStatus(activeSceneId ?? "", versionId);
@@ -374,7 +376,7 @@ export const ScriptReader = forwardRef<ScriptReaderHandle, Props>(
     if (!versionContent) {
       return (
         <p className={styles.empty} data-testid="script-reader-empty">
-          Nessuna versione disponibile per questa sceneggiatura.
+          {t("breakdown.reader.empty")}
         </p>
       );
     }

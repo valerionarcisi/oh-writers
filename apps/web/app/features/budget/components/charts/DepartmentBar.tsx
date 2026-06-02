@@ -1,3 +1,4 @@
+import { useTranslation } from "~/features/i18n";
 import styles from "./DepartmentBar.module.css";
 
 export interface BarDatum {
@@ -15,12 +16,9 @@ interface DepartmentBarProps {
 }
 
 export function DepartmentBar({ data, maxValue }: DepartmentBarProps) {
+  const { t } = useTranslation();
   if (data.length === 0) {
-    return (
-      <div className={styles.empty}>
-        Nessun dato disponibile per il grafico.
-      </div>
-    );
+    return <div className={styles.empty}>{t("budget.empty.chart")}</div>;
   }
   const max = maxValue ?? data.reduce((m, d) => Math.max(m, d.value), 0);
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "~/features/i18n";
 import type { ScenarioView } from "../server/shooting-plan.server";
 import styles from "./PlanPicker.module.css";
 
@@ -15,6 +16,7 @@ export function PlanPicker({
   onToggleVisible,
   onCreatePlan,
 }: PlanPickerProps) {
+  const { t } = useTranslation();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const addWrapRef = useRef<HTMLDivElement>(null);
 
@@ -36,8 +38,12 @@ export function PlanPicker({
   }, [popoverOpen]);
 
   return (
-    <div className={styles.root} role="group" aria-label="Selezione piani visibili">
-      <span className={styles.label}>Mostra:</span>
+    <div
+      className={styles.root}
+      role="group"
+      aria-label={t("shootingPlan.picker.regionAria")}
+    >
+      <span className={styles.label}>{t("shootingPlan.picker.show")}</span>
       {scenarios.map((s) => {
         const visible = visibleScenarioIds.has(s.id);
         return (
@@ -60,11 +66,13 @@ export function PlanPicker({
           className={styles.addBtn}
           onClick={() => setPopoverOpen((o) => !o)}
         >
-          + piano
+          {t("shootingPlan.picker.addPlan")}
         </button>
         {popoverOpen && (
           <div className={styles.popover} role="menu">
-            <div className={styles.popoverLabel}>Crea Piano come:</div>
+            <div className={styles.popoverLabel}>
+              {t("shootingPlan.picker.createAs")}
+            </div>
             <button
               type="button"
               className={styles.popoverItem}
@@ -73,7 +81,7 @@ export function PlanPicker({
                 onCreatePlan("empty");
               }}
             >
-              Vuoto
+              {t("shootingPlan.picker.empty")}
             </button>
             <button
               type="button"
@@ -84,7 +92,7 @@ export function PlanPicker({
               }}
               disabled={scenarios.length === 0}
             >
-              Copia piano attivo
+              {t("shootingPlan.picker.copyActive")}
             </button>
             <button
               type="button"
@@ -94,7 +102,7 @@ export function PlanPicker({
                 onCreatePlan("pattern");
               }}
             >
-              Da pattern…
+              {t("shootingPlan.picker.fromPattern")}
             </button>
           </div>
         )}

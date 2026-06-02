@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Banner } from "@oh-writers/ui";
 import type { Suggestion } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ScheduleCesareBanner.module.css";
 
 /**
@@ -19,6 +20,7 @@ export function ScheduleCesareBanner({
   suggestions,
   onApply,
 }: ScheduleCesareBannerProps) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<ReadonlyArray<string>>([]);
   const visible = suggestions.filter((s) => !dismissed.includes(s.id));
 
@@ -31,12 +33,14 @@ export function ScheduleCesareBanner({
     <div
       className={styles.wrap}
       role="region"
-      aria-label="Suggerimenti Cesare"
+      aria-label={t("schedule.cesareBanner.ariaLabel")}
       data-testid="schedule-cesare-banner"
     >
       <span className={styles.tag}>
         Cesare · {visible.length}{" "}
-        {visible.length === 1 ? "suggerimento" : "suggerimenti"}
+        {visible.length === 1
+          ? t("schedule.cesareBanner.suggestionOne")
+          : t("schedule.cesareBanner.suggestionOther")}
       </span>
       <div className={styles.list}>
         {visible.map((s) => (
@@ -54,7 +58,10 @@ export function ScheduleCesareBanner({
                   dismiss(s.id);
                 },
               },
-              { label: "Ignora", onClick: () => dismiss(s.id) },
+              {
+                label: t("schedule.cesareBanner.ignore"),
+                onClick: () => dismiss(s.id),
+              },
             ]}
           />
         ))}

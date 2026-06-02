@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { DayCost } from "~/features/budget/server/budget.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DayView.module.css";
 
 const fmt = (n: number) =>
@@ -14,14 +15,11 @@ interface DayViewProps {
 }
 
 export function DayView({ days }: DayViewProps) {
+  const { t } = useTranslation();
   const [openDayId, setOpenDayId] = useState<string | null>(null);
 
   if (days.length === 0) {
-    return (
-      <div className={styles.empty}>
-        Pianifica le giornate nello schedule per vedere il costo per giornata.
-      </div>
-    );
+    return <div className={styles.empty}>{t("budget.empty.day")}</div>;
   }
 
   const maxTotal = Math.max(...days.map((d) => d.total), 1);
@@ -46,7 +44,11 @@ export function DayView({ days }: DayViewProps) {
               <span
                 className={`${styles.dayNum} ${isExpensive ? styles.warn : ""}`}
               >
-                {isExpensive ? "⚠ " : ""}Gg {day.dayNumber}
+                {isExpensive ? "⚠ " : ""}
+                {t("budget.day.dayPrefix").replace(
+                  "{number}",
+                  String(day.dayNumber),
+                )}
               </span>
               <div className={styles.bar}>
                 <div
@@ -69,37 +71,37 @@ export function DayView({ days }: DayViewProps) {
                 <table className={styles.breakdownTable}>
                   <tbody>
                     <tr>
-                      <td>Cast</td>
+                      <td>{t("budget.day.cast")}</td>
                       <td>{fmt(day.breakdown.cast)}</td>
                     </tr>
                     <tr>
-                      <td>Crew</td>
+                      <td>{t("budget.day.crew")}</td>
                       <td>{fmt(day.breakdown.crew)}</td>
                     </tr>
                     {day.breakdown.locations > 0 && (
                       <tr>
-                        <td>Locations</td>
+                        <td>{t("budget.day.locations")}</td>
                         <td>{fmt(day.breakdown.locations)}</td>
                       </tr>
                     )}
                     {day.breakdown.vehicles > 0 && (
                       <tr>
-                        <td>Veicoli</td>
+                        <td>{t("budget.day.vehicles")}</td>
                         <td>{fmt(day.breakdown.vehicles)}</td>
                       </tr>
                     )}
                     {day.breakdown.other > 0 && (
                       <tr>
-                        <td>Altro (ripartito)</td>
+                        <td>{t("budget.day.other")}</td>
                         <td>{fmt(day.breakdown.other)}</td>
                       </tr>
                     )}
                     <tr>
-                      <td>Contingenza</td>
+                      <td>{t("budget.day.contingency")}</td>
                       <td>{fmt(day.breakdown.contingency)}</td>
                     </tr>
                     <tr className={styles.totalRow}>
-                      <td>Totale giornata</td>
+                      <td>{t("budget.day.total")}</td>
                       <td>{fmt(day.total)}</td>
                     </tr>
                   </tbody>

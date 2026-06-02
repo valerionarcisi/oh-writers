@@ -4,6 +4,8 @@ import type {
   LocationCandidate,
   PatchLocationCandidate,
 } from "@oh-writers/domain";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { PlacesCombobox } from "./PlacesCombobox";
 import type { PlaceSuggestion } from "../server/places-autocomplete.server";
 import type { AreaFilterResult } from "../lib/area-filter";
@@ -29,11 +31,11 @@ interface AddCandidatePayload {
 
 type RequirementFilter = "all" | "pending" | "scouting" | "confirmed";
 
-const FILTER_LABELS: Record<RequirementFilter, string> = {
-  all: "Tutte",
-  pending: "Da fare",
-  scouting: "In sopralluogo",
-  confirmed: "Confermate",
+const FILTER_LABEL_KEYS: Record<RequirementFilter, TranslationKey> = {
+  all: "locations.filter.all",
+  pending: "locations.filter.pending",
+  scouting: "locations.filter.scouting",
+  confirmed: "locations.filter.confirmed",
 };
 
 interface LocationPanelProps {
@@ -73,11 +75,11 @@ const STATUS_DOT: Record<string, string> = {
   locked: "#2d6a4f",
 };
 
-const CANDIDATE_STATUS_LABEL: Record<string, string> = {
-  confirmed: "Confermata",
-  visited: "Visitata",
-  candidate: "Candidata",
-  rejected: "Scartata",
+const CANDIDATE_STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  confirmed: "locations.candidateStatus.confirmed",
+  visited: "locations.candidateStatus.visited",
+  candidate: "locations.candidateStatus.candidate",
+  rejected: "locations.candidateStatus.rejected",
 };
 
 function CandidateRow({
@@ -106,6 +108,7 @@ function CandidateRow({
   onConfirm: (requirementId: string, candidateId: string) => void;
   onRemoveCandidate: (candidateId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(isConfirmed);
   const [notes, setNotes] = useState(candidate.notes ?? "");
   const [contact, setContact] = useState(candidate.contactName ?? "");
@@ -154,15 +157,20 @@ function CandidateRow({
               <span
                 className={`${styles.candidateStatusBadge} ${styles[`badge_${candidate.status}`]}`}
               >
-                {CANDIDATE_STATUS_LABEL[candidate.status]}
+                {CANDIDATE_STATUS_LABEL_KEYS[candidate.status]
+                  ? t(CANDIDATE_STATUS_LABEL_KEYS[candidate.status]!)
+                  : candidate.status}
               </span>
               <span className={styles.chevron}>{expanded ? "∧" : "∨"}</span>
             </button>
             <button
               type="button"
               className={styles.openInMapsHeader}
-              title="Centra sulla mappa"
-              aria-label={`Centra ${candidate.name} sulla mappa`}
+              title={t("locations.action.centerMap")}
+              aria-label={t("locations.action.centerMapAria").replace(
+                "{name}",
+                candidate.name,
+              )}
               onClick={(e) => {
                 e.stopPropagation();
                 onCandidateSelect(candidate.id);
@@ -177,12 +185,17 @@ function CandidateRow({
               className={styles.affinityChips}
               data-testid={`affinity-${candidate.id}`}
             >
-              <span className={styles.affinityLead}>Va bene anche per:</span>
+              <span className={styles.affinityLead}>
+                {t("locations.panel.alsoGoodFor")}
+              </span>
               {crossMatches.map((m) => (
                 <span key={m.requirementId} className={styles.affinityChip}>
                   {m.requirementName}
                   <span className={styles.affinityScenes}>
-                    {m.sceneCount} {m.sceneCount === 1 ? "scena" : "scene"}
+                    {m.sceneCount}{" "}
+                    {m.sceneCount === 1
+                      ? t("locations.panel.sceneSingular")
+                      : t("locations.panel.scenePlural")}
                   </span>
                 </span>
               ))}
@@ -208,11 +221,13 @@ function CandidateRow({
 
               <div className={styles.candidateForm}>
                 <div className={styles.formField}>
-                  <label className={styles.fieldLabel}>Contatto</label>
+                  <label className={styles.fieldLabel}>
+                    {t("locations.field.contact")}
+                  </label>
                   <input
                     className={styles.fieldInput}
                     value={contact}
-                    placeholder="Nome, email, telefono…"
+                    placeholder={t("locations.field.contactPlaceholder")}
                     onChange={(e) => setContact(e.target.value)}
                     onBlur={() =>
                       onUpdateCandidate(candidate.id, {
@@ -222,7 +237,9 @@ function CandidateRow({
                   />
                 </div>
                 <div className={styles.formField}>
-                  <label className={styles.fieldLabel}>€ / giorno</label>
+                  <label className={styles.fieldLabel}>
+                    {t("locations.field.feePerDay")}
+                  </label>
                   <input
                     className={styles.fieldInput}
                     type="number"
@@ -239,11 +256,13 @@ function CandidateRow({
               </div>
 
               <div className={styles.formField}>
-                <label className={styles.fieldLabel}>Note sopralluogo</label>
+                <label className={styles.fieldLabel}>
+                  {t("locations.field.scoutingNotes")}
+                </label>
                 <textarea
                   className={styles.fieldTextarea}
                   value={notes}
-                  placeholder="Impressioni, luce, rumore, accessibilità…"
+                  placeholder={t("locations.field.scoutingNotesPlaceholder")}
                   rows={3}
                   onChange={(e) => setNotes(e.target.value)}
                   onBlur={() =>
@@ -259,7 +278,7 @@ function CandidateRow({
                   className={styles.btnGhost}
                   onClick={() => onRemoveCandidate(candidate.id)}
                 >
-                  Scarta
+                  {t("locations.action.reject")}
                 </button>
                 {candidate.status !== "visited" && (
                   <button
@@ -270,7 +289,7 @@ function CandidateRow({
                       onUpdateCandidate(candidate.id, { status: "visited" })
                     }
                   >
-                    Segna visitata
+                    {t("locations.action.markVisited")}
                   </button>
                 )}
                 {!isConfirmed && (
@@ -280,7 +299,7 @@ function CandidateRow({
                     className={styles.btnGreen}
                     onClick={() => onConfirm(requirementId, candidate.id)}
                   >
-                    ✓ Conferma
+                    {t("locations.action.confirm")}
                   </button>
                 )}
               </div>
@@ -303,35 +322,40 @@ function AddCandidateForm({
   onAdd: (requirementId: string, candidate: any) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
 
   return (
     <div className={styles.addForm} data-testid="add-candidate-form">
       <div className={styles.formField}>
-        <label className={styles.fieldLabel}>Nome location</label>
+        <label className={styles.fieldLabel}>
+          {t("locations.field.locationName")}
+        </label>
         <input
           data-testid="candidate-name-input"
           className={styles.fieldInput}
           value={name}
-          placeholder="Es. Via Tortona 18, Milano"
+          placeholder={t("locations.field.locationNamePlaceholder")}
           onChange={(e) => setName(e.target.value)}
           autoFocus
         />
       </div>
       <div className={styles.formField}>
-        <label className={styles.fieldLabel}>Indirizzo (opzionale)</label>
+        <label className={styles.fieldLabel}>
+          {t("locations.field.addressOptional")}
+        </label>
         <input
           data-testid="candidate-address-input"
           className={styles.fieldInput}
           value={address}
-          placeholder="Indirizzo completo…"
+          placeholder={t("locations.field.addressPlaceholder")}
           onChange={(e) => setAddress(e.target.value)}
         />
       </div>
       <div className={styles.addFormActions}>
         <button type="button" className={styles.btnGhost} onClick={onCancel}>
-          Annulla
+          {t("locations.action.cancel")}
         </button>
         <button
           type="button"
@@ -350,7 +374,7 @@ function AddCandidateForm({
             onCancel();
           }}
         >
-          + Aggiungi
+          {t("locations.action.add")}
         </button>
       </div>
     </div>
@@ -373,6 +397,7 @@ export function LocationPanel({
   onDismissAreaFilter,
   crossMatches,
 }: LocationPanelProps) {
+  const { t } = useTranslation();
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<RequirementFilter>("all");
   const selectedReq = requirements.find((r) => r.id === selectedId) ?? null;
@@ -388,20 +413,20 @@ export function LocationPanel({
   return (
     <aside className={styles.panel} data-testid="locations-panel">
       <div className={styles.filterBar}>
-        {(Object.keys(FILTER_LABELS) as RequirementFilter[]).map((f) => (
+        {(Object.keys(FILTER_LABEL_KEYS) as RequirementFilter[]).map((f) => (
           <button
             key={f}
             type="button"
             className={`${styles.filterChip} ${activeFilter === f ? styles.filterChipActive : ""}`}
             onClick={() => setActiveFilter(f)}
           >
-            {FILTER_LABELS[f]}
+            {t(FILTER_LABEL_KEYS[f])}
           </button>
         ))}
       </div>
       <div className={styles.panelHead}>
         <div className={styles.panelTitle} data-testid="locations-panel-title">
-          LOCATION ({requirements.length})
+          {t("locations.panel.title")} ({requirements.length})
         </div>
         <div className={styles.progressBar}>
           <div
@@ -414,7 +439,10 @@ export function LocationPanel({
           />
         </div>
         <div className={styles.progressLabel}>
-          {confirmedCount} / {requirements.length} confermate
+          {t("locations.panel.confirmedCount").replace(
+            "{value}",
+            `${confirmedCount} / ${requirements.length}`,
+          )}
         </div>
       </div>
 
@@ -425,8 +453,22 @@ export function LocationPanel({
         >
           <span className={styles.areaFilterLabel}>
             {areaFilter.matchingCandidateIds.length > 0
-              ? `Filtrando per: ${areaFilter.label} — ${areaFilter.matchingCandidateIds.length} ${areaFilter.matchingCandidateIds.length === 1 ? "candidato" : "candidati"} in quest'area`
-              : `Nessun candidato in: ${areaFilter.label}`}
+              ? t("locations.areaFilter.matching")
+                  .replace("{label}", areaFilter.label)
+                  .replace(
+                    "{count}",
+                    String(areaFilter.matchingCandidateIds.length),
+                  )
+                  .replace(
+                    "{candidates}",
+                    areaFilter.matchingCandidateIds.length === 1
+                      ? t("locations.areaFilter.candidateSingular")
+                      : t("locations.areaFilter.candidatePlural"),
+                  )
+              : t("locations.areaFilter.none").replace(
+                  "{label}",
+                  areaFilter.label,
+                )}
           </span>
           <div className={styles.areaFilterActions}>
             {areaFilter.matchingCandidateIds.length === 0 && (
@@ -436,13 +478,13 @@ export function LocationPanel({
                 onClick={() => selectedId && onAskCesare(selectedId)}
                 disabled={!selectedId}
               >
-                ✦ Chiedi a Cesare
+                ✦ {t("locations.areaFilter.askCesare")}
               </button>
             )}
             <button
               type="button"
               className={styles.areaFilterDismiss}
-              aria-label="Rimuovi filtro area"
+              aria-label={t("locations.areaFilter.removeAria")}
               onClick={onDismissAreaFilter}
             >
               ✕
@@ -457,8 +499,7 @@ export function LocationPanel({
             className={styles.emptyState}
             data-testid="locations-empty-state"
           >
-            Nessuna location trovata. Sincronizza dal breakdown o aggiungi
-            manualmente.
+            {t("locations.panel.empty")}
           </div>
         )}
         {filteredRequirements.map((req) => {
@@ -493,7 +534,10 @@ export function LocationPanel({
                   {[req.intExt, req.timeOfDay.join(", ")]
                     .filter(Boolean)
                     .join(" · ")}{" "}
-                  · {req.sceneCount} {req.sceneCount === 1 ? "scena" : "scene"}
+                  · {req.sceneCount}{" "}
+                  {req.sceneCount === 1
+                    ? t("locations.panel.sceneSingular")
+                    : t("locations.panel.scenePlural")}
                 </span>
                 {bestCand ? (
                   <span
@@ -510,7 +554,9 @@ export function LocationPanel({
                     {bestCand.name}
                   </span>
                 ) : (
-                  <span className={styles.reqNoLocation}>Nessun candidato</span>
+                  <span className={styles.reqNoLocation}>
+                    {t("locations.panel.noCandidate")}
+                  </span>
                 )}
               </span>
               <span className={styles.reqCount}>{req.candidates.length}</span>
@@ -530,7 +576,7 @@ export function LocationPanel({
               type="button"
               className={styles.btnAgent}
               onClick={() => onAskCesare(selectedReq.id)}
-              title="Chiedi suggerimenti a Cesare"
+              title={t("locations.panel.askCesareTitle")}
             >
               ✦ Cesare
             </button>
@@ -566,7 +612,7 @@ export function LocationPanel({
                 className={styles.addCandidateBtn}
                 onClick={() => setAddingFor(selectedReq.id)}
               >
-                + Aggiungi candidato
+                {t("locations.action.addCandidate")}
               </button>
             )}
           </div>

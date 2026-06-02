@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useButton } from "react-aria";
 import { useQuery } from "@tanstack/react-query";
 import { dayLocationWarningsQueryOptions } from "../server/schedule.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DayLocationWarningBanner.module.css";
 
 interface DayLocationWarningBannerProps {
@@ -17,11 +18,12 @@ const STATUS_LABEL: Record<string, string> = {
 const dismissKey = (dayId: string): string => `ohw:loc-warn:${dayId}`;
 
 function DismissButton({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
       onPress,
-      "aria-label": "Nascondi avviso location",
+      "aria-label": t("schedule.locationWarning.dismissAria"),
     },
     ref,
   );
@@ -36,6 +38,7 @@ export function DayLocationWarningBanner({
   dayId,
   dayNumber,
 }: DayLocationWarningBannerProps) {
+  const { t } = useTranslation();
   const { data } = useQuery(dayLocationWarningsQueryOptions(dayId));
   const warnings = data && data.isOk ? data.value : [];
 
@@ -59,18 +62,22 @@ export function DayLocationWarningBanner({
       className={styles.banner}
       role="status"
       data-testid={`day-location-warning-${dayId}`}
-      aria-label={`Avviso location per il giorno ${dayNumber}`}
+      aria-label={t("schedule.locationWarning.ariaLabel").replace(
+        "{number}",
+        String(dayNumber),
+      )}
     >
       <span className={styles.icon} aria-hidden="true">
         ⚠
       </span>
       <div className={styles.body}>
         <p className={styles.headline}>
-          Questa giornata ha {warnings.length}{" "}
           {warnings.length === 1
-            ? "scena con location non ancora confermata"
-            : "scene con location non ancora confermate"}
-          :
+            ? t("schedule.locationWarning.headlineOne")
+            : t("schedule.locationWarning.headlineOther").replace(
+                "{count}",
+                String(warnings.length),
+              )}
         </p>
         <ul className={styles.list}>
           {warnings.map((w) => (

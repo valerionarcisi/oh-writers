@@ -9,6 +9,7 @@ import {
   type BreakdownCategory,
   type CastTier,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   breakdownForSceneOptions,
   useCesareSuggest,
@@ -36,6 +37,7 @@ export function BreakdownPanel({
   versionId,
   canEdit,
 }: Props) {
+  const { t } = useTranslation();
   const sceneId = scene?.id ?? "";
   const { data: occurrences = [] } = useQuery(
     breakdownForSceneOptions(sceneId, versionId),
@@ -60,13 +62,16 @@ export function BreakdownPanel({
   );
 
   if (!scene) {
-    return <p className={styles.empty}>Seleziona una scena.</p>;
+    return <p className={styles.empty}>{t("breakdown.panel.selectScene")}</p>;
   }
 
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <h3 className={styles.title}>Elementi scena {scene.number}</h3>
+        <h3 className={styles.title}>
+          {t("breakdown.panel.elementsScenePrefix")}
+          {scene.number}
+        </h3>
         {canEdit && (
           <div className={styles.actions}>
             <button
@@ -76,7 +81,9 @@ export function BreakdownPanel({
               onClick={() => suggest.mutate()}
               disabled={suggest.isPending}
             >
-              {suggest.isPending ? "Cesare…" : "Suggerisci"}
+              {suggest.isPending
+                ? t("breakdown.panel.cesareLoading")
+                : t("breakdown.panel.suggest")}
             </button>
             <button
               type="button"
@@ -84,7 +91,7 @@ export function BreakdownPanel({
               data-testid="add-element-trigger"
               onClick={() => setAddOpen(true)}
             >
-              Aggiungi
+              {t("breakdown.panel.add")}
             </button>
           </div>
         )}
@@ -94,7 +101,7 @@ export function BreakdownPanel({
         <p className={styles.error} role="alert">
           {suggest.error instanceof Error
             ? suggest.error.message
-            : "Cesare non è disponibile in questo momento."}
+            : t("breakdown.panel.cesareUnavailable")}
         </p>
       )}
 
@@ -117,7 +124,7 @@ export function BreakdownPanel({
       )}
 
       {occurrences.length === 0 ? (
-        <p className={styles.empty}>Nessun elemento ancora.</p>
+        <p className={styles.empty}>{t("breakdown.panel.noElementYet")}</p>
       ) : (
         <div className={styles.groups}>
           {BREAKDOWN_CATEGORIES.map((cat) => {
@@ -155,7 +162,9 @@ export function BreakdownPanel({
                   aria-disabled={occurrence.isStale}
                   data-stale={occurrence.isStale}
                   title={
-                    occurrence.isStale ? "Non più trovato nel testo" : undefined
+                    occurrence.isStale
+                      ? t("breakdown.panel.staleTitle")
+                      : undefined
                   }
                 >
                   <Tag
@@ -173,7 +182,7 @@ export function BreakdownPanel({
               <section key={cat} className={styles.group}>
                 <h4 className={styles.groupTitle}>{meta.labelIt}</h4>
                 {cat === "cast" ? (
-                  <CastTierGroups items={items} renderTag={renderTag} />
+                  <CastTierGroups items={items} renderTag={renderTag} t={t} />
                 ) : (
                   <div className={styles.tags}>{items.map(renderTag)}</div>
                 )}
@@ -199,9 +208,10 @@ export function BreakdownPanel({
 interface CastTierGroupsProps {
   items: SceneOccurrenceWithElement[];
   renderTag: (it: SceneOccurrenceWithElement) => React.ReactNode;
+  t: ReturnType<typeof useTranslation>["t"];
 }
 
-function CastTierGroups({ items, renderTag }: CastTierGroupsProps) {
+function CastTierGroups({ items, renderTag, t }: CastTierGroupsProps) {
   const byTier = new Map<CastTier | "unassigned", SceneOccurrenceWithElement[]>(
     [],
   );
@@ -226,7 +236,7 @@ function CastTierGroups({ items, renderTag }: CastTierGroupsProps) {
         if (!tierItems || tierItems.length === 0) return null;
         const label =
           tier === "unassigned"
-            ? "Non assegnato"
+            ? t("breakdown.panel.unassigned")
             : CAST_TIER_META[tier].labelIt;
         return (
           <div key={tier} className={styles.castTierGroup}>

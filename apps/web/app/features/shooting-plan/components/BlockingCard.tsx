@@ -6,6 +6,7 @@ import { BlockingCanvas, type ProposedBlockingChange } from "./BlockingCanvas";
 import { BlockingProposalPanel } from "./BlockingProposalPanel";
 import { unwrapResult } from "@oh-writers/utils";
 import type { ActorPosition, CameraPin } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./BlockingCard.module.css";
 
 interface BlockingProposalEventDetail {
@@ -65,6 +66,7 @@ export function BlockingCard({
   onShotSelect,
   onOpenEditor,
 }: BlockingCardProps) {
+  const { t } = useTranslation();
   const { data: raw } = useSuspenseQuery(blockingQueryOptions(sceneId, planId));
   const blocking = unwrapResult(raw);
   const { moveActor, moveCamera } = useBlocking(sceneId, planId);
@@ -219,31 +221,39 @@ export function BlockingCard({
   return (
     <section
       className={styles.card}
-      aria-label={`Blocking — SC.${sceneNumber}`}
+      aria-label={t("shootingPlan.blocking.cardAria").replace(
+        "{value}",
+        String(sceneNumber),
+      )}
     >
       <header className={styles.header}>
         <span className={styles.label}>
-          ANTEPRIMA BLOCKING · SC.{sceneNumber}
+          {t("shootingPlan.blocking.previewLabel").replace(
+            "{value}",
+            String(sceneNumber),
+          )}
         </span>
         {blocking.isSuggested && (
-          <span className={styles.suggeritoBadge}>SUGGERITO</span>
+          <span className={styles.suggeritoBadge}>
+            {t("shootingPlan.blocking.suggestedBadge")}
+          </span>
         )}
         <div className={styles.actions}>
           <button
             type="button"
             className={styles.actionBtn}
             disabled
-            title="Prossimamente"
+            title={t("shootingPlan.blocking.comingSoon")}
           >
-            ⌘V Vista 3D
+            {t("shootingPlan.blocking.view3d")}
           </button>
           <button
             type="button"
             className={styles.actionBtn}
             onClick={onOpenEditor}
-            title="Apri blocking editor (⌘B)"
+            title={t("shootingPlan.blocking.openEditorTitle")}
           >
-            ⌘B Editor
+            {t("shootingPlan.blocking.editor")}
           </button>
         </div>
       </header>
@@ -251,14 +261,20 @@ export function BlockingCard({
       <div className={styles.body}>
         <aside className={styles.sidebar}>
           <dl className={styles.meta}>
-            <dt className={styles.metaLabel}>Attori</dt>
+            <dt className={styles.metaLabel}>
+              {t("shootingPlan.blocking.actors")}
+            </dt>
             <dd className={styles.metaValue}>
               {localActors.map((a) => a.label).join(" · ") || "—"}
             </dd>
-            <dt className={styles.metaLabel}>Camera</dt>
+            <dt className={styles.metaLabel}>
+              {t("shootingPlan.blocking.camera")}
+            </dt>
             <dd className={styles.metaValue}>
               {localCameras.length}{" "}
-              {localCameras.length === 1 ? "posizione" : "posizioni"}
+              {localCameras.length === 1
+                ? t("shootingPlan.blocking.positionSingular")
+                : t("shootingPlan.blocking.positionPlural")}
             </dd>
           </dl>
           {!blocking.detachedActors && (
@@ -292,27 +308,30 @@ export function BlockingCard({
               isApplying={isApplying}
             />
           )}
-          <div className={styles.legend} aria-label="Legenda blocking">
+          <div
+            className={styles.legend}
+            aria-label={t("shootingPlan.blocking.legendAria")}
+          >
             <span
               className={styles.legendItem}
               data-kind="camera"
-              aria-label="Camera"
+              aria-label={t("shootingPlan.blocking.legendCamera")}
             >
-              Camera
+              {t("shootingPlan.blocking.legendCamera")}
             </span>
             <span
               className={styles.legendItem}
               data-kind="actor"
-              aria-label="Personaggio"
+              aria-label={t("shootingPlan.blocking.legendCharacter")}
             >
-              Personaggio
+              {t("shootingPlan.blocking.legendCharacter")}
             </span>
             <span
               className={styles.legendItem}
               data-kind="furniture"
-              aria-label="Arredo"
+              aria-label={t("shootingPlan.blocking.legendFurniture")}
             >
-              Arredo
+              {t("shootingPlan.blocking.legendFurniture")}
             </span>
           </div>
         </div>

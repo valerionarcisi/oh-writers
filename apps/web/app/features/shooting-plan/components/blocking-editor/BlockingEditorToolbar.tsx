@@ -1,3 +1,5 @@
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./BlockingEditorToolbar.module.css";
 
 export type EditorTool = "select" | "wall" | "furniture" | "opening";
@@ -14,11 +16,11 @@ interface BlockingEditorToolbarProps {
   onClose: () => void;
 }
 
-const TOOLS: { id: EditorTool; label: string }[] = [
-  { id: "select", label: "↖ Seleziona" },
-  { id: "wall", label: "▬ Parete" },
-  { id: "furniture", label: "□ Mobile" },
-  { id: "opening", label: "↔ Apertura" },
+const TOOLS: { id: EditorTool; labelKey: TranslationKey }[] = [
+  { id: "select", labelKey: "shootingPlan.editorToolbar.toolSelect" },
+  { id: "wall", labelKey: "shootingPlan.editorToolbar.toolWall" },
+  { id: "furniture", labelKey: "shootingPlan.editorToolbar.toolFurniture" },
+  { id: "opening", labelKey: "shootingPlan.editorToolbar.toolOpening" },
 ];
 
 export function BlockingEditorToolbar({
@@ -32,6 +34,7 @@ export function BlockingEditorToolbar({
   onRedo,
   onClose,
 }: BlockingEditorToolbarProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={styles.toolbar}
@@ -43,18 +46,18 @@ export function BlockingEditorToolbar({
         className={styles.closeBtn}
         onClick={onClose}
       >
-        ← Chiudi
+        {t("shootingPlan.editorToolbar.close")}
       </button>
       <div className={styles.divider} />
-      {TOOLS.map((t) => (
+      {TOOLS.map((tool) => (
         <button
-          key={t.id}
+          key={tool.id}
           type="button"
           className={styles.toolBtn}
-          data-active={activeTool === t.id || undefined}
-          onClick={() => onToolChange(t.id)}
+          data-active={activeTool === tool.id || undefined}
+          onClick={() => onToolChange(tool.id)}
         >
-          {t.label}
+          {t(tool.labelKey)}
         </button>
       ))}
       <div className={styles.divider} />

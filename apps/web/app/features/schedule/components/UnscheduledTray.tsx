@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { StripView } from "../server/schedule.server";
 import { StripCard } from "./StripCard";
+import { useTranslation } from "~/features/i18n";
 import styles from "./UnscheduledTray.module.css";
 
 interface UnscheduledTrayProps {
@@ -18,6 +19,7 @@ export function UnscheduledTray({
   onLockToggle,
   onStripClick,
 }: UnscheduledTrayProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
 
@@ -26,7 +28,7 @@ export function UnscheduledTray({
   return (
     <div className={styles.tray} data-testid="unscheduled-tray">
       <div className={styles.trayHeader} onClick={() => setOpen((v) => !v)}>
-        <h4 className={styles.trayTitle}>Non pianificate</h4>
+        <h4 className={styles.trayTitle}>{t("schedule.unscheduled.title")}</h4>
         {strips.length > 0 && (
           <span className={styles.trayCount}>{strips.length}</span>
         )}

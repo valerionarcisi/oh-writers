@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { Primitive, ActorPosition, CameraPin } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { ActorPin, CameraPinEl } from "./BlockingPin";
 import styles from "./BlockingCanvas.module.css";
 
@@ -55,6 +56,7 @@ export function BlockingCanvas({
   onCameraRotate,
   onPinClick,
 }: BlockingCanvasProps) {
+  const { t } = useTranslation();
   const scale = DISPLAY_W / widthCm;
   const displayH = heightCm * scale;
 
@@ -320,7 +322,7 @@ export function BlockingCanvas({
       {proposedChanges && proposedChanges.length > 0 && (
         <g
           className={styles.ghostLayer}
-          aria-label="Proposte di blocking suggerite da Cesare"
+          aria-label={t("shootingPlan.canvas.proposalsAria")}
         >
           {proposedChanges.map((p) => {
             if (p.kind === "actor") {

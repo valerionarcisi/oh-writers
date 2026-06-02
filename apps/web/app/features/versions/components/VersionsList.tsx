@@ -5,6 +5,7 @@ import {
   type DraftRevisionColor,
 } from "@oh-writers/domain";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
+import { useTranslation } from "~/features/i18n";
 import styles from "./VersionsList.module.css";
 
 export interface VersionListItem {
@@ -66,6 +67,7 @@ export function VersionsList({
   onUpdateDate,
   onCompare,
 }: VersionsListProps) {
+  const { t } = useTranslation();
   const [creating, setCreating] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -121,7 +123,7 @@ export function VersionsList({
                     ref={newInputRef}
                     className={styles.labelInput}
                     type="text"
-                    placeholder="Nome versione"
+                    placeholder={t("versions.list.namePlaceholder")}
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyDown={(e) => {
@@ -141,7 +143,7 @@ export function VersionsList({
                     disabled={isCreating || !newLabel.trim()}
                     data-testid="versions-new-save"
                   >
-                    {isCreating ? "…" : "Salva"}
+                    {isCreating ? "…" : t("versions.list.save")}
                   </button>
                   <button
                     type="button"
@@ -151,7 +153,7 @@ export function VersionsList({
                       setNewLabel("");
                     }}
                   >
-                    Annulla
+                    {t("versions.list.cancel")}
                   </button>
                 </div>
               ) : (
@@ -161,7 +163,7 @@ export function VersionsList({
                   onClick={() => setCreating(true)}
                   data-testid="versions-new-trigger"
                 >
-                  + Nuova versione
+                  {t("versions.list.new")}
                 </button>
               ))}
             {onCreateFromScratch && !creating && (
@@ -172,7 +174,7 @@ export function VersionsList({
                 disabled={isCreatingFromScratch}
                 data-testid="versions-new-scratch"
               >
-                {isCreatingFromScratch ? "…" : "+ Nuova versione vuota"}
+                {isCreatingFromScratch ? "…" : t("versions.list.newScratch")}
               </button>
             )}
           </>
@@ -184,7 +186,7 @@ export function VersionsList({
             onClick={onCompare}
             data-testid="versions-compare-trigger"
           >
-            ⇄ Confronta versioni
+            {t("versions.list.compare")}
           </button>
         )}
       </div>
@@ -201,12 +203,12 @@ export function VersionsList({
             <Skeleton
               lines={4}
               widths={["70%", "100%", "60%", "100%"]}
-              ariaLabel="Caricamento versioni"
+              ariaLabel={t("versions.list.loading")}
             />
           </div>
         )}
         {!isLoading && items.length === 0 && (
-          <div className={styles.empty}>Nessuna versione salvata.</div>
+          <div className={styles.empty}>{t("versions.list.empty")}</div>
         )}
         {!isLoading && items.length > 0 && (
           <ul className={styles.list}>
@@ -240,7 +242,7 @@ export function VersionsList({
                       disabled={isRenaming || !renameLabel.trim()}
                       data-testid={`version-rename-save-${item.id}`}
                     >
-                      {isRenaming ? "…" : "Salva"}
+                      {isRenaming ? "…" : t("versions.list.save")}
                     </button>
                     <button
                       type="button"
@@ -250,7 +252,7 @@ export function VersionsList({
                         setRenameLabel("");
                       }}
                     >
-                      Annulla
+                      {t("versions.list.cancel")}
                     </button>
                   </li>
                 );
@@ -259,9 +261,9 @@ export function VersionsList({
               const isOnlyVersion = items.length === 1;
               const deleteDisabled = isDeleting || isActive || isOnlyVersion;
               const deleteTitle = isOnlyVersion
-                ? "Unica versione — non eliminabile"
+                ? t("versions.list.deleteOnly")
                 : isActive
-                  ? "Versione attiva — non eliminabile"
+                  ? t("versions.list.deleteActive")
                   : undefined;
 
               return (
@@ -285,13 +287,13 @@ export function VersionsList({
                           }}
                           aria-label={
                             item.draftColor
-                              ? `Draft color: ${item.draftColor}`
-                              : "Set draft color"
+                              ? `${t("versions.list.draftColorWithValue")} ${item.draftColor}`
+                              : t("versions.list.setDraftColor")
                           }
                           title={
                             item.draftColor
                               ? DRAFT_COLOR_LABEL[item.draftColor]
-                              : "Set draft color"
+                              : t("versions.list.setDraftColor")
                           }
                           onClick={(e) => {
                             e.stopPropagation();
@@ -307,14 +309,14 @@ export function VersionsList({
                         </button>
                       )}
                       <span className={styles.label}>
-                        {item.label ?? "Senza nome"}
+                        {item.label ?? t("versions.unnamed")}
                       </span>
                       {isActive && (
                         <span
                           className={styles.badgeActive}
                           data-testid={`version-badge-active-${item.id}`}
                         >
-                          Attiva
+                          {t("versions.list.badgeActive")}
                         </span>
                       )}
                       {canEdit && (
@@ -325,7 +327,7 @@ export function VersionsList({
                             e.stopPropagation();
                             startRename(item);
                           }}
-                          aria-label={`Rinomina ${item.label ?? "versione"}`}
+                          aria-label={`${t("versions.list.renameAria")} ${item.label ?? t("versions.list.renameFallback")}`}
                           data-testid={`version-rename-${item.id}`}
                         >
                           ✎
@@ -336,7 +338,7 @@ export function VersionsList({
                       <div
                         className={styles.colorPicker}
                         role="group"
-                        aria-label="Draft color"
+                        aria-label={t("versions.list.colorPicker")}
                         onClick={(e) => e.stopPropagation()}
                         data-testid={`version-color-picker-${item.id}`}
                       >
@@ -367,7 +369,7 @@ export function VersionsList({
                           <button
                             type="button"
                             className={`${styles.swatch} ${styles.swatchClear}`}
-                            aria-label="Clear color"
+                            aria-label={t("versions.list.clearColor")}
                             aria-pressed={!item.draftColor}
                             data-testid={`version-color-${item.id}-clear`}
                             onClick={() => {
@@ -387,7 +389,7 @@ export function VersionsList({
                         </div>
                         {onUpdateDate && (
                           <label className={styles.draftDateLabel}>
-                            <span>Draft date</span>
+                            <span>{t("versions.list.draftDate")}</span>
                             <input
                               type="date"
                               className={styles.dateInput}
@@ -410,7 +412,9 @@ export function VersionsList({
                           minute: "2-digit",
                         })}
                         {item.sub ? ` · ${item.sub}` : ""}
-                        {item.draftDate ? ` · Draft ${item.draftDate}` : ""}
+                        {item.draftDate
+                          ? ` · ${t("versions.list.draftPrefix")} ${item.draftDate}`
+                          : ""}
                       </span>
                     </div>
                   </div>
@@ -425,9 +429,9 @@ export function VersionsList({
                           onSelect(item);
                         }}
                         data-testid={`version-activate-${item.id}`}
-                        title="Imposta come versione attiva"
+                        title={t("versions.list.activateTitle")}
                       >
-                        Attiva
+                        {t("versions.list.activate")}
                       </button>
                     )}
                     {canEdit && onDuplicate && (
@@ -436,12 +440,12 @@ export function VersionsList({
                         className={styles.btnGhost}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDuplicate(item.id, item.label ?? "Senza nome");
+                          onDuplicate(item.id, item.label ?? t("versions.unnamed"));
                         }}
                         disabled={isDuplicating}
                         data-testid={`version-duplicate-${item.id}`}
                       >
-                        Duplica
+                        {t("versions.list.duplicate")}
                       </button>
                     )}
                     {canEdit && (
@@ -456,7 +460,7 @@ export function VersionsList({
                         title={deleteTitle}
                         data-testid={`version-delete-${item.id}`}
                       >
-                        Elimina
+                        {t("versions.list.delete")}
                       </button>
                     )}
                   </div>
@@ -471,7 +475,7 @@ export function VersionsList({
         <Dialog
           isOpen
           onClose={() => setPendingColor(null)}
-          title="Conferma cambio colore"
+          title={t("versions.list.colorConfirmTitle")}
           isDismissable={false}
           data-testid="version-color-confirm"
           actions={
@@ -481,7 +485,7 @@ export function VersionsList({
                 onClick={() => setPendingColor(null)}
                 data-testid="version-color-confirm-cancel"
               >
-                Annulla
+                {t("versions.list.cancel")}
               </Button>
               <Button
                 variant="primary"
@@ -493,25 +497,25 @@ export function VersionsList({
                 data-testid="version-color-confirm-ok"
                 autoFocus
               >
-                Conferma
+                {t("versions.list.confirm")}
               </Button>
             </>
           }
         >
           <p>
-            Cambiare il revision color da{" "}
+            {t("versions.list.colorChange1")}{" "}
             <strong>
               {pendingColor.from
                 ? DRAFT_COLOR_LABEL[pendingColor.from]
-                : "(nessuno)"}
+                : t("versions.list.colorNone")}
             </strong>{" "}
-            a{" "}
+            {t("versions.list.colorChange2")}{" "}
             <strong>
               {pendingColor.to
                 ? DRAFT_COLOR_LABEL[pendingColor.to]
-                : "(nessuno)"}
+                : t("versions.list.colorNone")}
             </strong>
-            ? Il valore fa parte del revision cycle hollywoodiano.
+            {t("versions.list.colorChange3")}
           </p>
         </Dialog>
       )}
@@ -520,7 +524,7 @@ export function VersionsList({
         <Dialog
           isOpen
           onClose={() => setDeletingId(null)}
-          title="Conferma eliminazione"
+          title={t("versions.list.deleteConfirmTitle")}
           isDismissable={false}
           data-testid="version-delete-confirm"
           actions={
@@ -530,7 +534,7 @@ export function VersionsList({
                 onClick={() => setDeletingId(null)}
                 data-testid="version-delete-confirm-cancel"
               >
-                Annulla
+                {t("versions.list.cancel")}
               </Button>
               <Button
                 variant="danger"
@@ -541,12 +545,12 @@ export function VersionsList({
                 disabled={isDeleting}
                 data-testid="version-delete-confirm-ok"
               >
-                Elimina
+                {t("versions.list.delete")}
               </Button>
             </>
           }
         >
-          <p>Eliminare questa versione? L&apos;operazione non è reversibile.</p>
+          <p>{t("versions.list.deleteConfirmBody")}</p>
         </Dialog>
       )}
     </div>

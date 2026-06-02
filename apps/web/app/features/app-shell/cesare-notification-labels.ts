@@ -1,37 +1,42 @@
 import type { CesarePage } from "~/features/predictions";
+import type { TranslationKey } from "@oh-writers/domain";
+
+/** A translator — `useTranslation().t`. Passed in so this module stays free of
+ *  React-hook imports (it is imported by both components and plain helpers). */
+type Translate = (key: TranslationKey) => string;
 
 /**
- * In-progress action label for each Cesare-enabled page.
+ * In-progress action label key for each Cesare-enabled page.
  * Used by the persistent pill while a tool loop is running.
  */
-export const ACTION_LABEL_BY_PAGE: Record<CesarePage, string> = {
-  soggetto: "Cesare sta lavorando sul soggetto…",
-  synopsis: "Cesare sta lavorando sulla sinossi…",
-  outline: "Cesare sta lavorando sulla scaletta…",
-  treatment: "Cesare sta lavorando sul trattamento…",
-  screenplay: "Cesare sta analizzando la scena…",
-  breakdown: "Cesare sta aggiornando il breakdown…",
-  budget: "Cesare sta aggiornando il budget…",
-  schedule: "Cesare sta riorganizzando il piano…",
-  "shooting-plan": "Cesare sta lavorando alle inquadrature…",
-  locations: "Cesare sta cercando candidati…",
+export const ACTION_LABEL_KEY_BY_PAGE: Record<CesarePage, TranslationKey> = {
+  soggetto: "shell.action.soggetto",
+  synopsis: "shell.action.synopsis",
+  outline: "shell.action.outline",
+  treatment: "shell.action.treatment",
+  screenplay: "shell.action.screenplay",
+  breakdown: "shell.action.breakdown",
+  budget: "shell.action.budget",
+  schedule: "shell.action.schedule",
+  "shooting-plan": "shell.action.shootingPlan",
+  locations: "shell.action.locations",
 };
 
 /**
- * Fallback completion label per page when the reply doesn't match any of the
- * heuristic keywords.
+ * Fallback completion label key per page when the reply doesn't match any of
+ * the heuristic keywords.
  */
-export const DEFAULT_RESULT_BY_PAGE: Record<CesarePage, string> = {
-  soggetto: "Cesare ha risposto sul soggetto",
-  synopsis: "Cesare ha risposto sulla sinossi",
-  outline: "Cesare ha risposto sulla scaletta",
-  treatment: "Cesare ha risposto sul trattamento",
-  screenplay: "Cesare ha risposto sulla scena",
-  breakdown: "Cesare ha aggiornato il breakdown",
-  budget: "Cesare ha risposto sul budget",
-  schedule: "Cesare ha risposto sulla pianificazione",
-  "shooting-plan": "Cesare ha risposto sulle inquadrature",
-  locations: "Cesare ha aggiornato le location",
+export const DEFAULT_RESULT_KEY_BY_PAGE: Record<CesarePage, TranslationKey> = {
+  soggetto: "shell.result.soggetto",
+  synopsis: "shell.result.synopsis",
+  outline: "shell.result.outline",
+  treatment: "shell.result.treatment",
+  screenplay: "shell.result.screenplay",
+  breakdown: "shell.result.breakdown",
+  budget: "shell.result.budget",
+  schedule: "shell.result.schedule",
+  "shooting-plan": "shell.result.shootingPlan",
+  locations: "shell.result.locations",
 };
 
 /**
@@ -55,47 +60,52 @@ export const isAgenticPage = (page: CesarePage): boolean =>
   AGENTIC_PAGES.has(page);
 
 /**
- * Parse the reply text and produce a short Italian result label.
- * Heuristic — looks for action verbs that the tool loops generate.
+ * Parse the reply text and produce a short localised result label.
+ * Heuristic — looks for action verbs that the tool loops generate. The reply
+ * keywords matched here are the Italian verbs the model emits, NOT UI copy.
  */
-export const deriveResultLabel = (page: CesarePage, reply: string): string => {
+export const deriveResultLabel = (
+  page: CesarePage,
+  reply: string,
+  t: Translate,
+): string => {
   const lc = reply.toLowerCase();
 
   if (page === "locations") {
     const countMatch = reply.match(/(\d+)\s+candidat/i);
     if (countMatch && (lc.includes("aggiunto") || lc.includes("trovat"))) {
-      return `Aggiunti ${countMatch[1]} candidati`;
+      return `${t("shell.derived.locationsCandidatesPrefix")} ${countMatch[1]} ${t("shell.derived.locationsCandidatesSuffix")}`;
     }
     if (
       lc.includes("aggiunto") ||
       lc.includes("candidat") ||
       lc.includes("trovato")
     ) {
-      return "Aggiornate le location";
+      return t("shell.derived.locationsUpdated");
     }
   }
 
   if (page === "budget") {
     if (lc.includes("aggiunto") || lc.includes("aggiunti"))
-      return "Aggiunte voci al budget";
+      return t("shell.derived.budgetAdded");
     if (lc.includes("aggiornato") || lc.includes("modificato"))
-      return "Aggiornato il budget";
+      return t("shell.derived.budgetUpdated");
     if (lc.includes("spostato") || lc.includes("ridistribuito"))
-      return "Budget riorganizzato";
+      return t("shell.derived.budgetReorganised");
   }
 
   if (page === "breakdown") {
-    if (lc.includes("aggiunto")) return "Aggiunti elementi al breakdown";
+    if (lc.includes("aggiunto")) return t("shell.derived.breakdownAdded");
     if (lc.includes("rimosso") || lc.includes("cancellato"))
-      return "Breakdown ripulito";
+      return t("shell.derived.breakdownCleaned");
     if (lc.includes("aggiornato") || lc.includes("modificato"))
-      return "Breakdown aggiornato";
+      return t("shell.derived.breakdownUpdated");
   }
 
   if (page === "schedule") {
     if (lc.includes("spostato") || lc.includes("riordinato"))
-      return "Pianificazione aggiornata";
-    if (lc.includes("aggiunto")) return "Aggiunti elementi al piano";
+      return t("shell.derived.scheduleUpdated");
+    if (lc.includes("aggiunto")) return t("shell.derived.scheduleAdded");
   }
 
   if (
@@ -104,13 +114,13 @@ export const deriveResultLabel = (page: CesarePage, reply: string): string => {
     page === "outline" ||
     page === "treatment"
   ) {
-    if (lc.includes("espanso")) return "Documento espanso";
+    if (lc.includes("espanso")) return t("shell.derived.docExpanded");
     if (lc.includes("compresso") || lc.includes("riassunto"))
-      return "Documento riassunto";
+      return t("shell.derived.docSummarised");
     if (lc.includes("riscritto") || lc.includes("sostituito"))
-      return "Documento riscritto";
+      return t("shell.derived.docRewritten");
     if (lc.includes("aggiornato") || lc.includes("modificato"))
-      return "Documento aggiornato";
+      return t("shell.derived.docUpdated");
   }
 
   if (page === "screenplay") {
@@ -119,11 +129,11 @@ export const deriveResultLabel = (page: CesarePage, reply: string): string => {
       lc.includes("draft") ||
       lc.includes("versione")
     )
-      return "Cesare ha preparato una nuova versione";
-    if (lc.includes("rinomina")) return "Cesare ha proposto una rinomina";
+      return t("shell.derived.screenplayNewVersion");
+    if (lc.includes("rinomina")) return t("shell.derived.screenplayRename");
     if (lc.includes("proposto") || lc.includes("propost"))
-      return "Cesare ha proposto una modifica";
+      return t("shell.derived.screenplayProposal");
   }
 
-  return DEFAULT_RESULT_BY_PAGE[page];
+  return t(DEFAULT_RESULT_KEY_BY_PAGE[page]);
 };

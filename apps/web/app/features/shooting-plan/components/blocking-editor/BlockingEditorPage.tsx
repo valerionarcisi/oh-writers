@@ -15,6 +15,7 @@ import {
 import { BlockingEditorCanvas } from "./BlockingEditorCanvas";
 import { unwrapResult } from "@oh-writers/utils";
 import type { Primitive } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./BlockingEditorPage.module.css";
 
 interface BlockingEditorPageProps {
@@ -28,6 +29,7 @@ export function BlockingEditorPage({
   planId,
   onClose,
 }: BlockingEditorPageProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: raw } = useSuspenseQuery(blockingQueryOptions(sceneId, planId));
   const blocking = unwrapResult(raw);
@@ -102,15 +104,20 @@ export function BlockingEditorPage({
       />
       <div className={styles.body}>
         <aside className={styles.layers}>
-          <p className={styles.layerTitle}>Layer</p>
+          <p className={styles.layerTitle}>
+            {t("shootingPlan.editorPage.layer")}
+          </p>
           <label className={styles.layerItem}>
-            <input type="checkbox" defaultChecked /> Location
+            <input type="checkbox" defaultChecked />{" "}
+            {t("shootingPlan.editorPage.location")}
           </label>
           <label className={styles.layerItem}>
-            <input type="checkbox" defaultChecked /> Attori
+            <input type="checkbox" defaultChecked />{" "}
+            {t("shootingPlan.editorPage.actors")}
           </label>
           <label className={styles.layerItem}>
-            <input type="checkbox" defaultChecked /> Camere
+            <input type="checkbox" defaultChecked />{" "}
+            {t("shootingPlan.editorPage.cameras")}
           </label>
         </aside>
         <main className={styles.canvas}>

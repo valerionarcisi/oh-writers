@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useButton } from "react-aria";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ShootingPlanDock.module.css";
 
 interface ShootingPlanDockProps {
@@ -22,26 +23,31 @@ export function ShootingPlanDock({
   onPrint,
   onCesareClick,
 }: ShootingPlanDockProps) {
+  const { t } = useTranslation();
   const prefillRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: prefillButtonProps } = useButton(
     {
       onPress: onPrefill,
       isDisabled: !onPrefill,
-      "aria-label": "Pre-popola le inquadrature dal breakdown",
+      "aria-label": t("shootingPlan.dock.prefillAria"),
     },
     prefillRef,
   );
 
   return (
-    <div className={styles.dock} role="toolbar" aria-label="Azioni piano">
-      <span className={styles.dockLabel}>Piano</span>
+    <div
+      className={styles.dock}
+      role="toolbar"
+      aria-label={t("shootingPlan.dock.toolbarAria")}
+    >
+      <span className={styles.dockLabel}>{t("shootingPlan.dock.label")}</span>
 
       <button
         type="button"
         className={styles.btnPrimary}
         onClick={onGeneratePlan}
         disabled={isGenerating}
-        title="Genera il piano di ripresa da tutte le scene (⇧⌘G)"
+        title={t("shootingPlan.dock.generateTitle")}
       >
         {isGenerating ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={styles.spinIcon}>
@@ -52,7 +58,9 @@ export function ShootingPlanDock({
             <path d="M5 3h14M5 3v18l7-4 7 4V3" />
           </svg>
         )}
-        {isGenerating ? "Generando…" : "Genera piano"}
+        {isGenerating
+          ? t("shootingPlan.dock.generating")
+          : t("shootingPlan.dock.generate")}
         <kbd className={styles.kbd}>⇧⌘G</kbd>
       </button>
 
@@ -60,7 +68,7 @@ export function ShootingPlanDock({
         ref={prefillRef}
         {...prefillButtonProps}
         className={styles.btnGhost}
-        title="Pre-popola le inquadrature dal breakdown (⇧⌘P)"
+        title={t("shootingPlan.dock.prefillTitle")}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M3 12a9 9 0 1 1 3 6.7" />
@@ -74,10 +82,10 @@ export function ShootingPlanDock({
         type="button"
         className={styles.btnGhost}
         onClick={onExport}
-        title="Esporta il piano confermato (⌘E)"
+        title={t("shootingPlan.dock.exportTitle")}
         data-testid="export-csv-btn"
       >
-        Esporta
+        {t("shootingPlan.dock.export")}
         <kbd className={styles.kbd}>⌘E</kbd>
       </button>
 
@@ -85,10 +93,10 @@ export function ShootingPlanDock({
         type="button"
         className={styles.btnGhost}
         onClick={onPrint}
-        title="Stampa per la troupe (⌘P)"
+        title={t("shootingPlan.dock.printTitle")}
         data-testid="export-pdf-btn"
       >
-        Stampa
+        {t("shootingPlan.dock.print")}
         <kbd className={styles.kbd}>⌘P</kbd>
       </button>
 
@@ -97,7 +105,7 @@ export function ShootingPlanDock({
       <button
         type="button"
         className={styles.cesareBtn}
-        title="Apri Cesare"
+        title={t("shootingPlan.dock.openCesare")}
         onClick={onCesareClick}
       >
         <span className={styles.cesareDot} aria-hidden="true" />

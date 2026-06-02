@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ShotContextMenu.module.css";
 
 interface TrackContextMenuProps {
@@ -12,6 +13,7 @@ export function TrackContextMenu({
   onCompact,
   onClose,
 }: TrackContextMenuProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function TrackContextMenu({
           onClose();
         }}
       >
-        Rimuovi spazi
+        {t("shootingPlan.trackMenu.removeGaps")}
       </button>
     </div>
   );

@@ -20,12 +20,14 @@
 
 import { useRef, type ReactNode } from "react";
 import { useDialog, useOverlay, FocusScope } from "react-aria";
+import { useTranslation } from "~/features/i18n";
 import styles from "./CesarePeekLane.module.css";
 
 export interface CesarePeekLaneProps {
   /** Clears `?peek` — invoked on ESC (via react-aria `useOverlay`). */
   onClose: () => void;
-  /** Accessible label for the lane landmark. */
+  /** Accessible label for the lane landmark. Defaults to the localised
+   *  "Cesare — column" landmark label. */
   ariaLabel?: string;
   /** The split chat container (a `CesareSheet` with `surface="split"`). */
   children: ReactNode;
@@ -33,9 +35,11 @@ export interface CesarePeekLaneProps {
 
 export function CesarePeekLane({
   onClose,
-  ariaLabel = "Cesare — colonna",
+  ariaLabel,
   children,
 }: CesarePeekLaneProps) {
+  const { t } = useTranslation();
+  const resolvedAriaLabel = ariaLabel ?? t("shell.peekLane.aria");
   const ref = useRef<HTMLDivElement>(null);
 
   // `useOverlay` provides ESC-to-close (mandatory react-aria dismiss). Outside-
@@ -50,7 +54,7 @@ export function CesarePeekLane({
     ref,
   );
 
-  const { dialogProps } = useDialog({ "aria-label": ariaLabel }, ref);
+  const { dialogProps } = useDialog({ "aria-label": resolvedAriaLabel }, ref);
 
   return (
     <FocusScope>

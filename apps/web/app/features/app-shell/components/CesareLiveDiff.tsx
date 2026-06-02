@@ -20,6 +20,7 @@
 // feeding an effect, and the 47d "Maximum update depth exceeded" loop is gone.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { DocumentType } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   getLiveDiffState,
   subscribeLiveDiff,
@@ -61,6 +62,7 @@ function visibleSegments(flash: LiveDiffFlash): ReadonlyArray<LiveDiffSegment> {
 }
 
 export function CesareLiveDiff({ documentType }: CesareLiveDiffProps) {
+  const { t } = useTranslation();
   const flash = useFlashFor(documentType);
   // The flash currently being painted. Set imperatively when a NEW nonce
   // arrives, cleared by a timer — fire-and-forget, no derived loop.
@@ -92,7 +94,7 @@ export function CesareLiveDiff({ documentType }: CesareLiveDiffProps) {
       data-document-type={documentType}
       data-flash-mode={active.mode}
       role="region"
-      aria-label="Modifiche di Cesare"
+      aria-label={t("shell.liveDiff.aria")}
     >
       <p className={styles.body}>
         {visibleSegments(active).map((seg, i) => {

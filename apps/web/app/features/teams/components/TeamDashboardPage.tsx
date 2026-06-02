@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { Users, Settings, Plus } from "lucide-react";
+import { useTranslation } from "~/features/i18n";
 import { teamQueryOptions } from "../server/teams.server";
 import styles from "./TeamDashboardPage.module.css";
 
@@ -10,15 +11,16 @@ interface TeamDashboardPageProps {
 }
 
 export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
+  const { t } = useTranslation();
   const { data: result } = useSuspenseQuery(teamQueryOptions(slug));
 
   if (!result.isOk) {
     return (
       <div className={styles.error}>
         {match(result.error)
-          .with({ _tag: "TeamNotFoundError" }, () => "Team non trovato.")
-          .with({ _tag: "ForbiddenError" }, () => "Accesso negato.")
-          .otherwise(() => "Errore nel caricamento del team.")}
+          .with({ _tag: "TeamNotFoundError" }, () => t("teams.error.notFound"))
+          .with({ _tag: "ForbiddenError" }, () => t("teams.error.forbidden"))
+          .otherwise(() => t("teams.error.loadTeam"))}
       </div>
     );
   }
@@ -56,7 +58,7 @@ export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
             className={styles.actionBtn}
           >
             <Users size={16} strokeWidth={1.5} />
-            Membri
+            {t("teams.dashboard.members")}
           </Link>
           <Link
             to="/teams/$slug/settings"
@@ -64,26 +66,28 @@ export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
             className={styles.actionBtn}
           >
             <Settings size={16} strokeWidth={1.5} />
-            Impostazioni
+            {t("teams.dashboard.settings")}
           </Link>
         </div>
       </header>
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Progetti del team</h2>
+          <h2 className={styles.sectionTitle}>
+            {t("teams.dashboard.projectsTitle")}
+          </h2>
           <Link to="/dashboard" className={styles.newProjectBtn}>
             <Plus size={14} strokeWidth={1.5} />
-            Nuovo progetto
+            {t("teams.dashboard.newProject")}
           </Link>
         </div>
-        <p className={styles.emptyHint}>
-          I progetti assegnati a questo team appariranno qui.
-        </p>
+        <p className={styles.emptyHint}>{t("teams.dashboard.projectsHint")}</p>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Membri ({members.length})</h2>
+        <h2 className={styles.sectionTitle}>
+          {t("teams.dashboard.membersTitle")} ({members.length})
+        </h2>
         <ul className={styles.memberList}>
           {members.map((member) => (
             <li key={member.id} className={styles.memberRow}>
@@ -106,7 +110,8 @@ export function TeamDashboardPage({ slug }: TeamDashboardPageProps) {
       {invitations.filter((i) => !i.acceptedAt).length > 0 && (
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
-            Inviti in attesa ({invitations.filter((i) => !i.acceptedAt).length})
+            {t("teams.dashboard.pendingTitle")} (
+            {invitations.filter((i) => !i.acceptedAt).length})
           </h2>
           <ul className={styles.memberList}>
             {invitations

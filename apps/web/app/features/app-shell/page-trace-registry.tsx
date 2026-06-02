@@ -22,17 +22,19 @@ import {
   type PageTraceViewComponent,
   type TraceMarker,
 } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 
-const KIND_LABELS = {
-  soggetto: "Soggetto",
-  sinossi: "Sinossi",
-  scaletta: "Scaletta",
-  trattamento: "Trattamento",
-  screenplay: "Sceneggiatura",
-  breakdown: "Breakdown",
-  budget: "Budget",
-  locations: "Location",
-} as const;
+const KIND_LABEL_KEYS = {
+  soggetto: "shell.trace.kind.soggetto",
+  sinossi: "shell.trace.kind.sinossi",
+  scaletta: "shell.trace.kind.scaletta",
+  trattamento: "shell.trace.kind.trattamento",
+  screenplay: "shell.trace.kind.screenplay",
+  breakdown: "shell.trace.kind.breakdown",
+  budget: "shell.trace.kind.budget",
+  locations: "shell.trace.kind.locations",
+} as const satisfies Record<string, TranslationKey>;
 
 const MARKER_GLYPHS: Record<TraceMarker["kind"], string> = {
   replace: "↺",
@@ -55,7 +57,7 @@ const MARKER_LABELS: Record<TraceMarker["kind"], string> = {
  * surrounding SplitDrawer body.
  */
 function buildStubRenderer(
-  kind: keyof typeof KIND_LABELS,
+  kind: keyof typeof KIND_LABEL_KEYS,
 ): PageTraceViewComponent {
   const Renderer: PageTraceViewComponent = ({
     pageRef,
@@ -63,9 +65,11 @@ function buildStubRenderer(
     onAccept,
     onReject,
   }) => {
+    const { t } = useTranslation();
+    const kindLabel = t(KIND_LABEL_KEYS[kind]);
     const label = pageRef.scope
-      ? `${KIND_LABELS[kind]} · ${pageRef.scope}`
-      : KIND_LABELS[kind];
+      ? `${kindLabel} · ${pageRef.scope}`
+      : kindLabel;
 
     const list: ReactNode =
       traceMarkers.length === 0 ? (
@@ -76,7 +80,7 @@ function buildStubRenderer(
             fontSize: 12.5,
           }}
         >
-          Nessuna modifica.
+          {t("shell.trace.empty")}
         </p>
       ) : (
         traceMarkers.map((marker) => (
@@ -154,7 +158,7 @@ function buildStubRenderer(
                   cursor: "pointer",
                 }}
               >
-                Accetta
+                {t("shell.trace.accept")}
               </button>
               <button
                 type="button"
@@ -169,7 +173,7 @@ function buildStubRenderer(
                   cursor: "pointer",
                 }}
               >
-                Rifiuta
+                {t("shell.trace.reject")}
               </button>
             </div>
           </article>
@@ -193,7 +197,7 @@ function buildStubRenderer(
         >
           <span aria-hidden="true">★</span>
           <strong style={{ color: "var(--ds-text)" }}>{label}</strong>
-          <span>· modalità trace</span>
+          <span>{t("shell.trace.mode")}</span>
         </header>
         {list}
       </section>
@@ -211,8 +215,8 @@ let hasRegistered = false;
  */
 export function ensurePageTraceRegistry(): void {
   if (hasRegistered) return;
-  for (const kind of Object.keys(KIND_LABELS) as Array<
-    keyof typeof KIND_LABELS
+  for (const kind of Object.keys(KIND_LABEL_KEYS) as Array<
+    keyof typeof KIND_LABEL_KEYS
   >) {
     registerPageTraceView(kind, buildStubRenderer(kind));
   }

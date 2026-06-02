@@ -48,22 +48,30 @@ import { SceneDrawer } from "./SceneDrawer";
 import { ShootingDayDrawer } from "./ShootingDayDrawer";
 import { ScheduleCesareBanner } from "./ScheduleCesareBanner";
 import { ScheduleDayView } from "./ScheduleDayView";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import styles from "./SchedulePage.module.css";
 
 type ViewTab = "strip" | "day" | "days" | "weeks";
 
-const TABS: ReadonlyArray<{ id: ViewTab; label: string }> = [
-  { id: "strip", label: "Spannografo" },
-  { id: "day", label: "Giornata" },
-  { id: "days", label: "Giorni" },
-  { id: "weeks", label: "Settimane" },
-];
+const TAB_LABEL_KEYS: ReadonlyArray<{ id: ViewTab; labelKey: TranslationKey }> =
+  [
+    { id: "strip", labelKey: "schedule.page.tabStrip" },
+    { id: "day", labelKey: "schedule.page.tabDay" },
+    { id: "days", labelKey: "schedule.page.tabDays" },
+    { id: "weeks", labelKey: "schedule.page.tabWeeks" },
+  ];
 
 interface SchedulePageProps {
   projectId: string;
 }
 
 export function SchedulePage({ projectId }: SchedulePageProps) {
+  const { t } = useTranslation();
+  const tabs = TAB_LABEL_KEYS.map(({ id, labelKey }) => ({
+    id,
+    label: t(labelKey),
+  }));
   const qc = useQueryClient();
   // Cesare now lives in the shell-level BottomDock (Spec 44 TKT-LEAD-01).
   const _openCesare = useCesareOpen();
@@ -350,31 +358,37 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
         className={`${styles.viewbar} ${isStuck ? styles.isStuck : ""}`}
       >
         <SegmentedControl<ViewTab>
-          options={TABS}
+          options={tabs}
           activeId={tab}
           onSelect={setTab}
-          ariaLabel="Vista piano di lavorazione"
+          ariaLabel={t("schedule.page.viewAria")}
         />
         <span className={styles.viewbarRight} />
         <VersionTrigger
           variant="pill"
           versionLabel={versionLabel}
           menuItems={[
-            ...screenplayVersions.map((v, idx) => ({
-              id: `version-${v.id}`,
-              label:
-                v.id === currentVersionId
-                  ? `● ${v.label ?? `Versione ${idx + 1}`}`
-                  : (v.label ?? `Versione ${idx + 1}`),
-              onSelect: handleOpenVersions,
-              tone:
-                v.id === currentVersionId
-                  ? ("default" as const)
-                  : ("muted" as const),
-            })),
+            ...screenplayVersions.map((v, idx) => {
+              const fallback = t("schedule.page.versionFallback").replace(
+                "{number}",
+                String(idx + 1),
+              );
+              return {
+                id: `version-${v.id}`,
+                label:
+                  v.id === currentVersionId
+                    ? `● ${v.label ?? fallback}`
+                    : (v.label ?? fallback),
+                onSelect: handleOpenVersions,
+                tone:
+                  v.id === currentVersionId
+                    ? ("default" as const)
+                    : ("muted" as const),
+              };
+            }),
             {
               id: "open-drawer",
-              label: "Apri Versioni →",
+              label: t("schedule.page.openVersions"),
               onSelect: handleOpenVersions,
             },
           ]}
@@ -384,20 +398,34 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
       <main className={styles.main} id="main">
         <header className={styles.eyebrowRow}>
           <span className={styles.eyebrow}>
-            PIANO DI RIPRESA · <strong>{dayCount}</strong>{" "}
-            {dayCount === 1 ? "GIORNATA" : "GIORNATE"} · {sceneCount} SCENE
+            {t("schedule.page.eyebrowPrefix")} <strong>{dayCount}</strong>{" "}
+            {dayCount === 1
+              ? t("schedule.page.dayOne")
+              : t("schedule.page.dayOther")}{" "}
+            ·{" "}
+            {t("schedule.page.eyebrowScenes").replace(
+              "{scenes}",
+              String(sceneCount),
+            )}
           </span>
           <span className={styles.eyebrowMeta}>
-            {totalPages > 0 && <>{totalPages} pag · </>}
-            {totalHours > 0 && <>{formatDayHours(totalHours)} totali</>}
+            {totalPages > 0 && (
+              <>
+                {totalPages} {t("schedule.pagesShortBare")} ·{" "}
+              </>
+            )}
+            {totalHours > 0 && (
+              <>
+                {formatDayHours(totalHours)} {t("schedule.page.total")}
+              </>
+            )}
           </span>
         </header>
 
         {scheduleIsEmpty ? (
           <div className={styles.empty}>
             <p className={styles.emptyHint}>
-              Genera il piano di lavorazione per organizzare le scene in
-              giornate di ripresa. Richiede uno screenplay con scene.
+              {t("schedule.page.emptyHint")}
             </p>
             <button
               type="button"
@@ -406,7 +434,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
               disabled={generateMutation.isPending}
               onClick={() => generateMutation.mutate()}
             >
-              Genera pianificazione
+              {t("schedule.page.generatePlan")}
             </button>
           </div>
         ) : (
@@ -496,20 +524,26 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
       {/* Spec 44 TKT-LEAD-01: page-scoped CTAs only, bottom-left. The
        * shell-level BottomDock owns bottom-right + the universal ✦ Cesare. */}
       <FloatingDock
-        label="PIANO DI RIPRESA"
+        label={t("schedule.page.dockLabel")}
         primaryAction={{
-          label: schedule ? "Rigenera" : "Genera",
+          label: schedule
+            ? t("schedule.page.regenerate")
+            : t("schedule.page.generate"),
           hotkey: "⌘⇧P",
           onClick: () => generateMutation.mutate(),
         }}
         secondaryActions={[
           {
-            label: isCsvPending ? "Esportando…" : "Esporta",
+            label: isCsvPending
+              ? t("schedule.page.exporting")
+              : t("schedule.page.export"),
             hotkey: "⌘E",
             onClick: exportCsv,
           },
           {
-            label: isPdfPending ? "Generando…" : "Stampa",
+            label: isPdfPending
+              ? t("schedule.page.generating")
+              : t("schedule.page.print"),
             hotkey: "⌘P",
             onClick: exportPdf,
           },

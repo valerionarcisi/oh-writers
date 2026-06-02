@@ -17,6 +17,7 @@ import { ScreenplaySection } from "./ScreenplaySection";
 import { ProductionCardGrid } from "./ProductionCardGrid";
 import { ActivityFeed } from "./ActivityFeed";
 import { TeamPresence } from "./TeamPresence";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectOverviewPage.module.css";
 
 interface ProjectOverviewPageProps {
@@ -24,6 +25,7 @@ interface ProjectOverviewPageProps {
 }
 
 export function ProjectOverviewPage({ projectId }: ProjectOverviewPageProps) {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useProjectOverview(projectId);
 
   if (isLoading)
@@ -32,7 +34,7 @@ export function ProjectOverviewPage({ projectId }: ProjectOverviewPageProps) {
         <Skeleton
           lines={3}
           widths={["60%", "40%", "30%"]}
-          ariaLabel="Caricamento panoramica progetto"
+          ariaLabel={t("projects.overview.loading")}
         />
       </div>
     );
@@ -60,6 +62,7 @@ function ProjectOverviewContent({
   projectId,
   overview,
 }: ProjectOverviewContentProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const archive = useArchiveProject();
   const restore = useRestoreProject();
@@ -76,10 +79,9 @@ function ProjectOverviewContent({
   const onRestore = () => restore.mutate({ projectId });
   const onDelete = () => {
     void confirm({
-      title: "Eliminare il progetto?",
-      message:
-        "Eliminare questo progetto? L'operazione non può essere annullata.",
-      confirmLabel: "Elimina",
+      title: t("projects.overview.deleteTitle"),
+      message: t("projects.overview.deleteMessage"),
+      confirmLabel: t("action.delete"),
       destructive: true,
     }).then((ok) => {
       if (!ok) return;

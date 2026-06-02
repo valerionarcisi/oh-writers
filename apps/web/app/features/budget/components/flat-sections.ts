@@ -1,4 +1,9 @@
-import { resourceTotal, type FiscalRegime, type BudgetLine } from "@oh-writers/domain";
+import {
+  resourceTotal,
+  type FiscalRegime,
+  type BudgetLine,
+  type TranslationKey,
+} from "@oh-writers/domain";
 import type { BudgetCast, BudgetCrew } from "@oh-writers/db/schema";
 
 export const SectionIds = {
@@ -18,20 +23,20 @@ export const SectionIds = {
 } as const;
 export type SectionId = (typeof SectionIds)[keyof typeof SectionIds];
 
-export const SECTION_LABEL: Record<SectionId, string> = {
-  cast: "Cast",
-  crew: "Troupe",
-  locations: "Locations",
-  scenografia: "Scenografia",
-  costumi: "Costumi",
-  fotografia: "Fotografia",
-  suono: "Suono",
-  vfx: "VFX",
-  comparse: "Comparse",
-  vehicles: "Veicoli",
-  post: "Post-produzione",
-  contingency: "Contingency",
-  other: "Altro",
+export const SECTION_LABEL_KEY: Record<SectionId, TranslationKey> = {
+  cast: "budget.section.label.cast",
+  crew: "budget.section.label.crew",
+  locations: "budget.section.label.locations",
+  scenografia: "budget.section.label.scenografia",
+  costumi: "budget.section.label.costumi",
+  fotografia: "budget.section.label.fotografia",
+  suono: "budget.section.label.suono",
+  vfx: "budget.section.label.vfx",
+  comparse: "budget.section.label.comparse",
+  vehicles: "budget.section.label.vehicles",
+  post: "budget.section.label.post",
+  contingency: "budget.section.label.contingency",
+  other: "budget.section.label.other",
 };
 
 export const SECTION_TOKEN: Record<SectionId, string> = {
@@ -104,7 +109,7 @@ export type FlatRow = CastFlatRow | CrewFlatRow | LineFlatRow;
 
 export type FlatSection = {
   readonly id: SectionId;
-  readonly label: string;
+  readonly labelKey: TranslationKey;
   readonly tokenVar: string;
   readonly rows: ReadonlyArray<FlatRow>;
   readonly total: number;
@@ -232,7 +237,7 @@ export const buildFlatSections = (input: {
     if (rows.length === 0 && !ALWAYS_VISIBLE.has(id)) continue;
     result.push({
       id,
-      label: SECTION_LABEL[id],
+      labelKey: SECTION_LABEL_KEY[id],
       tokenVar: SECTION_TOKEN[id],
       rows,
       total: sumRows(rows),

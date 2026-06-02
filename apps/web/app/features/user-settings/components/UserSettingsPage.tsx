@@ -6,7 +6,7 @@ import { PasswordInput } from "~/features/auth";
 import { unwrapResult } from "@oh-writers/utils";
 import { TEAM_ROLE_LABELS_IT, type Locale } from "@oh-writers/domain";
 import { authClient } from "~/lib/auth-client";
-import { useLocale } from "~/features/i18n";
+import { useLocale, useTranslation } from "~/features/i18n";
 import {
   updateUserProfile,
   updateUserLocale,
@@ -28,6 +28,7 @@ export function UserSettingsPage({
   const profileQuery = useQuery(userProfileQueryOptions());
   const profile = profileQuery.data?.isOk ? profileQuery.data.value : null;
 
+  const { t } = useTranslation();
   const name = profile?.name ?? userName;
   const email = profile?.email ?? userEmail;
   const avatarUrl = profile?.avatarUrl ?? null;
@@ -35,7 +36,7 @@ export function UserSettingsPage({
   return (
     <div className={styles.page}>
       <div>
-        <h1 className={styles.title}>Impostazioni account</h1>
+        <h1 className={styles.title}>{t("settings.title")}</h1>
         <p className={styles.subtitle}>{email}</p>
       </div>
 
@@ -56,19 +57,6 @@ export function UserSettingsPage({
 
 // ── Profile ────────────────────────────────────────────────────────────────
 
-const ProfileSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Il nome è obbligatorio")
-    .max(100, "Massimo 100 caratteri"),
-  avatarUrl: z
-    .string()
-    .url("URL non valido")
-    .or(z.literal(""))
-    .transform((v) => (v === "" ? null : v))
-    .nullable(),
-});
-
 function ProfileSection({
   initialName,
   email,
@@ -78,6 +66,19 @@ function ProfileSection({
   email: string;
   initialAvatarUrl: string | null;
 }) {
+  const { t } = useTranslation();
+  const profileSchema = z.object({
+    name: z
+      .string()
+      .min(1, t("settings.profile.validation.nameRequired"))
+      .max(100, t("settings.profile.validation.nameMax")),
+    avatarUrl: z
+      .string()
+      .url(t("settings.profile.validation.urlInvalid"))
+      .or(z.literal(""))
+      .transform((v) => (v === "" ? null : v))
+      .nullable(),
+  });
   const qc = useQueryClient();
   const [name, setName] = useState(initialName);
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl ?? "");
@@ -92,7 +93,7 @@ function ProfileSection({
 
   const mut = useMutation({
     mutationFn: async () => {
-      const parsed = ProfileSchema.safeParse({
+      const parsed = profileSchema.safeParse({
         name,
         avatarUrl: avatarUrl || null,
       });
@@ -119,25 +120,31 @@ function ProfileSection({
     },
     onError: (e) => {
       if ((e as Error).message !== "validation") {
-        setApiError((e as Error).message ?? "Errore durante il salvataggio.");
+        setApiError((e as Error).message ?? t("settings.profile.saveError"));
       }
     },
   });
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Profilo</h2>
+      <h2 className={styles.sectionTitle}>
+        {t("settings.profile.sectionTitle")}
+      </h2>
 
       <div className={styles.avatarRow}>
         {previewUrl ? (
-          <img src={previewUrl} alt="Avatar" className={styles.avatarPreview} />
+          <img
+            src={previewUrl}
+            alt={t("settings.profile.avatarAlt")}
+            className={styles.avatarPreview}
+          />
         ) : (
           <div className={styles.avatarFallback}>
             {name.charAt(0).toUpperCase()}
           </div>
         )}
         <FormField
-          label="URL avatar"
+          label={t("settings.profile.avatarUrlLabel")}
           htmlFor="avatar-url"
           error={fieldErrors.avatarUrl}
           className={styles.avatarField}
@@ -156,7 +163,11 @@ function ProfileSection({
       </div>
 
       <div className={styles.fieldGroup}>
-        <FormField label="Nome" htmlFor="profile-name" error={fieldErrors.name}>
+        <FormField
+          label={t("settings.profile.nameLabel")}
+          htmlFor="profile-name"
+          error={fieldErrors.name}
+        >
           <Input
             id="profile-name"
             type="text"
@@ -169,7 +180,9 @@ function ProfileSection({
         </FormField>
 
         <div className={styles.emailField}>
-          <span className={styles.fieldLabel}>Email</span>
+          <span className={styles.fieldLabel}>
+            {t("settings.profile.emailLabel")}
+          </span>
           <span className={styles.readOnly} data-testid="profile-email">
             {email}
           </span>
@@ -179,7 +192,7 @@ function ProfileSection({
       <div className={styles.formActions}>
         {success && (
           <span className={styles.successMsg} data-testid="profile-success-msg">
-            Salvato!
+            {t("settings.profile.saved")}
           </span>
         )}
         {apiError && (
@@ -194,7 +207,9 @@ function ProfileSection({
           disabled={mut.isPending}
           data-testid="save-profile-btn"
         >
-          {mut.isPending ? "Salvataggio…" : "Salva profilo"}
+          {mut.isPending
+            ? t("settings.profile.saving")
+            : t("settings.profile.save")}
         </Button>
       </div>
     </section>
@@ -203,26 +218,15 @@ function ProfileSection({
 
 // ── Password ───────────────────────────────────────────────────────────────
 
-const PasswordSchema = z
-  .object({
-    current: z.string().min(1, "Inserisci la password attuale"),
-    next: z.string().min(8, "La nuova password deve avere almeno 8 caratteri"),
-    confirm: z.string().min(1, "Conferma la nuova password"),
-  })
-  .refine((d) => d.next === d.confirm, {
-    message: "Le password non corrispondono",
-    path: ["confirm"],
-  });
-
 // ── Language ─────────────────────────────────────────────────────────────────
 
-const LOCALE_OPTIONS: ReadonlyArray<{ id: Locale; label: string }> = [
-  { id: "it", label: "Italiano" },
-  { id: "en", label: "English" },
-];
-
 function LanguageSection() {
+  const { t } = useTranslation();
   const currentLocale = useLocale();
+  const localeOptions: ReadonlyArray<{ id: Locale; label: string }> = [
+    { id: "it", label: t("settings.language.optionIt") },
+    { id: "en", label: t("settings.language.optionEn") },
+  ];
   const [selected, setSelected] = useState<Locale>(currentLocale);
 
   const mut = useMutation({
@@ -245,18 +249,21 @@ function LanguageSection() {
 
   return (
     <section className={styles.section} data-testid="language-section">
-      <h2 className={styles.sectionTitle}>Lingua</h2>
+      <h2 className={styles.sectionTitle}>
+        {t("settings.language.sectionTitle")}
+      </h2>
       <SegmentedControl<Locale>
-        options={LOCALE_OPTIONS}
+        options={localeOptions}
         activeId={selected}
         onSelect={onSelect}
-        ariaLabel="Lingua dell'interfaccia"
+        ariaLabel={t("settings.language.ariaLabel")}
       />
     </section>
   );
 }
 
 function PasswordSection() {
+  const { t } = useTranslation();
   const providersQuery = useQuery(userAccountProvidersQueryOptions());
   const hasPassword =
     providersQuery.data?.isOk && providersQuery.data.value.hasPassword;
@@ -270,12 +277,27 @@ function PasswordSection() {
   if (providersQuery.isLoading) return null;
   if (!hasPassword) return null;
 
+  const passwordSchema = z
+    .object({
+      current: z
+        .string()
+        .min(1, t("settings.password.validation.currentRequired")),
+      next: z.string().min(8, t("settings.password.validation.nextMin")),
+      confirm: z
+        .string()
+        .min(1, t("settings.password.validation.confirmRequired")),
+    })
+    .refine((d) => d.next === d.confirm, {
+      message: t("settings.password.validation.mismatch"),
+      path: ["confirm"],
+    });
+
   const setField =
     (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setFields((prev) => ({ ...prev, [k]: e.target.value }));
 
   const handleSubmit = async () => {
-    const parsed = PasswordSchema.safeParse(fields);
+    const parsed = passwordSchema.safeParse(fields);
     if (!parsed.success) {
       const flat = parsed.error.flatten().fieldErrors;
       const formErrs = parsed.error.flatten().formErrors;
@@ -297,7 +319,7 @@ function PasswordSection() {
       });
       if (result.error) {
         setApiError(
-          result.error.message ?? "Errore durante il cambio password.",
+          result.error.message ?? t("settings.password.changeError"),
         );
       } else {
         setSuccess(true);
@@ -305,7 +327,7 @@ function PasswordSection() {
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch {
-      setApiError("Errore durante il cambio password.");
+      setApiError(t("settings.password.changeError"));
     } finally {
       setIsPending(false);
     }
@@ -313,11 +335,13 @@ function PasswordSection() {
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Cambia password</h2>
+      <h2 className={styles.sectionTitle}>
+        {t("settings.password.sectionTitle")}
+      </h2>
 
       <div className={styles.fieldGroup}>
         <FormField
-          label="Password attuale"
+          label={t("settings.password.currentLabel")}
           htmlFor="current-pwd"
           error={fieldErrors.current}
         >
@@ -333,7 +357,7 @@ function PasswordSection() {
         </FormField>
 
         <FormField
-          label="Nuova password"
+          label={t("settings.password.newLabel")}
           htmlFor="new-pwd"
           error={fieldErrors.next}
         >
@@ -349,7 +373,7 @@ function PasswordSection() {
         </FormField>
 
         <FormField
-          label="Conferma nuova password"
+          label={t("settings.password.confirmLabel")}
           htmlFor="confirm-pwd"
           error={fieldErrors.confirm}
         >
@@ -371,7 +395,7 @@ function PasswordSection() {
             className={styles.successMsg}
             data-testid="password-success-msg"
           >
-            Password aggiornata!
+            {t("settings.password.updated")}
           </span>
         )}
         {apiError && (
@@ -386,7 +410,9 @@ function PasswordSection() {
           disabled={isPending}
           data-testid="save-password-btn"
         >
-          {isPending ? "Salvataggio…" : "Aggiorna password"}
+          {isPending
+            ? t("settings.password.saving")
+            : t("settings.password.save")}
         </Button>
       </div>
     </section>
@@ -396,17 +422,18 @@ function PasswordSection() {
 // ── Teams ──────────────────────────────────────────────────────────────────
 
 function TeamsSection() {
+  const { t } = useTranslation();
   const teamsQuery = useQuery(userTeamsQueryOptions());
 
   const teamList = teamsQuery.data?.isOk ? teamsQuery.data.value : [];
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Team</h2>
+      <h2 className={styles.sectionTitle}>{t("settings.teams.sectionTitle")}</h2>
 
       {teamsQuery.isLoading ? null : teamList.length === 0 ? (
         <p className={styles.emptyState} data-testid="teams-empty-state">
-          Non fai parte di nessun team.
+          {t("settings.teams.empty")}
         </p>
       ) : (
         <div className={styles.teamList} data-testid="teams-list">

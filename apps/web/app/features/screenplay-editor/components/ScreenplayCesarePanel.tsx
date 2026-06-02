@@ -6,6 +6,8 @@ import {
   type PolishSuggestion,
 } from "../server/screenplay-polish.server";
 import { staleScenesOptions } from "~/features/breakdown";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ScreenplayCesarePanel.module.css";
 
 interface ScreenplayCesarePanelProps {
@@ -24,25 +26,30 @@ interface ScreenplayCesarePanelProps {
 }
 
 export function ScreenplayCesarePanel(props: ScreenplayCesarePanelProps) {
+  const { t } = useTranslation();
   return (
-    <aside className={styles.panel} aria-label="Note di Cesare">
+    <aside className={styles.panel} aria-label={t("screenplay.cesare.notesAria")}>
       <header className={styles.header}>
         <span className={styles.label}>Cesare</span>
       </header>
-      <Suspense fallback={<p className={styles.loading}>Lettura in corso…</p>}>
+      <Suspense
+        fallback={
+          <p className={styles.loading}>{t("screenplay.cesare.reading")}</p>
+        }
+      >
         <PanelBody {...props} />
       </Suspense>
     </aside>
   );
 }
 
-const KIND_LABEL: Record<PolishSuggestion["kind"], string> = {
-  dialogue: "Dialogo",
-  action: "Azione",
-  structure: "Struttura",
-  pacing: "Pacing",
-  style: "Stile",
-  format: "Formato",
+const KIND_LABEL_KEY: Record<PolishSuggestion["kind"], TranslationKey> = {
+  dialogue: "screenplay.cesare.kind.dialogue",
+  action: "screenplay.cesare.kind.action",
+  structure: "screenplay.cesare.kind.structure",
+  pacing: "screenplay.cesare.kind.pacing",
+  style: "screenplay.cesare.kind.style",
+  format: "screenplay.cesare.kind.format",
 };
 
 const KIND_COLOR: Record<PolishSuggestion["kind"], string> = {
@@ -66,6 +73,7 @@ function PanelBody({
   sceneTotal,
   onApplyEdit,
 }: ScreenplayCesarePanelProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const hasContent = sceneTotal > 0;
@@ -101,7 +109,7 @@ function PanelBody({
         next.delete(id);
         return next;
       });
-      setFlash("Modifica applicata · Cmd+Z per annullare");
+      setFlash(t("screenplay.cesare.editApplied"));
       window.setTimeout(() => setFlash(null), 2400);
     } else {
       setNotFoundIds((prev) => new Set(prev).add(id));
@@ -121,7 +129,10 @@ function PanelBody({
     });
   };
 
-  const sceneLabel = debouncedScene !== null ? `Sc. ${debouncedScene}` : null;
+  const sceneLabel =
+    debouncedScene !== null
+      ? `${t("screenplay.cesare.scenePrefix")}${debouncedScene}`
+      : null;
   const isWaitingForDebounce = sceneCurrent !== debouncedScene;
   const isLoading =
     hasContent && (isWaitingForDebounce || polishQ.isFetching);
@@ -133,13 +144,13 @@ function PanelBody({
         <div className={styles.notesHeadRow}>
           <p className={styles.notesHead}>
             {!hasContent ? (
-              "Scrivi almeno una scena per iniziare."
+              t("screenplay.cesare.writeOneScene")
             ) : isLoading ? (
-              `${sceneLabel ? `${sceneLabel} · ` : ""}Cesare sta leggendo…`
+              `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.cesareReading")}`
             ) : suggestions.length > 0 ? (
-              `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length} rifiniture`
+              `${sceneLabel ? `${sceneLabel} · ` : ""}${suggestions.length}${t("screenplay.cesare.refinementsSuffix")}`
             ) : (
-              `${sceneLabel ? `${sceneLabel} · ` : ""}Nessuna rifinitura.`
+              `${sceneLabel ? `${sceneLabel} · ` : ""}${t("screenplay.cesare.noRefinements")}`
             )}
           </p>
           <button
@@ -147,8 +158,8 @@ function PanelBody({
             className={styles.refresh}
             onClick={handleRefresh}
             disabled={polishQ.isFetching || !hasContent}
-            aria-label="Rilegge la sceneggiatura"
-            title="Rilegge la sceneggiatura"
+            aria-label={t("screenplay.cesare.rereadAria")}
+            title={t("screenplay.cesare.rereadTitle")}
           >
             ↻
           </button>
@@ -209,10 +220,11 @@ function PanelBody({
                         className={styles.kindTag}
                         style={{ color: KIND_COLOR[s.kind] }}
                       >
-                        {KIND_LABEL[s.kind]}
+                        {t(KIND_LABEL_KEY[s.kind])}
                       </span>
                       <span className={styles.sceneTag} data-num>
-                        Sc. {s.scene}
+                        {t("screenplay.cesare.scenePrefix")}
+                        {s.scene}
                       </span>
                     </p>
                     <p className={styles.suggestionMessage}>
@@ -220,10 +232,10 @@ function PanelBody({
                       {notFoundIds.has(s.id) && (
                         <span
                           className={styles.notFoundTag}
-                          title="Testo non trovato nella sceneggiatura"
-                          aria-label="Testo non trovato nella sceneggiatura"
+                          title={t("screenplay.cesare.textNotFoundTitle")}
+                          aria-label={t("screenplay.cesare.textNotFoundTitle")}
                         >
-                          ! testo non trovato
+                          {t("screenplay.cesare.textNotFoundTag")}
                         </span>
                       )}
                     </p>
@@ -245,7 +257,7 @@ function PanelBody({
                         }
                         data-testid={`cesare-apply-${s.id}`}
                       >
-                        Applica
+                        {t("screenplay.cesare.apply")}
                       </button>
                     )}
                   </div>
@@ -258,8 +270,10 @@ function PanelBody({
         {staleScenes.length > 0 && (
           <p className={styles.stale}>
             {staleScenes.length}{" "}
-            {staleScenes.length === 1 ? "scena obsoleta" : "scene obsolete"} —
-            il breakdown è da rispogliare.
+            {staleScenes.length === 1
+              ? t("screenplay.cesare.staleSingular")
+              : t("screenplay.cesare.stalePlural")}
+            {t("screenplay.cesare.staleSuffix")}
           </p>
         )}
       </section>
@@ -270,7 +284,7 @@ function PanelBody({
         onClick={handleOpenBreakdown}
         data-testid="screenplay-cesare-open-breakdown"
       >
-        Apri Breakdown →
+        {t("screenplay.cesare.openBreakdown")}
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
 import type { ScreenplaySummary } from "../../server/project-overview.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ScreenplaySection.module.css";
 
 interface ScreenplaySectionProps {
@@ -25,6 +26,7 @@ export function ScreenplaySection({
   projectId,
   screenplay,
 }: ScreenplaySectionProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const open = () =>
@@ -40,10 +42,12 @@ export function ScreenplaySection({
     >
       <div className={styles.head}>
         <h2 id="overview-screenplay-h" className={styles.title}>
-          Sceneggiatura
+          {t("nav.screenplay")}
         </h2>
         <span className={styles.meta}>
-          {screenplay ? "Versione attuale" : "Non ancora avviata"}
+          {screenplay
+            ? t("projects.screenplaySection.currentVersion")
+            : t("projects.screenplaySection.notStarted")}
         </span>
       </div>
       <div className={styles.card}>
@@ -59,38 +63,41 @@ export function ScreenplaySection({
               <div className={styles.stats}>
                 <span>
                   <span className={styles.num}>{screenplay.pageCount}</span>{" "}
-                  pagine
+                  {t("projects.screenplaySection.pages")}
                 </span>
                 <span>
                   <span className={styles.num}>{screenplay.sceneCount}</span>{" "}
-                  scene
+                  {t("projects.screenplaySection.scenes")}
                 </span>
                 <span>
                   <span className={styles.num}>
                     {screenplay.characterCount}
                   </span>{" "}
-                  personaggi
+                  {t("projects.screenplaySection.characters")}
                 </span>
               </div>
               <div className={styles.foot}>
-                Aggiornata {formatTimestamp(screenplay.updatedAt)} · Salvataggio
-                automatico attivo
+                {t("projects.screenplaySection.updated")}{" "}
+                {formatTimestamp(screenplay.updatedAt)} ·{" "}
+                {t("projects.screenplaySection.autosave")}
               </div>
             </div>
             <Button variant="primary" size="md" onPress={open}>
-              Apri editor →
+              {t("projects.screenplaySection.openEditor")}
             </Button>
           </>
         ) : (
           <>
             <div className={styles.metaCol}>
-              <h3 className={styles.cardTitle}>Nessuna sceneggiatura</h3>
+              <h3 className={styles.cardTitle}>
+                {t("projects.screenplaySection.noScreenplay")}
+              </h3>
               <div className={styles.foot}>
-                Apri l'editor per creare la prima bozza.
+                {t("projects.screenplaySection.createFirstDraft")}
               </div>
             </div>
             <Button variant="primary" size="md" onPress={open}>
-              Apri editor →
+              {t("projects.screenplaySection.openEditor")}
             </Button>
           </>
         )}

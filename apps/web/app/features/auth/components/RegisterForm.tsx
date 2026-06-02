@@ -3,13 +3,14 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { Button } from "@oh-writers/ui";
 import { authClient } from "~/lib/auth-client";
+import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
 import styles from "./RegisterForm.module.css";
 
 const RegisterSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(8),
 });
 
 type FormValues = z.infer<typeof RegisterSchema>;
@@ -17,6 +18,15 @@ type FormErrors = Partial<Record<keyof FormValues, string>>;
 
 export function RegisterForm() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const registerSchema = z.object({
+    name: z
+      .string()
+      .min(1, t("auth.register.validation.nameRequired"))
+      .max(100, t("auth.register.validation.nameTooLong")),
+    email: z.string().email(t("auth.register.validation.emailInvalid")),
+    password: z.string().min(8, t("auth.register.validation.passwordMin")),
+  });
   const [values, setValues] = useState<FormValues>({
     name: "",
     email: "",
@@ -34,7 +44,7 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = RegisterSchema.safeParse(values);
+    const result = registerSchema.safeParse(values);
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const issue of result.error.issues) {
@@ -54,7 +64,7 @@ export function RegisterForm() {
     setIsSubmitting(false);
 
     if (error) {
-      setApiError(error.message ?? "Failed to create account");
+      setApiError(error.message ?? t("auth.register.error.createFailed"));
       return;
     }
 
@@ -65,7 +75,7 @@ export function RegisterForm() {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <span className={styles.logo}>Oh Writers</span>
-        <h1 className={styles.heading}>Create account</h1>
+        <h1 className={styles.heading}>{t("auth.register.heading")}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form} noValidate>
@@ -73,7 +83,7 @@ export function RegisterForm() {
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="name">
-            Name <span className={styles.required}>*</span>
+            {t("auth.register.fieldName")} <span className={styles.required}>*</span>
           </label>
           <input
             id="name"
@@ -82,7 +92,7 @@ export function RegisterForm() {
             className={`${styles.input} ${errors.name ? styles.inputError : ""}`}
             value={values.name}
             onChange={(e) => setField("name", e.target.value)}
-            placeholder="Jane Smith"
+            placeholder={t("auth.register.placeholderName")}
             autoFocus
           />
           {errors.name && (
@@ -92,7 +102,7 @@ export function RegisterForm() {
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="email">
-            Email <span className={styles.required}>*</span>
+            {t("auth.register.fieldEmail")} <span className={styles.required}>*</span>
           </label>
           <input
             id="email"
@@ -101,7 +111,7 @@ export function RegisterForm() {
             className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
             value={values.email}
             onChange={(e) => setField("email", e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t("auth.register.placeholderEmail")}
           />
           {errors.email && (
             <span className={styles.fieldError}>{errors.email}</span>
@@ -110,7 +120,7 @@ export function RegisterForm() {
 
         <div className={styles.field}>
           <label className={styles.label} htmlFor="password">
-            Password <span className={styles.required}>*</span>
+            {t("auth.register.fieldPassword")} <span className={styles.required}>*</span>
           </label>
           <PasswordInput
             id="password"
@@ -118,7 +128,7 @@ export function RegisterForm() {
             hasError={!!errors.password}
             value={values.password}
             onChange={(e) => setField("password", e.target.value)}
-            placeholder="Min. 8 characters"
+            placeholder={t("auth.register.placeholderPassword")}
           />
           {errors.password && (
             <span className={styles.fieldError}>{errors.password}</span>
@@ -126,14 +136,16 @@ export function RegisterForm() {
         </div>
 
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account…" : "Create account"}
+          {isSubmitting
+            ? t("auth.register.submitting")
+            : t("auth.register.submit")}
         </Button>
       </form>
 
       <p className={styles.footer}>
-        Already have an account?{" "}
+        {t("auth.register.haveAccount")}{" "}
         <Link to="/login" className={styles.link}>
-          Sign in
+          {t("auth.register.signIn")}
         </Link>
       </p>
     </div>

@@ -7,6 +7,8 @@ import { StripCard } from "./StripCard";
 import { DayDifficultyBadge } from "./DayDifficultyBadge";
 import { DayLocationWarningBanner } from "./DayLocationWarningBanner";
 import { useDayEstimate, type DayWeatherAnchor } from "../hooks/useDayEstimate";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import styles from "./ShootingDayColumn.module.css";
 
 interface ShootingDayColumnProps {
@@ -73,6 +75,7 @@ export function ShootingDayColumn({
   onStripClick,
   onDayClick,
 }: ShootingDayColumnProps) {
+  const { t } = useTranslation();
   const { estimate, weather, isWeatherLoading } = useDayEstimate({
     day,
     weatherAnchor,
@@ -118,11 +121,14 @@ export function ShootingDayColumn({
     onDrop(day.id, day.strips.length);
   };
 
-  const dayTypeLabel: Record<ShootingDayView["dayType"], string> = {
-    shoot: "",
-    travel: "viaggio",
-    rest: "riposo",
-    prep: "prep",
+  const dayTypeLabelKey: Record<
+    ShootingDayView["dayType"],
+    TranslationKey | null
+  > = {
+    shoot: null,
+    travel: "schedule.dayColumn.dayType.travel",
+    rest: "schedule.dayColumn.dayType.rest",
+    prep: "schedule.dayColumn.dayType.prep",
   };
 
   const isRest = day.dayType === "rest";
@@ -135,18 +141,22 @@ export function ShootingDayColumn({
       <header
         className={styles.header}
         onClick={() => onDayClick(day.id)}
-        title="Apri dettagli giorno"
+        title={t("schedule.dayColumn.openDetails")}
       >
         <div className={styles.headerTop}>
           <span
             className={styles.dayNumber}
             data-testid={`day-header-${day.dayNumber}`}
           >
-            GIORNO {String(day.dayNumber).padStart(2, "0")}
+            {t("schedule.dayColumn.day")}{" "}
+            {String(day.dayNumber).padStart(2, "0")}
           </span>
           {day.dayType !== "shoot" && (
             <span className={styles.dayTypeBadge} data-type={day.dayType}>
-              {dayTypeLabel[day.dayType]}
+              {(() => {
+                const key = dayTypeLabelKey[day.dayType];
+                return key ? t(key) : "";
+              })()}
             </span>
           )}
           <div
@@ -157,15 +167,15 @@ export function ShootingDayColumn({
               align="end"
               data-testid={`add-scene-${day.dayNumber}`}
               triggerClassName={styles.actionBtn}
-              triggerLabel="Aggiungi scena"
-              triggerTitle="Aggiungi scena alla giornata"
+              triggerLabel={t("schedule.dayColumn.addScene")}
+              triggerTitle={t("schedule.dayColumn.addSceneToDay")}
               triggerDisabled={unscheduledStrips.length === 0}
               trigger={<Plus size={12} strokeWidth={2} aria-hidden="true" />}
               items={
                 unscheduledStrips.length === 0
                   ? [
                       {
-                        label: "Nessuna scena da aggiungere",
+                        label: t("schedule.dayColumn.noSceneToAdd"),
                         onClick: () => undefined,
                         disabled: true,
                       },
@@ -183,22 +193,22 @@ export function ShootingDayColumn({
               align="end"
               data-testid={`remove-scene-${day.dayNumber}`}
               triggerClassName={styles.actionBtn}
-              triggerLabel="Rimuovi scena"
-              triggerTitle="Rimuovi scena dalla giornata"
+              triggerLabel={t("schedule.dayColumn.removeScene")}
+              triggerTitle={t("schedule.dayColumn.removeSceneFromDay")}
               triggerDisabled={day.strips.length === 0}
               trigger={<Minus size={12} strokeWidth={2} aria-hidden="true" />}
               items={
                 day.strips.length === 0
                   ? [
                       {
-                        label: "Nessuna scena in questa giornata",
+                        label: t("schedule.dayColumn.noSceneInDay"),
                         onClick: () => undefined,
                         disabled: true,
                       },
                     ]
                   : day.strips.map((s) => ({
                       label: `SC ${s.sceneNumber} · ${s.location ?? "—"}`,
-                      description: "Sposta tra le non pianificate",
+                      description: t("schedule.dayColumn.moveToUnscheduled"),
                       onClick: () => onMoveStrip(s.id, null),
                     }))
               }
@@ -206,8 +216,8 @@ export function ShootingDayColumn({
             <button
               type="button"
               className={styles.removeBtn}
-              title="Rimuovi giorno"
-              aria-label="Rimuovi giorno"
+              title={t("schedule.dayColumn.removeDay")}
+              aria-label={t("schedule.dayColumn.removeDay")}
               data-testid={`remove-day-${day.dayNumber}`}
               onClick={() => onRemove(day.id)}
             >
@@ -234,8 +244,8 @@ export function ShootingDayColumn({
                   type="button"
                   className={styles.dateDisplay}
                   onClick={openDatePicker}
-                  aria-label="Modifica data"
-                  title="Modifica data"
+                  aria-label={t("schedule.dayColumn.editDate")}
+                  title={t("schedule.dayColumn.editDate")}
                 >
                   <span>{formatLongDate(day.date)}</span>
                   <Pencil size={11} strokeWidth={2} aria-hidden="true" />
@@ -248,21 +258,24 @@ export function ShootingDayColumn({
               className={styles.dateSet}
               onClick={openDatePicker}
               data-testid={`day-date-set-${day.dayNumber}`}
-              aria-label="Imposta data"
+              aria-label={t("schedule.dayColumn.setDate")}
             >
               <Calendar size={12} strokeWidth={2} aria-hidden="true" />
-              <span>Imposta data</span>
+              <span>{t("schedule.dayColumn.setDate")}</span>
             </button>
           )}
         </div>
 
         {!isRest && (
-          <div className={styles.kpiRow} aria-label="Riepilogo giornata">
+          <div
+            className={styles.kpiRow}
+            aria-label={t("schedule.dayColumn.summaryAria")}
+          >
             <span className={styles.kpi}>
-              <b>{kpis.sceneCount}</b> SCENE
+              <b>{kpis.sceneCount}</b> {t("schedule.dayColumn.scenes")}
             </span>
             <span className={styles.kpi}>
-              <b>{kpis.totalPages}</b> PAG
+              <b>{kpis.totalPages}</b> {t("schedule.dayColumn.pages")}
             </span>
             <span
               className={styles.kpi}
@@ -277,7 +290,11 @@ export function ShootingDayColumn({
             )}
           </div>
         )}
-        {isRest && <div className={styles.restLabel}>— giorno di riposo —</div>}
+        {isRest && (
+          <div className={styles.restLabel}>
+            {t("schedule.dayColumn.restDay")}
+          </div>
+        )}
         {!isRest && day.strips.length > 0 && (
           <DayDifficultyBadge
             estimate={estimate}

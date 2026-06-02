@@ -1,6 +1,7 @@
 import { useRef, type CSSProperties } from "react";
 import { useButton } from "react-aria";
 import { CATEGORY_META, type BreakdownCategory } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./RecapStrip.module.css";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ function AddToBudgetButton({
   onPress: () => void;
   isPending: boolean;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
@@ -63,7 +65,7 @@ function AddToBudgetButton({
       className={styles.cta}
       data-testid="recap-strip-add-to-budget"
     >
-      {isPending ? "Aggiungo…" : "Aggiungi al budget"}
+      {isPending ? t("cesare.recap.adding") : t("cesare.recap.addToBudget")}
     </button>
   );
 }
@@ -86,12 +88,14 @@ export function RecapStrip({
   sceneNumber,
   sceneLabel,
   cost,
-  costUnit = "/ giornata",
+  costUnit,
   categories,
   onAddToBudget,
   isAddPending = false,
   className,
 }: RecapStripProps) {
+  const { t } = useTranslation();
+  const resolvedCostUnit = costUnit ?? t("cesare.recap.costUnit");
   const eyebrow = sceneLabel
     ? `Sc. ${sceneNumber} ${sceneLabel}`
     : `Sc. ${sceneNumber}`;
@@ -103,18 +107,18 @@ export function RecapStrip({
       className={classes}
       data-testid="recap-strip"
       data-scene-id={sceneId}
-      aria-label={`Recap scena ${sceneNumber}`}
+      aria-label={`${t("cesare.recap.aria")} ${sceneNumber}`}
     >
       <div className={styles.costBlock}>
         <span className={styles.label}>{eyebrow}</span>
         <span className={styles.cost}>
           {formatEur(cost)}
-          <small>{costUnit}</small>
+          <small>{resolvedCostUnit}</small>
         </span>
       </div>
 
       {categories.length > 0 && (
-        <ul className={styles.cats} aria-label="Categorie">
+        <ul className={styles.cats} aria-label={t("cesare.recap.categoriesAria")}>
           {categories.map((item) => {
             const meta = CATEGORY_META[item.category];
             const label = item.label ?? meta.labelIt;

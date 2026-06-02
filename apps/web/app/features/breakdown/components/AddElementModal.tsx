@@ -8,6 +8,7 @@ import {
   type BreakdownCategory,
   type CastTier,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { useAddBreakdownElement } from "../hooks/useBreakdown";
 import styles from "./AddElementModal.module.css";
 
@@ -29,6 +30,7 @@ export function AddElementModal({
   versionId,
   sceneId,
 }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [category, setCategory] = useState<BreakdownCategory>(DEFAULT_CATEGORY);
   const [castTier, setCastTier] = useState<CastTier>(DEFAULT_CAST_TIER);
@@ -71,11 +73,11 @@ export function AddElementModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Aggiungi elemento"
+      title={t("breakdown.addElement.title")}
       footer={
         <>
           <DsButton variant="ghost" onClick={onClose}>
-            Annulla
+            {t("breakdown.addElement.cancel")}
           </DsButton>
           <DsButton
             type="submit"
@@ -84,7 +86,9 @@ export function AddElementModal({
             data-testid="add-element-submit"
             disabled={add.isPending}
           >
-            {add.isPending ? "Salvataggio…" : "Aggiungi"}
+            {add.isPending
+              ? t("breakdown.addElement.saving")
+              : t("breakdown.addElement.add")}
           </DsButton>
         </>
       }
@@ -95,7 +99,7 @@ export function AddElementModal({
         onSubmit={handleSubmit}
       >
         <label className={styles.field}>
-          <span className={styles.label}>Nome</span>
+          <span className={styles.label}>{t("breakdown.addElement.name")}</span>
           <input
             type="text"
             className={styles.input}
@@ -107,7 +111,9 @@ export function AddElementModal({
           />
         </label>
         <label className={styles.field}>
-          <span className={styles.label}>Categoria</span>
+          <span className={styles.label}>
+            {t("breakdown.addElement.category")}
+          </span>
           <select
             className={styles.input}
             data-testid="add-element-category"
@@ -123,7 +129,9 @@ export function AddElementModal({
         </label>
         {category === "cast" && (
           <label className={styles.field}>
-            <span className={styles.label}>Tier</span>
+            <span className={styles.label}>
+              {t("breakdown.addElement.tier")}
+            </span>
             <select
               className={styles.input}
               data-testid="add-element-cast-tier"
@@ -139,7 +147,9 @@ export function AddElementModal({
           </label>
         )}
         <label className={styles.field}>
-          <span className={styles.label}>Quantità</span>
+          <span className={styles.label}>
+            {t("breakdown.addElement.quantity")}
+          </span>
           <input
             type="number"
             className={styles.input}

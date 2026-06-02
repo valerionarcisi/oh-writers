@@ -5,6 +5,7 @@ import { Skeleton } from "@oh-writers/ui";
 import { getBreakdownForScene } from "~/features/breakdown";
 import { unwrapResult } from "@oh-writers/utils";
 import type { StripView } from "../server/schedule.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./SceneDrawer.module.css";
 
 interface SceneDrawerProps {
@@ -18,6 +19,7 @@ export function SceneDrawer({
   screenplayVersionId,
   onClose,
 }: SceneDrawerProps) {
+  const { t } = useTranslation();
   const { data: elements } = useQuery({
     queryKey: ["scene-breakdown", strip?.sceneId, screenplayVersionId],
     queryFn: () =>
@@ -63,7 +65,7 @@ export function SceneDrawer({
             type="button"
             className={styles.closeBtn}
             onClick={onClose}
-            title="Chiudi"
+            title={t("schedule.close")}
           >
             <X size={16} strokeWidth={2} />
           </button>
@@ -76,7 +78,9 @@ export function SceneDrawer({
               <div className={styles.sceneMeta}>
                 <span>{strip.intExt}</span>
                 {strip.timeOfDay && <span>· {strip.timeOfDay}</span>}
-                <span>· {strip.pageCount} pag.</span>
+                <span>
+                  · {strip.pageCount} {t("schedule.pagesShort")}
+                </span>
               </div>
             </div>
 
@@ -86,14 +90,14 @@ export function SceneDrawer({
                   <Skeleton
                     lines={5}
                     widths={["60%", "100%", "40%", "100%", "30%"]}
-                    ariaLabel="Caricamento elementi scena"
+                    ariaLabel={t("schedule.loadingSceneElements")}
                   />
                 </div>
               )}
 
               {grouped && Object.keys(grouped).length === 0 && (
                 <div className={styles.empty}>
-                  Nessun elemento di breakdown per questa scena.
+                  {t("schedule.sceneDrawer.noBreakdown")}
                 </div>
               )}
 

@@ -6,6 +6,7 @@ import {
   queryOptions,
 } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import {
   getBudgetCaps,
   setBudgetCap,
@@ -36,6 +37,7 @@ export function BudgetCapBar({
   projectId,
   currentSpendEuros,
 }: BudgetCapBarProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: caps } = useQuery(capsQueryOptions(projectId));
   const globalCap = (caps ?? []).find((c: BudgetCapDto) => c.topSheet === null);
@@ -106,7 +108,7 @@ export function BudgetCapBar({
       data-testid="budget-cap-bar"
       data-has-cap={globalCap !== undefined ? "true" : "false"}
     >
-      <span className={styles.label}>Tetto budget</span>
+      <span className={styles.label}>{t("budget.cap.label")}</span>
 
       {isEditing ? (
         <input
@@ -124,7 +126,7 @@ export function BudgetCapBar({
             if (e.key === "Escape") setIsEditing(false);
           }}
           placeholder="50000"
-          aria-label="Tetto budget in euro"
+          aria-label={t("budget.cap.inputAriaLabel")}
           data-testid="budget-cap-input"
         />
       ) : (
@@ -138,7 +140,9 @@ export function BudgetCapBar({
             {capCents !== null ? (
               formatCents(capCents)
             ) : (
-              <span className={styles.placeholder}>imposta tetto</span>
+              <span className={styles.placeholder}>
+                {t("budget.cap.placeholder")}
+              </span>
             )}
           </span>
           <span aria-hidden="true"> ✎</span>
@@ -153,7 +157,7 @@ export function BudgetCapBar({
             aria-valuemin={0}
             aria-valuemax={capCents}
             aria-valuenow={currentCents}
-            aria-label="Spesa stimata vs tetto"
+            aria-label={t("budget.cap.progressAriaLabel")}
           >
             <div
               className={`${styles.progressFill} ${
@@ -166,8 +170,14 @@ export function BudgetCapBar({
             {formatCents(currentCents)} ·{" "}
             <span className={isOver ? styles.overspend : ""}>
               {isOver
-                ? `sopra di ${formatCents(Math.abs(residualCents ?? 0))}`
-                : `restano ${formatCents(residualCents ?? 0)}`}
+                ? t("budget.cap.over").replace(
+                    "{amount}",
+                    formatCents(Math.abs(residualCents ?? 0)),
+                  )
+                : t("budget.cap.remaining").replace(
+                    "{amount}",
+                    formatCents(residualCents ?? 0),
+                  )}
             </span>
           </span>
         </>

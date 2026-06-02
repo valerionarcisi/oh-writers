@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { DAILY_CAPACITY_HOURS } from "@oh-writers/domain";
+import type { TranslationKey } from "@oh-writers/domain";
 import type { ShootingDayView } from "../server/schedule.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ShootingDayDrawer.module.css";
 
 interface ShootingDayDrawerProps {
@@ -10,11 +12,11 @@ interface ShootingDayDrawerProps {
   onEffortChange: (stripId: string, estimatedHours: number | null) => void;
 }
 
-const DAY_TYPE_LABEL: Record<ShootingDayView["dayType"], string> = {
-  shoot: "Riprese",
-  travel: "Viaggio",
-  rest: "Riposo",
-  prep: "Prep",
+const DAY_TYPE_LABEL_KEY: Record<ShootingDayView["dayType"], TranslationKey> = {
+  shoot: "schedule.dayDrawer.dayType.shoot",
+  travel: "schedule.dayDrawer.dayType.travel",
+  rest: "schedule.dayDrawer.dayType.rest",
+  prep: "schedule.dayDrawer.dayType.prep",
 };
 
 const capacityColor = (hours: number): "green" | "yellow" | "red" => {
@@ -28,6 +30,7 @@ export function ShootingDayDrawer({
   onClose,
   onEffortChange,
 }: ShootingDayDrawerProps) {
+  const { t } = useTranslation();
   // Local input state: stripId → string value (empty = auto)
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
@@ -88,7 +91,12 @@ export function ShootingDayDrawer({
       >
         <div className={styles.drawerHeader}>
           <div className={styles.dayLabel}>
-            {day ? `Giorno ${day.dayNumber}` : ""}
+            {day
+              ? t("schedule.dayDrawer.dayLabel").replace(
+                  "{number}",
+                  String(day.dayNumber),
+                )
+              : ""}
           </div>
           <div className={styles.headerMeta}>
             {day?.date && (
@@ -101,7 +109,7 @@ export function ShootingDayDrawer({
             )}
             {day && (
               <span className={styles.dayTypeBadge} data-type={day.dayType}>
-                {DAY_TYPE_LABEL[day.dayType]}
+                {t(DAY_TYPE_LABEL_KEY[day.dayType])}
               </span>
             )}
           </div>
@@ -109,7 +117,7 @@ export function ShootingDayDrawer({
             type="button"
             className={styles.closeBtn}
             onClick={onClose}
-            title="Chiudi"
+            title={t("schedule.close")}
           >
             <X size={16} strokeWidth={2} />
           </button>
@@ -119,7 +127,7 @@ export function ShootingDayDrawer({
           <>
             <div className={styles.capacitySection}>
               <div className={styles.capacityLabel}>
-                <span>Capacità giornata</span>
+                <span>{t("schedule.dayDrawer.capacity")}</span>
                 <span
                   className={styles.capacityValue}
                   data-color={barColor}
@@ -140,8 +148,8 @@ export function ShootingDayDrawer({
               </div>
               {totalHours > DAILY_CAPACITY_HOURS && (
                 <div className={styles.overCapacityNote}>
-                  +{(totalHours - DAILY_CAPACITY_HOURS).toFixed(1)}h oltre la
-                  capacità
+                  +{(totalHours - DAILY_CAPACITY_HOURS).toFixed(1)}h{" "}
+                  {t("schedule.dayDrawer.overCapacity")}
                 </div>
               )}
             </div>
@@ -149,7 +157,7 @@ export function ShootingDayDrawer({
             <div className={styles.sceneList}>
               {day.strips.length === 0 && (
                 <div className={styles.empty}>
-                  Nessuna scena in questo giorno.
+                  {t("schedule.dayDrawer.noScene")}
                 </div>
               )}
               {day.strips.map((strip) => {
@@ -171,7 +179,7 @@ export function ShootingDayDrawer({
                         </span>
                       </div>
                       <div className={styles.scenePages}>
-                        {strip.pageCount} pag.
+                        {strip.pageCount} {t("schedule.pagesShort")}
                       </div>
                     </div>
                     <div className={styles.effortCell}>
@@ -196,7 +204,7 @@ export function ShootingDayDrawer({
                         <button
                           type="button"
                           className={styles.clearBtn}
-                          title="Ripristina auto"
+                          title={t("schedule.dayDrawer.restoreAuto")}
                           onClick={() => {
                             setInputs((prev) => ({
                               ...prev,

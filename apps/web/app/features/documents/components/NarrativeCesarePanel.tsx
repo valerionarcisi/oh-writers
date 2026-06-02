@@ -6,6 +6,7 @@ import {
   type NarrativePolishSuggestion,
   type NarrativePolishSuggestionDoc,
 } from "../server/narrative-polish.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./NarrativeCesarePanel.module.css";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -54,9 +55,9 @@ function SkeletonMemo() {
   );
 }
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ loadingLabel }: { loadingLabel: string }) {
   return (
-    <div className={styles.body} aria-busy="true" aria-label="Caricamento suggerimenti">
+    <div className={styles.body} aria-busy="true" aria-label={loadingLabel}>
       <section className={styles.group}>
         <p className={[styles.groupLabel, styles.skeletonLine, styles.skeletonShort].join(" ")} aria-hidden="true" />
         <ul className={styles.list}>
@@ -75,17 +76,19 @@ function LoadingSkeleton() {
 }
 
 function EmptyContentState() {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
-      <p className={styles.emptyText}>Inizia a scrivere per ricevere suggerimenti da Cesare.</p>
+      <p className={styles.emptyText}>{t("documents.cesarePanel.empty")}</p>
     </div>
   );
 }
 
 function ErrorState() {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
-      <p className={styles.emptyText}>Impossibile caricare i suggerimenti. Riprova più tardi.</p>
+      <p className={styles.emptyText}>{t("documents.cesarePanel.error")}</p>
     </div>
   );
 }
@@ -98,6 +101,9 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
   content,
 }) => {
   if (!isNarrativeDocType(docType)) return null;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { t } = useTranslation();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery(narrativePolishQueryOptions(projectId, docType, content));
@@ -116,14 +122,17 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
   const isError = query.isError || (query.data != null && !query.data.isOk);
 
   const statusLabel = isLoading
-    ? "Analisi…"
+    ? t("documents.cesarePanel.statusAnalyzing")
     : isError
-      ? "Errore"
+      ? t("documents.cesarePanel.statusError")
       : suggestions.length > 0
-        ? `${suggestions.length} note`
+        ? t("documents.cesarePanel.statusNotes").replace(
+            "{count}",
+            String(suggestions.length),
+          )
         : hasContent
-          ? "Nessuna nota"
-          : "–";
+          ? t("documents.cesarePanel.statusNoNotes")
+          : t("documents.cesarePanel.statusNone");
 
   const lastUpdated = query.dataUpdatedAt > 0
     ? new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(
@@ -132,7 +141,10 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
     : null;
 
   return (
-    <aside className={styles.panel} aria-label="Note di Cesare">
+    <aside
+      className={styles.panel}
+      aria-label={t("documents.cesarePanel.ariaLabel")}
+    >
       <header className={styles.header}>
         <span className={styles.label}>Cesare</span>
         <span className={styles.status}>{statusLabel}</span>
@@ -141,7 +153,9 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
       {!hasContent ? (
         <EmptyContentState />
       ) : isLoading && suggestions.length === 0 ? (
-        <LoadingSkeleton />
+        <LoadingSkeleton
+          loadingLabel={t("documents.loading.suggestions")}
+        />
       ) : isError ? (
         <ErrorState />
       ) : (
@@ -163,7 +177,7 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
       )}
 
       <footer className={styles.footer}>
-        <span>Analisi AI</span>
+        <span>{t("documents.cesarePanel.footerAnalysis")}</span>
         <span>{lastUpdated ?? "–"}</span>
       </footer>
     </aside>

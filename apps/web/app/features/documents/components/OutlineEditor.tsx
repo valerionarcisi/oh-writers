@@ -13,6 +13,7 @@ import {
   moveSequenceBetweenActs,
   moveAct,
 } from "../lib/outline-drag";
+import { useTranslation } from "~/features/i18n";
 import styles from "./OutlineEditor.module.css";
 
 interface OutlineEditorProps {
@@ -248,6 +249,7 @@ interface CharacterPickerProps {
 }
 
 function CharacterPicker({ selected, suggestions, onChange, readOnly }: CharacterPickerProps) {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const inputId = useId();
 
@@ -296,7 +298,10 @@ function CharacterPicker({ selected, suggestions, onChange, readOnly }: Characte
                 type="button"
                 className={styles.characterTagRemove}
                 onClick={() => remove(char)}
-                aria-label={`Rimuovi ${char}`}
+                aria-label={t("documents.outline.removeCharacterAria").replace(
+                  "{character}",
+                  char,
+                )}
               >
                 ×
               </button>
@@ -311,8 +316,12 @@ function CharacterPicker({ selected, suggestions, onChange, readOnly }: Characte
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={selected.length === 0 ? "Personaggi…" : ""}
-              aria-label="Aggiungi personaggio"
+              placeholder={
+                selected.length === 0
+                  ? t("documents.outline.charactersPlaceholder")
+                  : ""
+              }
+              aria-label={t("documents.outline.addCharacterAria")}
             />
             {filtered.length > 0 && (
               <ul className={styles.characterSuggestions} role="listbox">
@@ -366,6 +375,7 @@ function SceneCard({
   characterSuggestions,
   readOnly,
 }: SceneCardProps) {
+  const { t } = useTranslation();
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
@@ -393,7 +403,11 @@ function SceneCard({
       onDragEnd={() => setIsDragOver(false)}
     >
       {!readOnly && (
-        <span className={styles.dragHandle} aria-hidden="true" title="Trascina per riordinare">
+        <span
+          className={styles.dragHandle}
+          aria-hidden="true"
+          title={t("documents.outline.dragToReorder")}
+        >
           ⠿
         </span>
       )}
@@ -403,17 +417,17 @@ function SceneCard({
           className={styles.sceneHeadingInput}
           value={scene.heading}
           onChange={(e) => onUpdate({ heading: e.target.value.toUpperCase() })}
-          placeholder="INT. LUOGO - GIORNO"
+          placeholder={t("documents.outline.sceneHeadingPlaceholder")}
           readOnly={readOnly}
-          aria-label="Intestazione scena"
+          aria-label={t("documents.outline.sceneHeadingAria")}
         />
         <input
           className={styles.sceneDescriptionInput}
           value={scene.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
-          placeholder="Descrizione della scena…"
+          placeholder={t("documents.outline.sceneDescriptionPlaceholder")}
           readOnly={readOnly}
-          aria-label="Descrizione scena"
+          aria-label={t("documents.outline.sceneDescriptionAria")}
         />
         <div className={styles.sceneFooter}>
           <CharacterPicker
@@ -423,7 +437,9 @@ function SceneCard({
             readOnly={readOnly}
           />
           <div className={styles.pageEstimateWrapper}>
-            <label className={styles.pageEstimateLabel}>pp.</label>
+            <label className={styles.pageEstimateLabel}>
+              {t("documents.outline.pagesShort")}
+            </label>
             <input
               type="number"
               className={styles.pageEstimateInput}
@@ -436,7 +452,7 @@ function SceneCard({
                 onUpdate({ pageEstimate: isNaN(v) ? null : Math.min(20, Math.max(0, v)) });
               }}
               readOnly={readOnly}
-              aria-label="Pagine stimate"
+              aria-label={t("documents.outline.estimatedPagesAria")}
               placeholder="—"
             />
           </div>
@@ -446,7 +462,7 @@ function SceneCard({
         <button
           className={styles.deleteBtn}
           onClick={onDelete}
-          aria-label="Elimina scena"
+          aria-label={t("documents.outline.deleteSceneAria")}
           type="button"
         >
           ×
@@ -487,6 +503,7 @@ function SequenceBlock({
   outline,
   readOnly,
 }: SequenceBlockProps) {
+  const { t } = useTranslation();
   const [isSeqDragOver, setIsSeqDragOver] = useState(false);
 
   const handleSceneDragStart = useCallback(
@@ -558,7 +575,11 @@ function SequenceBlock({
     >
       <div className={styles.sequenceHeader}>
         {!readOnly && (
-          <span className={styles.dragHandle} aria-hidden="true" title="Trascina sequenza">
+          <span
+            className={styles.dragHandle}
+            aria-hidden="true"
+            title={t("documents.outline.dragSequence")}
+          >
             ⠿
           </span>
         )}
@@ -566,14 +587,14 @@ function SequenceBlock({
           className={styles.sequenceTitleInput}
           value={sequence.title}
           onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="Titolo sequenza…"
+          placeholder={t("documents.outline.sequenceTitlePlaceholder")}
           readOnly={readOnly}
         />
         {!readOnly && (
           <button
             className={styles.deleteBtn}
             onClick={onDelete}
-            aria-label="Elimina sequenza"
+            aria-label={t("documents.outline.deleteSequenceAria")}
             type="button"
           >
             ×
@@ -599,7 +620,7 @@ function SequenceBlock({
         ))}
         {!readOnly && (
           <button className={styles.addBtn} onClick={onAddScene} type="button">
-            + Aggiungi scena
+            {t("documents.outline.addScene")}
           </button>
         )}
       </div>
@@ -630,6 +651,7 @@ function ActBlock({
   outline,
   readOnly,
 }: ActBlockProps) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -653,7 +675,11 @@ function ActBlock({
     activeDrag = null;
   };
 
-  const collapsedSummary = `${act.sequences.length} sequenze · ${sceneCount} scene${totalPages > 0 ? ` · ~${totalPages}pp` : ""}`;
+  const collapsedSummary = `${t("documents.outline.sequencesScenes")
+    .replace("{sequences}", String(act.sequences.length))
+    .replace("{scenes}", String(sceneCount))}${
+    totalPages > 0 ? ` · ~${totalPages}pp` : ""
+  }`;
 
   return (
     <div
@@ -670,7 +696,11 @@ function ActBlock({
     >
       <div className={styles.actHeader}>
         {!readOnly && (
-          <span className={styles.dragHandle} aria-hidden="true" title="Trascina atto">
+          <span
+            className={styles.dragHandle}
+            aria-hidden="true"
+            title={t("documents.outline.dragAct")}
+          >
             ⠿
           </span>
         )}
@@ -678,7 +708,11 @@ function ActBlock({
           className={styles.chevronBtn}
           onClick={() => setCollapsed((c) => !c)}
           aria-expanded={!collapsed}
-          aria-label={collapsed ? "Espandi atto" : "Collassa atto"}
+          aria-label={
+            collapsed
+              ? t("documents.outline.expandAct")
+              : t("documents.outline.collapseAct")
+          }
           type="button"
         >
           <span className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ""}`}>▾</span>
@@ -705,7 +739,9 @@ function ActBlock({
           <span
             className={styles.actTitle}
             onDoubleClick={() => !readOnly && setRenaming(true)}
-            title={readOnly ? undefined : "Doppio click per rinominare"}
+            title={
+              readOnly ? undefined : t("documents.outline.doubleClickToRename")
+            }
           >
             {act.title}
             {collapsed && (
@@ -717,7 +753,7 @@ function ActBlock({
           <button
             className={styles.deleteBtn}
             onClick={onDelete}
-            aria-label="Elimina atto"
+            aria-label={t("documents.outline.deleteActAria")}
             type="button"
           >
             ×
@@ -755,7 +791,7 @@ function ActBlock({
           ))}
           {!readOnly && (
             <button className={styles.addBtn} onClick={onAddSequence} type="button">
-              + Aggiungi sequenza
+              {t("documents.outline.addSequence")}
             </button>
           )}
         </div>
@@ -771,13 +807,16 @@ export function OutlineEditor({
   onChange,
   readOnly = false,
 }: OutlineEditorProps) {
+  const { t } = useTranslation();
   const characterSuggestions = collectAllCharacters(value);
 
   const body = (
     <>
       {value.acts.length === 0 && (
         <div className={styles.emptyState}>
-          <p className={styles.emptyStateText}>Nessun atto. Aggiungi il primo atto per iniziare la scaletta.</p>
+          <p className={styles.emptyStateText}>
+            {t("documents.outline.empty")}
+          </p>
         </div>
       )}
       {value.acts.map((act, actIdx) => (
@@ -799,7 +838,7 @@ export function OutlineEditor({
           onClick={() => onChange(addAct(value))}
           type="button"
         >
-          + Aggiungi atto
+          {t("documents.outline.addAct")}
         </button>
       )}
     </>

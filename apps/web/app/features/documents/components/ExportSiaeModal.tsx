@@ -14,6 +14,7 @@ import {
   type SiaeFormState,
 } from "../lib/siae-initial-state";
 import { AuthorListField, type AuthorEntry } from "./AuthorListField";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ExportSiaeModal.module.css";
 
 export interface ExportSiaeModalLabels {
@@ -42,25 +43,6 @@ export interface ExportSiaeModalProps {
   readonly defaults: SiaeFormDefaults;
   readonly labels?: Partial<ExportSiaeModalLabels>;
 }
-
-const DEFAULT_LABELS: ExportSiaeModalLabels = {
-  heading: "Esporta PDF per deposito SIAE",
-  titleLabel: "Titolo",
-  genreLabel: "Genere dichiarato",
-  durationLabel: "Durata stimata (minuti)",
-  dateLabel: "Data di compilazione",
-  notesLabel: "Note di deposito (opzionale)",
-  notesPlaceholder: "Note incluse nella copertina…",
-  authorsHeading: "Autori",
-  addAuthor: "+ Aggiungi autore",
-  removeAuthor: "Rimuovi",
-  fullNamePlaceholder: "Nome completo",
-  taxCodePlaceholder: "Codice fiscale (opzionale)",
-  submit: "Genera PDF",
-  submitting: "Generazione…",
-  cancel: "Annulla",
-  genericError: "Qualcosa è andato storto. Riprova.",
-};
 
 type FieldErrors = {
   title?: string;
@@ -111,7 +93,26 @@ export function ExportSiaeModal({
   defaults,
   labels,
 }: ExportSiaeModalProps) {
-  const l = { ...DEFAULT_LABELS, ...labels };
+  const { t } = useTranslation();
+  const defaultLabels: ExportSiaeModalLabels = {
+    heading: t("documents.siae.heading"),
+    titleLabel: t("documents.siae.titleLabel"),
+    genreLabel: t("documents.siae.genreLabel"),
+    durationLabel: t("documents.siae.durationLabel"),
+    dateLabel: t("documents.siae.dateLabel"),
+    notesLabel: t("documents.siae.notesLabel"),
+    notesPlaceholder: t("documents.siae.notesPlaceholder"),
+    authorsHeading: t("documents.siae.authorsHeading"),
+    addAuthor: t("documents.siae.addAuthor"),
+    removeAuthor: t("documents.siae.removeAuthor"),
+    fullNamePlaceholder: t("documents.siae.fullNamePlaceholder"),
+    taxCodePlaceholder: t("documents.siae.taxCodePlaceholder"),
+    submit: t("documents.siae.submit"),
+    submitting: t("documents.siae.submitting"),
+    cancel: t("documents.siae.cancel"),
+    genericError: t("documents.siae.genericError"),
+  };
+  const l = { ...defaultLabels, ...labels };
   const [state, setState] = useState<SiaeFormState>(() =>
     buildSiaeInitialState(defaults),
   );
@@ -168,18 +169,14 @@ export function ExportSiaeModal({
       onError: (err) => {
         const tagged = err as unknown as { _tag?: string };
         const copy = match(tagged)
-          .with(
-            { _tag: "SubjectNotFoundError" },
-            () =>
-              "Soggetto non pronto: scrivi del contenuto prima di esportare.",
+          .with({ _tag: "SubjectNotFoundError" }, () =>
+            t("documents.siae.error.subjectNotFound"),
           )
-          .with(
-            { _tag: "ForbiddenError" },
-            () => "Non hai i permessi per esportare questo progetto.",
+          .with({ _tag: "ForbiddenError" }, () =>
+            t("documents.siae.error.forbidden"),
           )
-          .with(
-            { _tag: "ValidationError" },
-            () => "Il modulo SIAE contiene valori non validi.",
+          .with({ _tag: "ValidationError" }, () =>
+            t("documents.siae.error.validation"),
           )
           .with({ _tag: "DbError" }, () => l.genericError)
           .otherwise(() => l.genericError);

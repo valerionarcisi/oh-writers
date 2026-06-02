@@ -27,6 +27,8 @@ import {
   type VersionCompareItem,
 } from "~/features/documents";
 import { useConfirmDialog } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 
 // ─── Screenplay scope ─────────────────────────────────────────────────────────
 
@@ -37,6 +39,7 @@ function ScreenplayVersionsList({
   screenplayId: string;
   onSelect?: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useVersions(screenplayId);
   const create = useCreateManualVersion();
   const rename = useRenameVersion(screenplayId);
@@ -46,20 +49,19 @@ function ScreenplayVersionsList({
   const loadError: string | null =
     result && !result.isOk
       ? match(result.error)
-          .with({ _tag: "VersionNotFoundError" }, () => "Versione non trovata.")
-          .with(
-            { _tag: "ScreenplayNotFoundError" },
-            () => "Sceneggiatura non trovata.",
+          .with({ _tag: "VersionNotFoundError" }, () =>
+            t("versions.error.versionNotFound"),
           )
-          .with({ _tag: "ProjectNotFoundError" }, () => "Progetto non trovato.")
-          .with(
-            { _tag: "ForbiddenError" },
-            () => "Non hai accesso a queste versioni.",
+          .with({ _tag: "ScreenplayNotFoundError" }, () =>
+            t("versions.error.screenplayNotFound"),
           )
-          .with(
-            { _tag: "DbError" },
-            () => "Impossibile caricare le versioni. Riprova.",
+          .with({ _tag: "ProjectNotFoundError" }, () =>
+            t("versions.error.projectNotFound"),
           )
+          .with({ _tag: "ForbiddenError" }, () =>
+            t("versions.error.forbidden"),
+          )
+          .with({ _tag: "DbError" }, () => t("versions.error.loadFailed"))
           .exhaustive()
       : null;
   const [error, setError] = useState<string | null>(loadError);
@@ -77,7 +79,11 @@ function ScreenplayVersionsList({
         : new Date(v.createdAt).toISOString(),
     sub:
       v.pageCount != null
-        ? `${v.pageCount} ${v.pageCount === 1 ? "pagina" : "pagine"}`
+        ? `${v.pageCount} ${
+            v.pageCount === 1
+              ? t("versions.pageCountSingular")
+              : t("versions.pageCountPlural")
+          }`
         : undefined,
     draftColor: (v.draftColor ?? null) as DraftRevisionColor | null,
     draftDate: v.draftDate ?? null,
@@ -88,7 +94,7 @@ function ScreenplayVersionsList({
       setError(null);
       create.mutate(
         { screenplayId, label },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [create, screenplayId],
@@ -99,7 +105,7 @@ function ScreenplayVersionsList({
       setError(null);
       rename.mutate(
         { versionId: id, label },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [rename],
@@ -110,7 +116,7 @@ function ScreenplayVersionsList({
       setError(null);
       del.mutate(
         { versionId: id },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [del],
@@ -119,10 +125,10 @@ function ScreenplayVersionsList({
   const handleDuplicate = useCallback(
     (id: string, baseLabel: string) => {
       setError(null);
-      const nextLabel = `${baseLabel} (copia)`;
+      const nextLabel = `${baseLabel} ${t("versions.copySuffix")}`;
       duplicate.mutate(
         { versionId: id, label: nextLabel },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [duplicate],
@@ -133,7 +139,7 @@ function ScreenplayVersionsList({
       setError(null);
       updateMeta.mutate(
         { versionId: id, draftColor: color },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [updateMeta],
@@ -144,7 +150,7 @@ function ScreenplayVersionsList({
       setError(null);
       updateMeta.mutate(
         { versionId: id, draftDate: date },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [updateMeta],
@@ -183,6 +189,7 @@ function DocumentVersionsList({
   initialActiveId: string | null;
   dirtyHook: VersionsDrawerDirtyHook | null;
 }) {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useDocVersions(documentId);
   const createScratch = useCreateVersionFromScratch(documentId);
   const duplicate = useDuplicateDocVersion(documentId);
@@ -193,15 +200,13 @@ function DocumentVersionsList({
   const loadError: string | null =
     result && !result.isOk
       ? match(result.error)
-          .with({ _tag: "DocumentNotFoundError" }, () => "Document not found.")
-          .with(
-            { _tag: "ForbiddenError" },
-            () => "You cannot access these versions.",
+          .with({ _tag: "DocumentNotFoundError" }, () =>
+            t("versions.error.documentNotFound"),
           )
-          .with(
-            { _tag: "DbError" },
-            () => "Could not load versions. Please retry.",
+          .with({ _tag: "ForbiddenError" }, () =>
+            t("versions.error.docForbidden"),
           )
+          .with({ _tag: "DbError" }, () => t("versions.error.docLoadFailed"))
           .exhaustive()
       : null;
   const [error, setError] = useState<string | null>(loadError);
@@ -239,7 +244,7 @@ function DocumentVersionsList({
     setError(null);
     createScratch.mutate(undefined, {
       onSuccess: (v) => setActiveId(v.id),
-      onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
+      onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")),
     });
   }, [createScratch]);
 
@@ -248,7 +253,7 @@ function DocumentVersionsList({
       setError(null);
       duplicate.mutate(id, {
         onSuccess: (v) => setActiveId(v.id),
-        onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
+        onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")),
       });
     },
     [duplicate],
@@ -259,7 +264,7 @@ function DocumentVersionsList({
       setError(null);
       rename.mutate(
         { versionId: id, label },
-        { onError: (e) => setError(e instanceof Error ? e.message : "Errore") },
+        { onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")) },
       );
     },
     [rename],
@@ -274,18 +279,17 @@ function DocumentVersionsList({
       // current version's last state before the pointer moves.
       if (dirtyHook?.isDirty()) {
         const save = await confirm({
-          title: "Modifiche non salvate",
-          message:
-            "Hai modifiche non salvate. Vuoi salvarle prima di passare a un'altra versione? (Annulla per scartarle e procedere)",
-          confirmLabel: "Salva",
-          cancelLabel: "Scarta",
+          title: t("versions.unsaved.title"),
+          message: t("versions.unsaved.message"),
+          confirmLabel: t("versions.unsaved.save"),
+          cancelLabel: t("versions.unsaved.discard"),
         });
         if (save) dirtyHook.flush();
       }
       setError(null);
       switchTo.mutate(item.id, {
         onSuccess: () => setActiveId(item.id),
-        onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
+        onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")),
       });
     },
     [switchTo, activeId, dirtyHook, confirm],
@@ -295,7 +299,7 @@ function DocumentVersionsList({
     (id: string) => {
       setError(null);
       del.mutate(id, {
-        onError: (e) => setError(e instanceof Error ? e.message : "Errore"),
+        onError: (e) => setError(e instanceof Error ? e.message : t("versions.error.generic")),
       });
     },
     [del],
@@ -336,28 +340,30 @@ function DocumentVersionsList({
 
 // ─── Drawer shell ─────────────────────────────────────────────────────────────
 
-const SCOPE_TITLES = {
-  screenplay: "Versioni screenplay",
-  logline: "Versioni logline",
-  soggetto: "Versioni soggetto",
-  synopsis: "Versioni sinossi",
-  outline: "Versioni scaletta",
-  treatment: "Versioni trattamento",
-} satisfies Record<"screenplay" | DocumentType, string>;
+const SCOPE_TITLE_KEYS = {
+  screenplay: "versions.scope.screenplay",
+  logline: "versions.scope.logline",
+  soggetto: "versions.scope.soggetto",
+  synopsis: "versions.scope.synopsis",
+  outline: "versions.scope.outline",
+  treatment: "versions.scope.treatment",
+} satisfies Record<"screenplay" | DocumentType, TranslationKey>;
 
 const getScopeTitle = (
   scope: NonNullable<ReturnType<typeof useVersionsDrawer>["state"]["scope"]>,
+  t: (key: TranslationKey) => string,
 ): string => {
-  if (scope.kind === "screenplay") return SCOPE_TITLES.screenplay;
-  return SCOPE_TITLES[scope.docType];
+  if (scope.kind === "screenplay") return t(SCOPE_TITLE_KEYS.screenplay);
+  return t(SCOPE_TITLE_KEYS[scope.docType]);
 };
 
 export function VersionsDrawer() {
+  const { t } = useTranslation();
   const { state, onSelectVersion, dirtyHook, close, setWidth } =
     useVersionsDrawer();
   const { isOpen, scope, width } = state;
 
-  const title = scope ? getScopeTitle(scope) : "Versioni";
+  const title = scope ? getScopeTitle(scope, t) : t("versions.scope.fallback");
 
   return (
     <Drawer

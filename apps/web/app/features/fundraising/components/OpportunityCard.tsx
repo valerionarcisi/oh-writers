@@ -1,16 +1,20 @@
 import { Bookmark, X, CheckCircle } from "lucide-react";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import type { OpportunityWithSave } from "../server/fundraising.server";
 import type { FundraisingSaveState } from "@oh-writers/db/schema";
 import styles from "./OpportunityCard.module.css";
 
-const KIND_LABELS: Record<string, string> = {
-  bando_pubblico: "Bando pubblico",
-  call_festival: "Festival",
-  residenza: "Residenza",
-  grant_privato: "Grant",
-  workshop: "Workshop",
-  pitch_forum: "Pitch forum",
-  other: "Altro",
+type Translate = (key: TranslationKey) => string;
+
+const KIND_LABEL_KEYS: Record<string, TranslationKey> = {
+  bando_pubblico: "fundraising.kind.bando_pubblico",
+  call_festival: "fundraising.kind.call_festival",
+  residenza: "fundraising.kind.residenza",
+  grant_privato: "fundraising.kind.grant_privato",
+  workshop: "fundraising.kind.workshop",
+  pitch_forum: "fundraising.kind.pitch_forum",
+  other: "fundraising.kind.other",
 };
 
 interface OpportunityCardProps {
@@ -20,25 +24,38 @@ interface OpportunityCardProps {
   onSave: (state: FundraisingSaveState) => void;
 }
 
-function formatDeadline(deadlineAt: Date | null): {
+function formatDeadline(
+  deadlineAt: Date | null,
+  t: Translate,
+): {
   label: string;
   urgent: boolean;
   expired: boolean;
 } {
   if (!deadlineAt)
-    return { label: "Scadenza non indicata", urgent: false, expired: false };
+    return {
+      label: t("fundraising.deadlineLabel.none"),
+      urgent: false,
+      expired: false,
+    };
   const now = Date.now();
   const diff = deadlineAt.getTime() - now;
   const days = Math.round(diff / 86_400_000);
   if (days < 0) {
     return {
-      label: `Scaduto ${Math.abs(days)} giorni fa`,
+      label: t("fundraising.deadlineLabel.expiredDaysAgo").replace(
+        "{value}",
+        String(Math.abs(days)),
+      ),
       urgent: false,
       expired: true,
     };
   }
   return {
-    label: `tra ${days} giorni`,
+    label: t("fundraising.deadlineLabel.inDays").replace(
+      "{value}",
+      String(days),
+    ),
     urgent: days <= 14,
     expired: false,
   };
@@ -48,6 +65,7 @@ function formatAmount(
   amountMin: string | null,
   amountMax: string | null,
   amountText: string | null,
+  t: Translate,
 ): string | null {
   if (amountMin && amountMax) {
     const fmt = (v: string) =>
@@ -64,7 +82,7 @@ function formatAmount(
       currency: "EUR",
       maximumFractionDigits: 0,
     });
-    return `Fino a ${fmt}`;
+    return t("fundraising.amount.upTo").replace("{value}", fmt);
   }
   return amountText ?? null;
 }
@@ -75,12 +93,15 @@ export function OpportunityCard({
   onSelect,
   onSave,
 }: OpportunityCardProps) {
-  const deadline = formatDeadline(opportunity.deadlineAt);
+  const { t } = useTranslation();
+  const deadline = formatDeadline(opportunity.deadlineAt, t);
   const amount = formatAmount(
     opportunity.amountMin,
     opportunity.amountMax,
     opportunity.amountText,
+    t,
   );
+  const kindLabelKey = KIND_LABEL_KEYS[opportunity.kind];
 
   const handleSaveClick = (
     state: FundraisingSaveState,
@@ -107,7 +128,7 @@ export function OpportunityCard({
           )}
         </div>
         <span className={styles.kindBadge} data-kind={opportunity.kind}>
-          {KIND_LABELS[opportunity.kind] ?? opportunity.kind}
+          {kindLabelKey ? t(kindLabelKey) : opportunity.kind}
         </span>
       </div>
 
@@ -128,9 +149,9 @@ export function OpportunityCard({
           className={styles.saveBtn}
           data-active={opportunity.saveState === "saved"}
           data-testid="save-btn-card"
-          title="Salva"
+          title={t("fundraising.action.save")}
           onClick={(e) => handleSaveClick("saved", e)}
-          aria-label="Salva opportunità"
+          aria-label={t("fundraising.action.saveAria")}
         >
           <Bookmark size={14} />
         </button>
@@ -139,9 +160,9 @@ export function OpportunityCard({
           className={styles.saveBtn}
           data-active={opportunity.saveState === "dismissed"}
           data-testid="dismiss-btn-card"
-          title="Ignora"
+          title={t("fundraising.action.dismiss")}
           onClick={(e) => handleSaveClick("dismissed", e)}
-          aria-label="Ignora opportunità"
+          aria-label={t("fundraising.action.dismissAria")}
         >
           <X size={14} />
         </button>
@@ -150,9 +171,9 @@ export function OpportunityCard({
           className={styles.saveBtn}
           data-active={opportunity.saveState === "applied"}
           data-testid="applied-btn-card"
-          title="Applicato"
+          title={t("fundraising.action.applied")}
           onClick={(e) => handleSaveClick("applied", e)}
-          aria-label="Applicato"
+          aria-label={t("fundraising.action.appliedAria")}
         >
           <CheckCircle size={14} />
         </button>

@@ -4,6 +4,7 @@ import {
   PATTERN_IDS,
   type PatternId,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./PatternMenu.module.css";
 
 interface PatternMenuProps {
@@ -16,6 +17,7 @@ const formatMin = (m: number): string =>
   m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
 
 export function PatternMenu({ recommendedId, onSelect, onClose }: PatternMenuProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function PatternMenu({ recommendedId, onSelect, onClose }: PatternMenuPro
 
   return (
     <div ref={ref} className={styles.menu} role="menu">
-      <div className={styles.label}>Pattern copertura</div>
+      <div className={styles.label}>{t("shootingPlan.pattern.label")}</div>
       {PATTERN_IDS.map((id) => {
         const p = COVERAGE_PATTERNS[id];
         const isRecommended = id === recommendedId;
@@ -58,7 +60,9 @@ export function PatternMenu({ recommendedId, onSelect, onClose }: PatternMenuPro
               </span>
             </span>
             {isRecommended && (
-              <span className={styles.recommendedBadge}>consigliato</span>
+              <span className={styles.recommendedBadge}>
+                {t("shootingPlan.pattern.recommended")}
+              </span>
             )}
           </button>
         );
@@ -68,9 +72,9 @@ export function PatternMenu({ recommendedId, onSelect, onClose }: PatternMenuPro
         type="button"
         className={styles.item}
         disabled
-        title="Disponibile in una versione futura"
+        title={t("shootingPlan.pattern.futureTitle")}
       >
-        + Salva piano attuale come pattern…
+        {t("shootingPlan.pattern.saveAsPattern")}
       </button>
     </div>
   );

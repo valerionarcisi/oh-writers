@@ -1,9 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@oh-writers/ui";
 import { DashboardImportFountainButton } from "./DashboardImportFountainButton";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardEmptyState.module.css";
 
 export function DashboardEmptyState() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   return (
     <section className={styles.empty} aria-labelledby="dashboard-empty-title">
@@ -40,7 +42,7 @@ export function DashboardEmptyState() {
           fontFamily="var(--ds-font-mono)"
           fontSize="11"
         >
-          Una pagina bianca.
+          {t("dashboard.empty.svgLine")}
         </text>
         <rect x="34" y="98" width="6" height="14" fill="currentColor">
           <animate
@@ -52,23 +54,20 @@ export function DashboardEmptyState() {
         </rect>
       </svg>
       <h2 id="dashboard-empty-title" className={styles.heading}>
-        Pagina bianca
+        {t("dashboard.empty.heading")}
       </h2>
-      <p className={styles.body}>
-        Inizia da una logline, importa un Fountain già scritto, o parti da un
-        template pensato per il tuo formato.
-      </p>
+      <p className={styles.body}>{t("dashboard.empty.body")}</p>
       <div className={styles.actions}>
         <Button
           variant="primary"
           type="button"
           onClick={() => navigate({ to: "/projects/new" })}
         >
-          Crea il primo progetto
+          {t("dashboard.empty.createFirst")}
         </Button>
         <DashboardImportFountainButton />
         <Button variant="ghost" type="button" disabled>
-          Parti da template
+          {t("dashboard.empty.fromTemplate")}
         </Button>
       </div>
     </section>

@@ -6,7 +6,12 @@ import type {
   BudgetSummary,
   ScheduleSummary,
 } from "../../server/project-overview.server";
-import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  type DocumentType,
+  type TranslationKey,
+} from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectPipeline.module.css";
 
 type NodeStatus = "done" | "current" | "todo";
@@ -23,7 +28,7 @@ type PipelineRoute =
 
 interface PipelineNode {
   readonly key: string;
-  readonly label: string;
+  readonly labelKey: TranslationKey;
   readonly status: NodeStatus;
   readonly route: PipelineRoute;
 }
@@ -37,12 +42,12 @@ interface ProjectPipelineProps {
   readonly schedule: ScheduleSummary;
 }
 
-const DOC_LABELS: Record<DocumentType, string> = {
-  logline: "Logline",
-  soggetto: "Soggetto",
-  synopsis: "Sinossi",
-  outline: "Scaletta",
-  treatment: "Trattamento",
+const DOC_LABEL_KEYS: Record<DocumentType, TranslationKey> = {
+  logline: "projects.pipeline.logline",
+  soggetto: "nav.soggetto",
+  synopsis: "nav.synopsis",
+  outline: "nav.outline",
+  treatment: "nav.treatment",
 };
 
 const DOC_ROUTES: Record<Exclude<DocumentType, "logline">, PipelineRoute> = {
@@ -71,6 +76,7 @@ export function ProjectPipeline({
   budget,
   schedule,
 }: ProjectPipelineProps) {
+  const { t } = useTranslation();
   const narrativeOrder: DocumentType[] = [
     DocumentTypes.SOGGETTO,
     DocumentTypes.SYNOPSIS,
@@ -79,7 +85,7 @@ export function ProjectPipeline({
   ];
   const firstIncomplete =
     narrativeOrder.find(
-      (t) => !documents.find((d) => d.type === t)?.hasContent,
+      (type) => !documents.find((d) => d.type === type)?.hasContent,
     ) ?? null;
 
   const allNarrativeDone = firstIncomplete === null;
@@ -121,33 +127,33 @@ export function ProjectPipeline({
       : "todo";
 
   const nodes: PipelineNode[] = [
-    ...narrativeOrder.map((t) => ({
-      key: t,
-      label: DOC_LABELS[t],
-      status: docStatus(documents, t, firstIncomplete),
-      route: DOC_ROUTES[t as Exclude<DocumentType, "logline">],
+    ...narrativeOrder.map((type) => ({
+      key: type,
+      labelKey: DOC_LABEL_KEYS[type],
+      status: docStatus(documents, type, firstIncomplete),
+      route: DOC_ROUTES[type as Exclude<DocumentType, "logline">],
     })),
     {
       key: "screenplay",
-      label: "Sceneggiatura",
+      labelKey: "nav.screenplay" as const,
       status: screenplayStatus,
       route: "/projects/$id/screenplay" as const,
     },
     {
       key: "breakdown",
-      label: "Breakdown",
+      labelKey: "nav.breakdown" as const,
       status: breakdownStatus,
       route: "/projects/$id/breakdown" as const,
     },
     {
       key: "budget",
-      label: "Budget",
+      labelKey: "nav.budget" as const,
       status: budgetStatus,
       route: "/projects/$id/budget" as const,
     },
     {
       key: "schedule",
-      label: "Calendarizzazione",
+      labelKey: "projects.pipeline.scheduling" as const,
       status: scheduleStatus,
       route: "/projects/$id/schedule" as const,
     },
@@ -159,10 +165,10 @@ export function ProjectPipeline({
   return (
     <section
       className={styles.wrapper}
-      aria-label="Pipeline di sviluppo"
+      aria-label={t("projects.pipeline.label")}
       data-testid="overview-pipeline"
     >
-      <div className={styles.label}>Pipeline di sviluppo</div>
+      <div className={styles.label}>{t("projects.pipeline.label")}</div>
       <div className={styles.track}>
         {nodes.map((n, idx) => (
           <div key={n.key} className={styles.cell}>
@@ -174,7 +180,7 @@ export function ProjectPipeline({
               <span className={styles.mark} aria-hidden>
                 {markFor(n.status)}
               </span>
-              {n.label}
+              {t(n.labelKey)}
             </Link>
             {idx < nodes.length - 1 && (
               <span

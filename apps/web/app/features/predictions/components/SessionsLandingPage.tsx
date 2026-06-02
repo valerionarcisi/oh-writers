@@ -8,21 +8,25 @@ import { useRef } from "react";
 import { useButton } from "react-aria";
 import { useNavigate } from "@tanstack/react-router";
 import { Skeleton } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
 import { useSessions } from "../sessions";
 import type { CesareSession } from "../sessions";
+import { useTranslation } from "~/features/i18n";
 import styles from "./SessionsLandingPage.module.css";
 
-function formatRelative(iso: string): string {
+type Translate = (key: TranslationKey) => string;
+
+function formatRelative(iso: string, t: Translate): string {
   const ts = new Date(iso).getTime();
   const diff = Date.now() - ts;
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "ora";
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1) return t("cesare.time.now");
+  if (minutes < 60) return `${minutes}${t("cesare.time.minutes")}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return `${hours}${t("cesare.time.hours")}`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return "ieri";
-  return `${days}g`;
+  if (days === 1) return t("cesare.time.yesterday");
+  return `${days}${t("cesare.time.days")}`;
 }
 
 function SessionRow({
@@ -32,11 +36,12 @@ function SessionRow({
   session: CesareSession;
   onOpen: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
       onPress: () => onOpen(session.id),
-      "aria-label": `Apri ${session.title}`,
+      "aria-label": `${t("cesare.landing.openPrefix")} ${session.title}`,
     },
     ref,
   );
@@ -52,13 +57,14 @@ function SessionRow({
       </span>
       <span className={styles.rowTitle}>{session.title}</span>
       <span className={styles.rowMeta}>
-        {formatRelative(session.lastMessageAt)}
+        {formatRelative(session.lastMessageAt, t)}
       </span>
     </button>
   );
 }
 
 export function SessionsLandingPage({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const sessionsQuery = useSessions(projectId);
 
@@ -76,7 +82,7 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
   const { buttonProps: newButtonProps } = useButton(
     {
       onPress: openNewSessionLanding,
-      "aria-label": "Nuova sessione Cesare",
+      "aria-label": t("cesare.landing.newSessionAria"),
     },
     newRef,
   );
@@ -98,9 +104,9 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
             ✦
           </span>
           <div>
-            <h1 className={styles.title}>Cesare</h1>
+            <h1 className={styles.title}>{t("cesare.landing.title")}</h1>
             <p className={styles.subtitle}>
-              Le tue conversazioni su questo progetto
+              {t("cesare.landing.listSubtitle")}
             </p>
           </div>
         </div>
@@ -110,7 +116,7 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
           className={styles.newButton}
           data-testid="cesare-session-new"
         >
-          + Nuova
+          {t("cesare.landing.new")}
         </button>
       </header>
 
@@ -119,14 +125,12 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
           lines={4}
           widths={["70%", "55%", "62%", "48%"]}
           tone="agent"
-          ariaLabel="Caricamento sessioni Cesare"
+          ariaLabel={t("cesare.landing.loadingAria")}
         />
       ) : sessions.length === 0 ? (
-        <p className={styles.empty}>
-          Nessuna sessione ancora. Avviane una con “+ Nuova”.
-        </p>
+        <p className={styles.empty}>{t("cesare.landing.empty")}</p>
       ) : (
-        <ul className={styles.list} aria-label="Sessioni Cesare">
+        <ul className={styles.list} aria-label={t("cesare.landing.listAria")}>
           {sessions.map((session) => (
             <li key={session.id}>
               <SessionRow session={session} onOpen={openSession} />

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import { ShotSizes, CameraMovements, CameraLabels } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { updateShot, deleteShot } from "../server/shooting-plan.server";
 import type { ShotView } from "../server/shooting-plan.server";
 import styles from "./ShotDetailPanel.module.css";
@@ -21,6 +22,7 @@ export function ShotDetailPanel({
   sceneId,
   onClose,
 }: ShotDetailPanelProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: ["shot-plan", sceneId] });
@@ -61,7 +63,9 @@ export function ShotDetailPanel({
       </div>
       <div className={styles.fields}>
         <label className={styles.field}>
-          <span className={styles.fieldLabel}>Dimensione</span>
+          <span className={styles.fieldLabel}>
+            {t("shootingPlan.shotDetail.size")}
+          </span>
           <select
             className={styles.select}
             value={shot.shotSize}
@@ -79,7 +83,9 @@ export function ShotDetailPanel({
           </select>
         </label>
         <label className={styles.field}>
-          <span className={styles.fieldLabel}>Movimento</span>
+          <span className={styles.fieldLabel}>
+            {t("shootingPlan.shotDetail.movement")}
+          </span>
           <select
             className={styles.select}
             value={shot.cameraMovement}
@@ -97,7 +103,9 @@ export function ShotDetailPanel({
           </select>
         </label>
         <label className={styles.field}>
-          <span className={styles.fieldLabel}>Camera</span>
+          <span className={styles.fieldLabel}>
+            {t("shootingPlan.shotDetail.camera")}
+          </span>
           <select
             className={styles.select}
             value={shot.cameraLabel}
@@ -116,9 +124,12 @@ export function ShotDetailPanel({
         </label>
         <label className={styles.field}>
           <span className={styles.fieldLabel}>
-            Minuti
+            {t("shootingPlan.shotDetail.minutes")}
             <span className={styles.autoHint}>
-              auto: {shot.resolvedMinutes}m
+              {t("shootingPlan.shotDetail.autoHint").replace(
+                "{value}",
+                String(shot.resolvedMinutes),
+              )}
             </span>
           </span>
           <input
@@ -127,7 +138,10 @@ export function ShotDetailPanel({
             min={1}
             max={480}
             step={5}
-            placeholder={`${shot.resolvedMinutes} (auto)`}
+            placeholder={t("shootingPlan.shotDetail.autoPlaceholder").replace(
+              "{value}",
+              String(shot.resolvedMinutes),
+            )}
             value={minutes}
             onChange={(e) => setMinutes(e.target.value)}
             onBlur={() => {
@@ -144,12 +158,14 @@ export function ShotDetailPanel({
                 updateMutation.mutate({ estimatedMinutes: null });
               }}
             >
-              reset auto
+              {t("shootingPlan.shotDetail.resetAuto")}
             </button>
           )}
         </label>
         <label className={styles.field}>
-          <span className={styles.fieldLabel}>Note</span>
+          <span className={styles.fieldLabel}>
+            {t("shootingPlan.shotDetail.notes")}
+          </span>
           <textarea
             className={styles.textarea}
             defaultValue={shot.notes ?? ""}
@@ -165,7 +181,7 @@ export function ShotDetailPanel({
         className={styles.deleteBtn}
         onClick={() => deleteMutation.mutate()}
       >
-        Elimina shot
+        {t("shootingPlan.shotDetail.deleteShot")}
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Button, Dialog } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import { useMenuPopover } from "../hooks/useMenuPopover";
 import { useImportPdf } from "../hooks/useImportPdf";
 import { useImportFountain } from "../hooks/useImportFountain";
@@ -57,6 +58,7 @@ export function ToolbarMenu({
   onTitlePageDetected,
   onExportFountain,
 }: ToolbarMenuProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const openTitlePage = () =>
     void navigate({
@@ -100,8 +102,8 @@ export function ToolbarMenu({
         className={styles.trigger}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        aria-label="Azioni sceneggiatura"
-        title="Azioni sceneggiatura"
+        aria-label={t("screenplay.menu.actionsAria")}
+        title={t("screenplay.menu.actionsAria")}
         disabled={imp.isLoading}
         onClick={toggle}
         data-testid="toolbar-menu-trigger"
@@ -113,7 +115,7 @@ export function ToolbarMenu({
         <div
           ref={panelRef}
           role="menu"
-          aria-label="Azioni sceneggiatura"
+          aria-label={t("screenplay.menu.actionsAria")}
           className={styles.panel}
           data-testid="toolbar-menu-panel"
         >
@@ -127,7 +129,9 @@ export function ToolbarMenu({
             <span className={styles.itemIcon} aria-hidden="true">
               ⇪
             </span>
-            <span className={styles.itemLabel}>Importa PDF</span>
+            <span className={styles.itemLabel}>
+              {t("screenplay.menu.importPdf")}
+            </span>
           </button>
 
           <button
@@ -140,7 +144,9 @@ export function ToolbarMenu({
             <span className={styles.itemIcon} aria-hidden="true">
               ⇪
             </span>
-            <span className={styles.itemLabel}>Importa Fountain</span>
+            <span className={styles.itemLabel}>
+              {t("screenplay.menu.importFountain")}
+            </span>
           </button>
 
           {onExportFountain && hasContent && (
@@ -154,7 +160,9 @@ export function ToolbarMenu({
               <span className={styles.itemIcon} aria-hidden="true">
                 ↧
               </span>
-              <span className={styles.itemLabel}>Esporta Fountain</span>
+              <span className={styles.itemLabel}>
+                {t("screenplay.menu.exportFountain")}
+              </span>
             </button>
           )}
 
@@ -163,7 +171,7 @@ export function ToolbarMenu({
               type="button"
               role="menuitem"
               className={styles.item}
-              title="Rinumera tutte le scene secondo l'ordine del documento"
+              title={t("screenplay.menu.renumberTitle")}
               onClick={runAndClose(onResequenceAll)}
               data-testid="menu-item-renumber"
             >
@@ -171,7 +179,7 @@ export function ToolbarMenu({
                 #
               </span>
               <span className={styles.itemLabel}>
-                Ricalcola numerazione scene
+                {t("screenplay.menu.recalcSceneNumbers")}
               </span>
             </button>
           )}
@@ -183,13 +191,15 @@ export function ToolbarMenu({
               role="menuitem"
               className={styles.item}
               onClick={runAndClose(openTitlePage)}
-              title="Apri il frontespizio"
+              title={t("screenplay.menu.titlePageTitle")}
               data-testid="menu-item-title-page"
             >
               <span className={styles.itemIcon} aria-hidden="true">
                 ✎
               </span>
-              <span className={styles.itemLabel}>Frontespizio</span>
+              <span className={styles.itemLabel}>
+                {t("screenplay.menu.titlePage")}
+              </span>
             </button>
           )}
         </div>
@@ -216,7 +226,7 @@ export function ToolbarMenu({
         <Dialog
           isOpen
           onClose={imp.cancel}
-          title="Importa PDF"
+          title={t("screenplay.menu.importPdfTitle")}
           isDismissable={false}
           data-testid="import-confirm"
           actions={
@@ -226,7 +236,7 @@ export function ToolbarMenu({
                 onClick={imp.cancel}
                 data-testid="import-confirm-cancel"
               >
-                Annulla
+                {t("screenplay.menu.cancel")}
               </Button>
               {nextVersionLabel && onCreateVersionThenImport ? (
                 <>
@@ -235,7 +245,7 @@ export function ToolbarMenu({
                     onClick={imp.confirm}
                     data-testid="import-confirm-overwrite"
                   >
-                    Sovrascrivi
+                    {t("screenplay.menu.overwrite")}
                   </Button>
                   <Button
                     variant="primary"
@@ -243,7 +253,9 @@ export function ToolbarMenu({
                     data-testid="import-confirm-new-version"
                     autoFocus
                   >
-                    Salva come {nextVersionLabel} e importa
+                    {t("screenplay.menu.saveAsPrefix")}
+                    {nextVersionLabel}
+                    {t("screenplay.menu.saveAsSuffix")}
                   </Button>
                 </>
               ) : (
@@ -253,7 +265,7 @@ export function ToolbarMenu({
                   data-testid="import-confirm-ok"
                   autoFocus
                 >
-                  Sostituisci
+                  {t("screenplay.menu.replace")}
                 </Button>
               )}
             </>
@@ -261,8 +273,8 @@ export function ToolbarMenu({
         >
           <p>
             {nextVersionLabel && onCreateVersionThenImport
-              ? "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla."
-              : "Sostituire la sceneggiatura attuale con il contenuto importato?"}
+              ? t("screenplay.menu.confirmWithVersionBody")
+              : t("screenplay.menu.confirmReplaceBody")}
           </p>
         </Dialog>
       )}
@@ -288,7 +300,7 @@ export function ToolbarMenu({
         <Dialog
           isOpen
           onClose={fountainImp.cancel}
-          title="Importa Fountain"
+          title={t("screenplay.menu.importFountainTitle")}
           isDismissable={false}
           data-testid="import-fountain-confirm"
           actions={
@@ -298,7 +310,7 @@ export function ToolbarMenu({
                 onClick={fountainImp.cancel}
                 data-testid="import-fountain-confirm-cancel"
               >
-                Annulla
+                {t("screenplay.menu.cancel")}
               </Button>
               {nextVersionLabel && onCreateVersionThenImport ? (
                 <>
@@ -307,7 +319,7 @@ export function ToolbarMenu({
                     onClick={fountainImp.confirm}
                     data-testid="import-fountain-confirm-overwrite"
                   >
-                    Sovrascrivi
+                    {t("screenplay.menu.overwrite")}
                   </Button>
                   <Button
                     variant="primary"
@@ -315,7 +327,9 @@ export function ToolbarMenu({
                     data-testid="import-fountain-confirm-new-version"
                     autoFocus
                   >
-                    Salva come {nextVersionLabel} e importa
+                    {t("screenplay.menu.saveAsPrefix")}
+                    {nextVersionLabel}
+                    {t("screenplay.menu.saveAsSuffix")}
                   </Button>
                 </>
               ) : (
@@ -325,7 +339,7 @@ export function ToolbarMenu({
                   data-testid="import-fountain-confirm-ok"
                   autoFocus
                 >
-                  Sostituisci
+                  {t("screenplay.menu.replace")}
                 </Button>
               )}
             </>
@@ -333,8 +347,8 @@ export function ToolbarMenu({
         >
           <p>
             {nextVersionLabel && onCreateVersionThenImport
-              ? "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla."
-              : "Sostituire la sceneggiatura attuale con il contenuto importato?"}
+              ? t("screenplay.menu.confirmWithVersionBody")
+              : t("screenplay.menu.confirmReplaceBody")}
           </p>
         </Dialog>
       )}

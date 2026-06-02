@@ -2,6 +2,7 @@ import type {
   BudgetOverview,
   BudgetCategoryKey,
 } from "../../server/budget-helpers";
+import { useTranslation } from "~/features/i18n";
 import { CategoryDonut, type DonutSegment } from "../charts/CategoryDonut";
 import { DepartmentBar, type BarDatum } from "../charts/DepartmentBar";
 import { Sparkline } from "../charts/Sparkline";
@@ -35,19 +36,23 @@ interface StatusBadgeProps {
 }
 
 function StatusBadge({ status, reason }: StatusBadgeProps) {
+  const { t } = useTranslation();
   const label =
     status === "ok"
-      ? "Completo"
+      ? t("budget.overview.statusComplete")
       : status === "warn"
-        ? (reason ?? "Da confermare")
+        ? (reason ?? t("budget.overview.statusToConfirm"))
         : status === "missing"
-          ? (reason ?? "Senza tariffa")
-          : "Locked";
+          ? (reason ?? t("budget.overview.statusNoRate"))
+          : t("budget.overview.statusLocked");
   return (
     <span
       className={styles.statusBadge}
       data-status={status}
-      aria-label={`Stato categoria: ${label}`}
+      aria-label={t("budget.overview.statusBadgeAriaLabel").replace(
+        "{label}",
+        label,
+      )}
     >
       <span className={styles.statusDot} aria-hidden="true" />
       {label}
@@ -59,6 +64,7 @@ export function OverviewSection({
   overview,
   onDrillDown,
 }: OverviewSectionProps) {
+  const { t } = useTranslation();
   const donutSegments: DonutSegment[] = overview.categories
     .filter((c) => c.total > 0)
     .map((c) => ({
@@ -84,7 +90,9 @@ export function OverviewSection({
     <div className={styles.root}>
       <section className={styles.hero}>
         <div className={styles.heroTotal}>
-          <div className={styles.eyebrow}>Totale stimato</div>
+          <div className={styles.eyebrow}>
+            {t("budget.overview.estimatedTotal")}
+          </div>
           <div className={styles.heroValue}>
             {eurAmount(overview.grandTotal)}
           </div>
@@ -93,22 +101,34 @@ export function OverviewSection({
               className={styles.delta}
               data-direction={overview.deltaPercent > 0 ? "neg" : "pos"}
             >
-              {formatDelta(overview.deltaPercent)} vs preventivo
+              {t("budget.overview.deltaVsEstimate").replace(
+                "{delta}",
+                formatDelta(overview.deltaPercent),
+              )}
             </span>
           )}
           <div className={styles.heroSub}>
-            imprevisti{" "}
-            {overview.grandTotal > 0
-              ? Math.round(
-                  (overview.contingencyAmount / overview.grandTotal) * 100,
-                )
-              : 0}
-            % inclusa
+            {t("budget.overview.contingencyIncluded").replace(
+              "{percent}",
+              String(
+                overview.grandTotal > 0
+                  ? Math.round(
+                      (overview.contingencyAmount / overview.grandTotal) * 100,
+                    )
+                  : 0,
+              ),
+            )}
             {overview.shootingDays
-              ? ` · ${overview.shootingDays} giornate`
+              ? t("budget.overview.days").replace(
+                  "{days}",
+                  String(overview.shootingDays),
+                )
               : ""}
             {overview.perDay !== null
-              ? ` · ${eurCompact(overview.perDay)}/giorno`
+              ? t("budget.overview.perDayInline").replace(
+                  "{amount}",
+                  eurCompact(overview.perDay),
+                )
               : ""}
           </div>
         </div>
@@ -118,51 +138,64 @@ export function OverviewSection({
             segments={donutSegments}
             total={overview.grandTotal}
             centerLabel={eurCompact(overview.grandTotal)}
-            centerSub={`${overview.categories.length} categorie`}
+            centerSub={t("budget.overview.categoriesCount").replace(
+              "{count}",
+              String(overview.categories.length),
+            )}
           />
         </div>
 
         <dl className={styles.kpis}>
           <KpiCell
             kind="cast"
-            label="Cast"
+            label={t("budget.overview.kpiCast")}
             value={eurCompact(overview.castTotal)}
-            foot={`${overview.castTotal > 0 ? Math.round((overview.castTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.find((c) => c.id === "cast")?.resourceCount ?? 0} ruoli`}
+            foot={`${overview.castTotal > 0 ? Math.round((overview.castTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.find((c) => c.id === "cast")?.resourceCount ?? 0} ${t("budget.overview.roles")}`}
           />
           <KpiCell
             kind="crew"
-            label="Troupe"
+            label={t("budget.overview.kpiCrew")}
             value={eurCompact(overview.crewTotal)}
-            foot={`${overview.crewTotal > 0 ? Math.round((overview.crewTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.find((c) => c.id === "crew")?.resourceCount ?? 0} ruoli`}
+            foot={`${overview.crewTotal > 0 ? Math.round((overview.crewTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.find((c) => c.id === "crew")?.resourceCount ?? 0} ${t("budget.overview.roles")}`}
           />
           <KpiCell
             kind="prod"
-            label="Produzione"
+            label={t("budget.overview.kpiProduction")}
             value={eurCompact(overview.productionTotal)}
-            foot={`${overview.grandTotal > 0 ? Math.round((overview.productionTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.filter((c) => c.id !== "cast" && c.id !== "crew").length} reparti`}
+            foot={`${overview.grandTotal > 0 ? Math.round((overview.productionTotal / overview.grandTotal) * 100) : 0}% · ${overview.categories.filter((c) => c.id !== "cast" && c.id !== "crew").length} ${t("budget.overview.repartiCount")}`}
           />
           <KpiCell
             kind="cont"
-            label="Imprevisti"
+            label={t("budget.overview.kpiContingency")}
             value={eurCompact(overview.contingencyAmount)}
-            foot={`${overview.grandTotal > 0 ? Math.round((overview.contingencyAmount / overview.grandTotal) * 100) : 0}% imp.`}
+            foot={`${overview.grandTotal > 0 ? Math.round((overview.contingencyAmount / overview.grandTotal) * 100) : 0}% ${t("budget.overview.contingencyShort")}`}
           />
           <KpiCell
             kind="days"
-            label="Costo / giornata"
+            label={t("budget.overview.kpiPerDay")}
             value={overview.perDay !== null ? eurCompact(overview.perDay) : "—"}
-            foot={overview.shootingDays ? `${overview.shootingDays} gg` : "n/d"}
+            foot={
+              overview.shootingDays
+                ? t("budget.overview.daysShort").replace(
+                    "{days}",
+                    String(overview.shootingDays),
+                  )
+                : t("budget.overview.notAvailable")
+            }
           />
           <KpiCell
             kind="scene"
-            label="Costo / scena"
+            label={t("budget.overview.kpiPerScene")}
             value={
               overview.perScene !== null ? eurCompact(overview.perScene) : "—"
             }
             foot={
               overview.sceneCount > 0
-                ? `media ${overview.sceneCount} scene`
-                : "n/d"
+                ? t("budget.overview.sceneAverage").replace(
+                    "{count}",
+                    String(overview.sceneCount),
+                  )
+                : t("budget.overview.notAvailable")
             }
           />
         </dl>
@@ -171,27 +204,41 @@ export function OverviewSection({
       <section className={styles.split}>
         <div className={styles.card}>
           <header className={styles.cardHead}>
-            <span className={styles.cardTitle}>Distribuzione spesa</span>
-            <span className={styles.cardMeta}>top 5 reparti</span>
+            <span className={styles.cardTitle}>
+              {t("budget.overview.spendDistribution")}
+            </span>
+            <span className={styles.cardMeta}>
+              {t("budget.overview.top5")}
+            </span>
           </header>
           <DepartmentBar data={topDepartments} />
         </div>
         <div className={styles.card}>
           <header className={styles.cardHead}>
-            <span className={styles.cardTitle}>Stato budget</span>
+            <span className={styles.cardTitle}>
+              {t("budget.overview.budgetStatus")}
+            </span>
             <span className={styles.cardMeta}>
-              {overview.missingRatesCount} avvisi
+              {t("budget.overview.warnings").replace(
+                "{count}",
+                String(overview.missingRatesCount),
+              )}
             </span>
           </header>
           <ul className={styles.alerts}>
             {overview.missingRatesCount > 0 && (
               <li className={styles.alert} data-tone="warn">
-                <div className={styles.alertTag}>Rate mancanti</div>
+                <div className={styles.alertTag}>
+                  {t("budget.overview.missingRatesTag")}
+                </div>
                 <div>
                   <strong>
-                    {overview.missingRatesCount} attori senza day-rate
-                  </strong>{" "}
-                  — imposta le tariffe per evitare stima a zero.
+                    {t("budget.overview.actorsNoDayRate").replace(
+                      "{count}",
+                      String(overview.missingRatesCount),
+                    )}
+                  </strong>
+                  {t("budget.overview.setRatesToAvoidZero")}
                 </div>
               </li>
             )}
@@ -201,18 +248,20 @@ export function OverviewSection({
                 <li key={c.id} className={styles.alert} data-tone="info">
                   <div className={styles.alertTag}>{c.label}</div>
                   <div>
-                    <strong>Senza tariffa</strong> — categoria presente nel
-                    breakdown ma non ancora stimata.
+                    <strong>{t("budget.overview.noRateTag")}</strong>
+                    {t("budget.overview.categoryInBreakdown")}
                   </div>
                 </li>
               ))}
             {overview.missingRatesCount === 0 &&
               overview.categories.every((c) => c.status !== "missing") && (
                 <li className={styles.alert} data-tone="ok">
-                  <div className={styles.alertTag}>Pronto</div>
+                  <div className={styles.alertTag}>
+                    {t("budget.overview.readyTag")}
+                  </div>
                   <div>
-                    <strong>Tutte le categorie sono coperte</strong> — il budget
-                    è pronto per il lock.
+                    <strong>{t("budget.overview.allCovered")}</strong>
+                    {t("budget.overview.readyForLock")}
                   </div>
                 </li>
               )}
@@ -222,9 +271,14 @@ export function OverviewSection({
 
       <section className={styles.catsSection}>
         <header className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Reparti</h2>
+          <h2 className={styles.sectionTitle}>
+            {t("budget.overview.departments")}
+          </h2>
           <span className={styles.sectionMeta}>
-            {overview.categories.length} categorie · clicca per dettaglio
+            {t("budget.section.departmentsMeta").replace(
+              "{count}",
+              String(overview.categories.length),
+            )}
           </span>
         </header>
         <div className={styles.cats}>
@@ -236,7 +290,10 @@ export function OverviewSection({
               style={{ ["--cat-color" as string]: `var(${c.colorVar})` }}
               onClick={() => onDrillDown(c.id)}
               data-testid={`category-card-${c.id}`}
-              aria-label={`Apri dettaglio ${c.label}`}
+              aria-label={t("budget.overview.openDetail").replace(
+                "{category}",
+                c.label,
+              )}
             >
               <div className={styles.catTop}>
                 <span className={styles.catName}>{c.label}</span>
@@ -248,12 +305,17 @@ export function OverviewSection({
               <Sparkline
                 values={c.sparkline}
                 colorVar={c.colorVar}
-                ariaLabel={`Andamento ${c.label}`}
+                ariaLabel={t("budget.overview.trend").replace(
+                  "{category}",
+                  c.label,
+                )}
               />
               <div className={styles.catFoot}>
                 <span>
                   {c.resourceCount}{" "}
-                  {c.id === "cast" || c.id === "crew" ? "ruoli" : "voci"}
+                  {c.id === "cast" || c.id === "crew"
+                    ? t("budget.overview.rolesCount")
+                    : t("budget.overview.linesCount")}
                 </span>
                 <StatusBadge status={c.status} reason={c.statusReason} />
               </div>

@@ -7,6 +7,7 @@ import {
 import { match } from "ts-pattern";
 import { unwrapResult } from "@oh-writers/utils";
 import { UserMinus, RotateCcw, X } from "lucide-react";
+import { useTranslation } from "~/features/i18n";
 import {
   teamQueryOptions,
   inviteMember,
@@ -25,6 +26,7 @@ interface TeamMembersPageProps {
 type RoleOption = "owner" | "editor" | "viewer";
 
 export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: result } = useSuspenseQuery(teamQueryOptions(slug));
 
@@ -37,9 +39,9 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
     return (
       <div className={styles.error}>
         {match(result.error)
-          .with({ _tag: "TeamNotFoundError" }, () => "Team non trovato.")
-          .with({ _tag: "ForbiddenError" }, () => "Accesso negato.")
-          .otherwise(() => "Errore nel caricamento del team.")}
+          .with({ _tag: "TeamNotFoundError" }, () => t("teams.error.notFound"))
+          .with({ _tag: "ForbiddenError" }, () => t("teams.error.forbidden"))
+          .otherwise(() => t("teams.error.loadTeam"))}
       </div>
     );
   }
@@ -50,9 +52,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
 
   if (!isOwner) {
     return (
-      <div className={styles.forbidden}>
-        Solo i proprietari possono gestire i membri.
-      </div>
+      <div className={styles.forbidden}>{t("teams.members.ownersOnly")}</div>
     );
   }
 
@@ -72,7 +72,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
       invalidate();
     },
     onError: (e: { message?: string }) => {
-      setInviteError(e.message ?? "Errore durante l'invio dell'invito.");
+      setInviteError(e.message ?? t("teams.members.sendError"));
     },
   });
 
@@ -81,7 +81,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
       unwrapResult(await resendInvite({ data: { invitationId } })),
     onSuccess: invalidate,
     onError: (e: { message?: string }) => {
-      setActionError(e.message ?? "Errore.");
+      setActionError(e.message ?? t("teams.error.generic"));
     },
   });
 
@@ -90,7 +90,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
       unwrapResult(await revokeInvite({ data: { invitationId } })),
     onSuccess: invalidate,
     onError: (e: { message?: string }) => {
-      setActionError(e.message ?? "Errore.");
+      setActionError(e.message ?? t("teams.error.generic"));
     },
   });
 
@@ -99,7 +99,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
       unwrapResult(await removeMember({ data: { teamId: team.id, userId } })),
     onSuccess: invalidate,
     onError: (e: { message?: string }) => {
-      setActionError(e.message ?? "Errore.");
+      setActionError(e.message ?? t("teams.error.generic"));
     },
   });
 
@@ -116,7 +116,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
       ),
     onSuccess: invalidate,
     onError: (e: { message?: string }) => {
-      setActionError(e.message ?? "Errore.");
+      setActionError(e.message ?? t("teams.error.generic"));
     },
   });
 
@@ -124,11 +124,13 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Membri — {team.name}</h1>
+      <h1 className={styles.title}>
+        {t("teams.members.title")} {team.name}
+      </h1>
 
       {/* Invite form */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Invita membro</h2>
+        <h2 className={styles.sectionTitle}>{t("teams.members.inviteTitle")}</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -139,7 +141,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
           <input
             type="email"
             className={styles.input}
-            placeholder="email@esempio.com"
+            placeholder={t("teams.members.emailPlaceholder")}
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             required
@@ -149,16 +151,18 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
             value={inviteRole}
             onChange={(e) => setInviteRole(e.target.value as RoleOption)}
           >
-            <option value="editor">Editor</option>
-            <option value="viewer">Viewer</option>
-            <option value="owner">Owner</option>
+            <option value="editor">{t("teams.members.roleEditor")}</option>
+            <option value="viewer">{t("teams.members.roleViewer")}</option>
+            <option value="owner">{t("teams.members.roleOwner")}</option>
           </select>
           <button
             type="submit"
             className={styles.inviteBtn}
             disabled={inviteMutation.isPending || !inviteEmail.trim()}
           >
-            {inviteMutation.isPending ? "Invio…" : "Invita"}
+            {inviteMutation.isPending
+              ? t("teams.members.sending")
+              : t("teams.members.invite")}
           </button>
         </form>
         {inviteError && <p className={styles.errorMsg}>{inviteError}</p>}
@@ -168,7 +172,9 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
 
       {/* Members list */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Membri ({team.members.length})</h2>
+        <h2 className={styles.sectionTitle}>
+          {t("teams.members.listTitle")} ({team.members.length})
+        </h2>
         <ul className={styles.list} data-testid="members-list">
           {team.members.map((member) => (
             <li key={member.id} className={styles.row}>
@@ -193,15 +199,15 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
                   })
                 }
               >
-                <option value="owner">Owner</option>
-                <option value="editor">Editor</option>
-                <option value="viewer">Viewer</option>
+                <option value="owner">{t("teams.members.roleOwner")}</option>
+                <option value="editor">{t("teams.members.roleEditor")}</option>
+                <option value="viewer">{t("teams.members.roleViewer")}</option>
               </select>
               {member.userId !== currentUserId && (
                 <button
                   type="button"
                   className={styles.iconBtn}
-                  title="Rimuovi membro"
+                  title={t("teams.members.removeMember")}
                   disabled={removeMemMutation.isPending}
                   onClick={() => removeMemMutation.mutate(member.userId)}
                 >
@@ -217,7 +223,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
       {pendingInvitations.length > 0 && (
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
-            Inviti in attesa ({pendingInvitations.length})
+            {t("teams.members.pendingTitle")} ({pendingInvitations.length})
           </h2>
           <ul className={styles.list} data-testid="invitations-list">
             {pendingInvitations.map((inv) => (
@@ -230,7 +236,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
                 <button
                   type="button"
                   className={styles.iconBtn}
-                  title="Reinvia invito"
+                  title={t("teams.members.resendInvite")}
                   disabled={resendMutation.isPending}
                   onClick={() => resendMutation.mutate(inv.id)}
                 >
@@ -239,7 +245,7 @@ export function TeamMembersPage({ slug, currentUserId }: TeamMembersPageProps) {
                 <button
                   type="button"
                   className={styles.iconBtn}
-                  title="Revoca invito"
+                  title={t("teams.members.revokeInvite")}
                   disabled={revokeMutation.isPending}
                   onClick={() => revokeMutation.mutate(inv.id)}
                 >

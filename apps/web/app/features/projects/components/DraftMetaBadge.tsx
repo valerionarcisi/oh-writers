@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { projectDraftMetaQueryOptions } from "../server/draft-meta.server";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "../draft-color-palette";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DraftMetaBadge.module.css";
 
 interface DraftMetaBadgeProps {
@@ -9,6 +10,7 @@ interface DraftMetaBadgeProps {
 }
 
 export function DraftMetaBadge({ projectId }: DraftMetaBadgeProps) {
+  const { t } = useTranslation();
   const { data: result } = useQuery(projectDraftMetaQueryOptions(projectId));
   if (!result) return null;
 
@@ -19,8 +21,8 @@ export function DraftMetaBadge({ projectId }: DraftMetaBadgeProps) {
 
       const colorLabel = draftColor
         ? DRAFT_COLOR_LABEL[draftColor]
-        : "Senza colore";
-      const title = `Bozza ${colorLabel}${draftDate ? ` — ${draftDate}` : ""} · gestita nelle Versioni della sceneggiatura`;
+        : t("projects.draftBadge.noColor");
+      const title = `${t("projects.draftBadge.titlePrefix")} ${colorLabel}${draftDate ? ` — ${draftDate}` : ""} ${t("projects.draftBadge.titleSuffix")}`;
 
       return (
         <span

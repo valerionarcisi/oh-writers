@@ -1,4 +1,5 @@
 import { Button, Dialog } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 
 interface ImportedTitlePageConfirmProps {
   onConfirm: () => void;
@@ -17,11 +18,12 @@ export function ImportedTitlePageConfirm({
   onConfirm,
   onCancel,
 }: ImportedTitlePageConfirmProps) {
+  const { t } = useTranslation();
   return (
     <Dialog
       isOpen
       onClose={onCancel}
-      title="Frontespizio importato dal PDF"
+      title={t("screenplay.titlePage.confirmTitle")}
       isDismissable={false}
       actions={
         <>
@@ -30,7 +32,7 @@ export function ImportedTitlePageConfirm({
             onClick={onCancel}
             data-testid="imported-titlepage-confirm-cancel"
           >
-            Annulla
+            {t("screenplay.titlePage.cancel")}
           </Button>
           <Button
             variant="primary"
@@ -38,14 +40,13 @@ export function ImportedTitlePageConfirm({
             data-testid="imported-titlepage-confirm-confirm"
             autoFocus
           >
-            Sostituisci
+            {t("screenplay.titlePage.replace")}
           </Button>
         </>
       }
     >
       <p data-testid="imported-titlepage-confirm">
-        Vuoi sostituire il frontespizio attuale con quello estratto dal PDF
-        importato?
+        {t("screenplay.titlePage.confirmBody")}
       </p>
     </Dialog>
   );

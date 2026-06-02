@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import { formatDayHours } from "@oh-writers/domain";
+import type { TranslationKey } from "@oh-writers/domain";
 import type { ScheduleView, StripView } from "../server/schedule.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ScheduleTimelineView.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 interface ScheduleTimelineViewProps {
   schedule: ScheduleView;
@@ -32,8 +36,8 @@ const normalizeKey = (loc: string | null): string => {
   return t.length === 0 ? UNCATEGORIZED_KEY : t.toUpperCase();
 };
 
-const prettyLabel = (key: string): string => {
-  if (key === UNCATEGORIZED_KEY) return "Senza location";
+const prettyLabel = (key: string, t: Translate): string => {
+  if (key === UNCATEGORIZED_KEY) return t("schedule.timeline.withoutLocation");
   return key.toLowerCase();
 };
 
@@ -41,6 +45,7 @@ export function ScheduleTimelineView({
   schedule,
   onSelectDay,
 }: ScheduleTimelineViewProps) {
+  const { t } = useTranslation();
   const { lanes, dayCount } = useMemo(() => {
     const days = schedule.shootingDays;
     const laneMap = new Map<string, Map<string, BlockData>>();
@@ -94,7 +99,7 @@ export function ScheduleTimelineView({
       const totalHours = blocks.reduce((s, b) => s + (b?.hours ?? 0), 0);
       orderedLanes.push({
         key,
-        label: prettyLabel(key),
+        label: prettyLabel(key, t),
         blocks,
         totalScenes,
         totalHours,
@@ -102,13 +107,11 @@ export function ScheduleTimelineView({
     }
 
     return { lanes: orderedLanes, dayCount: days.length };
-  }, [schedule]);
+  }, [schedule, t]);
 
   if (dayCount === 0) {
     return (
-      <p className={styles.placeholder}>
-        Nessuna giornata pianificata. Genera prima il piano di lavorazione.
-      </p>
+      <p className={styles.placeholder}>{t("schedule.timeline.empty")}</p>
     );
   }
 
@@ -119,7 +122,7 @@ export function ScheduleTimelineView({
         style={{ "--day-count": dayCount } as React.CSSProperties}
       >
         <div className={styles.laneHead} aria-hidden="true">
-          Location
+          {t("schedule.timeline.location")}
         </div>
         <div className={styles.axis}>
           {schedule.shootingDays.map((d) => (
@@ -128,10 +131,15 @@ export function ScheduleTimelineView({
               type="button"
               className={styles.axisCell}
               onClick={() => onSelectDay(d.id)}
-              aria-label={`Giornata ${d.dayNumber}`}
+              aria-label={t("schedule.timeline.dayAria").replace(
+                "{number}",
+                String(d.dayNumber),
+              )}
               data-testid={`timeline-axis-${d.dayNumber}`}
             >
-              <span className={styles.axisLabel}>Giorno</span>
+              <span className={styles.axisLabel}>
+                {t("schedule.timeline.day")}
+              </span>
               <span className={styles.axisNum}>
                 {String(d.dayNumber).padStart(2, "0")}
               </span>
@@ -147,7 +155,8 @@ export function ScheduleTimelineView({
             <div className={styles.laneLabelCol}>
               <div className={styles.laneLabel}>{lane.label}</div>
               <div className={styles.laneMeta}>
-                {lane.totalScenes} sc · {formatDayHours(lane.totalHours)}
+                {lane.totalScenes} {t("schedule.timeline.scenesShort")} ·{" "}
+                {formatDayHours(lane.totalHours)}
               </div>
             </div>
             <div className={styles.row}>
@@ -159,11 +168,14 @@ export function ScheduleTimelineView({
                     className={styles.block}
                     data-color={b.bannerColor}
                     onClick={() => onSelectDay(b.dayId)}
-                    title={`G${String(b.dayNumber).padStart(2, "0")} · ${b.sceneCount} scene · ${formatDayHours(b.hours)}`}
+                    title={t("schedule.timeline.blockTitle")
+                      .replace("{day}", String(b.dayNumber).padStart(2, "0"))
+                      .replace("{scenes}", String(b.sceneCount))
+                      .replace("{hours}", formatDayHours(b.hours))}
                     data-testid={`timeline-block-${lane.key}-${b.dayNumber}`}
                   >
                     <span className={styles.blockNum}>
-                      {b.sceneCount} sc
+                      {b.sceneCount} {t("schedule.timeline.scenesShort")}
                     </span>
                     <span className={styles.blockHours}>
                       {formatDayHours(b.hours)}

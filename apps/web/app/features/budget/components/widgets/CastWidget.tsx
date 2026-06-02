@@ -12,6 +12,7 @@ import {
   removeBudgetCastRow,
 } from "~/features/budget/server/budget.server";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import { BudgetGauge } from "./BudgetGauge";
 import { BudgetResourceRow } from "../BudgetResourceRow";
 import styles from "./CastWidget.module.css";
@@ -45,6 +46,7 @@ export function CastWidget({
   projectId,
   budgetId,
 }: CastWidgetProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -96,11 +98,9 @@ export function CastWidget({
     return (
       <div className={styles.widget}>
         <div className={styles.header}>
-          <h3 className={styles.title}>Cast</h3>
+          <h3 className={styles.title}>{t("budget.cast.title")}</h3>
         </div>
-        <p className={styles.empty}>
-          Genera il budget per popolare il cast dal breakdown.
-        </p>
+        <p className={styles.empty}>{t("budget.cast.empty")}</p>
         <div className={styles.footer}>
           {addOpen ? (
             <form
@@ -112,20 +112,20 @@ export function CastWidget({
             >
               <input
                 className={styles.addInput}
-                placeholder="Nome attore"
+                placeholder={t("budget.cast.actorNamePlaceholder")}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 autoFocus
               />
               <button type="submit" className={styles.addConfirm}>
-                Aggiungi
+                {t("budget.form.add")}
               </button>
               <button
                 type="button"
                 className={styles.addCancel}
                 onClick={() => setAddOpen(false)}
               >
-                Annulla
+                {t("budget.form.cancel")}
               </button>
             </form>
           ) : (
@@ -134,7 +134,7 @@ export function CastWidget({
               className={styles.addTrigger}
               onClick={() => setAddOpen(true)}
             >
-              + Aggiungi attore
+              {t("budget.cast.addActor")}
             </button>
           )}
         </div>
@@ -152,10 +152,13 @@ export function CastWidget({
           label={fmt(castTotal)}
         />
         <div>
-          <h3 className={styles.title}>Cast</h3>
+          <h3 className={styles.title}>{t("budget.cast.title")}</h3>
           {selectedScene !== null && (
             <p className={styles.sceneNote}>
-              Sc.{selectedScene} · costo proporzionale
+              {t("budget.cast.sceneNote").replace(
+                "{scene}",
+                String(selectedScene),
+              )}
             </p>
           )}
         </div>
@@ -164,13 +167,23 @@ export function CastWidget({
         <table className={styles.table}>
           <thead>
             <tr className={styles.thead}>
-              <th className={styles.th}>Attore</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Gg</th>
-              <th className={`${styles.th} ${styles.numTh}`}>€/g</th>
-              <th className={styles.th}>Regime</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Vitto</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Pernotto</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Totale</th>
+              <th className={styles.th}>{t("budget.cast.colActor")}</th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.cast.colDays")}
+              </th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.cast.colDayRate")}
+              </th>
+              <th className={styles.th}>{t("budget.cast.colRegime")}</th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.cast.colMeal")}
+              </th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.cast.colAccommodation")}
+              </th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.cast.colTotal")}
+              </th>
               <th className={styles.th} />
             </tr>
           </thead>
@@ -207,7 +220,7 @@ export function CastWidget({
           >
             <input
               className={styles.addInput}
-              placeholder="Nome attore"
+              placeholder={t("budget.cast.actorNamePlaceholder")}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Banner } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import { staleScenesOptions } from "../hooks/useBreakdown";
 
 interface Props {
@@ -12,6 +13,7 @@ const dismissedKey = (versionId: string) =>
   `breakdown-banner-dismissed-${versionId}`;
 
 export function VersionImportBanner({ versionId }: Props) {
+  const { t } = useTranslation();
   const { data: staleSceneIds = [] } = useQuery(staleScenesOptions(versionId));
   const [dismissed, setDismissed] = useState(false);
 
@@ -31,7 +33,11 @@ export function VersionImportBanner({ versionId }: Props) {
     <Banner
       variant="warning"
       data-testid="version-import-banner"
-      message={`${staleSceneIds.length} scena${staleSceneIds.length === 1 ? "" : "e"} contengono elementi che potrebbero non essere più presenti dopo l'import.`}
+      message={`${staleSceneIds.length}${
+        staleSceneIds.length === 1
+          ? t("breakdown.importBanner.sceneSingularSuffix")
+          : t("breakdown.importBanner.scenePluralSuffix")
+      }`}
       onDismiss={handleDismiss}
     />
   );

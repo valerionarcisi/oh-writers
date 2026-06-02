@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { NextStep } from "../../server/project-overview.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./NextStepBanner.module.css";
 
 interface NextStepBannerProps {
@@ -8,6 +9,7 @@ interface NextStepBannerProps {
 }
 
 export function NextStepBanner({ nextStep, onApply }: NextStepBannerProps) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
 
@@ -15,14 +17,14 @@ export function NextStepBanner({ nextStep, onApply }: NextStepBannerProps) {
     <aside
       className={styles.banner}
       role="status"
-      aria-label="Suggerimento di Cesare"
+      aria-label={t("projects.nextStep.label")}
       data-testid="overview-next-step"
     >
       <div className={styles.icon} aria-hidden>
         C
       </div>
       <div className={styles.body}>
-        <div className={styles.label}>Cesare suggerisce</div>
+        <div className={styles.label}>{t("projects.nextStep.heading")}</div>
         <p className={styles.message}>{nextStep.suggestion}</p>
         <div className={styles.actions}>
           <button
@@ -38,7 +40,7 @@ export function NextStepBanner({ nextStep, onApply }: NextStepBannerProps) {
             className={styles.ghost}
             onClick={() => setDismissed(true)}
           >
-            Più tardi
+            {t("projects.nextStep.later")}
           </button>
         </div>
       </div>

@@ -19,34 +19,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useButton } from "react-aria";
 import { useNavigate } from "@tanstack/react-router";
+import type { TranslationKey } from "@oh-writers/domain";
 import { useRequestShellFocus } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import { useCreateSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
 import { useNarrativeNextStep } from "../use-narrative-next-step";
 import type { NarrativeStep } from "../narrative-next-step";
 import styles from "./NewSessionLandingPage.module.css";
 
-const PLACEHOLDER = "Chiedi qualunque cosa a Cesare…";
-
 // Generic starters that always make sense, regardless of how far along the
 // narrative chain the project is. They seed the composer (the user can refine
-// before sending) so the landing is never a dead end.
+// before sending) so the landing is never a dead end. Labels + prompts resolve
+// to the active locale.
 const GENERIC_STARTERS: ReadonlyArray<{
   readonly id: string;
-  readonly label: string;
-  readonly prompt: string;
+  readonly labelKey: TranslationKey;
+  readonly promptKey: TranslationKey;
 }> = [
   {
     id: "brainstorm",
-    label: "Esplora un'idea per il film",
-    prompt:
-      "Aiutami a esplorare un'idea per un film: facciamo brainstorming sul tema, i personaggi e il conflitto.",
+    labelKey: "cesare.landing.starterBrainstormLabel",
+    promptKey: "cesare.landing.starterBrainstormPrompt",
   },
   {
     id: "review",
-    label: "Rivedi cosa ho scritto finora",
-    prompt:
-      "Dai un'occhiata a quello che ho scritto finora nel progetto e dimmi cosa funziona e cosa migliorare.",
+    labelKey: "cesare.landing.starterReviewLabel",
+    promptKey: "cesare.landing.starterReviewPrompt",
   },
 ];
 
@@ -54,6 +53,7 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
   // Engage focus mode for the lifetime of this route (spec 44 / spec 52).
   useRequestShellFocus();
 
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useCesareChatStore();
   const createSession = useCreateSession(projectId);
@@ -110,12 +110,9 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
           ✦
         </span>
         <h1 className={styles.heading} data-testid="new-session-heading">
-          Cosa scriviamo oggi?
+          {t("cesare.landing.heading")}
         </h1>
-        <p className={styles.subheading}>
-          Cesare ti aiuta a scrivere e revisionare il tuo film, passo dopo
-          passo.
-        </p>
+        <p className={styles.subheading}>{t("cesare.landing.subheading")}</p>
 
         <GlowComposer
           ref={inputRef}
@@ -127,7 +124,7 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
 
         <div
           className={styles.suggestions}
-          aria-label="Suggerimenti"
+          aria-label={t("cesare.landing.suggestionsAria")}
           data-testid="new-session-suggestions"
         >
           {nextStep && (
@@ -143,8 +140,8 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
           {GENERIC_STARTERS.map((starter) => (
             <SuggestionChip
               key={starter.id}
-              label={starter.label}
-              prompt={starter.prompt}
+              label={t(starter.labelKey)}
+              prompt={t(starter.promptKey)}
               onPick={seedPrompt}
               isDisabled={isStarting}
               variant="starter"
@@ -158,7 +155,7 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
             role="alert"
             data-testid="new-session-error"
           >
-            Impossibile avviare la sessione. Riprova.
+            {t("cesare.landing.error")}
           </p>
         )}
       </div>
@@ -185,13 +182,14 @@ const GlowComposer = ({
   onSubmit,
   isDisabled,
 }: GlowComposerProps & { ref: React.Ref<HTMLTextAreaElement> }) => {
+  const { t } = useTranslation();
   const sendRef = useRef<HTMLButtonElement>(null);
   const canSend = value.trim().length > 0 && !isDisabled;
   const { buttonProps } = useButton(
     {
       onPress: onSubmit,
       isDisabled: !canSend,
-      "aria-label": "Avvia la sessione",
+      "aria-label": t("cesare.landing.startSession"),
     },
     sendRef,
   );
@@ -212,10 +210,10 @@ const GlowComposer = ({
               onSubmit();
             }
           }}
-          placeholder={PLACEHOLDER}
+          placeholder={t("cesare.landing.placeholder")}
           disabled={isDisabled}
           rows={1}
-          aria-label="Messaggio per Cesare"
+          aria-label={t("cesare.landing.messageAria")}
           data-testid="new-session-input"
         />
         <button

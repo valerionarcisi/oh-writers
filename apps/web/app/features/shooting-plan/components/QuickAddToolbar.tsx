@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PatternId, ShotSize } from "@oh-writers/domain";
 import { SHOT_SIZE_LABELS } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { PatternMenu } from "./PatternMenu";
 import styles from "./QuickAddToolbar.module.css";
 
@@ -27,6 +28,7 @@ export function QuickAddToolbar({
   onApplyPattern,
   disabled,
 }: QuickAddToolbarProps) {
+  const { t } = useTranslation();
   const [patternOpen, setPatternOpen] = useState(false);
 
   return (
@@ -52,7 +54,7 @@ export function QuickAddToolbar({
         <button
           type="button"
           className={styles.patternBtn}
-          title="Aggiunge una copertura completa (es. campo/controcampo)"
+          title={t("shootingPlan.quickAdd.patternTitle")}
           disabled={disabled}
           onClick={() => setPatternOpen((o) => !o)}
         >
@@ -68,7 +70,7 @@ export function QuickAddToolbar({
       </div>
 
       <div className={styles.spacer} />
-      <span className={styles.hint}>⌘D duplica · ⌫ elimina</span>
+      <span className={styles.hint}>{t("shootingPlan.quickAdd.hint")}</span>
     </div>
   );
 }

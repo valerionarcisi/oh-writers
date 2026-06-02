@@ -66,6 +66,7 @@ import { VersionViewingBanner } from "./VersionViewingBanner";
 import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
 import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
   useTitlePageState,
@@ -203,6 +204,7 @@ export const ScreenplayEditor = forwardRef<
   },
   ref,
 ) {
+  const { t } = useTranslation();
   const [content, setContent] = useState(screenplay.content);
   const [pmDoc, setPmDoc] = useState<Record<string, unknown> | null>(
     screenplay.pmDoc ?? null,
@@ -350,23 +352,26 @@ export const ScreenplayEditor = forwardRef<
       ? versionsResult.value[0]
       : null;
   const nextVersionLabel =
-    versionsCount > 0 ? `Versione ${versionsCount + 1}` : null;
+    versionsCount > 0
+      ? `${t("screenplay.editor.versionFallbackPrefix")} ${versionsCount + 1}`
+      : null;
   const versionsLoadError: string | null =
     versionsResult && !versionsResult.isOk
       ? match(versionsResult.error)
-          .with({ _tag: "VersionNotFoundError" }, () => "Versione non trovata.")
-          .with(
-            { _tag: "ScreenplayNotFoundError" },
-            () => "Sceneggiatura non trovata.",
+          .with({ _tag: "VersionNotFoundError" }, () =>
+            t("screenplay.editor.error.versionNotFound"),
           )
-          .with({ _tag: "ProjectNotFoundError" }, () => "Progetto non trovato.")
-          .with(
-            { _tag: "ForbiddenError" },
-            () => "Non hai accesso a queste versioni.",
+          .with({ _tag: "ScreenplayNotFoundError" }, () =>
+            t("screenplay.editor.error.screenplayNotFound"),
           )
-          .with(
-            { _tag: "DbError" },
-            () => "Impossibile caricare le versioni. Riprova.",
+          .with({ _tag: "ProjectNotFoundError" }, () =>
+            t("screenplay.editor.error.projectNotFound"),
+          )
+          .with({ _tag: "ForbiddenError" }, () =>
+            t("screenplay.editor.error.forbidden"),
+          )
+          .with({ _tag: "DbError" }, () =>
+            t("screenplay.editor.error.db"),
           )
           .exhaustive()
       : null;
@@ -983,14 +988,14 @@ export const ScreenplayEditor = forwardRef<
           {draftBanners.map((d) => (
             <div key={d.id} className={styles.draftBannerRow}>
               <span data-testid="cesare-draft-banner-label">
-                {`✦ Cesare ha preparato la versione: "${d.label}".`}
+                {`${t("screenplay.editor.draftBannerPrefix")}${d.label}${t("screenplay.editor.draftBannerSuffix")}`}
               </span>
               <a
                 className={styles.draftBannerLink}
                 data-testid="cesare-draft-banner-open"
                 href={`/projects/${screenplay.projectId}/screenplay/versions/${d.versionId}`}
               >
-                Apri il diff →
+                {t("screenplay.editor.openDiff")}
               </a>
               <button
                 type="button"
@@ -1003,7 +1008,7 @@ export const ScreenplayEditor = forwardRef<
                 }
                 disabled={promoteDraft.isPending}
               >
-                Promuovi a attiva
+                {t("screenplay.editor.promoteToActive")}
               </button>
               <button
                 type="button"
@@ -1016,7 +1021,7 @@ export const ScreenplayEditor = forwardRef<
                 }
                 disabled={discardDraft.isPending}
               >
-                Scarta draft
+                {t("screenplay.editor.discardDraft")}
               </button>
             </div>
           ))}
@@ -1051,7 +1056,9 @@ export const ScreenplayEditor = forwardRef<
               triggerClassName={styles.exportTrigger}
               items={exportMenuItems}
               trigger={
-                <span data-testid="screenplay-export-pdf">Esporta PDF ▾</span>
+                <span data-testid="screenplay-export-pdf">
+                  {t("screenplay.editor.exportPdf")}
+                </span>
               }
             />
           ) : (
@@ -1061,7 +1068,9 @@ export const ScreenplayEditor = forwardRef<
               data-testid="screenplay-export-pdf"
               disabled
             >
-              {exportPdf.isPending ? "Esportazione…" : "Esporta PDF ▾"}
+              {exportPdf.isPending
+                ? t("screenplay.editor.exporting")
+                : t("screenplay.editor.exportPdf")}
             </button>
           )}
           <ToolbarMenu

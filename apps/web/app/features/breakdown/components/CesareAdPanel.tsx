@@ -6,6 +6,8 @@ import {
   type AdSuggestionSeverity,
   type AdAnalyzeInput,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import type {
   BreakdownSceneSummary,
   ProjectBreakdownRow,
@@ -33,17 +35,17 @@ interface Props {
   onOpenScene: (sceneId: string) => void;
 }
 
-const SEVERITY_LABEL: Record<AdSuggestionSeverity, string> = {
-  critical: "Critico",
-  warn: "Attenzione",
-  info: "Info",
+const SEVERITY_LABEL_KEY: Record<AdSuggestionSeverity, TranslationKey> = {
+  critical: "breakdown.ad.severity.critical",
+  warn: "breakdown.ad.severity.warn",
+  info: "breakdown.ad.severity.info",
 };
 
-const KIND_LABEL: Record<AdSuggestionKind, string> = {
-  continuity: "Continuity",
-  "risk-flag": "Rischio produzione",
-  "coverage-gap": "Copertura",
-  "location-consolidate": "Location",
+const KIND_LABEL_KEY: Record<AdSuggestionKind, TranslationKey> = {
+  continuity: "breakdown.ad.kind.continuity",
+  "risk-flag": "breakdown.ad.kind.riskFlag",
+  "coverage-gap": "breakdown.ad.kind.coverageGap",
+  "location-consolidate": "breakdown.ad.kind.locationConsolidate",
 };
 
 const SEVERITY_CLASS: Record<AdSuggestionSeverity, string> = {
@@ -116,6 +118,7 @@ export function CesareAdPanel({
   activeSceneId,
   onOpenScene,
 }: Props) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<Set<string>>(() =>
     loadDismissed(projectId),
   );
@@ -150,9 +153,7 @@ export function CesareAdPanel({
 
   if (visible.length === 0) {
     return (
-      <p className={styles.adAlertEmpty}>
-        Nessun alert di produzione su questa vista.
-      </p>
+      <p className={styles.adAlertEmpty}>{t("breakdown.ad.empty")}</p>
     );
   }
 
@@ -177,6 +178,7 @@ interface CardProps {
 }
 
 function AdAlertCard({ suggestion, onOpenScene, onIgnore }: CardProps) {
+  const { t } = useTranslation();
   return (
     <article
       className={[
@@ -188,10 +190,10 @@ function AdAlertCard({ suggestion, onOpenScene, onIgnore }: CardProps) {
     >
       <header className={styles.adAlertHead}>
         <span className={styles.adAlertEyebrow}>
-          {KIND_LABEL[suggestion.kind]}
+          {t(KIND_LABEL_KEY[suggestion.kind])}
         </span>
         <span className={styles.adAlertSeverity}>
-          {SEVERITY_LABEL[suggestion.severity]}
+          {t(SEVERITY_LABEL_KEY[suggestion.severity])}
         </span>
         {suggestion.sceneNumber !== null && (
           <span className={styles.adAlertSceneTag}>
@@ -208,7 +210,8 @@ function AdAlertCard({ suggestion, onOpenScene, onIgnore }: CardProps) {
             className={styles.adAlertBtn}
             onClick={() => onOpenScene(suggestion.sceneId!)}
           >
-            Apri scena {suggestion.sceneNumber ?? ""}
+            {t("breakdown.ad.openScenePrefix")}
+            {suggestion.sceneNumber ?? ""}
           </button>
         )}
         {suggestion.suggestedAction && (
@@ -225,7 +228,7 @@ function AdAlertCard({ suggestion, onOpenScene, onIgnore }: CardProps) {
           className={styles.adAlertBtn}
           onClick={() => onIgnore(suggestion.id)}
         >
-          Ignora
+          {t("breakdown.ad.ignore")}
         </button>
       </div>
     </article>

@@ -1,4 +1,5 @@
 import type { ActorPosition, CameraPin } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 
 export const CONE_RADIUS = 80;
 
@@ -102,6 +103,7 @@ export function CameraPinEl({
   onRotateHandleDown,
   onClick,
 }: CameraPinElProps) {
+  const { t } = useTranslation();
   const fs = Math.max(7, 9 * scale);
   const boxW = 36 * scale;
   const boxH = 24 * scale;
@@ -175,7 +177,7 @@ export function CameraPinEl({
           style={{ cursor: "grab" }}
           onPointerDown={onRotateHandleDown}
         >
-          <title>Trascina per ruotare la camera</title>
+          <title>{t("shootingPlan.pin.rotateTitle")}</title>
         </circle>
       )}
     </g>

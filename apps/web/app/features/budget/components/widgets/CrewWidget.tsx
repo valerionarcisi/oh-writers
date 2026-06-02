@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { resourceTotal, CREW_DEPARTMENTS } from "@oh-writers/domain";
-import type { FiscalRegime } from "@oh-writers/domain";
+import type { FiscalRegime, TranslationKey } from "@oh-writers/domain";
 import type { BudgetCrew } from "~/features/budget/server/budget.server";
 import {
   updateBudgetCrewRow,
@@ -9,6 +9,7 @@ import {
   removeBudgetCrewRow,
 } from "~/features/budget/server/budget.server";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import { BudgetGauge } from "./BudgetGauge";
 import { BudgetResourceRow } from "../BudgetResourceRow";
 import styles from "./CrewWidget.module.css";
@@ -22,14 +23,14 @@ interface CrewWidgetProps {
 
 const parseNum = (v: string) => Number(v);
 
-const DEPT_LABELS: Record<string, string> = {
-  regia: "Regia",
-  fotografia: "Fotografia",
-  suono: "Suono",
-  arte: "Arte",
-  costumi: "Costumi",
-  trucco: "Trucco",
-  produzione: "Produzione",
+const DEPT_LABEL_KEYS: Record<string, TranslationKey> = {
+  regia: "budget.dept.regia",
+  fotografia: "budget.dept.fotografia",
+  suono: "budget.dept.suono",
+  arte: "budget.dept.arte",
+  costumi: "budget.dept.costumi",
+  trucco: "budget.dept.trucco",
+  produzione: "budget.dept.produzione",
 };
 
 export function CrewWidget({
@@ -38,6 +39,7 @@ export function CrewWidget({
   grandTotal,
   projectId,
 }: CrewWidgetProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -108,21 +110,34 @@ export function CrewWidget({
           color="var(--color-crew, #10b981)"
           label={fmt(crewTotal)}
         />
-        <h3 className={styles.title}>Troupe</h3>
+        <h3 className={styles.title}>{t("budget.crew.title")}</h3>
       </div>
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr className={styles.thead}>
-              <th className={styles.th} aria-label="Attivo" />
-              <th className={styles.th}>Ruolo</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Gg</th>
-              <th className={`${styles.th} ${styles.numTh}`}>€/g</th>
-              <th className={styles.th}>Regime</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Vitto</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Pernotto</th>
-              <th className={`${styles.th} ${styles.numTh}`}>Totale</th>
+              <th
+                className={styles.th}
+                aria-label={t("budget.crew.colActive")}
+              />
+              <th className={styles.th}>{t("budget.crew.colRole")}</th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.crew.colDays")}
+              </th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.crew.colDayRate")}
+              </th>
+              <th className={styles.th}>{t("budget.crew.colRegime")}</th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.crew.colMeal")}
+              </th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.crew.colAccommodation")}
+              </th>
+              <th className={`${styles.th} ${styles.numTh}`}>
+                {t("budget.crew.colTotal")}
+              </th>
               <th className={styles.th} />
             </tr>
           </thead>
@@ -133,7 +148,7 @@ export function CrewWidget({
                 <>
                   <tr key={`dept-${dept}`} className={styles.deptRow}>
                     <td colSpan={9} className={styles.deptCell}>
-                      {DEPT_LABELS[dept] ?? dept}
+                      {DEPT_LABEL_KEYS[dept] ? t(DEPT_LABEL_KEYS[dept]!) : dept}
                     </td>
                   </tr>
                   {deptRows.map((row) => (
@@ -160,7 +175,7 @@ export function CrewWidget({
               <>
                 <tr className={styles.deptRow}>
                   <td colSpan={9} className={styles.deptCell}>
-                    Ruoli custom
+                    {t("budget.crew.customRoles")}
                   </td>
                 </tr>
                 {customRows.map((row) => (
@@ -202,7 +217,7 @@ export function CrewWidget({
           >
             <input
               className={styles.addInput}
-              placeholder="Nome ruolo"
+              placeholder={t("budget.crew.roleNamePlaceholder")}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
@@ -214,20 +229,20 @@ export function CrewWidget({
             >
               {CREW_DEPARTMENTS.map((d) => (
                 <option key={d} value={d}>
-                  {DEPT_LABELS[d] ?? d}
+                  {DEPT_LABEL_KEYS[d] ? t(DEPT_LABEL_KEYS[d]!) : d}
                 </option>
               ))}
-              <option value="custom">Custom</option>
+              <option value="custom">{t("budget.crew.customOption")}</option>
             </select>
             <button type="submit" className={styles.addConfirm}>
-              Aggiungi
+              {t("budget.form.add")}
             </button>
             <button
               type="button"
               className={styles.addCancel}
               onClick={() => setAddOpen(false)}
             >
-              Annulla
+              {t("budget.form.cancel")}
             </button>
           </form>
         ) : (
@@ -236,7 +251,7 @@ export function CrewWidget({
             className={styles.addTrigger}
             onClick={() => setAddOpen(true)}
           >
-            + Aggiungi ruolo
+            {t("budget.crew.addRole")}
           </button>
         )}
       </div>

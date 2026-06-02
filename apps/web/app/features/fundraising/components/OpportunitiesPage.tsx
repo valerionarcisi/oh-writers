@@ -6,6 +6,8 @@ import {
 } from "@tanstack/react-query";
 import { Skeleton } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import type {
   FundraisingSaveState,
   FundraisingOpportunityKind,
@@ -22,30 +24,30 @@ import styles from "./OpportunitiesPage.module.css";
 
 const STATUS_OPTIONS: Array<{
   value: OpportunitiesFilters["status"];
-  label: string;
+  labelKey: TranslationKey;
 }> = [
-  { value: "active", label: "Attivi" },
-  { value: "expired", label: "Scaduti" },
-  { value: undefined, label: "Tutti" },
+  { value: "active", labelKey: "fundraising.status.active" },
+  { value: "expired", labelKey: "fundraising.status.expired" },
+  { value: undefined, labelKey: "fundraising.status.all" },
 ];
 
 const DEADLINE_OPTIONS: Array<{
   value: OpportunitiesFilters["deadlineWithin"];
-  label: string;
+  labelKey: TranslationKey;
 }> = [
-  { value: "30d", label: "Prossimi 30gg" },
-  { value: "90d", label: "Prossimi 90gg" },
-  { value: "any", label: "Tutti" },
+  { value: "30d", labelKey: "fundraising.deadline.30d" },
+  { value: "90d", labelKey: "fundraising.deadline.90d" },
+  { value: "any", labelKey: "fundraising.deadline.any" },
 ];
 
-const KIND_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Tutti" },
-  { value: "bando_pubblico", label: "Bando pubblico" },
-  { value: "call_festival", label: "Festival" },
-  { value: "residenza", label: "Residenza" },
-  { value: "grant_privato", label: "Grant" },
-  { value: "workshop", label: "Workshop" },
-  { value: "pitch_forum", label: "Pitch forum" },
+const KIND_OPTIONS: Array<{ value: string; labelKey: TranslationKey }> = [
+  { value: "", labelKey: "fundraising.kind.all" },
+  { value: "bando_pubblico", labelKey: "fundraising.kind.bando_pubblico" },
+  { value: "call_festival", labelKey: "fundraising.kind.call_festival" },
+  { value: "residenza", labelKey: "fundraising.kind.residenza" },
+  { value: "grant_privato", labelKey: "fundraising.kind.grant_privato" },
+  { value: "workshop", labelKey: "fundraising.kind.workshop" },
+  { value: "pitch_forum", labelKey: "fundraising.kind.pitch_forum" },
 ];
 
 function activeFilterCount(filters: OpportunitiesFilters): number {
@@ -71,6 +73,7 @@ function OpportunitiesList({
   onSelect,
   onSave,
 }: OpportunitiesListProps) {
+  const { t } = useTranslation();
   const { data } = useSuspenseQuery(
     opportunitiesQueryOptions(projectId, filters),
   );
@@ -79,9 +82,11 @@ function OpportunitiesList({
   if (opportunities.length === 0) {
     return (
       <div className={styles.emptyState}>
-        <div className={styles.emptyTitle}>Nessuna opportunità trovata</div>
+        <div className={styles.emptyTitle}>
+          {t("fundraising.list.empty.title")}
+        </div>
         <div className={styles.emptySubtext}>
-          Prova a cambiare i filtri o torna più tardi.
+          {t("fundraising.list.empty.subtitle")}
         </div>
       </div>
     );
@@ -103,6 +108,7 @@ function OpportunitiesList({
 }
 
 function ListSkeleton() {
+  const { t } = useTranslation();
   return (
     <ul className={styles.skeletonList}>
       {Array.from({ length: 5 }).map((_, i) => (
@@ -110,7 +116,7 @@ function ListSkeleton() {
           <Skeleton
             lines={4}
             widths={["60%", "80%", "100%", "45%"]}
-            ariaLabel="Caricamento opportunità"
+            ariaLabel={t("fundraising.list.loading")}
           />
         </li>
       ))}
@@ -123,6 +129,7 @@ interface OpportunitiesPageProps {
 }
 
 export function OpportunitiesPage({ projectId }: OpportunitiesPageProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [filters, setFilters] = useState<OpportunitiesFilters>({
     status: "active",
@@ -185,14 +192,16 @@ export function OpportunitiesPage({ projectId }: OpportunitiesPageProps) {
         {/* Filter rail */}
         <aside className={styles.filterRail}>
           <div className={styles.filterHeading}>
-            Filtri
+            {t("fundraising.filter.heading")}
             {filterCount > 0 && (
               <span className={styles.filterBadge}>{filterCount}</span>
             )}
           </div>
 
           <div className={styles.filterGroup}>
-            <div className={styles.filterGroupLabel}>Tipo</div>
+            <div className={styles.filterGroupLabel}>
+              {t("fundraising.filter.kind")}
+            </div>
             <div className={styles.filterChips}>
               {KIND_OPTIONS.map((opt) => (
                 <button
@@ -202,14 +211,16 @@ export function OpportunitiesPage({ projectId }: OpportunitiesPageProps) {
                   data-active={selectedKind === opt.value}
                   onClick={() => handleKindChip(opt.value)}
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className={styles.filterGroup}>
-            <div className={styles.filterGroupLabel}>Stato</div>
+            <div className={styles.filterGroupLabel}>
+              {t("fundraising.filter.status")}
+            </div>
             <div className={styles.filterChips}>
               {STATUS_OPTIONS.map((opt) => (
                 <button
@@ -222,14 +233,16 @@ export function OpportunitiesPage({ projectId }: OpportunitiesPageProps) {
                     setFilters((f) => ({ ...f, status: opt.value }))
                   }
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className={styles.filterGroup}>
-            <div className={styles.filterGroupLabel}>Scadenza</div>
+            <div className={styles.filterGroupLabel}>
+              {t("fundraising.filter.deadline")}
+            </div>
             <div className={styles.filterChips}>
               {DEADLINE_OPTIONS.map((opt) => (
                 <button
@@ -243,7 +256,7 @@ export function OpportunitiesPage({ projectId }: OpportunitiesPageProps) {
                     setFilters((f) => ({ ...f, deadlineWithin: opt.value }))
                   }
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               ))}
             </div>
@@ -253,7 +266,9 @@ export function OpportunitiesPage({ projectId }: OpportunitiesPageProps) {
         {/* List column */}
         <div className={styles.listColumn}>
           <div className={styles.listHeader}>
-            <div className={styles.listTitle}>Opportunità di finanziamento</div>
+            <div className={styles.listTitle}>
+              {t("fundraising.list.title")}
+            </div>
           </div>
           <Suspense fallback={<ListSkeleton />}>
             <OpportunitiesList
