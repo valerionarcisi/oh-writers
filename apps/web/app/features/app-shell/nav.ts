@@ -10,13 +10,18 @@
 // turns it into the rail-friendly shape. No router imports here.
 
 import type { RailSection, RailNavItem } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
 
 export type RailSectionId = "sviluppo" | "produzione" | "recenti";
+
+/** A translator — `useTranslation().t`. Passed in so this module stays
+ *  framework-agnostic (no React hook import). */
+type Translate = (key: TranslationKey) => string;
 
 type NavEntry = {
   id: string;
   segment: string;
-  label: string;
+  labelKey: TranslationKey;
   /** Glyph the rail will render — a unicode character used as-is. The icon
    *  sprite doesn't yet cover every section so we keep the legacy glyphs
    *  for parity with the mockup. */
@@ -24,66 +29,87 @@ type NavEntry = {
 };
 
 const DEV_ENTRIES: ReadonlyArray<NavEntry> = [
-  { id: "soggetto", segment: "soggetto", label: "Soggetto", glyph: "¶" },
-  { id: "synopsis", segment: "synopsis", label: "Sinossi", glyph: "¶" },
-  { id: "outline", segment: "outline", label: "Scaletta", glyph: "≡" },
-  { id: "treatment", segment: "treatment", label: "Trattamento", glyph: "▤" },
+  { id: "soggetto", segment: "soggetto", labelKey: "nav.soggetto", glyph: "¶" },
+  { id: "synopsis", segment: "synopsis", labelKey: "nav.synopsis", glyph: "¶" },
+  { id: "outline", segment: "outline", labelKey: "nav.outline", glyph: "≡" },
+  {
+    id: "treatment",
+    segment: "treatment",
+    labelKey: "nav.treatment",
+    glyph: "▤",
+  },
   {
     id: "screenplay",
     segment: "screenplay",
-    label: "Sceneggiatura",
+    labelKey: "nav.screenplay",
     glyph: "▣",
   },
 ];
 
 const PROD_ENTRIES: ReadonlyArray<NavEntry> = [
-  { id: "breakdown", segment: "breakdown", label: "Breakdown", glyph: "◧" },
-  { id: "budget", segment: "budget", label: "Budget", glyph: "€" },
-  { id: "schedule", segment: "schedule", label: "Calendario", glyph: "▦" },
-  { id: "locations", segment: "locations", label: "Location", glyph: "◎" },
+  {
+    id: "breakdown",
+    segment: "breakdown",
+    labelKey: "nav.breakdown",
+    glyph: "◧",
+  },
+  { id: "budget", segment: "budget", labelKey: "nav.budget", glyph: "€" },
+  { id: "schedule", segment: "schedule", labelKey: "nav.schedule", glyph: "▦" },
+  {
+    id: "locations",
+    segment: "locations",
+    labelKey: "nav.locations",
+    glyph: "◎",
+  },
   {
     id: "shooting-plan",
     segment: "shooting-plan",
-    label: "Inquadrature",
+    labelKey: "nav.shootingPlan",
     glyph: "▦",
   },
 ];
 
 /** Build the rail navigation for a project. The active flag is computed
  *  against `currentSegment` (e.g. "breakdown"); pass an empty string to
- *  render the rail without any active highlight. */
+ *  render the rail without any active highlight. `t` resolves labels to the
+ *  active locale. */
 export function buildRailNav({
   projectId,
   currentSegment,
+  t,
 }: {
   projectId: string;
   currentSegment: string;
+  t: Translate;
 }): { sviluppo: RailSection; produzione: RailSection } {
   const toRailItem = (entry: NavEntry): RailNavItem => ({
     id: entry.id,
-    label: entry.label,
+    label: t(entry.labelKey),
     icon: entry.glyph,
     href: `/projects/${projectId}/${entry.segment}`,
     isActive: entry.segment === currentSegment,
   });
   return {
     sviluppo: {
-      label: "Sviluppo",
+      label: t("navGroup.development"),
       items: DEV_ENTRIES.map(toRailItem),
     },
     produzione: {
-      label: "Produzione",
+      label: t("navGroup.production"),
       items: PROD_ENTRIES.map(toRailItem),
     },
   };
 }
 
 /** Active section label, used by the slim TopBar crumb. */
-export function railSectionLabelForSegment(segment: string): string | null {
+export function railSectionLabelForSegment(
+  segment: string,
+  t: Translate,
+): string | null {
   const entry = [...DEV_ENTRIES, ...PROD_ENTRIES].find(
     (e) => e.segment === segment,
   );
-  return entry?.label ?? null;
+  return entry ? t(entry.labelKey) : null;
 }
 
 /** All known segments — useful for route-id matching helpers in `_app.tsx`. */

@@ -73,6 +73,7 @@ import {
 import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
 import { buildRailNav } from "../nav";
+import { useTranslation } from "~/features/i18n";
 import {
   NotificationCenterDrawerHeader,
   NotificationCenterDrawerContent,
@@ -279,6 +280,7 @@ function AppShellInner({
   const activeShootingDay = useActiveShootingDay();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [cesareOpen, setCesareOpen] = useState(false);
@@ -817,7 +819,7 @@ function AppShellInner({
     // Section jumps are derived from the same nav source the rail renders,
     // so the palette can never drift from the rail's section list.
     if (projectId) {
-      const nav = buildRailNav({ projectId, currentSegment: activeSegment });
+      const nav = buildRailNav({ projectId, currentSegment: activeSegment, t });
       for (const section of [nav.sviluppo, nav.produzione]) {
         for (const entry of section.items) {
           items.push({
@@ -852,7 +854,7 @@ function AppShellInner({
     }
 
     return items;
-  }, [router, projectId, activeSegment, openCesare, onCesareSessionNew]);
+  }, [router, projectId, activeSegment, openCesare, onCesareSessionNew, t]);
 
   // ── Rail tools (search + new + switch + more) ────────────────
   const railTools = useMemo<RailToolItem[]>(
@@ -906,9 +908,9 @@ function AppShellInner({
       // so the chrome is consistent. Recents come from the project list.
       return [];
     }
-    const nav = buildRailNav({ projectId, currentSegment: activeSegment });
+    const nav = buildRailNav({ projectId, currentSegment: activeSegment, t });
     return [nav.sviluppo, nav.produzione];
-  }, [projectId, activeSegment]);
+  }, [projectId, activeSegment, t]);
 
   const recentsSection = useMemo(() => {
     if (!projects || projects.length === 0) return null;
