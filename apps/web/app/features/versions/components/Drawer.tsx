@@ -5,6 +5,7 @@ import {
   useCallback,
   useState,
 } from "react";
+import { useTranslation } from "~/features/i18n";
 import styles from "./Drawer.module.css";
 
 interface DrawerProps {
@@ -29,6 +30,7 @@ export function Drawer({
   onWidthChange,
   "data-testid": testId,
 }: DrawerProps) {
+  const { t } = useTranslation();
   const [currentWidth, setCurrentWidth] = useState(width);
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -99,7 +101,7 @@ export function Drawer({
             type="button"
             className={styles.closeBtn}
             onClick={onClose}
-            aria-label="Chiudi"
+            aria-label={t("versions.drawer.close")}
             data-testid="drawer-close"
           >
             ✕

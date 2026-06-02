@@ -1,5 +1,6 @@
-import type { DocumentType } from "@oh-writers/domain";
+import type { DocumentType, TranslationKey } from "@oh-writers/domain";
 import { DocumentTypes } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./AIAssistantPanel.module.css";
 
 interface AIAssistantPanelProps {
@@ -7,66 +8,64 @@ interface AIAssistantPanelProps {
 }
 
 // Type-specific quick actions — wired to real AI calls in Spec 07
-const AI_ACTIONS: Record<DocumentType, string[]> = {
+const AI_ACTION_KEYS: Record<DocumentType, ReadonlyArray<TranslationKey>> = {
   [DocumentTypes.LOGLINE]: [
-    "Genera 3 alternative",
-    "Rendi più conciso",
-    "Rafforza il conflitto",
+    "documents.aiPanel.action.generateAlternatives",
+    "documents.aiPanel.action.makeConcise",
+    "documents.aiPanel.action.strengthenConflict",
   ],
   [DocumentTypes.SOGGETTO]: [
-    "Espandi un paragrafo",
-    "Stringi la premessa",
-    "Chiarisci il tema",
+    "documents.aiPanel.action.expandParagraph",
+    "documents.aiPanel.action.tightenPremise",
+    "documents.aiPanel.action.clarifyTheme",
   ],
   [DocumentTypes.SYNOPSIS]: [
-    "Espandi un paragrafo",
-    "Suggerisci una scena da aggiungere",
-    "Verifica la struttura in tre atti",
+    "documents.aiPanel.action.expandParagraph",
+    "documents.aiPanel.action.suggestSceneToAdd",
+    "documents.aiPanel.action.checkThreeAct",
   ],
   [DocumentTypes.OUTLINE]: [
-    "Suggerisci una scena",
-    "Individua problemi di ritmo",
-    "Suggerisci un'alternativa",
+    "documents.aiPanel.action.suggestScene",
+    "documents.aiPanel.action.findPacingIssues",
+    "documents.aiPanel.action.suggestAlternative",
   ],
   [DocumentTypes.TREATMENT]: [
-    "Espandi una sezione",
-    "Suggerisci dialoghi",
-    "Individua problemi di ritmo",
+    "documents.aiPanel.action.expandSection",
+    "documents.aiPanel.action.suggestDialogue",
+    "documents.aiPanel.action.findPacingIssues",
   ],
 };
 
 export function AIAssistantPanel({ type }: AIAssistantPanelProps) {
-  const actions = AI_ACTIONS[type];
+  const { t } = useTranslation();
+  const actionKeys = AI_ACTION_KEYS[type];
 
   return (
     <aside className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>Assistente AI</span>
-        <span className={styles.badge}>Spec 07</span>
+        <span className={styles.title}>{t("documents.aiPanel.title")}</span>
+        <span className={styles.badge}>{t("documents.aiPanel.badge")}</span>
       </div>
 
-      <p className={styles.notice}>
-        L'assistenza AI arriverà con la Spec 07. Le azioni qui sotto saranno
-        attive una volta integrate.
-      </p>
+      <p className={styles.notice}>{t("documents.aiPanel.notice")}</p>
 
       <div className={styles.actions}>
-        {actions.map((action) => (
+        {actionKeys.map((actionKey) => (
           <button
-            key={action}
+            key={actionKey}
             className={styles.actionBtn}
             disabled
-            title="In arrivo con la Spec 07"
+            title={t("documents.aiPanel.actionTooltip")}
             type="button"
           >
-            {action}
+            {t(actionKey)}
           </button>
         ))}
       </div>
 
       <div className={styles.suggestionArea}>
         <p className={styles.suggestionPlaceholder}>
-          I suggerimenti compariranno qui dopo aver eseguito un'azione.
+          {t("documents.aiPanel.suggestionPlaceholder")}
         </p>
       </div>
     </aside>

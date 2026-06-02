@@ -1,4 +1,5 @@
 import { pageCountColor, TARGET_PAGES_PER_DAY } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./PageCountBar.module.css";
 
 interface PageCountBarProps {
@@ -6,6 +7,7 @@ interface PageCountBarProps {
 }
 
 export function PageCountBar({ pages }: PageCountBarProps) {
+  const { t } = useTranslation();
   const color = pageCountColor(pages);
   const pct = Math.min(100, (pages / (TARGET_PAGES_PER_DAY * 1.5)) * 100);
   return (
@@ -17,7 +19,9 @@ export function PageCountBar({ pages }: PageCountBarProps) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className={styles.label}>{pages} pag.</div>
+      <div className={styles.label}>
+        {pages} {t("schedule.pagesShort")}
+      </div>
     </div>
   );
 }

@@ -32,10 +32,12 @@ import {
   useCreateSession,
   type CesareSession,
 } from "~/features/predictions/sessions";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { useCesareChat } from "../use-cesare-chat";
 import {
   CesareConversation,
-  PAGE_LABELS,
+  pageLabel,
   parseRewriteSceneMarker,
   parseBlockingProposalMarkerForSideChannel,
   type CesarePage,
@@ -48,6 +50,8 @@ import {
 import { useNarrativeNextStep } from "../use-narrative-next-step";
 import { NextStepChip } from "./NextStepChip";
 import styles from "./CesareSheet.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 /**
  * Cross-component flow (Spec 44): consumers invoke the returned function to
@@ -104,82 +108,83 @@ export type AskCesareFn = (params: {
 
 // ─── Quick prompts (unchanged from legacy sheet) ───────────────────────────
 
-const QUICK_PROMPTS_INITIAL: Record<CesarePage, string[]> = {
+const QUICK_PROMPT_KEYS: Record<CesarePage, ReadonlyArray<TranslationKey>> = {
   soggetto: [
-    "Il conflitto centrale è chiaro?",
-    "Suggerisci un arco del personaggio",
-    "Come rendere il finale più forte?",
+    "cesare.quick.soggetto.0",
+    "cesare.quick.soggetto.1",
+    "cesare.quick.soggetto.2",
   ],
   synopsis: [
-    "La sinossi è efficace per un produttore?",
-    "Riassumi in tre righe",
-    "Rendi il tono più commerciale",
+    "cesare.quick.synopsis.0",
+    "cesare.quick.synopsis.1",
+    "cesare.quick.synopsis.2",
   ],
   outline: [
-    "C'è squilibrio tra gli atti?",
-    "Suggerisci un twist al secondo atto",
-    "Compatta le scene ridondanti",
+    "cesare.quick.outline.0",
+    "cesare.quick.outline.1",
+    "cesare.quick.outline.2",
   ],
   treatment: [
-    "Il ritmo narrativo funziona?",
-    "Suggerisci come migliorare la transizione",
-    "Identifica i punti deboli",
+    "cesare.quick.treatment.0",
+    "cesare.quick.treatment.1",
+    "cesare.quick.treatment.2",
   ],
   screenplay: [
-    "Questa scena è fattibile domani?",
-    "Aiutami a scrivere il dialogo",
-    "Come riduco i costi di questa scena?",
+    "cesare.quick.screenplay.0",
+    "cesare.quick.screenplay.1",
+    "cesare.quick.screenplay.2",
   ],
   breakdown: [
-    "Cosa costa di più in questa scena?",
-    "Suggerisci dove tagliare",
-    "Compara con scene simili",
+    "cesare.quick.breakdown.0",
+    "cesare.quick.breakdown.1",
+    "cesare.quick.breakdown.2",
   ],
   budget: [
-    "Dove stiamo sforando?",
-    "Ottimizza questa categoria",
-    "Stima il costo della prossima giornata",
+    "cesare.quick.budget.0",
+    "cesare.quick.budget.1",
+    "cesare.quick.budget.2",
   ],
   schedule: [
-    "Ottimizza i giorni di ripresa",
-    "Raggruppa per location",
-    "Quanti giorni rimangono?",
+    "cesare.quick.schedule.0",
+    "cesare.quick.schedule.1",
+    "cesare.quick.schedule.2",
   ],
   "shooting-plan": [
-    "Quanto tempo ci vuole per questa scena?",
-    "Raggruppa le inquadrature per setup",
-    "Ordine ottimale delle riprese",
+    "cesare.quick.shootingPlan.0",
+    "cesare.quick.shootingPlan.1",
+    "cesare.quick.shootingPlan.2",
   ],
   locations: [
-    "Trova candidati per questa location",
-    "Quale zona geografica esplorare?",
-    "Cosa controllare durante il sopralluogo?",
+    "cesare.quick.locations.0",
+    "cesare.quick.locations.1",
+    "cesare.quick.locations.2",
   ],
 };
 
 // ─── Sessions UI ───────────────────────────────────────────────────────────
 
-const formatRelativeLastAt = (iso: string): string => {
+const formatRelativeLastAt = (iso: string, t: Translate): string => {
   const ts = new Date(iso).getTime();
   const diff = Date.now() - ts;
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "ora";
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1) return t("cesare.time.now");
+  if (minutes < 60) return `${minutes}${t("cesare.time.minutes")}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return `${hours}${t("cesare.time.hours")}`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return "ieri";
-  return `${days}g`;
+  if (days === 1) return t("cesare.time.yesterday");
+  return `${days}${t("cesare.time.days")}`;
 };
 
 const toDrawerSessions = (
   sessions: ReadonlyArray<CesareSession>,
   activeId: string | null,
+  t: Translate,
 ): ReadonlyArray<CesareDrawerSession> =>
   sessions.map((s) => ({
     id: s.id,
     title: s.title,
-    lastAt: formatRelativeLastAt(s.lastMessageAt),
+    lastAt: formatRelativeLastAt(s.lastMessageAt, t),
     isActive: s.id === activeId,
   }));
 
@@ -233,6 +238,7 @@ export function CesareSheet({
   surface = "floating",
   onOpenAsSplit,
 }: CesareSheetProps) {
+  const { t } = useTranslation();
   // ── Drawer state machine ────────────────────────────────────────────────
   const initialDrawerState: CesareDrawerState = isOpen ? "expanded" : "closed";
   const drawer = useDrawerState({
@@ -352,8 +358,8 @@ export function CesareSheet({
   }, [createSession, chat]);
 
   const drawerSessions = useMemo(
-    () => toDrawerSessions(sessionsQuery.data ?? [], activeSessionId),
-    [sessionsQuery.data, activeSessionId],
+    () => toDrawerSessions(sessionsQuery.data ?? [], activeSessionId, t),
+    [sessionsQuery.data, activeSessionId, t],
   );
 
   // ── Sessions popover ─────────────────────────────────────────────────────
@@ -380,11 +386,11 @@ export function CesareSheet({
         id: "page-scope",
         label:
           sceneNumber != null
-            ? `${PAGE_LABELS[page]} · SC.${sceneNumber}`
-            : PAGE_LABELS[page],
+            ? `${pageLabel(page, t)} · SC.${sceneNumber}`
+            : pageLabel(page, t),
       },
     ],
-    [page, sceneNumber],
+    [page, sceneNumber, t],
   );
 
   // ── Diff surface handlers (Spec 47e) ─────────────────────────────────────
@@ -491,18 +497,18 @@ export function CesareSheet({
   // ── Scopes shown above the composer ─────────────────────────────────────
   const scopes = useMemo<ReadonlyArray<CesareDrawerScope>>(
     () => [
-      { id: "page", icon: "📎", label: PAGE_LABELS[page] },
+      { id: "page", icon: "📎", label: pageLabel(page, t) },
       ...(sceneNumber != null
         ? [
             {
               id: "scene",
               icon: "🎬",
-              label: `Scena ${sceneNumber}`,
+              label: `${t("cesare.scene")} ${sceneNumber}`,
             } satisfies CesareDrawerScope,
           ]
         : []),
     ],
-    [page, sceneNumber],
+    [page, sceneNumber, t],
   );
 
   // ── Body composition (shared conversation renderer) ──────────────────────
@@ -579,7 +585,9 @@ export function CesareSheet({
         onSubmit: handleSubmit,
         isThinking: isLoading,
       }}
-      peekSubtitle={isLoading ? "sta pensando…" : "in attesa"}
+      peekSubtitle={
+        isLoading ? t("cesare.peek.thinking") : t("cesare.peek.waiting")
+      }
     >
       {conversationBody}
       {isSessionPopoverOpen && (
@@ -598,10 +606,11 @@ export function CesareSheet({
 // ─── Floating-sheet-only building blocks ───────────────────────────────────
 
 function EmptyState({ page }: { page: CesarePage }) {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
       <p className={styles.emptyText}>
-        Chiedimi qualunque cosa su {PAGE_LABELS[page]}.
+        {t("cesare.empty.askAbout")} {pageLabel(page, t)}.
       </p>
     </div>
   );
@@ -614,18 +623,22 @@ function QuickPrompts({
   page: CesarePage;
   onSelect: (prompt: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <div className={styles.quickPrompts} aria-label="Suggerimenti rapidi">
-      {QUICK_PROMPTS_INITIAL[page].map((prompt) => (
-        <button
-          key={prompt}
-          type="button"
-          className={styles.quickPromptBtn}
-          onClick={() => onSelect(prompt)}
-        >
-          {prompt}
-        </button>
-      ))}
+    <div className={styles.quickPrompts} aria-label={t("cesare.quickPrompts.aria")}>
+      {QUICK_PROMPT_KEYS[page].map((key) => {
+        const prompt = t(key);
+        return (
+          <button
+            key={key}
+            type="button"
+            className={styles.quickPromptBtn}
+            onClick={() => onSelect(prompt)}
+          >
+            {prompt}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -643,6 +656,7 @@ function SessionsPopover({
   onNew: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -665,12 +679,14 @@ function SessionsPopover({
       ref={ref}
       className={styles.sessionsPopover}
       role="dialog"
-      aria-label="Sessioni Cesare"
+      aria-label={t("cesare.sessions.popoverAria")}
       data-testid="cesare-sessions-popover"
     >
       <ul className={styles.sessionsList} role="listbox">
         {sessions.length === 0 && (
-          <li className={styles.sessionsEmpty}>Nessuna sessione</li>
+          <li className={styles.sessionsEmpty}>
+            {t("cesare.sessions.empty")}
+          </li>
         )}
         {sessions.map((s) => (
           <li key={s.id}>
@@ -688,14 +704,14 @@ function SessionsPopover({
             >
               <span className={styles.sessionRowTitle}>{s.title}</span>
               <span className={styles.sessionRowMeta}>
-                {formatRelativeLastAt(s.lastMessageAt)}
+                {formatRelativeLastAt(s.lastMessageAt, t)}
               </span>
             </button>
           </li>
         ))}
       </ul>
       <button type="button" className={styles.sessionNewBtn} onClick={onNew}>
-        + Nuova sessione
+        {t("cesare.sessions.new")}
       </button>
     </div>
   );

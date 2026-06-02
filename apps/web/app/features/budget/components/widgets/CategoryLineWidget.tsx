@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import type { BudgetLine } from "@oh-writers/domain";
 import { updateBudgetLine } from "~/features/budget/server/budget.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./CategoryLineWidget.module.css";
 
 const fmt = (n: number) =>
@@ -30,6 +31,7 @@ export function CategoryLineWidget({
   elementCount,
   projectId,
 }: CategoryLineWidgetProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editingField, setEditingField] = useState<"rate" | "actual" | null>(
@@ -67,7 +69,12 @@ export function CategoryLineWidget({
           <span className={styles.icon}>{icon}</span>
           <span className={styles.title}>{title}</span>
           {elementCount > 0 && (
-            <span className={styles.badge}>{elementCount} elementi</span>
+            <span className={styles.badge}>
+              {t("budget.line.elements").replace(
+                "{count}",
+                String(elementCount),
+              )}
+            </span>
           )}
         </div>
         <div className={styles.headerRight}>
@@ -81,17 +88,18 @@ export function CategoryLineWidget({
       {open && (
         <div className={styles.body}>
           {!line ? (
-            <p className={styles.aiHint}>
-              Genera il budget per popolare questa sezione.
-            </p>
+            <p className={styles.aiHint}>{t("budget.line.empty")}</p>
           ) : (
             <div className={styles.row}>
               <span className={styles.rowLabel}>
-                {elementCount} {elementCount === 1 ? "elemento" : "elementi"}{" "}
-                dal breakdown
+                {elementCount}{" "}
+                {elementCount === 1
+                  ? t("budget.line.elementSingular")
+                  : t("budget.line.elementPlural")}{" "}
+                {t("budget.line.fromBreakdown")}
               </span>
               <div className={styles.fieldGroup}>
-                <span>Tariffa</span>
+                <span>{t("budget.line.rate")}</span>
                 {editingField === "rate" ? (
                   <input
                     className={styles.cellInput}
@@ -120,7 +128,7 @@ export function CategoryLineWidget({
                 )}
               </div>
               <div className={styles.fieldGroup}>
-                <span>Effettivo</span>
+                <span>{t("budget.line.actual")}</span>
                 {editingField === "actual" ? (
                   <input
                     className={styles.cellInput}

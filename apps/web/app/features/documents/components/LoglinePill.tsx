@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Popover } from "@oh-writers/ui";
 import { LOGLINE_MAX } from "../documents.schema";
+import { useTranslation } from "~/features/i18n";
 import styles from "./LoglinePill.module.css";
 
 export interface LoglinePillProps {
@@ -10,14 +11,14 @@ export interface LoglinePillProps {
   readonly onChange?: (next: string) => void;
 }
 
-const PLACEHOLDER = "Aggiungi una logline per inquadrare il progetto.";
-
 export function LoglinePill({
   projectId: _projectId,
   logline,
   canEdit,
   onChange,
 }: LoglinePillProps) {
+  const { t } = useTranslation();
+  const placeholder = t("documents.logline.placeholder");
   const [isOpen, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const trimmed = logline.trim();
@@ -30,7 +31,7 @@ export function LoglinePill({
     ? trimmed.length > 90
       ? `${trimmed.slice(0, 87)}…`
       : trimmed
-    : "Nessuna logline";
+    : t("documents.logline.empty");
 
   return (
     <div className={styles.wrap}>
@@ -42,7 +43,11 @@ export function LoglinePill({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        aria-label={hasLogline ? `Logline: ${trimmed}` : "Apri logline"}
+        aria-label={
+          hasLogline
+            ? t("documents.logline.loglineAria").replace("{logline}", trimmed)
+            : t("documents.logline.openAria")
+        }
         data-testid="narrative-logline-pill"
       >
         <span className={styles.pin} aria-hidden="true">
@@ -57,7 +62,7 @@ export function LoglinePill({
         width={480}
         className={styles.popover}
       >
-        <p className={styles.popHead}>Logline</p>
+        <p className={styles.popHead}>{t("documents.logline.heading")}</p>
         {canEdit && onChange !== undefined ? (
           <>
             <textarea
@@ -65,7 +70,7 @@ export function LoglinePill({
               value={logline}
               maxLength={LOGLINE_MAX}
               onChange={(e) => onChange(e.target.value)}
-              placeholder={PLACEHOLDER}
+              placeholder={placeholder}
               rows={4}
               data-testid="narrative-logline-editor"
             />
@@ -75,7 +80,7 @@ export function LoglinePill({
           </>
         ) : (
           <p className={styles.readonly}>
-            {hasLogline ? trimmed : PLACEHOLDER}
+            {hasLogline ? trimmed : placeholder}
           </p>
         )}
       </Popover>

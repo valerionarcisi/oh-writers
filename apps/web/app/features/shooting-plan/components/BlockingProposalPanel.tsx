@@ -1,5 +1,6 @@
 import { useButton } from "react-aria";
 import { useRef } from "react";
+import { useTranslation } from "~/features/i18n";
 import type { ProposedBlockingChange } from "./BlockingCanvas";
 import styles from "./BlockingProposalPanel.module.css";
 
@@ -55,6 +56,7 @@ export function BlockingProposalPanel({
   onRejectOne,
   isApplying,
 }: BlockingProposalPanelProps) {
+  const { t } = useTranslation();
   if (proposals.length === 0) return null;
   const actorCount = proposals.filter((p) => p.kind === "actor").length;
   const cameraCount = proposals.filter((p) => p.kind === "camera").length;
@@ -63,14 +65,22 @@ export function BlockingProposalPanel({
     <aside
       className={styles.panel}
       role="region"
-      aria-label="Proposte di blocking di Cesare"
+      aria-label={t("shootingPlan.proposal.regionAria")}
       data-testid="blocking-proposal-panel"
     >
       <header className={styles.header}>
-        <span className={styles.title}>Suggerimento Cesare</span>
+        <span className={styles.title}>
+          {t("shootingPlan.proposal.title")}
+        </span>
         <span className={styles.subtitle}>
-          {actorCount} {actorCount === 1 ? "attore" : "attori"} · {cameraCount}{" "}
-          {cameraCount === 1 ? "camera" : "camere"}
+          {actorCount}{" "}
+          {actorCount === 1
+            ? t("shootingPlan.proposal.actorSingular")
+            : t("shootingPlan.proposal.actorPlural")}{" "}
+          · {cameraCount}{" "}
+          {cameraCount === 1
+            ? t("shootingPlan.proposal.cameraSingular")
+            : t("shootingPlan.proposal.cameraPlural")}
         </span>
       </header>
 
@@ -86,14 +96,20 @@ export function BlockingProposalPanel({
             <div className={styles.itemActions}>
               <PanelButton
                 label="✓"
-                ariaLabel={`Accetta ${p.label}`}
+                ariaLabel={t("shootingPlan.proposal.acceptOneAria").replace(
+                  "{name}",
+                  p.label,
+                )}
                 variant="ghost"
                 isDisabled={isApplying}
                 onPress={() => onAcceptOne(p)}
               />
               <PanelButton
                 label="✕"
-                ariaLabel={`Scarta ${p.label}`}
+                ariaLabel={t("shootingPlan.proposal.rejectOneAria").replace(
+                  "{name}",
+                  p.label,
+                )}
                 variant="ghost"
                 isDisabled={isApplying}
                 onPress={() => onRejectOne(p)}
@@ -105,13 +121,17 @@ export function BlockingProposalPanel({
 
       <footer className={styles.footer}>
         <PanelButton
-          label="Scarta tutto"
+          label={t("shootingPlan.proposal.rejectAll")}
           variant="danger"
           isDisabled={isApplying}
           onPress={onRejectAll}
         />
         <PanelButton
-          label={isApplying ? "Applicando…" : "Accetta tutto"}
+          label={
+            isApplying
+              ? t("shootingPlan.proposal.applying")
+              : t("shootingPlan.proposal.acceptAll")
+          }
           variant="primary"
           isDisabled={isApplying}
           onPress={onAcceptAll}

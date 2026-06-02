@@ -2,6 +2,374 @@ import type { LocaleDict } from "./types.js";
 
 /** screenplay feature keys. Filled by the i18n bulk extraction (Spec 18b PR-5+). */
 export const screenplayKeys = {
-  en: {},
-  it: {},
+  en: {
+    // SaveIndicator — labels
+    "screenplay.save.label.saving": "Saving…",
+    "screenplay.save.label.dirty": "Unsaved",
+    "screenplay.save.label.error": "Error",
+    "screenplay.save.label.offline": "Offline",
+    "screenplay.save.label.saved": "Saved",
+    "screenplay.save.label.savedRelativePrefix": "Saved · ",
+    // SaveIndicator — tooltips
+    "screenplay.save.tip.saving": "Saving…",
+    "screenplay.save.tip.dirty": "Unsaved changes — click to save now",
+    "screenplay.save.tip.error": "Save failed — click to retry",
+    "screenplay.save.tip.offline": "Offline — changes are queued",
+    "screenplay.save.tip.savedRelativePrefix": "Saved ",
+    "screenplay.save.tip.savedRelativeSuffix": " — click to save now",
+    "screenplay.save.tip.savedAll": "All changes saved — click to save now",
+
+    // SceneStaleBadge
+    "screenplay.staleBadge.singularSuffix": "scene with outdated breakdown",
+    "screenplay.staleBadge.pluralSuffix": "scenes with outdated breakdown",
+    "screenplay.staleBadge.openBreakdown": "Open breakdown",
+
+    // VersionViewingBanner
+    "screenplay.viewing.unsavedChanges": "You have unsaved changes.",
+    "screenplay.viewing.youAreViewingPrefix": "You are viewing ",
+    "screenplay.viewing.savedOnPrefix": " · saved on ",
+    "screenplay.viewing.cancel": "Cancel",
+    "screenplay.viewing.restoreWithoutSaving": "Restore without saving",
+    "screenplay.viewing.saveVersionAndRestore": "Save version and restore",
+    "screenplay.viewing.backToDraft": "Back to draft",
+    "screenplay.viewing.restoring": "Restoring…",
+    "screenplay.viewing.restoreThisVersion": "Restore this version",
+
+    // ImportedTitlePageConfirm
+    "screenplay.titlePage.confirmTitle": "Title page imported from PDF",
+    "screenplay.titlePage.cancel": "Cancel",
+    "screenplay.titlePage.replace": "Replace",
+    "screenplay.titlePage.confirmBody":
+      "Do you want to replace the current title page with the one extracted from the imported PDF?",
+
+    // HoverToolbar
+    "screenplay.hover.accept": "Accept",
+    "screenplay.hover.reject": "Reject",
+    "screenplay.hover.acceptAria": "Accept Cesare edit",
+    "screenplay.hover.rejectAria": "Reject Cesare edit",
+
+    // ScreenplayElementChips — labels
+    "screenplay.chip.element.scene": "Scene",
+    "screenplay.chip.element.action": "Action",
+    "screenplay.chip.element.character": "Character",
+    "screenplay.chip.element.dialogue": "Dialogue",
+    "screenplay.chip.element.parenthetical": "Parenthetical",
+    "screenplay.chip.element.transition": "Transition",
+    "screenplay.chip.convertBlockAria": "Convert current block",
+
+    // ScreenplayToolbar — element labels
+    "screenplay.toolbar.element.scene": "Scene heading",
+    "screenplay.toolbar.element.action": "Action",
+    "screenplay.toolbar.element.character": "Character",
+    "screenplay.toolbar.element.dialogue": "Dialogue",
+    "screenplay.toolbar.element.parenthetical": "Parenthetical",
+    "screenplay.toolbar.element.transition": "Transition",
+    "screenplay.toolbar.convertBlockAria": "Convert current block",
+
+    // ToolbarMenu
+    "screenplay.menu.actionsAria": "Screenplay actions",
+    "screenplay.menu.importPdf": "Import PDF",
+    "screenplay.menu.importFountain": "Import Fountain",
+    "screenplay.menu.exportFountain": "Export Fountain",
+    "screenplay.menu.renumberTitle":
+      "Renumber all scenes following the document order",
+    "screenplay.menu.recalcSceneNumbers": "Recalculate scene numbers",
+    "screenplay.menu.titlePageTitle": "Open the title page",
+    "screenplay.menu.titlePage": "Title page",
+    "screenplay.menu.importPdfTitle": "Import PDF",
+    "screenplay.menu.cancel": "Cancel",
+    "screenplay.menu.overwrite": "Overwrite",
+    "screenplay.menu.saveAsPrefix": "Save as ",
+    "screenplay.menu.saveAsSuffix": " and import",
+    "screenplay.menu.replace": "Replace",
+    "screenplay.menu.importFountainTitle": "Import Fountain",
+    "screenplay.menu.confirmWithVersionBody":
+      "The current screenplay will be replaced by the imported content. You can save it as a new version first, so you don't lose anything.",
+    "screenplay.menu.confirmReplaceBody":
+      "Replace the current screenplay with the imported content?",
+
+    // VersionsPanel
+    "screenplay.versionsPanel.error.versionNotFound": "Version not found.",
+    "screenplay.versionsPanel.error.screenplayNotFound": "Screenplay not found.",
+    "screenplay.versionsPanel.error.projectNotFound": "Project not found.",
+    "screenplay.versionsPanel.error.forbidden":
+      "You do not have access to these versions.",
+    "screenplay.versionsPanel.error.db": "Unable to load the versions. Try again.",
+    "screenplay.versionsPanel.title": "Versions",
+    "screenplay.versionsPanel.labelPlaceholder": "Version label",
+    "screenplay.versionsPanel.save": "Save",
+    "screenplay.versionsPanel.cancel": "Cancel",
+    "screenplay.versionsPanel.newVersion": "+ New version",
+    "screenplay.versionsPanel.closeAria": "Close versions panel",
+    "screenplay.versionsPanel.closeTitle": "Close",
+    "screenplay.versionsPanel.loading": "Loading versions",
+    "screenplay.versionsPanel.empty": "No saved version. Create the first snapshot.",
+    "screenplay.versionsPanel.unnamed": "Unnamed",
+    "screenplay.versionsPanel.pageSingular": "page",
+    "screenplay.versionsPanel.pagePlural": "pages",
+    "screenplay.versionsPanel.viewing": "Viewing",
+    "screenplay.versionsPanel.view": "View",
+    "screenplay.versionsPanel.rename": "Rename",
+    "screenplay.versionsPanel.duplicate": "Duplicate",
+    "screenplay.versionsPanel.delete": "Delete",
+    "screenplay.versionsPanel.versionFallbackPrefix": "Version",
+
+    // VersionsList (legacy)
+    "screenplay.versionsList.unnamed": "Unnamed",
+
+    // ScreenplayCesarePanel
+    "screenplay.cesare.notesAria": "Cesare notes",
+    "screenplay.cesare.reading": "Reading…",
+    "screenplay.cesare.kind.dialogue": "Dialogue",
+    "screenplay.cesare.kind.action": "Action",
+    "screenplay.cesare.kind.structure": "Structure",
+    "screenplay.cesare.kind.pacing": "Pacing",
+    "screenplay.cesare.kind.style": "Style",
+    "screenplay.cesare.kind.format": "Format",
+    "screenplay.cesare.editApplied": "Edit applied · Cmd+Z to undo",
+    "screenplay.cesare.writeOneScene": "Write at least one scene to start.",
+    "screenplay.cesare.cesareReading": "Cesare is reading…",
+    "screenplay.cesare.refinementsSuffix": " refinements",
+    "screenplay.cesare.noRefinements": "No refinement.",
+    "screenplay.cesare.rereadAria": "Re-reads the screenplay",
+    "screenplay.cesare.rereadTitle": "Re-reads the screenplay",
+    "screenplay.cesare.textNotFoundTitle": "Text not found in the screenplay",
+    "screenplay.cesare.textNotFoundTag": "! text not found",
+    "screenplay.cesare.apply": "Apply",
+    "screenplay.cesare.staleSingular": "stale scene",
+    "screenplay.cesare.stalePlural": "stale scenes",
+    "screenplay.cesare.staleSuffix": " — the breakdown needs re-running.",
+    "screenplay.cesare.openBreakdown": "Open Breakdown →",
+    "screenplay.cesare.scenePrefix": "Sc. ",
+
+    // ScreenplayEditor
+    "screenplay.editor.error.versionNotFound": "Version not found.",
+    "screenplay.editor.error.screenplayNotFound": "Screenplay not found.",
+    "screenplay.editor.error.projectNotFound": "Project not found.",
+    "screenplay.editor.error.forbidden":
+      "You do not have access to these versions.",
+    "screenplay.editor.error.db": "Unable to load the versions. Try again.",
+    "screenplay.editor.versionFallbackPrefix": "Version",
+    "screenplay.editor.draftBannerPrefix": '✦ Cesare prepared the version: "',
+    "screenplay.editor.draftBannerSuffix": '".',
+    "screenplay.editor.openDiff": "Open the diff →",
+    "screenplay.editor.promoteToActive": "Promote to active",
+    "screenplay.editor.discardDraft": "Discard draft",
+    "screenplay.editor.exporting": "Exporting…",
+    "screenplay.editor.exportPdf": "Export PDF ▾",
+
+    // ExportScreenplayPdfModal
+    "screenplay.export.titlePrefix": "Export — ",
+    "screenplay.export.cancel": "Cancel",
+    "screenplay.export.generating": "Generating…",
+    "screenplay.export.generate": "Generate",
+    "screenplay.export.chooseScenesPrefix": "Choose scenes (",
+    "screenplay.export.chooseScenesSuffix": " selected)",
+    "screenplay.export.loadingScenes": "Loading scenes",
+    "screenplay.export.noSceneFound": "No scene found.",
+    "screenplay.export.includeCoverPage": "Include cover page",
+
+    // ScreenplayEditorShell
+    "screenplay.shell.fallbackAct": "Act I",
+    "screenplay.shell.exporting": "Exporting…",
+    "screenplay.shell.exportPdf": "Export PDF",
+    "screenplay.shell.exitFocus": "Exit Focus",
+    "screenplay.shell.focus": "Focus",
+    "screenplay.shell.versions": "Versions",
+    "screenplay.shell.openSceneIndexAria": "Open scene index",
+    "screenplay.shell.index": "Index",
+    "screenplay.shell.searchScenePlaceholder": "Search scene or location…",
+    "screenplay.shell.searchSceneAria": "Search scene or location",
+    "screenplay.shell.noSceneFound": "No scene found",
+    "screenplay.shell.openVersions": "Open versions →",
+    "screenplay.shell.closeCesare": "Close Cesare",
+    "screenplay.shell.openCesare": "Open Cesare",
+    "screenplay.shell.openCesareTitle": "Open Cesare ✦",
+  },
+  it: {
+    // SaveIndicator — labels
+    "screenplay.save.label.saving": "Salvataggio…",
+    "screenplay.save.label.dirty": "Non salvato",
+    "screenplay.save.label.error": "Errore",
+    "screenplay.save.label.offline": "Offline",
+    "screenplay.save.label.saved": "Salvato",
+    "screenplay.save.label.savedRelativePrefix": "Salvato · ",
+    // SaveIndicator — tooltips
+    "screenplay.save.tip.saving": "Salvataggio in corso…",
+    "screenplay.save.tip.dirty": "Modifiche non salvate — clicca per salvare ora",
+    "screenplay.save.tip.error": "Salvataggio fallito — clicca per riprovare",
+    "screenplay.save.tip.offline": "Offline — le modifiche sono in coda",
+    "screenplay.save.tip.savedRelativePrefix": "Salvato ",
+    "screenplay.save.tip.savedRelativeSuffix": " — clicca per salvare ora",
+    "screenplay.save.tip.savedAll":
+      "Tutte le modifiche salvate — clicca per salvare ora",
+
+    // SceneStaleBadge
+    "screenplay.staleBadge.singularSuffix": "scena con breakdown non aggiornato",
+    "screenplay.staleBadge.pluralSuffix": "scene con breakdown non aggiornato",
+    "screenplay.staleBadge.openBreakdown": "Apri breakdown",
+
+    // VersionViewingBanner
+    "screenplay.viewing.unsavedChanges": "Hai modifiche non salvate.",
+    "screenplay.viewing.youAreViewingPrefix": "Stai visualizzando ",
+    "screenplay.viewing.savedOnPrefix": " · salvata il ",
+    "screenplay.viewing.cancel": "Annulla",
+    "screenplay.viewing.restoreWithoutSaving": "Ripristina senza salvare",
+    "screenplay.viewing.saveVersionAndRestore": "Salva versione e ripristina",
+    "screenplay.viewing.backToDraft": "Torna alla bozza",
+    "screenplay.viewing.restoring": "Ripristino…",
+    "screenplay.viewing.restoreThisVersion": "Ripristina questa versione",
+
+    // ImportedTitlePageConfirm
+    "screenplay.titlePage.confirmTitle": "Frontespizio importato dal PDF",
+    "screenplay.titlePage.cancel": "Annulla",
+    "screenplay.titlePage.replace": "Sostituisci",
+    "screenplay.titlePage.confirmBody":
+      "Vuoi sostituire il frontespizio attuale con quello estratto dal PDF importato?",
+
+    // HoverToolbar
+    "screenplay.hover.accept": "Accetta",
+    "screenplay.hover.reject": "Rifiuta",
+    "screenplay.hover.acceptAria": "Accetta modifica di Cesare",
+    "screenplay.hover.rejectAria": "Rifiuta modifica di Cesare",
+
+    // ScreenplayElementChips — labels
+    "screenplay.chip.element.scene": "Scena",
+    "screenplay.chip.element.action": "Azione",
+    "screenplay.chip.element.character": "Personaggio",
+    "screenplay.chip.element.dialogue": "Dialogo",
+    "screenplay.chip.element.parenthetical": "Parentetica",
+    "screenplay.chip.element.transition": "Transizione",
+    "screenplay.chip.convertBlockAria": "Converti blocco corrente",
+
+    // ScreenplayToolbar — element labels
+    "screenplay.toolbar.element.scene": "Intestazione scena",
+    "screenplay.toolbar.element.action": "Azione",
+    "screenplay.toolbar.element.character": "Personaggio",
+    "screenplay.toolbar.element.dialogue": "Dialogo",
+    "screenplay.toolbar.element.parenthetical": "Parentetica",
+    "screenplay.toolbar.element.transition": "Transizione",
+    "screenplay.toolbar.convertBlockAria": "Converti blocco corrente",
+
+    // ToolbarMenu
+    "screenplay.menu.actionsAria": "Azioni sceneggiatura",
+    "screenplay.menu.importPdf": "Importa PDF",
+    "screenplay.menu.importFountain": "Importa Fountain",
+    "screenplay.menu.exportFountain": "Esporta Fountain",
+    "screenplay.menu.renumberTitle":
+      "Rinumera tutte le scene secondo l'ordine del documento",
+    "screenplay.menu.recalcSceneNumbers": "Ricalcola numerazione scene",
+    "screenplay.menu.titlePageTitle": "Apri il frontespizio",
+    "screenplay.menu.titlePage": "Frontespizio",
+    "screenplay.menu.importPdfTitle": "Importa PDF",
+    "screenplay.menu.cancel": "Annulla",
+    "screenplay.menu.overwrite": "Sovrascrivi",
+    "screenplay.menu.saveAsPrefix": "Salva come ",
+    "screenplay.menu.saveAsSuffix": " e importa",
+    "screenplay.menu.replace": "Sostituisci",
+    "screenplay.menu.importFountainTitle": "Importa Fountain",
+    "screenplay.menu.confirmWithVersionBody":
+      "La sceneggiatura attuale verrà sostituita dal contenuto importato. Puoi prima salvarla come nuova versione, così non perdi nulla.",
+    "screenplay.menu.confirmReplaceBody":
+      "Sostituire la sceneggiatura attuale con il contenuto importato?",
+
+    // VersionsPanel
+    "screenplay.versionsPanel.error.versionNotFound": "Versione non trovata.",
+    "screenplay.versionsPanel.error.screenplayNotFound":
+      "Sceneggiatura non trovata.",
+    "screenplay.versionsPanel.error.projectNotFound": "Progetto non trovato.",
+    "screenplay.versionsPanel.error.forbidden": "Non hai accesso a queste versioni.",
+    "screenplay.versionsPanel.error.db":
+      "Impossibile caricare le versioni. Riprova.",
+    "screenplay.versionsPanel.title": "Versioni",
+    "screenplay.versionsPanel.labelPlaceholder": "Etichetta versione",
+    "screenplay.versionsPanel.save": "Salva",
+    "screenplay.versionsPanel.cancel": "Annulla",
+    "screenplay.versionsPanel.newVersion": "+ Nuova versione",
+    "screenplay.versionsPanel.closeAria": "Chiudi pannello versioni",
+    "screenplay.versionsPanel.closeTitle": "Chiudi",
+    "screenplay.versionsPanel.loading": "Caricamento versioni",
+    "screenplay.versionsPanel.empty":
+      "Nessuna versione salvata. Crea la prima snapshot.",
+    "screenplay.versionsPanel.unnamed": "Senza nome",
+    "screenplay.versionsPanel.pageSingular": "pagina",
+    "screenplay.versionsPanel.pagePlural": "pagine",
+    "screenplay.versionsPanel.viewing": "In visualizzazione",
+    "screenplay.versionsPanel.view": "Visualizza",
+    "screenplay.versionsPanel.rename": "Rinomina",
+    "screenplay.versionsPanel.duplicate": "Duplica",
+    "screenplay.versionsPanel.delete": "Elimina",
+    "screenplay.versionsPanel.versionFallbackPrefix": "Versione",
+
+    // VersionsList (legacy)
+    "screenplay.versionsList.unnamed": "Senza nome",
+
+    // ScreenplayCesarePanel
+    "screenplay.cesare.notesAria": "Note di Cesare",
+    "screenplay.cesare.reading": "Lettura in corso…",
+    "screenplay.cesare.kind.dialogue": "Dialogo",
+    "screenplay.cesare.kind.action": "Azione",
+    "screenplay.cesare.kind.structure": "Struttura",
+    "screenplay.cesare.kind.pacing": "Pacing",
+    "screenplay.cesare.kind.style": "Stile",
+    "screenplay.cesare.kind.format": "Formato",
+    "screenplay.cesare.editApplied": "Modifica applicata · Cmd+Z per annullare",
+    "screenplay.cesare.writeOneScene": "Scrivi almeno una scena per iniziare.",
+    "screenplay.cesare.cesareReading": "Cesare sta leggendo…",
+    "screenplay.cesare.refinementsSuffix": " rifiniture",
+    "screenplay.cesare.noRefinements": "Nessuna rifinitura.",
+    "screenplay.cesare.rereadAria": "Rilegge la sceneggiatura",
+    "screenplay.cesare.rereadTitle": "Rilegge la sceneggiatura",
+    "screenplay.cesare.textNotFoundTitle": "Testo non trovato nella sceneggiatura",
+    "screenplay.cesare.textNotFoundTag": "! testo non trovato",
+    "screenplay.cesare.apply": "Applica",
+    "screenplay.cesare.staleSingular": "scena obsoleta",
+    "screenplay.cesare.stalePlural": "scene obsolete",
+    "screenplay.cesare.staleSuffix": " — il breakdown è da rispogliare.",
+    "screenplay.cesare.openBreakdown": "Apri Breakdown →",
+    "screenplay.cesare.scenePrefix": "Sc. ",
+
+    // ScreenplayEditor
+    "screenplay.editor.error.versionNotFound": "Versione non trovata.",
+    "screenplay.editor.error.screenplayNotFound": "Sceneggiatura non trovata.",
+    "screenplay.editor.error.projectNotFound": "Progetto non trovato.",
+    "screenplay.editor.error.forbidden": "Non hai accesso a queste versioni.",
+    "screenplay.editor.error.db": "Impossibile caricare le versioni. Riprova.",
+    "screenplay.editor.versionFallbackPrefix": "Versione",
+    "screenplay.editor.draftBannerPrefix": '✦ Cesare ha preparato la versione: "',
+    "screenplay.editor.draftBannerSuffix": '".',
+    "screenplay.editor.openDiff": "Apri il diff →",
+    "screenplay.editor.promoteToActive": "Promuovi a attiva",
+    "screenplay.editor.discardDraft": "Scarta draft",
+    "screenplay.editor.exporting": "Esportazione…",
+    "screenplay.editor.exportPdf": "Esporta PDF ▾",
+
+    // ExportScreenplayPdfModal
+    "screenplay.export.titlePrefix": "Esporta — ",
+    "screenplay.export.cancel": "Annulla",
+    "screenplay.export.generating": "Generazione…",
+    "screenplay.export.generate": "Genera",
+    "screenplay.export.chooseScenesPrefix": "Scegli le scene (",
+    "screenplay.export.chooseScenesSuffix": " selezionate)",
+    "screenplay.export.loadingScenes": "Caricamento scene",
+    "screenplay.export.noSceneFound": "Nessuna scena trovata.",
+    "screenplay.export.includeCoverPage": "Includi cover page",
+
+    // ScreenplayEditorShell
+    "screenplay.shell.fallbackAct": "Atto I",
+    "screenplay.shell.exporting": "Esportazione…",
+    "screenplay.shell.exportPdf": "Esporta PDF",
+    "screenplay.shell.exitFocus": "Esci da Focus",
+    "screenplay.shell.focus": "Focus",
+    "screenplay.shell.versions": "Versioni",
+    "screenplay.shell.openSceneIndexAria": "Apri indice scene",
+    "screenplay.shell.index": "Indice",
+    "screenplay.shell.searchScenePlaceholder": "Cerca scena o luogo…",
+    "screenplay.shell.searchSceneAria": "Cerca scena o luogo",
+    "screenplay.shell.noSceneFound": "Nessuna scena trovata",
+    "screenplay.shell.openVersions": "Apri Versioni →",
+    "screenplay.shell.closeCesare": "Chiudi Cesare",
+    "screenplay.shell.openCesare": "Apri Cesare",
+    "screenplay.shell.openCesareTitle": "Apri Cesare ✦",
+  },
 } as const satisfies LocaleDict;

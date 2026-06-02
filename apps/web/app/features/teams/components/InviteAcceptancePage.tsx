@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import {
   inviteByTokenQueryOptions,
   acceptInvite,
@@ -14,6 +15,7 @@ interface InviteAcceptancePageProps {
 
 export function InviteAcceptancePage({ token }: InviteAcceptancePageProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: result } = useSuspenseQuery(inviteByTokenQueryOptions(token));
 
   const acceptMutation = useMutation({
@@ -35,15 +37,15 @@ export function InviteAcceptancePage({ token }: InviteAcceptancePageProps) {
     const errorMsg = match(result.error)
       .with(
         { _tag: "InvitationNotFoundError" },
-        () => "Invito non trovato o non valido.",
+        () => t("teams.invite.notFound"),
       )
-      .with({ _tag: "TeamNotFoundError" }, () => "Il team non esiste più.")
-      .otherwise(() => "Errore nel caricamento dell'invito.");
+      .with({ _tag: "TeamNotFoundError" }, () => t("teams.invite.teamGone"))
+      .otherwise(() => t("teams.invite.loadError"));
 
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <h1 className={styles.title}>Invito non valido</h1>
+          <h1 className={styles.title}>{t("teams.invite.invalidTitle")}</h1>
           <p className={styles.description}>{errorMsg}</p>
         </div>
       </div>
@@ -57,16 +59,15 @@ export function InviteAcceptancePage({ token }: InviteAcceptancePageProps) {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Unisciti a {team.name}</h1>
+        <h1 className={styles.title}>
+          {t("teams.invite.joinTitle")} {team.name}
+        </h1>
 
         {isExpired ? (
-          <p className={styles.description}>
-            Questo invito è scaduto. Chiedi all'amministratore di inviarne uno
-            nuovo.
-          </p>
+          <p className={styles.description}>{t("teams.invite.expired")}</p>
         ) : isAccepted ? (
           <p className={styles.description}>
-            Hai già accettato questo invito.{" "}
+            {t("teams.invite.alreadyAccepted")}{" "}
             <button
               type="button"
               className={styles.linkBtn}
@@ -77,20 +78,20 @@ export function InviteAcceptancePage({ token }: InviteAcceptancePageProps) {
                 })
               }
             >
-              Vai al team
+              {t("teams.invite.goToTeam")}
             </button>
           </p>
         ) : (
           <>
             <p className={styles.description}>
-              Sei stato invitato a far parte di <strong>{team.name}</strong>{" "}
-              come <strong>{invitation.role}</strong>.
+              {t("teams.invite.invitedAs1")} <strong>{team.name}</strong>{" "}
+              {t("teams.invite.invitedAs2")} <strong>{invitation.role}</strong>.
             </p>
 
             {acceptMutation.isError && (
               <p className={styles.errorMsg}>
                 {(acceptMutation.error as { message?: string }).message ??
-                  "Errore durante l'accettazione dell'invito."}
+                  t("teams.invite.acceptError")}
               </p>
             )}
 
@@ -101,7 +102,9 @@ export function InviteAcceptancePage({ token }: InviteAcceptancePageProps) {
                 onClick={() => acceptMutation.mutate()}
                 disabled={acceptMutation.isPending}
               >
-                {acceptMutation.isPending ? "Accettazione…" : "Accetta invito"}
+                {acceptMutation.isPending
+                  ? t("teams.invite.accepting")
+                  : t("teams.invite.accept")}
               </button>
             </div>
           </>

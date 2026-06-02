@@ -9,6 +9,7 @@ import {
 } from "../hooks/useVersions";
 import type { VersionView } from "../screenplay-versions.schema";
 import { ResultErrorView } from "~/components/ResultErrorView";
+import { useTranslation } from "~/features/i18n";
 import styles from "./VersionsList.module.css";
 
 interface VersionsListProps {
@@ -195,10 +196,13 @@ function VersionRow({
   isRestoring,
   isDeleting,
 }: VersionRowProps) {
+  const { t } = useTranslation();
   return (
     <li className={styles.row}>
       <div className={styles.rowMeta}>
-        <span className={styles.label}>{version.label ?? "Senza nome"}</span>
+        <span className={styles.label}>
+          {version.label ?? t("screenplay.versionsList.unnamed")}
+        </span>
         <span className={styles.date}>
           {version.createdAt.toLocaleDateString()}{" "}
           {version.createdAt.toLocaleTimeString()}

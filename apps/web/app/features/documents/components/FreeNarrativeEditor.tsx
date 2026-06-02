@@ -2,10 +2,8 @@ import { useMemo } from "react";
 import type { DocumentType } from "@oh-writers/domain";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { toCartelle } from "../lib/cartelle-counter";
+import { useTranslation } from "~/features/i18n";
 import styles from "./FreeNarrativeEditor.module.css";
-
-const PLACEHOLDER =
-  "Scrivi il tuo soggetto. Usa ## per strutturarlo in sezioni (es. ## Premessa).";
 
 export interface FreeNarrativeEditorProps {
   readonly content: string;
@@ -36,6 +34,7 @@ export function FreeNarrativeEditor({
   hideCounter = false,
   diffDocumentType,
 }: FreeNarrativeEditorProps) {
+  const { t } = useTranslation();
   const { cartelle, chars } = useMemo(() => {
     const plain = stripHtmlTags(content);
     const c = plain.length;
@@ -49,13 +48,17 @@ export function FreeNarrativeEditor({
         onChange={onChange}
         enableHeadings={true}
         readOnly={!canEdit}
-        placeholder={PLACEHOLDER}
+        placeholder={t("documents.freeNarrative.placeholder")}
         diffDocumentType={diffDocumentType}
       />
       {!hideCounter && (
         <div className={styles.counter} aria-live="polite">
-          {cartelle} {cartelle === 1 ? "cartella" : "cartelle"} ·{" "}
-          {chars.toLocaleString("it-IT")} caratteri
+          {cartelle}{" "}
+          {cartelle === 1
+            ? t("documents.freeNarrative.cartellaOne")
+            : t("documents.freeNarrative.cartellaOther")}{" "}
+          · {chars.toLocaleString("it-IT")}{" "}
+          {t("documents.freeNarrative.characters")}
         </div>
       )}
     </>

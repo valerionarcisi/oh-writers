@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Modal, DsButton } from "@oh-writers/ui";
 import { buildSideBySideDiff } from "@oh-writers/utils";
 import type { DiffRow, DiffSegment } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import styles from "./VersionCompareModal.module.css";
 
 export interface VersionCompareItem {
@@ -29,6 +30,7 @@ export function VersionCompareModal({
   initialRightId,
   onClose,
 }: VersionCompareModalProps) {
+  const { t } = useTranslation();
   const sorted = useMemo(
     () => [...versions].sort((a, b) => b.number - a.number),
     [versions],
@@ -59,7 +61,7 @@ export function VersionCompareModal({
       size="xl"
       footer={
         <DsButton variant="ghost" onClick={onClose}>
-          Chiudi
+          {t("documents.versionCompare.close")}
         </DsButton>
       }
     >

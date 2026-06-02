@@ -8,7 +8,11 @@ import {
   useDiscardDocumentDraft,
 } from "../hooks/useDocumentDrafts";
 import { diffDocumentLines, type DocumentDiffLine } from "../lib/diff-document";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import styles from "./DraftBanner.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 interface DraftBannerProps {
   readonly documentId: string;
@@ -31,6 +35,7 @@ export function DraftBanner({
   currentContent,
   canEdit,
 }: DraftBannerProps) {
+  const { t } = useTranslation();
   const draftsQuery = useDocumentDrafts(documentId);
   const promote = usePromoteDocumentDraft(documentId, projectId, docType);
   const discard = useDiscardDocumentDraft(documentId, projectId, docType);
@@ -44,17 +49,19 @@ export function DraftBanner({
     <section
       className={styles.banner}
       role="region"
-      aria-label="Bozze di Cesare"
+      aria-label={t("documents.draftBanner.ariaLabel")}
       data-testid="document-draft-banner"
     >
       <header className={styles.header}>
         <span className={styles.title}>
-          ✦ Cesare ha pronto{" "}
-          {drafts.length === 1 ? "un draft" : `${drafts.length} draft`}
+          {drafts.length === 1
+            ? t("documents.draftBanner.readyOne")
+            : t("documents.draftBanner.readyMany").replace(
+                "{count}",
+                String(drafts.length),
+              )}
         </span>
-        <span className={styles.hint}>
-          Confronta, promuovi a versione attiva o scarta.
-        </span>
+        <span className={styles.hint}>{t("documents.draftBanner.hint")}</span>
       </header>
       <ul className={styles.list}>
         {drafts.map((d) => {
@@ -63,7 +70,11 @@ export function DraftBanner({
             <li key={d.id} className={styles.item} data-draft-id={d.id}>
               <div className={styles.row}>
                 <span className={styles.label}>
-                  {d.label ?? `Bozza #${d.number}`}
+                  {d.label ??
+                    t("documents.draftBanner.draftFallback").replace(
+                      "{number}",
+                      String(d.number),
+                    )}
                 </span>
                 <div className={styles.actions}>
                   <Button
@@ -74,7 +85,9 @@ export function DraftBanner({
                     aria-controls={`draft-diff-${d.id}`}
                     data-testid={`draft-compare-${d.id}`}
                   >
-                    {isExpanded ? "Nascondi confronto" : "Confronta"}
+                    {isExpanded
+                      ? t("documents.draftBanner.hideCompare")
+                      : t("documents.draftBanner.compare")}
                   </Button>
                   <Button
                     variant="primary"
@@ -83,7 +96,7 @@ export function DraftBanner({
                     onPress={() => promote.mutate(d.id)}
                     data-testid={`draft-promote-${d.id}`}
                   >
-                    Promuovi a attiva
+                    {t("documents.draftBanner.promote")}
                   </Button>
                   <Button
                     variant="danger"
@@ -92,7 +105,7 @@ export function DraftBanner({
                     onPress={() => discard.mutate(d.id)}
                     data-testid={`draft-discard-${d.id}`}
                   >
-                    Scarta
+                    {t("documents.draftBanner.discard")}
                   </Button>
                 </div>
               </div>
@@ -102,6 +115,7 @@ export function DraftBanner({
                   currentContent={currentContent}
                   draft={d}
                   docType={docType}
+                  t={t}
                 />
               )}
             </li>
@@ -117,9 +131,10 @@ interface DraftDiffProps {
   readonly currentContent: string;
   readonly draft: DocumentVersion;
   readonly docType: DocumentType;
+  readonly t: Translate;
 }
 
-function DraftDiff({ id, currentContent, draft, docType }: DraftDiffProps) {
+function DraftDiff({ id, currentContent, draft, docType, t }: DraftDiffProps) {
   // Outline docs are JSON-encoded. A line-by-line diff over the raw JSON is
   // unreadable for a writer (parentheses, braces, ids, etc). Render a visual
   // act → sequence → scene preview instead, with new scenes highlighted.
@@ -129,6 +144,7 @@ function DraftDiff({ id, currentContent, draft, docType }: DraftDiffProps) {
         id={id}
         current={parseOutlineSafe(currentContent)}
         next={parseOutlineSafe(draft.content)}
+        t={t}
       />
     );
   }
@@ -137,12 +153,18 @@ function DraftDiff({ id, currentContent, draft, docType }: DraftDiffProps) {
   const lines = diffDocumentLines(left, right);
   return (
     <div id={id} className={styles.diff} data-testid="draft-diff">
-      <pre className={styles.diffSide} aria-label="Versione corrente">
+      <pre
+        className={styles.diffSide}
+        aria-label={t("documents.draftBanner.currentVersion")}
+      >
         {lines.map((line, i) => (
           <DiffLineRow key={`l-${i}`} line={line} side="left" />
         ))}
       </pre>
-      <pre className={styles.diffSide} aria-label="Bozza di Cesare">
+      <pre
+        className={styles.diffSide}
+        aria-label={t("documents.draftBanner.cesareDraft")}
+      >
         {lines.map((line, i) => (
           <DiffLineRow key={`r-${i}`} line={line} side="right" />
         ))}
@@ -197,21 +219,33 @@ function OutlineVisualDiff({
   id,
   current,
   next,
+  t,
 }: {
   readonly id: string;
   readonly current: OutlineDoc;
   readonly next: OutlineDoc;
+  readonly t: Translate;
 }) {
   const currentSceneKeys = new Set<string>(collectSceneKeys(current));
   return (
     <div id={id} className={styles.outline} data-testid="draft-diff-outline">
-      <section className={styles.outlineSide} aria-label="Versione corrente">
-        <span className={styles.outlineSideLabel}>Attuale</span>
-        <OutlineSide doc={current} sceneKeysFromOther={new Set()} />
+      <section
+        className={styles.outlineSide}
+        aria-label={t("documents.draftBanner.currentVersion")}
+      >
+        <span className={styles.outlineSideLabel}>
+          {t("documents.draftBanner.outlineCurrent")}
+        </span>
+        <OutlineSide doc={current} sceneKeysFromOther={new Set()} t={t} />
       </section>
-      <section className={styles.outlineSide} aria-label="Bozza di Cesare">
-        <span className={styles.outlineSideLabel}>Bozza Cesare</span>
-        <OutlineSide doc={next} sceneKeysFromOther={currentSceneKeys} />
+      <section
+        className={styles.outlineSide}
+        aria-label={t("documents.draftBanner.cesareDraft")}
+      >
+        <span className={styles.outlineSideLabel}>
+          {t("documents.draftBanner.outlineDraft")}
+        </span>
+        <OutlineSide doc={next} sceneKeysFromOther={currentSceneKeys} t={t} />
       </section>
     </div>
   );
@@ -220,13 +254,19 @@ function OutlineVisualDiff({
 function OutlineSide({
   doc,
   sceneKeysFromOther,
+  t,
 }: {
   readonly doc: OutlineDoc;
   readonly sceneKeysFromOther: ReadonlySet<string>;
+  readonly t: Translate;
 }) {
   const acts = doc.acts ?? [];
   if (acts.length === 0) {
-    return <p className={styles.outlineEmpty}>Nessun atto.</p>;
+    return (
+      <p className={styles.outlineEmpty}>
+        {t("documents.draftBanner.noActs")}
+      </p>
+    );
   }
   return (
     <>
@@ -245,7 +285,13 @@ function OutlineSide({
               sceneKeysFromOther.size > 0 && allNew ? "true" : undefined
             }
           >
-            <h4 className={styles.actTitle}>{act.title ?? `Atto ${ai + 1}`}</h4>
+            <h4 className={styles.actTitle}>
+              {act.title ??
+                t("documents.draftBanner.actFallback").replace(
+                  "{number}",
+                  String(ai + 1),
+                )}
+            </h4>
             {(act.sequences ?? []).map((seq, si) => (
               <div
                 key={`${actKey}-seq-${seq.id ?? si}`}

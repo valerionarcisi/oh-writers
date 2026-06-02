@@ -6,6 +6,7 @@ import {
   type TitlePage,
   type DraftColor,
 } from "../title-page.schema";
+import { useTranslation } from "~/features/i18n";
 import styles from "./TitlePageForm.module.css";
 
 interface TitlePageFormProps {
@@ -43,6 +44,7 @@ export function TitlePageForm({
   isSubmitting = false,
   onSubmit,
 }: TitlePageFormProps) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<TitlePage>(initialValues);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -67,12 +69,14 @@ export function TitlePageForm({
       <form
         className={styles.form}
         onSubmit={handleSubmit}
-        aria-label="Impostazioni frontespizio"
+        aria-label={t("projects.titlePage.formLabel")}
       >
         <fieldset className={styles.fieldset} disabled={!canEdit}>
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Titolo</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.titleLabel")}
+              </span>
               <input
                 className={styles.input}
                 value={projectTitle}
@@ -80,14 +84,16 @@ export function TitlePageForm({
                 data-testid="title-page-title"
               />
               <span className={styles.hint}>
-                Modifica il titolo del progetto nelle Impostazioni.
+                {t("projects.titlePage.titleHint")}
               </span>
             </label>
           </div>
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Scritto da</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.writtenBy")}
+              </span>
               <input
                 className={styles.input}
                 value={toInputValue(values.author)}
@@ -100,7 +106,9 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Tratto da</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.basedOn")}
+              </span>
               <input
                 className={styles.input}
                 value={toInputValue(values.basedOn)}
@@ -113,7 +121,9 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Contatti</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.contact")}
+              </span>
               <textarea
                 className={styles.textarea}
                 value={toInputValue(values.contact)}
@@ -127,7 +137,9 @@ export function TitlePageForm({
 
           <div className={styles.rowGrid}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Data bozza</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.draftDate")}
+              </span>
               <input
                 type="date"
                 className={styles.input}
@@ -143,7 +155,9 @@ export function TitlePageForm({
             </label>
 
             <label className={styles.label}>
-              <span className={styles.labelText}>Colore bozza</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.draftColor")}
+              </span>
               <select
                 className={styles.input}
                 value={values.draftColor ?? ""}
@@ -167,13 +181,15 @@ export function TitlePageForm({
             </label>
 
             <label className={styles.label}>
-              <span className={styles.labelText}>Note</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.notes")}
+              </span>
               <input
                 className={styles.input}
                 value={toInputValue(values.notes)}
                 onChange={(e) => update("notes", toNullable(e.target.value))}
                 maxLength={200}
-                placeholder="es. PRIMA BOZZA"
+                placeholder={t("projects.titlePage.notesPlaceholder")}
                 data-testid="title-page-notes"
               />
             </label>
@@ -181,7 +197,9 @@ export function TitlePageForm({
 
           <div className={styles.row}>
             <label className={styles.label}>
-              <span className={styles.labelText}>Registrazione WGA</span>
+              <span className={styles.labelText}>
+                {t("projects.titlePage.wgaRegistration")}
+              </span>
               <input
                 className={styles.input}
                 value={toInputValue(values.wgaRegistration)}
@@ -203,7 +221,7 @@ export function TitlePageForm({
                 disabled={!isDirty || isSubmitting}
                 data-testid="title-page-save"
               >
-                {isSubmitting ? "Salvataggio…" : "Salva"}
+                {isSubmitting ? t("status.saving") : t("action.save")}
               </Button>
             </div>
           )}
@@ -221,6 +239,7 @@ interface TitlePagePreviewProps {
 }
 
 function TitlePagePreview({ projectTitle, titlePage }: TitlePagePreviewProps) {
+  const { t } = useTranslation();
   const {
     author,
     basedOn,
@@ -234,13 +253,18 @@ function TitlePagePreview({ projectTitle, titlePage }: TitlePagePreviewProps) {
   const hasDraftInfo = draftDate || draftColor || notes || wgaRegistration;
 
   return (
-    <aside className={styles.preview} aria-label="Anteprima frontespizio">
+    <aside
+      className={styles.preview}
+      aria-label={t("projects.titlePage.previewLabel")}
+    >
       <div className={styles.page} data-testid="title-page-preview">
         <div className={styles.pageCenter}>
           <h2 className={styles.pageTitle}>{projectTitle.toUpperCase()}</h2>
           {author && (
             <>
-              <p className={styles.pageLabel}>Scritto da</p>
+              <p className={styles.pageLabel}>
+                {t("projects.titlePage.writtenBy")}
+              </p>
               <p className={styles.pageAuthor}>{author}</p>
             </>
           )}

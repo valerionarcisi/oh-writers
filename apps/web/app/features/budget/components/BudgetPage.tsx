@@ -13,6 +13,7 @@ import {
   VersionTrigger,
 } from "@oh-writers/ui";
 import { ExportBudgetModal } from "./ExportBudgetModal";
+import { useTranslation } from "~/features/i18n";
 import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
 import { resourceTotal } from "@oh-writers/domain";
 import type { Budget, FiscalRegime } from "@oh-writers/domain";
@@ -99,6 +100,7 @@ interface BudgetPageProps {
 }
 
 export function BudgetPage({ projectId }: BudgetPageProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   // Spec 44 TKT-LEAD-01: Cesare is opened from the shell BottomDock.
   const _openCesare = useCesareOpen();
@@ -237,7 +239,8 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           percent: grandTotal > 0 ? (castTotal / grandTotal) * 100 : 0,
           resourceCount: cast.length,
           status: castTotal > 0 ? "ok" : "missing",
-          statusReason: castTotal > 0 ? null : "Genera per stimare",
+          statusReason:
+            castTotal > 0 ? null : t("budget.overview.generateToEstimate"),
           sparkline: [0, 0, 0, 0, 0, castTotal],
         },
         {
@@ -248,7 +251,8 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           percent: grandTotal > 0 ? (crewTotal / grandTotal) * 100 : 0,
           resourceCount: crew.filter((r) => r.enabled).length,
           status: crewTotal > 0 ? "ok" : "missing",
-          statusReason: crewTotal > 0 ? null : "Genera per stimare",
+          statusReason:
+            crewTotal > 0 ? null : t("budget.overview.generateToEstimate"),
           sparkline: [0, 0, 0, 0, 0, crewTotal],
         },
       ],
@@ -272,22 +276,22 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       <Viewbar isScrolled={isStuck} className={styles.viewbar}>
         <SegmentedControl
           options={[
-            { id: "overview", label: "Panoramica" },
-            { id: "category", label: "Per categoria" },
-            { id: "day", label: "Per giornata" },
-            { id: "weekly", label: "Settimane" },
+            { id: "overview", label: t("budget.view.overview") },
+            { id: "category", label: t("budget.view.category") },
+            { id: "day", label: t("budget.view.day") },
+            { id: "weekly", label: t("budget.view.weekly") },
           ]}
           activeId={view}
           onSelect={(id) => {
             setView(id as ViewMode);
             if (id !== "category") setDrillCategory(null);
           }}
-          ariaLabel="Vista budget"
+          ariaLabel={t("budget.view.ariaLabel")}
         />
         <span className={styles.viewbarRight} />
         {budget && shootingDays !== null && (
           <SettingChip
-            label="Giorni"
+            label={t("budget.viewbar.daysLabel")}
             value={shootingDays}
             placeholder="—"
             disabled={false}
@@ -300,7 +304,7 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           contingencyPercent !== null &&
           contingencyPercent !== undefined && (
             <SettingChip
-              label="Cont."
+              label={t("budget.viewbar.contingencyLabel")}
               value={contingencyPercent}
               placeholder="10"
               disabled={false}
@@ -315,21 +319,24 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           variant="pill"
           versionLabel={versionLabel}
           menuItems={[
-            ...screenplayVersions.map((v, idx) => ({
-              id: `version-${v.id}`,
-              label:
-                v.id === currentVersionId
-                  ? `● ${v.label ?? `Versione ${idx + 1}`}`
-                  : (v.label ?? `Versione ${idx + 1}`),
-              onSelect: handleOpenVersionsDrawer,
-              tone:
-                v.id === currentVersionId
-                  ? ("default" as const)
-                  : ("muted" as const),
-            })),
+            ...screenplayVersions.map((v, idx) => {
+              const fallbackLabel = `${t("budget.viewbar.versionFallback")} ${idx + 1}`;
+              return {
+                id: `version-${v.id}`,
+                label:
+                  v.id === currentVersionId
+                    ? `● ${v.label ?? fallbackLabel}`
+                    : (v.label ?? fallbackLabel),
+                onSelect: handleOpenVersionsDrawer,
+                tone:
+                  v.id === currentVersionId
+                    ? ("default" as const)
+                    : ("muted" as const),
+              };
+            }),
             {
               id: "open-drawer",
-              label: "Apri Versioni →",
+              label: t("budget.viewbar.openVersions"),
               onSelect: handleOpenVersionsDrawer,
             },
           ]}
@@ -356,9 +363,11 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               {budget && (
                 <section className={styles.section}>
                   <header className={styles.sectionHead}>
-                    <h2 className={styles.sectionTitle}>Tutte le voci</h2>
+                    <h2 className={styles.sectionTitle}>
+                      {t("budget.section.allLines")}
+                    </h2>
                     <span className={styles.sectionMeta}>
-                      Modifica diretta · ⌘K per cercare · Tab per saltare campo
+                      {t("budget.section.allLinesMeta")}
                     </span>
                   </header>
                   <CategoryFlatTable
@@ -374,8 +383,9 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               )}
               {!budget && (
                 <div className={styles.emptyCard}>
-                  Configura le tariffe, poi premi <strong>Rigenera</strong> per
-                  generare il budget.
+                  {t("budget.empty.configureRatesPrefix")}{" "}
+                  <strong>{t("budget.empty.configureRatesRegenerate")}</strong>{" "}
+                  {t("budget.empty.configureRatesSuffix")}
                 </div>
               )}
             </>
@@ -385,14 +395,14 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
             <section className={styles.section}>
               <header className={styles.sectionHead}>
                 <h2 className={styles.sectionTitle}>
-                  Vista dettagliata · {detailSection}
+                  {t("budget.section.detailView")} · {detailSection}
                 </h2>
                 <button
                   type="button"
                   className={styles.filter}
                   onClick={() => setDetailSection(null)}
                 >
-                  Chiudi ✕
+                  {t("budget.section.close")}
                 </button>
               </header>
               {detailSection === SectionIds.CAST && (
@@ -419,9 +429,14 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           {view === "day" && (
             <section className={styles.section}>
               <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Per giornata</h2>
+                <h2 className={styles.sectionTitle}>
+                  {t("budget.section.byDay")}
+                </h2>
                 <span className={styles.sectionMeta}>
-                  {dayCosts?.length ?? 0} giornate
+                  {t("budget.section.byDayMeta").replace(
+                    "{count}",
+                    String(dayCosts?.length ?? 0),
+                  )}
                 </span>
               </header>
               <DayView days={dayCosts ?? []} />
@@ -431,9 +446,11 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           {view === "weekly" && (
             <section className={styles.section}>
               <header className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>Per settimana</h2>
+                <h2 className={styles.sectionTitle}>
+                  {t("budget.section.byWeek")}
+                </h2>
                 <span className={styles.sectionMeta}>
-                  Ripartizione costi della produzione per settimana di ripresa
+                  {t("budget.section.byWeekMeta")}
                 </span>
               </header>
               <BudgetWeeklyView projectId={projectId} />
@@ -445,13 +462,15 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left only; Cesare → BottomDock. */}
       <FloatingDock
         primaryAction={{
-          label: generateMutation.isPending ? "Generando…" : "Rigenera",
+          label: generateMutation.isPending
+            ? t("budget.action.regenerating")
+            : t("budget.action.regenerate"),
           hotkey: "⌘R",
           onClick: () => generateMutation.mutate(),
         }}
         secondaryActions={[
           {
-            label: "Esporta",
+            label: t("budget.action.export"),
             hotkey: "⌘E",
             onClick: () => setIsExportOpen(true),
           },
@@ -461,10 +480,10 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       {view === "category" && categoryTotal !== null && (
         <FloatingDock
           position="bottom-left"
-          label="Totale stimato"
+          label={t("budget.action.estimatedTotal")}
           infoChips={[
             {
-              label: "totale",
+              label: t("budget.action.totalChip"),
               value: new Intl.NumberFormat("it-IT", {
                 style: "currency",
                 currency: "EUR",
@@ -509,6 +528,7 @@ function CategoryView({
   budget,
   projectId,
 }: CategoryViewProps) {
+  const { t } = useTranslation();
   if (drillCategory !== null) {
     return (
       <div className={styles.drillWrap}>
@@ -518,7 +538,7 @@ function CategoryView({
           onClick={onClose}
           data-testid="drill-back"
         >
-          ← Torna a tutte le categorie
+          {t("budget.back.toCategories")}
         </button>
         <CategoryDrillContent
           categoryId={drillCategory}
@@ -536,9 +556,14 @@ function CategoryView({
   return (
     <section className={styles.section}>
       <header className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>Per categoria</h2>
+        <h2 className={styles.sectionTitle}>
+          {t("budget.section.byCategory")}
+        </h2>
         <span className={styles.sectionMeta}>
-          {overview.categories.length} reparti · clicca per dettaglio
+          {t("budget.section.repartiMeta").replace(
+            "{count}",
+            String(overview.categories.length),
+          )}
         </span>
       </header>
       <div className={styles.cats}>
@@ -566,7 +591,9 @@ function CategoryView({
             </div>
             <div className={styles.catFoot}>
               <span>{c.percent.toFixed(0)}%</span>
-              <span>{c.resourceCount} voci</span>
+              <span>
+                {c.resourceCount} {t("budget.category.lines")}
+              </span>
             </div>
           </button>
         ))}
@@ -594,11 +621,12 @@ function CategoryDrillContent({
   budget,
   projectId,
 }: CategoryDrillContentProps) {
+  const { t } = useTranslation();
   if (categoryId === "cast") {
     if (!budget)
       return (
         <div className={styles.emptyCard}>
-          Genera il budget per poter gestire il cast.
+          {t("budget.empty.castDrillNoBudget")}
         </div>
       );
     return (
@@ -616,7 +644,7 @@ function CategoryDrillContent({
     if (!budget || crew.length === 0)
       return (
         <div className={styles.emptyCard}>
-          Nessun ruolo di troupe — esegui Genera per popolare.
+          {t("budget.empty.crewDrillEmpty")}
         </div>
       );
     return (
@@ -631,7 +659,7 @@ function CategoryDrillContent({
   if (!budget) {
     return (
       <div className={styles.emptyCard}>
-        Nessun budget generato — esegui Genera per popolare la categoria.
+        {t("budget.empty.categoryNoBudget")}
       </div>
     );
   }

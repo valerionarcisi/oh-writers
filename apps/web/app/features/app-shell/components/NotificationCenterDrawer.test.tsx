@@ -17,6 +17,7 @@ import {
   CesareNotificationProvider,
   useCesareNotifications,
 } from "../cesare-notification-context";
+import { LocaleProvider } from "~/features/i18n";
 import {
   NotificationCenterDrawerHeader,
   NotificationCenterDrawerContent,
@@ -33,9 +34,11 @@ afterEach(cleanup);
 
 function withProviders(ui: React.ReactNode) {
   return (
-    <CesareNotificationProvider>
-      <SplitDrawerProvider>{ui}</SplitDrawerProvider>
-    </CesareNotificationProvider>
+    <LocaleProvider locale="it">
+      <CesareNotificationProvider>
+        <SplitDrawerProvider>{ui}</SplitDrawerProvider>
+      </CesareNotificationProvider>
+    </LocaleProvider>
   );
 }
 

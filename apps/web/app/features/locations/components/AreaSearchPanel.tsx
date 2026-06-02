@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import type { LocationRequirement } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   searchPlacesInArea,
   type PlaceSuggestion,
@@ -29,6 +30,7 @@ export function AreaSearchPanel({
   onClose,
   onAddCandidate,
 }: AreaSearchPanelProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlaceSuggestion[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,9 @@ export function AreaSearchPanel({
       setError(null);
     },
     onError: (e: unknown) => {
-      setError(e instanceof Error ? e.message : "Errore di ricerca");
+      setError(
+        e instanceof Error ? e.message : t("locations.areaSearch.searchError"),
+      );
     },
   });
 
@@ -68,16 +72,16 @@ export function AreaSearchPanel({
     <div className={styles.panel} data-testid="area-search-panel">
       <header className={styles.head}>
         <div>
-          <div className={styles.title}>Cerca in questa area</div>
+          <div className={styles.title}>{t("locations.areaSearch.title")}</div>
           <div className={styles.coords}>
-            {circle.lat.toFixed(4)}, {circle.lng.toFixed(4)} · raggio{" "}
-            {formatRadius(circle.radius_m)}
+            {circle.lat.toFixed(4)}, {circle.lng.toFixed(4)} ·{" "}
+            {t("locations.areaSearch.radius")} {formatRadius(circle.radius_m)}
           </div>
         </div>
         <button
           type="button"
           className={styles.closeBtn}
-          aria-label="Chiudi ricerca area"
+          aria-label={t("locations.areaSearch.closeAria")}
           data-testid="area-search-close-btn"
           onClick={onClose}
         >
@@ -89,7 +93,7 @@ export function AreaSearchPanel({
         <input
           type="text"
           className={styles.input}
-          placeholder="Es. pizzeria, ristorante, bar… (vuoto = qualsiasi)"
+          placeholder={t("locations.areaSearch.queryPlaceholder")}
           value={query}
           data-testid="area-search-query-input"
           onChange={(e) => setQuery(e.target.value)}
@@ -104,14 +108,16 @@ export function AreaSearchPanel({
           onClick={handleSearch}
           disabled={searchMutation.isPending}
         >
-          {searchMutation.isPending ? "Cerco…" : "Cerca"}
+          {searchMutation.isPending
+            ? t("locations.areaSearch.searching")
+            : t("locations.areaSearch.search")}
         </button>
       </div>
 
       {requirements.length > 1 ? (
         <div className={styles.requirementRow}>
           <label className={styles.smallLabel} htmlFor="area-search-req">
-            Aggiungi a:
+            {t("locations.areaSearch.addTo")}
           </label>
           <select
             id="area-search-req"
@@ -138,7 +144,9 @@ export function AreaSearchPanel({
       {results !== null ? (
         <div className={styles.results} data-testid="area-search-results">
           {results.length === 0 ? (
-            <div className={styles.empty}>Nessun risultato in questa area.</div>
+            <div className={styles.empty}>
+              {t("locations.areaSearch.empty")}
+            </div>
           ) : (
             results.map((suggestion) => (
               <div
@@ -175,7 +183,7 @@ export function AreaSearchPanel({
                     }
                   }}
                 >
-                  + Aggiungi
+                  {t("locations.action.add")}
                 </button>
               </div>
             ))

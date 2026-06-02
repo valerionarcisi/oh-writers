@@ -122,20 +122,33 @@ export interface WeekRow {
   totalMinutes: number;
 }
 
+// Formats the per-week sidebar label ("Settimana N" in Italian). The UI passes a
+// locale-aware formatter; the default keeps the historical Italian label so the
+// utils stay usable (and unit-testable) without a translator.
+export type WeekLabelFormatter = (weekNumber: number) => string;
+
+const defaultWeekLabel: WeekLabelFormatter = (n) => `Settimana ${n}`;
+
 // Assign day cells to weeks. When days have dates, we use actual calendar week
 // placement. When no dates are assigned, we space them sequentially Mon–Fri.
-export const buildWeekRows = (cells: DayCell[]): WeekRow[] => {
+export const buildWeekRows = (
+  cells: DayCell[],
+  weekLabel: WeekLabelFormatter = defaultWeekLabel,
+): WeekRow[] => {
   if (cells.length === 0) return [];
 
   const hasDates = cells.some((c) => c.date !== null);
 
   if (hasDates) {
-    return buildWeekRowsFromDates(cells);
+    return buildWeekRowsFromDates(cells, weekLabel);
   }
-  return buildWeekRowsSequential(cells);
+  return buildWeekRowsSequential(cells, weekLabel);
 };
 
-const buildWeekRowsFromDates = (cells: DayCell[]): WeekRow[] => {
+const buildWeekRowsFromDates = (
+  cells: DayCell[],
+  weekLabel: WeekLabelFormatter,
+): WeekRow[] => {
   // Map each cell to its ISO week key (year-week)
   const weekMap = new Map<string, DayCell[]>();
 
@@ -159,7 +172,7 @@ const buildWeekRowsFromDates = (cells: DayCell[]): WeekRow[] => {
 
   return sortedKeys.map((mondayStr, idx): WeekRow => {
     const [my, mm, md] = mondayStr.split("-").map(Number);
-    if (!my || !mm || !md) return buildEmptyWeek(idx + 1);
+    if (!my || !mm || !md) return buildEmptyWeek(idx + 1, weekLabel);
 
     const monday = new Date(my, mm - 1, md);
     const sunday = new Date(monday);
@@ -185,7 +198,7 @@ const buildWeekRowsFromDates = (cells: DayCell[]): WeekRow[] => {
 
     return {
       weekIndex: idx + 1,
-      label: `Settimana ${idx + 1}`,
+      label: weekLabel(idx + 1),
       dateRangeLabel,
       slots,
       activeDays,
@@ -197,7 +210,10 @@ const buildWeekRowsFromDates = (cells: DayCell[]): WeekRow[] => {
 };
 
 // No dates: lay days out sequentially Mon–Fri, 5 per week
-const buildWeekRowsSequential = (cells: DayCell[]): WeekRow[] => {
+const buildWeekRowsSequential = (
+  cells: DayCell[],
+  weekLabel: WeekLabelFormatter,
+): WeekRow[] => {
   const weeks: WeekRow[] = [];
   let weekIdx = 0;
   let cellIdx = 0;
@@ -219,7 +235,7 @@ const buildWeekRowsSequential = (cells: DayCell[]): WeekRow[] => {
     const weekCells = slots.map((s) => s.dayCell).filter(Boolean) as DayCell[];
     weeks.push({
       weekIndex: weekIdx,
-      label: `Settimana ${weekIdx}`,
+      label: weekLabel(weekIdx),
       dateRangeLabel: null,
       slots,
       activeDays: weekCells.length,
@@ -232,9 +248,12 @@ const buildWeekRowsSequential = (cells: DayCell[]): WeekRow[] => {
   return weeks;
 };
 
-const buildEmptyWeek = (idx: number): WeekRow => ({
+const buildEmptyWeek = (
+  idx: number,
+  weekLabel: WeekLabelFormatter = defaultWeekLabel,
+): WeekRow => ({
   weekIndex: idx,
-  label: `Settimana ${idx}`,
+  label: weekLabel(idx),
   dateRangeLabel: null,
   slots: Array.from({ length: 7 }, (_, dow) => ({
     dayOfWeek: dow,

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { fiscalMultiplier, resourceTotal } from "@oh-writers/domain";
 import type { FiscalRegime } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import styles from "./BudgetResourceRow.module.css";
 
 interface BudgetResourceRowProps {
@@ -26,10 +28,10 @@ interface BudgetResourceRowProps {
   onRemove?: () => void;
 }
 
-const REGIME_LABELS: Record<FiscalRegime, string> = {
-  piva: "P.IVA",
-  privato: "Privato",
-  none: "Netto",
+const REGIME_LABEL_KEYS: Record<FiscalRegime, TranslationKey> = {
+  piva: "budget.regime.piva",
+  privato: "budget.regime.privato",
+  none: "budget.regime.none",
 };
 
 function EditableCell({
@@ -98,6 +100,7 @@ function RegimeSelect({
   onChange: (v: FiscalRegime) => void;
   testId?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <select
       className={styles.regimeSelect}
@@ -107,7 +110,7 @@ function RegimeSelect({
     >
       {(["piva", "privato", "none"] as FiscalRegime[]).map((r) => (
         <option key={r} value={r}>
-          {REGIME_LABELS[r]}
+          {t(REGIME_LABEL_KEYS[r])}
         </option>
       ))}
     </select>
@@ -128,6 +131,7 @@ export function BudgetResourceRow({
   onPatch,
   onRemove,
 }: BudgetResourceRowProps) {
+  const { t } = useTranslation();
   const fullTotal = resourceTotal({
     days,
     dayRate,
@@ -151,7 +155,7 @@ export function BudgetResourceRow({
             type="checkbox"
             checked={enabled}
             onChange={(e) => onPatch({ enabled: e.target.checked })}
-            aria-label="Attiva/disattiva"
+            aria-label={t("budget.resource.toggleAriaLabel")}
           />
         </td>
       )}
@@ -209,7 +213,7 @@ export function BudgetResourceRow({
         data-testid={`resource-row-total-${id}`}
       >
         <span
-          title={`${days}g × €${dayRate}${fiscalRegime === "privato" ? " ×1.20" : ""} + vitto/pernotto${sceneRatio < 1 ? ` × ${Math.round(sceneRatio * 100)}% (scena)` : ""}`}
+          title={`${days}${t("budget.resource.daysUnit")} × €${dayRate}${fiscalRegime === "privato" ? t("budget.resource.privateMultiplier") : ""}${t("budget.resource.titleMeals")}${sceneRatio < 1 ? t("budget.resource.scenePortion").replace("{percent}", String(Math.round(sceneRatio * 100))) : ""}`}
         >
           {fmt(total)}
         </span>
@@ -220,7 +224,7 @@ export function BudgetResourceRow({
             type="button"
             className={styles.removeBtn}
             onClick={onRemove}
-            aria-label="Rimuovi"
+            aria-label={t("budget.resource.removeAriaLabel")}
           >
             ×
           </button>

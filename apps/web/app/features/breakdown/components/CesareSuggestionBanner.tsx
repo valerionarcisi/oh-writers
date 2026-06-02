@@ -1,4 +1,5 @@
 import { Banner } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 
 interface Props {
   pendingCount: number;
@@ -13,19 +14,25 @@ export function CesareSuggestionBanner({
   onIgnoreAll,
   onDismiss,
 }: Props) {
+  const { t } = useTranslation();
+  const message = `${t("breakdown.suggestion.foundPrefix")}${pendingCount}${
+    pendingCount === 1
+      ? t("breakdown.suggestion.foundSingularSuffix")
+      : t("breakdown.suggestion.foundPluralSuffix")
+  }`;
   return (
     <Banner
       variant="cesare"
-      message={`Cesare ha trovato ${pendingCount} elemento${pendingCount === 1 ? "" : "i"} da confermare`}
+      message={message}
       data-testid="cesare-suggestion-banner"
       actions={[
         {
-          label: "Accetta tutti",
+          label: t("breakdown.suggestion.acceptAll"),
           variant: "primary",
           onClick: onAcceptAll,
         },
         {
-          label: "Ignora tutti",
+          label: t("breakdown.suggestion.ignoreAll"),
           onClick: onIgnoreAll,
         },
       ]}

@@ -11,6 +11,7 @@
 import { useRef } from "react";
 import { useButton } from "react-aria";
 import type { NextStepSuggestion } from "../narrative-next-step";
+import { useTranslation } from "~/features/i18n";
 import styles from "./NextStepChip.module.css";
 
 export interface NextStepChipProps {
@@ -26,19 +27,20 @@ export function NextStepChip({
   onPick,
   isDisabled = false,
 }: NextStepChipProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
       onPress: () => onPick(suggestion.prompt),
       isDisabled,
-      "aria-label": `Prossimo passo: ${suggestion.chipLabel}`,
+      "aria-label": `${t("cesare.nextStep.aria")} ${suggestion.chipLabel}`,
     },
     ref,
   );
 
   return (
     <div className={styles.wrap} data-testid="cesare-next-step">
-      <span className={styles.kicker}>Prossimo passo</span>
+      <span className={styles.kicker}>{t("cesare.nextStep.kicker")}</span>
       <button
         {...buttonProps}
         ref={ref}

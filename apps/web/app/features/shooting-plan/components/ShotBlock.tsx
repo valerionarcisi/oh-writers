@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { SHOOTING_DAY_MINUTES, SHOT_SIZE_LABELS } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import type { ShotView } from "../server/shooting-plan.server";
 import styles from "./ShotBlock.module.css";
 
@@ -43,6 +44,7 @@ export function ShotBlock({
   onDragStart,
   onResizeCommit,
 }: ShotBlockProps) {
+  const { t } = useTranslation();
   const color = SHOT_SIZE_COLORS[shot.shotSize] ?? "var(--color-accent)";
   const [resizeMinutes, setResizeMinutes] = useState<number | null>(null);
   const resizeRef = useRef<{
@@ -135,7 +137,7 @@ export function ShotBlock({
         onPointerMove={handleResizePointerMove}
         onPointerUp={handleResizePointerUp}
         onPointerCancel={handleResizePointerUp}
-        title="Trascina per cambiare durata"
+        title={t("shootingPlan.shotBlock.resizeTitle")}
       />
     </div>
   );

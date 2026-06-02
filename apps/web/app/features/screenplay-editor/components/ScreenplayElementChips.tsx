@@ -1,4 +1,6 @@
 import type { CSSProperties } from "react";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import type { ElementType } from "../lib/fountain-element-detector";
 import styles from "./ScreenplayToolbar.module.css";
 
@@ -7,13 +9,13 @@ interface ScreenplayElementChipsProps {
   onSetElement: (element: ElementType) => void;
 }
 
-const ELEMENT_LABELS: Record<ElementType, string> = {
-  scene: "Scena",
-  action: "Azione",
-  character: "Personaggio",
-  dialogue: "Dialogo",
-  parenthetical: "Parentetica",
-  transition: "Transizione",
+const ELEMENT_LABEL_KEY: Record<ElementType, TranslationKey> = {
+  scene: "screenplay.chip.element.scene",
+  action: "screenplay.chip.element.action",
+  character: "screenplay.chip.element.character",
+  dialogue: "screenplay.chip.element.dialogue",
+  parenthetical: "screenplay.chip.element.parenthetical",
+  transition: "screenplay.chip.element.transition",
 };
 
 const ELEMENT_SHORTCUTS: Record<ElementType, string> = {
@@ -55,14 +57,16 @@ export function ScreenplayElementChips({
   currentElement,
   onSetElement,
 }: ScreenplayElementChipsProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={styles.elementStrip}
       role="toolbar"
-      aria-label="Converti blocco corrente"
+      aria-label={t("screenplay.chip.convertBlockAria")}
     >
       {ELEMENT_ORDER.map((el) => {
         const isActive = currentElement === el;
+        const label = t(ELEMENT_LABEL_KEY[el]);
         return (
           <button
             key={el}
@@ -70,12 +74,12 @@ export function ScreenplayElementChips({
             className={`${styles.elementChip} ${isActive ? styles.elementChipActive : ""}`}
             style={{ "--chip-accent": ELEMENT_COLORS[el] } as CSSProperties}
             data-color={ELEMENT_COLORS[el]}
-            title={`${ELEMENT_LABELS[el]} (${ELEMENT_SHORTCUTS[el]})`}
+            title={`${label} (${ELEMENT_SHORTCUTS[el]})`}
             aria-pressed={isActive}
             onClick={() => onSetElement(el)}
           >
             <span className={styles.chipDot} aria-hidden="true" />
-            <span className={styles.chipLabel}>{ELEMENT_LABELS[el]}</span>
+            <span className={styles.chipLabel}>{label}</span>
           </button>
         );
       })}

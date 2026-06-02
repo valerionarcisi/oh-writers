@@ -8,6 +8,7 @@ import { Node as PMNode } from "prosemirror-model";
 import { titlePageSchema } from "../title-page-pm/schema";
 import { emptyDoc } from "../title-page-pm/empty-doc";
 import { placeholdersPlugin } from "../title-page-pm/placeholders";
+import { useTranslation } from "~/features/i18n";
 import styles from "./TitlePageEditor.module.css";
 
 interface TitlePageEditorProps {
@@ -35,6 +36,9 @@ export function TitlePageEditor({
   onDocChange,
   readOnly = false,
 }: TitlePageEditorProps) {
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -51,7 +55,7 @@ export function TitlePageEditor({
           "Mod-Shift-z": redo,
         }),
         keymap(baseKeymap),
-        placeholdersPlugin(),
+        placeholdersPlugin((key) => tRef.current(key)),
       ],
     });
 

@@ -1,4 +1,6 @@
 import { Tabs } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectFilters.module.css";
 
 export type FilterTab = "all" | "personal" | "archived";
@@ -13,16 +15,16 @@ interface ProjectFiltersProps {
   onSortChange: (sort: SortKey) => void;
 }
 
-const TABS: { key: FilterTab; label: string }[] = [
-  { key: "all", label: "Tutti" },
-  { key: "personal", label: "Personali" },
-  { key: "archived", label: "Archiviati" },
+const TABS: { key: FilterTab; labelKey: TranslationKey }[] = [
+  { key: "all", labelKey: "dashboard.filters.tabAll" },
+  { key: "personal", labelKey: "dashboard.filters.tabPersonal" },
+  { key: "archived", labelKey: "dashboard.filters.tabArchived" },
 ];
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "updatedAt", label: "Ultima modifica" },
-  { key: "createdAt", label: "Data creazione" },
-  { key: "title", label: "Titolo" },
+const SORT_OPTIONS: { key: SortKey; labelKey: TranslationKey }[] = [
+  { key: "updatedAt", labelKey: "dashboard.filters.sortUpdated" },
+  { key: "createdAt", labelKey: "dashboard.filters.sortCreated" },
+  { key: "title", labelKey: "dashboard.filters.sortTitle" },
 ];
 
 export function ProjectFilters({
@@ -33,10 +35,11 @@ export function ProjectFilters({
   onSearchChange,
   onSortChange,
 }: ProjectFiltersProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.bar}>
       <Tabs
-        tabs={TABS.map((t) => ({ id: t.key, label: t.label }))}
+        tabs={TABS.map((tab) => ({ id: tab.key, label: t(tab.labelKey) }))}
         activeId={activeTab}
         onSelect={(id) => onTabChange(id as FilterTab)}
       />
@@ -45,7 +48,7 @@ export function ProjectFilters({
         <input
           type="search"
           className={styles.searchInput}
-          placeholder="Cerca progetti…"
+          placeholder={t("dashboard.filters.searchPlaceholder")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -58,7 +61,7 @@ export function ProjectFilters({
       >
         {SORT_OPTIONS.map((opt) => (
           <option key={opt.key} value={opt.key}>
-            {opt.label}
+            {t(opt.labelKey)}
           </option>
         ))}
       </select>

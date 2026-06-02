@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "~/features/i18n";
 import styles from "./SearchBar.module.css";
 
 interface Props {
@@ -20,6 +21,7 @@ export function SearchBar({
   onPrev,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function SearchBar({
   const label =
     total === 0
       ? query.length > 0
-        ? "Nessun risultato"
+        ? t("breakdown.search.noResult")
         : ""
       : `${currentIndex + 1} / ${total}`;
 
@@ -48,11 +50,11 @@ export function SearchBar({
         ref={inputRef}
         type="text"
         className={styles.input}
-        placeholder="Cerca…"
+        placeholder={t("breakdown.search.placeholder")}
         value={query}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        aria-label="Cerca nello script"
+        aria-label={t("breakdown.search.aria")}
       />
       {label && (
         <span className={styles.count} aria-live="polite">
@@ -65,8 +67,8 @@ export function SearchBar({
         className={styles.nav}
         onClick={onPrev}
         disabled={total === 0}
-        aria-label="Risultato precedente"
-        title="Precedente (Shift+Enter)"
+        aria-label={t("breakdown.search.prevAria")}
+        title={t("breakdown.search.prevTitle")}
       >
         ↑
       </button>
@@ -75,8 +77,8 @@ export function SearchBar({
         className={styles.nav}
         onClick={onNext}
         disabled={total === 0}
-        aria-label="Risultato successivo"
-        title="Successivo (Enter)"
+        aria-label={t("breakdown.search.nextAria")}
+        title={t("breakdown.search.nextTitle")}
       >
         ↓
       </button>
@@ -84,8 +86,8 @@ export function SearchBar({
         type="button"
         className={styles.close}
         onClick={onClose}
-        aria-label="Chiudi ricerca"
-        title="Chiudi (Esc)"
+        aria-label={t("breakdown.search.closeAria")}
+        title={t("breakdown.search.closeTitle")}
       >
         ✕
       </button>

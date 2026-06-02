@@ -2,20 +2,22 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import { RATE_UNITS } from "@oh-writers/domain";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { upsertRateEntry, deleteRateEntry } from "../server/budget.server";
 import type { ProjectRateCard } from "../server/budget.server";
 import styles from "./RateCardSection.module.css";
 
-const FISCAL_LABELS: Record<string, string> = {
-  piva: "P.IVA",
-  privato: "Privato",
-  none: "—",
+const FISCAL_LABEL_KEYS: Record<string, TranslationKey> = {
+  piva: "budget.fiscal.piva",
+  privato: "budget.fiscal.privato",
+  none: "budget.fiscal.none",
 };
 
-const UNIT_LABELS: Record<string, string> = {
-  giornata: "Giornata",
-  posa: "Posa",
-  forfait: "Forfait",
+const UNIT_LABEL_KEYS: Record<string, TranslationKey> = {
+  giornata: "budget.unit.giornata",
+  posa: "budget.unit.posa",
+  forfait: "budget.unit.forfait",
 };
 
 const fmt = (v: string | number) =>
@@ -53,6 +55,7 @@ const emptyDraft = (): DraftRow => ({
 });
 
 export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<DraftRow>(emptyDraft());
@@ -106,7 +109,7 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
   return (
     <div className={styles.section} data-testid="rate-card-section">
       <div className={styles.header}>
-        <span className={styles.title}>Tariffe</span>
+        <span className={styles.title}>{t("budget.rateCard.title")}</span>
         {!adding && (
           <button
             type="button"
@@ -117,7 +120,7 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
             }}
             data-testid="add-rate-entry-btn"
           >
-            + Aggiungi
+            {t("budget.rateCard.add")}
           </button>
         )}
       </div>
@@ -126,13 +129,15 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Ruolo</th>
-              <th>Unità</th>
-              <th className={styles.numCol}>€ / unità</th>
-              <th className={styles.numCol}>Diaria</th>
-              <th className={styles.numCol}>Alloggio</th>
-              <th>Regime</th>
+              <th>{t("budget.rateCard.colName")}</th>
+              <th>{t("budget.rateCard.colRole")}</th>
+              <th>{t("budget.rateCard.colUnit")}</th>
+              <th className={styles.numCol}>{t("budget.rateCard.colRate")}</th>
+              <th className={styles.numCol}>{t("budget.rateCard.colMeal")}</th>
+              <th className={styles.numCol}>
+                {t("budget.rateCard.colAccommodation")}
+              </th>
+              <th>{t("budget.rateCard.colRegime")}</th>
               <th />
             </tr>
           </thead>
@@ -151,7 +156,11 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
                 <tr key={e.id} className={styles.row}>
                   <td className={styles.nameCell}>{e.name}</td>
                   <td className={styles.muted}>{e.role ?? "—"}</td>
-                  <td>{UNIT_LABELS[e.rateUnit]}</td>
+                  <td>
+                    {UNIT_LABEL_KEYS[e.rateUnit]
+                      ? t(UNIT_LABEL_KEYS[e.rateUnit]!)
+                      : e.rateUnit}
+                  </td>
                   <td className={styles.numCell}>
                     {Number(e.rateValue) === 0 ? (
                       <span className={styles.zero}>0 €</span>
@@ -166,14 +175,16 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
                     {fmt(e.accommodation) || "—"}
                   </td>
                   <td className={styles.muted}>
-                    {FISCAL_LABELS[e.fiscalRegime]}
+                    {FISCAL_LABEL_KEYS[e.fiscalRegime]
+                      ? t(FISCAL_LABEL_KEYS[e.fiscalRegime]!)
+                      : e.fiscalRegime}
                   </td>
                   <td className={styles.actions}>
                     <button
                       type="button"
                       className={styles.iconBtn}
                       onClick={() => startEdit(e)}
-                      title="Modifica"
+                      title={t("budget.rateCard.edit")}
                     >
                       ✎
                     </button>
@@ -181,7 +192,7 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
                       type="button"
                       className={`${styles.iconBtn} ${styles.deleteBtn}`}
                       onClick={() => deleteMutation.mutate(e.id)}
-                      title="Elimina"
+                      title={t("budget.rateCard.delete")}
                     >
                       ×
                     </button>
@@ -204,10 +215,7 @@ export function RateCardSection({ projectId, entries }: RateCardSectionProps) {
       )}
 
       {entries.length === 0 && !adding && (
-        <p className={styles.empty}>
-          Aggiungi le tariffe prima di generare il budget per pre-popolare cast
-          e troupe con i valori corretti.
-        </p>
+        <p className={styles.empty}>{t("budget.rateCard.empty")}</p>
       )}
     </div>
   );
@@ -230,6 +238,7 @@ function EditRow({
   saving,
   autoFocusName,
 }: EditRowProps) {
+  const { t } = useTranslation();
   const set =
     (field: keyof DraftRow) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -248,7 +257,7 @@ function EditRow({
           value={draft.name}
           onChange={set("name")}
           onKeyDown={handleKeyDown}
-          placeholder="Nome *"
+          placeholder={t("budget.rateCard.namePlaceholder")}
           autoFocus={autoFocusName}
           data-testid="rate-name-input"
         />
@@ -259,7 +268,7 @@ function EditRow({
           value={draft.role}
           onChange={set("role")}
           onKeyDown={handleKeyDown}
-          placeholder="Ruolo"
+          placeholder={t("budget.rateCard.rolePlaceholder")}
         />
       </td>
       <td>
@@ -270,7 +279,7 @@ function EditRow({
         >
           {RATE_UNITS.map((u) => (
             <option key={u} value={u}>
-              {UNIT_LABELS[u]}
+              {UNIT_LABEL_KEYS[u] ? t(UNIT_LABEL_KEYS[u]!) : u}
             </option>
           ))}
         </select>
@@ -315,9 +324,9 @@ function EditRow({
           value={draft.fiscalRegime}
           onChange={set("fiscalRegime")}
         >
-          <option value="piva">P.IVA</option>
-          <option value="privato">Privato</option>
-          <option value="none">—</option>
+          <option value="piva">{t("budget.fiscal.piva")}</option>
+          <option value="privato">{t("budget.fiscal.privato")}</option>
+          <option value="none">{t("budget.fiscal.none")}</option>
         </select>
       </td>
       <td className={styles.actions}>

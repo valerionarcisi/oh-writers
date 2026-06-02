@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import { ReadOnlyScreenplayView } from "~/features/screenplay-editor";
+import { useTranslation } from "~/features/i18n";
 import { sceneFountainQueryOptions } from "../server/shooting-plan.server";
 import styles from "./SceneFountainPanel.module.css";
 
@@ -14,6 +15,7 @@ export function SceneFountainPanel({
   sceneId,
   projectId,
 }: SceneFountainPanelProps) {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     ...sceneFountainQueryOptions(sceneId, projectId),
     select: (raw) => {
@@ -27,14 +29,14 @@ export function SceneFountainPanel({
 
   return (
     <div className={styles.panel}>
-      <div className={styles.label}>TESTO SCENA</div>
+      <div className={styles.label}>{t("shootingPlan.sceneFountain.label")}</div>
       <div className={styles.scrollArea}>
         {isLoading && (
           <div className={styles.loading}>
             <Skeleton
               lines={3}
               widths={["80%", "100%", "60%"]}
-              ariaLabel="Caricamento testo scena"
+              ariaLabel={t("shootingPlan.sceneFountain.loading")}
             />
           </div>
         )}

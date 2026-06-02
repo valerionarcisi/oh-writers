@@ -21,7 +21,9 @@ import {
   CAST_TIER_META,
   type BreakdownCategory,
   type CastTier,
+  type TranslationKey,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   projectBreakdownOptions,
   useArchiveBreakdownElement,
@@ -30,6 +32,8 @@ import {
 } from "../hooks/useBreakdown";
 import type { ProjectBreakdownRow } from "../server/breakdown.server";
 import styles from "./ProjectBreakdownTable.module.css";
+
+type TranslateFn = ReturnType<typeof useTranslation>["t"];
 
 interface Props {
   projectId: string;
@@ -64,6 +68,7 @@ export function ProjectBreakdownTable({
   versionId,
   canEdit,
 }: Props) {
+  const { t } = useTranslation();
   const { data: rows = [], isLoading } = useQuery(
     projectBreakdownOptions(projectId, versionId),
   );
@@ -215,9 +220,13 @@ export function ProjectBreakdownTable({
   const bulkArchive = () => {
     const ids = [...selected];
     void confirm({
-      title: `Archiviare ${ids.length} element${ids.length === 1 ? "o" : "i"}?`,
-      message: "Gli elementi archiviati non appaiono nella tabella.",
-      confirmLabel: "Archivia",
+      title: `${t("breakdown.bulk.archiveTitlePrefix")}${ids.length}${
+        ids.length === 1
+          ? t("breakdown.bulk.archiveTitleSingularSuffix")
+          : t("breakdown.bulk.archiveTitlePluralSuffix")
+      }`,
+      message: t("breakdown.bulk.archiveMessageTable"),
+      confirmLabel: t("breakdown.table.archiveConfirm"),
       destructive: true,
     }).then((ok) => {
       if (!ok) return;
@@ -280,7 +289,7 @@ export function ProjectBreakdownTable({
         <Skeleton
           lines={8}
           widths={["20%", "80%", "20%", "80%", "20%", "80%", "20%", "80%"]}
-          ariaLabel="Caricamento tabella spoglio"
+          ariaLabel={t("breakdown.table.loading")}
         />
       </div>
     );
@@ -293,7 +302,7 @@ export function ProjectBreakdownTable({
           <input
             className={styles.searchInput}
             type="search"
-            placeholder="Cerca elemento…"
+            placeholder={t("breakdown.table.searchElementPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             data-testid="breakdown-table-search"
@@ -333,17 +342,17 @@ export function ProjectBreakdownTable({
             }}
             data-testid="breakdown-status-filter"
           >
-            <option value="all">Tutti gli stati</option>
-            <option value="ok">✓ Accepted</option>
-            <option value="pending">• Pending</option>
-            <option value="stale">⚠ Obsoleti</option>
+            <option value="all">{t("breakdown.table.allStates")}</option>
+            <option value="ok">{t("breakdown.table.optAccepted")}</option>
+            <option value="pending">{t("breakdown.table.optPending")}</option>
+            <option value="stale">{t("breakdown.table.optStale")}</option>
           </select>
         </div>
 
         {selected.size > 0 && canEdit && (
           <div className={styles.bulkBar} data-testid="bulk-action-bar">
             <span className={styles.bulkCount}>
-              {selected.size} selezionati
+              {selected.size} {t("breakdown.table.bulkSelected")}
             </span>
             <div className={styles.recatWrap} ref={recategorizeMenuRef}>
               <button
@@ -352,7 +361,7 @@ export function ProjectBreakdownTable({
                 onClick={() => setRecatOpen((o) => !o)}
                 data-testid="bulk-recategorize-trigger"
               >
-                Ricategorizza ▾
+                {t("breakdown.table.recategorize")}
               </button>
               {recatOpen && (
                 <ContextMenu
@@ -382,7 +391,7 @@ export function ProjectBreakdownTable({
               onClick={bulkArchive}
               data-testid="bulk-archive-btn"
             >
-              Archivia
+              {t("breakdown.table.archive")}
             </button>
           </div>
         )}
@@ -416,7 +425,7 @@ export function ProjectBreakdownTable({
                       if (el) el.indeterminate = someChecked;
                     }}
                     onChange={toggleAll}
-                    aria-label="Seleziona tutti"
+                    aria-label={t("breakdown.table.selectAllAria")}
                     data-testid="select-all-checkbox"
                   />
                 </th>
@@ -425,24 +434,29 @@ export function ProjectBreakdownTable({
                 className={[styles.th, styles.sortable].join(" ")}
                 onClick={() => onHeaderClick("name")}
               >
-                Nome{sortIndicator("name")}
+                {t("breakdown.table.name")}
+                {sortIndicator("name")}
               </th>
               <th
                 className={[styles.th, styles.sortable].join(" ")}
                 onClick={() => onHeaderClick("category")}
               >
-                Categoria{sortIndicator("category")}
+                {t("breakdown.table.category")}
+                {sortIndicator("category")}
               </th>
               <th
                 className={[styles.th, styles.sortable].join(" ")}
                 onClick={() => onHeaderClick("totalQuantity")}
               >
-                Quantità{sortIndicator("totalQuantity")}
+                {t("breakdown.table.quantity")}
+                {sortIndicator("totalQuantity")}
               </th>
-              <th className={styles.th}>Scene</th>
-              {showCastTierCol && <th className={styles.th}>Tier</th>}
-              <th className={styles.th}>Origine</th>
-              <th className={styles.th}>Stato</th>
+              <th className={styles.th}>{t("breakdown.table.scenes")}</th>
+              {showCastTierCol && (
+                <th className={styles.th}>{t("breakdown.table.tier")}</th>
+              )}
+              <th className={styles.th}>{t("breakdown.table.source")}</th>
+              <th className={styles.th}>{t("breakdown.table.status")}</th>
             </tr>
           </thead>
           <tbody>
@@ -452,7 +466,7 @@ export function ProjectBreakdownTable({
                   colSpan={(canEdit ? 1 : 0) + 6 + (showCastTierCol ? 1 : 0)}
                   className={styles.emptyCell}
                 >
-                  Nessun elemento trovato.
+                  {t("breakdown.noElementFound")}
                 </td>
               </tr>
             )}
@@ -473,7 +487,7 @@ export function ProjectBreakdownTable({
                       type="checkbox"
                       checked={selected.has(row.id)}
                       onChange={() => toggleRow(row.id)}
-                      aria-label={`Seleziona ${row.name}`}
+                      aria-label={`${t("breakdown.selectRowPrefix")}${row.name}`}
                     />
                   </td>
                 )}
@@ -541,10 +555,10 @@ export function ProjectBreakdownTable({
                   </td>
                 )}
                 <td className={[styles.td, styles.mutedText].join(" ")}>
-                  <SourceBadge source={row._raw.latestSource} />
+                  <SourceBadge source={row._raw.latestSource} t={t} />
                 </td>
                 <td className={styles.td}>
-                  <StatusDot status={row.status} />
+                  <StatusDot status={row.status} t={t} />
                 </td>
               </tr>
             ))}
@@ -559,12 +573,12 @@ export function ProjectBreakdownTable({
           anchor={{ x: menu.x, y: menu.y }}
           items={[
             {
-              label: "Archivia",
+              label: t("breakdown.table.archive"),
               onClick: () => {
                 void confirm({
-                  title: "Archiviare elemento?",
-                  message: "Archiviare questo elemento?",
-                  confirmLabel: "Archivia",
+                  title: t("breakdown.table.archiveElementTitle"),
+                  message: t("breakdown.table.archiveElementMessage"),
+                  confirmLabel: t("breakdown.table.archiveConfirm"),
                   destructive: true,
                 }).then((ok) => {
                   if (ok) archive.mutate({ elementId: menu.row.id });
@@ -580,38 +594,54 @@ export function ProjectBreakdownTable({
   );
 }
 
-function StatusDot({ status }: { status: ElementStatus }) {
+function StatusDot({
+  status,
+  t,
+}: {
+  status: ElementStatus;
+  t: TranslateFn;
+}) {
   if (status === "stale")
     return (
       <span
         className={styles.staleIndicator}
-        title="Alcune scene sono cambiate"
+        title={t("breakdown.table.scenesChanged")}
       >
         ⚠
       </span>
     );
   if (status === "pending")
     return (
-      <span className={styles.pendingIndicator} title="In attesa di conferma">
+      <span
+        className={styles.pendingIndicator}
+        title={t("breakdown.table.awaitingConfirmation")}
+      >
         •
       </span>
     );
   return (
-    <span className={styles.okIndicator} title="Accettato">
+    <span className={styles.okIndicator} title={t("breakdown.table.accepted")}>
       ✓
     </span>
   );
 }
 
-const SOURCE_LABEL: Record<string, string> = {
-  regex: "Regex",
-  cesare: "Cesare",
-  manual: "Manuale",
+const SOURCE_LABEL_KEY: Record<string, TranslationKey> = {
+  regex: "breakdown.source.regex",
+  cesare: "breakdown.source.cesare",
+  manual: "breakdown.source.manual",
 };
 
-function SourceBadge({ source }: { source: string | null }) {
+function SourceBadge({
+  source,
+  t,
+}: {
+  source: string | null;
+  t: TranslateFn;
+}) {
   if (!source) return <span className={styles.mutedText}>—</span>;
-  return <span>{SOURCE_LABEL[source] ?? source}</span>;
+  const labelKey = SOURCE_LABEL_KEY[source];
+  return <span>{labelKey ? t(labelKey) : source}</span>;
 }
 
 function SceneList({ numbers }: { numbers: number[] }) {

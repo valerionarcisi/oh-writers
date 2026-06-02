@@ -8,6 +8,7 @@ import {
 import { FloatingDock } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import { useCesareOpen, useSetActiveRequirementId } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import type {
   LocationRequirement,
   LocationCandidate,
@@ -42,6 +43,7 @@ interface LocationsPageProps {
 }
 
 export function LocationsPage({ projectId }: LocationsPageProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const openCesare = useCesareOpen();
   const { data } = useSuspenseQuery(locationsQueryOptions(projectId));
@@ -213,7 +215,7 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
         // discovery). Mirror that here so the test hook exercises the same flow.
         setAreaFilter({
           kind: "drawn",
-          label: "Area disegnata",
+          label: t("locations.map.drawnArea"),
           matchingCandidateIds: [],
         });
       }
@@ -496,28 +498,30 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
 
       {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left; Cesare → BottomDock. */}
       <FloatingDock
-        label="LOCATION"
+        label={t("locations.dock.label")}
         infoChips={[
           {
-            label: "Confermate",
+            label: t("locations.dock.confirmed"),
             value: `${confirmedCount} / ${requirements.length}`,
           },
         ]}
         secondaryActions={[
           {
             label: syncMutation.isPending
-              ? "Sincronizzazione…"
+              ? t("locations.dock.syncing")
               : syncState?.locationsStale
-                ? "⚠ Sincronizza"
-                : "Sincronizza",
+                ? t("locations.dock.syncStale")
+                : t("locations.dock.sync"),
             hotkey: "⌘⇧S",
             onClick: () => syncMutation.mutate(),
             ariaLabel: syncState?.locationsStale
-              ? "Location non sincronizzate con la versione attiva"
-              : "Sincronizza da breakdown",
+              ? t("locations.dock.syncStaleAria")
+              : t("locations.dock.syncAria"),
           },
           {
-            label: exportMutation.isPending ? "Esportazione…" : "Esporta",
+            label: exportMutation.isPending
+              ? t("locations.dock.exporting")
+              : t("locations.dock.export"),
             hotkey: "⌘E",
             onClick: () => exportMutation.mutate(),
           },

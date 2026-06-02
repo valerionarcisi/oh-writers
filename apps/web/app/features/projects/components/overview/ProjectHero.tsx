@@ -1,23 +1,25 @@
 import type { Project } from "@oh-writers/db";
 import { Button, DropdownMenu } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectHero.module.css";
 
-const FORMAT_LABELS: Record<string, string> = {
-  feature: "Lungometraggio",
-  short: "Cortometraggio",
-  series_episode: "Episodio serie",
-  pilot: "Pilota",
+const FORMAT_LABEL_KEYS: Record<string, TranslationKey> = {
+  feature: "dashboard.filter.formatFeature",
+  short: "dashboard.filter.formatShort",
+  series_episode: "dashboard.filter.formatSeriesEpisode",
+  pilot: "dashboard.filter.formatPilot",
 };
 
-const GENRE_LABELS: Record<string, string> = {
-  drama: "Dramma",
-  comedy: "Commedia",
-  thriller: "Thriller",
-  horror: "Horror",
-  action: "Azione",
-  "sci-fi": "Sci-fi",
-  documentary: "Documentario",
-  other: "Altro",
+const GENRE_LABEL_KEYS: Record<string, TranslationKey> = {
+  drama: "projects.genre.drama",
+  comedy: "projects.genre.comedy",
+  thriller: "projects.genre.thriller",
+  horror: "projects.genre.horror",
+  action: "projects.genre.action",
+  "sci-fi": "projects.genre.sciFi",
+  documentary: "projects.genre.documentary",
+  other: "projects.genre.other",
 };
 
 interface ProjectHeroProps {
@@ -41,35 +43,41 @@ export function ProjectHero({
   onDelete,
   isMutating,
 }: ProjectHeroProps) {
+  const { t } = useTranslation();
   const menuItems = project.isArchived
     ? [
-        { label: "Frontespizio", onClick: onOpenTitlePage },
-        { label: "Impostazioni", onClick: onOpenSettings },
+        { label: t("projects.hero.titlePage"), onClick: onOpenTitlePage },
+        { label: t("action.settings"), onClick: onOpenSettings },
         {
-          label: "Ripristina",
+          label: t("projects.hero.restore"),
           onClick: onRestore,
           disabled: isMutating,
         },
         {
-          label: "Elimina",
+          label: t("action.delete"),
           onClick: onDelete,
           disabled: isMutating,
         },
       ]
     : [
-        { label: "Frontespizio", onClick: onOpenTitlePage },
-        { label: "Impostazioni", onClick: onOpenSettings },
+        { label: t("projects.hero.titlePage"), onClick: onOpenTitlePage },
+        { label: t("action.settings"), onClick: onOpenSettings },
         {
-          label: "Archivia",
+          label: t("projects.hero.archive"),
           onClick: onArchive,
           disabled: isMutating,
         },
       ];
 
-  const formatLabel =
-    FORMAT_LABELS[project.format] ?? project.format.replace("_", " ");
-  const genreLabel = project.genre ? GENRE_LABELS[project.genre] : null;
-  const scopeLabel = project.teamId ? "Team" : "Personale";
+  const formatKey = FORMAT_LABEL_KEYS[project.format];
+  const formatLabel = formatKey
+    ? t(formatKey)
+    : project.format.replace("_", " ");
+  const genreKey = project.genre ? GENRE_LABEL_KEYS[project.genre] : undefined;
+  const genreLabel = genreKey ? t(genreKey) : null;
+  const scopeLabel = project.teamId
+    ? t("projects.hero.scopeTeam")
+    : t("projects.hero.scopePersonal");
 
   return (
     <header className={styles.hero}>
@@ -87,7 +95,7 @@ export function ProjectHero({
           {project.isArchived && (
             <>
               <span className={styles.dot}>·</span>
-              <span className={styles.warn}>Archiviato</span>
+              <span className={styles.warn}>{t("projects.hero.archived")}</span>
             </>
           )}
         </div>
@@ -100,7 +108,7 @@ export function ProjectHero({
           onPress={onContinueScreenplay}
           data-testid="overview-continue-screenplay"
         >
-          Continua sceneggiatura →
+          {t("projects.hero.continueScreenplay")}
         </Button>
         <DropdownMenu
           trigger={<span aria-hidden>⋯</span>}

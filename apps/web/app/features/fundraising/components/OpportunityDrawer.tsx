@@ -8,9 +8,13 @@ import {
   Bookmark,
   CheckCircle,
 } from "lucide-react";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import type { OpportunityWithSave } from "../server/fundraising.server";
 import type { FundraisingSaveState } from "@oh-writers/db/schema";
 import styles from "./OpportunityDrawer.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 interface OpportunityDrawerProps {
   opportunity: OpportunityWithSave | null;
@@ -19,13 +23,20 @@ interface OpportunityDrawerProps {
   onNotesBlur: (notes: string) => void;
 }
 
-function formatDeadlineFull(deadlineAt: Date | null): {
+function formatDeadlineFull(
+  deadlineAt: Date | null,
+  t: Translate,
+): {
   label: string;
   urgent: boolean;
   expired: boolean;
 } {
   if (!deadlineAt)
-    return { label: "Scadenza non indicata", urgent: false, expired: false };
+    return {
+      label: t("fundraising.deadlineLabel.none"),
+      urgent: false,
+      expired: false,
+    };
   const now = Date.now();
   const diff = deadlineAt.getTime() - now;
   const days = Math.round(diff / 86_400_000);
@@ -35,15 +46,27 @@ function formatDeadlineFull(deadlineAt: Date | null): {
     year: "numeric",
   });
   if (days < 0) {
-    return { label: `Scaduto il ${dateStr}`, urgent: false, expired: true };
+    return {
+      label: t("fundraising.deadlineLabel.expiredOn").replace(
+        "{value}",
+        dateStr,
+      ),
+      urgent: false,
+      expired: true,
+    };
   }
-  return { label: `Scade il ${dateStr}`, urgent: days <= 14, expired: false };
+  return {
+    label: t("fundraising.deadlineLabel.dueOn").replace("{value}", dateStr),
+    urgent: days <= 14,
+    expired: false,
+  };
 }
 
 function formatAmount(
   amountMin: string | null,
   amountMax: string | null,
   amountText: string | null,
+  t: Translate,
 ): string | null {
   if (amountMin && amountMax) {
     const fmt = (v: string) =>
@@ -60,7 +83,7 @@ function formatAmount(
       currency: "EUR",
       maximumFractionDigits: 0,
     });
-    return `Fino a ${fmt}`;
+    return t("fundraising.amount.upTo").replace("{value}", fmt);
   }
   return amountText ?? null;
 }
@@ -76,17 +99,19 @@ function DrawerContent({
   onSave: (state: FundraisingSaveState) => void;
   onNotesBlur: (notes: string) => void;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const { dialogProps, titleProps } = useDialog(
     { "aria-label": opportunity.title },
     ref,
   );
 
-  const deadline = formatDeadlineFull(opportunity.deadlineAt);
+  const deadline = formatDeadlineFull(opportunity.deadlineAt, t);
   const amount = formatAmount(
     opportunity.amountMin,
     opportunity.amountMax,
     opportunity.amountText,
+    t,
   );
   const eligibility = opportunity.eligibility ?? {};
   const allTags = [
@@ -111,7 +136,7 @@ function DrawerContent({
           type="button"
           className={styles.closeBtn}
           onClick={onClose}
-          aria-label="Chiudi dettaglio"
+          aria-label={t("fundraising.drawer.closeAria")}
         >
           <X size={16} />
         </button>
@@ -120,7 +145,9 @@ function DrawerContent({
       <div className={styles.drawerBody}>
         {/* Save actions */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Stato</div>
+          <div className={styles.sectionLabel}>
+            {t("fundraising.drawer.status")}
+          </div>
           <div className={styles.saveActions}>
             <button
               type="button"
@@ -130,7 +157,7 @@ function DrawerContent({
               onClick={() => onSave("saved")}
             >
               <Bookmark size={14} />
-              Salva
+              {t("fundraising.action.save")}
             </button>
             <button
               type="button"
@@ -140,7 +167,7 @@ function DrawerContent({
               onClick={() => onSave("dismissed")}
             >
               <X size={14} />
-              Ignora
+              {t("fundraising.action.dismiss")}
             </button>
             <button
               type="button"
@@ -150,14 +177,16 @@ function DrawerContent({
               onClick={() => onSave("applied")}
             >
               <CheckCircle size={14} />
-              Applicato
+              {t("fundraising.action.applied")}
             </button>
           </div>
         </div>
 
         {/* Deadline */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Scadenza</div>
+          <div className={styles.sectionLabel}>
+            {t("fundraising.drawer.deadline")}
+          </div>
           <div className={styles.metaRow}>
             <Calendar size={14} className={styles.metaIcon} />
             <span
@@ -177,7 +206,9 @@ function DrawerContent({
         {/* Amount */}
         {amount && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Importo</div>
+            <div className={styles.sectionLabel}>
+              {t("fundraising.drawer.amount")}
+            </div>
             <div className={styles.metaRow}>
               <Euro size={14} className={styles.metaIcon} />
               <span className={styles.deadlineValue}>{amount}</span>
@@ -188,7 +219,9 @@ function DrawerContent({
         {/* Summary */}
         {opportunity.summary && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Descrizione</div>
+            <div className={styles.sectionLabel}>
+              {t("fundraising.drawer.description")}
+            </div>
             <p className={styles.sectionText}>{opportunity.summary}</p>
           </div>
         )}
@@ -196,7 +229,9 @@ function DrawerContent({
         {/* Requirements */}
         {opportunity.requirements && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Requisiti</div>
+            <div className={styles.sectionLabel}>
+              {t("fundraising.drawer.requirements")}
+            </div>
             <p className={styles.sectionText}>{opportunity.requirements}</p>
           </div>
         )}
@@ -204,7 +239,9 @@ function DrawerContent({
         {/* Eligibility tags */}
         {allTags.length > 0 && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Eleggibilità</div>
+            <div className={styles.sectionLabel}>
+              {t("fundraising.drawer.eligibility")}
+            </div>
             <div className={styles.tags}>
               {allTags.map((tag) => (
                 <span key={tag} className={styles.tag}>
@@ -224,17 +261,19 @@ function DrawerContent({
             className={styles.externalLink}
           >
             <ExternalLink size={14} />
-            Apri sul sito
+            {t("fundraising.drawer.openSite")}
           </a>
         </div>
 
         {/* Notes */}
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Note</div>
+          <div className={styles.sectionLabel}>
+            {t("fundraising.drawer.notes")}
+          </div>
           <textarea
             className={styles.notesTextarea}
             defaultValue={opportunity.saveNotes ?? ""}
-            placeholder="Aggiungi note personali…"
+            placeholder={t("fundraising.drawer.notesPlaceholder")}
             onBlur={(e) => onNotesBlur(e.currentTarget.value)}
           />
         </div>

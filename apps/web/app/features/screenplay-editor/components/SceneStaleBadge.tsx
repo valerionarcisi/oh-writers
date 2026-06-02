@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Badge } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import { staleScenesOptions } from "~/features/breakdown";
 import styles from "./SceneStaleBadge.module.css";
 
@@ -15,6 +16,7 @@ interface Props {
  * the badge navigates to the project's /breakdown page.
  */
 export function SceneStaleBadge({ projectId, versionId }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: staleIds = [] } = useQuery({
     ...staleScenesOptions(versionId ?? ""),
@@ -42,8 +44,8 @@ export function SceneStaleBadge({ projectId, versionId }: Props) {
       <span>
         <span className={styles.count}>{count}</span>{" "}
         {count === 1
-          ? "scena con breakdown non aggiornato"
-          : "scene con breakdown non aggiornato"}
+          ? t("screenplay.staleBadge.singularSuffix")
+          : t("screenplay.staleBadge.pluralSuffix")}
       </span>
       <button
         type="button"
@@ -51,7 +53,7 @@ export function SceneStaleBadge({ projectId, versionId }: Props) {
         onClick={goToBreakdown}
         data-testid="editor-scene-stale-badge-link"
       >
-        Apri breakdown
+        {t("screenplay.staleBadge.openBreakdown")}
       </button>
     </div>
   );

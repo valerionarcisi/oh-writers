@@ -25,6 +25,7 @@ import { BlockingCard } from "./BlockingCard";
 import { ParallelPlansEditor } from "./ParallelPlansEditor";
 import { ShootingPlanDock } from "./ShootingPlanDock";
 import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import { useExportShotList } from "../hooks/useExportShotList";
 import styles from "./ShootingPlanPage.module.css";
 
@@ -41,6 +42,7 @@ const formatMinutes = (m: number): string => {
 };
 
 export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const openCesare = useCesareOpen();
@@ -105,7 +107,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       });
       if (!result.isOk) {
         showToast({
-          message: "Errore durante la generazione del piano.",
+          message: t("shootingPlan.toast.generateError"),
           variant: "error",
         });
         return;
@@ -113,19 +115,37 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
       const { createdCount, skippedCount, estimatedDays } = result.value;
       if (createdCount === 0 && skippedCount > 0) {
         showToast({
-          message: `Tutte le ${skippedCount} scene hanno già un piano.`,
+          message: t("shootingPlan.toast.allHavePlan").replace(
+            "{count}",
+            String(skippedCount),
+          ),
           variant: "info",
         });
       } else {
+        const skippedFragment =
+          skippedCount > 0
+            ? t("shootingPlan.toast.generatedSkipped").replace(
+                "{count}",
+                String(skippedCount),
+              )
+            : "";
+        const daysFragment = (
+          estimatedDays === 1
+            ? t("shootingPlan.toast.daysSingular")
+            : t("shootingPlan.toast.daysPlural")
+        ).replace("{count}", String(estimatedDays));
         showToast({
-          message: `Piano generato: ${createdCount} scene create${skippedCount > 0 ? `, ${skippedCount} già esistenti` : ""}. Stima: ${estimatedDays} giorn${estimatedDays === 1 ? "o" : "i"} di riprese.`,
+          message: t("shootingPlan.toast.generated")
+            .replace("{created}", String(createdCount))
+            .replace("{skipped}", skippedFragment)
+            .replace("{days}", daysFragment),
           variant: "success",
         });
       }
     },
     onError: () => {
       showToast({
-        message: "Errore durante la generazione del piano.",
+        message: t("shootingPlan.toast.generateError"),
         variant: "error",
       });
     },
@@ -212,26 +232,34 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.headerEyebrow}>Piano di ripresa</span>
+          <span className={styles.headerEyebrow}>
+            {t("shootingPlan.page.eyebrow")}
+          </span>
           <h1 className={styles.title}>
             {selectedScene
               ? `SC.${selectedScene.sceneNumber} · ${selectedScene.intExt}. ${selectedScene.location}`
-              : "Riprese"}
+              : t("shootingPlan.page.titleFallback")}
           </h1>
         </div>
         <div className={styles.headerMeta}>
           <span className={styles.headerMetaChip}>
-            {scenes.length} {scenes.length === 1 ? "scena" : "scene"}
+            {scenes.length}{" "}
+            {scenes.length === 1
+              ? t("shootingPlan.page.sceneSingular")
+              : t("shootingPlan.page.scenePlural")}
           </span>
           <span className={styles.headerMetaSep}>·</span>
           <span className={styles.headerMetaChip}>
-            {totalShots} {totalShots === 1 ? "inquadratura" : "inquadrature"}
+            {totalShots}{" "}
+            {totalShots === 1
+              ? t("shootingPlan.page.shotSingular")
+              : t("shootingPlan.page.shotPlural")}
           </span>
           {totalMinutesAll > 0 && (
             <>
               <span className={styles.headerMetaSep}>·</span>
               <span className={styles.headerMetaChip}>
-                {formatMinutes(totalMinutesAll)} pianificate
+                {formatMinutes(totalMinutesAll)} {t("shootingPlan.page.planned")}
               </span>
             </>
           )}
@@ -240,7 +268,9 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
               <span className={styles.headerMetaSep}>·</span>
               <span className={styles.headerMetaChip}>
                 {plannedCount}{" "}
-                {plannedCount === 1 ? "scena pianificata" : "scene pianificate"}
+                {plannedCount === 1
+                  ? t("shootingPlan.page.plannedSceneSingular")
+                  : t("shootingPlan.page.plannedScenePlural")}
               </span>
             </>
           )}
@@ -248,7 +278,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
             <>
               <span className={styles.headerMetaSep}>·</span>
               <span className={styles.headerMetaChip} data-highlight>
-                {scenarioCount} piani candidati
+                {scenarioCount} {t("shootingPlan.page.candidatePlans")}
               </span>
             </>
           )}
@@ -257,10 +287,12 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
 
       <div className={styles.body}>
         <aside className={styles.sceneSidebar}>
-          <div className={styles.sidebarLabel}>Scene del progetto</div>
+          <div className={styles.sidebarLabel}>
+            {t("shootingPlan.page.sidebarScenes")}
+          </div>
           {scenes.length === 0 && (
             <p className={styles.sidebarEmpty}>
-              Nessuna scena trovata. Importa una sceneggiatura per iniziare.
+              {t("shootingPlan.page.sidebarEmpty")}
             </p>
           )}
           {scenes.map((scene) => {
@@ -286,8 +318,8 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                     data-planned={isPlanned || undefined}
                   >
                     {isPlanned
-                      ? `● ${scene.shotCount} shot · ${formatMinutes(scene.totalMinutes ?? 0)}`
-                      : "○ non pianificata"}
+                      ? `● ${scene.shotCount} ${t("shootingPlan.page.shotSummary")} · ${formatMinutes(scene.totalMinutes ?? 0)}`
+                      : t("shootingPlan.page.sceneNotPlanned")}
                   </span>
                 </button>
                 {isSelected && (
@@ -339,7 +371,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
                     <Skeleton
                       lines={2}
                       widths={["80%", "50%"]}
-                      ariaLabel="Caricamento blocking"
+                      ariaLabel={t("shootingPlan.page.loadingBlocking")}
                     />
                   }
                 >
@@ -379,10 +411,7 @@ export function ShootingPlanPage({ projectId }: ShootingPlanPageProps) {
         ) : (
           <main className={styles.main}>
             <div className={styles.mainEmpty}>
-              <p>
-                Seleziona una scena dalla lista per iniziare a pianificare le
-                inquadrature.
-              </p>
+              <p>{t("shootingPlan.page.selectScene")}</p>
             </div>
           </main>
         )}

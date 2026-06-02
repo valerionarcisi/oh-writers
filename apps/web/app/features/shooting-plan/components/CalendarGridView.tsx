@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import {
   buildDayCells,
   buildWeekRows,
@@ -40,6 +41,7 @@ interface DayCellCardProps {
 }
 
 function DayCellCard({ cell, onClick }: DayCellCardProps) {
+  const { t } = useTranslation();
   const dateAbbrev = cell.date ? getDayAbbrev(cell.date) : null;
   const calendarDay = cell.date
     ? parseInt(cell.date.split("-")[2] ?? "0", 10)
@@ -51,7 +53,10 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
       className={styles.dayCell}
       data-overloaded={cell.isOverloaded || undefined}
       onClick={onClick}
-      aria-label={`Giorno ${cell.dayNumber}: ${cell.sceneCount} scene, ${cell.shotCount} inquadrature`}
+      aria-label={t("shootingPlan.calendar.dayAria")
+        .replace("{day}", String(cell.dayNumber))
+        .replace("{scenes}", String(cell.sceneCount))
+        .replace("{shots}", String(cell.shotCount))}
     >
       {/* Cell header row: calendar day + day-number badge */}
       <div className={styles.dayCellHead}>
@@ -76,9 +81,11 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
       {/* Pills row */}
       <div className={styles.dayPills}>
         <span className={styles.pillScene}>
-          {cell.sceneCount} {cell.sceneCount === 1 ? "sc" : "sc"}
+          {cell.sceneCount} {t("shootingPlan.calendar.sceneAbbr")}
         </span>
-        <span className={styles.pillShot}>{cell.shotCount} inq</span>
+        <span className={styles.pillShot}>
+          {cell.shotCount} {t("shootingPlan.calendar.shotAbbr")}
+        </span>
       </div>
 
       {/* Duration bar */}
@@ -103,7 +110,7 @@ function DayCellCard({ cell, onClick }: DayCellCardProps) {
 
       {/* Hover hint */}
       <span className={styles.dayHoverHint} aria-hidden>
-        Apri →
+        {t("shootingPlan.calendar.openHint")}
       </span>
     </button>
   );
@@ -116,6 +123,7 @@ interface EmptyCellProps {
 }
 
 function EmptyCell({ isWeekend }: EmptyCellProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={styles.emptyCell}
@@ -123,7 +131,7 @@ function EmptyCell({ isWeekend }: EmptyCellProps) {
       aria-hidden
     >
       <span className={styles.emptyCellLabel}>
-        {isWeekend ? "Riposo" : "—"}
+        {isWeekend ? t("shootingPlan.calendar.rest") : "—"}
       </span>
     </div>
   );
@@ -138,6 +146,7 @@ interface WeekRowBlockProps {
 }
 
 function WeekRowBlock({ week, weekId, onDayClick }: WeekRowBlockProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.weekBlock} id={weekId}>
       {/* Week header */}
@@ -149,17 +158,22 @@ function WeekRowBlock({ week, weekId, onDayClick }: WeekRowBlockProps) {
         <div className={styles.weekStats}>
           <span>
             <strong>{week.activeDays}</strong>{" "}
-            {week.activeDays === 1 ? "giorno" : "giorni"}
+            {week.activeDays === 1
+              ? t("shootingPlan.calendar.daySingular")
+              : t("shootingPlan.calendar.dayPlural")}
           </span>
           <span>
-            <strong>{week.totalScenes}</strong> scene
+            <strong>{week.totalScenes}</strong>{" "}
+            {t("shootingPlan.calendar.scenes")}
           </span>
           <span>
-            <strong>{week.totalShots}</strong> inq
+            <strong>{week.totalShots}</strong>{" "}
+            {t("shootingPlan.calendar.shotAbbr")}
           </span>
           {week.totalMinutes > 0 && (
             <span>
-              <strong>{formatMinutes(week.totalMinutes)}</strong> pianificate
+              <strong>{formatMinutes(week.totalMinutes)}</strong>{" "}
+              {t("shootingPlan.calendar.plannedDuration")}
             </span>
           )}
         </div>
@@ -199,21 +213,22 @@ function WeekRowBlock({ week, weekId, onDayClick }: WeekRowBlockProps) {
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
 function NoScheduleState() {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
       <p className={styles.emptyStateText}>
-        Nessun piano di lavorazione trovato. Genera un piano dalla sezione
-        Schedule.
+        {t("shootingPlan.calendar.noSchedule")}
       </p>
     </div>
   );
 }
 
 function NoDaysState() {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
       <p className={styles.emptyStateText}>
-        Nessun giorno di ripresa pianificato ancora.
+        {t("shootingPlan.calendar.noDays")}
       </p>
     </div>
   );
@@ -226,6 +241,7 @@ export function CalendarGridView({
   scenes,
   onSwitchToPerScena,
 }: CalendarGridViewProps) {
+  const { t } = useTranslation();
   const scheduleQuery = useQuery(scheduleQueryOptions(projectId));
 
   const scheduleData =
@@ -235,7 +251,9 @@ export function CalendarGridView({
 
   const shootingDays = scheduleData?.shootingDays ?? [];
   const dayCells = buildDayCells(shootingDays, scenes);
-  const weekRows = buildWeekRows(dayCells);
+  const weekRows = buildWeekRows(dayCells, (n) =>
+    t("shootingPlan.calendar.week").replace("{value}", String(n)),
+  );
 
   const handleDayClick = (cell: DayCell) => {
     if (!onSwitchToPerScena) return;
@@ -249,7 +267,7 @@ export function CalendarGridView({
         <Skeleton
           lines={4}
           widths={["100%", "100%", "100%", "60%"]}
-          ariaLabel="Caricamento calendario"
+          ariaLabel={t("shootingPlan.calendar.loading")}
         />
       </div>
     );
@@ -267,7 +285,9 @@ export function CalendarGridView({
     <div className={styles.root}>
       {/* Week sidebar */}
       <aside className={styles.weekSidebar}>
-        <div className={styles.weekSidebarTitle}>Settimane</div>
+        <div className={styles.weekSidebarTitle}>
+          {t("shootingPlan.calendar.weeks")}
+        </div>
         {weekRows.map((week) => (
           <a
             key={week.weekIndex}
@@ -287,8 +307,11 @@ export function CalendarGridView({
               </span>
             )}
             <span className={styles.weekSidebarMeta}>
-              {week.activeDays} {week.activeDays === 1 ? "giorno" : "giorni"} ·{" "}
-              {week.totalScenes} sc
+              {week.activeDays}{" "}
+              {week.activeDays === 1
+                ? t("shootingPlan.calendar.daySingular")
+                : t("shootingPlan.calendar.dayPlural")}{" "}
+              · {week.totalScenes} {t("shootingPlan.calendar.sceneAbbr")}
             </span>
           </a>
         ))}
@@ -296,26 +319,36 @@ export function CalendarGridView({
         <div className={styles.weekSidebarDivider} />
 
         <div className={styles.sidebarTotals}>
-          <div className={styles.sidebarTotalsTitle}>Totale progetto</div>
+          <div className={styles.sidebarTotalsTitle}>
+            {t("shootingPlan.calendar.projectTotal")}
+          </div>
           <div className={styles.sidebarTotalsRow}>
-            <span className={styles.sidebarTotalsLabel}>Giorni</span>
+            <span className={styles.sidebarTotalsLabel}>
+              {t("shootingPlan.calendar.totalDays")}
+            </span>
             <span className={styles.sidebarTotalsValue}>{dayCells.length}</span>
           </div>
           <div className={styles.sidebarTotalsRow}>
-            <span className={styles.sidebarTotalsLabel}>Scene</span>
+            <span className={styles.sidebarTotalsLabel}>
+              {t("shootingPlan.calendar.totalScenes")}
+            </span>
             <span className={styles.sidebarTotalsValue}>
               {dayCells.reduce((sum, c) => sum + c.sceneCount, 0)}
             </span>
           </div>
           <div className={styles.sidebarTotalsRow}>
-            <span className={styles.sidebarTotalsLabel}>Inquadrature</span>
+            <span className={styles.sidebarTotalsLabel}>
+              {t("shootingPlan.calendar.totalShots")}
+            </span>
             <span className={styles.sidebarTotalsValue} data-accent>
               {dayCells.reduce((sum, c) => sum + c.shotCount, 0)}
             </span>
           </div>
           {dayCells.some((c) => c.totalMinutes > 0) && (
             <div className={styles.sidebarTotalsRow}>
-              <span className={styles.sidebarTotalsLabel}>Pianificate</span>
+              <span className={styles.sidebarTotalsLabel}>
+                {t("shootingPlan.calendar.totalPlanned")}
+              </span>
               <span className={styles.sidebarTotalsValue}>
                 {formatMinutes(
                   dayCells.reduce((sum, c) => sum + c.totalMinutes, 0),

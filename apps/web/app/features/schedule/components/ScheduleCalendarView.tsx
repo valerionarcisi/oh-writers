@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { computeDayKpis, formatDayHours } from "@oh-writers/domain";
 import type { ScheduleView, ShootingDayView } from "../server/schedule.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ScheduleCalendarView.module.css";
 
 interface ScheduleCalendarViewProps {
@@ -130,6 +131,7 @@ export function ScheduleCalendarView({
   schedule,
   onSelectDay,
 }: ScheduleCalendarViewProps) {
+  const { t } = useTranslation();
   const { weeks, undated } = useMemo(() => {
     const dated: { cell: DayCell; date: Date }[] = [];
     const undatedCells: DayCell[] = [];
@@ -149,13 +151,16 @@ export function ScheduleCalendarView({
       {undated.length > 0 && (
         <section
           className={styles.undatedBlock}
-          aria-label="Giornate non datate"
+          aria-label={t("schedule.calendar.undatedAria")}
         >
           <header className={styles.blockHead}>
-            <h3>Non datate</h3>
+            <h3>{t("schedule.calendar.undatedHeading")}</h3>
             <span className={styles.blockMeta}>
               {undated.length}{" "}
-              {undated.length === 1 ? "giornata" : "giornate"} senza data
+              {undated.length === 1
+                ? t("schedule.calendar.dayOne")
+                : t("schedule.calendar.dayOther")}{" "}
+              {t("schedule.calendar.withoutDate")}
             </span>
           </header>
           <div className={styles.undatedStrip}>
@@ -175,7 +180,10 @@ export function ScheduleCalendarView({
       )}
 
       {hasDated ? (
-        <section className={styles.calendar} aria-label="Calendario settimanale">
+        <section
+          className={styles.calendar}
+          aria-label={t("schedule.calendar.weeklyAria")}
+        >
           <div className={styles.headerRow} aria-hidden="true">
             <span className={styles.weekColHead} />
             {WEEKDAYS_IT.map((d) => (
@@ -211,9 +219,7 @@ export function ScheduleCalendarView({
         </section>
       ) : (
         undated.length === 0 && (
-          <p className={styles.placeholder}>
-            Nessuna giornata pianificata. Genera prima il piano di lavorazione.
-          </p>
+          <p className={styles.placeholder}>{t("schedule.calendar.empty")}</p>
         )
       )}
     </div>
@@ -221,6 +227,7 @@ export function ScheduleCalendarView({
 }
 
 function CellBody({ cell }: { cell: DayCell }) {
+  const { t } = useTranslation();
   const { day, hours, primaryLocation } = cell;
   return (
     <>
@@ -229,7 +236,8 @@ function CellBody({ cell }: { cell: DayCell }) {
         {primaryLocation ? primaryLocation.toLowerCase() : "—"}
       </span>
       <span className={styles.cellMeta}>
-        {day.strips.length} sc · {formatDayHours(hours)}
+        {day.strips.length} {t("schedule.calendar.scenesShort")} ·{" "}
+        {formatDayHours(hours)}
       </span>
     </>
   );

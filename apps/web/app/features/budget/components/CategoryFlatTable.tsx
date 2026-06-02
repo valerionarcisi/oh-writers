@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import type { Budget } from "@oh-writers/domain";
 import type { BudgetCast, BudgetCrew } from "@oh-writers/db/schema";
 import {
@@ -161,6 +162,7 @@ export function CategoryFlatTable({
   initialFocusSection,
   onGrandTotal,
 }: CategoryFlatTableProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
   const invalidate = useCallback(() => {
@@ -411,18 +413,18 @@ export function CategoryFlatTable({
           onClick={() => setSearchOpen(true)}
           data-testid="budget-flat-search"
         >
-          <span>Cerca voce…</span>
+          <span>{t("budget.flat.search")}</span>
           <span className={styles.searchKey}>⌘K</span>
         </button>
       </div>
 
       <div className={styles.gridHead} role="row">
-        <span>Voce</span>
-        <span className={styles.headNum}>Q.tà</span>
-        <span className={styles.headNum}>Tariffa</span>
-        <span className={styles.headNum}>Totale</span>
-        <span className={styles.headNum}>Stato</span>
-        <span className={styles.headNum}>Azioni</span>
+        <span>{t("budget.flat.colLine")}</span>
+        <span className={styles.headNum}>{t("budget.flat.colQty")}</span>
+        <span className={styles.headNum}>{t("budget.flat.colRate")}</span>
+        <span className={styles.headNum}>{t("budget.flat.colTotal")}</span>
+        <span className={styles.headNum}>{t("budget.flat.colStatus")}</span>
+        <span className={styles.headNum}>{t("budget.flat.colActions")}</span>
       </div>
 
       {sections.map((section) => {
@@ -456,7 +458,7 @@ export function CategoryFlatTable({
                   className={styles.sectionDot}
                   aria-hidden="true"
                 />
-                {section.label}
+                {t(section.labelKey)}
                 <span className={styles.sectionCount}>
                   {section.rows.length}
                 </span>
@@ -477,7 +479,7 @@ export function CategoryFlatTable({
                     }
                   }}
                 >
-                  Vista dettagliata →
+                  {t("budget.flat.detailLink")}
                 </span>
               ) : (
                 <span />
@@ -492,7 +494,10 @@ export function CategoryFlatTable({
                 {section.rows.length === 0 && section.id !== SectionIds.CREW && (
                   <div className={styles.row}>
                     <span className={styles.numFaint}>
-                      Nessuna voce in {section.label}
+                      {t("budget.flat.noLinesIn").replace(
+                        "{section}",
+                        t(section.labelKey),
+                      )}
                     </span>
                   </div>
                 )}
@@ -551,7 +556,9 @@ export function CategoryFlatTable({
                       <span className={styles.num}>{eurAmount(row.total)}</span>
                       <span className={styles.num}>
                         {row.total > 0 ? (
-                          <span className={styles.numFaint}>OK</span>
+                          <span className={styles.numFaint}>
+                            {t("budget.flat.statusOk")}
+                          </span>
                         ) : (
                           <span className={styles.numFaint}>—</span>
                         )}
@@ -561,12 +568,17 @@ export function CategoryFlatTable({
                           <button
                             type="button"
                             className={styles.removeBtn}
-                            aria-label={`Rimuovi ${row.name}`}
+                            aria-label={t("budget.flat.removeRow").replace(
+                              "{name}",
+                              row.name,
+                            )}
                             onClick={() => {
                               if (
                                 row.total === 0 ||
                                 window.confirm(
-                                  `Rimuovere "${row.name}"? Totale: ${eurAmount(row.total)}`,
+                                  t("budget.flat.confirmRemove")
+                                    .replace("{name}", row.name)
+                                    .replace("{total}", eurAmount(row.total)),
                                 )
                               ) {
                                 removeCrew.mutate(row.id);
@@ -586,7 +598,7 @@ export function CategoryFlatTable({
                       <input
                         autoFocus
                         className={styles.addInputName}
-                        placeholder="Nuova voce — nome ruolo"
+                        placeholder={t("budget.flat.addRolePlaceholder")}
                         value={addDraft}
                         onChange={(e) => setAddDraft(e.target.value)}
                         onBlur={confirmAdd}
@@ -604,7 +616,7 @@ export function CategoryFlatTable({
                         onClick={() => startAdd(section.id)}
                         data-testid={`flat-add-${section.id}`}
                       >
-                        + Aggiungi voce
+                        {t("budget.flat.addLine")}
                       </button>
                     </div>
                   ))}
@@ -619,12 +631,12 @@ export function CategoryFlatTable({
         <div
           className={styles.searchPopover}
           role="dialog"
-          aria-label="Cerca voce budget"
+          aria-label={t("budget.flat.searchDialogAriaLabel")}
         >
           <input
             autoFocus
             className={styles.searchInput}
-            placeholder="Cerca per nome…"
+            placeholder={t("budget.flat.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -644,12 +656,14 @@ export function CategoryFlatTable({
               >
                 <span>{m.row.name}</span>
                 <span className={styles.searchResultMeta}>
-                  {m.section.label} · {eurAmount(m.row.total)}
+                  {t(m.section.labelKey)} · {eurAmount(m.row.total)}
                 </span>
               </button>
             ))}
             {searchQuery && searchMatches.length === 0 && (
-              <span className={styles.searchResultMeta}>Nessun risultato</span>
+              <span className={styles.searchResultMeta}>
+                {t("budget.flat.noResults")}
+              </span>
             )}
           </div>
         </div>

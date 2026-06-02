@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Modal, DsButton } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ExportPdfModal.module.css";
 
 export type ExportFormat = "pdf" | "docx";
@@ -42,6 +43,7 @@ export function ExportPdfModal({
   availableFormats = ["pdf"],
   title,
 }: ExportPdfModalProps) {
+  const { t } = useTranslation();
   const [includeTitlePage, setIncludeTitlePage] = useState(false);
   const [format, setFormat] = useState<ExportFormat>(
     availableFormats[0] ?? "pdf",
@@ -50,7 +52,12 @@ export function ExportPdfModal({
   const showFormatPicker = availableFormats.length > 1;
   const resolvedTitle =
     title ??
-    (showFormatPicker ? "Esporta documento" : `Esporta ${FORMAT_LABELS[format]}`);
+    (showFormatPicker
+      ? t("documents.exportPdf.titleDocument")
+      : t("documents.exportPdf.titleFormat").replace(
+          "{format}",
+          FORMAT_LABELS[format],
+        ));
 
   return (
     <Modal
@@ -64,7 +71,7 @@ export function ExportPdfModal({
             onClick={onClose}
             disabled={isPending}
           >
-            Annulla
+            {t("documents.exportPdf.cancel")}
           </DsButton>
           <DsButton
             variant="primary"
@@ -77,7 +84,9 @@ export function ExportPdfModal({
               })
             }
           >
-            {isPending ? "Generazione…" : "Genera"}
+            {isPending
+              ? t("documents.exportPdf.generating")
+              : t("documents.exportPdf.generate")}
           </DsButton>
         </>
       }
@@ -91,7 +100,9 @@ export function ExportPdfModal({
             className={styles.fieldset}
             data-testid="narrative-export-format"
           >
-            <legend className={styles.legend}>Formato</legend>
+            <legend className={styles.legend}>
+              {t("documents.exportPdf.formatLegend")}
+            </legend>
             {availableFormats.map((f) => (
               <label key={f} className={styles.checkboxRow}>
                 <input
@@ -115,11 +126,11 @@ export function ExportPdfModal({
             disabled={!canIncludeTitlePage}
             onChange={(e) => setIncludeTitlePage(e.target.checked)}
           />
-          <span>Includi frontespizio</span>
+          <span>{t("documents.exportPdf.includeTitlePage")}</span>
         </label>
         {!canIncludeTitlePage && (
           <p className={styles.hint}>
-            Compila il frontespizio del progetto per abilitare questa opzione.
+            {t("documents.exportPdf.titlePageHint")}
           </p>
         )}
       </div>

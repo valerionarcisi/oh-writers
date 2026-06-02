@@ -16,7 +16,9 @@ import {
   type ChangeUpdate,
   type TraceMarker,
 } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
 import type { ChatMessage, TraceStep } from "../use-cesare-chat-reducer";
+import { useTranslation } from "~/features/i18n";
 import styles from "./CesareSheet.module.css";
 
 // ─── Cesare page model (shared with CesareSheet's server callers) ──────────
@@ -33,18 +35,26 @@ export type CesarePage =
   | "shooting-plan"
   | "locations";
 
-export const PAGE_LABELS: Record<CesarePage, string> = {
-  soggetto: "SOGGETTO",
-  synopsis: "SINOSSI",
-  outline: "SCALETTA",
-  treatment: "TRATTAMENTO",
-  screenplay: "SCENEGGIATURA",
-  breakdown: "BREAKDOWN",
-  budget: "BUDGET",
-  schedule: "CALENDARIO",
-  "shooting-plan": "INQUADRATURE",
-  locations: "LOCATION",
+/** Page label key per Cesare page. Resolved to the active locale via
+ *  `pageLabel(page, t)`. The labels are uppercase chip copy. */
+export const PAGE_LABEL_KEYS: Record<CesarePage, TranslationKey> = {
+  soggetto: "cesare.page.soggetto",
+  synopsis: "cesare.page.synopsis",
+  outline: "cesare.page.outline",
+  treatment: "cesare.page.treatment",
+  screenplay: "cesare.page.screenplay",
+  breakdown: "cesare.page.breakdown",
+  budget: "cesare.page.budget",
+  schedule: "cesare.page.schedule",
+  "shooting-plan": "cesare.page.shootingPlan",
+  locations: "cesare.page.locations",
 };
+
+/** Resolve a page's chip label to the active locale. */
+export const pageLabel = (
+  page: CesarePage,
+  t: (key: TranslationKey) => string,
+): string => t(PAGE_LABEL_KEYS[page]);
 
 // ─── Marker parsers (kept here so server consumers keep working) ───────────
 
@@ -580,6 +590,7 @@ export function MessageView({
   onShowChanges,
   onHideChanges,
 }: { message: ChatMessage } & ConversationHandlers) {
+  const { t } = useTranslation();
   const [isShowingDiff, setShowingDiff] = useState(false);
 
   if (message.role === "user") {
@@ -598,12 +609,14 @@ export function MessageView({
         {message.status === "pending" && (
           <span
             className={styles.bubbleStatusDot}
-            aria-label="Invio in corso"
+            aria-label={t("cesare.bubble.sending")}
             data-testid="cesare-bubble-pending"
           />
         )}
         {message.status === "failed" && (
-          <span className={styles.bubbleStatusFailed}>Invio non riuscito</span>
+          <span className={styles.bubbleStatusFailed}>
+            {t("cesare.bubble.sendFailed")}
+          </span>
         )}
       </div>
     );
@@ -669,11 +682,12 @@ export function MessageView({
 }
 
 function LoadingIndicator() {
+  const { t } = useTranslation();
   return (
     <div
       className={styles.bubbleAssistant}
       aria-busy="true"
-      aria-label="Cesare sta rispondendo"
+      aria-label={t("cesare.bubble.replying")}
     >
       <div className={styles.skeletonBody}>
         <span
@@ -692,20 +706,21 @@ function LoadingIndicator() {
 
 // ─── Live trace (A2) ─────────────────────────────────────────────────────────
 
-const TRACE_VERB: Record<TraceStep["kind"], string> = {
-  reasoning: "Sto ragionando",
-  reading: "Sto leggendo",
-  writing: "Sto scrivendo",
-  tool: "Eseguo",
+const TRACE_VERB_KEY: Record<TraceStep["kind"], TranslationKey> = {
+  reasoning: "cesare.trace.reasoning",
+  reading: "cesare.trace.reading",
+  writing: "cesare.trace.writing",
+  tool: "cesare.trace.tool",
 };
 
 export function LiveTrace({ steps }: { steps: ReadonlyArray<TraceStep> }) {
+  const { t } = useTranslation();
   const last = steps[steps.length - 1];
   const liveLabel = last
-    ? `Cesare ${TRACE_VERB[last.kind].toLowerCase()}${
+    ? `Cesare ${t(TRACE_VERB_KEY[last.kind]).toLowerCase()}${
         last.entity ? ` ${last.entity.label}` : ""
       }`
-    : "Cesare sta lavorando";
+    : t("cesare.trace.working");
   return (
     <div
       className={styles.liveTrace}
@@ -721,7 +736,7 @@ export function LiveTrace({ steps }: { steps: ReadonlyArray<TraceStep> }) {
             data-entity-domain={step.entity?.domain ?? ""}
           >
             <span className={styles.liveTraceVerb}>
-              {TRACE_VERB[step.kind]}
+              {t(TRACE_VERB_KEY[step.kind])}
             </span>
             {step.kind === "reasoning" ? (
               <span className={styles.liveTraceText}>{step.text}</span>

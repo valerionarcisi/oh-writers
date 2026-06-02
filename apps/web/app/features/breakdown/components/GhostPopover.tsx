@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "~/features/i18n";
 import styles from "./GhostPopover.module.css";
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function GhostPopover({ x, y, onAccept, onIgnore, onDismiss }: Props) {
+  const { t } = useTranslation();
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onDismiss();
@@ -23,17 +25,19 @@ export function GhostPopover({ x, y, onAccept, onIgnore, onDismiss }: Props) {
       className={styles.popover}
       style={{ left: x, top: y }}
       role="dialog"
-      aria-label="Suggerimento Cesare"
+      aria-label={t("breakdown.ghost.cesareSuggestionAria")}
       data-testid="ghost-popover"
     >
-      <span className={styles.label}>Suggerimento Cesare</span>
+      <span className={styles.label}>
+        {t("breakdown.ghost.cesareSuggestion")}
+      </span>
       <button
         type="button"
         className={`${styles.btn} ${styles.accept}`}
         data-testid="ghost-popover-accept"
         onClick={onAccept}
       >
-        Accetta
+        {t("breakdown.ghost.accept")}
       </button>
       <button
         type="button"
@@ -41,7 +45,7 @@ export function GhostPopover({ x, y, onAccept, onIgnore, onDismiss }: Props) {
         data-testid="ghost-popover-ignore"
         onClick={onIgnore}
       >
-        Ignora
+        {t("breakdown.ghost.ignore")}
       </button>
     </div>
   );

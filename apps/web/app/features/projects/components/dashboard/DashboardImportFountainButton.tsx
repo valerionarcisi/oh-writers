@@ -8,13 +8,14 @@ import {
   screenplayQueryOptions,
 } from "~/features/screenplay-editor";
 import { useCreateProject } from "../../hooks/useProjects";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardImportFountainButton.module.css";
 
 // Strip a trailing `.fountain` / `.txt` extension and fall back to a default
 // title when the filename is empty after stripping.
-const titleFromFileName = (fileName: string): string => {
+const titleFromFileName = (fileName: string, fallbackTitle: string): string => {
   const base = fileName.replace(/\.(fountain|txt)$/i, "").trim();
-  return base.length > 0 ? base : "Sceneggiatura importata";
+  return base.length > 0 ? base : fallbackTitle;
 };
 
 /**
@@ -25,6 +26,7 @@ const titleFromFileName = (fileName: string): string => {
  * functions — no new endpoint is introduced.
  */
 export function DashboardImportFountainButton() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const createProject = useCreateProject();
@@ -53,7 +55,10 @@ export function DashboardImportFountainButton() {
       .andThen((fountain) =>
         ResultAsync.fromPromise(
           createProject.mutateAsync({
-            title: titleFromFileName(file.name),
+            title: titleFromFileName(
+              file.name,
+              t("dashboard.import.defaultTitle"),
+            ),
             format: "feature",
           }),
           () => "create" as const,
@@ -83,7 +88,7 @@ export function DashboardImportFountainButton() {
     setImporting(false);
 
     if (outcome.isErr()) {
-      setError("Importazione non riuscita. Riprova.");
+      setError(t("dashboard.import.failed"));
       return;
     }
 
@@ -112,7 +117,9 @@ export function DashboardImportFountainButton() {
         disabled={isImporting}
         data-testid="dashboard-import-fountain"
       >
-        {isImporting ? "Importazione…" : "Importa Fountain"}
+        {isImporting
+          ? t("dashboard.import.importing")
+          : t("dashboard.import.label")}
       </Button>
       {error && (
         <span role="alert" className={styles.error}>

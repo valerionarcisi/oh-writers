@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { unwrapResult } from "@oh-writers/utils";
 import type { BudgetLine } from "@oh-writers/domain";
 import { updateBudgetLine } from "~/features/budget/server/budget.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./LocationsWidget.module.css";
 
 const fmt = (n: number) =>
@@ -92,6 +93,7 @@ function PerElementWidget({
   activeElementIds,
   projectId,
 }: PerElementWidgetProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const total = lines.reduce((sum, l) => sum + lineEffective(l), 0);
 
@@ -116,19 +118,25 @@ function PerElementWidget({
       {open && (
         <div className={styles.body}>
           {lines.length === 0 ? (
-            <p className={styles.empty}>
-              Nessun elemento trovato nel breakdown.
-            </p>
+            <p className={styles.empty}>{t("budget.empty.perElement")}</p>
           ) : (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr className={styles.thead}>
-                    <th>Nome</th>
-                    <th className={styles.numTh}>Giorni</th>
-                    <th className={styles.numTh}>€/giorno</th>
-                    <th className={styles.numTh}>Effettivo</th>
-                    <th className={styles.numTh}>Totale</th>
+                    <th>{t("budget.perElement.colName")}</th>
+                    <th className={styles.numTh}>
+                      {t("budget.perElement.colDays")}
+                    </th>
+                    <th className={styles.numTh}>
+                      {t("budget.perElement.colDayRate")}
+                    </th>
+                    <th className={styles.numTh}>
+                      {t("budget.perElement.colActual")}
+                    </th>
+                    <th className={styles.numTh}>
+                      {t("budget.perElement.colTotal")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,7 +150,7 @@ function PerElementWidget({
                           {line.name}
                           {isStale && (
                             <span className={styles.stale}>
-                              ⚠ rimosso dal breakdown
+                              {t("budget.perElement.removedFromBreakdown")}
                             </span>
                           )}
                         </td>
@@ -182,11 +190,25 @@ function PerElementWidget({
 export function LocationsWidget(
   props: Omit<PerElementWidgetProps, "icon" | "title">,
 ) {
-  return <PerElementWidget icon="📍" title="Location" {...props} />;
+  const { t } = useTranslation();
+  return (
+    <PerElementWidget
+      icon="📍"
+      title={t("budget.perElement.locationsTitle")}
+      {...props}
+    />
+  );
 }
 
 export function VehiclesWidget(
   props: Omit<PerElementWidgetProps, "icon" | "title">,
 ) {
-  return <PerElementWidget icon="🚗" title="Veicoli" {...props} />;
+  const { t } = useTranslation();
+  return (
+    <PerElementWidget
+      icon="🚗"
+      title={t("budget.perElement.vehiclesTitle")}
+      {...props}
+    />
+  );
 }

@@ -1,30 +1,31 @@
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@oh-writers/ui";
-import { TEAM_ROLE_LABELS_IT } from "@oh-writers/domain";
+import { TEAM_ROLE_LABELS_IT, type TranslationKey } from "@oh-writers/domain";
 import type { DashboardProject } from "../../dashboard.schema";
 import { ProjectCoverGradient } from "./ProjectCoverGradient";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectCardCompact.module.css";
 
 interface Props {
   readonly project: DashboardProject;
 }
 
-const FORMAT_LABELS: Record<string, string> = {
-  feature: "Lungo",
-  short: "Corto",
-  series_episode: "Episodio",
-  pilot: "Pilot",
+const FORMAT_LABEL_KEYS: Record<string, TranslationKey> = {
+  feature: "dashboard.card.formatFeature",
+  short: "dashboard.card.formatShort",
+  series_episode: "dashboard.card.formatSeriesEpisode",
+  pilot: "dashboard.card.formatPilot",
 };
 
-const GENRE_LABELS: Record<string, string> = {
-  drama: "Drama",
-  comedy: "Commedia",
-  thriller: "Thriller",
-  horror: "Horror",
-  action: "Azione",
-  "sci-fi": "Sci-fi",
-  documentary: "Documentario",
-  other: "Altro",
+const GENRE_LABEL_KEYS: Record<string, TranslationKey> = {
+  drama: "dashboard.card.genreDrama",
+  comedy: "dashboard.card.genreComedy",
+  thriller: "dashboard.card.genreThriller",
+  horror: "dashboard.card.genreHorror",
+  action: "dashboard.card.genreAction",
+  "sci-fi": "dashboard.card.genreSciFi",
+  documentary: "dashboard.card.genreDocumentary",
+  other: "dashboard.card.genreOther",
 };
 
 const ROLE_LABELS = TEAM_ROLE_LABELS_IT;
@@ -32,6 +33,9 @@ const ROLE_LABELS = TEAM_ROLE_LABELS_IT;
 const MAX_AVATARS = 3;
 
 export function ProjectCardCompact({ project }: Props) {
+  const { t } = useTranslation();
+  const formatKey = FORMAT_LABEL_KEYS[project.format];
+  const genreKey = project.genre ? GENRE_LABEL_KEYS[project.genre] : undefined;
   const visibleAvatars = project.collaborators.slice(0, MAX_AVATARS);
   const overflow = project.collaborators.length - visibleAvatars.length;
   return (
@@ -40,7 +44,7 @@ export function ProjectCardCompact({ project }: Props) {
         to="/projects/$id"
         params={{ id: project.id }}
         className={styles.rowLink}
-        aria-label={`Apri il progetto ${project.title}`}
+        aria-label={`${t("dashboard.card.openProject")} ${project.title}`}
       />
       <ProjectCoverGradient
         gradient={project.coverGradient}
@@ -50,15 +54,15 @@ export function ProjectCardCompact({ project }: Props) {
       <div className={styles.titleCell}>
         <span className={styles.title}>{project.title}</span>
         <span className={styles.meta}>
-          {FORMAT_LABELS[project.format] ?? project.format}
+          {formatKey ? t(formatKey) : project.format}
           {project.genre
-            ? ` · ${GENRE_LABELS[project.genre] ?? project.genre}`
+            ? ` · ${genreKey ? t(genreKey) : project.genre}`
             : ""}
         </span>
       </div>
       <span className={styles.cellNum} data-num>
         {project.stats.sceneCount > 0 ? project.stats.sceneCount : "—"}
-        <span className={styles.cellLbl}>scene</span>
+        <span className={styles.cellLbl}>{t("dashboard.card.scenes")}</span>
       </span>
       <div className={styles.pctCell}>
         <div
@@ -91,17 +95,17 @@ export function ProjectCardCompact({ project }: Props) {
           )}
         </div>
       ) : (
-        <span className={styles.solo}>Solo</span>
+        <span className={styles.solo}>{t("dashboard.card.solo")}</span>
       )}
       <span className={styles.roleTag}>{ROLE_LABELS[project.role]}</span>
       <Link
         to="/projects/$id/screenplay"
         params={{ id: project.id }}
         className={styles.editorLink}
-        aria-label={`Apri l'editor di ${project.title}`}
+        aria-label={`${t("dashboard.card.openEditor")} ${project.title}`}
         onClick={(e) => e.stopPropagation()}
       >
-        Editor →
+        {t("dashboard.card.editorLink")}
       </Link>
     </div>
   );

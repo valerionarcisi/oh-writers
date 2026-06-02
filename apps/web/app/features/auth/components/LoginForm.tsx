@@ -2,16 +2,9 @@ import { useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { authClient } from "~/lib/auth-client";
+import { useTranslation } from "~/features/i18n";
 import { PasswordInput } from "./PasswordInput";
 import styles from "./LoginForm.module.css";
-
-const EmailSchema = z.object({
-  email: z.string().email("Inserisci un indirizzo email valido"),
-});
-
-const PasswordSchema = z.object({
-  password: z.string().min(1, "La password è obbligatoria"),
-});
 
 interface LoginFormProps {
   availableProviders: string[];
@@ -19,6 +12,13 @@ interface LoginFormProps {
 
 export function LoginForm({ availableProviders }: LoginFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const emailSchema = z.object({
+    email: z.string().email(t("auth.validation.emailInvalid")),
+  });
+  const passwordSchema = z.object({
+    password: z.string().min(1, t("auth.validation.passwordRequired")),
+  });
   const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,9 +29,12 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
 
   const handleEmailContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    const result = EmailSchema.safeParse({ email });
+    const result = emailSchema.safeParse({ email });
     if (!result.success) {
-      setEmailError(result.error.issues[0]?.message ?? "Email non valida");
+      setEmailError(
+        result.error.issues[0]?.message ??
+          t("auth.validation.emailInvalidShort"),
+      );
       return;
     }
     setEmailError(null);
@@ -41,9 +44,12 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = PasswordSchema.safeParse({ password });
+    const result = passwordSchema.safeParse({ password });
     if (!result.success) {
-      setPasswordError(result.error.issues[0]?.message ?? "Password obbligatoria");
+      setPasswordError(
+        result.error.issues[0]?.message ??
+          t("auth.validation.passwordRequiredShort"),
+      );
       return;
     }
     setPasswordError(null);
@@ -54,7 +60,7 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
     setIsSubmitting(false);
 
     if (error) {
-      setApiError("Email o password non corretti");
+      setApiError(t("auth.error.invalidCredentials"));
       return;
     }
 
@@ -78,7 +84,9 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
 
       <div className={styles.headingBlock}>
         <h1 className={styles.heading}>
-          {step === "email" ? "Accedi" : "Bentornato"}
+          {step === "email"
+            ? t("auth.login.headingSignIn")
+            : t("auth.login.headingWelcomeBack")}
         </h1>
         {step === "password" && (
           <p className={styles.emailPill}>
@@ -88,7 +96,7 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
               className={styles.changeEmail}
               onClick={() => { setStep("email"); setApiError(null); setPasswordError(null); }}
             >
-              Cambia
+              {t("auth.login.changeEmail")}
             </button>
           </p>
         )}
@@ -99,7 +107,7 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
       {step === "email" ? (
         <form onSubmit={handleEmailContinue} className={styles.form} noValidate>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="email">Email</label>
+            <label className={styles.label} htmlFor="email">{t("auth.field.email")}</label>
             <input
               id="email"
               type="email"
@@ -108,28 +116,28 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
               className={`${styles.input} ${emailError ? styles.inputError : ""}`}
               value={email}
               onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
-              placeholder="tu@esempio.com"
+              placeholder={t("auth.placeholder.email")}
             />
             {emailError && <span className={styles.fieldError}>{emailError}</span>}
           </div>
 
           <button type="submit" className={styles.primaryBtn}>
-            Continua
+            {t("auth.action.continue")}
           </button>
 
           {availableProviders.length > 0 && (
             <>
-              <div className={styles.divider}><span>oppure</span></div>
+              <div className={styles.divider}><span>{t("auth.divider.or")}</span></div>
               <div className={styles.oauthGroup}>
                 {availableProviders.includes("google") && (
                   <button type="button" className={styles.oauthBtn} onClick={() => handleOAuth("google")}>
                     <GoogleIcon />
-                    Continua con Google
+                    {t("auth.oauth.continueGoogle")}
                   </button>
                 )}
                 {availableProviders.includes("github") && (
                   <button type="button" className={styles.oauthBtn} onClick={() => handleOAuth("github")}>
-                    Continua con GitHub
+                    {t("auth.oauth.continueGithub")}
                   </button>
                 )}
               </div>
@@ -139,7 +147,7 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
       ) : (
         <form onSubmit={handlePasswordSubmit} className={styles.form} noValidate>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="password">Password</label>
+            <label className={styles.label} htmlFor="password">{t("auth.field.password")}</label>
             <PasswordInput
               id="password"
               autoComplete="current-password"
@@ -153,14 +161,14 @@ export function LoginForm({ availableProviders }: LoginFormProps) {
           </div>
 
           <button type="submit" className={styles.primaryBtn} disabled={isSubmitting}>
-            {isSubmitting ? "Accesso in corso…" : "Accedi"}
+            {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
           </button>
         </form>
       )}
 
       <p className={styles.footer}>
-        Non hai un account?{" "}
-        <Link to="/register" className={styles.footerLink}>Registrati</Link>
+        {t("auth.login.noAccount")}{" "}
+        <Link to="/register" className={styles.footerLink}>{t("auth.login.register")}</Link>
       </p>
     </div>
   );

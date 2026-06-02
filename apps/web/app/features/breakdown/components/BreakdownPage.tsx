@@ -28,7 +28,9 @@ import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
   type BreakdownCategory,
+  type TranslationKey,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   breakdownContextOptions,
   breakdownForSceneOptions,
@@ -82,38 +84,43 @@ interface ContextMenuState {
 
 const UNDERLINE_CHIPS: ReadonlyArray<{
   key: UnderlineKey;
-  label: string;
+  labelKey: TranslationKey;
   color: string;
   defaultOn: boolean;
 }> = [
-  { key: "cast", label: "Cast", color: "var(--ds-cat-cast)", defaultOn: true },
+  {
+    key: "cast",
+    labelKey: "breakdown.chip.cast",
+    color: "var(--ds-cat-cast)",
+    defaultOn: true,
+  },
   {
     key: "locations",
-    label: "Location",
+    labelKey: "breakdown.chip.locations",
     color: "var(--ds-cat-locations)",
     defaultOn: true,
   },
   {
     key: "props",
-    label: "Oggetti di scena",
+    labelKey: "breakdown.chip.props",
     color: "var(--ds-cat-scenografia)",
     defaultOn: true,
   },
   {
     key: "costumes",
-    label: "Costumi",
+    labelKey: "breakdown.chip.costumes",
     color: "var(--ds-cat-costumi)",
     defaultOn: false,
   },
   {
     key: "photography",
-    label: "Fotografia",
+    labelKey: "breakdown.chip.photography",
     color: "var(--ds-cat-fotografia)",
     defaultOn: false,
   },
   {
     key: "sound",
-    label: "Suono",
+    labelKey: "breakdown.chip.sound",
     color: "var(--ds-cat-suono)",
     defaultOn: false,
   },
@@ -131,6 +138,7 @@ const formatHeading = (scene: BreakdownSceneSummary): string => {
 };
 
 export function BreakdownPage({ projectId }: Props) {
+  const { t } = useTranslation();
   return (
     <Suspense
       fallback={
@@ -138,7 +146,7 @@ export function BreakdownPage({ projectId }: Props) {
           <Skeleton
             lines={4}
             widths={["100%", "100%", "100%", "60%"]}
-            ariaLabel="Caricamento spoglio"
+            ariaLabel={t("breakdown.loading")}
           />
         </div>
       }
@@ -149,6 +157,7 @@ export function BreakdownPage({ projectId }: Props) {
 }
 
 function BreakdownPageContent({ projectId }: Props) {
+  const { t } = useTranslation();
   const { data: ctx } = useSuspenseQuery(breakdownContextOptions(projectId));
   const versionId = ctx.screenplayVersionId;
   const { data: syncState } = useQuery(syncStateQueryOptions(projectId));
@@ -383,14 +392,18 @@ function BreakdownPageContent({ projectId }: Props) {
       occurrenceIds: [hoverTooltip.occurrenceId],
       status: "accepted",
     });
-    flashFeedback(`Confermato «${hoverTooltip.name}»`);
+    flashFeedback(
+      `${t("breakdown.feedback.confirmedPrefix")}${hoverTooltip.name}${t("breakdown.feedback.confirmedSuffix")}`,
+    );
     setHoverTooltip(null);
   };
 
   const handleHoverReject = () => {
     if (!hoverTooltip?.occurrenceId) return;
     removeOcc.mutate({ projectId, occurrenceId: hoverTooltip.occurrenceId });
-    flashFeedback(`Scartato «${hoverTooltip.name}»`);
+    flashFeedback(
+      `${t("breakdown.feedback.discardedPrefix")}${hoverTooltip.name}${t("breakdown.feedback.discardedSuffix")}`,
+    );
     setHoverTooltip(null);
   };
 
@@ -497,7 +510,9 @@ function BreakdownPageContent({ projectId }: Props) {
         occurrenceIds: [ctxMenu.occurrenceId],
         status: "accepted",
       });
-      flashFeedback(`Confermato «${elName}»`);
+      flashFeedback(
+        `${t("breakdown.feedback.confirmedPrefix")}${elName}${t("breakdown.feedback.confirmedSuffix")}`,
+      );
     }
     closeCtxMenu();
   };
@@ -506,7 +521,9 @@ function BreakdownPageContent({ projectId }: Props) {
     if (ctxMenu?.elementId) {
       const elName = ctxMenu.name;
       archiveEl.mutate({ elementId: ctxMenu.elementId });
-      flashFeedback(`Rimosso «${elName}»`);
+      flashFeedback(
+        `${t("breakdown.feedback.removedPrefix")}${elName}${t("breakdown.feedback.removedSuffix")}`,
+      );
     }
     closeCtxMenu();
   };
@@ -530,7 +547,9 @@ function BreakdownPageContent({ projectId }: Props) {
       elementId: ctxMenu.elementId,
       patch: { name: trimmed },
     });
-    flashFeedback(`Rinominato «${ctxMenu.name}» → «${trimmed}»`);
+    flashFeedback(
+      `${t("breakdown.feedback.renamedPrefix")}${ctxMenu.name}${t("breakdown.feedback.renamedMid")}${trimmed}${t("breakdown.feedback.renamedSuffix")}`,
+    );
     closeCtxMenu();
   };
 
@@ -544,7 +563,9 @@ function BreakdownPageContent({ projectId }: Props) {
       elementId: ctxMenu.elementId,
       patch: { category: nextCat },
     });
-    flashFeedback(`«${ctxMenu.name}» → ${CATEGORY_META[nextCat].labelIt}`);
+    flashFeedback(
+      `${t("breakdown.feedback.recategorizedPrefix")}${ctxMenu.name}${t("breakdown.feedback.recategorizedArrow")}${CATEGORY_META[nextCat].labelIt}`,
+    );
     closeCtxMenu();
   };
 
@@ -611,13 +632,13 @@ function BreakdownPageContent({ projectId }: Props) {
           <div className={styles.viewbarLeft}>
             <SegmentedControl
               options={[
-                { id: "per-scene", label: "Per scena" },
-                { id: "per-project", label: "Per progetto" },
-                { id: "matrice", label: "Matrice" },
+                { id: "per-scene", label: t("breakdown.tab.perScene") },
+                { id: "per-project", label: t("breakdown.tab.perProject") },
+                { id: "matrice", label: t("breakdown.tab.matrix") },
               ]}
               activeId={viewTab}
               onSelect={(id) => setViewTab(id as ViewTab)}
-              ariaLabel="Vista breakdown"
+              ariaLabel={t("breakdown.viewAriaLabel")}
             />
           </div>
           <ViewbarSep />
@@ -633,7 +654,7 @@ function BreakdownPageContent({ projectId }: Props) {
                   data-testid="breakdown-underline-trigger"
                 >
                   <span className={styles.underlineTriggerPrefix}>
-                    Sottolinea
+                    {t("breakdown.underline")}
                   </span>
                   <span className={styles.underlineTriggerCount}>
                     {underlineActiveCount}
@@ -650,7 +671,7 @@ function BreakdownPageContent({ projectId }: Props) {
                   <div
                     className={styles.underlineList}
                     role="group"
-                    aria-label="Categorie sottolineate"
+                    aria-label={t("breakdown.underlineCategoriesAria")}
                   >
                     {UNDERLINE_CHIPS.map((chip) => {
                       const isOn = underline[chip.key];
@@ -665,14 +686,14 @@ function BreakdownPageContent({ projectId }: Props) {
                             type="checkbox"
                             checked={isOn}
                             onChange={() => toggleUnderline(chip.key)}
-                            aria-label={`Mostra sottolineature ${chip.label}`}
+                            aria-label={`${t("breakdown.underlineShowPrefix")} ${t(chip.labelKey)}`}
                           />
                           <span
                             className={styles.underlineDot}
                             aria-hidden="true"
                           />
                           <span className={styles.underlineLabel}>
-                            {chip.label}
+                            {t(chip.labelKey)}
                           </span>
                         </label>
                       );
@@ -743,13 +764,15 @@ function BreakdownPageContent({ projectId }: Props) {
                       type="text"
                       value={indiceQuery}
                       onChange={(e) => setIndiceQuery(e.target.value)}
-                      placeholder="Cerca scena o luogo…"
-                      aria-label="Cerca scena"
+                      placeholder={t("breakdown.searchScenePlaceholder")}
+                      aria-label={t("breakdown.searchSceneAria")}
                     />
                     <span className={styles.popKbd}>⌘K</span>
                   </div>
                   {filteredScenes.length === 0 ? (
-                    <p className={styles.popAct}>Nessuna scena trovata.</p>
+                    <p className={styles.popAct}>
+                      {t("breakdown.noSceneFound")}
+                    </p>
                   ) : (
                     filteredScenes.map(({ scene, count }) => {
                       const isCurrent = scene.id === activeScene?.id;
@@ -787,8 +810,9 @@ function BreakdownPageContent({ projectId }: Props) {
                   id: `version-${v.id}`,
                   label:
                     v.id === versionId
-                      ? `● ${v.label ?? `Versione ${idx + 1}`}`
-                      : (v.label ?? `Versione ${idx + 1}`),
+                      ? `● ${v.label ?? `${t("breakdown.versionFallbackPrefix")} ${idx + 1}`}`
+                      : (v.label ??
+                        `${t("breakdown.versionFallbackPrefix")} ${idx + 1}`),
                   onSelect: () => {
                     if (ctx.screenplayId) {
                       openVersionsDrawer({
@@ -804,7 +828,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 })),
                 {
                   id: "open-drawer",
-                  label: "Apri Versioni →",
+                  label: t("breakdown.openVersions"),
                   onSelect: () => {
                     if (ctx.screenplayId) {
                       openVersionsDrawer({
@@ -826,8 +850,7 @@ function BreakdownPageContent({ projectId }: Props) {
           role="alert"
           data-testid="breakdown-stale-banner"
         >
-          La versione attiva della sceneggiatura è cambiata — rigenera il
-          breakdown per allinearlo.
+          {t("breakdown.staleBanner")}
         </div>
       )}
 
@@ -837,7 +860,7 @@ function BreakdownPageContent({ projectId }: Props) {
           role="status"
           data-testid="auto-spoglio-banner"
         >
-          Auto-spoglio in corso…
+          {t("breakdown.autoSpoglioBanner")}
         </div>
       )}
 
@@ -907,7 +930,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 />
               ) : (
                 <p className={styles.empty}>
-                  Nessuna versione disponibile per questa sceneggiatura.
+                  {t("breakdown.noVersionAvailable")}
                 </p>
               )}
             </div>
@@ -940,7 +963,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 disabled={!hoverTooltip.occurrenceId || setStatus.isPending}
                 onClick={handleHoverAccept}
               >
-                Accetta
+                {t("breakdown.accept")}
               </button>
               <button
                 type="button"
@@ -948,7 +971,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 disabled={!hoverTooltip.occurrenceId || removeOcc.isPending}
                 onClick={handleHoverReject}
               >
-                Scarta
+                {t("breakdown.discard")}
               </button>
             </>
           ) : canEdit ? (
@@ -959,10 +982,10 @@ function BreakdownPageContent({ projectId }: Props) {
               onClick={handleHoverRemove}
               title={
                 hoverTooltip.occurrenceId
-                  ? "Rimuovi dalla scena"
-                  : "Seleziona una scena per rimuovere"
+                  ? t("breakdown.removeFromScene")
+                  : t("breakdown.selectSceneToRemove")
               }
-              aria-label="Rimuovi dalla scena"
+              aria-label={t("breakdown.removeFromScene")}
             >
               <Trash2 size={12} strokeWidth={2} />
             </button>
@@ -984,7 +1007,7 @@ function BreakdownPageContent({ projectId }: Props) {
               : "var(--ds-text-3)",
           }}
           role="menu"
-          aria-label={`Azioni elemento ${ctxMenu.name}`}
+          aria-label={`${t("breakdown.elementActionsAria")} ${ctxMenu.name}`}
           onKeyDown={handleCtxArrowKey}
           data-testid="breakdown-context-menu"
         >
@@ -992,7 +1015,7 @@ function BreakdownPageContent({ projectId }: Props) {
             <span className="dot" aria-hidden="true" />
             {ctxMenu.category
               ? CATEGORY_META[ctxMenu.category].labelIt
-              : "Elemento"}{" "}
+              : t("breakdown.element")}{" "}
             · <b>{ctxMenu.name}</b>
           </div>
           {ctxMenu.mode === "main" && (
@@ -1005,7 +1028,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 disabled={!ctxMenu.occurrenceId}
               >
                 <span aria-hidden="true">✓</span>
-                <span>Conferma elemento</span>
+                <span>{t("breakdown.confirmElement")}</span>
                 <span className={styles.ctxKbd}>↵</span>
               </button>
               <button
@@ -1016,7 +1039,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 data-testid="ctx-change-category"
               >
                 <span aria-hidden="true">↔</span>
-                <span>Cambia categoria</span>
+                <span>{t("breakdown.changeCategory")}</span>
                 <span className={styles.ctxKbd}>⇧C</span>
               </button>
               <button
@@ -1027,7 +1050,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 data-testid="ctx-rename"
               >
                 <span aria-hidden="true">✎</span>
-                <span>Modifica nome</span>
+                <span>{t("breakdown.editName")}</span>
               </button>
               <div className={styles.ctxSep} aria-hidden="true" />
               <button
@@ -1037,7 +1060,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 onClick={handleRemove}
               >
                 <span aria-hidden="true">🗑</span>
-                <span>Rimuovi dallo spoglio</span>
+                <span>{t("breakdown.removeFromBreakdown")}</span>
                 <span className={styles.ctxKbd}>⌫</span>
               </button>
             </>
@@ -1097,7 +1120,7 @@ function BreakdownPageContent({ projectId }: Props) {
        * one Cesare surface, one command centre. */}
       <FloatingDock
         primaryAction={{
-          label: "Ri-spogliare con AI",
+          label: t("breakdown.respoglioWithAi"),
           hotkey: "⌘R",
           onClick: () => {
             /* TODO wire — same as v1 streamFullSpoglio */
@@ -1105,7 +1128,7 @@ function BreakdownPageContent({ projectId }: Props) {
         }}
         secondaryActions={[
           {
-            label: "Esporta",
+            label: t("breakdown.export"),
             hotkey: "⌘E",
             onClick: () => setExportOpen(true),
           },
@@ -1145,6 +1168,7 @@ interface RenameFormProps {
 }
 
 function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(initialName);
   return (
     <form
@@ -1166,7 +1190,7 @@ function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
             onCancel();
           }
         }}
-        aria-label="Nuovo nome elemento"
+        aria-label={t("breakdown.newElementNameAria")}
         data-testid="ctx-rename-input"
       />
       <div className={styles.ctxRenameActions}>
@@ -1175,7 +1199,7 @@ function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
           className={styles.ctxRenameBtn}
           onClick={onCancel}
         >
-          Annulla
+          {t("breakdown.cancel")}
         </button>
         <button
           type="submit"
@@ -1184,7 +1208,7 @@ function RenameForm({ initialName, onCommit, onCancel }: RenameFormProps) {
           )}
           data-testid="ctx-rename-save"
         >
-          Salva
+          {t("breakdown.save")}
         </button>
       </div>
     </form>

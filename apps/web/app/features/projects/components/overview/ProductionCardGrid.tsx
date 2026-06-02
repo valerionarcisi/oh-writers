@@ -5,7 +5,11 @@ import type {
   ScheduleSummary,
   LocationsSummary,
 } from "../../server/project-overview.server";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProductionCardGrid.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 interface ProductionCardGridProps {
   readonly projectId: string;
@@ -44,6 +48,7 @@ const buildCards = (
   budget: BudgetSummary,
   schedule: ScheduleSummary,
   locations: LocationsSummary,
+  t: Translate,
 ): ProdCardData[] => {
   const breakdownPct =
     breakdown.totalScenes > 0
@@ -52,61 +57,61 @@ const buildCards = (
   return [
     {
       key: "breakdown",
-      eyebrow: "Breakdown",
+      eyebrow: t("nav.breakdown"),
       value: String(breakdown.scenesBrokenDown),
-      unit: `/ ${breakdown.totalScenes} scene`,
+      unit: `/ ${breakdown.totalScenes} ${t("projects.production.scenesUnit")}`,
       sub:
         breakdown.scenesBrokenDown === 0
-          ? "Nessuna scena spogliata"
-          : `${breakdown.scenesBrokenDown} scene spogliate`,
+          ? t("projects.production.noScenesBrokenDown")
+          : `${breakdown.scenesBrokenDown} ${t("projects.production.scenesBrokenDown")}`,
       progressPct: breakdownPct,
       progressLabel:
         breakdown.scenesBrokenDown === 0
-          ? "0% — Avvia spoglio"
-          : `${breakdownPct}% — Continua spoglio`,
+          ? `0${t("projects.production.startBreakdown")}`
+          : `${breakdownPct}${t("projects.production.continueBreakdown")}`,
       route: "/projects/$id/breakdown",
     },
     {
       key: "budget",
-      eyebrow: "Budget",
+      eyebrow: t("nav.budget"),
       value: budget.hasAny ? formatEUR(budget.totalEUR) : "—",
       unit: null,
       sub: budget.hasAny
-        ? `${budget.lineCount} voci · ${budget.status}`
-        : "Da generare dopo breakdown",
+        ? `${budget.lineCount} ${t("projects.production.budgetLines")} ${budget.status}`
+        : t("projects.production.budgetAfterBreakdown"),
       progressPct: budget.hasAny ? (budget.status === "locked" ? 100 : 50) : 0,
       progressLabel: budget.hasAny
         ? budget.status === "locked"
-          ? "Bloccato"
-          : "In bozza"
-        : "In attesa",
+          ? t("projects.production.locked")
+          : t("projects.production.draft")
+        : t("projects.production.waiting"),
       route: "/projects/$id/budget",
     },
     {
       key: "schedule",
-      eyebrow: "Calendarizzazione",
+      eyebrow: t("projects.pipeline.scheduling"),
       value: schedule.hasAny ? String(schedule.shootingDayCount) : "—",
-      unit: schedule.hasAny ? "giornate" : null,
+      unit: schedule.hasAny ? t("projects.production.daysUnit") : null,
       sub: schedule.hasAny
-        ? `${Math.round(schedule.totalHours)} h · ${schedule.scheduledScenes} scene`
-        : "Da generare dopo budget",
+        ? `${Math.round(schedule.totalHours)} h · ${schedule.scheduledScenes} ${t("projects.production.scenesUnit")}`
+        : t("projects.production.scheduleAfterBudget"),
       progressPct:
         schedule.totalScenes > 0
-          ? Math.round(
-              (schedule.scheduledScenes / schedule.totalScenes) * 100,
-            )
+          ? Math.round((schedule.scheduledScenes / schedule.totalScenes) * 100)
           : 0,
-      progressLabel: schedule.hasAny ? "In bozza" : "In attesa",
+      progressLabel: schedule.hasAny
+        ? t("projects.production.draft")
+        : t("projects.production.waiting"),
       route: "/projects/$id/schedule",
     },
     {
       key: "locations",
-      eyebrow: "Location",
+      eyebrow: t("nav.locations"),
       value: locations.hasAny ? String(locations.confirmedCount) : "—",
       unit: locations.hasAny ? `/ ${locations.totalRequirements}` : null,
       sub: locations.hasAny
-        ? `${locations.confirmedCount} confermate su ${locations.totalRequirements}`
-        : "Sincronizza da breakdown",
+        ? `${locations.confirmedCount} ${t("projects.production.confirmedOf")} ${locations.totalRequirements}`
+        : t("projects.production.syncFromBreakdown"),
       progressPct:
         locations.totalRequirements > 0
           ? Math.round(
@@ -114,8 +119,8 @@ const buildCards = (
             )
           : 0,
       progressLabel: locations.hasAny
-        ? `${locations.confirmedCount} / ${locations.totalRequirements} confermate`
-        : "In attesa",
+        ? `${locations.confirmedCount} / ${locations.totalRequirements} ${t("projects.production.confirmed")}`
+        : t("projects.production.waiting"),
       route: "/projects/$id/locations",
     },
   ];
@@ -128,7 +133,8 @@ export function ProductionCardGrid({
   schedule,
   locations,
 }: ProductionCardGridProps) {
-  const cards = buildCards(breakdown, budget, schedule, locations);
+  const { t } = useTranslation();
+  const cards = buildCards(breakdown, budget, schedule, locations, t);
 
   return (
     <section
@@ -137,9 +143,11 @@ export function ProductionCardGrid({
     >
       <div className={styles.head}>
         <h2 id="overview-production-h" className={styles.title}>
-          Produzione
+          {t("projects.production.heading")}
         </h2>
-        <span className={styles.meta}>Dati dalla bozza corrente</span>
+        <span className={styles.meta}>
+          {t("projects.production.subtitle")}
+        </span>
       </div>
       <div className={styles.grid}>
         {cards.map((c) => {
@@ -170,7 +178,10 @@ export function ProductionCardGrid({
                   {c.unit && <span className={styles.unit}>{c.unit}</span>}
                 </div>
                 {showAiBadge && (
-                  <span className={styles.aiBadge} aria-label="Stima AI">
+                  <span
+                    className={styles.aiBadge}
+                    aria-label={t("projects.production.aiEstimate")}
+                  >
                     AI
                   </span>
                 )}

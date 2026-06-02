@@ -25,6 +25,7 @@ import { useDialog, useOverlay, FocusScope } from "react-aria";
 import { SplitDrawer } from "@oh-writers/ui";
 import type { SplitDrawerState } from "@oh-writers/ui";
 import { VersionsSplitDrawer } from "~/features/versions";
+import { useTranslation } from "~/features/i18n";
 import type { VersionsPeek, VersionsCompare } from "../versions-peek";
 import styles from "./VersionsSplitLane.module.css";
 
@@ -56,6 +57,7 @@ export function VersionsSplitLane({
   onStepBack,
   onClose,
 }: VersionsSplitLaneProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
   // react-aria owns dismiss + focus (mandatory). ESC clears `?versions`.
@@ -70,7 +72,10 @@ export function VersionsSplitLane({
     },
     ref,
   );
-  const { dialogProps } = useDialog({ "aria-label": "Versioni" }, ref);
+  const { dialogProps } = useDialog(
+    { "aria-label": t("shell.versionsLane.aria") },
+    ref,
+  );
 
   // The SplitDrawer's visible state mirrors the routed surface: `full` when the
   // user expanded (`?vstate=full`), `open` (split) otherwise. The primitive's
@@ -100,10 +105,12 @@ export function VersionsSplitLane({
           onCycle={state === "full" ? onStepBack : onExpand}
           onStepBack={onStepBack}
           onClose={onClose}
-          header={<h2 className={styles.title}>Versioni</h2>}
+          header={
+            <h2 className={styles.title}>{t("shell.versionsLane.title")}</h2>
+          }
           size={{ width }}
           onSizeChange={({ width: next }) => onWidthChange(next)}
-          ariaLabel="Versioni del documento"
+          ariaLabel={t("shell.versionsLane.frameAria")}
           testId="versions-split-drawer-frame"
         >
           <VersionsSplitDrawer

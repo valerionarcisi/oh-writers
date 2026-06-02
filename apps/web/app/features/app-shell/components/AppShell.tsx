@@ -66,7 +66,7 @@ import {
   type CesareNotification,
 } from "../cesare-notification-context";
 import {
-  ACTION_LABEL_BY_PAGE,
+  ACTION_LABEL_KEY_BY_PAGE,
   deriveResultLabel,
   isAgenticPage,
 } from "../cesare-notification-labels";
@@ -556,7 +556,7 @@ function AppShellInner({
 
       if (agentic) {
         const id = startNotification({
-          actionLabel: ACTION_LABEL_BY_PAGE[page],
+          actionLabel: t(ACTION_LABEL_KEY_BY_PAGE[page]),
           page,
           projectId: pid,
         });
@@ -571,7 +571,7 @@ function AppShellInner({
           const reply = result.value;
           const toolsRan = parseToolsExecuted(reply);
           if (toolsRan > 0) {
-            const resultLabel = deriveResultLabel(page, reply);
+            const resultLabel = deriveResultLabel(page, reply, t);
             completeNotification(id, { resultLabel });
             firePush({
               title: "Cesare",
@@ -585,7 +585,7 @@ function AppShellInner({
             dismissNotification(id);
           }
         } else {
-          failNotification(id, "Cesare ha avuto un problema");
+          failNotification(id, t("shell.notification.failed"));
         }
         pendingNotificationId.current = null;
       }
@@ -599,6 +599,7 @@ function AppShellInner({
       firePush,
       markAllSeen,
       dismissNotification,
+      t,
     ],
   );
 
@@ -625,7 +626,7 @@ function AppShellInner({
         });
         if (applied.has("locations")) {
           showToast({
-            message: "✦ Cesare ha aggiornato le location",
+            message: t("shell.toast.locations"),
             variant: "success",
             durationMs: CESARE_TOAST_DURATION_MS,
           });
@@ -646,9 +647,9 @@ function AppShellInner({
           "outline",
           "treatment",
         ] as const;
-        for (const t of docTypes) {
+        for (const docType of docTypes) {
           void queryClient.invalidateQueries({
-            queryKey: ["documents", projectId, t],
+            queryKey: ["documents", projectId, docType],
           });
         }
         void queryClient.invalidateQueries({ queryKey: ["document-drafts"] });
@@ -661,17 +662,19 @@ function AppShellInner({
         // toast names the entity the marker says was ACTUALLY edited — which may
         // differ from the open page (a logline edit from the soggetto page is
         // "la logline", not "il documento") — and pops only on a real apply.
-        const docLabels: Record<string, string> = {
-          logline: "la logline",
-          soggetto: "il soggetto",
-          synopsis: "la sinossi",
-          outline: "la scaletta",
-          treatment: "il trattamento",
-        };
-        const appliedDoc = Object.keys(docLabels).find((d) => applied.has(d));
+        const docLabelKeys = {
+          logline: "shell.toast.doc.logline",
+          soggetto: "shell.toast.doc.soggetto",
+          synopsis: "shell.toast.doc.synopsis",
+          outline: "shell.toast.doc.outline",
+          treatment: "shell.toast.doc.treatment",
+        } as const;
+        const appliedDoc = (
+          Object.keys(docLabelKeys) as Array<keyof typeof docLabelKeys>
+        ).find((d) => applied.has(d));
         if (appliedDoc) {
           showToast({
-            message: `✦ Cesare ha aggiornato ${docLabels[appliedDoc]}`,
+            message: `${t("shell.toast.docPrefix")} ${t(docLabelKeys[appliedDoc])}`,
             variant: "success",
             durationMs: CESARE_TOAST_DURATION_MS,
           });
@@ -688,7 +691,7 @@ function AppShellInner({
         });
         if (applied.has("budget")) {
           showToast({
-            message: "✦ Cesare ha aggiornato il budget",
+            message: t("shell.toast.budget"),
             variant: "success",
             durationMs: CESARE_TOAST_DURATION_MS,
           });
@@ -702,7 +705,7 @@ function AppShellInner({
         void queryClient.invalidateQueries({ queryKey: ["shot-plan"] });
         if (applied.has("shooting-plan")) {
           showToast({
-            message: "✦ Cesare ha aggiornato il piano inquadrature",
+            message: t("shell.toast.shootingPlan"),
             variant: "success",
             durationMs: CESARE_TOAST_DURATION_MS,
           });
@@ -716,7 +719,7 @@ function AppShellInner({
         void queryClient.invalidateQueries({ queryKey: ["versions"] });
       }
     },
-    [cesarePage, projectId, queryClient, showToast, activeDocument],
+    [cesarePage, projectId, queryClient, showToast, activeDocument, t],
   );
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
@@ -808,8 +811,8 @@ function AppShellInner({
     const items: CommandPaletteItem[] = [
       {
         id: "nav:dashboard",
-        label: "Vai alla Dashboard",
-        group: "Navigazione",
+        label: t("shell.palette.dashboard"),
+        group: t("shell.palette.groupNav"),
         icon: "compass",
         keywords: ["home", "progetti", "start"],
         onSelect: () => void router.navigate({ to: "/dashboard" }),
@@ -824,8 +827,8 @@ function AppShellInner({
         for (const entry of section.items) {
           items.push({
             id: `nav:${entry.id}`,
-            label: `Vai a ${entry.label}`,
-            group: "Sezioni progetto",
+            label: `${t("shell.palette.goToPrefix")} ${entry.label}`,
+            group: t("shell.palette.groupSections"),
             icon: "file-text",
             keywords: [entry.label.toLowerCase(), section.label.toLowerCase()],
             onSelect: () => void router.navigate({ to: entry.href }),
@@ -836,16 +839,16 @@ function AppShellInner({
       items.push(
         {
           id: "cesare:open",
-          label: "Apri Cesare",
-          group: "Cesare",
+          label: t("shell.palette.openCesare"),
+          group: t("shell.palette.groupCesare"),
           icon: "comment",
           keywords: ["assistente", "chat", "ai"],
           onSelect: () => openCesare(),
         },
         {
           id: "cesare:new-session",
-          label: "Nuova sessione Cesare",
-          group: "Cesare",
+          label: t("shell.palette.newCesareSession"),
+          group: t("shell.palette.groupCesare"),
           icon: "plus",
           keywords: ["sessione", "session", "nuova", "chat"],
           onSelect: () => onCesareSessionNew?.(),
@@ -861,30 +864,30 @@ function AppShellInner({
     () => [
       {
         id: "search",
-        label: "Cerca",
+        label: t("shell.rail.search"),
         icon: "search",
         onPress: openPalette,
       },
       {
         id: "new",
-        label: "Nuovo",
+        label: t("shell.rail.new"),
         icon: "plus",
         onPress: () => router.navigate({ to: "/projects/new" }),
       },
       {
         id: "switch",
-        label: "Cambia progetto",
+        label: t("shell.rail.switchProject"),
         icon: "arrows-lr",
         onPress: handleBrandClick,
       },
       {
         id: "more",
-        label: "Altro",
+        label: t("shell.rail.more"),
         icon: "help",
         onPress: openPalette,
       },
     ],
-    [openPalette, router, handleBrandClick],
+    [openPalette, router, handleBrandClick, t],
   );
 
   // ── Rail account row (bell / avatar / gear) ──────────────────
@@ -921,8 +924,8 @@ function AppShellInner({
       href: `/projects/${p.id}`,
       isActive: p.id === projectId,
     }));
-    return { label: "Recenti", items };
-  }, [projects, projectId]);
+    return { label: t("shell.rail.recents"), items };
+  }, [projects, projectId, t]);
 
   const fullSections = useMemo(
     () => (recentsSection ? [...railSections, recentsSection] : railSections),
@@ -1144,6 +1147,7 @@ function SplitDrawerHost({
   setSplitDrawerWidth,
   onNotificationActivate,
 }: SplitDrawerHostProps) {
+  const { t } = useTranslation();
   if (!splitDrawer.payload) return null;
 
   const payload = splitDrawer.payload;
@@ -1174,7 +1178,7 @@ function SplitDrawerHost({
         header={<NotificationCenterDrawerHeader />}
         size={{ width: splitDrawerWidth }}
         onSizeChange={({ width }) => setSplitDrawerWidth(width)}
-        ariaLabel="Centro notifiche"
+        ariaLabel={t("shell.splitDrawer.notificationsAria")}
         testId="notification-center-drawer"
       >
         <NotificationCenterDrawerContent onActivate={onNotificationActivate} />
@@ -1201,7 +1205,9 @@ function SplitDrawerHost({
             textOverflow: "ellipsis",
           }}
         >
-          {payload.title ?? payload.pageRef.title ?? "Anteprima"}
+          {payload.title ??
+            payload.pageRef.title ??
+            t("shell.splitDrawer.previewFallback")}
         </h2>
       }
       footer={
@@ -1219,7 +1225,7 @@ function SplitDrawerHost({
               fontSize: 12,
             }}
           >
-            Accetta tutto
+            {t("shell.splitDrawer.acceptAll")}
           </button>
           <button
             type="button"
@@ -1234,7 +1240,7 @@ function SplitDrawerHost({
               fontSize: 12,
             }}
           >
-            Rifiuta tutto
+            {t("shell.splitDrawer.rejectAll")}
           </button>
           <span
             style={{
@@ -1243,8 +1249,10 @@ function SplitDrawerHost({
               fontSize: 11.5,
             }}
           >
-            {payload.traceMarkers.length} modifich
-            {payload.traceMarkers.length === 1 ? "a" : "e"} in sospeso
+            {payload.traceMarkers.length}{" "}
+            {payload.traceMarkers.length === 1
+              ? t("shell.splitDrawer.pendingSingular")
+              : t("shell.splitDrawer.pendingPlural")}
           </span>
         </>
       }

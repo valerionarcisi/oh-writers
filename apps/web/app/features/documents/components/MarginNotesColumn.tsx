@@ -7,6 +7,7 @@ import {
   type NarrativePolishSuggestion,
   type NarrativePolishSuggestionDoc,
 } from "../server/narrative-polish.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./MarginNotesColumn.module.css";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -42,11 +43,12 @@ function SkeletonNote() {
 }
 
 function LoadingState() {
+  const { t } = useTranslation();
   return (
     <div
       className={styles.column}
       aria-busy="true"
-      aria-label="Caricamento note"
+      aria-label={t("documents.loading.notes")}
     >
       <SkeletonNote />
       <SkeletonNote />
@@ -56,21 +58,19 @@ function LoadingState() {
 }
 
 function EmptyContentState() {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
-      <p className={styles.emptyText}>
-        Inizia a scrivere per ricevere note da Cesare.
-      </p>
+      <p className={styles.emptyText}>{t("documents.marginNotes.empty")}</p>
     </div>
   );
 }
 
 function ErrorState() {
+  const { t } = useTranslation();
   return (
     <div className={styles.emptyState}>
-      <p className={styles.emptyText}>
-        Impossibile caricare le note. Riprova più tardi.
-      </p>
+      <p className={styles.emptyText}>{t("documents.marginNotes.error")}</p>
     </div>
   );
 }
@@ -98,6 +98,9 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   if (!isNarrativeDocType(docType)) return null;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { t } = useTranslation();
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery(
     narrativePolishQueryOptions(projectId, docType, content),
   );
@@ -114,7 +117,10 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
 
   if (!hasContent) {
     return (
-      <aside className={styles.column} aria-label="Note di Cesare">
+      <aside
+        className={styles.column}
+        aria-label={t("documents.marginNotes.ariaLabel")}
+      >
         <EmptyContentState />
       </aside>
     );
@@ -126,7 +132,10 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
 
   if (isError) {
     return (
-      <aside className={styles.column} aria-label="Note di Cesare">
+      <aside
+        className={styles.column}
+        aria-label={t("documents.marginNotes.ariaLabel")}
+      >
         <ErrorState />
       </aside>
     );
@@ -134,9 +143,14 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
 
   if (suggestions.length === 0) {
     return (
-      <aside className={styles.column} aria-label="Note di Cesare">
+      <aside
+        className={styles.column}
+        aria-label={t("documents.marginNotes.ariaLabel")}
+      >
         <div className={styles.emptyState}>
-          <p className={styles.emptyText}>Nessuna nota in questo momento.</p>
+          <p className={styles.emptyText}>
+            {t("documents.marginNotes.none")}
+          </p>
         </div>
       </aside>
     );
@@ -145,7 +159,7 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   return (
     <aside
       className={styles.column}
-      aria-label="Note di Cesare"
+      aria-label={t("documents.marginNotes.ariaLabel")}
       data-testid="margin-notes-column"
     >
       {suggestions.map((memo, idx) => (

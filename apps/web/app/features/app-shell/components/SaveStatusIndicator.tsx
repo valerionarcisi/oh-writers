@@ -1,5 +1,6 @@
 import { match } from "ts-pattern";
 import { useSaveStateValue } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import styles from "./SaveStatusIndicator.module.css";
 
 /**
@@ -10,17 +11,18 @@ import styles from "./SaveStatusIndicator.module.css";
  * Hides entirely when no editor on the page has published a state.
  */
 export function SaveStatusIndicator() {
+  const { t } = useTranslation();
   const { state, secondsAgo } = useSaveStateValue();
   if (!state) return null;
 
   const label = match(state)
-    .with("saving", () => "Salvataggio…")
+    .with("saving", () => t("shell.save.savingShort"))
     .with("saved", () =>
       typeof secondsAgo === "number" && secondsAgo > 5
-        ? `Salvato ${secondsAgo}s fa`
-        : "Salvato",
+        ? `${t("shell.save.savedAgoPrefix")} ${secondsAgo}s ${t("shell.save.savedAgoSuffix")}`
+        : t("shell.save.saved"),
     )
-    .with("offline", () => "Offline — modifiche non salvate")
+    .with("offline", () => t("shell.save.offline"))
     .exhaustive();
 
   if (!label) return null;

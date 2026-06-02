@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Badge } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectCard.module.css";
 
 interface ProjectCardProps {
@@ -15,22 +17,22 @@ interface ProjectCardProps {
 }
 
 // tRPC HTTP transport serializes Date → string; new Date() handles both
-const FORMAT_LABELS: Record<string, string> = {
-  feature: "lungometraggio",
-  short: "cortometraggio",
-  series_episode: "episodio serie",
-  pilot: "pilota",
+const FORMAT_LABEL_KEYS: Record<string, TranslationKey> = {
+  feature: "projects.format.feature",
+  short: "projects.format.short",
+  series_episode: "projects.format.seriesEpisode",
+  pilot: "projects.format.pilot",
 };
 
-const GENRE_LABELS: Record<string, string> = {
-  drama: "dramma",
-  comedy: "commedia",
-  thriller: "thriller",
-  horror: "horror",
-  action: "azione",
-  "sci-fi": "sci-fi",
-  documentary: "documentario",
-  other: "altro",
+const GENRE_LABEL_KEYS: Record<string, TranslationKey> = {
+  drama: "projects.card.genreDrama",
+  comedy: "projects.card.genreComedy",
+  thriller: "projects.card.genreThriller",
+  horror: "projects.card.genreHorror",
+  action: "projects.card.genreAction",
+  "sci-fi": "projects.card.genreSciFi",
+  documentary: "projects.card.genreDocumentary",
+  other: "projects.card.genreOther",
 };
 
 const formatDate = (date: Date | string): string =>
@@ -41,6 +43,9 @@ const formatDate = (date: Date | string): string =>
   }).format(new Date(date));
 
 export function ProjectCard({ project }: ProjectCardProps) {
+  const { t } = useTranslation();
+  const formatKey = FORMAT_LABEL_KEYS[project.format];
+  const genreKey = project.genre ? GENRE_LABEL_KEYS[project.genre] : undefined;
   return (
     <Link
       to="/projects/$id"
@@ -49,24 +54,28 @@ export function ProjectCard({ project }: ProjectCardProps) {
     >
       <div className={styles.header}>
         <span className={styles.title}>{project.title}</span>
-        {project.isArchived && <Badge variant="outline">Archiviato</Badge>}
+        {project.isArchived && (
+          <Badge variant="outline">{t("projects.card.archived")}</Badge>
+        )}
       </div>
 
       <div className={styles.meta}>
         <span className={styles.format}>
           {[
-            FORMAT_LABELS[project.format] ?? project.format.replace("_", " "),
-            project.genre ? (GENRE_LABELS[project.genre] ?? project.genre) : null,
+            formatKey ? t(formatKey) : project.format.replace("_", " "),
+            project.genre ? (genreKey ? t(genreKey) : project.genre) : null,
           ]
             .filter(Boolean)
             .join(" · ")}
         </span>
-        {project.teamId && <Badge variant="accent">Team</Badge>}
+        {project.teamId && (
+          <Badge variant="accent">{t("projects.card.team")}</Badge>
+        )}
       </div>
 
       <div className={styles.footer}>
         <span className={styles.date}>
-          Aggiornato {formatDate(project.updatedAt)}
+          {t("projects.card.updated")} {formatDate(project.updatedAt)}
         </span>
       </div>
     </Link>

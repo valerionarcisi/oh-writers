@@ -6,6 +6,7 @@ import {
   SaveStatusIndicator,
   useTopBarSlotPublisher,
 } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import styles from "./NarrativeDocsShell.module.css";
 
 type NarrativeLayoutVariant = "single" | "two" | "three";
@@ -49,6 +50,7 @@ export function NarrativeDocsShell({
   rightAside,
   children,
 }: NarrativeDocsShellProps) {
+  const { t } = useTranslation();
   // Spec 44 TKT-LEAD-04 — the document-type subtabs row was removed: the
   // LeftRail already navigates to the four narrative doc types, so the
   // SegmentedControl + active-doc label duplicated the rail's selection
@@ -101,7 +103,7 @@ export function NarrativeDocsShell({
                         : [
                             {
                               id: "open-drawer",
-                              label: "Apri Versioni →",
+                              label: t("documents.shell.openVersions"),
                               onSelect: onOpenVersions,
                             },
                           ]

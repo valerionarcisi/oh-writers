@@ -1,3 +1,4 @@
+import { useTranslation } from "~/features/i18n";
 import styles from "./VersionViewingBanner.module.css";
 
 interface RestoreConfirmHandlers {
@@ -23,6 +24,7 @@ export function VersionViewingBanner({
   isRestoring = false,
   restoreConfirm,
 }: VersionViewingBannerProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={styles.banner}
@@ -32,12 +34,14 @@ export function VersionViewingBanner({
     >
       <div className={styles.message}>
         {restoreConfirm ? (
-          "Hai modifiche non salvate."
+          t("screenplay.viewing.unsavedChanges")
         ) : (
           <>
-            Stai visualizzando <span className={styles.label}>{label}</span>
+            {t("screenplay.viewing.youAreViewingPrefix")}
+            <span className={styles.label}>{label}</span>
             <span className={styles.date}>
-              · salvata il {new Date(createdAt).toLocaleString()}
+              {t("screenplay.viewing.savedOnPrefix")}
+              {new Date(createdAt).toLocaleString()}
             </span>
           </>
         )}
@@ -51,7 +55,7 @@ export function VersionViewingBanner({
               onClick={restoreConfirm.onCancel}
               data-testid="version-restore-cancel"
             >
-              Annulla
+              {t("screenplay.viewing.cancel")}
             </button>
             <button
               type="button"
@@ -59,7 +63,7 @@ export function VersionViewingBanner({
               onClick={restoreConfirm.onRestoreOnly}
               data-testid="version-restore-only"
             >
-              Ripristina senza salvare
+              {t("screenplay.viewing.restoreWithoutSaving")}
             </button>
             <button
               type="button"
@@ -67,7 +71,7 @@ export function VersionViewingBanner({
               onClick={restoreConfirm.onSaveAndRestore}
               data-testid="version-save-and-restore"
             >
-              Salva versione e ripristina
+              {t("screenplay.viewing.saveVersionAndRestore")}
             </button>
           </>
         ) : (
@@ -78,7 +82,7 @@ export function VersionViewingBanner({
               onClick={onReturn}
               data-testid="version-viewing-return"
             >
-              Torna alla bozza
+              {t("screenplay.viewing.backToDraft")}
             </button>
             <button
               type="button"
@@ -87,7 +91,9 @@ export function VersionViewingBanner({
               disabled={isRestoring}
               data-testid="version-viewing-restore"
             >
-              {isRestoring ? "Ripristino…" : "Ripristina questa versione"}
+              {isRestoring
+                ? t("screenplay.viewing.restoring")
+                : t("screenplay.viewing.restoreThisVersion")}
             </button>
           </>
         )}

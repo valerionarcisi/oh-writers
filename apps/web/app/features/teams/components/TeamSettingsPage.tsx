@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import {
   teamQueryOptions,
   updateTeam,
@@ -24,6 +25,7 @@ export function TeamSettingsPage({
   currentUserId,
 }: TeamSettingsPageProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: result } = useSuspenseQuery(teamQueryOptions(slug));
 
@@ -36,9 +38,9 @@ export function TeamSettingsPage({
     return (
       <div className={styles.error}>
         {match(result.error)
-          .with({ _tag: "TeamNotFoundError" }, () => "Team non trovato.")
-          .with({ _tag: "ForbiddenError" }, () => "Accesso negato.")
-          .otherwise(() => "Errore nel caricamento del team.")}
+          .with({ _tag: "TeamNotFoundError" }, () => t("teams.error.notFound"))
+          .with({ _tag: "ForbiddenError" }, () => t("teams.error.forbidden"))
+          .otherwise(() => t("teams.error.loadTeam"))}
       </div>
     );
   }
@@ -49,9 +51,7 @@ export function TeamSettingsPage({
 
   if (!isOwner) {
     return (
-      <div className={styles.error}>
-        Solo i proprietari possono accedere alle impostazioni.
-      </div>
+      <div className={styles.error}>{t("teams.settings.ownersOnly")}</div>
     );
   }
 
@@ -67,7 +67,7 @@ export function TeamSettingsPage({
       setSaveError(null);
     },
     onError: (e: { message?: string }) => {
-      setSaveError(e.message ?? "Errore durante il salvataggio.");
+      setSaveError(e.message ?? t("teams.settings.saveError"));
     },
   });
 
@@ -78,21 +78,23 @@ export function TeamSettingsPage({
       void navigate({ to: "/dashboard" });
     },
     onError: (e: { message?: string }) => {
-      setDeleteError(e.message ?? "Errore durante l'eliminazione.");
+      setDeleteError(e.message ?? t("teams.settings.deleteError"));
       setShowDeleteConfirm(false);
     },
   });
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Impostazioni team</h1>
+      <h1 className={styles.title}>{t("teams.settings.title")}</h1>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Informazioni generali</h2>
+        <h2 className={styles.sectionTitle}>
+          {t("teams.settings.generalTitle")}
+        </h2>
 
         <div className={styles.field}>
           <label htmlFor="team-name" className={styles.label}>
-            Nome del team
+            {t("teams.settings.nameLabel")}
           </label>
           <input
             id="team-name"
@@ -112,15 +114,16 @@ export function TeamSettingsPage({
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending || displayName === team.name}
         >
-          {saveMutation.isPending ? "Salvataggio…" : "Salva modifiche"}
+          {saveMutation.isPending
+            ? t("teams.settings.saving")
+            : t("teams.settings.save")}
         </button>
       </section>
 
       <section className={styles.dangerZone}>
-        <h2 className={styles.dangerTitle}>Zona pericolosa</h2>
+        <h2 className={styles.dangerTitle}>{t("teams.settings.dangerTitle")}</h2>
         <p className={styles.dangerDescription}>
-          L'eliminazione del team è permanente e rimuoverà tutti i dati
-          associati.
+          {t("teams.settings.dangerDescription")}
         </p>
 
         {deleteError && <p className={styles.errorMsg}>{deleteError}</p>}
@@ -131,19 +134,19 @@ export function TeamSettingsPage({
             className={styles.deleteBtn}
             onClick={() => setShowDeleteConfirm(true)}
           >
-            Elimina team
+            {t("teams.settings.delete")}
           </button>
         ) : (
           <div className={styles.confirmRow}>
             <span className={styles.confirmText}>
-              Sei sicuro? L'azione è irreversibile.
+              {t("teams.settings.confirmText")}
             </span>
             <button
               type="button"
               className={styles.cancelBtn}
               onClick={() => setShowDeleteConfirm(false)}
             >
-              Annulla
+              {t("action.cancel")}
             </button>
             <button
               type="button"
@@ -152,8 +155,8 @@ export function TeamSettingsPage({
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending
-                ? "Eliminazione…"
-                : "Conferma eliminazione"}
+                ? t("teams.settings.deleting")
+                : t("teams.settings.confirmDelete")}
             </button>
           </div>
         )}

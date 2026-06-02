@@ -25,6 +25,7 @@ import { ProjectCardGrid } from "./ProjectCardGrid";
 import { ProjectCardCompact } from "./ProjectCardCompact";
 import { DashboardEmptyState } from "./DashboardEmptyState";
 import { SkeletonCard } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardPage.module.css";
 
 const matchesTab = (
@@ -110,6 +111,7 @@ const computeHeroStats = (projects: ReadonlyArray<DashboardProject>) => {
 };
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const { data, isLoading, error } = useDashboardProjects();
   const [view, setView] = useDashboardView();
   const [activeTab, setActiveTab] = useState<DashboardFilterTab>(
@@ -132,9 +134,12 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <div className={styles.skeletonGrid} aria-label="Caricamento progetti">
+        <div
+          className={styles.skeletonGrid}
+          aria-label={t("dashboard.page.loading")}
+        >
           {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} ariaLabel="Caricamento progetto" />
+            <SkeletonCard key={i} ariaLabel={t("dashboard.page.loadingCard")} />
           ))}
         </div>
       </div>
@@ -144,9 +149,7 @@ export function DashboardPage() {
   if (error) {
     return (
       <div className={styles.page}>
-        <p className={styles.statusError}>
-          Impossibile caricare i progetti. Riprova tra qualche istante.
-        </p>
+        <p className={styles.statusError}>{t("dashboard.page.loadError")}</p>
       </div>
     );
   }
@@ -189,18 +192,16 @@ export function DashboardPage() {
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle}>
           {activeTab === DashboardFilterTabs.ARCHIVED
-            ? "Archiviati"
-            : "Tutti i progetti"}
+            ? t("dashboard.page.sectionArchived")
+            : t("dashboard.page.sectionAll")}
         </h2>
         <span className={styles.sectionCount} data-num>
-          {filtered.length} risultati
+          {filtered.length} {t("dashboard.page.results")}
         </span>
       </div>
 
       {filtered.length === 0 ? (
-        <p className={styles.empty}>
-          Nessun progetto corrisponde ai filtri attuali.
-        </p>
+        <p className={styles.empty}>{t("dashboard.page.noMatches")}</p>
       ) : view === DashboardViewModes.GRID ? (
         <div className={styles.grid}>
           {filtered.map((p) => (

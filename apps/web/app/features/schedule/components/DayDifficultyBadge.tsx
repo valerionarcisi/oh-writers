@@ -1,4 +1,9 @@
-import type { DayEstimate, WeatherFactor } from "@oh-writers/domain";
+import type {
+  DayEstimate,
+  WeatherFactor,
+  TranslationKey,
+} from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DayDifficultyBadge.module.css";
 
 interface DayDifficultyBadgeProps {
@@ -8,12 +13,12 @@ interface DayDifficultyBadgeProps {
   readonly dayNumber?: number;
 }
 
-const TONE_LABEL: Record<1 | 2 | 3 | 4 | 5, string> = {
-  1: "bassa",
-  2: "medio-bassa",
-  3: "media",
-  4: "medio-alta",
-  5: "critica",
+const TONE_LABEL_KEY: Record<1 | 2 | 3 | 4 | 5, TranslationKey> = {
+  1: "schedule.difficulty.low",
+  2: "schedule.difficulty.midLow",
+  3: "schedule.difficulty.mid",
+  4: "schedule.difficulty.midHigh",
+  5: "schedule.difficulty.critical",
 };
 
 const DIFFICULTY_TONE: Record<1 | 2 | 3 | 4 | 5, string> = {
@@ -55,6 +60,7 @@ export function DayDifficultyBadge({
   isWeatherLoading,
   dayNumber,
 }: DayDifficultyBadgeProps) {
+  const { t } = useTranslation();
   const tone = DIFFICULTY_TONE[estimate.difficulty];
   const hasWeatherImpact = estimate.weatherImpactPct !== 0;
   const tooltipLines = [
@@ -62,11 +68,22 @@ export function DayDifficultyBadge({
     ...estimate.recommendations.map((r) => `→ ${r}`),
   ];
   const tooltip = tooltipLines.length > 0 ? tooltipLines.join("\n") : "";
-  const dayLabel = dayNumber ? `giorno ${dayNumber}` : "questa giornata";
+  const dayLabel = dayNumber
+    ? t("schedule.difficulty.dayLabel").replace("{number}", String(dayNumber))
+    : t("schedule.difficulty.thisDay");
   const probabilityLabel = hasWeatherImpact
-    ? `Riuscita stimata ${estimate.successProbabilityClear}% con tempo sereno, ${estimate.successProbabilityActual}% con il meteo previsto.`
-    : `Riuscita stimata ${estimate.successProbabilityActual}%.`;
-  const ariaLabel = `Difficoltà ${dayLabel}: ${TONE_LABEL[estimate.difficulty]}, ${estimate.difficulty} punti su 5. ${probabilityLabel}`;
+    ? t("schedule.difficulty.successWithWeather")
+        .replace("{clear}", String(estimate.successProbabilityClear))
+        .replace("{actual}", String(estimate.successProbabilityActual))
+    : t("schedule.difficulty.successOnly").replace(
+        "{actual}",
+        String(estimate.successProbabilityActual),
+      );
+  const ariaLabel = t("schedule.difficulty.ariaLabel")
+    .replace("{day}", dayLabel)
+    .replace("{tone}", t(TONE_LABEL_KEY[estimate.difficulty]))
+    .replace("{score}", String(estimate.difficulty))
+    .replace("{probability}", probabilityLabel);
 
   return (
     <div
@@ -85,18 +102,25 @@ export function DayDifficultyBadge({
         </div>
       )}
       <div className={styles.row}>
-        <span className={styles.label}>Difficoltà</span>
+        <span className={styles.label}>
+          {t("schedule.difficulty.label")}
+        </span>
         <span
           className={styles.dots}
           data-tone={tone}
-          aria-label={`Difficoltà ${estimate.difficulty} su 5`}
+          aria-label={t("schedule.difficulty.dotsAria").replace(
+            "{score}",
+            String(estimate.difficulty),
+          )}
         >
           {renderDots(estimate.difficulty)}
         </span>
         <span className={styles.score}>({estimate.difficulty}/5)</span>
       </div>
       <div className={styles.row}>
-        <span className={styles.label}>Riuscita</span>
+        <span className={styles.label}>
+          {t("schedule.difficulty.successLabel")}
+        </span>
         {hasWeatherImpact ? (
           <span className={styles.probabilityShift}>
             <span className={styles.probClear}>
@@ -118,7 +142,10 @@ export function DayDifficultyBadge({
           </span>
         )}
         {isWeatherLoading && (
-          <span className={styles.loading} aria-label="meteo in caricamento">
+          <span
+            className={styles.loading}
+            aria-label={t("schedule.difficulty.weatherLoading")}
+          >
             …
           </span>
         )}

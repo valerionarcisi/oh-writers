@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SegmentedControl } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
-import type { Budget, BudgetLine } from "@oh-writers/domain";
+import type { Budget, BudgetLine, TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import {
   updateBudgetLine,
   addBudgetLine,
@@ -20,59 +21,64 @@ const eurAmount = (n: number) => eur.format(Math.round(n));
 const PRODUCTION_TABS = [
   {
     id: "locations",
-    label: "Location",
+    labelKey: "budget.production.tab.locations",
     categories: ["locations"],
     colorVar: "--ds-cat-locations",
   },
   {
     id: "fotografia",
-    label: "Fotografia",
+    labelKey: "budget.production.tab.fotografia",
     categories: ["equipment"],
     colorVar: "--ds-cat-fotografia",
   },
   {
     id: "suono",
-    label: "Suono",
+    labelKey: "budget.production.tab.suono",
     categories: ["sound"],
     colorVar: "--ds-cat-suono",
   },
   {
     id: "scenografia",
-    label: "Scenografia",
+    labelKey: "budget.production.tab.scenografia",
     categories: ["props", "set_dress"],
     colorVar: "--ds-cat-scenografia",
   },
   {
     id: "costumi",
-    label: "Costumi & Trucco",
+    labelKey: "budget.production.tab.costumi",
     categories: ["wardrobe", "makeup"],
     colorVar: "--ds-cat-costumi",
   },
   {
     id: "vehicles",
-    label: "Veicoli",
+    labelKey: "budget.production.tab.vehicles",
     categories: ["vehicles"],
     colorVar: "--ds-cat-vehicles",
   },
   {
     id: "comparse",
-    label: "Comparse",
+    labelKey: "budget.production.tab.comparse",
     categories: ["extras", "atmosphere"],
     colorVar: "--ds-cat-comparse",
   },
   {
     id: "vfx",
-    label: "VFX / SFX",
+    labelKey: "budget.production.tab.vfx",
     categories: ["vfx", "sfx"],
     colorVar: "--ds-cat-vfx",
   },
   {
     id: "stunts",
-    label: "Stunt",
+    labelKey: "budget.production.tab.stunts",
     categories: ["stunts"],
     colorVar: "--ds-cat-vfx",
   },
-] as const;
+] as const satisfies ReadonlyArray<{
+  id: string;
+  labelKey: TranslationKey;
+  categories: readonly string[];
+  colorVar: string;
+}>;
 
 type ProductionTabId = (typeof PRODUCTION_TABS)[number]["id"];
 
@@ -86,8 +92,12 @@ const lineStatus = (l: BudgetLine): "ok" | "warn" | "missing" => {
   return "ok";
 };
 
-const statusLabel = (s: "ok" | "warn" | "missing"): string =>
-  s === "ok" ? "Confermata" : s === "warn" ? "Modificata" : "Senza tariffa";
+const statusLabelKey = (s: "ok" | "warn" | "missing"): TranslationKey =>
+  s === "ok"
+    ? "budget.production.statusOk"
+    : s === "warn"
+      ? "budget.production.statusWarn"
+      : "budget.production.statusMissing";
 
 interface ProductionDrillDownProps {
   readonly budget: Budget;
@@ -102,6 +112,7 @@ export function ProductionDrillDown({
   initialTab,
   projectId,
 }: ProductionDrillDownProps) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<ProductionTabId>(initialTab ?? "locations");
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -175,16 +186,16 @@ export function ProductionDrillDown({
       <nav
         className={styles.subnav}
         role="tablist"
-        aria-label="Sotto-categorie produzione"
+        aria-label={t("budget.production.subnavAriaLabel")}
       >
         <SegmentedControl
-          options={PRODUCTION_TABS.map((t) => ({
-            id: t.id,
-            label: t.label,
+          options={PRODUCTION_TABS.map((tab) => ({
+            id: tab.id,
+            label: t(tab.labelKey),
           }))}
           activeId={tab}
           onSelect={(id) => setTab(id as ProductionTabId)}
-          ariaLabel="Sotto-categoria produzione"
+          ariaLabel={t("budget.production.subnavOptionAriaLabel")}
         />
       </nav>
 
@@ -195,30 +206,47 @@ export function ProductionDrillDown({
         }}
       >
         <div>
-          <div className={styles.eyebrow}>Categoria produzione</div>
-          <h2 className={styles.title}>{activeTab.label}</h2>
+          <div className={styles.eyebrow}>
+            {t("budget.production.eyebrow")}
+          </div>
+          <h2 className={styles.title}>{t(activeTab.labelKey)}</h2>
           <div className={styles.meta}>
-            {tabLines.length} voci · totale {eurAmount(tabTotal)}
-            {missing > 0 && ` · ${missing} senza tariffa`}
+            {t("budget.production.linesTotal")
+              .replace("{count}", String(tabLines.length))
+              .replace("{total}", eurAmount(tabTotal))}
+            {missing > 0 &&
+              t("budget.production.missingRates").replace(
+                "{count}",
+                String(missing),
+              )}
           </div>
         </div>
       </header>
 
       {tabLines.length === 0 ? (
         <div className={styles.empty}>
-          Nessuna voce per {activeTab.label.toLowerCase()}. Genera il budget per
-          popolarla dal breakdown.
+          {t("budget.production.empty").replace(
+            "{category}",
+            t(activeTab.labelKey).toLowerCase(),
+          )}
         </div>
       ) : (
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Voce</th>
-              <th className={styles.colNum}>Q.tà</th>
-              <th className={styles.colNum}>€/u</th>
-              <th className={styles.colNum}>Totale</th>
-              <th>Stato</th>
-              <th className={styles.colAction} aria-label="Azioni" />
+              <th>{t("budget.production.colLine")}</th>
+              <th className={styles.colNum}>{t("budget.production.colQty")}</th>
+              <th className={styles.colNum}>
+                {t("budget.production.colUnitRate")}
+              </th>
+              <th className={styles.colNum}>
+                {t("budget.production.colTotal")}
+              </th>
+              <th>{t("budget.production.colStatus")}</th>
+              <th
+                className={styles.colAction}
+                aria-label={t("budget.production.colActions")}
+              />
             </tr>
           </thead>
           <tbody>
@@ -249,14 +277,17 @@ export function ProductionDrillDown({
                   </td>
                   <td>
                     <span className={styles.statusPill} data-status={status}>
-                      {statusLabel(status)}
+                      {t(statusLabelKey(status))}
                     </span>
                   </td>
                   <td className={styles.colAction}>
                     <button
                       type="button"
                       className={styles.removeBtn}
-                      aria-label={`Rimuovi ${line.name}`}
+                      aria-label={t("budget.production.removeLine").replace(
+                        "{name}",
+                        line.name,
+                      )}
                       onClick={() => removeLineMutation.mutate(line.id)}
                       disabled={removeLineMutation.isPending}
                     >
@@ -269,7 +300,7 @@ export function ProductionDrillDown({
           </tbody>
           <tfoot>
             <tr>
-              <td>Totale</td>
+              <td>{t("budget.production.total")}</td>
               <td />
               <td />
               <td className={styles.colNum}>{eurAmount(tabTotal)}</td>
@@ -301,7 +332,7 @@ export function ProductionDrillDown({
           >
             <input
               className={styles.addInput}
-              placeholder="Voce"
+              placeholder={t("budget.production.linePlaceholder")}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
@@ -311,7 +342,7 @@ export function ProductionDrillDown({
               type="number"
               min="0"
               step="0.01"
-              placeholder="Q.tà"
+              placeholder={t("budget.production.qtyPlaceholder")}
               value={newQty}
               onChange={(e) => setNewQty(e.target.value)}
             />
@@ -320,7 +351,7 @@ export function ProductionDrillDown({
               type="number"
               min="0"
               step="0.01"
-              placeholder="€/u"
+              placeholder={t("budget.production.unitRatePlaceholder")}
               value={newRate}
               onChange={(e) => setNewRate(e.target.value)}
             />
@@ -329,14 +360,14 @@ export function ProductionDrillDown({
               className={styles.addConfirm}
               disabled={addLineMutation.isPending}
             >
-              Aggiungi
+              {t("budget.production.addConfirm")}
             </button>
             <button
               type="button"
               className={styles.addCancel}
               onClick={() => setAddOpen(false)}
             >
-              Annulla
+              {t("budget.production.addCancel")}
             </button>
           </form>
         ) : (
@@ -345,7 +376,10 @@ export function ProductionDrillDown({
             className={styles.addTrigger}
             onClick={() => setAddOpen(true)}
           >
-            + Aggiungi voce a {activeTab.label}
+            {t("budget.production.addLineTo").replace(
+              "{category}",
+              t(activeTab.labelKey),
+            )}
           </button>
         )}
       </div>

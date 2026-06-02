@@ -6,6 +6,7 @@ import { useDocument } from "../hooks/useDocument";
 import { emptyNarrativeDocument } from "../lib/empty-narrative-document";
 import { ResultErrorView } from "~/components/ResultErrorView";
 import { Skeleton } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import styles from "../../../routes/_app.projects.$id_.editor.module.css";
 
 interface DocumentRoutePageProps {
@@ -17,6 +18,7 @@ export const DocumentRoutePage: FC<DocumentRoutePageProps> = ({
   type,
   projectId,
 }) => {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useDocument(projectId, type);
 
   if (isLoading)
@@ -25,7 +27,7 @@ export const DocumentRoutePage: FC<DocumentRoutePageProps> = ({
         <Skeleton
           lines={5}
           widths={["50%", "100%", "100%", "75%", "60%"]}
-          ariaLabel="Caricamento documento"
+          ariaLabel={t("documents.loading.document")}
         />
       </div>
     );

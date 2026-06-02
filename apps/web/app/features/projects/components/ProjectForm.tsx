@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@oh-writers/ui";
-import { Formats, Genres } from "@oh-writers/domain";
+import { Formats, Genres, type TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectForm.module.css";
 
 type FormatValue = (typeof Formats)[keyof typeof Formats];
 type GenreValue = (typeof Genres)[keyof typeof Genres];
+
+type Translate = (key: TranslationKey) => string;
 
 // Object.values loses literal types; cast back to preserve them for z.enum inference
 const formatTuple = Object.values(Formats) as unknown as [
@@ -17,33 +20,37 @@ const genreTuple = Object.values(Genres) as unknown as [
   ...GenreValue[],
 ];
 
-const FormSchema = z.object({
-  title: z.string().min(1, "Il titolo è obbligatorio").max(200, "Il titolo è troppo lungo"),
-  format: z.enum(formatTuple, {
-    errorMap: () => ({ message: "Il formato è obbligatorio" }),
-  }),
-  genre: z.enum(genreTuple).optional(),
-});
+const buildFormSchema = (t: Translate) =>
+  z.object({
+    title: z
+      .string()
+      .min(1, t("projects.form.titleRequired"))
+      .max(200, t("projects.form.titleTooLong")),
+    format: z.enum(formatTuple, {
+      errorMap: () => ({ message: t("projects.form.formatRequired") }),
+    }),
+    genre: z.enum(genreTuple).optional(),
+  });
 
-const FORMAT_LABELS: Record<string, string> = {
-  feature: "lungometraggio",
-  short: "cortometraggio",
-  series_episode: "episodio serie",
-  pilot: "pilota",
+const FORMAT_LABEL_KEYS: Record<string, TranslationKey> = {
+  feature: "projects.format.feature",
+  short: "projects.format.short",
+  series_episode: "projects.format.seriesEpisode",
+  pilot: "projects.format.pilot",
 };
 
-const GENRE_LABELS: Record<string, string> = {
-  drama: "Dramma",
-  comedy: "Commedia",
-  thriller: "Thriller",
-  horror: "Horror",
-  action: "Azione",
-  "sci-fi": "Sci-fi",
-  documentary: "Documentario",
-  other: "Altro",
+const GENRE_LABEL_KEYS: Record<string, TranslationKey> = {
+  drama: "projects.genre.drama",
+  comedy: "projects.genre.comedy",
+  thriller: "projects.genre.thriller",
+  horror: "projects.genre.horror",
+  action: "projects.genre.action",
+  "sci-fi": "projects.genre.sciFi",
+  documentary: "projects.genre.documentary",
+  other: "projects.genre.other",
 };
 
-type FormValues = z.infer<typeof FormSchema>;
+type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
 interface ProjectFormProps {
@@ -59,8 +66,10 @@ export function ProjectForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
-  submitLabel = "Crea progetto",
+  submitLabel,
 }: ProjectFormProps) {
+  const { t } = useTranslation();
+  const resolvedSubmitLabel = submitLabel ?? t("projects.form.submit");
   const [values, setValues] = useState<Partial<FormValues>>({
     title: "",
     format: undefined,
@@ -71,7 +80,7 @@ export function ProjectForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const result = FormSchema.safeParse(values);
+    const result = buildFormSchema(t).safeParse(values);
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       for (const issue of result.error.issues) {
@@ -97,7 +106,8 @@ export function ProjectForm({
     <form onSubmit={handleSubmit} className={styles.form} noValidate>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="title">
-          Titolo <span className={styles.required}>*</span>
+          {t("projects.form.titleLabel")}{" "}
+          <span className={styles.required}>*</span>
         </label>
         <input
           id="title"
@@ -105,7 +115,7 @@ export function ProjectForm({
           className={`${styles.input} ${errors.title ? styles.error : ""}`}
           value={values.title ?? ""}
           onChange={(e) => setField("title", e.target.value)}
-          placeholder="La mia sceneggiatura"
+          placeholder={t("projects.form.titlePlaceholder")}
           autoFocus
         />
         {errors.title && (
@@ -115,7 +125,8 @@ export function ProjectForm({
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="format">
-          Formato <span className={styles.required}>*</span>
+          {t("projects.form.formatLabel")}{" "}
+          <span className={styles.required}>*</span>
         </label>
         <select
           id="format"
@@ -123,12 +134,15 @@ export function ProjectForm({
           value={values.format ?? ""}
           onChange={(e) => setField("format", e.target.value as FormatValue)}
         >
-          <option value="">Seleziona un formato…</option>
-          {Object.entries(Formats).map(([, val]) => (
-            <option key={val} value={val}>
-              {FORMAT_LABELS[val] ?? val.replace("_", " ")}
-            </option>
-          ))}
+          <option value="">{t("projects.form.formatPlaceholder")}</option>
+          {Object.entries(Formats).map(([, val]) => {
+            const labelKey = FORMAT_LABEL_KEYS[val];
+            return (
+              <option key={val} value={val}>
+                {labelKey ? t(labelKey) : val.replace("_", " ")}
+              </option>
+            );
+          })}
         </select>
         {errors.format && (
           <span className={styles.fieldError}>{errors.format}</span>
@@ -137,7 +151,10 @@ export function ProjectForm({
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="genre">
-          Genere <span className={styles.optional}>(opzionale)</span>
+          {t("projects.form.genreLabel")}{" "}
+          <span className={styles.optional}>
+            {t("projects.form.genreOptional")}
+          </span>
         </label>
         <select
           id="genre"
@@ -147,21 +164,26 @@ export function ProjectForm({
             setField("genre", (e.target.value as GenreValue) || undefined)
           }
         >
-          <option value="">Seleziona un genere…</option>
-          {Object.entries(Genres).map(([, val]) => (
-            <option key={val} value={val}>
-              {GENRE_LABELS[val] ?? val.charAt(0).toUpperCase() + val.slice(1)}
-            </option>
-          ))}
+          <option value="">{t("projects.form.genrePlaceholder")}</option>
+          {Object.entries(Genres).map(([, val]) => {
+            const labelKey = GENRE_LABEL_KEYS[val];
+            return (
+              <option key={val} value={val}>
+                {labelKey
+                  ? t(labelKey)
+                  : val.charAt(0).toUpperCase() + val.slice(1)}
+              </option>
+            );
+          })}
         </select>
       </div>
 
       <div className={styles.actions}>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? "Salvataggio…" : submitLabel}
+          {isSubmitting ? t("status.saving") : resolvedSubmitLabel}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Annulla
+          {t("action.cancel")}
         </Button>
       </div>
     </form>

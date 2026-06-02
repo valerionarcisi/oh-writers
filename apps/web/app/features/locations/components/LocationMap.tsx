@@ -3,7 +3,9 @@ import type {
   LocationRequirement,
   LocationCandidate,
   LocationPhoto,
+  TranslationKey,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { useLeaflet } from "../hooks/useLeaflet";
 import { parseDrawnCircle, type DrawnCircle } from "../lib/area-search";
 import { fetchOsmBoundary, type NominatimSuggestion } from "../lib/boundary";
@@ -58,11 +60,13 @@ const PIN_COLORS: Record<string, string> = {
   rejected: "#b91c1c",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  confirmed: "Confermata",
-  visited: "Visitata",
-  candidate: "Candidata",
-  rejected: "Scartata",
+type Translate = (key: TranslationKey) => string;
+
+const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  confirmed: "locations.candidateStatus.confirmed",
+  visited: "locations.candidateStatus.visited",
+  candidate: "locations.candidateStatus.candidate",
+  rejected: "locations.candidateStatus.rejected",
 };
 
 const escapeHtml = (raw: string): string =>
@@ -76,16 +80,19 @@ const escapeHtml = (raw: string): string =>
 const buildPopupHtml = (
   candidate: LocationCandidate,
   requirementName: string,
+  t: Translate,
 ): string => {
   const color = PIN_COLORS[candidate.status] ?? PIN_COLORS.candidate;
-  const statusLabel = STATUS_LABELS[candidate.status] ?? candidate.status;
+  const statusLabelKey = STATUS_LABEL_KEYS[candidate.status];
+  const statusLabel = statusLabelKey ? t(statusLabelKey) : candidate.status;
   const photos: LocationPhoto[] = candidate.photos.slice(0, 3);
+  const openPhotoTitle = escapeHtml(t("locations.map.openPhotoTitle"));
 
   const photoStrip = photos.length
     ? `<div style="display:flex;gap:6px;margin-top:8px">${photos
         .map(
           (p, idx) =>
-            `<button type="button" data-candidate-photo="${candidate.id}" data-photo-index="${idx}" title="Apri foto" style="display:block;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #d8d6cd;padding:0;cursor:pointer;background:#fff;font-family:inherit"><img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption ?? candidate.name)}" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none" /></button>`,
+            `<button type="button" data-candidate-photo="${candidate.id}" data-photo-index="${idx}" title="${openPhotoTitle}" style="display:block;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #d8d6cd;padding:0;cursor:pointer;background:#fff;font-family:inherit"><img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption ?? candidate.name)}" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none" /></button>`,
         )
         .join("")}</div>`
     : "";
@@ -103,10 +110,12 @@ const buildPopupHtml = (
         <strong style="font-size:13px;color:#1c1a17">${escapeHtml(candidate.name)}</strong>
         <span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;background:${color};color:white">${statusLabel}</span>
       </div>
-      <div style="font-size:11px;color:#88867e">Per: ${escapeHtml(requirementName)}</div>
+      <div style="font-size:11px;color:#88867e">${escapeHtml(
+        t("locations.map.forRequirement").replace("{name}", requirementName),
+      )}</div>
       ${addressLine}
       ${photoStrip}
-      <button type="button" data-candidate-details="${candidate.id}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #d8d6cd;border-radius:6px;background:#fff;color:#1c1a17;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Vedi dettagli</button>
+      <button type="button" data-candidate-details="${candidate.id}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #d8d6cd;border-radius:6px;background:#fff;color:#1c1a17;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">${escapeHtml(t("locations.map.viewDetails"))}</button>
     </div>
   `;
 };
@@ -131,6 +140,7 @@ export function LocationMap({
   onRankByScene,
   highlightedCandidateIds,
 }: LocationMapProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
@@ -153,6 +163,9 @@ export function LocationMap({
   const onFoundPlaceAddRef = useRef(onFoundPlaceAdd);
   const onAreaFilterRef = useRef(onAreaFilter);
   const requirementsRef = useRef(requirements);
+  // The translator is read inside Leaflet effects/handlers that must not
+  // re-bind on every render; mirror it through a ref like the other handlers.
+  const tRef = useRef(t);
   useEffect(() => {
     onSelectRef.current = onSelect;
     onCandidateSelectRef.current = onCandidateSelect;
@@ -161,6 +174,7 @@ export function LocationMap({
     onFoundPlaceAddRef.current = onFoundPlaceAdd;
     onAreaFilterRef.current = onAreaFilter;
     requirementsRef.current = requirements;
+    tRef.current = t;
   }, [
     onSelect,
     onCandidateSelect,
@@ -169,6 +183,7 @@ export function LocationMap({
     onFoundPlaceAdd,
     onAreaFilter,
     requirements,
+    t,
   ]);
 
   const allCandidates = requirements.flatMap((r) =>
@@ -203,11 +218,12 @@ export function LocationMap({
     const legend = L.control({ position: "bottomleft" });
     legend.onAdd = () => {
       const div = L.DomUtil.create("div");
+      const tr = tRef.current;
       div.innerHTML = `
         <div style="background:rgba(255,255,255,0.92);border:1px solid #d8d6cd;border-radius:8px;padding:10px 12px;font-family:system-ui,sans-serif;font-size:11px;backdrop-filter:blur(8px);margin-bottom:4px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:50%;background:#2d6a4f;border:2px solid white"></div><span style="color:#2d6a4f;font-weight:600">Confermata</span></div>
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:50%;background:#1d4ed8;border:2px solid white"></div><span style="color:#1d4ed8;font-weight:600">Visitata</span></div>
-          <div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#88867e;border:2px solid white"></div><span style="color:#6e6c66;font-weight:600">Candidata</span></div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:50%;background:#2d6a4f;border:2px solid white"></div><span style="color:#2d6a4f;font-weight:600">${escapeHtml(tr("locations.candidateStatus.confirmed"))}</span></div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:50%;background:#1d4ed8;border:2px solid white"></div><span style="color:#1d4ed8;font-weight:600">${escapeHtml(tr("locations.candidateStatus.visited"))}</span></div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#88867e;border:2px solid white"></div><span style="color:#6e6c66;font-weight:600">${escapeHtml(tr("locations.candidateStatus.candidate"))}</span></div>
         </div>`;
       return div;
     };
@@ -282,7 +298,7 @@ export function LocationMap({
             );
             onAreaFilterRef.current?.({
               kind: "drawn",
-              label: "Area disegnata",
+              label: tRef.current("locations.map.drawnArea"),
               matchingCandidateIds,
             });
           })();
@@ -294,7 +310,7 @@ export function LocationMap({
           );
           onAreaFilterRef.current?.({
             kind: "drawn",
-            label: "Area disegnata",
+            label: tRef.current("locations.map.drawnArea"),
             matchingCandidateIds,
           });
         }
@@ -438,7 +454,9 @@ export function LocationMap({
           opacity,
           fillOpacity: isDimmed ? 0.35 : 1,
         });
-        existing.setPopupContent(buildPopupHtml(candidate, req.name));
+        existing.setPopupContent(
+          buildPopupHtml(candidate, req.name, tRef.current),
+        );
         existing.setTooltipContent(
           `<strong style="font-size:11px">${escapeHtml(candidate.name)}</strong><br><span style="font-size:10px;color:#6e6c66">${escapeHtml(req.name)}</span>`,
         );
@@ -459,7 +477,7 @@ export function LocationMap({
         { direction: "top", offset: [0, -6] },
       );
 
-      marker.bindPopup(buildPopupHtml(candidate, req.name), {
+      marker.bindPopup(buildPopupHtml(candidate, req.name, tRef.current), {
         maxWidth: 300,
         closeButton: true,
         autoPan: true,
@@ -636,7 +654,12 @@ export function LocationMap({
       const safeId = escapeHtml(place.placeId);
       const matchLabel = foundPlaceLabels?.get(place.placeId);
       const matchLine = matchLabel
-        ? `<div style="font-size:11px;color:#1d4ed8;margin-top:6px;font-weight:600">→ adatto a: ${escapeHtml(matchLabel)}</div>`
+        ? `<div style="font-size:11px;color:#1d4ed8;margin-top:6px;font-weight:600">${escapeHtml(
+            tRef.current("locations.map.suitableFor").replace(
+              "{value}",
+              matchLabel,
+            ),
+          )}</div>`
         : "";
       const photoUrl = place.photos[0]?.thumbnailUrl ?? null;
       const photoBlock = photoUrl
@@ -649,7 +672,7 @@ export function LocationMap({
           <strong style="font-size:13px;color:#1c1a17">${escapeHtml(place.name)}</strong>
           <div style="font-size:11px;color:#6e6c66;margin-top:4px">${escapeHtml(place.address)}</div>
           ${matchLine}
-          <button type="button" data-found-add="${safeId}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #1d4ed8;border-radius:6px;background:#1d4ed8;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">+ Aggiungi come candidato</button>
+          <button type="button" data-found-add="${safeId}" style="margin-top:10px;width:100%;padding:6px 10px;border:1px solid #1d4ed8;border-radius:6px;background:#1d4ed8;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">${escapeHtml(tRef.current("locations.map.addAsCandidate"))}</button>
         </div>
       `,
         { maxWidth: 300, closeButton: true, autoPan: true },
@@ -699,7 +722,7 @@ export function LocationMap({
             onClearArea?.();
           }}
         >
-          ✕ Rimuovi area: {areaFilter.label}
+          {t("locations.map.removeArea").replace("{label}", areaFilter.label)}
         </button>
       ) : null}
       {areaFilter && canRankByScene ? (
@@ -710,7 +733,9 @@ export function LocationMap({
           disabled={rankPending}
           onClick={() => onRankByScene?.()}
         >
-          {rankPending ? "Ordino…" : "✦ Ordina per scena"}
+          {rankPending
+            ? t("locations.map.ranking")
+            : t("locations.map.rankByScene")}
         </button>
       ) : null}
     </div>
@@ -733,6 +758,7 @@ function MapSearchOverlay({
   readonly requirements: LocationRequirement[];
   readonly onAreaFilter?: (result: AreaFilterResult | null) => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
 
   const clearBoundaryLayer = () => {
@@ -815,7 +841,7 @@ function MapSearchOverlay({
         value={query}
         onChange={setQuery}
         onSelect={handleSelect}
-        placeholder="Cerca un luogo sulla mappa…"
+        placeholder={t("locations.map.searchPlaceholder")}
         inputTestId="map-search-input"
       />
     </div>

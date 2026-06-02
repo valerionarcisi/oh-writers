@@ -15,6 +15,7 @@ import {
 } from "../hooks/useVersions";
 import type { VersionView } from "../screenplay-versions.schema";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
+import { useTranslation } from "~/features/i18n";
 import styles from "./VersionsPanel.module.css";
 
 interface VersionsPanelProps {
@@ -37,6 +38,7 @@ export function VersionsPanel({
   viewingVersionId = null,
   onView,
 }: VersionsPanelProps) {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useVersions(screenplayId);
   const create = useCreateManualVersion();
   const rename = useRenameVersion(screenplayId);
@@ -67,19 +69,20 @@ export function VersionsPanel({
   const loadError: string | null =
     result && !result.isOk
       ? match(result.error)
-          .with({ _tag: "VersionNotFoundError" }, () => "Versione non trovata.")
-          .with(
-            { _tag: "ScreenplayNotFoundError" },
-            () => "Sceneggiatura non trovata.",
+          .with({ _tag: "VersionNotFoundError" }, () =>
+            t("screenplay.versionsPanel.error.versionNotFound"),
           )
-          .with({ _tag: "ProjectNotFoundError" }, () => "Progetto non trovato.")
-          .with(
-            { _tag: "ForbiddenError" },
-            () => "Non hai accesso a queste versioni.",
+          .with({ _tag: "ScreenplayNotFoundError" }, () =>
+            t("screenplay.versionsPanel.error.screenplayNotFound"),
           )
-          .with(
-            { _tag: "DbError" },
-            () => "Impossibile caricare le versioni. Riprova.",
+          .with({ _tag: "ProjectNotFoundError" }, () =>
+            t("screenplay.versionsPanel.error.projectNotFound"),
+          )
+          .with({ _tag: "ForbiddenError" }, () =>
+            t("screenplay.versionsPanel.error.forbidden"),
+          )
+          .with({ _tag: "DbError" }, () =>
+            t("screenplay.versionsPanel.error.db"),
           )
           .exhaustive()
       : null;
@@ -122,7 +125,10 @@ export function VersionsPanel({
     setError(null);
     const baseLabel = version.label ?? "Auto-save";
     duplicate.mutate(
-      { versionId: version.id, label: `Versione ${versions.length + 1}` },
+      {
+        versionId: version.id,
+        label: `${t("screenplay.versionsPanel.versionFallbackPrefix")} ${versions.length + 1}`,
+      },
       {
         onError: (e) =>
           setError(e instanceof Error ? e.message : "Duplicate failed"),
@@ -176,13 +182,15 @@ export function VersionsPanel({
       data-testid="versions-panel"
     >
       <div className={styles.header}>
-        <span className={styles.title}>Versioni</span>
+        <span className={styles.title}>
+          {t("screenplay.versionsPanel.title")}
+        </span>
         {creating ? (
           <div className={styles.createForm}>
             <input
               className={styles.labelInput}
               type="text"
-              placeholder="Etichetta versione"
+              placeholder={t("screenplay.versionsPanel.labelPlaceholder")}
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => {
@@ -203,7 +211,7 @@ export function VersionsPanel({
               disabled={create.isPending || !newLabel.trim()}
               data-testid="versions-new-save"
             >
-              {create.isPending ? "…" : "Salva"}
+              {create.isPending ? "…" : t("screenplay.versionsPanel.save")}
             </button>
             <button
               type="button"
@@ -213,7 +221,7 @@ export function VersionsPanel({
                 setNewLabel("");
               }}
             >
-              Annulla
+              {t("screenplay.versionsPanel.cancel")}
             </button>
           </div>
         ) : (
@@ -223,15 +231,15 @@ export function VersionsPanel({
             onClick={() => setCreating(true)}
             data-testid="versions-new-trigger"
           >
-            + Nuova versione
+            {t("screenplay.versionsPanel.newVersion")}
           </button>
         )}
         <button
           type="button"
           className={styles.closeBtn}
           onClick={onClose}
-          aria-label="Chiudi pannello versioni"
-          title="Chiudi"
+          aria-label={t("screenplay.versionsPanel.closeAria")}
+          title={t("screenplay.versionsPanel.closeTitle")}
         >
           ✕
         </button>
@@ -259,13 +267,13 @@ export function VersionsPanel({
             <Skeleton
               lines={4}
               widths={["70%", "100%", "60%", "100%"]}
-              ariaLabel="Caricamento versioni"
+              ariaLabel={t("screenplay.versionsPanel.loading")}
             />
           </div>
         )}
         {!isLoading && versions.length === 0 && (
           <div className={styles.empty}>
-            Nessuna versione salvata. Crea la prima snapshot.
+            {t("screenplay.versionsPanel.empty")}
           </div>
         )}
         {!isLoading && versions.length > 0 && (
@@ -334,7 +342,7 @@ export function VersionsPanel({
                         />
                       ) : (
                         <span className={styles.label}>
-                          {v.label ?? "Senza nome"}
+                          {v.label ?? t("screenplay.versionsPanel.unnamed")}
                         </span>
                       )}
                     </div>
@@ -391,7 +399,10 @@ export function VersionsPanel({
                         {new Date(v.createdAt).toLocaleString()}
                       </span>
                       <span className={styles.pages}>
-                        {v.pageCount} {v.pageCount === 1 ? "pagina" : "pagine"}
+                        {v.pageCount}{" "}
+                        {v.pageCount === 1
+                          ? t("screenplay.versionsPanel.pageSingular")
+                          : t("screenplay.versionsPanel.pagePlural")}
                       </span>
                     </div>
                   </div>
@@ -405,7 +416,7 @@ export function VersionsPanel({
                           disabled={rename.isPending || !renameLabel.trim()}
                           data-testid={`version-rename-save-${v.id}`}
                         >
-                          Salva
+                          {t("screenplay.versionsPanel.save")}
                         </button>
                         <button
                           type="button"
@@ -415,7 +426,7 @@ export function VersionsPanel({
                             setRenameLabel("");
                           }}
                         >
-                          Annulla
+                          {t("screenplay.versionsPanel.cancel")}
                         </button>
                       </>
                     ) : (
@@ -428,7 +439,9 @@ export function VersionsPanel({
                             data-testid={`version-view-${v.id}`}
                             aria-pressed={isViewing}
                           >
-                            {isViewing ? "In visualizzazione" : "Visualizza"}
+                            {isViewing
+                              ? t("screenplay.versionsPanel.viewing")
+                              : t("screenplay.versionsPanel.view")}
                           </button>
                         )}
                         <button
@@ -440,7 +453,7 @@ export function VersionsPanel({
                           }}
                           data-testid={`version-rename-${v.id}`}
                         >
-                          Rinomina
+                          {t("screenplay.versionsPanel.rename")}
                         </button>
                         <button
                           type="button"
@@ -449,7 +462,7 @@ export function VersionsPanel({
                           disabled={duplicate.isPending}
                           data-testid={`version-duplicate-${v.id}`}
                         >
-                          Duplica
+                          {t("screenplay.versionsPanel.duplicate")}
                         </button>
                         <button
                           type="button"
@@ -458,7 +471,7 @@ export function VersionsPanel({
                           disabled={del.isPending}
                           data-testid={`version-delete-${v.id}`}
                         >
-                          Elimina
+                          {t("screenplay.versionsPanel.delete")}
                         </button>
                       </>
                     )}

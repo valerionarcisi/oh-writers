@@ -1,14 +1,18 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useButton } from "react-aria";
 import { match } from "ts-pattern";
+import type { TranslationKey } from "@oh-writers/domain";
 import {
   useCesareNotifications,
   type CesareNotification,
   type AffectedEntity,
 } from "../cesare-notification-context";
-import { ACTION_LABEL_BY_PAGE } from "../cesare-notification-labels";
+import { ACTION_LABEL_KEY_BY_PAGE } from "../cesare-notification-labels";
 import type { CesarePage } from "~/features/predictions";
+import { useTranslation } from "~/features/i18n";
 import styles from "./NotificationCenterDrawer.module.css";
+
+type Translate = (key: TranslationKey) => string;
 
 interface NotificationCenterDrawerContentProps {
   readonly onActivate: (notification: CesareNotification) => void;
@@ -34,6 +38,7 @@ interface Group {
 export function NotificationCenterDrawerHeader(
   _: NotificationCenterDrawerHeaderProps = {},
 ) {
+  const { t } = useTranslation();
   const { notifications, markAllSeen } = useCesareNotifications();
   const unseenCount = notifications.filter(
     (n) => !n.seen && (n.status === "completed" || n.status === "failed"),
@@ -42,11 +47,15 @@ export function NotificationCenterDrawerHeader(
   return (
     <div className={styles.header}>
       <div>
-        <h2 className={styles.title}>Notifiche Cesare</h2>
+        <h2 className={styles.title}>{t("shell.notif.title")}</h2>
         <p className={styles.subtitle}>
           {unseenCount > 0
-            ? `${unseenCount} ${unseenCount === 1 ? "non letta" : "non lette"}`
-            : "Tutto letto"}
+            ? `${unseenCount} ${
+                unseenCount === 1
+                  ? t("shell.notif.unreadSingular")
+                  : t("shell.notif.unreadPlural")
+              }`
+            : t("shell.notif.allRead")}
         </p>
       </div>
       <div className={styles.headerActions}>
@@ -57,11 +66,12 @@ export function NotificationCenterDrawerHeader(
 }
 
 function MarkAllSeenButton({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton(
     {
       onPress,
-      "aria-label": "Segna tutte come lette",
+      "aria-label": t("shell.notif.markAllRead"),
     },
     buttonRef,
   );
@@ -72,7 +82,7 @@ function MarkAllSeenButton({ onPress }: { onPress: () => void }) {
       type="button"
       className={styles.linkBtn}
     >
-      Segna tutte come lette
+      {t("shell.notif.markAllRead")}
     </button>
   );
 }
@@ -89,6 +99,7 @@ function MarkAllSeenButton({ onPress }: { onPress: () => void }) {
 export function NotificationCenterDrawerContent({
   onActivate,
 }: NotificationCenterDrawerContentProps) {
+  const { t } = useTranslation();
   const { notifications, dismissNotification, clearCompleted } =
     useCesareNotifications();
 
@@ -112,12 +123,16 @@ export function NotificationCenterDrawerContent({
       else older.push(n);
     }
     const all: Group[] = [
-      { key: "today", label: "Oggi", items: today },
-      { key: "yesterday", label: "Ieri", items: yesterday },
-      { key: "older", label: "Più vecchie", items: older },
+      { key: "today", label: t("shell.notif.groupToday"), items: today },
+      {
+        key: "yesterday",
+        label: t("shell.notif.groupYesterday"),
+        items: yesterday,
+      },
+      { key: "older", label: t("shell.notif.groupOlder"), items: older },
     ];
     return all.filter((g) => g.items.length > 0);
-  }, [notifications]);
+  }, [notifications, t]);
 
   const handleClickItem = useCallback(
     (n: CesareNotification) => {
@@ -131,7 +146,7 @@ export function NotificationCenterDrawerContent({
       <section className={styles.section} aria-labelledby="cesare-section">
         <header className={styles.sectionHeader}>
           <h3 id="cesare-section" className={styles.sectionTitle}>
-            Cesare
+            {t("shell.notif.sectionCesare")}
           </h3>
           {notifications.length > 0 && (
             <button
@@ -139,16 +154,13 @@ export function NotificationCenterDrawerContent({
               className={styles.linkBtn}
               onClick={clearCompleted}
             >
-              Cancella completate
+              {t("shell.notif.clearCompleted")}
             </button>
           )}
         </header>
 
         {groups.length === 0 ? (
-          <p className={styles.empty}>
-            Nessuna notifica. Cesare ti avviserà quando completa un&apos;azione
-            su una pagina.
-          </p>
+          <p className={styles.empty}>{t("shell.notif.empty")}</p>
         ) : (
           groups.map((g) => (
             <div key={g.key} className={styles.group}>
@@ -160,6 +172,7 @@ export function NotificationCenterDrawerContent({
                     notification={n}
                     onClick={() => handleClickItem(n)}
                     onDismiss={() => dismissNotification(n.id)}
+                    t={t}
                   />
                 ))}
               </ul>
@@ -171,22 +184,19 @@ export function NotificationCenterDrawerContent({
       <section className={styles.section} aria-labelledby="team-section">
         <header className={styles.sectionHeader}>
           <h3 id="team-section" className={styles.sectionTitle}>
-            Team &amp; collaborazione
+            {t("shell.notif.sectionTeam")}
           </h3>
-          <span className={styles.soon}>Presto</span>
+          <span className={styles.soon}>{t("shell.notif.soon")}</span>
         </header>
-        <p className={styles.empty}>
-          Quando un collaboratore ti invita o commenta riceverai qui un
-          riepilogo.
-        </p>
+        <p className={styles.empty}>{t("shell.notif.teamEmpty")}</p>
       </section>
 
       <section className={styles.section} aria-labelledby="system-section">
         <header className={styles.sectionHeader}>
           <h3 id="system-section" className={styles.sectionTitle}>
-            Sistema
+            {t("shell.notif.sectionSystem")}
           </h3>
-          <span className={styles.soon}>Presto</span>
+          <span className={styles.soon}>{t("shell.notif.soon")}</span>
         </header>
         <p className={styles.empty}>
           Release notes e annunci dell&apos;app appariranno qui.
@@ -202,15 +212,20 @@ interface RowProps {
   readonly notification: CesareNotification;
   readonly onClick: () => void;
   readonly onDismiss: () => void;
+  readonly t: Translate;
 }
 
-function NotificationRow({ notification, onClick, onDismiss }: RowProps) {
+function NotificationRow({ notification, onClick, onDismiss, t }: RowProps) {
   const ts = notification.completedAt ?? notification.startedAt;
   const time = formatTime(ts);
   const dot = match(notification.status)
-    .with("in-progress", () => "in corso")
-    .with("completed", () => (notification.seen ? "letta" : "non letta"))
-    .with("failed", () => "errore")
+    .with("in-progress", () => t("shell.notif.statusInProgress"))
+    .with("completed", () =>
+      notification.seen
+        ? t("shell.notif.statusRead")
+        : t("shell.notif.statusUnread"),
+    )
+    .with("failed", () => t("shell.notif.statusError"))
     .exhaustive();
   return (
     <li className={styles.row} data-status={notification.status}>
@@ -231,21 +246,21 @@ function NotificationRow({ notification, onClick, onDismiss }: RowProps) {
             <span className={styles.rowSparkle} aria-hidden="true">
               ✦
             </span>{" "}
-            {labelForPage(notification.page)}{" "}
+            {labelForPage(notification.page, t)}{" "}
             <span className={styles.rowAction}>·</span>{" "}
             <span className={styles.rowAction}>{notification.actionLabel}</span>
           </span>
           <span className={styles.rowText}>
             {notification.status === "completed"
-              ? (notification.resultLabel ?? "Completata")
+              ? (notification.resultLabel ?? t("shell.notif.rowCompleted"))
               : notification.status === "failed"
-                ? (notification.errorLabel ?? "Errore")
-                : "In corso…"}
+                ? (notification.errorLabel ?? t("shell.notif.rowError"))
+                : t("shell.notif.rowInProgress")}
           </span>
           {notification.affectedEntities &&
             notification.affectedEntities.length > 0 && (
               <span className={styles.rowEntities}>
-                {summariseEntities(notification.affectedEntities)}
+                {summariseEntities(notification.affectedEntities, t)}
               </span>
             )}
         </span>
@@ -257,8 +272,8 @@ function NotificationRow({ notification, onClick, onDismiss }: RowProps) {
         type="button"
         className={styles.rowDismiss}
         onClick={onDismiss}
-        aria-label="Rimuovi notifica"
-        title="Rimuovi"
+        aria-label={t("shell.notif.dismiss")}
+        title={t("shell.notif.dismissTitle")}
       >
         ×
       </button>
@@ -279,28 +294,49 @@ const formatTime = (ts: number): string => {
   return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 };
 
-const labelForPage = (page: CesarePage): string => {
-  const map = ACTION_LABEL_BY_PAGE as Partial<Record<CesarePage, string>>;
-  return map[page] ?? page;
+const labelForPage = (page: CesarePage, t: Translate): string => {
+  const key = ACTION_LABEL_KEY_BY_PAGE[page] as TranslationKey | undefined;
+  return key ? t(key) : page;
 };
 
-const summariseEntities = (entities: AffectedEntity[]): string => {
+const summariseEntities = (
+  entities: AffectedEntity[],
+  t: Translate,
+): string => {
   const counts = entities.reduce<Record<string, number>>((acc, e) => {
     acc[e.kind] = (acc[e.kind] ?? 0) + 1;
     return acc;
   }, {});
   return Object.entries(counts)
-    .map(([kind, n]) => `${n} ${entityLabel(kind, n)}`)
+    .map(([kind, n]) => `${n} ${entityLabel(kind, n, t)}`)
     .join(" · ");
 };
 
-const entityLabel = (kind: string, n: number): string =>
+const entityLabel = (kind: string, n: number, t: Translate): string =>
   match(kind)
     .with("candidate", () =>
-      n === 1 ? "candidato location" : "candidati location",
+      n === 1
+        ? t("shell.notif.entityCandidateSingular")
+        : t("shell.notif.entityCandidatePlural"),
     )
-    .with("breakdown", () => (n === 1 ? "scena" : "scene"))
-    .with("budget-line", () => (n === 1 ? "voce budget" : "voci budget"))
-    .with("schedule-day", () => (n === 1 ? "giornata" : "giornate"))
-    .with("document", () => (n === 1 ? "documento" : "documenti"))
+    .with("breakdown", () =>
+      n === 1
+        ? t("shell.notif.entityBreakdownSingular")
+        : t("shell.notif.entityBreakdownPlural"),
+    )
+    .with("budget-line", () =>
+      n === 1
+        ? t("shell.notif.entityBudgetSingular")
+        : t("shell.notif.entityBudgetPlural"),
+    )
+    .with("schedule-day", () =>
+      n === 1
+        ? t("shell.notif.entityScheduleSingular")
+        : t("shell.notif.entitySchedulePlural"),
+    )
+    .with("document", () =>
+      n === 1
+        ? t("shell.notif.entityDocumentSingular")
+        : t("shell.notif.entityDocumentPlural"),
+    )
     .otherwise(() => kind);

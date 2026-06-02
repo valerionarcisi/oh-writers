@@ -1,11 +1,12 @@
 import { Input } from "@oh-writers/ui";
-import { TEAM_ROLE_LABELS_IT } from "@oh-writers/domain";
+import { TEAM_ROLE_LABELS_IT, type TranslationKey } from "@oh-writers/domain";
 import {
   DashboardSortKeys,
   DashboardViewModes,
   type DashboardSortKey,
   type DashboardViewMode,
 } from "../../dashboard.schema";
+import { useTranslation } from "~/features/i18n";
 import styles from "./DashboardFilters.module.css";
 
 export type FormatFilter =
@@ -32,38 +33,32 @@ interface Props {
   readonly onViewChange: (v: DashboardViewMode) => void;
 }
 
-const FORMATS: ReadonlyArray<{ id: FormatFilter; label: string }> = [
-  { id: "all", label: "Tutti i formati" },
-  { id: "feature", label: "Lungometraggio" },
-  { id: "short", label: "Cortometraggio" },
-  { id: "series_episode", label: "Episodio serie" },
-  { id: "pilot", label: "Pilota" },
+const FORMATS: ReadonlyArray<{ id: FormatFilter; labelKey: TranslationKey }> = [
+  { id: "all", labelKey: "dashboard.filter.formatAll" },
+  { id: "feature", labelKey: "dashboard.filter.formatFeature" },
+  { id: "short", labelKey: "dashboard.filter.formatShort" },
+  { id: "series_episode", labelKey: "dashboard.filter.formatSeriesEpisode" },
+  { id: "pilot", labelKey: "dashboard.filter.formatPilot" },
 ];
 
-const GENRES: ReadonlyArray<{ id: GenreFilter; label: string }> = [
-  { id: "all", label: "Tutti i generi" },
-  { id: "drama", label: "Dramma" },
-  { id: "comedy", label: "Commedia" },
-  { id: "thriller", label: "Thriller" },
-  { id: "horror", label: "Horror" },
-  { id: "action", label: "Azione" },
-  { id: "sci-fi", label: "Sci-fi" },
-  { id: "documentary", label: "Documentario" },
-  { id: "other", label: "Altro" },
+const GENRES: ReadonlyArray<{ id: GenreFilter; labelKey: TranslationKey }> = [
+  { id: "all", labelKey: "dashboard.filter.genreAll" },
+  { id: "drama", labelKey: "dashboard.filter.genreDrama" },
+  { id: "comedy", labelKey: "dashboard.filter.genreComedy" },
+  { id: "thriller", labelKey: "dashboard.filter.genreThriller" },
+  { id: "horror", labelKey: "dashboard.filter.genreHorror" },
+  { id: "action", labelKey: "dashboard.filter.genreAction" },
+  { id: "sci-fi", labelKey: "dashboard.filter.genreSciFi" },
+  { id: "documentary", labelKey: "dashboard.filter.genreDocumentary" },
+  { id: "other", labelKey: "dashboard.filter.genreOther" },
 ];
 
-const ROLES: ReadonlyArray<{ id: RoleFilter; label: string }> = [
-  { id: "all", label: "Tutti i ruoli" },
-  { id: "owner", label: TEAM_ROLE_LABELS_IT.owner },
-  { id: "editor", label: TEAM_ROLE_LABELS_IT.editor },
-  { id: "viewer", label: TEAM_ROLE_LABELS_IT.viewer },
-];
-
-const SORTS: ReadonlyArray<{ id: DashboardSortKey; label: string }> = [
-  { id: DashboardSortKeys.UPDATED, label: "Ultima modifica" },
-  { id: DashboardSortKeys.TITLE, label: "Titolo A-Z" },
-  { id: DashboardSortKeys.SCENES, label: "Numero scene" },
-];
+const SORTS: ReadonlyArray<{ id: DashboardSortKey; labelKey: TranslationKey }> =
+  [
+    { id: DashboardSortKeys.UPDATED, labelKey: "dashboard.filter.sortUpdated" },
+    { id: DashboardSortKeys.TITLE, labelKey: "dashboard.filter.sortTitle" },
+    { id: DashboardSortKeys.SCENES, labelKey: "dashboard.filter.sortScenes" },
+  ];
 
 export function DashboardFilters({
   search,
@@ -79,25 +74,32 @@ export function DashboardFilters({
   view,
   onViewChange,
 }: Props) {
+  const { t } = useTranslation();
+  const roles: ReadonlyArray<{ id: RoleFilter; label: string }> = [
+    { id: "all", label: t("dashboard.filter.roleAll") },
+    { id: "owner", label: TEAM_ROLE_LABELS_IT.owner },
+    { id: "editor", label: TEAM_ROLE_LABELS_IT.editor },
+    { id: "viewer", label: TEAM_ROLE_LABELS_IT.viewer },
+  ];
   return (
     <>
       <Input
         type="search"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
-        placeholder="Cerca progetto…"
-        aria-label="Cerca progetto"
+        placeholder={t("dashboard.filter.searchPlaceholder")}
+        aria-label={t("dashboard.filter.searchLabel")}
         className={styles.search}
       />
       <select
         className={styles.select}
         value={format}
         onChange={(e) => onFormatChange(e.target.value as FormatFilter)}
-        aria-label="Filtra per formato"
+        aria-label={t("dashboard.filter.formatLabel")}
       >
         {FORMATS.map((opt) => (
           <option key={opt.id} value={opt.id}>
-            {opt.label}
+            {t(opt.labelKey)}
           </option>
         ))}
       </select>
@@ -105,11 +107,11 @@ export function DashboardFilters({
         className={styles.select}
         value={genre}
         onChange={(e) => onGenreChange(e.target.value)}
-        aria-label="Filtra per genere"
+        aria-label={t("dashboard.filter.genreLabel")}
       >
         {GENRES.map((opt) => (
           <option key={opt.id} value={opt.id}>
-            {opt.label}
+            {t(opt.labelKey)}
           </option>
         ))}
       </select>
@@ -117,9 +119,9 @@ export function DashboardFilters({
         className={styles.select}
         value={role}
         onChange={(e) => onRoleChange(e.target.value as RoleFilter)}
-        aria-label="Filtra per ruolo"
+        aria-label={t("dashboard.filter.roleLabel")}
       >
-        {ROLES.map((opt) => (
+        {roles.map((opt) => (
           <option key={opt.id} value={opt.id}>
             {opt.label}
           </option>
@@ -129,18 +131,18 @@ export function DashboardFilters({
         className={styles.select}
         value={sort}
         onChange={(e) => onSortChange(e.target.value as DashboardSortKey)}
-        aria-label="Ordina"
+        aria-label={t("dashboard.filter.sortLabel")}
       >
         {SORTS.map((opt) => (
           <option key={opt.id} value={opt.id}>
-            {opt.label}
+            {t(opt.labelKey)}
           </option>
         ))}
       </select>
       <div
         className={styles.viewToggle}
         role="group"
-        aria-label="Vista progetti"
+        aria-label={t("dashboard.filter.viewLabel")}
       >
         <button
           type="button"
@@ -150,7 +152,7 @@ export function DashboardFilters({
           }`}
           onClick={() => onViewChange(DashboardViewModes.GRID)}
         >
-          Griglia
+          {t("dashboard.filter.viewGrid")}
         </button>
         <button
           type="button"
@@ -160,7 +162,7 @@ export function DashboardFilters({
           }`}
           onClick={() => onViewChange(DashboardViewModes.LIST)}
         >
-          Lista
+          {t("dashboard.filter.viewList")}
         </button>
       </div>
     </>

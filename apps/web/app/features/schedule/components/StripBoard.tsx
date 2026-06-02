@@ -1,6 +1,7 @@
 import type { ScheduleView, StripView } from "../server/schedule.server";
 import { ShootingDayColumn } from "./ShootingDayColumn";
 import type { DayWeatherAnchor } from "../hooks/useDayEstimate";
+import { useTranslation } from "~/features/i18n";
 import styles from "./StripBoard.module.css";
 
 const DAYS_PER_WEEK = 6;
@@ -39,6 +40,7 @@ export function StripBoard({
   onStripClick,
   onDayClick,
 }: StripBoardProps) {
+  const { t } = useTranslation();
   if (viewMode === "weeks") {
     const weeks: Array<{
       weekNumber: number;
@@ -60,12 +62,12 @@ export function StripBoard({
         {weeks.map((week) => (
           <div key={week.weekNumber} className={styles.weekGroup}>
             <div className={styles.weekLabel}>
-              Settimana {week.weekNumber}
+              {t("schedule.stripBoard.week")} {week.weekNumber}
               <span className={styles.weekActions}>
                 <button
                   type="button"
                   className={styles.weekActionBtn}
-                  title="Aggiungi giorno a questa settimana"
+                  title={t("schedule.stripBoard.addDayToWeek")}
                   onClick={onAddDay}
                 >
                   +
@@ -95,11 +97,11 @@ export function StripBoard({
         <button
           type="button"
           className={styles.addWeekBtn}
-          title="Aggiungi settimana"
+          title={t("schedule.stripBoard.addWeek")}
           data-testid="add-week-btn"
           onClick={onAddWeek}
         >
-          + Aggiungi settimana
+          {t("schedule.stripBoard.addWeekLabel")}
         </button>
       </div>
     );
@@ -126,7 +128,7 @@ export function StripBoard({
       <button
         type="button"
         className={styles.addDayBtn}
-        title="Aggiungi giorno"
+        title={t("schedule.stripBoard.addDay")}
         data-testid="add-day-btn"
         onClick={onAddDay}
       >

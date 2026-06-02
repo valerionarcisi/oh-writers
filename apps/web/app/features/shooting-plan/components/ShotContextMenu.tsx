@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "~/features/i18n";
 import type { ShotView, ScenarioView } from "../server/shooting-plan.server";
 import styles from "./ShotContextMenu.module.css";
 
@@ -25,6 +26,7 @@ export function ShotContextMenu({
   onDelete,
   onClose,
 }: ShotContextMenuProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function ShotContextMenu({
           onClose();
         }}
       >
-        <span>📋 Duplica</span>
+        <span>{t("shootingPlan.shotMenu.duplicate")}</span>
         <span className={styles.shortcut}>⌘D</span>
       </button>
       <button
@@ -68,8 +70,8 @@ export function ShotContextMenu({
         disabled={!canAddReverse}
         title={
           canAddReverse
-            ? "Crea lo specchio dello shot per il personaggio opposto"
-            : "Disponibile solo per OTS o MS in scene a 2 personaggi"
+            ? t("shootingPlan.shotMenu.addReverseTitle")
+            : t("shootingPlan.shotMenu.addReverseDisabledTitle")
         }
         onClick={() => {
           if (canAddReverse) {
@@ -78,7 +80,7 @@ export function ShotContextMenu({
           }
         }}
       >
-        ↔ Aggiungi controcampo
+        {t("shootingPlan.shotMenu.addReverse")}
       </button>
 
       {otherScenarios.length > 0 && (
@@ -94,7 +96,7 @@ export function ShotContextMenu({
                 onClose();
               }}
             >
-              → Sposta a {s.name}
+              {t("shootingPlan.shotMenu.moveTo").replace("{name}", s.name)}
             </button>
           ))}
         </>
@@ -109,7 +111,7 @@ export function ShotContextMenu({
           onClose();
         }}
       >
-        <span>🗑 Elimina</span>
+        <span>{t("shootingPlan.shotMenu.delete")}</span>
         <span className={styles.shortcut}>⌫</span>
       </button>
     </div>

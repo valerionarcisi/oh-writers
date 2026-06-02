@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { DsButton, Modal, Skeleton } from "@oh-writers/ui";
 import { EXPORT_FORMAT_META, type ExportFormat } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { useListScreenplayScenes } from "../hooks/useListScreenplayScenes";
 import styles from "./ExportScreenplayPdfModal.module.css";
 
@@ -22,6 +23,7 @@ export function ExportScreenplayPdfModal({
   onClose,
   onGenerate,
 }: ExportScreenplayPdfModalProps) {
+  const { t } = useTranslation();
   const meta = EXPORT_FORMAT_META[format];
   const [includeCoverPage, setIncludeCoverPage] = useState(
     meta.defaultIncludeCoverPage,
@@ -61,12 +63,12 @@ export function ExportScreenplayPdfModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={`Esporta — ${meta.labelIt}`}
+      title={`${t("screenplay.export.titlePrefix")}${meta.labelIt}`}
       size={meta.requiresSceneSelection ? "lg" : "md"}
       footer={
         <>
           <DsButton variant="ghost" onClick={onClose} disabled={isPending}>
-            Annulla
+            {t("screenplay.export.cancel")}
           </DsButton>
           <DsButton
             variant="primary"
@@ -74,7 +76,9 @@ export function ExportScreenplayPdfModal({
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
-            {isPending ? "Generazione…" : "Genera"}
+            {isPending
+              ? t("screenplay.export.generating")
+              : t("screenplay.export.generate")}
           </DsButton>
         </>
       }
@@ -88,18 +92,22 @@ export function ExportScreenplayPdfModal({
             data-testid="screenplay-export-scene-list"
           >
             <div className={styles.scenesHeader}>
-              Scegli le scene ({selected.size} selezionate)
+              {t("screenplay.export.chooseScenesPrefix")}
+              {selected.size}
+              {t("screenplay.export.chooseScenesSuffix")}
             </div>
             {scenesQuery.isLoading ? (
               <div className={styles.empty}>
                 <Skeleton
                   lines={5}
                   widths={["100%", "100%", "100%", "100%", "60%"]}
-                  ariaLabel="Caricamento scene"
+                  ariaLabel={t("screenplay.export.loadingScenes")}
                 />
               </div>
             ) : scenes.length === 0 ? (
-              <p className={styles.empty}>Nessuna scena trovata.</p>
+              <p className={styles.empty}>
+                {t("screenplay.export.noSceneFound")}
+              </p>
             ) : (
               <ul className={styles.sceneGrid}>
                 {scenes.map((s) => {
@@ -131,7 +139,7 @@ export function ExportScreenplayPdfModal({
             checked={includeCoverPage}
             onChange={(e) => setIncludeCoverPage(e.target.checked)}
           />
-          <span>Includi cover page</span>
+          <span>{t("screenplay.export.includeCoverPage")}</span>
         </label>
       </div>
     </Modal>

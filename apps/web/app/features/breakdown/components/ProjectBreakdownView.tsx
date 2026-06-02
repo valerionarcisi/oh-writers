@@ -22,6 +22,8 @@ import {
   type DuplicateCandidate,
   type ProjectBreakdownInputRow,
 } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
+import type { TranslationKey } from "@oh-writers/domain";
 import {
   projectBreakdownOptions,
   useBulkRenameBreakdownElements,
@@ -31,6 +33,8 @@ import {
 } from "../hooks/useBreakdown";
 import type { ProjectBreakdownRow } from "../server/breakdown.server";
 import styles from "./ProjectBreakdownView.module.css";
+
+type TranslateFn = ReturnType<typeof useTranslation>["t"];
 
 interface Props {
   projectId: string;
@@ -62,22 +66,26 @@ const formatRange = (nums: readonly number[]): string => {
   return `SC.${nums[0]} → SC.${nums[nums.length - 1]}`;
 };
 
-const STATUS_LABEL: Record<ProjectBreakdownInputRow["status"], string> = {
-  accepted: "accepted",
-  pending: "pending",
-  stale: "obsoleto",
+const STATUS_LABEL_KEY: Record<
+  ProjectBreakdownInputRow["status"],
+  TranslationKey
+> = {
+  accepted: "breakdown.status.accepted",
+  pending: "breakdown.status.pending",
+  stale: "breakdown.status.stale",
 };
 
-const SOURCE_LABEL: Record<
+const SOURCE_LABEL_KEY: Record<
   NonNullable<ProjectBreakdownInputRow["source"]>,
-  string
+  TranslationKey
 > = {
-  cesare: "Cesare",
-  regex: "Regex",
-  manual: "Manuale",
+  cesare: "breakdown.source.cesare",
+  regex: "breakdown.source.regex",
+  manual: "breakdown.source.manual",
 };
 
 export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
+  const { t } = useTranslation();
   const { data: rawRows = [], isLoading } = useQuery(
     projectBreakdownOptions(projectId, versionId),
   );
@@ -257,9 +265,13 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
   const bulkArchive = () => {
     const ids = [...selected];
     void confirm({
-      title: `Archiviare ${ids.length} element${ids.length === 1 ? "o" : "i"}?`,
-      message: "Gli elementi archiviati non appaiono più nello spoglio.",
-      confirmLabel: "Archivia",
+      title: `${t("breakdown.bulk.archiveTitlePrefix")}${ids.length}${
+        ids.length === 1
+          ? t("breakdown.bulk.archiveTitleSingularSuffix")
+          : t("breakdown.bulk.archiveTitlePluralSuffix")
+      }`,
+      message: t("breakdown.bulk.archiveMessage"),
+      confirmLabel: t("breakdown.bulk.archiveConfirm"),
       destructive: true,
     }).then((ok) => {
       if (!ok) return;
@@ -283,7 +295,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
 
   const bulkRenameAction = () => {
     const ids = [...selected];
-    const proposed = window.prompt("Nuovo nome per gli elementi selezionati");
+    const proposed = window.prompt(t("breakdown.bulk.renamePrompt"));
     if (proposed === null) return;
     const trimmed = proposed.trim();
     if (trimmed.length === 0) return;
@@ -298,9 +310,9 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
     const [keepId, ...mergeIds] = sortedByName;
     if (!keepId || mergeIds.length === 0) return;
     void confirm({
-      title: `Unificare ${dup.elementIds.length} varianti?`,
-      message: `"${dup.names.join('", "')}" verranno consolidate in un unico elemento.`,
-      confirmLabel: "Unifica",
+      title: `${t("breakdown.dup.mergeTitlePrefix")}${dup.elementIds.length}${t("breakdown.dup.mergeTitleSuffix")}`,
+      message: `"${dup.names.join('", "')}"${t("breakdown.dup.mergeMessageSuffix")}`,
+      confirmLabel: t("breakdown.dup.mergeConfirm"),
       destructive: false,
     }).then((ok) => {
       if (!ok) return;
@@ -350,7 +362,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
         <Skeleton
           lines={3}
           widths={["60%", "100%", "40%"]}
-          ariaLabel="Caricamento spoglio"
+          ariaLabel={t("breakdown.loading")}
         />
       </div>
     );
@@ -366,14 +378,18 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
       data-view="per-project"
     >
       {/* ─── KPI strip ─────────────────────────────────────────────────── */}
-      <section className={styles.kpis} aria-label="Riepilogo spoglio">
+      <section className={styles.kpis} aria-label={t("breakdown.summaryAria")}>
         <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Elementi totali</span>
+          <span className={styles.kpiLabel}>
+            {t("breakdown.kpi.totalElements")}
+          </span>
           <span className={styles.kpiValue}>{summary.totalElements}</span>
           <span className={styles.kpiSub}>{formattedSceneRange}</span>
         </div>
         <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Confermati</span>
+          <span className={styles.kpiLabel}>
+            {t("breakdown.kpi.confirmed")}
+          </span>
           <span
             className={[styles.kpiValue, styles.kpiOk].join(" ")}
             data-testid="kpi-accepted"
@@ -387,29 +403,35 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
           </span>
         </div>
         <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>In sospeso</span>
+          <span className={styles.kpiLabel}>{t("breakdown.kpi.pending")}</span>
           <span
             className={[styles.kpiValue, styles.kpiWarn].join(" ")}
             data-testid="kpi-pending"
           >
             {summary.pendingCount}
           </span>
-          <span className={styles.kpiSub}>da confermare</span>
+          <span className={styles.kpiSub}>{t("breakdown.kpi.toConfirm")}</span>
         </div>
         <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Obsoleti</span>
+          <span className={styles.kpiLabel}>{t("breakdown.kpi.stale")}</span>
           <span
             className={[styles.kpiValue, styles.kpiDanger].join(" ")}
             data-testid="kpi-stale"
           >
             {summary.staleCount}
           </span>
-          <span className={styles.kpiSub}>scene cambiate</span>
+          <span className={styles.kpiSub}>
+            {t("breakdown.kpi.changedScenes")}
+          </span>
         </div>
         <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Costo stimato</span>
+          <span className={styles.kpiLabel}>
+            {t("breakdown.kpi.estimatedCost")}
+          </span>
           <span className={styles.kpiValue}>—</span>
-          <span className={styles.kpiSub}>tariffa non collegata</span>
+          <span className={styles.kpiSub}>
+            {t("breakdown.kpi.rateNotLinked")}
+          </span>
         </div>
       </section>
 
@@ -425,10 +447,10 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
           </div>
           <div className={styles.dupBody}>
             <h4 className={styles.dupTitle}>
-              {duplicates.length} possibil
+              {duplicates.length}
               {duplicates.length === 1
-                ? "e duplicato rilevato"
-                : "i duplicati rilevati"}
+                ? t("breakdown.dup.singularSuffix")
+                : t("breakdown.dup.pluralSuffix")}
             </h4>
             <p className={styles.dupList}>
               {duplicates
@@ -444,7 +466,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
               className={styles.bulkBtn}
               onClick={() => setHideIgnoredDuplicates(true)}
             >
-              Ignora
+              {t("breakdown.dup.ignore")}
             </button>
             {canEdit && duplicates[0] && (
               <button
@@ -453,7 +475,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
                 onClick={() => applyMerge(duplicates[0]!)}
                 data-testid="breakdown-merge-first-duplicate"
               >
-                Rivedi e unifica
+                {t("breakdown.dup.reviewAndMerge")}
               </button>
             )}
           </div>
@@ -467,7 +489,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
           ref={searchInputRef}
           className={styles.search}
           type="search"
-          placeholder="Cerca elemento, descrizione… (⌘K)"
+          placeholder={t("breakdown.searchElementPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           data-testid="breakdown-view-search"
@@ -475,7 +497,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
         <div
           className={styles.chips}
           role="group"
-          aria-label="Filtri categoria"
+          aria-label={t("breakdown.categoryFiltersAria")}
         >
           {BREAKDOWN_CATEGORIES.map((cat) => {
             const meta = CATEGORY_META[cat];
@@ -503,33 +525,35 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
         </div>
         <div className={styles.pickers}>
           <label className={styles.picker}>
-            Stato:
+            {t("breakdown.statusLabel")}
             <select
               value={statusFilter}
               onChange={(e) =>
                 updateStatusFilter(e.target.value as StatusFilter)
               }
               data-testid="breakdown-status-filter"
-              aria-label="Filtra per stato"
+              aria-label={t("breakdown.filterByStatusAria")}
             >
-              <option value="all">tutti</option>
-              <option value="accepted">confermati</option>
-              <option value="pending">in sospeso</option>
-              <option value="stale">obsoleti</option>
+              <option value="all">{t("breakdown.filter.all")}</option>
+              <option value="accepted">
+                {t("breakdown.filter.confirmed")}
+              </option>
+              <option value="pending">{t("breakdown.filter.pending")}</option>
+              <option value="stale">{t("breakdown.filter.stale")}</option>
             </select>
           </label>
           <label className={styles.picker}>
-            Origine:
+            {t("breakdown.sourceLabel")}
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
               data-testid="breakdown-source-filter"
-              aria-label="Filtra per origine"
+              aria-label={t("breakdown.filterBySourceAria")}
             >
-              <option value="all">tutte</option>
-              <option value="cesare">Cesare</option>
-              <option value="regex">Regex</option>
-              <option value="manual">Manuale</option>
+              <option value="all">{t("breakdown.filter.allSources")}</option>
+              <option value="cesare">{t("breakdown.source.cesare")}</option>
+              <option value="regex">{t("breakdown.source.regex")}</option>
+              <option value="manual">{t("breakdown.source.manual")}</option>
             </select>
           </label>
           <button
@@ -538,7 +562,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
             onClick={exportCsv}
             data-testid="breakdown-export-csv"
           >
-            ↓ Esporta CSV
+            {t("breakdown.exportCsv")}
           </button>
         </div>
       </section>
@@ -547,7 +571,10 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
       {selected.size > 0 && canEdit && (
         <section className={styles.bulkBar} data-testid="bulk-action-bar">
           <span className={styles.bulkCount}>
-            {selected.size} selezionat{selected.size === 1 ? "o" : "i"}
+            {selected.size}{" "}
+            {selected.size === 1
+              ? t("breakdown.bulk.selectedSingular")
+              : t("breakdown.bulk.selectedPlural")}
           </span>
           <button
             type="button"
@@ -555,16 +582,16 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
             onClick={bulkConfirm}
             data-testid="bulk-confirm-btn"
           >
-            Conferma
+            {t("breakdown.bulk.confirm")}
           </button>
-          <RecategorizeMenu onPick={bulkRecategorize} />
+          <RecategorizeMenu onPick={bulkRecategorize} t={t} />
           <button
             type="button"
             className={styles.bulkBtn}
             onClick={bulkRenameAction}
             data-testid="bulk-rename-btn"
           >
-            Rinomina…
+            {t("breakdown.bulk.rename")}
           </button>
           <button
             type="button"
@@ -572,7 +599,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
             onClick={exportCsv}
             data-testid="bulk-export-btn"
           >
-            Esporta CSV
+            {t("breakdown.exportCsvPlain")}
           </button>
           <div className={styles.bulkSpacer} />
           <button
@@ -581,21 +608,23 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
             onClick={bulkArchive}
             data-testid="bulk-archive-btn"
           >
-            Archivia
+            {t("breakdown.bulk.archive")}
           </button>
           <button
             type="button"
             className={styles.bulkBtn}
             onClick={clearSelection}
           >
-            Annulla
+            {t("breakdown.cancel")}
           </button>
         </section>
       )}
 
       {/* ─── Groups ────────────────────────────────────────────────────── */}
       {groups.length === 0 && (
-        <div className={styles.emptyState}>Nessun elemento trovato.</div>
+        <div className={styles.emptyState}>
+          {t("breakdown.noElementFound")}
+        </div>
       )}
       {groups.map((g) => {
         const meta = CATEGORY_META[g.category];
@@ -617,11 +646,11 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
               <span className={styles.groupDot} aria-hidden />
               <span className={styles.groupName}>{meta.labelIt}</span>
               <span className={styles.groupCount}>
-                {g.rows.length} elementi
+                {g.rows.length} {t("breakdown.group.elementsSuffix")}
               </span>
               {g.pendingCount > 0 && (
                 <span className={styles.groupBadge}>
-                  {g.pendingCount} pending
+                  {g.pendingCount} {t("breakdown.group.pendingSuffix")}
                 </span>
               )}
               {g.staleCount > 0 && (
@@ -630,7 +659,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
                     " ",
                   )}
                 >
-                  {g.staleCount} obsoleti
+                  {g.staleCount} {t("breakdown.group.staleSuffix")}
                 </span>
               )}
               <span className={styles.groupSpacer} />
@@ -652,6 +681,7 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
                   onToggle={toggleRow}
                   focusedIndex={focusedIndex}
                   flatVisibleRows={flatVisibleRows}
+                  t={t}
                 />
               </div>
             )}
@@ -660,8 +690,9 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
       })}
 
       <div className={styles.footnote}>
-        {summary.totalElements} elementi · {summary.categoriesUsed} categorie ·
-        J/K naviga · spazio seleziona · ⌘K cerca
+        {summary.totalElements} {t("breakdown.footnote.elements")} ·{" "}
+        {summary.categoriesUsed} {t("breakdown.footnote.categories")} ·{" "}
+        {t("breakdown.footnote.hints")}
       </div>
     </div>
   );
@@ -671,15 +702,17 @@ export function ProjectBreakdownView({ projectId, versionId, canEdit }: Props) {
 
 function RecategorizeMenu({
   onPick,
+  t,
 }: {
   onPick: (cat: BreakdownCategory) => void;
+  t: TranslateFn;
 }) {
   return (
     <label
       className={styles.bulkBtn}
       style={{ paddingInline: "var(--ds-space-2)" }}
     >
-      Ricategorizza:
+      {t("breakdown.bulk.recategorizeLabel")}
       <select
         defaultValue=""
         onChange={(e) => {
@@ -688,10 +721,10 @@ function RecategorizeMenu({
           e.currentTarget.value = "";
         }}
         data-testid="bulk-recategorize-select"
-        aria-label="Ricategorizza in"
+        aria-label={t("breakdown.bulk.recategorizeAria")}
       >
         <option value="" disabled>
-          scegli…
+          {t("breakdown.bulk.choose")}
         </option>
         {BREAKDOWN_CATEGORIES.map((c) => (
           <option key={c} value={c}>
@@ -712,6 +745,7 @@ function CategoryTable({
   onToggle,
   focusedIndex,
   flatVisibleRows,
+  t,
 }: {
   group: {
     category: BreakdownCategory;
@@ -722,26 +756,36 @@ function CategoryTable({
   onToggle: (id: string) => void;
   focusedIndex: number;
   flatVisibleRows: { row: ProjectBreakdownInputRow }[];
+  t: TranslateFn;
 }) {
   const isCast = group.category === "cast";
   const isLocations = group.category === "locations";
   const secondaryHeader = isCast
-    ? "Tier"
+    ? t("breakdown.table.tier")
     : isLocations
-      ? "Tipo"
-      : "Descrizione";
+      ? t("breakdown.table.type")
+      : t("breakdown.table.description");
   return (
     <table className={styles.table}>
       <thead>
         <tr>
-          {canEdit && <th className={styles.th} aria-label="Selezione" />}
-          <th className={styles.th}>Nome</th>
+          {canEdit && (
+            <th
+              className={styles.th}
+              aria-label={t("breakdown.table.selectionAria")}
+            />
+          )}
+          <th className={styles.th}>{t("breakdown.table.name")}</th>
           <th className={styles.th}>{secondaryHeader}</th>
-          <th className={[styles.th, styles.thNum].join(" ")}>Scene</th>
-          <th className={styles.th}>Range</th>
-          <th className={styles.th}>Origine</th>
-          <th className={styles.th}>Stato</th>
-          <th className={[styles.th, styles.thNum].join(" ")}>Costo stim.</th>
+          <th className={[styles.th, styles.thNum].join(" ")}>
+            {t("breakdown.table.scenes")}
+          </th>
+          <th className={styles.th}>{t("breakdown.table.range")}</th>
+          <th className={styles.th}>{t("breakdown.table.source")}</th>
+          <th className={styles.th}>{t("breakdown.table.status")}</th>
+          <th className={[styles.th, styles.thNum].join(" ")}>
+            {t("breakdown.table.estimatedCost")}
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -769,7 +813,7 @@ function CategoryTable({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggle(r.elementId)}
-                    aria-label={`Seleziona ${r.name}`}
+                    aria-label={`${t("breakdown.selectRowPrefix")}${r.name}`}
                   />
                 </td>
               )}
@@ -820,7 +864,7 @@ function CategoryTable({
                       .filter(Boolean)
                       .join(" ")}
                   >
-                    {SOURCE_LABEL[r.source]}
+                    {t(SOURCE_LABEL_KEY[r.source])}
                   </span>
                 ) : (
                   <span className={styles.metaCell}>—</span>
@@ -838,7 +882,7 @@ function CategoryTable({
                   ].join(" ")}
                 >
                   <span className={styles.statusDot} aria-hidden />
-                  {STATUS_LABEL[r.status]}
+                  {t(STATUS_LABEL_KEY[r.status])}
                 </span>
               </td>
               <td className={styles.cost}>

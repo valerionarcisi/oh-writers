@@ -7,6 +7,7 @@ import type {
 } from "../server/shooting-plan.server";
 import { ShotBlock } from "./ShotBlock";
 import { TransitionBlock } from "./TransitionBlock";
+import { useTranslation } from "~/features/i18n";
 import styles from "./PlanTrack.module.css";
 
 interface PlanTrackProps {
@@ -52,6 +53,7 @@ export function PlanTrack(props: PlanTrackProps) {
     onResizeCommit,
   } = props;
 
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLDivElement>(null);
   const getTrackWidth = useCallback(
     () => canvasRef.current?.getBoundingClientRect().width ?? 0,
@@ -106,22 +108,24 @@ export function PlanTrack(props: PlanTrackProps) {
         <div className={styles.nameRow}>
           <span className={styles.name}>{scenario.name}</span>
           {isActive ? (
-            <span className={styles.activeChip}>ATTIVO</span>
+            <span className={styles.activeChip}>
+              {t("shootingPlan.track.active")}
+            </span>
           ) : (
             <button
               type="button"
               className={styles.makeActiveBtn}
               onClick={onMakeActive}
             >
-              RENDI ATTIVO
+              {t("shootingPlan.track.makeActive")}
             </button>
           )}
           {scenario.isSuggested && (
             <span
               className={styles.suggestedChip}
-              title="Pattern generato automaticamente — modifica per personalizzare"
+              title={t("shootingPlan.track.suggestedTitle")}
             >
-              suggerito
+              {t("shootingPlan.track.suggested")}
             </span>
           )}
         </div>

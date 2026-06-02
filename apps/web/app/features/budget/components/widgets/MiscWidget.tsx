@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BudgetLine } from "~/features/budget/server/budget.server";
 import { updateBudgetLine } from "~/features/budget/server/budget.server";
 import { unwrapResult } from "@oh-writers/utils";
+import { useTranslation } from "~/features/i18n";
 import styles from "./MiscWidget.module.css";
 
 interface MiscWidgetProps {
@@ -18,6 +19,7 @@ const lineTotal = (l: BudgetLine) =>
   l.actual ?? (l.rate ?? 0) * (l.quantity ?? 1);
 
 export function MiscWidget({ lines, total, projectId }: MiscWidgetProps) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
 
   const patchMutation = useMutation({
@@ -31,7 +33,7 @@ export function MiscWidget({ lines, total, projectId }: MiscWidgetProps) {
   return (
     <div className={styles.widget}>
       <div className={styles.header}>
-        <h3 className={styles.title}>Varie ed eventuali</h3>
+        <h3 className={styles.title}>{t("budget.misc.title")}</h3>
         <span className={styles.total}>{fmt(total)}</span>
       </div>
       <div className={styles.chips}>

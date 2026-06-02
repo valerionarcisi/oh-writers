@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
 import { DocumentTypes } from "@oh-writers/domain";
-import type { DocumentType } from "@oh-writers/domain";
+import type { DocumentType, TranslationKey } from "@oh-writers/domain";
 import { ActionsMenu, FloatingDock } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
 import {
@@ -40,6 +40,7 @@ import {
   useRoutedSurface,
 } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
+import { useTranslation } from "~/features/i18n";
 import styles from "./NarrativeEditor.module.css";
 
 const stripHtml = (html: string): string =>
@@ -58,13 +59,12 @@ interface NarrativeEditorProps {
   type: DocumentType;
 }
 
-const DOCUMENT_PLACEHOLDERS: Record<DocumentType, string> = {
-  [DocumentTypes.LOGLINE]:
-    "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",
-  [DocumentTypes.SOGGETTO]: "Inizia il tuo soggetto qui…",
-  [DocumentTypes.SYNOPSIS]: "Inizia la tua sinossi qui…",
-  [DocumentTypes.OUTLINE]: "",
-  [DocumentTypes.TREATMENT]: "Inizia il tuo trattamento qui…",
+const DOCUMENT_PLACEHOLDER_KEYS: Record<DocumentType, TranslationKey | null> = {
+  [DocumentTypes.LOGLINE]: "documents.editor.placeholder.logline",
+  [DocumentTypes.SOGGETTO]: "documents.editor.placeholder.soggetto",
+  [DocumentTypes.SYNOPSIS]: "documents.editor.placeholder.synopsis",
+  [DocumentTypes.OUTLINE]: null,
+  [DocumentTypes.TREATMENT]: "documents.editor.placeholder.treatment",
 };
 
 // Maps each narrative document type to the visual layout of the shell.
@@ -78,6 +78,9 @@ const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
 };
 
 export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
+  const { t } = useTranslation();
+  const placeholderKey = DOCUMENT_PLACEHOLDER_KEYS[type];
+  const documentPlaceholder = placeholderKey ? t(placeholderKey) : "";
   const [content, setContent] = useState(document.content);
   const editorViewRef = useRef<EditorView | null>(null);
   // Spec 44 TKT-LEAD-01: Cesare opens via shell BottomDock.
@@ -269,13 +272,15 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   );
   const currentVersionLabel = currentDocVersion?.label ?? null;
 
+  const versionFallback = (idx: number) =>
+    t("documents.editor.versionFallback").replace("{number}", String(idx + 1));
   const versionMenuItems = [
     ...docVersions.map((v, idx) => ({
       id: `version-${v.id}`,
       label:
         v.id === document.currentVersionId
-          ? `● ${v.label ?? `Versione ${idx + 1}`}`
-          : (v.label ?? `Versione ${idx + 1}`),
+          ? `● ${v.label ?? versionFallback(idx)}`
+          : (v.label ?? versionFallback(idx)),
       onSelect: openVersionsDrawer,
       tone:
         v.id === document.currentVersionId
@@ -284,7 +289,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     })),
     {
       id: "open-drawer",
-      label: "Apri Versioni →",
+      label: t("documents.editor.openVersions"),
       onSelect: openVersionsDrawer,
     },
   ];
@@ -301,7 +306,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       <TextEditor
         value={content}
         onChange={setContent}
-        placeholder={DOCUMENT_PLACEHOLDERS[type]}
+        placeholder={documentPlaceholder}
         maxLength={LOGLINE_MAX}
         singleLine={false}
         readOnly={isReadOnly}
@@ -312,7 +317,10 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           role="alert"
           data-testid="logline-error"
         >
-          Logline is limited to {LOGLINE_MAX} characters.
+          {t("documents.editor.loglineError").replace(
+            "{max}",
+            String(LOGLINE_MAX),
+          )}
         </div>
       )}
       <div className={`${styles.editorFooter} ${styles.charCount}`}>
@@ -402,7 +410,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
                 ? isBulletListActive(editorViewRef.current.state)
                 : false
             }
-            aria-label="Elenco puntato"
+            aria-label={t("documents.editor.bulletListAria")}
             onMouseDown={(e) => {
               e.preventDefault();
               const view = editorViewRef.current;
@@ -422,7 +430,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       <NarrativeProseMirrorView
         value={content}
         onChange={setContent}
-        placeholder={DOCUMENT_PLACEHOLDERS[type]}
+        placeholder={documentPlaceholder}
         readOnly={isReadOnly}
         enableHeadings={isTreatment}
         diffDocumentType={type}
@@ -449,7 +457,7 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       data-testid="narrative-readonly-badge"
       role="status"
     >
-      Read only
+      {t("documents.editor.readOnly")}
     </div>
   ) : null;
 
@@ -488,8 +496,8 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           primaryAction={{
             label:
               isNarrative && exportPdf.isPending
-                ? "Esportando…"
-                : "Esporta PDF",
+                ? t("documents.editor.exporting")
+                : t("documents.editor.exportPdf"),
             hotkey: "⌘E",
             onClick: handleExport,
           }}
@@ -519,13 +527,19 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
       data-testid="narrative-actions-menu"
       items={[
         {
-          label: exportPdf.isPending ? "Esportazione…" : "Esporta PDF",
+          label: exportPdf.isPending
+            ? t("documents.editor.exportingMenu")
+            : t("documents.editor.exportPdf"),
           onClick: handleExport,
           disabled: !isNarrative || exportPdf.isPending,
         },
-        { label: "Versioni", onClick: openVersionsDrawer },
-        { label: "Importa", onClick: () => {}, disabled: true },
-        { label: "Frontespizio", onClick: () => {}, disabled: true },
+        { label: t("documents.editor.versions"), onClick: openVersionsDrawer },
+        { label: t("documents.editor.import"), onClick: () => {}, disabled: true },
+        {
+          label: t("documents.editor.titlePage"),
+          onClick: () => {},
+          disabled: true,
+        },
       ]}
     />
   ) : undefined;

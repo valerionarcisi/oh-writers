@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "~/features/i18n";
 import styles from "./HoverToolbar.module.css";
 
 export interface HoverToolbarProps {
@@ -28,6 +29,7 @@ export function HoverToolbar({
   onReject,
   status,
 }: HoverToolbarProps) {
+  const { t } = useTranslation();
   const [toolbarPos, setToolbarPos] = useState<{
     top: number;
     right: number;
@@ -96,18 +98,18 @@ export function HoverToolbar({
         className={styles.acceptBtn}
         onClick={onAccept}
         data-testid="cesare-pending-accept"
-        aria-label="Accetta modifica di Cesare"
+        aria-label={t("screenplay.hover.acceptAria")}
       >
-        ✓ Accetta
+        ✓ {t("screenplay.hover.accept")}
       </button>
       <button
         type="button"
         className={styles.rejectBtn}
         onClick={onReject}
         data-testid="cesare-pending-reject"
-        aria-label="Rifiuta modifica di Cesare"
+        aria-label={t("screenplay.hover.rejectAria")}
       >
-        ✗ Rifiuta
+        ✗ {t("screenplay.hover.reject")}
       </button>
     </div>,
     document.body,

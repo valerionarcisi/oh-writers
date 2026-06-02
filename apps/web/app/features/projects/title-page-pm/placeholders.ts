@@ -11,21 +11,25 @@
 import { Plugin } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import type { Node as PMNode } from "prosemirror-model";
+import type { TranslationKey } from "@oh-writers/domain";
 
-const REGION_HINTS: Record<string, string> = {
-  title: "Clicca o premi tab per impostare il titolo",
-  centerBlock: "Autore, Tratto da, Materiale di partenza…",
-  footerLeft: "Data bozza",
-  footerCenter: "Note",
-  footerRight: "Contatti",
+type Translate = (key: TranslationKey) => string;
+
+const REGION_HINT_KEYS: Record<string, TranslationKey> = {
+  title: "projects.titlePage.placeholderTitle",
+  centerBlock: "projects.titlePage.placeholderCenter",
+  footerLeft: "projects.titlePage.draftDate",
+  footerCenter: "projects.titlePage.notes",
+  footerRight: "projects.titlePage.contact",
 };
 
-const buildDecorations = (doc: PMNode): DecorationSet => {
+const buildDecorations = (doc: PMNode, t: Translate): DecorationSet => {
   const decos: Decoration[] = [];
 
   doc.forEach((region, regionOffset) => {
-    const hint = REGION_HINTS[region.type.name];
-    if (!hint) return;
+    const hintKey = REGION_HINT_KEYS[region.type.name];
+    if (!hintKey) return;
+    const hint = t(hintKey);
 
     const isTitle = region.type.name === "title";
     const isEmpty = isTitle
@@ -54,12 +58,14 @@ const buildDecorations = (doc: PMNode): DecorationSet => {
   return DecorationSet.create(doc, decos);
 };
 
-export const placeholdersPlugin = () =>
+export const placeholdersPlugin = (t: Translate) =>
   new Plugin({
     state: {
-      init: (_, state) => buildDecorations(state.doc),
+      init: (_, state) => buildDecorations(state.doc, t),
       apply: (tr, old) =>
-        tr.docChanged ? buildDecorations(tr.doc) : old.map(tr.mapping, tr.doc),
+        tr.docChanged
+          ? buildDecorations(tr.doc, t)
+          : old.map(tr.mapping, tr.doc),
     },
     props: {
       decorations(state) {

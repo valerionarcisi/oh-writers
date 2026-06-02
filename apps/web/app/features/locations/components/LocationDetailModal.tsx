@@ -4,6 +4,8 @@ import type {
   PatchLocationCandidate,
 } from "@oh-writers/domain";
 import { Dialog } from "@oh-writers/ui";
+import type { TranslationKey } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import styles from "./LocationDetailModal.module.css";
 
 interface LocationDetailModalProps {
@@ -17,11 +19,11 @@ interface LocationDetailModalProps {
   onRemove: (candidateId: string) => void;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  confirmed: "Confermata",
-  visited: "Visitata",
-  candidate: "Candidata",
-  rejected: "Scartata",
+const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  confirmed: "locations.candidateStatus.confirmed",
+  visited: "locations.candidateStatus.visited",
+  candidate: "locations.candidateStatus.candidate",
+  rejected: "locations.candidateStatus.rejected",
 };
 
 export function LocationDetailModal({
@@ -34,6 +36,7 @@ export function LocationDetailModal({
   onMarkVisited,
   onRemove,
 }: LocationDetailModalProps) {
+  const { t } = useTranslation();
   const [contact, setContact] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -87,7 +90,7 @@ export function LocationDetailModal({
               onClose();
             }}
           >
-            Scarta
+            {t("locations.action.reject")}
           </button>
           {status !== "visited" && !isConfirmed ? (
             <button
@@ -96,7 +99,7 @@ export function LocationDetailModal({
               data-testid="detail-modal-mark-visited-btn"
               onClick={() => onMarkVisited(candidate.id)}
             >
-              Segna visitata
+              {t("locations.action.markVisited")}
             </button>
           ) : null}
           {!isConfirmed ? (
@@ -109,7 +112,7 @@ export function LocationDetailModal({
                 onClose();
               }}
             >
-              ✓ Conferma
+              {t("locations.action.confirm")}
             </button>
           ) : null}
         </div>
@@ -120,7 +123,7 @@ export function LocationDetailModal({
           className={`${styles.statusBadge} ${styles[`badge_${status}`] ?? ""}`}
           data-testid="detail-modal-status-badge"
         >
-          {STATUS_LABEL[status] ?? status}
+          {STATUS_LABEL_KEYS[status] ? t(STATUS_LABEL_KEYS[status]) : status}
         </div>
 
         {photos.length > 0 ? (
@@ -132,7 +135,10 @@ export function LocationDetailModal({
                 className={styles.photoTile}
                 data-testid={`detail-modal-photo-${idx}`}
                 onClick={() => openLightbox(idx)}
-                aria-label={`Apri anteprima foto ${idx + 1}`}
+                aria-label={t("locations.detail.openPhotoAria").replace(
+                  "{value}",
+                  String(idx + 1),
+                )}
               >
                 <img
                   src={photo.url}
@@ -143,13 +149,17 @@ export function LocationDetailModal({
             ))}
           </div>
         ) : (
-          <div className={styles.noPhotos}>Nessuna foto disponibile</div>
+          <div className={styles.noPhotos}>
+            {t("locations.detail.noPhotos")}
+          </div>
         )}
 
         {candidate.address ||
         (candidate.lat != null && candidate.lng != null) ? (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Indirizzo</div>
+            <div className={styles.sectionLabel}>
+              {t("locations.field.address")}
+            </div>
             <div className={styles.addressRow}>
               <span className={styles.addressText}>
                 {candidate.address ??
@@ -161,7 +171,7 @@ export function LocationDetailModal({
                 data-testid="detail-modal-center-map-btn"
                 onClick={handleCenterMap}
               >
-                Centra sulla mappa
+                {t("locations.action.centerMap")}
               </button>
               {candidate.lat != null && candidate.lng != null ? (
                 <a
@@ -178,12 +188,14 @@ export function LocationDetailModal({
         ) : null}
 
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Contatto</div>
+          <div className={styles.sectionLabel}>
+            {t("locations.field.contact")}
+          </div>
           <input
             type="text"
             className={styles.input}
             value={contact}
-            placeholder="Nome, email, telefono…"
+            placeholder={t("locations.field.contactPlaceholder")}
             data-testid="detail-modal-contact-input"
             onChange={(e) => setContact(e.target.value)}
             onBlur={() =>
@@ -193,11 +205,13 @@ export function LocationDetailModal({
         </div>
 
         <div className={styles.section}>
-          <div className={styles.sectionLabel}>Note sopralluogo</div>
+          <div className={styles.sectionLabel}>
+            {t("locations.field.scoutingNotes")}
+          </div>
           <textarea
             className={styles.textarea}
             value={notes}
-            placeholder="Impressioni, luce, rumore, accessibilità…"
+            placeholder={t("locations.field.scoutingNotesPlaceholder")}
             rows={4}
             data-testid="detail-modal-notes-input"
             onChange={(e) => setNotes(e.target.value)}

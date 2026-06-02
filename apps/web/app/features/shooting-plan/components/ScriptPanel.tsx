@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useTranslation } from "~/features/i18n";
 import { updateSceneNotes } from "../server/shooting-plan.server";
 import styles from "./ScriptPanel.module.css";
 
@@ -23,6 +24,7 @@ export function ScriptPanel({
   storageKey,
   onJumpToScreenplay,
 }: ScriptPanelProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useLocalStorage<boolean>(storageKey, false);
   const [draft, setDraft] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,19 +60,28 @@ export function ScriptPanel({
         type="button"
         className={styles.collapsedTab}
         onClick={() => setIsOpen(true)}
-        aria-label="Apri pannello sceneggiatura"
+        aria-label={t("shootingPlan.scriptPanel.openAria")}
       >
         <span className={styles.collapsedIcon}>📄</span>
-        <span className={styles.collapsedLabel}>SCENA ▶</span>
+        <span className={styles.collapsedLabel}>
+          {t("shootingPlan.scriptPanel.collapsedLabel")}
+        </span>
       </button>
     );
   }
 
   return (
-    <aside className={styles.panel} aria-label="Pannello sceneggiatura">
+    <aside
+      className={styles.panel}
+      aria-label={t("shootingPlan.scriptPanel.regionAria")}
+    >
       <header className={styles.header}>
         <div className={styles.headerTitle}>
-          📄 Scena {sceneNumber} — testo
+          📄{" "}
+          {t("shootingPlan.scriptPanel.headerTitle").replace(
+            "{value}",
+            String(sceneNumber),
+          )}
         </div>
         <div className={styles.headerActions}>
           {onJumpToScreenplay && (
@@ -78,7 +89,7 @@ export function ScriptPanel({
               type="button"
               className={styles.iconBtn}
               onClick={onJumpToScreenplay}
-              title="Apri nello Screenplay editor"
+              title={t("shootingPlan.scriptPanel.openScreenplayTitle")}
             >
               ↗
             </button>
@@ -87,7 +98,7 @@ export function ScriptPanel({
             type="button"
             className={styles.iconBtn}
             onClick={() => setIsOpen(false)}
-            aria-label="Chiudi pannello"
+            aria-label={t("shootingPlan.scriptPanel.closeAria")}
           >
             ◀
           </button>
@@ -100,13 +111,15 @@ export function ScriptPanel({
           className={styles.notesTextarea}
           value={currentNotes}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="Aggiungi note di scena…"
+          placeholder={t("shootingPlan.scriptPanel.notesPlaceholder")}
           rows={6}
         />
       </div>
 
       <footer className={styles.footer}>
-        {saveMut.isPending ? "salvataggio…" : "note di scena"}
+        {saveMut.isPending
+          ? t("shootingPlan.scriptPanel.saving")
+          : t("shootingPlan.scriptPanel.notesFooter")}
       </footer>
     </aside>
   );

@@ -4,7 +4,10 @@ import { unwrapResult } from "@oh-writers/utils";
 import { sceneCostEstimateOptions } from "../hooks/useBreakdown";
 import { getBudget, addBudgetLine } from "~/features/budget/server/budget.server";
 import { useCesareOpen } from "~/features/app-shell";
+import { useTranslation } from "~/features/i18n";
 import styles from "./SceneCostPanel.module.css";
+
+type TranslateFn = ReturnType<typeof useTranslation>["t"];
 
 interface Props {
   projectId: string;
@@ -15,20 +18,21 @@ interface Props {
 const formatEur = (n: number): string =>
   `€ ${Math.round(n).toLocaleString("it-IT")}`;
 
-const difficultyLabel = (d: number): string => {
-  if (d <= 1) return "molto bassa";
-  if (d === 2) return "bassa";
-  if (d === 3) return "media";
-  if (d === 4) return "alta";
-  return "molto alta";
+const difficultyLabel = (d: number, t: TranslateFn): string => {
+  if (d <= 1) return t("breakdown.cost.difficulty.veryLow");
+  if (d === 2) return t("breakdown.cost.difficulty.low");
+  if (d === 3) return t("breakdown.cost.difficulty.medium");
+  if (d === 4) return t("breakdown.cost.difficulty.high");
+  return t("breakdown.cost.difficulty.veryHigh");
 };
 
 export function SceneCostPanel(props: Props) {
+  const { t } = useTranslation();
   return (
     <Suspense
       fallback={
         <div className={styles.card} data-testid="scene-cost-loading">
-          <p className={styles.empty}>Calcolo costo scena…</p>
+          <p className={styles.empty}>{t("breakdown.cost.calculating")}</p>
         </div>
       }
     >
@@ -38,6 +42,7 @@ export function SceneCostPanel(props: Props) {
 }
 
 function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
+  const { t } = useTranslation();
   const { data: estimate } = useSuspenseQuery(
     sceneCostEstimateOptions(projectId, sceneNumber),
   );
@@ -85,15 +90,16 @@ function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
   return (
     <div className={styles.card} data-testid="scene-cost-panel">
       <header className={styles.header}>
-        <span className={styles.eyebrow}>Costo stimato</span>
+        <span className={styles.eyebrow}>{t("breakdown.cost.estimated")}</span>
         <span className={styles.sceneLabel}>
-          Sc. {sceneNumber} {sceneLabel}
+          {t("breakdown.cost.scenePrefix")}
+          {sceneNumber} {sceneLabel}
         </span>
       </header>
 
       <div className={styles.total}>
         <span className={styles.totalAmount}>{formatEur(estimate.total)}</span>
-        <span className={styles.totalUnit}>/ giornata</span>
+        <span className={styles.totalUnit}>{t("breakdown.cost.perDay")}</span>
       </div>
 
       <ul className={styles.lines}>
@@ -108,10 +114,15 @@ function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
       </ul>
 
       <div className={styles.difficulty}>
-        <span className={styles.difficultyLabel}>Difficoltà</span>
+        <span className={styles.difficultyLabel}>
+          {t("breakdown.cost.difficulty")}
+        </span>
         <span
           className={styles.difficultyDots}
-          aria-label={`Difficoltà ${difficultyLabel(estimate.difficulty)}`}
+          aria-label={`${t("breakdown.cost.difficultyAriaPrefix")}${difficultyLabel(
+            estimate.difficulty,
+            t,
+          )}`}
         >
           {dots.map((on, i) => (
             <span
@@ -123,7 +134,7 @@ function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
           ))}
         </span>
         <span className={styles.difficultyText}>
-          {difficultyLabel(estimate.difficulty)}
+          {difficultyLabel(estimate.difficulty, t)}
         </span>
       </div>
 
@@ -144,7 +155,7 @@ function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
           onClick={() => openCesare()}
           data-testid="scene-cost-ask-cesare"
         >
-          <span aria-hidden="true">✦</span> Chiedi a Cesare
+          <span aria-hidden="true">✦</span> {t("breakdown.cost.askCesare")}
         </button>
         <button
           type="button"
@@ -153,7 +164,9 @@ function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
           disabled={addToBudget.isPending}
           data-testid="scene-cost-add-to-budget"
         >
-          {addToBudget.isPending ? "Aggiungo…" : "Aggiungi al budget"}
+          {addToBudget.isPending
+            ? t("breakdown.cost.adding")
+            : t("breakdown.cost.addToBudget")}
         </button>
       </div>
 
@@ -161,12 +174,12 @@ function SceneCostPanelContent({ projectId, sceneNumber, sceneLabel }: Props) {
         <p className={styles.error} role="status">
           {addToBudget.error instanceof Error
             ? addToBudget.error.message
-            : "Errore durante l'aggiunta al budget"}
+            : t("breakdown.cost.addError")}
         </p>
       )}
       {addToBudget.isSuccess && (
         <p className={styles.success} role="status">
-          Righe aggiunte al budget.
+          {t("breakdown.cost.added")}
         </p>
       )}
     </div>

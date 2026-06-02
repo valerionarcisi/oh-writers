@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@oh-writers/ui";
+import { useTranslation } from "~/features/i18n";
 import { staleScenesOptions } from "../hooks/useBreakdown";
 import type { BreakdownSceneSummary } from "../server/breakdown.server";
 import styles from "./SceneTOC.module.css";
@@ -18,6 +19,7 @@ export function SceneTOC({
   activeSceneId,
   onSceneSelect,
 }: Props) {
+  const { t } = useTranslation();
   const { data: staleIds = [] } = useQuery(staleScenesOptions(versionId));
   const itemsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
 
@@ -35,7 +37,7 @@ export function SceneTOC({
   }, [activeSceneId]);
 
   if (scenes.length === 0) {
-    return <p className={styles.empty}>Nessuna scena nella sceneggiatura.</p>;
+    return <p className={styles.empty}>{t("breakdown.toc.empty")}</p>;
   }
 
   return (
