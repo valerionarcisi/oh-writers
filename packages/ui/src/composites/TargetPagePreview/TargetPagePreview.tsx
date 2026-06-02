@@ -64,6 +64,10 @@ export interface TargetPagePreviewProps {
   onAcceptAll: () => void;
   onRejectAll: () => void;
   testId?: string;
+  /** Empty-state copy for the timeline (defaults to IT "Nessuna modifica"). */
+  emptyLabel?: string;
+  /** Title for the fallback stub (defaults to IT "Anteprima trace"). */
+  stubTitle?: string;
 }
 
 // ─── Registry ───────────────────────────────────────────────────────────────
@@ -257,6 +261,8 @@ export function TargetPagePreview({
   onAcceptAll: _onAcceptAll,
   onRejectAll: _onRejectAll,
   testId,
+  emptyLabel = "Nessuna modifica",
+  stubTitle = "Anteprima trace",
 }: TargetPagePreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -276,7 +282,7 @@ export function TargetPagePreview({
       <aside className={styles.timeline} aria-label="Trace timeline">
         <span className={styles.timelineLabel}>Modifiche</span>
         {traceMarkers.length === 0 ? (
-          <p className={styles.empty}>Nessuna modifica</p>
+          <p className={styles.empty}>{emptyLabel}</p>
         ) : (
           traceMarkers.map((marker) => (
             <TimelineButton
@@ -308,7 +314,7 @@ export function TargetPagePreview({
           />
         ) : (
           <div className={styles.stub}>
-            <strong>Anteprima trace</strong>
+            <strong>{stubTitle}</strong>
             <span>
               Nessun renderer registrato per <code>{pageRef.kind}</code>. Le
               modifiche sono elencate qui sotto.

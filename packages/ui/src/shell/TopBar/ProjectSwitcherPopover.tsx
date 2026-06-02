@@ -14,6 +14,12 @@ export type ProjectSwitcherPopoverProps = {
   onSelect: (id: string) => void;
   onAllProjects: () => void;
   onClose: () => void;
+  /** Aria-label for the listbox (defaults to IT "Cambia progetto"). */
+  switchLabel?: string;
+  /** Empty-state copy (defaults to IT "Nessun progetto"). */
+  emptyLabel?: string;
+  /** Aria-label for the current-project dot (defaults to IT "Progetto corrente"). */
+  currentLabel?: string;
 };
 
 export function ProjectSwitcherPopover({
@@ -22,6 +28,9 @@ export function ProjectSwitcherPopover({
   onSelect,
   onAllProjects,
   onClose,
+  switchLabel = "Cambia progetto",
+  emptyLabel = "Nessun progetto",
+  currentLabel = "Progetto corrente",
 }: ProjectSwitcherPopoverProps) {
   const initialFocusIndex = (() => {
     if (projects.length === 0) return -1;
@@ -66,13 +75,13 @@ export function ProjectSwitcherPopover({
   return (
     <div
       role="listbox"
-      aria-label="Cambia progetto"
+      aria-label={switchLabel}
       className={styles.projectPopover}
       data-testid="topbar-project-popover"
       onKeyDown={handleKeyDown}
     >
       {projects.length === 0 ? (
-        <span className={styles.projectEmpty}>Nessun progetto</span>
+        <span className={styles.projectEmpty}>{emptyLabel}</span>
       ) : (
         <div className={styles.projectList}>
           {projects.map((p, idx) => {
@@ -100,7 +109,7 @@ export function ProjectSwitcherPopover({
                 {isCurrent && (
                   <span
                     className={styles.projectItemDot}
-                    aria-label="Progetto corrente"
+                    aria-label={currentLabel}
                   />
                 )}
               </button>

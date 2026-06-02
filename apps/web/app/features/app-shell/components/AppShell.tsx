@@ -1025,6 +1025,16 @@ function AppShellInner({
               onSessionsOpen={onCesareSessionsOpen}
               account={railAccount}
               tools={railTools}
+              labels={{
+                sessionsTitle: t("shell.rail.sessionsTitle"),
+                sessionsOpen: t("shell.rail.sessionsOpen"),
+                notifications: t("shell.rail.notifications"),
+                notificationsUnread: t("shell.rail.notificationsUnread"),
+                settings: t("shell.rail.settings"),
+                projectFallback: t("shell.rail.projectFallback"),
+                newSession: t("shell.rail.newSession"),
+                nav: t("shell.rail.nav"),
+              }}
               onNavigate={handleNavigate}
               onCollapse={
                 shellState === "full"
@@ -1053,6 +1063,7 @@ function AppShellInner({
                   onHoverStart={railOverlay.open}
                   onHoverEnd={railOverlay.scheduleClose}
                   isOverlayOpen={railOverlay.isOpen}
+                  openLabel={t("shell.rail.openSidebar")}
                 />
               }
               sectionName={sectionName}
@@ -1101,13 +1112,18 @@ function AppShellInner({
               prose by a per-document <CesareLiveDiff/> (mounted in the document
               bodies). The shell only relays the broadcast. */}
 
-          <BottomDock onCesareToggle={toggleCesare} />
+          <BottomDock
+            onCesareToggle={toggleCesare}
+            openCesareLabel={t("shell.dock.openCesare")}
+          />
 
           <VersionsDrawer />
           <CommandPalette
             isOpen={isPaletteOpen}
             onClose={closePalette}
             items={paletteItems}
+            emptyLabel={t("shell.palette.empty")}
+            resultsLabel={t("shell.palette.results")}
           />
           {/* Floating Cesare sheet — the default surface. Unmounted while the
               split lane is open so the chat never duplicates. The helper
@@ -1179,6 +1195,8 @@ function SplitDrawerHost({
         size={{ width: splitDrawerWidth }}
         onSizeChange={({ width }) => setSplitDrawerWidth(width)}
         ariaLabel={t("shell.splitDrawer.notificationsAria")}
+        expandLabel={t("shell.splitDrawer.expand")}
+        closeLabel={t("shell.splitDrawer.close")}
         testId="notification-center-drawer"
       >
         <NotificationCenterDrawerContent onActivate={onNotificationActivate} />
@@ -1258,6 +1276,8 @@ function SplitDrawerHost({
       }
       size={{ width: splitDrawerWidth }}
       onSizeChange={({ width }) => setSplitDrawerWidth(width)}
+      expandLabel={t("shell.splitDrawer.expand")}
+      closeLabel={t("shell.splitDrawer.close")}
     >
       <TargetPagePreview
         pageRef={payload.pageRef}
@@ -1266,6 +1286,8 @@ function SplitDrawerHost({
         onReject={payload.onReject}
         onAcceptAll={payload.onAcceptAll}
         onRejectAll={payload.onRejectAll}
+        emptyLabel={t("shell.targetPreview.empty")}
+        stubTitle={t("shell.targetPreview.stubTitle")}
       />
     </SplitDrawer>
   );

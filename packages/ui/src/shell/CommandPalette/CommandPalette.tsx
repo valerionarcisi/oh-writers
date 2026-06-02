@@ -26,6 +26,8 @@ export type CommandPaletteProps = {
   items: ReadonlyArray<CommandPaletteItem>;
   placeholder?: string;
   emptyLabel?: string;
+  /** Aria-label for the results listbox (defaults to IT "Risultati"). */
+  resultsLabel?: string;
 };
 
 type FlatEntry =
@@ -75,6 +77,7 @@ export function CommandPalette({
   items,
   placeholder = "Cerca comandi, scene, persone…",
   emptyLabel = "Nessun risultato",
+  resultsLabel = "Risultati",
 }: CommandPaletteProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -209,7 +212,7 @@ export function CommandPalette({
           id={listboxId}
           role="listbox"
           className={styles.list}
-          aria-label="Risultati"
+          aria-label={resultsLabel}
         >
           {entries.length === 0 ? (
             <div className={styles.empty}>{emptyLabel}</div>

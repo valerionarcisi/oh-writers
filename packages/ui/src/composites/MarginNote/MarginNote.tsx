@@ -8,6 +8,10 @@ export type MarginNoteProps = {
   text: string;
   onAccept?: () => void;
   onIgnore?: () => void;
+  /** Aria-label for the accept button (defaults to IT). */
+  acceptLabel?: string;
+  /** Aria-label for the ignore button (defaults to IT). */
+  ignoreLabel?: string;
 };
 
 const kindLabels: Record<MarginNoteKind, string> = {
@@ -15,7 +19,14 @@ const kindLabels: Record<MarginNoteKind, string> = {
   producer: "Produzione",
 };
 
-export function MarginNote({ kind, text, onAccept, onIgnore }: MarginNoteProps) {
+export function MarginNote({
+  kind,
+  text,
+  onAccept,
+  onIgnore,
+  acceptLabel = "Accetta suggerimento di Cesare",
+  ignoreLabel = "Ignora suggerimento di Cesare",
+}: MarginNoteProps) {
   const isProducer = kind === "producer";
 
   return (
@@ -43,7 +54,7 @@ export function MarginNote({ kind, text, onAccept, onIgnore }: MarginNoteProps) 
               type="button"
               className={[styles.actionBtn, styles.accept].join(" ")}
               onClick={onAccept}
-              aria-label="Accetta suggerimento di Cesare"
+              aria-label={acceptLabel}
             >
               Accetta
             </button>
@@ -53,7 +64,7 @@ export function MarginNote({ kind, text, onAccept, onIgnore }: MarginNoteProps) 
               type="button"
               className={[styles.actionBtn, styles.ignore].join(" ")}
               onClick={onIgnore}
-              aria-label="Ignora suggerimento di Cesare"
+              aria-label={ignoreLabel}
             >
               Ignora
             </button>

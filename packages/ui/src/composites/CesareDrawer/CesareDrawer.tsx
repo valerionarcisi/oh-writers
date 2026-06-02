@@ -141,7 +141,28 @@ export interface CesareDrawerProps {
 
   /** Accessible label for the drawer landmark. */
   ariaLabel?: string;
+
+  /** Translated chrome labels. Each field is optional and defaults to its IT
+   *  value, so the drawer renders correctly without a translator. */
+  labels?: CesareDrawerLabels;
 }
+
+// User-facing labels for the drawer chrome. Optional with IT defaults so
+// `packages/ui` stays framework-agnostic.
+export type CesareDrawerLabels = {
+  /** Peek-row aria-label for the expand affordance (defaults to IT). */
+  peekExpand?: string;
+  /** Peek-row aria-label for the close affordance (defaults to IT). */
+  peekClose?: string;
+  /** Header aria-label + title for expand (defaults to IT "Espandi"). */
+  expand?: string;
+  /** Header aria-label + title for "open as column" (defaults to IT). */
+  openAsColumn?: string;
+  /** Header aria-label + title for minimise (defaults to IT "Minimizza"). */
+  minimize?: string;
+  /** Header aria-label + title for close (defaults to IT "Chiudi"). */
+  close?: string;
+};
 
 // ─── Internal building blocks ───────────────────────────────────────────────
 
@@ -199,19 +220,23 @@ function PeekRow({
   subtitle,
   onCycle,
   onClose,
+  expandLabel,
+  closeLabel,
 }: {
   subtitle: string;
   onCycle: () => void;
   onClose: () => void;
+  expandLabel: string;
+  closeLabel: string;
 }) {
   const expandRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const { buttonProps: expandProps } = useButton(
-    { onPress: onCycle, "aria-label": "Espandi Cesare" },
+    { onPress: onCycle, "aria-label": expandLabel },
     expandRef,
   );
   const { buttonProps: closeProps } = useButton(
-    { onPress: onClose, "aria-label": "Chiudi Cesare" },
+    { onPress: onClose, "aria-label": closeLabel },
     closeRef,
   );
   return (
@@ -265,7 +290,14 @@ export function CesareDrawer({
   peekSubtitle = "in attesa",
   className,
   ariaLabel = "Assistente Cesare",
+  labels,
 }: CesareDrawerProps) {
+  const peekExpandLabel = labels?.peekExpand ?? "Espandi Cesare";
+  const peekCloseLabel = labels?.peekClose ?? "Chiudi Cesare";
+  const expandLabel = labels?.expand ?? "Espandi";
+  const openAsColumnLabel = labels?.openAsColumn ?? "Apri come colonna";
+  const minimizeLabel = labels?.minimize ?? "Minimizza";
+  const closeLabel = labels?.close ?? "Chiudi";
   // ─── Resize state ────────────────────────────────────────────────────────
   const isExpanded = state === "expanded";
   const isSplit = state === "expanded-split";
@@ -406,7 +438,13 @@ export function CesareDrawer({
     >
       {/* Peek state shows a single inline row and nothing else. */}
       {state === "peek" && (
-        <PeekRow subtitle={peekSubtitle} onCycle={onCycle} onClose={onClose} />
+        <PeekRow
+          subtitle={peekSubtitle}
+          onCycle={onCycle}
+          onClose={onClose}
+          expandLabel={peekExpandLabel}
+          closeLabel={peekCloseLabel}
+        />
       )}
 
       {/* Drag handles — paint themselves invisible until the matching state
@@ -465,7 +503,7 @@ export function CesareDrawer({
             {!isSplitSurface && (
               <HeaderButton
                 onPress={onCycle}
-                label="Espandi"
+                label={expandLabel}
                 icon={<span aria-hidden="true">↗</span>}
                 testId="cesare-expand-btn"
               />
@@ -475,21 +513,21 @@ export function CesareDrawer({
             {!isSplitSurface && onOpenAsSplit && (
               <HeaderButton
                 onPress={onOpenAsSplit}
-                label="Apri come colonna"
+                label={openAsColumnLabel}
                 icon={<span aria-hidden="true">◫</span>}
               />
             )}
             {!isSplitSurface && (
               <HeaderButton
                 onPress={onPeek}
-                label="Minimizza"
+                label={minimizeLabel}
                 icon={<span aria-hidden="true">−</span>}
                 testId="cesare-minimize-btn"
               />
             )}
             <HeaderButton
               onPress={onClose}
-              label="Chiudi"
+              label={closeLabel}
               icon={<span aria-hidden="true">×</span>}
               isDanger
               testId="cesare-close-btn"
