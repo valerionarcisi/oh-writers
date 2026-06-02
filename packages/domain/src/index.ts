@@ -1,5 +1,7 @@
 export * from "./types.js";
 export * from "./constants.js";
+export * from "./features/index.js";
+export * from "./i18n/index.js";
 export * from "./schemas/index.js";
 export * from "./scene-numbers.js";
 export * from "./scene-heading.js";

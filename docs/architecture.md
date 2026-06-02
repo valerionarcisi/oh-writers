@@ -240,6 +240,26 @@ Valid token → attach userId to socket context
 Every Yjs message → room access checked against team membership
 ```
 
+### Feature Flags
+
+Whether a feature is shown is decided in **one** pure resolver, never by inline
+`locale`/`plan`/market checks scattered across components.
+
+```
+Loader (server) builds FeatureContext { market(from locale), plan, userDisabled }
+  → resolveFeatures(ctx): Set<Feature>   [packages/domain/src/features/flags.ts]
+  → serialised into the SSR payload
+  → FeatureProvider → useFeature(Features.X): boolean
+```
+
+- Sources evaluated **market → plan → user**; first to exclude wins. **OFF = hidden** (no upsell).
+- The `Features` catalogue is the complete gateable surface; every new gateable feature is added there.
+- Resolved server-side so SSR / route guards / first paint are correct (no flash). Route-level gates
+  `beforeLoad`-redirect when disabled.
+- Today only the **market** rule cuts anything: the international (EN) market detaches the Italy-only
+  features (`siaeExport`, `fundraising`). `plan` is permissive (pre-billing); `userDisabled` is
+  designed-for but unwired. See `docs/conventions/feature-flags.md` + Spec 54.
+
 ---
 
 ## CSS Architecture
