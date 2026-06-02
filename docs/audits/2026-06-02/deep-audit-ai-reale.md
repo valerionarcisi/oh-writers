@@ -105,7 +105,7 @@ con stati che riportavano `drawerOpen:true` mentre `data-cesare="closed"`. Solo 
 sul giusto trigger `data-cesare` è passato a `expanded`. Possibile confusione di discoverability
 su quale apre la chat. Da verificare quale sia il trigger primario inteso.
 
-## 🟠 MEDIO-5 — Seed inconsistente: l'editor sceneggiatura mostra "1/1" vuoto pur avendo 9 scene seedate
+## ✅ MEDIO-5 (NON è un bug — falso positivo autoinflitto) — sceneggiatura mostra le 9 scene
 
 **Sintomo:** aprendo `/projects/<id>/screenplay` su uno screenplay seedato (Test User,
 progetti `…010`/`…011`), l'editor ProseMirror è vuoto (`.ProseMirror` innerText = "⋮"), la
@@ -119,8 +119,14 @@ seed popola `scenes` ma non `pm_doc`/`content` coerente, o il loader non ricostr
 dalle scene. In entrambi i casi **l'utente vede una sceneggiatura vuota dove dovrebbe esserci
 il suo lavoro** → esperienza rotta sul flusso centrale del prodotto.
 
-**ESITO TEST (fatto):** scritto "INT. TEST AUDIT - GIORNO" → autosave → reload → **persiste**.
-Quindi loader+save del contenuto utente FUNZIONANO. Il problema è **solo il seed**: popola la
+**ESITO FINALE (verificato):** dopo un reseed PULITO, tutti gli screenplay hanno `pm_doc`=35558
+(9 scene) e l'editor mostra correttamente **"Indice 1/9"** con il testo delle scene (`pmLen` 14575).
+Il "vuoto 1/1" visto in audit era **autoinflitto**: avevo scritto "INT. TEST AUDIT" + lanciato
+auto-spoglio su quegli screenplay nelle prove precedenti, e l'autosave aveva sovrascritto il
+`pm_doc` con il mio doc da 1 scena. `buildPmDocFromFountain` produce 9 scene correttamente
+(testato: pmDoc 33KB). **Nessun fix necessario** — seed + loader sono sani. (Ignora il testo qui sotto.)
+
+~~Il problema è **solo il seed**: popola la
 tabella `scenes` (9) ma lascia `pm_doc`≈194b e `content`≈whitespace, e l'editor monta dal
 `pm_doc` (vuoto), non aggrega `scenes`. Impatto reale: **i progetti demo/seedati appaiono con
 sceneggiatura vuota** (cattiva prima impressione), ma il flusso di scrittura reale è sano.
@@ -129,7 +135,7 @@ ricostruire il doc dalle `scenes` quando `pm_doc` è vuoto.
 
 Screenshot: `/tmp/audit-05-screenplay-content.png`, `/tmp/audit-06-screenplay-empty.png`.
 
-## 🟡 BASSO-6 — Doc drift: lo Stack in CLAUDE.md dice "Monaco (screenplay editing)" ma l'editor è ProseMirror
+## ✅ BASSO-6 (FIXATO doc) — Stack CLAUDE.md: Monaco→ProseMirror
 
 L'editor sceneggiatura è ProseMirror (`.ProseMirror`), non Monaco. La tabella Stack in
 CLAUDE.md elenca "Editor | Monaco (screenplay editing)". Aggiornare la doc (o confermare la
