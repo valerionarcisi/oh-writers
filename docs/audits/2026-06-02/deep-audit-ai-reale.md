@@ -156,13 +156,16 @@ chiamata parte, no crash) ma il TOTALE resta **0 €**: coerente con 0 elementi 
 all'utente (nessun messaggio "conferma prima gli elementi del breakdown"). UX da chiarire.
 Screenshot: `/tmp/audit-10-budget.png`, `/tmp/audit-11-budget-ai.png`.
 
-## 🟠 MEDIO-8 — Dialog di conferma (breakdown "Ri-spogliare", budget "Genera") senza testo
+## 🔴→✅ ALTO-8 (CORRETTO) — Il CTA "Ri-spogliare con AI" era un NO-OP (TODO non wired)
 
-Il dialog di conferma per le azioni AI distruttive/costose (ri-spoglio, genera budget) apre con
-i bottoni giusti (Genera/Annulla) ma **il corpo testuale è vuoto** (`[role=dialog].innerText` =
-""): manca titolo/descrizione che spieghino cosa sta per succedere (es. "Questo rigenererà lo
-spoglio e sovrascriverà gli elementi esistenti"). Visto sia su breakdown che su budget → è il
-componente dialog condiviso che non rende il contenuto in questo path. file: `ConfirmDialog`/`Modal`.
+**Rettifica:** in audit avevo letto un "dialog vuoto" — era una mis-osservazione (bottoni di
+overlay sovrapposti). Indagando il codice ho trovato il bug vero, **più grave**: il pulsante
+primario del breakdown **"Ri-spogliare con AI"** aveva `onClick: () => { /* TODO wire */ }`
+→ **non faceva NULLA**. Lo spoglio AI che sembrava funzionare in audit veniva dall'auto-spoglio
+on-mount, non dal bottone. (Il budget "Genera" invece È wired correttamente.)
+**FIX (fatto):** il CTA ora chiama `useStreamFullSpoglio(versionId).mutate({force:true})` dietro
+un ConfirmDialog (`breakdown.respoglio.*`, en/it), con banner di progresso + invalidazione query.
+file: `BreakdownPage.tsx` + `breakdown.ts` keys.
 
 ## ✅ PASS — Pagine secondarie (full-load): schedule, locations, opportunities, title-page, settings, shooting-plan, sessioni Cesare, versioni
 
