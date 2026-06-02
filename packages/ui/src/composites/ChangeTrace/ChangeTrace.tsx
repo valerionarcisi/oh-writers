@@ -231,6 +231,7 @@ export function ChangeTrace({
             type="button"
             className={styles.actionPrimary}
             data-state={showing ? "active" : "idle"}
+            data-testid="cesare-show-changes-btn"
           >
             {showLabel}
           </button>

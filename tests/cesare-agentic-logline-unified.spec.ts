@@ -50,7 +50,7 @@ async function openCesare(page: Page): Promise<void> {
   // floating chat.
   const trigger = page
     .getByTestId("bottom-dock")
-    .getByRole("button", { name: "Apri Cesare" });
+    .getByTestId("cesare-open-btn");
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
   await trigger.click();
   await page
@@ -64,7 +64,7 @@ async function sendCesare(page: Page, text: string): Promise<void> {
   await input.focus();
   await input.fill(text);
   await expect(input).toHaveValue(text, { timeout: 5_000 });
-  const sendBtn = page.getByRole("button", { name: "Invia messaggio" });
+  const sendBtn = page.getByTestId("cesare-send-btn");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click();
 }
@@ -146,7 +146,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
     // pill keeps the new logline (rollback lives in the Versions SplitDrawer).
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
     await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
+      trace.getByTestId("cesare-show-changes-btn"),
     ).toBeVisible({ timeout: 5_000 });
     await expect
       .poll(async () => readLoglineFromPill(page), { timeout: 5_000 })
@@ -177,7 +177,7 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
     // A version was auto-created (rollback lives in the Versions SplitDrawer);
     // the inline trace offers the transient "Mostra modifiche" flash, no Annulla.
     await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
+      trace.getByTestId("cesare-show-changes-btn"),
     ).toBeVisible({ timeout: 5_000 });
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });

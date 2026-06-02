@@ -120,7 +120,7 @@ test.describe("[OHW-038f] Spec 38 — Context Engineering", () => {
     await page.keyboard.press("Enter");
 
     // Wait for response
-    await expect(page.getByRole("button", { name: "Invia" })).toBeEnabled({
+    await expect(page.getByTestId("cesare-send-btn")).toBeEnabled({
       timeout: 30_000,
     });
 

@@ -31,6 +31,8 @@ export interface DropdownMenuItem {
   icon?: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Stable E2E hook for the rendered menu-item button (locale-independent). */
+  testId?: string;
 }
 
 export type DropdownMenuAlign = "start" | "end";
@@ -51,6 +53,9 @@ export interface DropdownMenuProps {
   triggerTitle?: string;
   /** Disables the trigger button (greys it out, blocks opening the menu). */
   triggerDisabled?: boolean;
+  /** Stable E2E hook for the trigger button (locale-independent). The
+   *  `data-testid` prop, by contrast, lands on the portalled menu list. */
+  triggerTestId?: string;
 }
 
 // ─── MenuItemInternal ────────────────────────────────────────────────────────
@@ -93,6 +98,7 @@ function MenuItemInternal({
         type="button"
         className={styles.item}
         disabled={isDisabled}
+        data-testid={raw.testId}
       >
         {raw.icon && (
           <span className={styles.icon} aria-hidden>
@@ -278,6 +284,7 @@ export function DropdownMenu({
   triggerLabel,
   triggerTitle,
   triggerDisabled = false,
+  triggerTestId,
   ...rest
 }: DropdownMenuProps) {
   const menuId = useId();
@@ -309,6 +316,7 @@ export function DropdownMenu({
         type="button"
         aria-label={triggerLabel}
         title={triggerTitle}
+        data-testid={triggerTestId}
         className={[styles.triggerWrap, triggerClassName]
           .filter(Boolean)
           .join(" ")}

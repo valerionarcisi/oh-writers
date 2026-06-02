@@ -77,7 +77,7 @@ test.describe("[OHW-051] Cesare history — derived markdown", () => {
     // The agentic-edit trace renders the "Aggiornato Soggetto" step + a
     // Mostra modifiche affordance — the persisted edit marker is what the
     // changelog markdown derives from.
-    await expect(conversation.getByText(/Mostra modifiche/i)).toBeVisible({
+    await expect(conversation.getByTestId("cesare-show-changes-btn")).toBeVisible({
       timeout: 15_000,
     });
 
@@ -93,7 +93,7 @@ test.describe("[OHW-051] Cesare history — derived markdown", () => {
         "Riscrivi il soggetto rendendolo più intenso",
       ),
     ).toBeVisible({ timeout: 15_000 });
-    await expect(conversationAfter.getByText(/Mostra modifiche/i)).toBeVisible({
+    await expect(conversationAfter.getByTestId("cesare-show-changes-btn")).toBeVisible({
       timeout: 15_000,
     });
   });

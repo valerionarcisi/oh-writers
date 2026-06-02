@@ -20,7 +20,7 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`);
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Nuova sessione Cesare" }).click();
+    await page.getByTestId("new-session-btn").click();
 
     await page.waitForURL(`**/projects/${TEAM_PROJECT_ID}/sessions/new`, {
       timeout: 10_000,
@@ -31,7 +31,7 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
 
     // Heading + glowing input + placeholder.
     await expect(
-      page.getByRole("heading", { name: "Cosa scriviamo oggi?" }),
+      page.getByTestId("new-session-heading"),
     ).toBeVisible();
     const input = page.getByTestId("new-session-input");
     await expect(input).toBeVisible();
@@ -107,7 +107,7 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
       timeout: 10_000,
     });
     await expect(
-      page.getByRole("heading", { name: "Cosa scriviamo oggi?" }),
+      page.getByTestId("new-session-heading"),
     ).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.body.getAttribute("data-shell")))

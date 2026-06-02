@@ -10,7 +10,7 @@ import { BASE_URL } from "../fixtures";
 export async function openCesareSheet(page: Page): Promise<void> {
   const trigger = page
     .getByTestId("bottom-dock")
-    .getByRole("button", { name: "Apri Cesare" });
+    .getByTestId("cesare-open-btn");
   await expect(trigger).toBeVisible({ timeout: 15_000 });
   await trigger.click();
   const input = page.getByPlaceholder("Chiedi a Cesare…");
@@ -33,10 +33,10 @@ export async function openCesareSheet(page: Page): Promise<void> {
  */
 export async function closeCesareSheet(page: Page): Promise<void> {
   const drawer = page.getByTestId("cesare-drawer");
-  // The expanded drawer header exposes a close control labelled "Chiudi"
-  // (the peek row uses "Chiudi Cesare"); match either, scoped to the drawer.
+  // The expanded drawer header and the minimized peek row each expose their
+  // own close control; match either, scoped to the drawer.
   const closeBtn = drawer
-    .getByRole("button", { name: /^Chiudi( Cesare)?$/ })
+    .getByTestId(/^cesare-(close|peek-close)-btn$/)
     .first();
   if (await closeBtn.isVisible().catch(() => false)) {
     await closeBtn.click();
@@ -82,14 +82,13 @@ export async function sendCesareMessage(
   // Send button: same viewport issue as the textarea — Playwright's
   // click viewport check fires even with `force: true` on this CI
   // version. Dispatch the click event in JS to bypass coords entirely.
-  // Locate via the explicit aria-label on the send button. We DON'T use
-  // `getByRole("button", { name: "Invia" })` because the Cesare sheet has
+  // Locate via the stable testid on the send button. We DON'T use
+  // `getByRole("button", { name: … })` because the Cesare sheet has
   // `aria-hidden={!isOpen}` on its `role="complementary"` ancestor, and on
   // slow CI runners Playwright's accessibility-tree query can race with the
-  // open transition and skip the subtree. A plain CSS attribute selector
+  // open transition and skip the subtree. A plain testid attribute selector
   // queries the DOM directly and is immune to ARIA-tree timing.
-  // Post-Wave-1: the send button's aria-label is "Invia messaggio".
-  const sendBtn = page.locator('[aria-label="Invia messaggio"]').first();
+  const sendBtn = page.locator('[data-testid="cesare-send-btn"]').first();
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.dispatchEvent("click");
 }

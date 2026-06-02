@@ -4,13 +4,11 @@ import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { resetCesareState } from "./helpers/cesare";
 import { expect as pwExpect, type Page } from "@playwright/test";
 
-// The shell refactor relabelled the dock pill ("Apri Cesare") and the composer
-// submit button ("Invia messaggio"); the shared cesare helpers still match the
-// old labels, so we drive the drawer locally with the current labels.
+// This file drives the drawer with a local helper (rather than the shared
+// cesare helpers) so it can wait on the streamed roundtrip directly. Locators
+// use stable testids so they stay locale-independent under i18n.
 async function openCesare(page: Page): Promise<void> {
-  const trigger = page
-    .getByRole("button", { name: /Apri Cesare|^Cesare(\s—.*)?$/ })
-    .first();
+  const trigger = page.getByTestId("cesare-open-btn").first();
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
   await trigger.click();
   const input = page.getByPlaceholder("Chiedi a Cesare…");
@@ -24,9 +22,7 @@ async function sendCesareMessage(page: Page, text: string): Promise<void> {
   await input.fill(text);
   await input.dispatchEvent("input");
   await pwExpect(input).toHaveValue(text, { timeout: 5_000 });
-  const sendBtn = page
-    .locator('[aria-label="Invia messaggio"], [aria-label="Invia"]')
-    .first();
+  const sendBtn = page.getByTestId("cesare-send-btn").first();
   await pwExpect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.dispatchEvent("click");
 }

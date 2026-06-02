@@ -120,7 +120,7 @@ test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 90_000 });
     await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
+      trace.getByTestId("cesare-show-changes-btn"),
     ).toBeVisible({ timeout: 10_000 });
     await expect(trace).toContainText(/trattamento/i);
 

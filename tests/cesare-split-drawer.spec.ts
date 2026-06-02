@@ -29,7 +29,7 @@ const readMainWidth = async (page: import("@playwright/test").Page) =>
 const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
   const drawer = page.getByTestId("cesare-drawer");
   await expect(async () => {
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
     await expect(drawer).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
   await page.getByLabel("Apri come colonna").click();

@@ -27,7 +27,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible({ timeout: 5_000 });
 
-    await dock.getByLabel("Apri Cesare").click();
+    await dock.getByTestId("cesare-open-btn").click();
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
@@ -36,7 +36,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
     // Close again — dock returns
     await page
       .getByTestId("cesare-drawer")
-      .getByRole("button", { name: "Chiudi" })
+      .getByTestId("cesare-close-btn")
       .click();
     await expect(dock).toBeVisible({ timeout: 3_000 });
   });
@@ -51,7 +51,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
 
     const account = page.getByTestId("rail-account");
     await expect(account).toBeVisible({ timeout: 10_000 });
-    await account.getByRole("button", { name: /Notifiche/ }).click();
+    await account.getByTestId("notifications-btn").click();
 
     // The drawer mounts via SplitDrawer with testId="notification-center-drawer"
     await expect(page.getByTestId("notification-center-drawer")).toBeVisible({
@@ -69,7 +69,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
 
     // Open Cesare — the drawer header is minimal (no bell), and the bell still
     // lives in the rail footer (single source).
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
     await expect(
@@ -78,7 +78,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
 
     await page
       .getByTestId("rail-account")
-      .getByRole("button", { name: /Notifiche/ })
+      .getByTestId("notifications-btn")
       .click();
 
     await expect(page.getByTestId("notification-center-drawer")).toBeVisible({

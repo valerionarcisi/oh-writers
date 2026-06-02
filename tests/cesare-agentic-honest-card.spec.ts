@@ -111,7 +111,7 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
     // "Mostra modifiche" over a tool that did nothing.
     await expect(page.getByTestId("cesare-change-trace")).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "Mostra modifiche" }),
+      page.getByTestId("cesare-show-changes-btn"),
     ).toHaveCount(0);
 
     // DB-level proof: nothing was written.
@@ -140,7 +140,7 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 60_000 });
     await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
+      trace.getByTestId("cesare-show-changes-btn"),
     ).toBeVisible({ timeout: 10_000 });
 
     // F-M1: the card titles the actually-edited entity. It must say "Logline"

@@ -428,6 +428,7 @@ function AppLayout() {
       </AppShell>
       <ConfirmDialog
         isOpen={sessionPendingDelete !== null}
+        testId="session-delete-dialog"
         title="Elimina sessione"
         message={
           sessionPendingDelete

@@ -35,7 +35,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     // ── closed → expanded ─────────────────────────────────────────────────
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible({ timeout: 5_000 });
-    const cesareTrigger = dock.getByLabel("Apri Cesare");
+    const cesareTrigger = dock.getByTestId("cesare-open-btn");
     await cesareTrigger.click();
 
     // Cesare opens via the AppShell legacy `cesareOpen` pathway. Body should
@@ -53,7 +53,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     // ── expanded → peek (via minimize button on the drawer header) ────────
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
-    await drawer.getByRole("button", { name: "Minimizza" }).click();
+    await drawer.getByTestId("cesare-minimize-btn").click();
 
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
@@ -66,8 +66,8 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     ).toBe(baselineWidth);
 
     // ── peek → expanded (clicking the peek row cycles back up) ────────────
-    // The peek row exposes an "Espandi" affordance. Use the header button.
-    await drawer.getByRole("button", { name: "Espandi" }).first().click();
+    // In peek state the peek row exposes its own expand affordance.
+    await drawer.getByTestId("cesare-peek-expand-btn").first().click();
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
@@ -76,8 +76,8 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     // The drawer cycles expanded → expanded-split → full. AppShell mirrors
     // expanded-split onto body[data-cesare]="expanded", so we click "↗" until
     // the drawer's own data-state reaches "full".
-    await drawer.getByRole("button", { name: "Espandi" }).first().click();
-    await drawer.getByRole("button", { name: "Espandi" }).first().click();
+    await drawer.getByTestId("cesare-expand-btn").first().click();
+    await drawer.getByTestId("cesare-expand-btn").first().click();
     await expect
       .poll(async () =>
         page.evaluate(
@@ -107,7 +107,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     expect(editorLeft).toBeGreaterThanOrEqual(0);
 
     // ── full → closed (×) ─────────────────────────────────────────────────
-    await drawer.getByRole("button", { name: "Chiudi" }).click();
+    await drawer.getByTestId("cesare-close-btn").click();
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("closed");
@@ -130,7 +130,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible();
 
-    await dock.getByLabel("Apri Cesare").click();
+    await dock.getByTestId("cesare-open-btn").click();
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
@@ -142,7 +142,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     // Close again -> dock returns
     await page
       .getByTestId("cesare-drawer")
-      .getByRole("button", { name: "Chiudi" })
+      .getByTestId("cesare-close-btn")
       .click();
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))

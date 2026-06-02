@@ -16,7 +16,7 @@ import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 async function openCesare(page: Page): Promise<void> {
   const trigger = page
     .getByTestId("bottom-dock")
-    .getByRole("button", { name: "Apri Cesare" });
+    .getByTestId("cesare-open-btn");
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
   await trigger.click();
   await page
@@ -30,7 +30,7 @@ async function sendCesare(page: Page, text: string): Promise<void> {
   await input.focus();
   await input.fill(text);
   await expect(input).toHaveValue(text, { timeout: 5_000 });
-  const sendBtn = page.getByRole("button", { name: "Invia messaggio" });
+  const sendBtn = page.getByTestId("cesare-send-btn");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click();
 }

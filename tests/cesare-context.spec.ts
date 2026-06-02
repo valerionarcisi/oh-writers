@@ -34,7 +34,7 @@ async function waitForCesareReply(
   page: typeof test.prototype.page,
 ): Promise<string> {
   // Send button re-enables when the response is complete
-  await expect(page.getByRole("button", { name: "Invia" })).toBeEnabled({
+  await expect(page.getByTestId("cesare-send-btn")).toBeEnabled({
     timeout: 60_000,
   });
   const messages = page.locator('[role="log"] p, [role="log"] li');
