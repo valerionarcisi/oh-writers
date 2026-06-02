@@ -1,4 +1,7 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
+import { useButton, useMenu, useMenuItem, useMenuTrigger } from "react-aria";
+import { Item, useMenuTriggerState, useTreeState } from "react-stately";
+import type { Node, TreeState } from "react-stately";
 import styles from "./VersionTrigger.module.css";
 import { Icon } from "../../icons/Icon";
 import { Popover } from "../Popover/Popover";
@@ -25,6 +28,121 @@ export type VersionTriggerProps = {
   onClick?: () => void;
 };
 
+// ─── MenuItemInternal ────────────────────────────────────────────────────────
+
+interface MenuItemInternalProps {
+  node: Node<VersionMenuItem>;
+  itemData: VersionMenuItem;
+  state: TreeState<VersionMenuItem>;
+  onClose: () => void;
+  onAction: (id: string) => void;
+}
+
+function MenuItemInternal({
+  node,
+  itemData,
+  state,
+  onClose,
+  onAction,
+}: MenuItemInternalProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const { menuItemProps } = useMenuItem(
+    {
+      key: node.key,
+      onAction: () => onAction(String(node.key)),
+      onClose,
+    },
+    state,
+    ref,
+  );
+
+  return (
+    <li role="none">
+      <button
+        {...menuItemProps}
+        ref={ref}
+        type="button"
+        className={[
+          styles.menuItem,
+          itemData.tone === "muted" ? styles.menuItemMuted : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {itemData.label}
+      </button>
+    </li>
+  );
+}
+
+// ─── MenuList ────────────────────────────────────────────────────────────────
+
+interface MenuListProps {
+  items: ReadonlyArray<VersionMenuItem>;
+  onClose: () => void;
+  /** ARIA props forwarded from useMenuTrigger. */
+  ariaMenuProps: object;
+}
+
+/**
+ * Menu body rendered inside the (already overlay-managed) Popover. Builds the
+ * react-stately TreeState that useMenu / useMenuItem require, so arrow-key
+ * navigation, type-ahead, Home/End and focus wrapping come from react-aria.
+ */
+function MenuList({ items, onClose, ariaMenuProps }: MenuListProps) {
+  const menuRef = useRef<HTMLUListElement>(null);
+
+  const itemMapRef = useRef<Map<string, VersionMenuItem>>(new Map());
+  itemMapRef.current = new Map(items.map((it) => [it.id, it]));
+
+  const treeState = useTreeState<VersionMenuItem>({
+    selectionMode: "none",
+    children: items.map((item) => (
+      <Item key={item.id} textValue={item.label}>
+        {item.label}
+      </Item>
+    )),
+    items,
+  });
+
+  const { menuProps } = useMenu<VersionMenuItem>(
+    { ...ariaMenuProps, onClose, autoFocus: "first", shouldFocusWrap: true },
+    treeState,
+    menuRef as RefObject<HTMLElement>,
+  );
+
+  // The enclosing Popover's FocusScope autoFocuses the menu container (the
+  // <ul>), which beats useMenu's autoFocus. Move focus onto the first item so a
+  // freshly opened menu behaves like a standard menu (first ArrowDown advances).
+  useLayoutEffect(() => {
+    const firstItem =
+      menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    firstItem?.focus();
+  }, []);
+
+  const handleAction = (id: string) => {
+    itemMapRef.current.get(id)?.onSelect();
+    onClose();
+  };
+
+  return (
+    <ul {...menuProps} ref={menuRef} className={styles.menuList}>
+      {[...treeState.collection].map((node) => (
+        <MenuItemInternal
+          key={node.key}
+          node={node}
+          itemData={itemMapRef.current.get(String(node.key))!}
+          state={treeState}
+          onClose={onClose}
+          onAction={handleAction}
+        />
+      ))}
+    </ul>
+  );
+}
+
+// ─── VersionTrigger ────────────────────────────────────────────────────────────
+
 export function VersionTrigger({
   variant = "ghost",
   label = "Versioni",
@@ -32,33 +150,38 @@ export function VersionTrigger({
   menuItems,
   onClick,
 }: VersionTriggerProps) {
-  const [isOpen, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const hasMenu = !!menuItems && menuItems.length > 0;
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const displayLabel =
     variant === "pill" && versionLabel ? versionLabel : label;
 
-  const handleTriggerClick = () => {
-    if (menuItems && menuItems.length > 0) {
-      setOpen((v) => !v);
-    } else if (onClick) {
-      onClick();
-    }
-  };
+  const triggerState = useMenuTriggerState({});
+  const { menuTriggerProps, menuProps } = useMenuTrigger<VersionMenuItem>(
+    { type: "menu" },
+    triggerState,
+    triggerRef,
+  );
 
-  const handleSelect = (item: VersionMenuItem) => {
-    item.onSelect();
-    setOpen(false);
-  };
+  // In menu mode the trigger toggles the react-stately menu state; otherwise it
+  // is a plain action button that calls onClick. Both go through useButton so
+  // press handling and ARIA wiring stay consistent with the rest of the DS.
+  const { buttonProps } = useButton(
+    hasMenu
+      ? menuTriggerProps
+      : { onPress: () => onClick?.(), "aria-haspopup": "dialog" as const },
+    triggerRef,
+  );
 
   return (
-    <div ref={wrapRef} className={styles.wrap}>
+    <div className={styles.wrap}>
       <button
+        {...buttonProps}
+        ref={triggerRef}
         type="button"
         className={styles.trigger}
         data-variant={variant}
-        onClick={handleTriggerClick}
-        aria-haspopup={menuItems ? "menu" : "dialog"}
-        aria-expanded={menuItems ? isOpen : undefined}
+        aria-haspopup={hasMenu ? "menu" : "dialog"}
+        aria-expanded={hasMenu ? triggerState.isOpen : undefined}
       >
         <span className={styles.label}>{displayLabel}</span>
         {variant === "pill" ? (
@@ -66,27 +189,19 @@ export function VersionTrigger({
         ) : null}
       </button>
 
-      {menuItems && menuItems.length > 0 ? (
+      {hasMenu ? (
         <Popover
-          isOpen={isOpen}
-          onClose={() => setOpen(false)}
+          isOpen={triggerState.isOpen}
+          onClose={() => triggerState.close()}
           placement="bottom-end"
           width={220}
           className={styles.menu}
         >
-          <div role="menu" className={styles.menuList}>
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="menuitem"
-                className={`${styles.menuItem} ${item.tone === "muted" ? styles.menuItemMuted : ""}`}
-                onClick={() => handleSelect(item)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+          <MenuList
+            items={menuItems}
+            onClose={() => triggerState.close()}
+            ariaMenuProps={menuProps}
+          />
         </Popover>
       ) : null}
     </div>
