@@ -288,6 +288,13 @@
       "when": 1779000000006,
       "tag": "0035_cesare_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779000000007,
+      "tag": "0036_add_users_locale",
+      "breakpoints": true
     }
   ]
 }

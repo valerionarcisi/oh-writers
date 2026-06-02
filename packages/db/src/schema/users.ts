@@ -7,6 +7,9 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
+  // UI locale. New (international) users default to English; the i18n migration
+  // backfills existing rows to 'it' to preserve the current Italian product.
+  locale: text("locale", { enum: ["it", "en"] }).notNull().default("en"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

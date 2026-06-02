@@ -241,6 +241,7 @@ export async function seed() {
       email: TEST_EMAIL,
       name: TEST_NAME,
       emailVerified: true,
+      locale: "it",
     })
     .onConflictDoNothing();
 
@@ -395,6 +396,7 @@ export async function seed() {
       email: TEST_VIEWER_EMAIL,
       name: TEST_VIEWER_NAME,
       emailVerified: true,
+      locale: "it",
     })
     .onConflictDoNothing();
 
@@ -524,12 +526,14 @@ export async function seed() {
         email: VALERIO_EMAIL,
         name: VALERIO_NAME,
         emailVerified: true,
+        locale: "it",
       },
       {
         id: VALERIO_VIEWER_ID,
         email: VALERIO_VIEWER_EMAIL,
         name: VALERIO_VIEWER_NAME,
         emailVerified: true,
+        locale: "it",
       },
     ])
     .onConflictDoNothing();
