@@ -10,6 +10,8 @@ export interface ConfirmDialogProps {
   readonly destructive?: boolean;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
+  /** Stable E2E hook forwarded to the underlying <dialog>. */
+  readonly testId?: string;
 }
 
 export function ConfirmDialog({
@@ -21,6 +23,7 @@ export function ConfirmDialog({
   destructive = false,
   onConfirm,
   onCancel,
+  testId,
 }: ConfirmDialogProps) {
   return (
     <Dialog
@@ -28,15 +31,21 @@ export function ConfirmDialog({
       onClose={onCancel}
       title={title}
       isDismissable={false}
+      data-testid={testId}
       actions={
         <>
-          <Button variant="ghost" onClick={onCancel}>
+          <Button
+            variant="ghost"
+            onClick={onCancel}
+            data-testid="confirm-dialog-cancel-btn"
+          >
             {cancelLabel}
           </Button>
           <Button
             variant={destructive ? "danger" : "primary"}
             onClick={onConfirm}
             autoFocus
+            data-testid="confirm-dialog-confirm-btn"
           >
             {confirmLabel}
           </Button>

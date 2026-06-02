@@ -263,9 +263,20 @@ function SessionRow({
   // Build the …-menu items from the wired affordances. Rename starts the inline
   // edit; delete asks the consumer to open the confirmation modal.
   const menuItems = [
-    onRename ? { label: "Rinomina", onClick: () => setEditing(true) } : null,
-    onDelete ? { label: "Elimina", onClick: onDelete } : null,
-  ].filter((it): it is { label: string; onClick: () => void } => it !== null);
+    onRename
+      ? {
+          label: "Rinomina",
+          onClick: () => setEditing(true),
+          testId: "session-rename-item",
+        }
+      : null,
+    onDelete
+      ? { label: "Elimina", onClick: onDelete, testId: "session-delete-item" }
+      : null,
+  ].filter(
+    (it): it is { label: string; onClick: () => void; testId: string } =>
+      it !== null,
+  );
   const hasMenu = menuItems.length > 0;
 
   if (isEditing && onRename) {
@@ -314,6 +325,7 @@ function SessionRow({
           triggerLabel={`Azioni sessione: ${session.title}`}
           triggerClassName={styles.sessionMoreBtn}
           triggerTitle="Azioni sessione"
+          triggerTestId="session-actions-btn"
           data-testid="session-actions-menu"
           items={menuItems}
         />
@@ -339,7 +351,8 @@ function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
     },
     ref,
   );
-  if (!onOpen) return <span>Sessioni Cesare</span>;
+  if (!onOpen)
+    return <span data-testid="rail-sessions-title">Sessioni Cesare</span>;
   return (
     <button
       ref={ref}
@@ -348,7 +361,7 @@ function SessionsSectionTitle({ onOpen }: { onOpen?: () => void }) {
       data-testid="rail-cesare-entry"
     >
       <RailGlyph icon="agent-spark" />
-      <span>Sessioni Cesare</span>
+      <span data-testid="rail-sessions-title">Sessioni Cesare</span>
     </button>
   );
 }
@@ -432,6 +445,7 @@ function AccountRow({ account }: { account: RailAccountActions }) {
         className={styles.accountBtn}
         title="Notifiche"
         data-rail-account="bell"
+        data-testid="notifications-btn"
       >
         <Icon name="bell" size={15} aria-hidden={true} />
         {account.hasUnreadNotifications && (
@@ -444,6 +458,7 @@ function AccountRow({ account }: { account: RailAccountActions }) {
         className={[styles.accountBtn, styles.accountAvatar].join(" ")}
         title="Profilo"
         data-rail-account="avatar"
+        data-testid="profile-btn"
       >
         <span aria-hidden="true">{account.avatarLabel}</span>
       </button>
@@ -453,6 +468,7 @@ function AccountRow({ account }: { account: RailAccountActions }) {
         className={styles.accountBtn}
         title="Impostazioni"
         data-rail-account="gear"
+        data-testid="settings-btn"
       >
         <GearGlyph />
       </button>
@@ -587,6 +603,7 @@ export function LeftRail({
               className={styles.newSession}
               onClick={onSessionNew}
               aria-label="Nuova sessione Cesare"
+              data-testid="new-session-btn"
             >
               + Nuova
             </button>

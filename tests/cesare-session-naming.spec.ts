@@ -92,9 +92,9 @@ test.describe("[OHW-053] Session naming + inline rename + delete", () => {
     // Scope to the central composer (the Cesare drawer mounts a second one).
     const composer = page.getByTestId("session-composer");
     await composer
-      .getByLabel("Composer Cesare")
+      .getByTestId("cesare-composer-input")
       .fill("Va bene così, procediamo");
-    await composer.getByRole("button", { name: "Invia messaggio" }).click();
+    await composer.getByTestId("cesare-send-btn").click();
 
     // Give the second turn time to settle + invalidate; the title is unchanged.
     await expect
@@ -115,8 +115,8 @@ test.describe("[OHW-053] Session naming + inline rename + delete", () => {
     await expect(row).toBeVisible({ timeout: 15_000 });
 
     // Open the …-menu and pick Rinomina.
-    await row.getByRole("button", { name: /Azioni sessione/ }).click();
-    await page.getByRole("menuitem", { name: "Rinomina" }).click();
+    await row.getByTestId("session-actions-btn").click();
+    await page.getByTestId("session-rename-item").click();
 
     const input = page.getByTestId("session-rename-input");
     await expect(input).toBeVisible();
@@ -138,9 +138,9 @@ test.describe("[OHW-053] Session naming + inline rename + delete", () => {
 
     // Esc cancels a subsequent edit (title stays).
     await railRow(page, sessionId)
-      .getByRole("button", { name: /Azioni sessione/ })
+      .getByTestId("session-actions-btn")
       .click();
-    await page.getByRole("menuitem", { name: "Rinomina" }).click();
+    await page.getByTestId("session-rename-item").click();
     const input2 = page.getByTestId("session-rename-input");
     await expect(input2).toBeVisible();
     await input2.fill("QUESTO NON DEVE RESTARE");
@@ -163,27 +163,27 @@ test.describe("[OHW-053] Session naming + inline rename + delete", () => {
     await expect(row).toBeVisible({ timeout: 15_000 });
 
     // Open the …-menu and pick Elimina → the confirmation modal opens.
-    await row.getByRole("button", { name: /Azioni sessione/ }).click();
-    await page.getByRole("menuitem", { name: "Elimina" }).click();
+    await row.getByTestId("session-actions-btn").click();
+    await page.getByTestId("session-delete-item").click();
 
-    const dialog = page.getByRole("dialog", { name: "Elimina sessione" });
+    const dialog = page.getByTestId("session-delete-dialog");
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await expect(dialog).toContainText("L'azione non è reversibile.");
 
     // Annulla closes the modal WITHOUT deleting the session.
-    await dialog.getByRole("button", { name: "Annulla" }).click();
+    await dialog.getByTestId("confirm-dialog-cancel-btn").click();
     await expect(dialog).toBeHidden({ timeout: 5_000 });
     await expect(railRow(page, sessionId)).toBeVisible();
 
     // Re-open the modal and confirm — the row leaves the list and, because the
     // session is the open one, the route navigates back to the landing.
     await railRow(page, sessionId)
-      .getByRole("button", { name: /Azioni sessione/ })
+      .getByTestId("session-actions-btn")
       .click();
-    await page.getByRole("menuitem", { name: "Elimina" }).click();
-    const dialog2 = page.getByRole("dialog", { name: "Elimina sessione" });
+    await page.getByTestId("session-delete-item").click();
+    const dialog2 = page.getByTestId("session-delete-dialog");
     await expect(dialog2).toBeVisible({ timeout: 5_000 });
-    await dialog2.getByRole("button", { name: "Elimina" }).click();
+    await dialog2.getByTestId("confirm-dialog-confirm-btn").click();
 
     await page.waitForURL(`**/projects/${TEAM_PROJECT_ID}/sessions`, {
       timeout: 15_000,

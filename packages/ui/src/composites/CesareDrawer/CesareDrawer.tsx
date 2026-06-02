@@ -150,11 +150,13 @@ function HeaderButton({
   label,
   icon,
   isDanger,
+  testId,
 }: {
   onPress: () => void;
   label: string;
   icon: ReactNode;
   isDanger?: boolean;
+  testId?: string;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const { buttonProps } = useButton({ onPress, "aria-label": label }, ref);
@@ -167,6 +169,7 @@ function HeaderButton({
         .filter(Boolean)
         .join(" ")}
       title={label}
+      data-testid={testId}
     >
       {icon}
     </button>
@@ -217,6 +220,7 @@ function PeekRow({
       {...expandProps}
       type="button"
       className={styles.peekRow}
+      data-testid="cesare-peek-expand-btn"
     >
       <span className={styles.peekGlow} aria-hidden="true" />
       <span className={styles.peekLabel}>Cesare</span>
@@ -226,6 +230,7 @@ function PeekRow({
         {...closeProps}
         type="button"
         className={styles.peekClose}
+        data-testid="cesare-peek-close-btn"
         onClick={(e) => {
           e.stopPropagation();
           onClose();
@@ -422,6 +427,7 @@ export function CesareDrawer({
                 onClick={onSessionSelectorClick}
                 aria-label="Seleziona sessione Cesare"
                 aria-haspopup="listbox"
+                data-testid="cesare-session-selector"
               >
                 {sessions.find((s) => s.id === activeSessionId)?.title ??
                   "Sessione"}
@@ -461,6 +467,7 @@ export function CesareDrawer({
                 onPress={onCycle}
                 label="Espandi"
                 icon={<span aria-hidden="true">↗</span>}
+                testId="cesare-expand-btn"
               />
             )}
             {/* "Open as split column" — promotes the floating chat into the
@@ -477,6 +484,7 @@ export function CesareDrawer({
                 onPress={onPeek}
                 label="Minimizza"
                 icon={<span aria-hidden="true">−</span>}
+                testId="cesare-minimize-btn"
               />
             )}
             <HeaderButton
@@ -484,6 +492,7 @@ export function CesareDrawer({
               label="Chiudi"
               icon={<span aria-hidden="true">×</span>}
               isDanger
+              testId="cesare-close-btn"
             />
           </div>
         </header>
@@ -578,6 +587,7 @@ export function CesareDrawer({
                     onClick={composer.onSubmit}
                     disabled={composer.value.trim().length === 0}
                     aria-label="Invia messaggio"
+                    data-testid="cesare-send-btn"
                   >
                     ↑
                   </button>

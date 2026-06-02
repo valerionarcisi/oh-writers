@@ -110,7 +110,7 @@ test.describe("[Audit ALTO #3] write-from-zero chain", () => {
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 90_000 });
     await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
+      trace.getByTestId("cesare-show-changes-btn"),
     ).toBeVisible({ timeout: 10_000 });
 
     // DB-level proof (Bug #3 core): the soggetto now actually has content — no

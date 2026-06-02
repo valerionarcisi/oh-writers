@@ -20,14 +20,14 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     });
 
     // Open Cesare from the dock
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
     // The session selector inside the drawer header. If sessions data hasn't
     // loaded yet, the selector may render with a placeholder — we just check
     // the aria-label is present.
-    const selector = drawer.getByLabel("Seleziona sessione Cesare");
+    const selector = drawer.getByTestId("cesare-session-selector");
     await expect(selector).toBeVisible({ timeout: 5_000 });
   });
 
@@ -39,12 +39,12 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
     await expect(page.getByTestId("cesare-drawer")).toBeVisible();
 
     // Snapshot the active session title (from the drawer's session selector)
     const drawer = page.getByTestId("cesare-drawer");
-    const selector = drawer.getByLabel("Seleziona sessione Cesare");
+    const selector = drawer.getByTestId("cesare-session-selector");
     await expect(selector).toBeVisible({ timeout: 5_000 });
     const initialTitle = (await selector.textContent()) ?? "";
     expect(initialTitle.length).toBeGreaterThan(0);
@@ -58,7 +58,7 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     const drawer2 = page.getByTestId("cesare-drawer");
     await expect(drawer2).toBeVisible({ timeout: 5_000 });
     const titleAfterNav =
-      (await drawer2.getByLabel("Seleziona sessione Cesare").textContent()) ??
+      (await drawer2.getByTestId("cesare-session-selector").textContent()) ??
       "";
     expect(
       titleAfterNav,
@@ -73,29 +73,29 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
     const initialTitle =
-      (await drawer.getByLabel("Seleziona sessione Cesare").textContent()) ??
+      (await drawer.getByTestId("cesare-session-selector").textContent()) ??
       "";
 
     // Close
-    await drawer.getByRole("button", { name: "Chiudi" }).click();
+    await drawer.getByTestId("cesare-close-btn").click();
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("closed");
 
     // Reopen
-    await page.getByTestId("bottom-dock").getByLabel("Apri Cesare").click();
+    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
     await expect(page.getByTestId("cesare-drawer")).toBeVisible({
       timeout: 5_000,
     });
     const reopenedTitle =
       (await page
         .getByTestId("cesare-drawer")
-        .getByLabel("Seleziona sessione Cesare")
+        .getByTestId("cesare-session-selector")
         .textContent()) ?? "";
     expect(reopenedTitle).toBe(initialTitle);
   });

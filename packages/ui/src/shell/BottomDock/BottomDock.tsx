@@ -37,6 +37,7 @@ function CesareButton({
       className={styles.cesare}
       title="Apri Cesare"
       data-cesare-trigger=""
+      data-testid="cesare-open-btn"
     >
       <span className={styles.cesareIcon} aria-hidden="true" />
       {showLabel && <span className={styles.cesareLabel}>Cesare</span>}

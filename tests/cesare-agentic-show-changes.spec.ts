@@ -36,7 +36,7 @@ async function openCesare(page: Page): Promise<void> {
   // bottom dock so we open the floating chat, not the rail sessions header.
   const trigger = page
     .getByTestId("bottom-dock")
-    .getByRole("button", { name: "Apri Cesare" });
+    .getByTestId("cesare-open-btn");
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
   await trigger.click();
   await page
@@ -50,7 +50,7 @@ async function sendCesare(page: Page, text: string): Promise<void> {
   await input.focus();
   await input.fill(text);
   await expect(input).toHaveValue(text, { timeout: 5_000 });
-  const sendBtn = page.getByRole("button", { name: "Invia messaggio" });
+  const sendBtn = page.getByTestId("cesare-send-btn");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click();
 }
@@ -98,7 +98,7 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await expect(trace).toHaveAttribute("data-state", "idle");
     await expect(body).not.toHaveAttribute("data-split-drawer", /open|full/);
 
-    const showBtn = trace.getByRole("button", { name: "Mostra modifiche" });
+    const showBtn = trace.getByTestId("cesare-show-changes-btn");
     await expect(showBtn).toBeVisible();
     await showBtn.click();
 
@@ -112,7 +112,7 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     await expect(flash).toHaveCount(0, { timeout: 6_000 });
 
     // Nascondi → red previous-text flash, then fades. The doc keeps the v2.
-    await trace.getByRole("button", { name: "Nascondi modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
     const peek = page.getByTestId("cesare-live-diff-inline");
     await expect(peek).toBeVisible({ timeout: 5_000 });
     await expect(peek).toHaveAttribute("data-flash-mode", "nascondi");
@@ -123,12 +123,12 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     // ── BRANCH 2: FULL → SplitDrawer with the target page diff ─────────────
     // "Espandi" (the ↗ header control) walks expanded → full; in full the panel
     // covers the doc so "Mostra modifiche" must route to the SplitDrawer.
-    await page.getByRole("button", { name: "Espandi", exact: true }).click();
+    await page.getByTestId("cesare-expand-btn").click();
     await expect(body).toHaveAttribute("data-cesare", "full", {
       timeout: 5_000,
     });
 
-    await trace.getByRole("button", { name: "Mostra modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
 
     // SplitDrawer opened (body[data-split-drawer] set by the shell).
     await expect(body).toHaveAttribute("data-split-drawer", /open|full/, {
@@ -140,7 +140,7 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
     });
 
     // Nascondi modifiche → SplitDrawer closes.
-    await trace.getByRole("button", { name: "Nascondi modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
     await expect(body).not.toHaveAttribute("data-split-drawer", /open|full/, {
       timeout: 5_000,
     });
@@ -178,7 +178,7 @@ test.describe("[Spec 47-A6] Cesare Mostra/Nascondi modifiche end-to-end", () => 
 
     await expect(page.getByTestId("cesare-change-trace")).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "Mostra modifiche" }),
+      page.getByTestId("cesare-show-changes-btn"),
     ).toHaveCount(0);
     // No flash was armed and no split opened.
     await expect(page.getByTestId("cesare-live-diff-inline")).toHaveCount(0);

@@ -109,7 +109,9 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
         <span className={styles.brandGlyph} aria-hidden="true">
           ✦
         </span>
-        <h1 className={styles.heading}>Cosa scriviamo oggi?</h1>
+        <h1 className={styles.heading} data-testid="new-session-heading">
+          Cosa scriviamo oggi?
+        </h1>
         <p className={styles.subheading}>
           Cesare ti aiuta a scrivere e revisionare il tuo film, passo dopo
           passo.

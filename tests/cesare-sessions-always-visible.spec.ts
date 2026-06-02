@@ -28,7 +28,9 @@ test.describe("[Spec 44 F1] Sessioni Cesare always visible in LeftRail", () => {
       '[data-rail-section="sessions"]',
     );
     await expect(sessionsSection).toBeVisible({ timeout: 10_000 });
-    await expect(authenticatedPage.getByText("Sessioni Cesare")).toBeVisible();
+    await expect(
+      authenticatedPage.getByTestId("rail-sessions-title").first(),
+    ).toBeVisible();
   });
 
   test("[OHW-044-F1] sessions section stays visible after opening AND closing Cesare", async ({

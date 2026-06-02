@@ -22,52 +22,32 @@ test.describe("[OHW-047-A3] Cesare header is Notion-minimal; account row in rail
     // ── The rail footer account row is the single home for bell/avatar/gear ──
     const account = page.getByTestId("rail-account");
     await expect(account).toBeVisible({ timeout: 10_000 });
-    await expect(
-      account.getByRole("button", { name: "Notifiche" }),
-    ).toBeVisible();
-    await expect(
-      account.getByRole("button", { name: "Profilo" }),
-    ).toBeVisible();
-    await expect(
-      account.getByRole("button", { name: "Impostazioni" }),
-    ).toBeVisible();
+    await expect(account.getByTestId("notifications-btn")).toBeVisible();
+    await expect(account.getByTestId("profile-btn")).toBeVisible();
+    await expect(account.getByTestId("settings-btn")).toBeVisible();
 
     // ── The BottomDock no longer renders bell/settings — only the Cesare pill ─
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible({ timeout: 5_000 });
-    await expect(
-      dock.getByRole("button", { name: "Apri Cesare" }),
-    ).toBeVisible();
-    await expect(dock.getByRole("button", { name: /Notifiche/ })).toHaveCount(
-      0,
-    );
-    await expect(
-      dock.getByRole("button", { name: /Impostazioni/ }),
-    ).toHaveCount(0);
+    await expect(dock.getByTestId("cesare-open-btn")).toBeVisible();
+    await expect(dock.getByTestId("notifications-btn")).toHaveCount(0);
+    await expect(dock.getByTestId("settings-btn")).toHaveCount(0);
 
     // ── Open Cesare and assert the minimal header ────────────────────────────
-    await dock.getByRole("button", { name: "Apri Cesare" }).click();
+    await dock.getByTestId("cesare-open-btn").click();
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
-    await expect(drawer.getByRole("button", { name: "Espandi" })).toBeVisible();
-    await expect(
-      drawer.getByRole("button", { name: "Minimizza" }),
-    ).toBeVisible();
-    await expect(drawer.getByRole("button", { name: "Chiudi" })).toBeVisible();
+    await expect(drawer.getByTestId("cesare-expand-btn")).toBeVisible();
+    await expect(drawer.getByTestId("cesare-minimize-btn")).toBeVisible();
+    await expect(drawer.getByTestId("cesare-close-btn")).toBeVisible();
 
     // No `…` overflow trigger and no account icons inside the header.
     await expect(
       drawer.getByRole("button", { name: "Altre azioni" }),
     ).toHaveCount(0);
-    await expect(
-      drawer.getByRole("button", { name: "Notifiche", exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      drawer.getByRole("button", { name: "Profilo", exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      drawer.getByRole("button", { name: "Impostazioni", exact: true }),
-    ).toHaveCount(0);
+    await expect(drawer.getByTestId("notifications-btn")).toHaveCount(0);
+    await expect(drawer.getByTestId("profile-btn")).toHaveCount(0);
+    await expect(drawer.getByTestId("settings-btn")).toHaveCount(0);
   });
 });

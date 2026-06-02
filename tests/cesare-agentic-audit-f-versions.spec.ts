@@ -197,7 +197,7 @@ test.describe("[OHW-audit-F-versions] first-generation Mostra modifiche", () => 
     // proof a real apply (and auto-version) happened on a first generation.
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 90_000 });
-    const showBtn = trace.getByRole("button", { name: "Mostra modifiche" });
+    const showBtn = trace.getByTestId("cesare-show-changes-btn");
     await expect(showBtn).toBeVisible({ timeout: 10_000 });
     await showBtn.click();
 

@@ -80,7 +80,7 @@ test.describe("[Spec 44] Cesare Agentic — Document generation applies live", (
     const trace = authenticatedPage.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 10_000 });
     await expect(
-      trace.getByRole("button", { name: "Mostra modifiche" }),
+      trace.getByTestId("cesare-show-changes-btn"),
     ).toBeVisible({ timeout: 10_000 });
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });

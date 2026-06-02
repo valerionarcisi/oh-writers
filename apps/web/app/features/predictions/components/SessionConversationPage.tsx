@@ -213,12 +213,14 @@ function SessionComposer({
         disabled={isThinking}
         rows={1}
         aria-label="Composer Cesare"
+        data-testid="cesare-composer-input"
       />
       <button
         ref={sendRef}
         {...buttonProps}
         type="button"
         className={styles.composerSend}
+        data-testid="cesare-send-btn"
       >
         ↑
       </button>

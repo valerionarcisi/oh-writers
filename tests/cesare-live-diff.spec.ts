@@ -25,7 +25,7 @@ const PERSONAL_PROJECT_ID = "00000000-0000-4000-a000-000000000010";
 async function openCesare(page: Page): Promise<void> {
   const trigger = page
     .getByTestId("bottom-dock")
-    .getByRole("button", { name: "Apri Cesare" });
+    .getByTestId("cesare-open-btn");
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
   await trigger.click();
   await page
@@ -39,7 +39,7 @@ async function sendCesare(page: Page, text: string): Promise<void> {
   await input.focus();
   await input.fill(text);
   await expect(input).toHaveValue(text, { timeout: 5_000 });
-  const sendBtn = page.getByRole("button", { name: "Invia messaggio" });
+  const sendBtn = page.getByTestId("cesare-send-btn");
   await expect(sendBtn).toBeEnabled({ timeout: 5_000 });
   await sendBtn.click();
 }
@@ -90,7 +90,7 @@ test.describe("[OHW-047e] Cesare modifiche — transient flash highlight (green/
     ).toHaveCount(0);
 
     // ── Mostra → GREEN additions appear INSIDE the document, then FADE OUT ────
-    await trace.getByRole("button", { name: "Mostra modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
 
     const flash = authenticatedPage.getByTestId("cesare-live-diff-inline");
     await expect(flash).toBeVisible({ timeout: 5_000 });
@@ -110,7 +110,7 @@ test.describe("[OHW-047e] Cesare modifiche — transient flash highlight (green/
     await expect(flash).toHaveCount(0, { timeout: 6_000 });
 
     // ── Nascondi → RED previous text flashes, then FADES; doc unchanged ───────
-    await trace.getByRole("button", { name: "Nascondi modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
 
     const peek = authenticatedPage.getByTestId("cesare-live-diff-inline");
     await expect(peek).toBeVisible({ timeout: 5_000 });
@@ -122,7 +122,7 @@ test.describe("[OHW-047e] Cesare modifiche — transient flash highlight (green/
     await expect(editor).toContainText(appliedMarker, { timeout: 5_000 });
 
     // Re-click Mostra → green flash again (toggleable).
-    await trace.getByRole("button", { name: "Mostra modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
     const reflash = authenticatedPage.getByTestId("cesare-live-diff-inline");
     await expect(reflash).toBeVisible({ timeout: 5_000 });
     await expect(reflash).toHaveAttribute("data-flash-mode", "mostra");
@@ -150,7 +150,7 @@ test.describe("[OHW-047e] Cesare modifiche — transient flash highlight (green/
     await expect(trace).toBeVisible({ timeout: 120_000 });
 
     // Mostra → soggetto (the open doc) flashes its own green diff.
-    await trace.getByRole("button", { name: "Mostra modifiche" }).click();
+    await trace.getByTestId("cesare-show-changes-btn").click();
     await expect(
       authenticatedPage.locator(
         '[data-testid="subject-editor"] [data-testid="cesare-live-diff-inline"][data-document-type="soggetto"]',
