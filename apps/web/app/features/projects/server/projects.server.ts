@@ -5,7 +5,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   DocumentTypes,
-  DOCUMENT_TYPE_LABELS_IT,
+  documentTypeLabel,
   TeamRoles,
   Locales,
 } from "@oh-writers/domain";
@@ -126,7 +126,7 @@ export const getProjectById = createServerFn({ method: "GET" })
           Object.values(DocumentTypes).map((type) => ({
             projectId: project.id,
             type,
-            title: DOCUMENT_TYPE_LABELS_IT[type],
+            title: documentTypeLabel(type, user.locale),
             content: "",
             createdBy: user.id,
           })),
@@ -220,7 +220,7 @@ export const createProject = createServerFn({ method: "POST" })
               Object.values(DocumentTypes).map((type) => ({
                 projectId: project.id,
                 type,
-                title: DOCUMENT_TYPE_LABELS_IT[type],
+                title: documentTypeLabel(type, user.locale),
                 content: "",
                 createdBy: user.id,
               })),

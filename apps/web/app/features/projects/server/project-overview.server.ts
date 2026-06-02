@@ -8,6 +8,9 @@ import {
   type DocumentType,
   TeamRoles,
   type TeamRole,
+  translate,
+  type Locale,
+  type TranslationKey,
 } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
@@ -179,6 +182,21 @@ export const daysSince = (iso: string, now: Date = new Date()): number => {
 export const estimateMinutes = (pageCount: number): number =>
   Math.max(0, Math.floor(pageCount));
 
+// Server-side translator: same `{token}` interpolation contract as the client
+// `t().replace(...)` call sites, so generated copy localises by the request locale.
+const tr = (
+  locale: Locale,
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+): string => {
+  const raw = translate(locale, key);
+  if (!params) return raw;
+  return Object.entries(params).reduce(
+    (acc, [name, value]) => acc.replaceAll(`{${name}}`, String(value)),
+    raw,
+  );
+};
+
 // Mock generator for the Cesare next-step. The suggestion is derived from
 // real signals (page count, breakdown state, idle time) so the heuristic is
 // stable; the surface stays mock until Spec 11 wires the LLM in.
@@ -190,23 +208,34 @@ export const buildNextStep = (input: {
   budget: BudgetSummary;
   idleDays: number;
   projectId: string;
+  locale: Locale;
 }): NextStep | null => {
+  const { locale } = input;
   if (!input.hasScreenplay) return null;
   if (input.sceneCount > 0 && !input.breakdown.hasAny) {
-    const idleNote =
+    const prefix =
       input.idleDays > 1
-        ? `Lo screenplay è fermo da ${input.idleDays} giorni a pagina ${input.pageCount}.`
-        : `Hai ${input.sceneCount} scene pronte.`;
+        ? tr(locale, "projects.nextStep.idle", {
+            n: input.idleDays,
+            count: input.pageCount,
+          })
+        : tr(locale, "projects.nextStep.scenesReady", {
+            count: input.sceneCount,
+          });
     return {
-      suggestion: `${idleNote} Posso fare una prima passata di spoglio così quando torni hai già un breakdown grezzo da rivedere.`,
-      actionLabel: "Avvia spoglio",
+      suggestion: tr(locale, "projects.nextStep.breakdownSuggestion", {
+        prefix,
+      }),
+      actionLabel: tr(locale, "projects.nextStep.breakdownAction"),
       actionHref: `/projects/${input.projectId}/breakdown`,
     };
   }
   if (input.breakdown.hasAny && !input.budget.hasAny) {
     return {
-      suggestion: `Hai ${input.breakdown.scenesBrokenDown} scene spogliate. Posso generare un primo preventivo a partire dagli elementi.`,
-      actionLabel: "Genera budget",
+      suggestion: tr(locale, "projects.nextStep.budgetSuggestion", {
+        count: input.breakdown.scenesBrokenDown,
+      }),
+      actionLabel: tr(locale, "projects.nextStep.budgetAction"),
       actionHref: `/projects/${input.projectId}/budget`,
     };
   }
@@ -380,9 +409,7 @@ const loadBudget = (
         })
         .from(budgetLines)
         .where(eq(budgetLines.budgetId, budget.id))
-        .then(
-          (rows) => rows[0] ?? { totalEUR: 0, lineCount: 0 },
-        ),
+        .then((rows) => rows[0] ?? { totalEUR: 0, lineCount: 0 }),
       (e) => new DbError("projectOverview.budget.lines", e),
     ).map(
       (agg): BudgetSummary => ({
@@ -430,20 +457,21 @@ const loadSchedule = (
       readonly scheduledScenes: number;
       readonly totalHours: number;
     }
-    const stripAggAsync: ResultAsync<StripAgg, DbError> = ResultAsync.fromPromise(
-      db
-        .select({
-          scheduledScenes: sql<number>`count(*)::int`,
-          totalHours: sql<number>`coalesce(sum(${strips.estimatedHours}), 0)::float`,
-        })
-        .from(strips)
-        .where(eq(strips.scheduleId, schedule.id))
-        .then(
-          (rows): StripAgg =>
-            rows[0] ?? { scheduledScenes: 0, totalHours: 0 },
-        ),
-      (e) => new DbError("projectOverview.schedule.strips", e),
-    );
+    const stripAggAsync: ResultAsync<StripAgg, DbError> =
+      ResultAsync.fromPromise(
+        db
+          .select({
+            scheduledScenes: sql<number>`count(*)::int`,
+            totalHours: sql<number>`coalesce(sum(${strips.estimatedHours}), 0)::float`,
+          })
+          .from(strips)
+          .where(eq(strips.scheduleId, schedule.id))
+          .then(
+            (rows): StripAgg =>
+              rows[0] ?? { scheduledScenes: 0, totalHours: 0 },
+          ),
+        (e) => new DbError("projectOverview.schedule.strips", e),
+      );
     return dayCountAsync.andThen((dayCount) =>
       stripAggAsync.map(
         (stripAgg): ScheduleSummary => ({
@@ -463,15 +491,20 @@ const loadLocations = (
 ): ResultAsync<LocationsSummary, DbError> =>
   ResultAsync.fromPromise(
     db
-      .select({ id: locationRequirements.id, status: locationRequirements.status })
+      .select({
+        id: locationRequirements.id,
+        status: locationRequirements.status,
+      })
       .from(locationRequirements)
       .where(eq(locationRequirements.projectId, projectId)),
     (e) => new DbError("projectOverview.locations", e),
-  ).map((rows): LocationsSummary => ({
-    totalRequirements: rows.length,
-    confirmedCount: rows.filter((r) => r.status === "confirmed").length,
-    hasAny: rows.length > 0,
-  }));
+  ).map(
+    (rows): LocationsSummary => ({
+      totalRequirements: rows.length,
+      confirmedCount: rows.filter((r) => r.status === "confirmed").length,
+      hasAny: rows.length > 0,
+    }),
+  );
 
 const loadCollaborators = (
   db: Db,
@@ -533,13 +566,17 @@ const buildActivityFeed = (input: {
   screenplay: ScreenplayRow | null;
   project: Project;
   ownerName: string | null;
+  locale: Locale;
 }): ActivityItem[] => {
+  const { locale } = input;
   const items: ActivityItem[] = [];
   if (input.screenplay) {
     items.push({
       id: `act-screenplay-${input.screenplay.id}`,
       kind: "screenplay_save",
-      summary: `Sceneggiatura aggiornata (${input.screenplay.pageCount} pagine).`,
+      summary: tr(locale, "projects.activity.screenplaySaved", {
+        count: input.screenplay.pageCount,
+      }),
       actorName: input.ownerName,
       actorKind: "user",
       at: input.screenplay.updatedAt.toISOString(),
@@ -550,7 +587,9 @@ const buildActivityFeed = (input: {
     items.push({
       id: `act-doc-${doc.id}`,
       kind: "document_edit",
-      summary: `${doc.title} aggiornato.`,
+      summary: tr(locale, "projects.activity.documentEdited", {
+        title: doc.title,
+      }),
       actorName: input.ownerName,
       actorKind: "user",
       at: doc.updatedAt,
@@ -559,14 +598,12 @@ const buildActivityFeed = (input: {
   items.push({
     id: `act-created-${input.project.id}`,
     kind: "project_created",
-    summary: "Progetto creato.",
+    summary: tr(locale, "projects.activity.projectCreated"),
     actorName: input.ownerName,
     actorKind: "user",
     at: input.project.createdAt.toISOString(),
   });
-  return items
-    .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, 7);
+  return items.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 7);
 };
 
 // ─── Aggregator ───────────────────────────────────────────────────────────────
@@ -574,6 +611,7 @@ const buildActivityFeed = (input: {
 const buildOverview = (
   db: Db,
   project: Project,
+  locale: Locale,
 ): ResultAsync<ProjectOverview, DbError> =>
   ResultAsync.combine([
     loadDocuments(db, project.id),
@@ -593,13 +631,12 @@ const buildOverview = (
       ]).map(([breakdown, budget, schedule, locations]): ProjectOverview => {
         const ownerCollab =
           collaborators.find((c) => c.role === "owner") ??
-          collaborators.find(
-            (c) => (c.role as string) === TeamRoles.OWNER,
-          ) ??
+          collaborators.find((c) => (c.role as string) === TeamRoles.OWNER) ??
           collaborators[0] ??
           null;
         const candidates: string[] = [project.updatedAt.toISOString()];
-        if (screenplayRow) candidates.push(screenplayRow.updatedAt.toISOString());
+        if (screenplayRow)
+          candidates.push(screenplayRow.updatedAt.toISOString());
         for (const doc of docs) candidates.push(doc.updatedAt);
         const lastEditedAt = candidates.sort((a, b) => b.localeCompare(a))[0]!;
         const pageCount = screenplayRow?.pageCount ?? 0;
@@ -634,12 +671,14 @@ const buildOverview = (
           budget,
           idleDays: kpi.idleDays,
           projectId: project.id,
+          locale,
         });
         const activity = buildActivityFeed({
           documents: docs,
           screenplay: screenplayRow,
           project,
           ownerName: ownerCollab?.name ?? null,
+          locale,
         });
         return {
           project,
@@ -668,7 +707,7 @@ export const getProjectOverview = createServerFn({ method: "GET" })
     }): Promise<ResultShape<ProjectOverview, ProjectOverviewError>> =>
       toShape(
         await withProjectAccess(data.projectId, "view", ({ db, access }) =>
-          buildOverview(db, access.project),
+          buildOverview(db, access.project, access.user.locale),
         ),
       ),
   );

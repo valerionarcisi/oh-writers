@@ -65,8 +65,7 @@ export const projectsKeys = {
     // Draft meta badge
     "projects.draftBadge.noColor": "No color",
     "projects.draftBadge.titlePrefix": "Draft",
-    "projects.draftBadge.titleSuffix":
-      "· managed in the screenplay Versions",
+    "projects.draftBadge.titleSuffix": "· managed in the screenplay Versions",
     // Title page draft panel
     "projects.draftPanel.heading": "Current draft",
     "projects.draftPanel.date": "Date",
@@ -162,6 +161,22 @@ export const projectsKeys = {
     "projects.team.roleAi": "AI assistant",
     "projects.team.invite": "Invite collaborator",
     "projects.team.inviteRole": "Viewer or editor",
+
+    // Overview — next-step suggestions ({n}/{count} interpolated server-side)
+    "projects.nextStep.idle":
+      "The screenplay has been idle for {n} days at page {count}.",
+    "projects.nextStep.scenesReady": "You have {count} scenes ready.",
+    "projects.nextStep.breakdownSuggestion":
+      "{prefix} I can do a first breakdown pass so a rough breakdown is ready to review when you return.",
+    "projects.nextStep.breakdownAction": "Start breakdown",
+    "projects.nextStep.budgetSuggestion":
+      "You have {count} scenes broken down. I can generate a first budget from the elements.",
+    "projects.nextStep.budgetAction": "Generate budget",
+
+    // Overview — activity feed
+    "projects.activity.screenplaySaved": "Screenplay updated ({count} pages).",
+    "projects.activity.documentEdited": "{title} updated.",
+    "projects.activity.projectCreated": "Project created.",
   },
   it: {
     // Project form
@@ -325,5 +340,22 @@ export const projectsKeys = {
     "projects.team.roleAi": "Assistente AI",
     "projects.team.invite": "Invita collaboratore",
     "projects.team.inviteRole": "Lettore o editor",
+
+    // Overview — next-step suggestions ({n}/{count} interpolated server-side)
+    "projects.nextStep.idle":
+      "Lo screenplay è fermo da {n} giorni a pagina {count}.",
+    "projects.nextStep.scenesReady": "Hai {count} scene pronte.",
+    "projects.nextStep.breakdownSuggestion":
+      "{prefix} Posso fare una prima passata di spoglio così quando torni hai già un breakdown grezzo da rivedere.",
+    "projects.nextStep.breakdownAction": "Avvia spoglio",
+    "projects.nextStep.budgetSuggestion":
+      "Hai {count} scene spogliate. Posso generare un primo preventivo a partire dagli elementi.",
+    "projects.nextStep.budgetAction": "Genera budget",
+
+    // Overview — activity feed
+    "projects.activity.screenplaySaved":
+      "Sceneggiatura aggiornata ({count} pagine).",
+    "projects.activity.documentEdited": "{title} aggiornato.",
+    "projects.activity.projectCreated": "Progetto creato.",
   },
 } as const satisfies LocaleDict;
