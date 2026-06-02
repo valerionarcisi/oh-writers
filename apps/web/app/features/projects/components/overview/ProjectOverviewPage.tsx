@@ -17,6 +17,8 @@ import { ScreenplaySection } from "./ScreenplaySection";
 import { ProductionCardGrid } from "./ProductionCardGrid";
 import { ActivityFeed } from "./ActivityFeed";
 import { TeamPresence } from "./TeamPresence";
+import { useYjsRoom } from "~/features/realtime";
+import { useSession } from "~/lib/auth-client";
 import { useTranslation } from "~/features/i18n";
 import styles from "./ProjectOverviewPage.module.css";
 
@@ -64,6 +66,23 @@ function ProjectOverviewContent({
 }: ProjectOverviewContentProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // ─── Live presence (Spec 09b §A2) ──────────────────────────────────────────
+  // Open the project's primary realtime room (the screenplay) awareness-only to
+  // surface who is online now. No screenplay → no live room; the hook stays
+  // disabled and TeamPresence renders the static list. Degrades silently when
+  // VITE_WS_URL is unset (status "disabled").
+  const { data: sessionData } = useSession();
+  const presenceUser = sessionData?.user
+    ? { id: sessionData.user.id, name: sessionData.user.name }
+    : null;
+  const screenplayId = overview.screenplay?.id ?? null;
+  const presenceRoom = useYjsRoom(
+    screenplayId ? `screenplay:${screenplayId}` : "presence:none",
+    presenceUser,
+    screenplayId !== null,
+  );
+
   const archive = useArchiveProject();
   const restore = useRestoreProject();
   const remove = useDeleteProject();
@@ -157,7 +176,12 @@ function ProjectOverviewContent({
         </main>
         <aside className={styles.side}>
           <ActivityFeed items={overview.activity} />
-          <TeamPresence collaborators={overview.collaborators} />
+          <TeamPresence
+            collaborators={overview.collaborators}
+            peers={presenceRoom.peers}
+            localUserId={presenceUser?.id ?? null}
+            isOnline={presenceRoom.status === "connected"}
+          />
         </aside>
       </div>
     </div>

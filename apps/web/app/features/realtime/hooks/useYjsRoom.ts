@@ -5,10 +5,15 @@ import { userColor } from "@oh-writers/utils";
 import { createYjsRoom, isRealtimeEnabled } from "../lib/provider";
 import { getRealtimeToken } from "../server/realtime-token.server";
 
-export type RealtimeStatus = "disabled" | "connecting" | "connected" | "offline";
+export type RealtimeStatus =
+  | "disabled"
+  | "connecting"
+  | "connected"
+  | "offline";
 
 export interface Peer {
   clientId: number;
+  userId: string | null;
   name: string;
   color: string;
 }
@@ -81,10 +86,15 @@ export const useYjsRoom = (
         const peers: Peer[] = [];
         states.forEach((state, clientId) => {
           if (clientId === self) return;
-          const u = (state as { user?: { name?: string; color?: string } }).user;
+          const u = (
+            state as {
+              user?: { userId?: string; name?: string; color?: string };
+            }
+          ).user;
           if (!u) return;
           peers.push({
             clientId,
+            userId: u.userId ?? null,
             name: u.name ?? "?",
             color: u.color ?? userColor(String(clientId)),
           });
