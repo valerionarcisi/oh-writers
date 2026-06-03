@@ -24,7 +24,12 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   walk, grouped in `docs/BUGS.md` (N-01..N-25). Pick the next finding/topic, branch, fix
   per DoD, merge, `/clear`, repeat.
   **Resume order:** (1) ✅ **logline N-16 + Soggetto-in-nav N-17** — done (Spec 57),
-  then (2) **Topic 1 / TopBar (Spec 55)** — the systemic shell refactor ← **NEXT UP**.
+  then (2) **Topic 1 / TopBar (Spec 55)** — planned: `docs/superpowers/plans/2026-06-03-spec55-topbar-action-standard.md`
+  decomposes it into slices **A** (registry + TopBar zone, backbone) → **B** (migrate dock pages) →
+  **C** (bell+account→TopBar, retire rail footer/docks) → **D** (Spec 56 enforcement). Each slice is a
+  WIP=1 front; **pull Slice A next** (plan on `main`; start Slice A on a fresh branch).
+  Also queued from the 2026-06-03 Cesare walk: **N-26** (trace repeats "sta scrivendo") +
+  **N-09** confirmed (Mostra/Nascondi modifiche no-op) — Topic 2, see `docs/BUGS.md`.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 

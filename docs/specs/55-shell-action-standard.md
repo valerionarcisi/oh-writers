@@ -1,6 +1,7 @@
 # Spec 55 — Shell Action Standard (context-aware TopBar, one home per action)
 
 Status: APPROVED (brainstorm 2026-06-03) — design first, implementation via plan.
+Plan: `docs/superpowers/plans/2026-06-03-spec55-topbar-action-standard.md` (slices A–D; A = backbone registry + TopBar zone).
 Related: [Spec 44](44-shell-refactor-notion-style.md) (Cesare shell), [Spec 46](46-split-drawer.md) (SplitDrawer), [Spec 54](54-feature-flags.md) (feature gating). Enforced by [Spec 56](56-continuous-qa-system.md).
 
 ## Problem
