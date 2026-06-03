@@ -41,9 +41,10 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 - **N-06** ALTO — In split view (`?peek=cesare`) the **text input to talk to Cesare is missing / not visible** (img #12, #13).
 - **N-07** MEDIO — Chat layout: **fixed header + footer always visible, body scrolls, "go to end of chat" button** — same as Claude (img #13).
 - **N-08** MEDIO — Improve the **response bubbles** UI (img #12).
-- **N-09** MEDIO — **"Mostra/Nascondi modifiche" shows nothing** when toggled (img #11). (Spec 47e flash.)
+- **N-09** MEDIO — **"Mostra/Nascondi modifiche" shows nothing** when toggled (img #11). (Spec 47e flash.) **CONFIRMED 2026-06-03** on the logline-from-Cesare result card ("Aggiornata Logline · 1 MODIFICA", green "Nascondi modifiche" button) — clicking the toggle renders no visible diff. Repro: Soggetto → ask Cesare "mi scrivi la logline?" → on the result card click Mostra/Nascondi modifiche → nothing appears.
 - **N-10** MEDIO — **Markdown rendering problem** in Cesare messages (img #8).
 - **N-11** BASSO — Suggestion cards (Cesare structure cards) placement needs rethinking (img #14).
+- **N-26** MEDIO — **Trace repeats the "sta scrivendo" step many times** during a Cesare edit (new, 2026-06-03). The entity is written correctly (logline persisted, 188/200) but the inline trace emits the `writing{entity}` step repeatedly instead of once. Repro: Soggetto → ask Cesare to write the logline → watch the trace. Suspected cause: a `writing` step event emitted per stream chunk/token instead of once per entity (Spec 47a `cesare-stream-events.ts`). Violates the tracer invariant's intent (one clear step per phase).
 
 ### Topic 3 — Cesare sessions (pages & model)
 
