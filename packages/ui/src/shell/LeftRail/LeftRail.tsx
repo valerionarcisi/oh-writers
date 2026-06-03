@@ -763,6 +763,14 @@ export function LeftRail({
         </button>
       )}
 
+      {tools && tools.length > 0 && (
+        <div className={styles.tools} role="toolbar" aria-label={toolsLabel}>
+          {tools.map((tool) => (
+            <ToolButton key={tool.id} tool={tool} />
+          ))}
+        </div>
+      )}
+
       {/* Sessions slot — always visible (Spec 44 F1). The section itself
           renders null only when there are no sessions. */}
       <div className={styles.sessionsSlot}>{renderSessions()}</div>
@@ -799,14 +807,6 @@ export function LeftRail({
           profileLabel={profileLabel}
           accountLabel={accountLabel}
         />
-      )}
-
-      {tools && tools.length > 0 && (
-        <div className={styles.tools} role="toolbar" aria-label={toolsLabel}>
-          {tools.map((tool) => (
-            <ToolButton key={tool.id} tool={tool} />
-          ))}
-        </div>
       )}
     </aside>
   );

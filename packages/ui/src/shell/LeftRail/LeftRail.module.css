@@ -476,7 +476,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: var(--ds-space-1);
   padding: 6px var(--ds-space-1);
-  border-block-start: 1px solid var(--ds-line);
+  border-block-end: 1px solid var(--ds-line);
 }
 
 .tool {
