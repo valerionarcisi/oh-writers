@@ -11,6 +11,16 @@ is its own modal, notifications live bottom-left in the rail. The user experienc
 single, predictable home for "what can I do here". This is the root of the "drawer brutti
 / azioni in giro / incoerenza" pain.
 
+## Systemic — one pattern, app-wide (not per-page)
+
+These issues are **shared-component** problems, not page bugs; the walk screenshots are
+examples that reverberate across the whole app. The fix lives ONCE in the shell layer
+(TopBar + a per-page action registry + shared drawer/chat/account components), and every
+page consumes it — never patch a single page. Verification drives **every** narrative
+page (soggetto, sinossi, scaletta, trattamento, screenplay, breakdown, budget, schedule,
+locations), not only the screenshotted ones. Spec 56's single-home + shell-zone checks run
+across ALL routes, so a non-compliant page fails CI — that is how "everywhere" is guaranteed.
+
 ## The standard
 
 ### Canonical zones
