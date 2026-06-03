@@ -49,3 +49,46 @@ screenshot + typecheck, but no Playwright regression test. The bug could silentl
 regression test (assert the measurable property). Skip only with a written reason.
 Codified in `docs/conventions/ui-ux-research.md` §2. (Follow-up: add the rail
 single-footer test.)
+
+### 2026-06-03 — "Opens nothing" was a viewport overflow, found only by measuring at several widths
+
+**What went wrong** — N-16 ("clicking the logline opens nothing in some state") looked
+like a click-handler / popover-mount bug. At the default 1440 width the popover opened
+fine on every page, so a single-width repro would have closed it as "cannot reproduce".
+
+**Why** — The real cause was the shared `Popover` primitive having a fixed 480px width
+with no viewport-collision handling. It only overflowed off-screen once the lane was
+compressed (narrow window or a split/peek lane). Visible only by opening it at 1440 / 768
+/ 390 and measuring the bounding box against the viewport.
+
+**Rule going forward** — For "sometimes it doesn't show" overlay/popover bugs, repro at
+multiple viewport widths AND with side panels open, and assert the bounding box is inside
+the viewport — don't conclude from one width. A shared overlay primitive should clamp to
+the viewport (portal + reposition), never trust a fixed width to fit.
+
+### 2026-06-03 — "Missing from nav" was a mislabel, not a missing item
+
+**What went wrong** — N-17 ("Soggetto missing from the sidebar") read as a dropped nav
+entry. The entry was present all along; its EN label was wrongly "Treatment outline".
+
+**Why** — Jumped toward "where did the item go" instead of first checking what the first
+nav item actually rendered as. The i18n key resolved to a misleading English gloss that
+collided with the real "Treatment" sibling.
+
+**Rule going forward** — For "X is missing from the UI", first confirm what is actually
+rendered in that slot (label text included) before hunting for removed code. A wrong
+label reads as a missing item.
+
+### 2026-06-03 — Local E2E suite is flaky; establish a baseline before blaming a change
+
+**What went wrong** — A regression batch showed 16 failures with my change; alarming
+until a clean-baseline run failed _more_ (~42), with a run-to-run-variable set.
+
+**Why** — The local E2E environment is unstable — chiefly the `testProjectId` fixture
+(`tests/fixtures.ts:102`) waiting on the dashboard "Non fa ridere" link, which flakes on
+cold/slow servers and cascades. Failure counts are not a reliable signal on their own.
+
+**Rule going forward** — Before attributing E2E failures to a change, run the same specs
+on a clean baseline (stash) and compare. Lean on the deterministic layers (unit + the
+focused regression spec) and verify the actual target live; treat the broad flaky suite
+as advisory, not a gate.
