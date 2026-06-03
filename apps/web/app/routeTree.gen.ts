@@ -19,6 +19,7 @@ import { Route as InviteTokenImport } from "./routes/invite.$token";
 import { Route as DevTokensImport } from "./routes/dev/tokens";
 import { Route as AppSettingsImport } from "./routes/_app.settings";
 import { Route as AppDashboardImport } from "./routes/_app.dashboard";
+import { Route as AppTeamsIndexImport } from "./routes/_app.teams.index";
 import { Route as AppTeamsNewImport } from "./routes/_app.teams.new";
 import { Route as AppTeamsSlugImport } from "./routes/_app.teams.$slug";
 import { Route as AppProjectsNewImport } from "./routes/_app.projects.new";
@@ -36,6 +37,7 @@ import { Route as AppProjectsIdScreenplayImport } from "./routes/_app.projects.$
 import { Route as AppProjectsIdScheduleImport } from "./routes/_app.projects.$id_.schedule";
 import { Route as AppProjectsIdOutlineImport } from "./routes/_app.projects.$id_.outline";
 import { Route as AppProjectsIdOpportunitiesImport } from "./routes/_app.projects.$id_.opportunities";
+import { Route as AppProjectsIdLoglineImport } from "./routes/_app.projects.$id_.logline";
 import { Route as AppProjectsIdLocationsImport } from "./routes/_app.projects.$id_.locations";
 import { Route as AppProjectsIdBudgetImport } from "./routes/_app.projects.$id_.budget";
 import { Route as AppProjectsIdBreakdownImport } from "./routes/_app.projects.$id_.breakdown";
@@ -94,6 +96,12 @@ const AppSettingsRoute = AppSettingsImport.update({
 const AppDashboardRoute = AppDashboardImport.update({
   id: "/dashboard",
   path: "/dashboard",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppTeamsIndexRoute = AppTeamsIndexImport.update({
+  id: "/teams/",
+  path: "/teams/",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -200,6 +208,12 @@ const AppProjectsIdOpportunitiesRoute = AppProjectsIdOpportunitiesImport.update(
     getParentRoute: () => AppRoute,
   } as any,
 );
+
+const AppProjectsIdLoglineRoute = AppProjectsIdLoglineImport.update({
+  id: "/projects/$id_/logline",
+  path: "/projects/$id/logline",
+  getParentRoute: () => AppRoute,
+} as any);
 
 const AppProjectsIdLocationsRoute = AppProjectsIdLocationsImport.update({
   id: "/projects/$id_/locations",
@@ -363,6 +377,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppTeamsNewImport;
       parentRoute: typeof AppImport;
     };
+    "/_app/teams/": {
+      id: "/_app/teams/";
+      path: "/teams";
+      fullPath: "/teams";
+      preLoaderRoute: typeof AppTeamsIndexImport;
+      parentRoute: typeof AppImport;
+    };
     "/_app/projects/$id_/breakdown": {
       id: "/_app/projects/$id_/breakdown";
       path: "/projects/$id/breakdown";
@@ -382,6 +403,13 @@ declare module "@tanstack/react-router" {
       path: "/projects/$id/locations";
       fullPath: "/projects/$id/locations";
       preLoaderRoute: typeof AppProjectsIdLocationsImport;
+      parentRoute: typeof AppImport;
+    };
+    "/_app/projects/$id_/logline": {
+      id: "/_app/projects/$id_/logline";
+      path: "/projects/$id/logline";
+      fullPath: "/projects/$id/logline";
+      preLoaderRoute: typeof AppProjectsIdLoglineImport;
       parentRoute: typeof AppImport;
     };
     "/_app/projects/$id_/opportunities": {
@@ -594,9 +622,11 @@ interface AppRouteChildren {
   AppProjectsNewRoute: typeof AppProjectsNewRoute;
   AppTeamsSlugRoute: typeof AppTeamsSlugRoute;
   AppTeamsNewRoute: typeof AppTeamsNewRoute;
+  AppTeamsIndexRoute: typeof AppTeamsIndexRoute;
   AppProjectsIdBreakdownRoute: typeof AppProjectsIdBreakdownRoute;
   AppProjectsIdBudgetRoute: typeof AppProjectsIdBudgetRoute;
   AppProjectsIdLocationsRoute: typeof AppProjectsIdLocationsRoute;
+  AppProjectsIdLoglineRoute: typeof AppProjectsIdLoglineRoute;
   AppProjectsIdOpportunitiesRoute: typeof AppProjectsIdOpportunitiesRoute;
   AppProjectsIdOutlineRoute: typeof AppProjectsIdOutlineRoute;
   AppProjectsIdScheduleRoute: typeof AppProjectsIdScheduleRoute;
@@ -620,9 +650,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppProjectsNewRoute: AppProjectsNewRoute,
   AppTeamsSlugRoute: AppTeamsSlugRoute,
   AppTeamsNewRoute: AppTeamsNewRoute,
+  AppTeamsIndexRoute: AppTeamsIndexRoute,
   AppProjectsIdBreakdownRoute: AppProjectsIdBreakdownRoute,
   AppProjectsIdBudgetRoute: AppProjectsIdBudgetRoute,
   AppProjectsIdLocationsRoute: AppProjectsIdLocationsRoute,
+  AppProjectsIdLoglineRoute: AppProjectsIdLoglineRoute,
   AppProjectsIdOpportunitiesRoute: AppProjectsIdOpportunitiesRoute,
   AppProjectsIdOutlineRoute: AppProjectsIdOutlineRoute,
   AppProjectsIdScheduleRoute: AppProjectsIdScheduleRoute,
@@ -655,9 +687,11 @@ export interface FileRoutesByFullPath {
   "/projects/new": typeof AppProjectsNewRoute;
   "/teams/$slug": typeof AppTeamsSlugRoute;
   "/teams/new": typeof AppTeamsNewRoute;
+  "/teams": typeof AppTeamsIndexRoute;
   "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
   "/projects/$id/locations": typeof AppProjectsIdLocationsRoute;
+  "/projects/$id/logline": typeof AppProjectsIdLoglineRoute;
   "/projects/$id/opportunities": typeof AppProjectsIdOpportunitiesRoute;
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/schedule": typeof AppProjectsIdScheduleRoute;
@@ -694,9 +728,11 @@ export interface FileRoutesByTo {
   "/projects/new": typeof AppProjectsNewRoute;
   "/teams/$slug": typeof AppTeamsSlugRoute;
   "/teams/new": typeof AppTeamsNewRoute;
+  "/teams": typeof AppTeamsIndexRoute;
   "/projects/$id/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/projects/$id/budget": typeof AppProjectsIdBudgetRoute;
   "/projects/$id/locations": typeof AppProjectsIdLocationsRoute;
+  "/projects/$id/logline": typeof AppProjectsIdLoglineRoute;
   "/projects/$id/opportunities": typeof AppProjectsIdOpportunitiesRoute;
   "/projects/$id/outline": typeof AppProjectsIdOutlineRoute;
   "/projects/$id/schedule": typeof AppProjectsIdScheduleRoute;
@@ -732,9 +768,11 @@ export interface FileRoutesById {
   "/_app/projects/new": typeof AppProjectsNewRoute;
   "/_app/teams/$slug": typeof AppTeamsSlugRoute;
   "/_app/teams/new": typeof AppTeamsNewRoute;
+  "/_app/teams/": typeof AppTeamsIndexRoute;
   "/_app/projects/$id_/breakdown": typeof AppProjectsIdBreakdownRoute;
   "/_app/projects/$id_/budget": typeof AppProjectsIdBudgetRoute;
   "/_app/projects/$id_/locations": typeof AppProjectsIdLocationsRoute;
+  "/_app/projects/$id_/logline": typeof AppProjectsIdLoglineRoute;
   "/_app/projects/$id_/opportunities": typeof AppProjectsIdOpportunitiesRoute;
   "/_app/projects/$id_/outline": typeof AppProjectsIdOutlineRoute;
   "/_app/projects/$id_/schedule": typeof AppProjectsIdScheduleRoute;
@@ -773,9 +811,11 @@ export interface FileRouteTypes {
     | "/projects/new"
     | "/teams/$slug"
     | "/teams/new"
+    | "/teams"
     | "/projects/$id/breakdown"
     | "/projects/$id/budget"
     | "/projects/$id/locations"
+    | "/projects/$id/logline"
     | "/projects/$id/opportunities"
     | "/projects/$id/outline"
     | "/projects/$id/schedule"
@@ -811,9 +851,11 @@ export interface FileRouteTypes {
     | "/projects/new"
     | "/teams/$slug"
     | "/teams/new"
+    | "/teams"
     | "/projects/$id/breakdown"
     | "/projects/$id/budget"
     | "/projects/$id/locations"
+    | "/projects/$id/logline"
     | "/projects/$id/opportunities"
     | "/projects/$id/outline"
     | "/projects/$id/schedule"
@@ -847,9 +889,11 @@ export interface FileRouteTypes {
     | "/_app/projects/new"
     | "/_app/teams/$slug"
     | "/_app/teams/new"
+    | "/_app/teams/"
     | "/_app/projects/$id_/breakdown"
     | "/_app/projects/$id_/budget"
     | "/_app/projects/$id_/locations"
+    | "/_app/projects/$id_/logline"
     | "/_app/projects/$id_/opportunities"
     | "/_app/projects/$id_/outline"
     | "/_app/projects/$id_/schedule"
@@ -922,9 +966,11 @@ export const routeTree = rootRoute
         "/_app/projects/new",
         "/_app/teams/$slug",
         "/_app/teams/new",
+        "/_app/teams/",
         "/_app/projects/$id_/breakdown",
         "/_app/projects/$id_/budget",
         "/_app/projects/$id_/locations",
+        "/_app/projects/$id_/logline",
         "/_app/projects/$id_/opportunities",
         "/_app/projects/$id_/outline",
         "/_app/projects/$id_/schedule",
@@ -977,6 +1023,10 @@ export const routeTree = rootRoute
       "filePath": "_app.teams.new.tsx",
       "parent": "/_app"
     },
+    "/_app/teams/": {
+      "filePath": "_app.teams.index.tsx",
+      "parent": "/_app"
+    },
     "/_app/projects/$id_/breakdown": {
       "filePath": "_app.projects.$id_.breakdown.tsx",
       "parent": "/_app"
@@ -987,6 +1037,10 @@ export const routeTree = rootRoute
     },
     "/_app/projects/$id_/locations": {
       "filePath": "_app.projects.$id_.locations.tsx",
+      "parent": "/_app"
+    },
+    "/_app/projects/$id_/logline": {
+      "filePath": "_app.projects.$id_.logline.tsx",
       "parent": "/_app"
     },
     "/_app/projects/$id_/opportunities": {
