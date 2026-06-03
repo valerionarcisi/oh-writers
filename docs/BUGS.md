@@ -31,13 +31,18 @@ the walk screenshots. Severity is provisional (to confirm during one-by-one anal
 The recurring "everything near the lens" pattern. Confirms + enriches `docs/specs/55-shell-action-standard.md`.
 
 - **N-01** ALTO — Notifications still bottom-left; must move to the TopBar; they open in a SplitDrawer, and the **old notification drawer is removed** (img #3, #18).
+  - `Done =` bell lives in the TopBar action zone on every narrative page; clicking it opens notifications in a SplitDrawer; `NotificationCenterDrawer` (bottom-left) deleted; E2E asserts bell-in-topbar + split open + no legacy drawer in DOM.
 - **N-02** ALTO — **Versions missing on all narrative pages**; must open in a SplitDrawer, **old VersionsDrawer removed**; place "Versioni" near the lens (img #15). (Spec 49 + 55.)
+  - `Done =` "Versioni" action registered in the TopBar zone on all narrative document pages; opens the Versions SplitDrawer (`?peek=versions`); legacy VersionsDrawer removed; E2E asserts action present + split opens + rollback path intact.
 - **N-03** ALTO — **Exports** must sit near the lens, as a **per-page tool pattern across ALL narrative pages** (img #16, #20). One pattern, page-specific tools.
+  - `Done =` narrative document pages register their export actions (SIAE/PDF) via the shared TopBar action registry — one pattern, page-specific tools; no mid-page export menu/modal on narrative docs; E2E asserts export action in TopBar zone per narrative page. (Screenplay export registration owned by A5.)
 - **N-04** MEDIO — Drawers are ALWAYS SplitDrawer; clean up any legacy drawer (img #18).
+  - `Done =` no drawer pattern other than Cesare (floating bottom-right) + SplitDrawer (`?peek=`) remains in the narrative surface; BottomDock/FloatingDock/AccountRow retired per Spec 55; grep + E2E confirm no legacy drawer/dock mounts.
 
 ### Topic 2 — Cesare drawer & chat UX
 
 - **N-05** ALTO — Cesare **auto-opens**; it should **start closed** (img #4).
+  - `Done =` on first load of any narrative page Cesare is `closed` (no auto-open); `body[data-cesare]` is `closed` until the user opens it; E2E asserts closed-on-load across narrative pages. (Owned by A1 — `cesare-context.tsx`.)
 - **N-06** ALTO — In split view (`?peek=cesare`) the **text input to talk to Cesare is missing / not visible** (img #12, #13).
 - **N-07** MEDIO — Chat layout: **fixed header + footer always visible, body scrolls, "go to end of chat" button** — same as Claude (img #13).
 - **N-08** MEDIO — Improve the **response bubbles** UI (img #12).
@@ -71,9 +76,15 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 ### Topic 7 — Shell & settings polish
 
 - **N-21** BASSO — Redundant **"Oh Writers" label under the logo** (project switcher when no project) (img #3).
+  - `Done =` the redundant "Oh Writers" text under the logo is removed (logo stands alone when no project); Design judge screenshot-approves; matches Notion-style minimal header.
 - **N-22** MEDIO — **Avatar click and gear both open the same page**; should differ: avatar → user settings, gear → project settings (img #17).
+  - `Done =` avatar (TopBar account menu) → user settings route; gear → project settings route; they are distinct destinations; E2E asserts each opens its own page.
 - **N-23** MEDIO — **Account settings page too narrow** (cramped column) (img #19).
 - **N-24** BASSO — Project icon (e.g. "Non fa ridere"): unclear what it should open (img #4).
+
+### Topic 9 — Spec 55 rollout to production surface (DEBT, deferred)
+
+- **N-28** DEBT — **Spec 55 TopBar action standard not yet applied to the production pages** (budget, breakdown, schedule, locations). This fleet (Narrative Walk) intentionally scopes Spec 55 to the **narrative** surface (soggetto/sinossi/scaletta/trattamento/screenplay). The shell backbone (TopBar zones + action registry) lands app-wide via A1, but per-page action registration (export/versions) for the production pages is **out of scope** here. Valerio will analyse the production zones and file the specific bugs. Until then, Spec 56's single-home / shell-zone CI checks may report those routes as non-compliant — that is expected, not a regression. Tracked in `docs/BACKLOG.md` (ICEBOX).
 
 ### Topic 8 — Feature idea (ICEBOX, needs spec)
 

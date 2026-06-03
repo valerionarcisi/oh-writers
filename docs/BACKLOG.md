@@ -20,9 +20,17 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## NOW (max 1)
 
-- **Narrative UI/UX — analyse & fix one-by-one** — 25 findings from Valerio's 2026-06-03
-  walk, grouped in `docs/BUGS.md` (N-01..N-25). Pick the next finding/topic, branch, fix
-  per DoD, merge, `/clear`, repeat.
+- **Narrative Walk fleet (agent-fleet)** — fixing the walk findings via wave orchestration
+  with the 3-judge gate (Design→QA→Lead, bounce-back). Structure: **Wave 0 = A1** (Spec 55
+  shell backbone + narrative-page actions: N-01..N-05, N-21, N-22) merged to `main`; then
+  **Wave 1 = 5 parallel** lanes off updated `main` — A2 Cesare chat UX (N-06..N-11, N-26),
+  A3 Cesare grounding real-AI (N-27), A4 Sessions (N-12..N-14), A5 Screenplay chrome
+  (N-18, N-19), A6 Settings (N-23, N-24); then **Wave 2 = i18n sweep** (N-20). Shared
+  contract = `docs/BUGS.md` `Done =` lines + Spec 55. Scope = **narrative only**;
+  production rollout deferred (N-28). N-15/N-25 are decisions, not lanes.
+
+  **Superseded resume notes (kept for context):** picking findings one-by-one is now
+  replaced by the fleet above.
   **Resume order:** (1) ✅ **logline N-16 + Soggetto-in-nav N-17** — done (Spec 57),
   then (2) **Topic 1 / TopBar (Spec 55)** — planned: `docs/superpowers/plans/2026-06-03-spec55-topbar-action-standard.md`
   decomposes it into slices **A** (registry + TopBar zone, backbone) → **B** (migrate dock pages) →
@@ -55,6 +63,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## ICEBOX (not now)
 
+- **[N-28] Spec 55 rollout to production pages** (budget/breakdown/schedule/locations) — TopBar action-registry backbone lands app-wide via the fleet's A1, but per-page export/versions registration for production pages is deferred. Valerio to analyse those zones and file specific bugs. Spec 56 CI may flag those routes as non-compliant until then (expected). See `docs/BUGS.md` Topic 9.
 - The deferred "Ma an…" shell example (user dropped it).
 - Timeline Scaletta verticale (spec 15) · Moodboard/Storyboard (spec 19) · Billing & multi-tenancy (16-core) · AI auto-gen from screenplay (14/14b).
 - BYOK encrypted user key + model choice (noted in spec 48).
