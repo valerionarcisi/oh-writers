@@ -22,7 +22,9 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 - **Narrative UI/UX — analyse & fix one-by-one** — 25 findings from Valerio's 2026-06-03
   walk, grouped in `docs/BUGS.md` (N-01..N-25). Pick the next finding/topic, branch, fix
-  per DoD, merge, `/clear`, repeat. (Start point to be chosen.)
+  per DoD, merge, `/clear`, repeat.
+  **Resume order:** (1) **logline N-16** + **Soggetto-in-nav N-17** (quick isolated win),
+  then (2) **Topic 1 / TopBar (Spec 55)** — the systemic shell refactor.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
