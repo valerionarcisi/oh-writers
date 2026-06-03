@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Icon } from "../../icons/Icon";
 import type { IconName } from "../../icons/icon-names";
 import { DropdownMenu } from "../../components/DropdownMenu";
+import { GearGlyph } from "../TopBar/GearGlyph";
 import styles from "./LeftRail.module.css";
 
 export type RailNavItem = {
@@ -89,6 +90,10 @@ export type LeftRailProps = {
   brand: {
     label: string;
     onPress: () => void;
+    /** Whether to render the brand wordmark text next to the "O" mark. When
+     *  false the mark stands alone (BUGS N-21 — the "Oh Writers" wordmark is
+     *  redundant when no project is selected). Defaults to true. */
+    showLabel?: boolean;
   };
   /** Active project header. Clicking opens the project switcher (handled by
    *  the caller via the onProjectClick handler). */
@@ -426,27 +431,6 @@ function ToolButton({ tool }: { tool: RailToolItem }) {
   );
 }
 
-// Inline gear icon — `settings` isn't in the sprite (see icon-names.ts), so we
-// render the SVG directly. Same visual as the BottomDock gear.
-function GearGlyph() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-}
-
 // Account footer row — bell / avatar / gear. Each is a react-aria button so
 // keyboard + focus handling matches the rest of the rail.
 function AccountRow({
@@ -723,7 +707,9 @@ export function LeftRail({
           <span className={styles.brandMark} aria-hidden="true">
             O
           </span>
-          <span className={styles.brandName}>{brand.label}</span>
+          {brand.showLabel !== false && (
+            <span className={styles.brandName}>{brand.label}</span>
+          )}
         </button>
         {overlay?.onLockOpen && (
           <button

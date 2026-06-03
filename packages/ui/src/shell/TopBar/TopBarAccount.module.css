@@ -1,0 +1,50 @@
+/* packages/ui/src/shell/TopBar/TopBarAccount.module.css */
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+.accountBtn {
+  position: relative;
+  inline-size: 28px;
+  block-size: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  color: var(--ds-text-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ds-surface-alt);
+    color: var(--ds-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.accountAvatar {
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--ds-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--ds-line);
+}
+
+.accountDot {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--ds-danger);
+  border: 1.5px solid var(--ds-bg);
+}

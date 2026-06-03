@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import {
   TopBar,
+  TopBarAccount,
   SkipLink,
   CommandPalette,
   LeftRail,
@@ -28,7 +29,7 @@ import type {
   ProjectSwitcherItem,
   DropdownMenuItem,
   RailToolItem,
-  RailAccountActions,
+  TopBarAccountActions,
   CesareSessionItem,
 } from "@oh-writers/ui";
 import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
@@ -122,11 +123,13 @@ function readPersistedShell(): ShellState {
     ? raw
     : "full";
 }
+// Spec 55 / BUGS N-05 — Cesare ALWAYS starts closed on first load. It must
+// never auto-open: previously a persisted "expanded" reopened the floating chat
+// on every reload, covering the document. We keep persisting the user's last
+// state (for any future "reopen where I left off" affordance) but never act on
+// it at mount — the user opens Cesare explicitly via the BottomDock pill.
 function readPersistedCesare(): CesareState {
-  if (typeof window === "undefined") return "closed";
-  const raw = window.localStorage.getItem(CESARE_STORAGE_KEY);
-  // Restore only stable states. Peek/full are transient.
-  return raw === "expanded" ? "expanded" : "closed";
+  return "closed";
 }
 
 interface AppShellProps {
@@ -803,9 +806,22 @@ function AppShellInner({
     }
   }, [projectId, router]);
 
-  const handleSettings = useCallback(() => {
-    window.location.href = "/settings";
-  }, []);
+  // N-22 — avatar and gear are DISTINCT destinations: avatar → user settings,
+  // gear → project settings (falls back to user settings outside a project).
+  const handleUserSettings = useCallback(() => {
+    void router.navigate({ to: "/settings" });
+  }, [router]);
+
+  const handleProjectSettings = useCallback(() => {
+    if (projectId) {
+      void router.navigate({
+        to: "/projects/$id/settings",
+        params: { id: projectId },
+      });
+    } else {
+      void router.navigate({ to: "/settings" });
+    }
+  }, [projectId, router]);
 
   const paletteItems = useMemo<CommandPaletteItem[]>(() => {
     const items: CommandPaletteItem[] = [
@@ -890,18 +906,25 @@ function AppShellInner({
     [openPalette, router, handleBrandClick, t],
   );
 
-  // ── Rail account row (bell / avatar / gear) ──────────────────
-  // Spec 47b FIX 1: the account actions live ONLY in the rail footer. The
-  // BottomDock and the Cesare header no longer render them.
-  const railAccount = useMemo<RailAccountActions>(
+  // ── TopBar account zone (bell / avatar / gear) ───────────────
+  // Spec 55: the account actions live in the TopBar right zone (the single
+  // home), superseding the LeftRail footer AccountRow (Spec 47b). Avatar →
+  // user settings, gear → project settings (N-22, distinct destinations).
+  const topBarAccount = useMemo<TopBarAccountActions>(
     () => ({
       onBell: openBellDrawer,
-      onAvatar: handleSettings,
-      onGear: handleSettings,
+      onAvatar: handleUserSettings,
+      onGear: handleProjectSettings,
       hasUnreadNotifications: hasUnseen,
       avatarLabel: deriveInitials(user.name),
     }),
-    [openBellDrawer, handleSettings, hasUnseen, user.name],
+    [
+      openBellDrawer,
+      handleUserSettings,
+      handleProjectSettings,
+      hasUnseen,
+      user.name,
+    ],
   );
 
   // ── Rail sections (Sviluppo / Produzione / Recenti) ──────────
@@ -1007,7 +1030,13 @@ function AppShellInner({
           <SkipLink targetId="main-content" label={t("shell.skipLink")} />
           <div className={styles.rail}>
             <LeftRail
-              brand={{ label: "Oh Writers", onPress: handleBrandClick }}
+              brand={{
+                label: "Oh Writers",
+                onPress: handleBrandClick,
+                // N-21 — hide the redundant wordmark when no project is open;
+                // the "O" mark stands alone (Notion-style minimal header).
+                showLabel: Boolean(projectName),
+              }}
               project={
                 projectName
                   ? {
@@ -1023,7 +1052,6 @@ function AppShellInner({
               onSessionDelete={onCesareSessionDelete}
               onSessionNew={onCesareSessionNew}
               onSessionsOpen={onCesareSessionsOpen}
-              account={railAccount}
               tools={railTools}
               labels={{
                 sessionsTitle: t("shell.rail.sessionsTitle"),
@@ -1075,6 +1103,18 @@ function AppShellInner({
               actions={topBarSlots.actions ?? undefined}
               onSearch={openPalette}
               elementLegend={topBarSlots.elementLegend ?? undefined}
+              accountZone={
+                <TopBarAccount
+                  account={topBarAccount}
+                  labels={{
+                    notifications: t("shell.rail.notifications"),
+                    notificationsUnread: t("shell.rail.notificationsUnread"),
+                    profile: t("shell.rail.profile"),
+                    settings: t("shell.rail.settings"),
+                    account: t("shell.rail.account"),
+                  }}
+                />
+              }
             />
             {children}
           </main>

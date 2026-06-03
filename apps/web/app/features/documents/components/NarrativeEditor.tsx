@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EditorView } from "prosemirror-view";
-import { DocumentTypes } from "@oh-writers/domain";
+import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import type { DocumentType, TranslationKey } from "@oh-writers/domain";
 import { ActionsMenu, FloatingDock } from "@oh-writers/ui";
 import type { DocumentViewWithPermission } from "../server/documents.server";
@@ -36,9 +36,11 @@ import { useDocumentVersions } from "~/features/versions";
 import {
   useSaveStatePublisher,
   useCesareOpen,
+  useContextActions,
   useSetActiveDocument,
   useRoutedSurface,
 } from "~/features/app-shell";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import { createVersionFromScratch } from "../server/versions.server";
 import { useTranslation } from "~/features/i18n";
 import styles from "./NarrativeEditor.module.css";
@@ -519,28 +521,36 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     <TreatmentToc content={content} />
   ) : undefined;
 
-  // Unified "…" actions menu for narrative doc pages (Soggetto-style). PDF
-  // export is gated to the narrative export route (logline/synopsis/treatment);
-  // on Scaletta it stays present but disabled. Versioni is always actionable.
+  // Unified "…" actions menu for narrative doc pages (Soggetto-style), now built
+  // from the shared context-action registry (Spec 55) so every narrative page
+  // surfaces its actions through one pattern. The page wires handlers per
+  // `ContextActionId`; the registry owns order + gating. PDF export stays
+  // disabled when the route has no narrative export (Scaletta).
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT_PDF]: {
+        onSelect: handleExport,
+        disabled: !isNarrative || exportPdf.isPending,
+        labelOverride: exportPdf.isPending
+          ? t("documents.editor.exportingMenu")
+          : undefined,
+      },
+      [ContextActionIds.VERSIONS]: { onSelect: openVersionsDrawer },
+    }),
+    // handleExport / openVersionsDrawer are recreated each render and close over
+    // `isVersionsOpen` (the open/close toggle reads it). Key the memo on
+    // `isVersionsOpen` so it recaptures the current closures whenever that flips
+    // — otherwise the Versioni toggle and the "close versions before export"
+    // step would act on a stale value. The closures themselves are intentionally
+    // omitted from deps (they'd defeat the memo by changing every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isNarrative, exportPdf.isPending, isVersionsOpen, t],
+  );
+  const contextActionItems = useContextActions(type, contextActionHandlers);
   const docActionsMenu = hasTopBarDocActions ? (
     <ActionsMenu
       data-testid="narrative-actions-menu"
-      items={[
-        {
-          label: exportPdf.isPending
-            ? t("documents.editor.exportingMenu")
-            : t("documents.editor.exportPdf"),
-          onClick: handleExport,
-          disabled: !isNarrative || exportPdf.isPending,
-        },
-        { label: t("documents.editor.versions"), onClick: openVersionsDrawer },
-        { label: t("documents.editor.import"), onClick: () => {}, disabled: true },
-        {
-          label: t("documents.editor.titlePage"),
-          onClick: () => {},
-          disabled: true,
-        },
-      ]}
+      items={contextActionItems}
     />
   ) : undefined;
 

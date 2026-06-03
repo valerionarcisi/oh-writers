@@ -155,6 +155,12 @@ export type {
   TopBarSection,
   TopBarSectionGroup,
 } from "./shell/TopBar/TopBar";
+export { TopBarAccount } from "./shell/TopBar/TopBarAccount";
+export type {
+  TopBarAccountProps,
+  TopBarAccountActions,
+  TopBarAccountLabels,
+} from "./shell/TopBar/TopBarAccount";
 export { ProjectSwitcherPopover } from "./shell/TopBar/ProjectSwitcherPopover";
 export type {
   ProjectSwitcherItem,

@@ -74,3 +74,46 @@ footer**. CLAUDE.md + Spec 44 are updated when this ships.
 - Notifications + account reachable only from the TopBar; no rail AccountRow.
 - One drawer inventory only (Cesare floating + SplitDrawer routed).
 - The earlier rail tools→top-left fix (commit `ba59f05`) is reworked into the TopBar here.
+
+## Implemented — narrative-surface backbone (A1, Narrative Walk)
+
+Shipped the shell backbone + the NARRATIVE surface (soggetto/sinossi/scaletta/
+trattamento). Production-page action registration (budget/breakdown/schedule/
+locations) and screenplay export are deferred (N-28 / A5).
+
+- **Context-action registry (the backbone).** `packages/domain/src/actions/context-actions.ts`
+  — a pure, framework-agnostic declarative map `segment → ordered descriptors`
+  (`{ id, labelKey, feature?, order }`) + `resolveContextActions(segment, enabledFeatures)`.
+  The web binding `apps/web/app/features/app-shell/use-context-actions.ts`
+  (`useContextActions(segment, handlers)`) resolves it, feature-gates via
+  `useFeatures()` (Spec 54), translates label keys, and drops descriptors the page
+  did not wire — returning `DropdownMenuItem[]` for the TopBar `ActionsMenu`.
+  Downstream lanes register descriptors here + wire handlers; they never reinvent
+  TopBar placement.
+- **Narrative actions through the registry** (N-02/N-03): soggetto (DOCX, SIAE
+  IT-gated, Versioni) and synopsis/outline/treatment (PDF, Versioni) now build
+  their TopBar menu from `useContextActions`. SIAE gating moved out of an inline
+  `useFeature` call into the registry.
+- **TopBar account zone** (N-01/N-22): `packages/ui/src/shell/TopBar/TopBarAccount.tsx`
+  hosts bell + avatar + gear in the TopBar right zone (the single home). The
+  LeftRail footer `AccountRow` is no longer rendered by the shell (the `account`
+  prop is dropped). Avatar → `/settings` (user), gear → `/projects/:id/settings`
+  (project) — distinct destinations. The bell opens the notifications SplitDrawer
+  (unchanged transport).
+- **Cesare starts closed** (N-05): `readPersistedCesare()` always returns
+  `closed`; the persisted state is never acted on at mount, so Cesare never
+  auto-opens.
+- **No redundant wordmark** (N-21): with no project selected, `_app.tsx` leaves
+  `projectName` empty (was `"Oh Writers"`), so no project row renders and the
+  brand wordmark is hidden (`LeftRail` `brand.showLabel`); the "O" mark stands
+  alone.
+- **Tests.** Unit: `packages/domain/src/actions/context-actions.test.ts`.
+  E2E: `tests/shell/spec55-shell-backbone.spec.ts` (N-01..N-05, N-21, N-22);
+  legacy `tests/shell-dock.spec.ts` + `tests/cesare-header-minimal.spec.ts`
+  updated to the TopBar account home (and made hydration-robust). N-02 rollback
+  path stays covered by `tests/versions-splitdrawer.spec.ts`.
+- **Deferred / not done here.** The legacy `VersionsDrawer` context (`~/features/versions`)
+  stays mounted in `AppShell` because screenplay/budget/breakdown still consume
+  it (out of scope; A5 + N-28). The narrative surface itself uses only the routed
+  `?versions=` SplitDrawer. Spec 56 single-home enforcement (Slice D) and the
+  dock-page migration (Slice B) are separate fronts.

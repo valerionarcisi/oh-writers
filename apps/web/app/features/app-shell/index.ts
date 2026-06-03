@@ -40,6 +40,11 @@ export type {
   UseRoutedSurfaceResult,
   UseRoutedSurfaceOptions,
 } from "./use-routed-surface";
+export { useContextActions } from "./use-context-actions";
+export type {
+  ContextActionHandler,
+  ContextActionHandlers,
+} from "./use-context-actions";
 export {
   SaveStateProvider,
   useSaveStatePublisher,

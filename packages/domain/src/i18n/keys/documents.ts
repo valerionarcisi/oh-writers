@@ -80,8 +80,7 @@ export const documentsKeys = {
       "Subject not ready: write some content before exporting.",
     "documents.siae.error.forbidden":
       "You do not have permission to export this project.",
-    "documents.siae.error.validation":
-      "The SIAE form contains invalid values.",
+    "documents.siae.error.validation": "The SIAE form contains invalid values.",
 
     // Free narrative editor
     "documents.freeNarrative.placeholder":
@@ -91,18 +90,15 @@ export const documentsKeys = {
     "documents.freeNarrative.characters": "characters",
 
     // Logline pill
-    "documents.logline.placeholder":
-      "Add a logline to frame the project.",
+    "documents.logline.placeholder": "Add a logline to frame the project.",
     "documents.logline.empty": "No logline",
     "documents.logline.openAria": "Open logline",
     "documents.logline.loglineAria": "Logline: {logline}",
     "documents.logline.heading": "Logline",
 
     // Margin notes column
-    "documents.marginNotes.empty":
-      "Start writing to get notes from Cesare.",
-    "documents.marginNotes.error":
-      "Could not load notes. Try again later.",
+    "documents.marginNotes.empty": "Start writing to get notes from Cesare.",
+    "documents.marginNotes.error": "Could not load notes. Try again later.",
     "documents.marginNotes.none": "No notes right now.",
     "documents.marginNotes.ariaLabel": "Cesare notes",
 
@@ -129,14 +125,16 @@ export const documentsKeys = {
     "documents.editor.placeholder.synopsis": "Start your synopsis here…",
     "documents.editor.placeholder.treatment": "Start your treatment here…",
     "documents.editor.bulletListAria": "Bullet list",
-    "documents.editor.loglineError":
-      "Logline is limited to {max} characters.",
+    "documents.editor.loglineError": "Logline is limited to {max} characters.",
     "documents.editor.readOnly": "Read only",
     "documents.editor.versionFallback": "Version {number}",
     "documents.editor.openVersions": "Open Versions →",
     "documents.editor.exporting": "Exporting…",
     "documents.editor.exportingMenu": "Exporting…",
     "documents.editor.exportPdf": "Export PDF",
+    "documents.editor.exportDocx": "Export DOCX",
+    "documents.editor.exportingDocx": "Exporting…",
+    "documents.editor.exportSiae": "Export SIAE",
     "documents.editor.versions": "Versions",
     "documents.editor.import": "Import",
     "documents.editor.titlePage": "Title page",
@@ -298,14 +296,16 @@ export const documentsKeys = {
     "documents.editor.placeholder.synopsis": "Inizia la tua sinossi qui…",
     "documents.editor.placeholder.treatment": "Inizia il tuo trattamento qui…",
     "documents.editor.bulletListAria": "Elenco puntato",
-    "documents.editor.loglineError":
-      "Logline is limited to {max} characters.",
+    "documents.editor.loglineError": "Logline is limited to {max} characters.",
     "documents.editor.readOnly": "Read only",
     "documents.editor.versionFallback": "Versione {number}",
     "documents.editor.openVersions": "Apri Versioni →",
     "documents.editor.exporting": "Esportando…",
     "documents.editor.exportingMenu": "Esportazione…",
     "documents.editor.exportPdf": "Esporta PDF",
+    "documents.editor.exportDocx": "Esporta DOCX",
+    "documents.editor.exportingDocx": "Esportazione…",
+    "documents.editor.exportSiae": "Esporta SIAE",
     "documents.editor.versions": "Versioni",
     "documents.editor.import": "Importa",
     "documents.editor.titlePage": "Frontespizio",

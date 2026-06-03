@@ -277,11 +277,14 @@ function AppLayout() {
     : "";
 
   const { data: projectResult } = useProject(projectId ?? "");
+  // N-21 — with no project selected, leave the name empty so the shell renders
+  // no project switcher row and the brand wordmark is hidden (the "O" mark
+  // stands alone). Only fall back to "…" while a real project's title loads.
   const projectName = projectResult?.isOk
     ? projectResult.value.title
     : projectId
       ? "…"
-      : "Oh Writers";
+      : "";
 
   const sectionGroups = buildSectionGroups(projectId, activeSegment);
   const cesarePage = deriveCesarePage(pathname);

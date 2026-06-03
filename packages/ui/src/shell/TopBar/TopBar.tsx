@@ -49,6 +49,11 @@ export type TopBarProps = {
   /** Optional extra actions injected before the search button (e.g. export). */
   actions?: ReactNode;
 
+  /** Shell-level account zone (bell + avatar + gear). Rendered at the far end of
+   *  the right zone, after search — the single home for notifications + account
+   *  per Spec 55 (superseding the LeftRail footer). */
+  accountZone?: ReactNode;
+
   /** Whether the page has scrolled past 0 — controls border-bottom appearance. */
   isScrolled?: boolean;
 
@@ -123,6 +128,7 @@ export function TopBar({
   sectionName,
   center,
   actions,
+  accountZone,
   isScrolled = false,
   scopeChip,
   versionSelector,
@@ -169,6 +175,7 @@ export function TopBar({
           {versionSelector && (
             <span className={styles.versionSlot}>{versionSelector}</span>
           )}
+          {accountZone}
         </div>
       </div>
 

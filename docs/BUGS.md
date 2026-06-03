@@ -32,17 +32,22 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 
 - **N-01** ALTO — Notifications still bottom-left; must move to the TopBar; they open in a SplitDrawer, and the **old notification drawer is removed** (img #3, #18).
   - `Done =` bell lives in the TopBar action zone on every narrative page; clicking it opens notifications in a SplitDrawer; `NotificationCenterDrawer` (bottom-left) deleted; E2E asserts bell-in-topbar + split open + no legacy drawer in DOM.
+  - **FIXED (branch `agent/a1-spec55-shell-backbone`, pending Lead merge).** Bell moved to a new TopBar account zone (`packages/ui/src/shell/TopBar/TopBarAccount.tsx`), wired in `AppShell.tsx`; rail-footer `AccountRow` no longer rendered by the shell. Bell opens the notifications SplitDrawer. E2E `tests/shell/spec55-shell-backbone.spec.ts`.
 - **N-02** ALTO — **Versions missing on all narrative pages**; must open in a SplitDrawer, **old VersionsDrawer removed**; place "Versioni" near the lens (img #15). (Spec 49 + 55.)
   - `Done =` "Versioni" action registered in the TopBar zone on all narrative document pages; opens the Versions SplitDrawer (`?peek=versions`); legacy VersionsDrawer removed; E2E asserts action present + split opens + rollback path intact.
+  - **FIXED for narrative (branch `agent/a1-spec55-shell-backbone`, pending merge).** "Versioni" is registered in the shared registry (`context-actions.ts`) and rendered in the TopBar `ActionsMenu` on soggetto/sinossi/scaletta/trattamento; it opens the routed Versions SplitDrawer (`?versions=<docId>`, the real impl — NOT `?peek=versions`). Narrative pages no longer use the legacy `VersionsDrawer`. **Caveat:** the legacy `VersionsDrawer` shell mount is KEPT because screenplay/budget/breakdown still consume it (out of scope — A5/N-28); deleting it would break those. E2E: action+split in `spec55-shell-backbone.spec.ts`; rollback in `versions-splitdrawer.spec.ts`.
 - **N-03** ALTO — **Exports** must sit near the lens, as a **per-page tool pattern across ALL narrative pages** (img #16, #20). One pattern, page-specific tools.
   - `Done =` narrative document pages register their export actions (SIAE/PDF) via the shared TopBar action registry — one pattern, page-specific tools; no mid-page export menu/modal on narrative docs; E2E asserts export action in TopBar zone per narrative page. (Screenplay export registration owned by A5.)
+  - **FIXED (branch `agent/a1-spec55-shell-backbone`, pending merge).** Built the registry backbone (`packages/domain/src/actions/context-actions.ts` + `use-context-actions.ts`). Soggetto (DOCX + SIAE) and synopsis/outline/treatment (PDF) export actions now come from the registry into the TopBar `ActionsMenu`. Export modals still open from those actions (placement, not redesign). Unit: `context-actions.test.ts`; E2E: `spec55-shell-backbone.spec.ts`.
 - **N-04** MEDIO — Drawers are ALWAYS SplitDrawer; clean up any legacy drawer (img #18).
   - `Done =` no drawer pattern other than Cesare (floating bottom-right) + SplitDrawer (`?peek=`) remains in the narrative surface; BottomDock/FloatingDock/AccountRow retired per Spec 55; grep + E2E confirm no legacy drawer/dock mounts.
+  - **PARTIAL (branch `agent/a1-spec55-shell-backbone`, pending merge).** Rail `AccountRow` retired from the shell (bell/avatar/gear now in the TopBar). On the narrative surface the only drawers are Cesare (floating) + SplitDrawer (routed). `BottomDock` is KEPT — it is the Cesare launcher pill per the updated CLAUDE/Spec 44 invariant, not a per-page action bar. `FloatingDock` is only used on the (non-routed) logline editor, not narrative pages; retiring it app-wide is Slice C / N-28. E2E asserts no `rail-account` on narrative pages.
 
 ### Topic 2 — Cesare drawer & chat UX
 
 - **N-05** ALTO — Cesare **auto-opens**; it should **start closed** (img #4).
   - `Done =` on first load of any narrative page Cesare is `closed` (no auto-open); `body[data-cesare]` is `closed` until the user opens it; E2E asserts closed-on-load across narrative pages. (Owned by A1 — `cesare-context.tsx`.)
+  - **FIXED (branch `agent/a1-spec55-shell-backbone`, pending merge).** Root cause was `AppShell.readPersistedCesare()` restoring a persisted `expanded` on every load. Now it always returns `closed` (persisted state never acted on at mount). E2E in `spec55-shell-backbone.spec.ts` pre-seeds `ohw.cesare.state=expanded` and still asserts `body[data-cesare]=closed` on load.
 - **N-06** ALTO — In split view (`?peek=cesare`) the **text input to talk to Cesare is missing / not visible** (img #12, #13).
 - **N-07** MEDIO — Chat layout: **fixed header + footer always visible, body scrolls, "go to end of chat" button** — same as Claude (img #13).
 - **N-08** MEDIO — Improve the **response bubbles** UI (img #12).
@@ -77,8 +82,10 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 
 - **N-21** BASSO — Redundant **"Oh Writers" label under the logo** (project switcher when no project) (img #3).
   - `Done =` the redundant "Oh Writers" text under the logo is removed (logo stands alone when no project); Design judge screenshot-approves; matches Notion-style minimal header.
+  - **FIXED (branch `agent/a1-spec55-shell-backbone`, pending merge).** Root cause: `_app.tsx` defaulted `projectName` to `"Oh Writers"` when no project, so the shell rendered a redundant project row + wordmark. Now it is empty when no project → no project row, and `LeftRail brand.showLabel` hides the wordmark (the "O" mark stands alone). Screenshot `07-dashboard-no-wordmark.png`.
 - **N-22** MEDIO — **Avatar click and gear both open the same page**; should differ: avatar → user settings, gear → project settings (img #17).
   - `Done =` avatar (TopBar account menu) → user settings route; gear → project settings route; they are distinct destinations; E2E asserts each opens its own page.
+  - **FIXED (branch `agent/a1-spec55-shell-backbone`, pending merge).** In `AppShell` the avatar `onAvatar` → `/settings` (user) and gear `onGear` → `/projects/:id/settings` (project) — split into two handlers (was both `/settings`). E2E asserts each lands on its own pathname.
 - **N-23** MEDIO — **Account settings page too narrow** (cramped column) (img #19).
 - **N-24** BASSO — Project icon (e.g. "Non fa ridere"): unclear what it should open (img #4).
 

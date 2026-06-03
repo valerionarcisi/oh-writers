@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
-import { DocumentTypes } from "@oh-writers/domain";
+import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import { ActionsMenu, Skeleton } from "@oh-writers/ui";
 import {
   DraftBanner,
@@ -23,12 +23,13 @@ import { toErrorView } from "~/components/ResultErrorView";
 import { useProject } from "~/features/projects";
 import {
   useCesareOpen,
+  useContextActions,
   useSetActiveDocument,
   useRoutedSurface,
 } from "~/features/app-shell";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
-import { useFeature } from "~/features/feature-flags";
-import { Features } from "@oh-writers/domain";
+import { useTranslation } from "~/features/i18n";
 import { titleHead } from "~/lib/document-title";
 import type { DocumentViewWithPermission } from "~/features/documents";
 import styles from "./_app.projects.$id_.soggetto.module.css";
@@ -145,10 +146,12 @@ function SoggettoPageReady({
     setActiveDocument({ id: soggettoDoc.id, type: DocumentTypes.SOGGETTO });
     return () => setActiveDocument(null);
   }, [soggettoDoc.id, setActiveDocument]);
+  const { t } = useTranslation();
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSiaeOpen, setIsSiaeOpen] = useState(false);
-  // SIAE is the Italian copyright registry — hidden on the international market.
-  const siaeEnabled = useFeature(Features.SIAE_EXPORT);
+  // SIAE is the Italian copyright registry — gating is owned by the context-action
+  // registry (Spec 55) via `useContextActions`, which drops the SIAE descriptor on
+  // the international market. No inline market/feature check here.
   const projectQuery = useProject(projectId);
   const projectOk =
     projectQuery.data && projectQuery.data.isOk
@@ -216,47 +219,50 @@ function SoggettoPageReady({
     );
   };
 
+  // TopBar context actions come from the shared registry (Spec 55). The page
+  // wires runtime handlers per `ContextActionId`; the registry owns order +
+  // feature gating (SIAE only in the IT market). The DOCX handler carries a
+  // transient "Exporting…" label while the mutation runs.
+  const exportDocxPending = exportDocx.isPending;
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT_DOCX]: {
+        onSelect: () => {
+          if (isVersionsOpen) versionsClose();
+          setIsExportOpen(true);
+        },
+        disabled: exportDocxPending,
+        labelOverride: exportDocxPending
+          ? t("documents.editor.exportingDocx")
+          : undefined,
+      },
+      [ContextActionIds.EXPORT_SIAE]: {
+        onSelect: () => {
+          if (isVersionsOpen) versionsClose();
+          setIsSiaeOpen(true);
+        },
+        testId: "action-export-siae",
+      },
+      [ContextActionIds.VERSIONS]: { onSelect: toggleVersions },
+    }),
+    [exportDocxPending, isVersionsOpen, versionsClose, toggleVersions, t],
+  );
+  const contextActionItems = useContextActions(
+    "soggetto",
+    contextActionHandlers,
+  );
+
   // Memoise the TopBar actions node: `useTopBarSlotPublisher` re-publishes on
   // every new `value` reference, so an inline node here would loop the slot
-  // setState ("Maximum update depth"). All deps are stable (router-surface
-  // callbacks are useCallback'd; setters are stable).
-  const exportDocxPending = exportDocx.isPending;
+  // setState ("Maximum update depth"). `contextActionItems` is already memoised.
   const topBarActions = useMemo(
     () => (
       <ActionsMenu
         data-testid="soggetto-actions-menu"
-        items={[
-          {
-            label: exportDocxPending ? "Esportazione…" : "Esporta DOCX",
-            onClick: () => {
-              if (isVersionsOpen) versionsClose();
-              setIsExportOpen(true);
-            },
-            disabled: exportDocxPending,
-          },
-          ...(siaeEnabled
-            ? [
-                {
-                  label: "Esporta SIAE",
-                  testId: "action-export-siae",
-                  onClick: () => {
-                    if (isVersionsOpen) versionsClose();
-                    setIsSiaeOpen(true);
-                  },
-                },
-              ]
-            : []),
-          { label: "Versioni", onClick: toggleVersions },
-        ]}
+        items={contextActionItems}
       />
     ),
-    [
-      exportDocxPending,
-      isVersionsOpen,
-      versionsClose,
-      toggleVersions,
-      siaeEnabled,
-    ],
+    [contextActionItems],
   );
 
   return (
