@@ -23,7 +23,59 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
-_(none logged yet in this ledger — new bugs land here as we find them)_
+Narrative UI/UX manual walk — 2026-06-03 (Valerio). Grouped by topic; image refs are
+the walk screenshots. Severity is provisional (to confirm during one-by-one analysis).
+
+### Topic 1 — Action placement / TopBar standard (Spec 55)
+
+The recurring "everything near the lens" pattern. Confirms + enriches `docs/specs/55-shell-action-standard.md`.
+
+- **N-01** ALTO — Notifications still bottom-left; must move to the TopBar; they open in a SplitDrawer, and the **old notification drawer is removed** (img #3, #18).
+- **N-02** ALTO — **Versions missing on all narrative pages**; must open in a SplitDrawer, **old VersionsDrawer removed**; place "Versioni" near the lens (img #15). (Spec 49 + 55.)
+- **N-03** ALTO — **Exports** must sit near the lens, as a **per-page tool pattern across ALL narrative pages** (img #16, #20). One pattern, page-specific tools.
+- **N-04** MEDIO — Drawers are ALWAYS SplitDrawer; clean up any legacy drawer (img #18).
+
+### Topic 2 — Cesare drawer & chat UX
+
+- **N-05** ALTO — Cesare **auto-opens**; it should **start closed** (img #4).
+- **N-06** ALTO — In split view (`?peek=cesare`) the **text input to talk to Cesare is missing / not visible** (img #12, #13).
+- **N-07** MEDIO — Chat layout: **fixed header + footer always visible, body scrolls, "go to end of chat" button** — same as Claude (img #13).
+- **N-08** MEDIO — Improve the **response bubbles** UI (img #12).
+- **N-09** MEDIO — **"Mostra/Nascondi modifiche" shows nothing** when toggled (img #11). (Spec 47e flash.)
+- **N-10** MEDIO — **Markdown rendering problem** in Cesare messages (img #8).
+- **N-11** BASSO — Suggestion cards (Cesare structure cards) placement needs rethinking (img #14).
+
+### Topic 3 — Cesare sessions (pages & model)
+
+- **N-12** MEDIO — Sessions list page UI too basic (img #5).
+- **N-13** MEDIO — New-session **full-screen landing should live INSIDE AppShell**, not a bare takeover (img #6).
+- **N-14** MEDIO — Session conversation page: **EN/IT language mix** + UI too basic (img #7).
+- **N-15** QUESTION — Navigating between pages: should it spawn a **new session** or keep the same one? Design decision (img #10).
+
+### Topic 4 — Logline & narrative nav
+
+- **N-16** ALTO — **Clicking the logline opens nothing** in some state (the logline bug Valerio hit) (img #9). NOTE: the popover DID open in the Lead repro — repro the exact failing state.
+- **N-17** MEDIO — **"Soggetto" missing from the sidebar nav** (Development section shows Treatment outline/Synopsis/Outline/Treatment/Screenplay, no Soggetto) (img #4).
+
+### Topic 5 — Narrative editor chrome
+
+- **N-18** MEDIO — Screenplay: **remove the white border**, want only the centered text page (img #16).
+- **N-19** ALTO — Screenplay top element-tabs (SCENE/ACTION/…) look hardcoded or buggy; **imports + previously-available functionality missing** from the toolbar; move these controls (img #17).
+
+### Topic 6 — i18n leaks
+
+- **N-20** ALTO — EN/IT mix across narrative + sessions + shell (e.g. "Continue screenplay", "Export PDF", "Saved", "2 online", session titles) (img #3,#7,#8,#16,#17,#20). Maps to audit A-05/A-06.
+
+### Topic 7 — Shell & settings polish
+
+- **N-21** BASSO — Redundant **"Oh Writers" label under the logo** (project switcher when no project) (img #3).
+- **N-22** MEDIO — **Avatar click and gear both open the same page**; should differ: avatar → user settings, gear → project settings (img #17).
+- **N-23** MEDIO — **Account settings page too narrow** (cramped column) (img #19).
+- **N-24** BASSO — Project icon (e.g. "Non fa ridere"): unclear what it should open (img #4).
+
+### Topic 8 — Feature idea (ICEBOX, needs spec)
+
+- **N-25** FEATURE — **Live-draft via Cesare**: ask Cesare to write the soggetto → opens a SplitDrawer with a blank sheet → user dictates, Cesare writes & applies live → "ok, caricalo" commits it. Cesare can also **upload/attach a document**. (img #8) → own spec, not now.
 
 ## Archived
 

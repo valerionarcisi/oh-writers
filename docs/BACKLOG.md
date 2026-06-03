@@ -20,24 +20,31 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## NOW (max 1)
 
-- **[logline] Investigate the real logline bug** — manual edit + persist verified working
-  (live repro + `tests/documents/logline-manual.spec.ts`); Cesare path only mock-tested.
-  **Blocked on:** Valerio's manual repro (which exact path/steps fail). See `docs/LEARNINGS.md`.
+- **Narrative UI/UX — analyse & fix one-by-one** — 25 findings from Valerio's 2026-06-03
+  walk, grouped in `docs/BUGS.md` (N-01..N-25). Pick the next finding/topic, branch, fix
+  per DoD, merge, `/clear`, repeat. (Start point to be chosen.)
 
-## NEXT (prioritised)
+## NEXT (prioritised — narrative walk topics, then the rest)
 
-1. **[55] Shell action standard — context-aware TopBar** — `docs/specs/55-shell-action-standard.md`.
-   Unblocks audit C-01/C-02 + Spec 56 Phase 2 remainder + the rail rework. Big.
-2. **[A-01] Screenplay ⋯ menu opens off-screen** — `DropdownMenu` flip-up — audit A-01.
-3. **[C-01/C-02] pointer-events family** — SIAE submit + new-session send intercepted (shared stacking root cause) — audit C-01/C-02.
-4. **[A-03] Viewer never gets live narrative/Soggetto edits** — `FreeNarrativeEditor.tsx:66` — audit A-03.
-5. **[A-04] "Opportunità" nav entry missing in rail** — audit A-04.
-6. **[A-05] ~50 hardcoded `it-IT` Intl formatters** — dates/numbers wrong in EN — audit A-05.
-7. **[A-06] Hardcoded IT strings in `packages/ui`** (Cesare drawer, rail) — audit A-06.
-8. **[A-07/08/09] a11y** — nested button (PeekRow), DropdownMenu trigger focus ring, CommandPalette combobox — audit A-07/08/09.
-9. **[56-1b] a11y axe automation** — needs approval to add `@axe-core/playwright` — `docs/specs/56-continuous-qa-system.md` Phase 1b.
-10. **[56-2] DS Phase 2 remainder** — single-home action check + shell-zone structural assertions (needs Spec 55) — spec 56 Phase 2.
-11. **[56-3/4] Visual regression + DoD gate + heuristic loop + Stop-hook wiring** — spec 56 Phase 3/4.
+1. **[Topic 1 / Spec 55] TopBar standard** — exports + versions + notifications + save, all "near the lens"; per-page tool pattern; drawers always SplitDrawer; kill old drawers. `docs/specs/55-shell-action-standard.md` + BUGS N-01..N-04. **Backbone — unblocks Topics 5, parts of others.**
+2. **[Topic 4] Logline + nav** — clicking logline opens nothing (N-16); Soggetto missing from sidebar (N-17).
+3. **[Topic 2] Cesare drawer & chat UX** — starts closed, split-view input missing, Claude-style fixed chat, bubbles, show/hide, markdown, suggestions (N-05..N-11).
+4. **[Topic 3] Cesare sessions** — list/landing/conversation UI + session model question (N-12..N-15).
+5. **[Topic 5] Narrative editor chrome** — screenplay bare page (N-18); element-tabs/imports/functionality (N-19).
+6. **[Topic 6] i18n leaks** — EN/IT mix (N-20) — audit A-05/A-06.
+7. **[Topic 7] Shell & settings polish** — brand label, avatar≠gear, account-settings width, project icon (N-21..N-24).
+8. **[Topic 8 / ICEBOX→spec] Live-draft via Cesare** — N-25 (own spec).
+9. _(then the remaining audit items not covered above — A-01 menu off-screen, A-03 viewer realtime, A-07/08/09 a11y; Spec 56 phases 1b/2/3/4.)_
+10. **[A-01] Screenplay ⋯ menu opens off-screen** — `DropdownMenu` flip-up — audit A-01.
+11. **[C-01/C-02] pointer-events family** — SIAE submit + new-session send intercepted (shared stacking root cause) — audit C-01/C-02.
+12. **[A-03] Viewer never gets live narrative/Soggetto edits** — `FreeNarrativeEditor.tsx:66` — audit A-03.
+13. **[A-04] "Opportunità" nav entry missing in rail** — audit A-04.
+14. **[A-05] ~50 hardcoded `it-IT` Intl formatters** — dates/numbers wrong in EN — audit A-05.
+15. **[A-06] Hardcoded IT strings in `packages/ui`** (Cesare drawer, rail) — audit A-06.
+16. **[A-07/08/09] a11y** — nested button (PeekRow), DropdownMenu trigger focus ring, CommandPalette combobox — audit A-07/08/09.
+17. **[56-1b] a11y axe automation** — needs approval to add `@axe-core/playwright` — `docs/specs/56-continuous-qa-system.md` Phase 1b.
+18. **[56-2] DS Phase 2 remainder** — single-home action check + shell-zone structural assertions (needs Spec 55) — spec 56 Phase 2.
+19. **[56-3/4] Visual regression + DoD gate + heuristic loop + Stop-hook wiring** — spec 56 Phase 3/4.
 
 ## ICEBOX (not now)
 
