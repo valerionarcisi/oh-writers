@@ -47,8 +47,9 @@ until "CI is green". Each layer is a recognised practice, not bespoke.
 
 ### Phase 4 — gate + loop
 
-7. **Definition of Done** — a checklist in `docs/conventions/` + the above wired into
-   `qa.yml`. A change is "done" only when the coherence exit-conditions hold.
+7. **Definition of Done** — `docs/conventions/definition-of-done.md` (tests at every
+   layer, E2E first; screenshot recap; gates green; tracked) + the above wired into
+   `qa.yml`. A change is "done" only when the DoD + the coherence exit-conditions hold.
 8. **Heuristic coherence loop** — the audit-fleet (Spec 47 / agent-fleet) becomes the
    periodic deep sweep run "as a user" (Nielsen heuristics + the human-friendly judge),
    iterating fix→re-evaluate until the coherence bar is met. The Lead gate

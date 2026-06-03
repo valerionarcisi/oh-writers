@@ -33,6 +33,7 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 - [Shared Infrastructure](docs/conventions/shared-infra.md) — centralized utilities table
 - [Database](docs/conventions/database.md) — Drizzle, migrations
 - [UI/UX Research](docs/conventions/ui-ux-research.md) — drive live + measure (geometry/hit-test/computed style), validate with measure+screenshot+E2E test, record learnings
+- [Definition of Done](docs/conventions/definition-of-done.md) — tests at every layer (E2E first) + screenshot recap + gates green + tracked; a change isn't done until this holds
 
 ---
 
@@ -48,6 +49,8 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 6. **For UI/UX changes**: research live + measure (never guess), and validate with **live re-measure + screenshot + a Playwright regression test** before committing. See [UI/UX Research](docs/conventions/ui-ux-research.md). Skip the test only with a written reason.
 7. **Code-review the staged diff before every commit** — run the `/code-review` skill on the change, address any critical findings, then commit
 8. Commit following the Git conventions below
+
+A change is **done** only when it meets the [Definition of Done](docs/conventions/definition-of-done.md): tests at every applicable layer (E2E first), screenshots in a final recap, gates green, tracked in `docs/BACKLOG.md`/`docs/BUGS.md`.
 
 **Before implementation:** every plan or brainstorm that gets approved must produce a spec file in `docs/specs/` before any code is written. Name it `NN-feature-name.md` (or `NNb-feature-name.md` for sub-specs of an existing numbered spec). The spec is written first, then implementation starts.
 
