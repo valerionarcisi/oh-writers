@@ -38,6 +38,8 @@ Detailed rules live in `docs/conventions/`. Load the file that matches the task:
 
 ## Workflow
 
+**Work queue:** `docs/BACKLOG.md` is the single live queue (NOW/NEXT/ICEBOX/DONE). **WIP = 1** — one front at a time, taken to merge, then `/clear` and pull the next. State lives in the .md files (backlog + specs + LEARNINGS), not the conversation, so context stays small.
+
 1. Read the relevant feature folder and its schema files first
 2. Identify which domain owns the logic (see Domain Boundaries)
 3. Validate inputs with Zod before any logic runs
