@@ -95,6 +95,8 @@ jobs:
         run: pnpm db:migrate
       - name: Seed test DB
         run: pnpm db:seed:reset
+      - name: Route-coverage smoke (Spec 56 — no dead routes / crash-on-load)
+        run: pnpm exec playwright test tests/route-smoke.spec.ts --project=chromium
       - name: Mock E2E (Cesare agentic, --project=mock-ui)
         # playwright.config.ts adds the `list` reporter automatically when CI=1
         # so failures surface in stdout while the html report is still
