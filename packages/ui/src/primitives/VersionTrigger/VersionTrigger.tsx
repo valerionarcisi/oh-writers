@@ -193,6 +193,7 @@ export function VersionTrigger({
         <Popover
           isOpen={triggerState.isOpen}
           onClose={() => triggerState.close()}
+          triggerRef={triggerRef}
           placement="bottom-end"
           width={220}
           className={styles.menu}

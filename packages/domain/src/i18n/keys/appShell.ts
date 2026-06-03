@@ -45,7 +45,7 @@ export const appShellKeys = {
     "shell.versionsLane.title": "Versions",
     "shell.versionsLane.frameAria": "Document versions",
     // Page trace stub renderer
-    "shell.trace.kind.soggetto": "Treatment outline",
+    "shell.trace.kind.soggetto": "Soggetto",
     "shell.trace.kind.sinossi": "Synopsis",
     "shell.trace.kind.scaletta": "Outline",
     "shell.trace.kind.trattamento": "Treatment",
@@ -81,7 +81,8 @@ export const appShellKeys = {
     "shell.notif.teamEmpty":
       "When a collaborator invites you or comments you will get a summary here.",
     "shell.notif.sectionSystem": "System",
-    "shell.notif.systemEmpty": "Release notes and app announcements will appear here.",
+    "shell.notif.systemEmpty":
+      "Release notes and app announcements will appear here.",
     "shell.notif.statusInProgress": "in progress",
     "shell.notif.statusRead": "read",
     "shell.notif.statusUnread": "unread",
@@ -278,7 +279,8 @@ export const appShellKeys = {
     "shell.notif.teamEmpty":
       "Quando un collaboratore ti invita o commenta riceverai qui un riepilogo.",
     "shell.notif.sectionSystem": "Sistema",
-    "shell.notif.systemEmpty": "Release notes e annunci dell'app appariranno qui.",
+    "shell.notif.systemEmpty":
+      "Release notes e annunci dell'app appariranno qui.",
     "shell.notif.statusInProgress": "in corso",
     "shell.notif.statusRead": "letta",
     "shell.notif.statusUnread": "non letta",
@@ -336,7 +338,8 @@ export const appShellKeys = {
     "shell.derived.docSummarised": "Documento riassunto",
     "shell.derived.docRewritten": "Documento riscritto",
     "shell.derived.docUpdated": "Documento aggiornato",
-    "shell.derived.screenplayNewVersion": "Cesare ha preparato una nuova versione",
+    "shell.derived.screenplayNewVersion":
+      "Cesare ha preparato una nuova versione",
     "shell.derived.screenplayRename": "Cesare ha proposto una rinomina",
     "shell.derived.screenplayProposal": "Cesare ha proposto una modifica",
     // LeftRail chrome (Spec 18b PR-7)

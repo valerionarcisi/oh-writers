@@ -31,7 +31,7 @@ export const versionsKeys = {
     // Scope titles
     "versions.scope.screenplay": "Screenplay versions",
     "versions.scope.logline": "Logline versions",
-    "versions.scope.soggetto": "Treatment outline versions",
+    "versions.scope.soggetto": "Soggetto versions",
     "versions.scope.synopsis": "Synopsis versions",
     "versions.scope.outline": "Outline versions",
     "versions.scope.treatment": "Treatment versions",
@@ -170,7 +170,8 @@ export const versionsKeys = {
     "versions.split.vsCurrent": "rispetto alla versione attuale",
     "versions.split.isCurrent": "Questa è la versione attuale.",
     "versions.split.noDifference": "Nessuna differenza.",
-    "versions.split.selectToCompare": "Seleziona una versione per confrontarla.",
+    "versions.split.selectToCompare":
+      "Seleziona una versione per confrontarla.",
     "versions.split.comparedWith": "a confronto con",
     "versions.split.selectTwo": "Seleziona due versioni da confrontare.",
     "versions.split.selectSecond":

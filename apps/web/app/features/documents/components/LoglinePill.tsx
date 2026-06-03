@@ -58,6 +58,7 @@ export function LoglinePill({
       <Popover
         isOpen={isOpen}
         onClose={() => setOpen(false)}
+        triggerRef={triggerRef}
         placement="bottom-start"
         width={480}
         className={styles.popover}

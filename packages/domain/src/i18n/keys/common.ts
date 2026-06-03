@@ -4,7 +4,7 @@ import type { LocaleDict } from "./types.js";
 export const commonKeys = {
   en: {
     // Navigation — document types
-    "nav.soggetto": "Treatment outline",
+    "nav.soggetto": "Soggetto",
     "nav.synopsis": "Synopsis",
     "nav.outline": "Outline",
     "nav.treatment": "Treatment",

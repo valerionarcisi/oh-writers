@@ -37,7 +37,6 @@ type ActEntry = {
   scenes: SceneEntry[];
 };
 
-
 export type ScreenplayEditorShellProps = {
   title: string;
   /** Project id — drives the DraftMetaBadge in the viewbar right. */
@@ -96,6 +95,7 @@ export function ScreenplayEditorShell({
   const [indiceQuery, setIndiceQuery] = useState("");
   const [isScrolled, setScrolled] = useState(false);
   const viewbarWrapRef = useRef<HTMLDivElement>(null);
+  const indiceTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Toggle the data-scrolled flag on the viewbar so its CSS can shrink the
   // chip strip once the user has moved past the top of the page. The actual
@@ -198,7 +198,10 @@ export function ScreenplayEditorShell({
       });
     }
     if (onOpenVersions) {
-      items.push({ label: t("screenplay.shell.versions"), onClick: onOpenVersions });
+      items.push({
+        label: t("screenplay.shell.versions"),
+        onClick: onOpenVersions,
+      });
     }
     return <ActionsMenu data-testid="screenplay-actions-menu" items={items} />;
   }, [onExport, isExporting, onFocusToggle, isFocusMode, onOpenVersions, t]);
@@ -217,6 +220,7 @@ export function ScreenplayEditorShell({
       {hasRealToc && (
         <div className={styles.indiceWrap}>
           <button
+            ref={indiceTriggerRef}
             type="button"
             className={styles.indiceButton}
             onClick={() => setIndiceOpen((v) => !v)}
@@ -237,6 +241,7 @@ export function ScreenplayEditorShell({
           <Popover
             isOpen={isIndiceOpen}
             onClose={() => setIndiceOpen(false)}
+            triggerRef={indiceTriggerRef}
             placement="bottom-end"
             width={320}
             className={styles.indicePopover}
@@ -302,9 +307,7 @@ export function ScreenplayEditorShell({
                   id: `version-${v.id}`,
                   label: v.isCurrent ? `● ${v.label}` : v.label,
                   onSelect: onOpenVersions,
-                  tone: v.isCurrent
-                    ? ("default" as const)
-                    : ("muted" as const),
+                  tone: v.isCurrent ? ("default" as const) : ("muted" as const),
                 }))
               : []),
             {
@@ -354,9 +357,7 @@ export function ScreenplayEditorShell({
       >
         <Viewbar>
           <div className={styles.viewbarGrid}>
-            <div className={styles.viewbarCenter}>
-              {viewbarCenter ?? null}
-            </div>
+            <div className={styles.viewbarCenter}>{viewbarCenter ?? null}</div>
             {viewbarRightNode}
           </div>
         </Viewbar>

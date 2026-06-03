@@ -218,6 +218,7 @@ export function ViewSwitcher<Id extends string = string>({
       <Popover
         isOpen={triggerState.isOpen}
         onClose={() => triggerState.close()}
+        triggerRef={triggerRef}
         placement="bottom-start"
         width={220}
         className={styles.popover}

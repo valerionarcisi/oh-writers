@@ -87,7 +87,7 @@ export const teamRoleLabel = (role: TeamRole, locale: Locale): string =>
 /** English document-type labels (counterpart to `DOCUMENT_TYPE_LABELS_IT`). */
 export const DOCUMENT_TYPE_LABELS_EN: Record<DocumentType, string> = {
   logline: "Logline",
-  soggetto: "Treatment outline",
+  soggetto: "Soggetto",
   synopsis: "Synopsis",
   outline: "Outline",
   treatment: "Treatment",

@@ -23,13 +23,13 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 - **Narrative UI/UX — analyse & fix one-by-one** — 25 findings from Valerio's 2026-06-03
   walk, grouped in `docs/BUGS.md` (N-01..N-25). Pick the next finding/topic, branch, fix
   per DoD, merge, `/clear`, repeat.
-  **Resume order:** (1) **logline N-16** + **Soggetto-in-nav N-17** (quick isolated win),
-  then (2) **Topic 1 / TopBar (Spec 55)** — the systemic shell refactor.
+  **Resume order:** (1) ✅ **logline N-16 + Soggetto-in-nav N-17** — done (Spec 57),
+  then (2) **Topic 1 / TopBar (Spec 55)** — the systemic shell refactor ← **NEXT UP**.
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
 1. **[Topic 1 / Spec 55] TopBar standard** — exports + versions + notifications + save, all "near the lens"; per-page tool pattern; drawers always SplitDrawer; kill old drawers. `docs/specs/55-shell-action-standard.md` + BUGS N-01..N-04. **Backbone — unblocks Topics 5, parts of others.**
-2. **[Topic 4] Logline + nav** — clicking logline opens nothing (N-16); Soggetto missing from sidebar (N-17).
+2. ~~**[Topic 4] Logline + nav** (N-16, N-17)~~ — ✅ done, Spec 57.
 3. **[Topic 2] Cesare drawer & chat UX** — starts closed, split-view input missing, Claude-style fixed chat, bubbles, show/hide, markdown, suggestions (N-05..N-11).
 4. **[Topic 3] Cesare sessions** — list/landing/conversation UI + session model question (N-12..N-15).
 5. **[Topic 5] Narrative editor chrome** — screenplay bare page (N-18); element-tabs/imports/functionality (N-19).
@@ -56,6 +56,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## DONE (recent — trim periodically)
 
+- [Topic 4 / N-16+N-17] Collision-aware `Popover` primitive + correct "Soggetto" EN label — `docs/specs/57-popover-collision-and-soggetto-label.md`.
 - [M-12] Rail single footer (tools → top, Notion-style) — superseded by Spec 55 TopBar later.
 - Audit AI reale 2026-06-03 — 5 auditors + Lead gate — `docs/audits/2026-06-03/CONSOLIDATED.md`.
 - [56-1] Route-coverage smoke + fixed dead routes /teams & /logline — wired into CI.

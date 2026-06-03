@@ -54,8 +54,8 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 
 ### Topic 4 — Logline & narrative nav
 
-- **N-16** ALTO — **Clicking the logline opens nothing** in some state (the logline bug Valerio hit) (img #9). NOTE: the popover DID open in the Lead repro — repro the exact failing state.
-- **N-17** MEDIO — **"Soggetto" missing from the sidebar nav** (Development section shows Treatment outline/Synopsis/Outline/Treatment/Screenplay, no Soggetto) (img #4).
+- **N-16** ALTO — ~~**Clicking the logline opens nothing** in some state~~ **FIXED (Spec 57)**. Root cause: the shared `Popover` primitive positioned itself with absolute CSS + a fixed width and **no viewport-collision handling**. At 1440 the centred TopBar pill's 480px popover just fit; on any narrower width (smaller window or a split/peek lane compressing the lane) it overflowed off the right edge → appeared to open nothing. Fix: primitive now portals + clamps/flips to the viewport (`computeAnchoredPosition`) and caps `max-inline-size`. Regression: `tests/documents/logline-popover-viewport.spec.ts` (1440/768/390).
+- **N-17** MEDIO — ~~**"Soggetto" missing from the sidebar nav"**~~ **FIXED (Spec 57)**. Not missing — the EN label for `soggetto` was wrongly "Treatment outline" (colliding with the real "Treatment" item); with EN labels showing, Valerio read the first item as not-Soggetto. Corrected the EN label to "Soggetto" in all four key sites.
 
 ### Topic 5 — Narrative editor chrome
 

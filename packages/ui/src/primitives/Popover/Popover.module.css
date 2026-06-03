@@ -1,20 +1,26 @@
 /* packages/ui/src/primitives/Popover/Popover.module.css */
 .popover {
-  position: absolute;
-  z-index: 60;
+  position: fixed;
+  /* Body-portaled, so it competes in the top-level stacking context — it must
+   * sit above overlays/modals (--z-overlay 100, --z-modal 1000), not at the old
+   * in-context z-index:60. Matches the DropdownMenu body-portal primitive. */
+  z-index: 9999;
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-lg);
   box-shadow: var(--ds-shadow-3);
   padding: var(--ds-space-2) 0;
   min-width: 200px;
+  /* Never exceed the viewport — the 16px mirrors the 8px edge margin the
+   * positioning helper clamps to on each side, so a too-wide `width` shrinks
+   * to fit instead of overflowing off-screen (BUG N-16). */
+  max-inline-size: calc(100vw - 16px);
+  transform-origin: top left;
   animation: popIn var(--ds-duration-2) var(--ds-ease);
 }
 
-/* Animation uses opacity + scale only — NO translate, otherwise it overrides
- * the `.bottomCenter` translate(-50% 0) that horizontally centers the popover
- * and you get a snap when the animation ends. transform-origin gives the
- * "from above" feel without touching position. */
+/* Animation uses opacity + scale only — NO translate, so it never fights the
+ * JS-computed top/left placement. */
 @keyframes popIn {
   from {
     opacity: 0;
@@ -26,25 +32,8 @@
   }
 }
 
-.bottomStart {
-  top: calc(100% + 4px);
-  inset-inline-start: 0;
-  transform-origin: top left;
-}
-
-.bottomEnd {
-  top: calc(100% + 4px);
-  inset-inline-end: 0;
-  transform-origin: top right;
-}
-
-.bottomCenter {
-  top: calc(100% + 4px);
-  left: 50%;
-  translate: -50% 0;
-  transform-origin: top center;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .popover { animation: none; }
+  .popover {
+    animation: none;
+  }
 }

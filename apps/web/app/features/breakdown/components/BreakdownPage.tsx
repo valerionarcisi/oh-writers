@@ -201,6 +201,7 @@ function BreakdownPageContent({ projectId }: Props) {
     setUnderline((s) => ({ ...s, [key]: !s[key] }));
   const [underlineOpen, setUnderlineOpen] = useState(false);
   const underlineWrapRef = useRef<HTMLDivElement>(null);
+  const underlineTriggerRef = useRef<HTMLButtonElement>(null);
   const underlineActiveCount = UNDERLINE_CHIPS.reduce(
     (n, c) => (underline[c.key] ? n + 1 : n),
     0,
@@ -209,6 +210,7 @@ function BreakdownPageContent({ projectId }: Props) {
   const [viewTab, setViewTab] = useState<ViewTab>("per-scene");
   const [exportOpen, setExportOpen] = useState(false);
   const [indiceOpen, setIndiceOpen] = useState(false);
+  const indiceTriggerRef = useRef<HTMLButtonElement>(null);
   const [indiceQuery, setIndiceQuery] = useState("");
   const indiceSearchRef = useRef<HTMLInputElement>(null);
   const indiceWrapRef = useRef<HTMLDivElement>(null);
@@ -662,6 +664,7 @@ function BreakdownPageContent({ projectId }: Props) {
             <div className={styles.viewbarCenter}>
               <div className={styles.indiceWrap} ref={underlineWrapRef}>
                 <button
+                  ref={underlineTriggerRef}
                   type="button"
                   className={styles.underlineTrigger}
                   aria-haspopup="dialog"
@@ -681,6 +684,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 <Popover
                   isOpen={underlineOpen}
                   onClose={() => setUnderlineOpen(false)}
+                  triggerRef={underlineTriggerRef}
                   placement="bottom-center"
                   width={240}
                 >
@@ -730,6 +734,7 @@ function BreakdownPageContent({ projectId }: Props) {
             {false && (
               <div className={styles.indiceWrap} ref={indiceWrapRef}>
                 <button
+                  ref={indiceTriggerRef}
                   type="button"
                   className={styles.pillBtn}
                   aria-haspopup="dialog"
@@ -758,6 +763,7 @@ function BreakdownPageContent({ projectId }: Props) {
                 <Popover
                   isOpen={indiceOpen}
                   onClose={() => setIndiceOpen(false)}
+                  triggerRef={indiceTriggerRef}
                   placement="bottom-end"
                   width={320}
                 >
