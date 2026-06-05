@@ -1,12 +1,12 @@
-// Spec 52 — the full-screen, glowy Cesare new-session landing (Notion AI style).
+// Spec 52 — the glowy Cesare new-session landing (Notion AI style).
 //
 // Reached from the LeftRail "Nuova sessione" / "+ Nuova" affordance
-// (`/projects/:id/sessions/new`, routed + deep-linkable). The page engages the
-// AppShell focus mode (spec 44) for its lifetime so the rail + topstrip recede
-// and the landing owns the viewport. It renders the Cesare sparkle, an Italian
-// heading, a LARGE centred input with the token-driven glow, and a few
-// quick-prompt suggestions (the next narrative step from spec 50 + generic
-// starters).
+// (`/projects/:id/sessions/new`, routed + deep-linkable). Per N-13 the landing
+// lives INSIDE the AppShell — the rail + TopBar stay present — and centres the
+// Cesare prompt WITHIN the main content lane (it is not a bare full-screen
+// takeover / focus mode). It renders the Cesare sparkle, an Italian heading, a
+// LARGE centred input with the token-driven glow, and a few quick-prompt
+// suggestions (the next narrative step from spec 50 + generic starters).
 //
 // Submitting the first message starts the session and DOCKS into the normal
 // conversation view — without forking the chat. We reuse the SAME shared chat
@@ -20,7 +20,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useButton } from "react-aria";
 import { useNavigate } from "@tanstack/react-router";
 import type { TranslationKey } from "@oh-writers/domain";
-import { useRequestShellFocus } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import { useCreateSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
@@ -50,9 +49,8 @@ const GENERIC_STARTERS: ReadonlyArray<{
 ];
 
 export function NewSessionLandingPage({ projectId }: { projectId: string }) {
-  // Engage focus mode for the lifetime of this route (spec 44 / spec 52).
-  useRequestShellFocus();
-
+  // N-13 — the landing stays INSIDE the AppShell (rail + TopBar present); it
+  // centres the prompt within the main lane rather than engaging focus mode.
   const { t } = useTranslation();
   const navigate = useNavigate();
   const store = useCesareChatStore();

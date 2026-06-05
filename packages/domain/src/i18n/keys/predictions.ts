@@ -123,7 +123,11 @@ export const predictionsKeys = {
     "cesare.landing.new": "+ New",
     "cesare.landing.loadingAria": "Loading Cesare sessions",
     "cesare.landing.empty": "No session yet. Start one with “+ New”.",
+    "cesare.landing.emptyTitle": "No conversations yet",
     "cesare.landing.listAria": "Cesare sessions",
+    "cesare.landing.lastActivity": "Last activity",
+    "cesare.landing.countOne": "conversation",
+    "cesare.landing.countMany": "conversations",
     // Next-step chip
     "cesare.nextStep.kicker": "Next step",
     "cesare.nextStep.aria": "Next step:",
@@ -243,8 +247,13 @@ export const predictionsKeys = {
     "cesare.landing.listSubtitle": "Le tue conversazioni su questo progetto",
     "cesare.landing.new": "+ Nuova",
     "cesare.landing.loadingAria": "Caricamento sessioni Cesare",
-    "cesare.landing.empty": "Nessuna sessione ancora. Avviane una con “+ Nuova”.",
+    "cesare.landing.empty":
+      "Nessuna sessione ancora. Avviane una con “+ Nuova”.",
+    "cesare.landing.emptyTitle": "Ancora nessuna conversazione",
     "cesare.landing.listAria": "Sessioni Cesare",
+    "cesare.landing.lastActivity": "Ultima attività",
+    "cesare.landing.countOne": "conversazione",
+    "cesare.landing.countMany": "conversazioni",
     // Next-step chip
     "cesare.nextStep.kicker": "Prossimo passo",
     "cesare.nextStep.aria": "Prossimo passo:",

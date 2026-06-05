@@ -60,8 +60,14 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 ### Topic 3 — Cesare sessions (pages & model)
 
 - **N-12** MEDIO — Sessions list page UI too basic (img #5).
+  - `Done =` the sessions list renders inside the AppShell as Notion-style cards (sparkle header, primary "+ Nuova" CTA, session count, card per session with glyph/title/relative-activity/hover chevron), `SkeletonCard` loading, a proper empty state; all copy via i18n keys (IT), tokens only; E2E asserts list-in-shell + cards + count.
+  - **FIXED (branch `agent/a4-sessions-pages`).** Rewrote `SessionsLandingPage.tsx` + `.module.css`. Added i18n keys `cesare.landing.{lastActivity,countOne,countMany,emptyTitle}` (EN+IT). E2E `tests/cesare-sessions-pages-ui.spec.ts` `[N-12]`. Screenshot `/tmp/a4-after-list.png`.
 - **N-13** MEDIO — New-session **full-screen landing should live INSIDE AppShell**, not a bare takeover (img #6).
+  - `Done =` the new-session landing renders inside the AppShell (rail + TopBar present), centring the glowy composer within the main lane — no focus mode / `data-shell="focus"`; E2E asserts rail present (non-zero width) + non-focus on click-through and deep-link.
+  - **FIXED (branch `agent/a4-sessions-pages`).** Removed `useRequestShellFocus()` from `NewSessionLandingPage.tsx`; `.page` now `flex:1 1 auto` centred in the lane; softened the glow ring (wider inset + heavier blur + lower opacity — was a hard conic "X"). Updated the legacy focus-mode assertions in `tests/cesare-new-session-fullscreen.spec.ts` + new `[N-13]` E2E. Spec 52 revised. Screenshot `/tmp/a4-after-new.png`.
 - **N-14** MEDIO — Session conversation page: **EN/IT language mix** + UI too basic (img #7).
+  - `Done =` all conversation-page copy routes through i18n keys (IT values present — no hardcoded strings); chat layout with a pinned header, scrolling thread, and a composer docked at the bottom; tokens only; E2E asserts IT copy (subtitle + composer placeholder) + composer docked below the thread.
+  - **FIXED (branch `agent/a4-sessions-pages`).** Audit confirmed the page already routes every string through `t()` (the walk's EN was the account locale); reworked `SessionConversationPage.tsx` + `.module.css` into a full-height chat layout (header / scroll thread / docked composer). E2E `[N-14]` in `tests/cesare-sessions-pages-ui.spec.ts`. Screenshot `/tmp/a4-after-conversation.png`. NOTE: the conversation **header title** still reads the DB `session.title` ("Nuova sessione") — auto-naming from first message is **Spec 53 (not built, out of A4 scope)**.
 - **N-15** QUESTION — Navigating between pages: should it spawn a **new session** or keep the same one? Design decision (img #10).
 
 ### Topic 4 — Logline & narrative nav

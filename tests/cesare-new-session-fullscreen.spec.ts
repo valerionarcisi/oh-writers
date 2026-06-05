@@ -1,20 +1,22 @@
 // tests/cesare-new-session-fullscreen.spec.ts
 //
-// [OHW-052] Full-screen glowy Cesare new-session landing (Notion AI style).
+// [OHW-052] Glowy Cesare new-session landing (Notion AI style).
 //
-// Clicking the LeftRail "Nuova sessione" / "+ Nuova" opens a full-screen Cesare
-// landing (`/projects/:id/sessions/new`) with a centred glowing input, an
-// Italian heading and quick-prompt suggestions, with the rail + topstrip receded
-// (AppShell focus mode). Typing + submitting the first message creates the
-// session and DOCKS into the normal conversation view — the SAME single chat
-// container (no duplicate). The landing is routed + deep-linkable, and
-// `prefers-reduced-motion` removes the glow animation.
+// Clicking the LeftRail "Nuova sessione" / "+ Nuova" opens the Cesare
+// new-session landing (`/projects/:id/sessions/new`) with a centred glowing
+// input, an Italian heading and quick-prompt suggestions. Per N-13 the landing
+// lives INSIDE the AppShell — the rail + TopBar STAY PRESENT (not a bare
+// full-screen/focus-mode takeover); the prompt is centred within the main lane.
+// Typing + submitting the first message creates the session and DOCKS into the
+// normal conversation view — the SAME single chat container (no duplicate). The
+// landing is routed + deep-linkable, and `prefers-reduced-motion` removes the
+// glow animation.
 import { test, expect } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 
 test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
-  test("rail 'Nuova sessione' → full-screen landing (focus mode) with heading, glowing input, quick prompts", async ({
+  test("rail 'Nuova sessione' → landing INSIDE the shell (rail present) with heading, glowing input, quick prompts", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/soggetto`);
@@ -30,9 +32,7 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
     await expect(landing).toBeVisible({ timeout: 10_000 });
 
     // Heading + glowing input + placeholder.
-    await expect(
-      page.getByTestId("new-session-heading"),
-    ).toBeVisible();
+    await expect(page.getByTestId("new-session-heading")).toBeVisible();
     const input = page.getByTestId("new-session-input");
     await expect(input).toBeVisible();
     await expect(input).toHaveAttribute(
@@ -47,16 +47,17 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
       page.getByTestId("new-session-suggestion").first(),
     ).toBeVisible();
 
-    // Focus mode: the rail recedes (body[data-shell="focus"] drives the rail
-    // to display:none via CSS, so the rail occupies zero width).
+    // N-13: the landing lives INSIDE the AppShell — it does NOT engage focus
+    // mode, and the rail stays present (non-zero width), so the rail nav is
+    // reachable while composing.
     await expect
       .poll(() => page.evaluate(() => document.body.getAttribute("data-shell")))
-      .toBe("focus");
+      .not.toBe("focus");
     const railWidth = await page.evaluate(() => {
       const rail = document.querySelector("main")?.previousElementSibling;
       return rail ? rail.getBoundingClientRect().width : -1;
     });
-    expect(railWidth).toBe(0);
+    expect(railWidth).toBeGreaterThan(0);
   });
 
   test("type + submit → session created, page docks into the conversation, single chat container", async ({
@@ -90,14 +91,13 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
     await expect(page.getByTestId("session-conversation")).toHaveCount(1);
     await expect(page.getByTestId("session-composer")).toHaveCount(1);
 
-    // Focus mode is released once the landing unmounts (the conversation is a
-    // normal shell page with the rail back).
+    // The conversation is a normal shell page; focus mode is never engaged.
     await expect
       .poll(() => page.evaluate(() => document.body.getAttribute("data-shell")))
       .not.toBe("focus");
   });
 
-  test("deep-link straight to the landing renders the full-screen surface", async ({
+  test("deep-link straight to the landing renders the surface inside the shell", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/sessions/new`);
@@ -106,12 +106,16 @@ test.describe("[OHW-052] Full-screen glowy Cesare new-session landing", () => {
     await expect(page.getByTestId("cesare-new-session-landing")).toBeVisible({
       timeout: 10_000,
     });
-    await expect(
-      page.getByTestId("new-session-heading"),
-    ).toBeVisible();
+    await expect(page.getByTestId("new-session-heading")).toBeVisible();
+    // N-13: rail present (non-focus) even on a direct deep-link.
     await expect
       .poll(() => page.evaluate(() => document.body.getAttribute("data-shell")))
-      .toBe("focus");
+      .not.toBe("focus");
+    const railWidth = await page.evaluate(() => {
+      const rail = document.querySelector("main")?.previousElementSibling;
+      return rail ? rail.getBoundingClientRect().width : -1;
+    });
+    expect(railWidth).toBeGreaterThan(0);
   });
 
   test("a quick-prompt seeds the composer (the corresponding flow)", async ({

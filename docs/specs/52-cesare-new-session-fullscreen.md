@@ -1,22 +1,26 @@
-# Spec 52 — New Cesare session: full-screen glowy landing (Notion AI style)
+# Spec 52 — New Cesare session: glowy landing (Notion AI style)
 
-Status: **Built** · Decided 2026-05-31 (PO) · Implemented 2026-05-31.
+Status: **Built** · Decided 2026-05-31 (PO) · Implemented 2026-05-31 ·
+**Revised 2026-06-05 (N-13): the landing lives INSIDE the AppShell — no focus
+mode.**
 
 ## Implementation notes (as built)
 
 - Route: `/projects/:id/sessions/new` (`_app.projects.$id_.sessions.new.tsx`) →
   `NewSessionLandingPage`. The static `new` segment wins over the dynamic
   `$sessionId` conversation route, so both are deep-linkable.
-- Focus mode is engaged declaratively via a new `ShellFocusRequestProvider`
-  (`shell-focus-request-context.tsx`): the landing calls `useRequestShellFocus()`
-  for its lifetime; AppShell reads `isFocusRequested` and broadcasts
-  `body[data-shell="focus"]` (`effectiveShellState`) WITHOUT overwriting the
-  user's persisted density. Releasing it (route unmount) restores the prior
-  layout. Reference-counted so nested / fast transitions can't strand focus.
-- Bug fixed: `body[data-shell="focus"] .rail { display:none }` removed the rail
-  from the shell grid, so the single remaining in-flow item (`main`) auto-placed
-  into the empty first track and collapsed to 0. The focus grid template is now a
-  single `minmax(0, 1fr)` column.
+- **N-13 (2026-06-05): the landing no longer engages focus mode.** The original
+  build called `useRequestShellFocus()` to hide the rail + top strip, which made
+  the landing a bare full-screen takeover. The narrative walk flagged this: the
+  new-session landing must keep the rail + TopBar present (consistent shell). The
+  landing now simply renders inside the main content lane and centres the prompt
+  there (`.page { flex: 1 1 auto; align-items/justify-content: center }`). No
+  `data-shell="focus"`, no rail collapse. The glow ring was also softened (wider
+  inset + heavier blur + lower opacity) so it reads as an ambient halo instead of
+  a hard conic "X" painted through the composer.
+- (Historic) Focus mode was previously engaged via `ShellFocusRequestProvider`
+  (`shell-focus-request-context.tsx`) / `useRequestShellFocus()`; that provider
+  still exists for other surfaces, but the new-session landing no longer uses it.
 - The glow is a blurred, rotating conic-gradient ring (`--ds-agent` →
   `--ds-action`) behind the composer, pulsing its opacity; both animations are
   removed under `prefers-reduced-motion` (static ring).
@@ -55,9 +59,9 @@ big centred prompt.
 - **Glow**: a token-driven animated focus ring / gradient border (`--ds` tokens, no hardcoded hex;
   `--ds-duration` for the pulse). `prefers-reduced-motion` → static ring, no animation. Reuse the
   existing composer/input primitive; this is a larger, centred variant, not a new input.
-- **Full-screen**: reuse the AppShell focus/collapsed mode (spec 44) so rail + topstrip recede; the
-  Cesare landing owns the viewport. Routed + deep-linkable (consistent with spec 49 "everything
-  routed").
+- **Inside the shell (N-13, revised)**: the landing renders inside the AppShell main lane — the rail
+  - TopBar stay present — and centres the Cesare prompt within that lane. It is NOT a focus-mode /
+    full-screen takeover. Routed + deep-linkable (consistent with spec 49 "everything routed").
 - **react-aria** for the input + quick-prompt buttons (mandatory). CSS Modules + tokens.
 - **One chat container**: the landing input and the session conversation are the same Cesare chat
   surface in two layouts (empty centred → docked-with-history). Reuse `useCesareChat` /

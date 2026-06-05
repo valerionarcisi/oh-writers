@@ -1,13 +1,15 @@
-/* Spec 52 — full-screen glowy Cesare new-session landing.
-   The shell already recedes (body[data-shell="focus"]); this page centres the
-   Cesare prompt in the viewport. All colour/space/radius/motion come from
-   --ds-* tokens — no hardcoded hex, px, or magic numbers. */
+/* Spec 52 (N-13) — glowy Cesare new-session landing, INSIDE the AppShell.
+   The rail + TopBar stay present; this page centres the Cesare prompt WITHIN
+   the main content lane (no focus mode, no bare takeover). All
+   colour/space/radius/motion come from --ds-* tokens — no hardcoded hex, px, or
+   magic numbers. */
 
 .page {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
-  min-block-size: 100%;
+  min-block-size: 0;
   inline-size: 100%;
   padding-block: var(--ds-space-10);
   padding-inline: var(--ds-space-6);
@@ -67,9 +69,12 @@
 
 .glowRing {
   position: absolute;
-  inset: calc(-1 * var(--ds-space-2));
+  /* A generous, soft halo BEHIND the composer. The wide negative inset + heavy
+     blur dissolve the conic seams into an ambient glow rather than a hard cross
+     (N-13: the old tight ring painted a visible "X" through the surface). */
+  inset: calc(-1 * var(--ds-space-6));
   z-index: -1;
-  border-radius: var(--ds-radius-lg);
+  border-radius: var(--ds-radius-pill);
   background: conic-gradient(
     from 0deg,
     var(--ds-agent),
@@ -78,8 +83,8 @@
     var(--ds-action),
     var(--ds-agent)
   );
-  filter: blur(var(--ds-space-3));
-  opacity: 0.35;
+  filter: blur(var(--ds-space-8));
+  opacity: 0.28;
   animation:
     glow-spin 9s linear infinite,
     glow-pulse 3.2s var(--ds-ease) infinite;
@@ -88,7 +93,7 @@
 /* The composer lights its own focus-ring when the user is typing, layered on
    top of the ambient glow so the active field reads clearly. */
 .glowWrap:focus-within .glowRing {
-  opacity: 0.6;
+  opacity: 0.45;
 }
 
 .composer {
@@ -239,10 +244,10 @@
 @keyframes glow-pulse {
   0%,
   100% {
-    opacity: 0.3;
+    opacity: 0.24;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 }
 
@@ -252,6 +257,6 @@
 @media (prefers-reduced-motion: reduce) {
   .glowRing {
     animation: none;
-    opacity: 0.4;
+    opacity: 0.3;
   }
 }

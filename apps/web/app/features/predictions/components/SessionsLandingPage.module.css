@@ -1,133 +1,245 @@
+/* N-12 — Cesare sessions list, Notion-style. Centred content lane, sparkle
+   header with a primary "+ Nuova" CTA, sessions as full-width cards, and a
+   welcoming empty state. All colour/space/radius come from --ds-* tokens. */
+
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-space-4);
-  max-inline-size: 720px;
+  gap: var(--ds-space-5);
+  inline-size: 100%;
+  max-inline-size: 760px;
   margin-inline: auto;
-  padding-block: var(--ds-space-6);
-  padding-inline: var(--ds-space-4);
+  padding-block: var(--ds-space-10) var(--ds-space-8);
+  padding-inline: var(--ds-space-6);
 }
 
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-space-3);
-}
-
-.heading {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-3);
+  gap: var(--ds-space-4);
 }
 
 .brandGlyph {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
-  border-radius: var(--ds-radius-md);
-  background: var(--ds-surface);
+  inline-size: var(--ds-space-10);
+  block-size: var(--ds-space-10);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-agent-soft);
   color: var(--ds-agent);
-  font-size: 18px;
+  font-size: 1.375rem;
+  box-shadow: var(--ds-shadow-1);
+}
+
+.headingText {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
 }
 
 .title {
   margin: 0;
   font-family: var(--ds-font-display);
-  font-size: 20px;
+  font-size: 1.5rem;
+  line-height: 1.1;
   color: var(--ds-text);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.875rem;
   color: var(--ds-text-3);
 }
 
 .newButton {
-  border: 1px solid var(--ds-line);
-  background: transparent;
-  color: var(--ds-action);
+  flex: 0 0 auto;
+  border: none;
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
   font: inherit;
-  font-size: 13px;
-  padding-block: 6px;
-  padding-inline: 12px;
-  border-radius: var(--ds-radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding-block: var(--ds-space-2);
+  padding-inline: var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
   cursor: pointer;
+  box-shadow: var(--ds-shadow-1);
+  transition: background var(--ds-duration-2) var(--ds-ease);
 
   &:hover {
-    background: var(--ds-surface);
+    background: var(--ds-action);
   }
 
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
+}
+
+.count {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-faint);
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-space-1);
+  gap: var(--ds-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.row {
+.card {
   display: flex;
   align-items: center;
-  gap: var(--ds-space-3);
+  gap: var(--ds-space-4);
   inline-size: 100%;
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid var(--ds-line);
+  background: var(--ds-surface);
   font: inherit;
   text-align: start;
-  padding-block: 10px;
-  padding-inline: 12px;
-  border-radius: var(--ds-radius-md);
+  padding-block: var(--ds-space-4);
+  padding-inline: var(--ds-space-4);
+  border-radius: var(--ds-radius-lg);
   cursor: pointer;
   color: var(--ds-text);
+  box-shadow: var(--ds-shadow-0);
+  transition:
+    border-color var(--ds-duration-2) var(--ds-ease),
+    box-shadow var(--ds-duration-2) var(--ds-ease),
+    transform var(--ds-duration-2) var(--ds-ease);
 
   &:hover {
-    background: var(--ds-surface);
-    border-color: var(--ds-line);
+    border-color: color-mix(in oklch, var(--ds-agent) 50%, transparent);
+    box-shadow: var(--ds-shadow-2);
+
+    & .cardChevron {
+      color: var(--ds-agent);
+      transform: translateX(var(--ds-space-1));
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-agent);
+    outline-offset: 2px;
+  }
+}
+
+.cardGlyph {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ds-space-8);
+  block-size: var(--ds-space-8);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-size: 1rem;
+}
+
+.cardBody {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.cardTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ds-text);
+}
+
+.cardMeta {
+  font-size: 0.75rem;
+  color: var(--ds-text-faint);
+}
+
+.cardChevron {
+  flex: 0 0 auto;
+  color: var(--ds-text-faint);
+  font-size: 1rem;
+  transition:
+    color var(--ds-duration-2) var(--ds-ease),
+    transform var(--ds-duration-2) var(--ds-ease);
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ds-space-3);
+  padding-block: var(--ds-space-12);
+  padding-inline: var(--ds-space-6);
+  border: 1px dashed var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-alt);
+}
+
+.emptyGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ds-space-10);
+  block-size: var(--ds-space-10);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-agent-soft);
+  color: var(--ds-agent);
+  font-size: 1.375rem;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: var(--ds-font-display);
+  font-size: 1.125rem;
+  color: var(--ds-text);
+}
+
+.emptyBody {
+  margin: 0;
+  max-inline-size: 40ch;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ds-text-3);
+}
+
+.emptyCta {
+  margin-block-start: var(--ds-space-2);
+  border: none;
+  background: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding-block: var(--ds-space-2);
+  padding-inline: var(--ds-space-5);
+  border-radius: var(--ds-radius-pill);
+  cursor: pointer;
+  transition: background var(--ds-duration-2) var(--ds-ease);
+
+  &:hover {
+    background: var(--ds-action);
   }
 
   &:focus-visible {
     outline: 2px solid var(--ds-action);
     outline-offset: 2px;
   }
-}
-
-.rowGlyph {
-  color: var(--ds-agent);
-  font-size: 14px;
-}
-
-.rowTitle {
-  flex: 1;
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rowMeta {
-  color: var(--ds-text-faint);
-  font-size: 12px;
-}
-
-.empty {
-  margin: 0;
-  color: var(--ds-text-3);
-  font-size: 14px;
-}
-
-.error {
-  margin: 0;
-  color: var(--ds-danger);
-  font-size: 13px;
 }

@@ -111,7 +111,10 @@ export function SessionConversationPage({
 
   if (!isValidParam || sessionQuery.isError) {
     return (
-      <div className={styles.page} data-testid="cesare-session-not-found">
+      <div
+        className={styles.pageCentered}
+        data-testid="cesare-session-not-found"
+      >
         <h1 className={styles.title}>{t("cesare.session.notFoundTitle")}</h1>
         <p className={styles.subtitle}>{t("cesare.session.notFoundBody")}</p>
       </div>
@@ -120,7 +123,7 @@ export function SessionConversationPage({
 
   if (sessionQuery.isPending || !session) {
     return (
-      <div className={styles.page} data-testid="cesare-session-loading">
+      <div className={styles.pageCentered} data-testid="cesare-session-loading">
         <Skeleton
           lines={3}
           widths={["60%", "80%", "45%"]}
@@ -151,25 +154,31 @@ export function SessionConversationPage({
         </div>
       </header>
 
-      <CesareConversation
-        messages={messages}
-        page={page}
-        testId="session-conversation-thread"
-        onShowChanges={handleShowChanges}
-        onHideChanges={handleHideChanges}
-        emptyState={
-          <p className={styles.lede} data-testid="session-empty">
-            {t("cesare.session.empty")}
-          </p>
-        }
-      />
+      <div className={styles.thread}>
+        <div className={styles.threadInner}>
+          <CesareConversation
+            messages={messages}
+            page={page}
+            testId="session-conversation-thread"
+            onShowChanges={handleShowChanges}
+            onHideChanges={handleHideChanges}
+            emptyState={
+              <p className={styles.lede} data-testid="session-empty">
+                {t("cesare.session.empty")}
+              </p>
+            }
+          />
+        </div>
+      </div>
 
-      <SessionComposer
-        value={input}
-        onChange={setInput}
-        onSubmit={handleSubmit}
-        isThinking={isLoading}
-      />
+      <div className={styles.composerDock}>
+        <SessionComposer
+          value={input}
+          onChange={setInput}
+          onSubmit={handleSubmit}
+          isThinking={isLoading}
+        />
+      </div>
     </div>
   );
 }

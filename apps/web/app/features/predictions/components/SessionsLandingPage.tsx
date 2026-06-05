@@ -1,13 +1,13 @@
-// Spec 47-A5 — the full Cesare sessions landing.
+// Spec 47-A5 — the full Cesare sessions landing (N-12 redesign).
 //
 // Reached from the LeftRail "Cesare" entry (`/projects/:id/sessions`). Lists the
-// project's Cesare sessions with a "+ Nuova" affordance; clicking a row opens
-// its full conversation at the deep-linkable central route
+// project's Cesare sessions as Notion-style cards with a "+ Nuova" affordance;
+// clicking a card opens its full conversation at the deep-linkable central route
 // `/projects/:id/sessions/:sessionId`. This is a real central page, not a peek.
 import { useRef } from "react";
 import { useButton } from "react-aria";
 import { useNavigate } from "@tanstack/react-router";
-import { Skeleton } from "@oh-writers/ui";
+import { SkeletonCard } from "@oh-writers/ui";
 import type { TranslationKey } from "@oh-writers/domain";
 import { useSessions } from "../sessions";
 import type { CesareSession } from "../sessions";
@@ -29,7 +29,7 @@ function formatRelative(iso: string, t: Translate): string {
   return `${days}${t("cesare.time.days")}`;
 }
 
-function SessionRow({
+function SessionCard({
   session,
   onOpen,
 }: {
@@ -49,15 +49,22 @@ function SessionRow({
     <button
       ref={ref}
       {...buttonProps}
-      className={styles.row}
+      type="button"
+      className={styles.card}
       data-session-id={session.id}
     >
-      <span className={styles.rowGlyph} aria-hidden="true">
+      <span className={styles.cardGlyph} aria-hidden="true">
         ✦
       </span>
-      <span className={styles.rowTitle}>{session.title}</span>
-      <span className={styles.rowMeta}>
-        {formatRelative(session.lastMessageAt, t)}
+      <span className={styles.cardBody}>
+        <span className={styles.cardTitle}>{session.title}</span>
+        <span className={styles.cardMeta}>
+          {t("cesare.landing.lastActivity")} ·{" "}
+          {formatRelative(session.lastMessageAt, t)}
+        </span>
+      </span>
+      <span className={styles.cardChevron} aria-hidden="true">
+        →
       </span>
     </button>
   );
@@ -87,6 +94,15 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
     newRef,
   );
 
+  const emptyRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps: emptyButtonProps } = useButton(
+    {
+      onPress: openNewSessionLanding,
+      "aria-label": t("cesare.landing.newSessionAria"),
+    },
+    emptyRef,
+  );
+
   const openSession = (sessionId: string) => {
     void navigate({
       to: "/projects/$id/sessions/$sessionId",
@@ -99,20 +115,17 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
   return (
     <div className={styles.page} data-testid="cesare-sessions-landing">
       <header className={styles.header}>
-        <div className={styles.heading}>
-          <span className={styles.brandGlyph} aria-hidden="true">
-            ✦
-          </span>
-          <div>
-            <h1 className={styles.title}>{t("cesare.landing.title")}</h1>
-            <p className={styles.subtitle}>
-              {t("cesare.landing.listSubtitle")}
-            </p>
-          </div>
+        <span className={styles.brandGlyph} aria-hidden="true">
+          ✦
+        </span>
+        <div className={styles.headingText}>
+          <h1 className={styles.title}>{t("cesare.landing.title")}</h1>
+          <p className={styles.subtitle}>{t("cesare.landing.listSubtitle")}</p>
         </div>
         <button
           ref={newRef}
           {...newButtonProps}
+          type="button"
           className={styles.newButton}
           data-testid="cesare-session-new"
         >
@@ -121,22 +134,43 @@ export function SessionsLandingPage({ projectId }: { projectId: string }) {
       </header>
 
       {sessionsQuery.isPending ? (
-        <Skeleton
-          lines={4}
-          widths={["70%", "55%", "62%", "48%"]}
-          tone="agent"
-          ariaLabel={t("cesare.landing.loadingAria")}
-        />
+        <div className={styles.list} aria-busy="true">
+          <SkeletonCard ariaLabel={t("cesare.landing.loadingAria")} />
+          <SkeletonCard ariaLabel={t("cesare.landing.loadingAria")} />
+          <SkeletonCard ariaLabel={t("cesare.landing.loadingAria")} />
+        </div>
       ) : sessions.length === 0 ? (
-        <p className={styles.empty}>{t("cesare.landing.empty")}</p>
+        <div className={styles.empty} data-testid="cesare-sessions-empty">
+          <span className={styles.emptyGlyph} aria-hidden="true">
+            ✦
+          </span>
+          <p className={styles.emptyTitle}>{t("cesare.landing.emptyTitle")}</p>
+          <p className={styles.emptyBody}>{t("cesare.landing.empty")}</p>
+          <button
+            ref={emptyRef}
+            {...emptyButtonProps}
+            type="button"
+            className={styles.emptyCta}
+            data-testid="cesare-session-new-empty"
+          >
+            {t("cesare.landing.new")}
+          </button>
+        </div>
       ) : (
-        <ul className={styles.list} aria-label={t("cesare.landing.listAria")}>
-          {sessions.map((session) => (
-            <li key={session.id}>
-              <SessionRow session={session} onOpen={openSession} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className={styles.count}>
+            {sessions.length === 1
+              ? `1 ${t("cesare.landing.countOne")}`
+              : `${sessions.length} ${t("cesare.landing.countMany")}`}
+          </p>
+          <ul className={styles.list} aria-label={t("cesare.landing.listAria")}>
+            {sessions.map((session) => (
+              <li key={session.id}>
+                <SessionCard session={session} onOpen={openSession} />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

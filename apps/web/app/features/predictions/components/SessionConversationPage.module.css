@@ -1,63 +1,124 @@
+/* N-14 — Cesare session conversation page. A full-height column: the header is
+   pinned at the top, the thread scrolls in the middle, and the composer is
+   docked at the bottom (chat layout, à la Claude/Notion). Content sits in a
+   centred reading lane. All copy comes from i18n keys; all colour/space/radius
+   from --ds-* tokens. */
+
 .page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-block-size: 0;
+  inline-size: 100%;
+}
+
+/* Not-found / loading variants render in the same centred lane with breathing
+   room at the top (no thread to fill the height). */
+.pageCentered {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-4);
   align-items: flex-start;
-  max-inline-size: 720px;
+  inline-size: 100%;
+  max-inline-size: 760px;
   margin-inline: auto;
-  padding-block: var(--ds-space-6);
-  padding-inline: var(--ds-space-4);
+  padding-block: var(--ds-space-10);
+  padding-inline: var(--ds-space-6);
 }
 
 .header {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
+  inline-size: 100%;
+  max-inline-size: 760px;
+  margin-inline: auto;
+  padding-block: var(--ds-space-6) var(--ds-space-4);
+  padding-inline: var(--ds-space-6);
+  border-block-end: 1px solid var(--ds-line-soft);
 }
 
 .brandGlyph {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: var(--ds-space-8);
+  block-size: var(--ds-space-8);
   border-radius: var(--ds-radius-md);
-  background: var(--ds-surface);
+  background: var(--ds-agent-soft);
   color: var(--ds-agent);
-  font-size: 18px;
+  font-size: 1rem;
 }
 
 .title {
   margin: 0;
   font-family: var(--ds-font-display);
-  font-size: 20px;
+  font-size: 1.25rem;
+  line-height: 1.2;
   color: var(--ds-text);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-3);
+}
+
+/* Scrolling thread region — fills the space between header and composer. The
+   inner CesareConversation lays out the bubbles; this wrapper owns the scroll. */
+.thread {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  inline-size: 100%;
+  display: flex;
+  justify-content: center;
+  padding-block: var(--ds-space-6);
+  padding-inline: var(--ds-space-6);
+}
+
+.threadInner {
+  inline-size: 100%;
+  max-inline-size: 760px;
 }
 
 .lede {
   margin: 0;
   color: var(--ds-text-2);
-  font-size: 14px;
+  font-size: 0.9375rem;
   line-height: 1.5;
 }
 
-/* Full-page composer (Spec 47b FIX 2). The conversation thread renders above;
-   this is the persistent send box at the bottom of the page. */
+/* Docked composer — pinned to the bottom of the page, content centred to the
+   same reading lane. */
+.composerDock {
+  flex: 0 0 auto;
+  inline-size: 100%;
+  border-block-start: 1px solid var(--ds-line-soft);
+  background: var(--ds-bg);
+  padding-block: var(--ds-space-4);
+  padding-inline: var(--ds-space-6);
+}
+
 .composer {
   display: flex;
   align-items: flex-end;
   gap: var(--ds-space-2);
   inline-size: 100%;
+  max-inline-size: 760px;
+  margin-inline: auto;
   padding: var(--ds-space-2);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-lg);
   background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-1);
+  transition: border-color var(--ds-duration-2) var(--ds-ease);
+
+  &:focus-within {
+    border-color: var(--ds-agent);
+  }
 }
 
 .composerInput {
@@ -68,7 +129,7 @@
   background: transparent;
   color: var(--ds-text);
   font: inherit;
-  font-size: 14px;
+  font-size: 0.9375rem;
   line-height: 1.5;
   padding: var(--ds-space-1) var(--ds-space-2);
   max-block-size: 40vh;
@@ -84,16 +145,21 @@
 
 .composerSend {
   flex: 0 0 auto;
-  inline-size: 32px;
-  block-size: 32px;
+  inline-size: var(--ds-space-8);
+  block-size: var(--ds-space-8);
   display: grid;
   place-items: center;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--ds-radius-pill);
   background: var(--ds-agent);
   color: var(--ds-text-on-dark);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 1.0625rem;
+  transition: background var(--ds-duration-2) var(--ds-ease);
+
+  &:hover:not(:disabled) {
+    background: var(--ds-action);
+  }
 
   &:disabled {
     opacity: 0.4;
