@@ -7,6 +7,24 @@ import { toShape, type ResultShape } from "@oh-writers/utils";
 import { withProjectAccess } from "~/server/pipeline";
 import { callHaiku, extractToolUse } from "~/features/ai";
 import type { ProjectAccessError } from "~/server/access";
+import {
+  type NarrativePolishSuggestionDoc,
+  TOOL_NAME,
+  NARRATIVE_POLISH_TOOL,
+  GROUNDING_RULES,
+  buildNarrativeSystemPrompt,
+  SYSTEM_PROMPTS,
+} from "./narrative-polish-prompt";
+
+// Re-export the pure prompt assets so existing importers keep one entry point.
+export {
+  TOOL_NAME,
+  NARRATIVE_POLISH_TOOL,
+  GROUNDING_RULES,
+  buildNarrativeSystemPrompt,
+  SYSTEM_PROMPTS,
+};
+export type { NarrativePolishSuggestionDoc };
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,12 +35,6 @@ export class NarrativePolishError {
     this.message = `Narrative polish error: ${cause}`;
   }
 }
-
-export type NarrativePolishSuggestionDoc =
-  | typeof DocumentTypes.SOGGETTO
-  | typeof DocumentTypes.SYNOPSIS
-  | typeof DocumentTypes.OUTLINE
-  | typeof DocumentTypes.TREATMENT;
 
 export interface NarrativePolishSuggestion {
   readonly id: string;
@@ -46,50 +58,6 @@ const NarrativePolishInput = z.object({
 
 type NarrativePolishInputData = z.infer<typeof NarrativePolishInput>;
 
-// ─── Tool definition ──────────────────────────────────────────────────────────
-
-const TOOL_NAME = "submit_narrative_suggestions";
-
-const NARRATIVE_POLISH_TOOL = {
-  name: TOOL_NAME,
-  description:
-    "Restituisci da 3 a 5 suggerimenti di miglioramento concreti per il documento narrativo. Ogni suggerimento appartiene a un gruppo tematico (es. 'Struttura', 'Chiarezza', 'Tono') e ha una categoria più specifica.",
-  input_schema: {
-    type: "object",
-    properties: {
-      suggestions: {
-        type: "array",
-        minItems: 3,
-        maxItems: 5,
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Unique slug, e.g. 'str-1'" },
-            group: {
-              type: "string",
-              description:
-                "Thematic group label in Italian (e.g. 'Struttura', 'Chiarezza', 'Tono', 'Ritmo', 'Target formato')",
-            },
-            category: {
-              type: "string",
-              description:
-                "More specific label within the group (e.g. 'Finale', 'Atto II', 'Antefatto')",
-            },
-            message: {
-              type: "string",
-              maxLength: 300,
-              description:
-                "Concrete actionable suggestion in Italian, ≤ 300 characters.",
-            },
-          },
-          required: ["id", "group", "category", "message"],
-        },
-      },
-    },
-    required: ["suggestions"],
-  },
-} as const;
-
 const SuggestionsResponseSchema = z.object({
   suggestions: z.array(
     z.object({
@@ -100,34 +68,6 @@ const SuggestionsResponseSchema = z.object({
     }),
   ),
 });
-
-// ─── System prompts per doc type ──────────────────────────────────────────────
-
-const SYSTEM_PROMPTS: Record<NarrativePolishSuggestionDoc, string> = {
-  [DocumentTypes.SOGGETTO]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo un soggetto cinematografico.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
-Concentrati su: premessa, arco del protagonista, antagonista, struttura in tre atti, coerenza di tono.
-Niente complimenti generici. Ogni suggerimento deve indicare COSA migliorare e PERCHÉ.
-Ogni suggerimento deve avere un gruppo tematico (es. "Struttura", "Chiarezza", "Tono") e una categoria specifica.`,
-
-  [DocumentTypes.SYNOPSIS]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo una sinossi cinematografica.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
-Concentrati su: lunghezza (target 1-2 cartelle), finale esplicito, presentazione dei personaggi, antefatto, tono per produttori e organismi di finanziamento.
-Niente complimenti generici. Ogni suggerimento deve indicare COSA migliorare e PERCHÉ.
-Ogni suggerimento deve avere un gruppo tematico (es. "Target formato", "Struttura", "Chiarezza") e una categoria specifica.`,
-
-  [DocumentTypes.OUTLINE]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo una scaletta cinematografica.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
-Concentrati su: bilanciamento degli atti, posizionamento del catalyst, midpoint, pacing tra scene di interni/esterni, sequenze ridondanti.
-Niente complimenti generici. Ogni suggerimento deve indicare COSA migliorare e PERCHÉ.
-Ogni suggerimento deve avere un gruppo tematico (es. "Struttura", "Ritmo", "Copertura beat") e una categoria specifica.`,
-
-  [DocumentTypes.TREATMENT]: `Sei Cesare, dramaturg italiano sobrio. Stai leggendo un trattamento cinematografico.
-Restituisci da 3 a 5 suggerimenti di miglioramento concreti, in italiano.
-Concentrati su: densità del testo, coerenza del tono tra i capitoli, voce narrante, transizioni tra sequenze, ritmo della lettura.
-Niente complimenti generici. Ogni suggerimento deve indicare COSA migliorare e PERCHÉ.
-Ogni suggerimento deve avere un gruppo tematico (es. "Stile", "Lettura", "Chiarezza") e una categoria specifica.`,
-};
 
 // ─── Mock fallback ────────────────────────────────────────────────────────────
 
@@ -249,7 +189,10 @@ const callNarrativePolish = async (
   );
 
   if (result.isErr()) {
-    console.warn("[cesare/narrative-polish] callHaiku error:", result.error.message);
+    console.warn(
+      "[cesare/narrative-polish] callHaiku error:",
+      result.error.message,
+    );
     return [];
   }
 
@@ -288,8 +231,7 @@ const handlePolishNarrativeDoc = (
 
   return ResultAsync.fromPromise(
     callNarrativePolish(data.docType, data.content),
-    (e) =>
-      new NarrativePolishError(e instanceof Error ? e.message : String(e)),
+    (e) => new NarrativePolishError(e instanceof Error ? e.message : String(e)),
   );
 };
 
@@ -322,7 +264,8 @@ export const narrativePolishQueryOptions = (
 ) =>
   queryOptions({
     queryKey: ["narrative-polish", projectId, docType, content.slice(0, 200)],
-    queryFn: () => polishNarrativeDoc({ data: { projectId, docType, content } }),
+    queryFn: () =>
+      polishNarrativeDoc({ data: { projectId, docType, content } }),
     // Only fetch when there is meaningful content
     enabled: content.length > 50,
     // Suggestions remain valid for the entire session — they are re-fetched only

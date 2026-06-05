@@ -33,6 +33,7 @@
     "vernissage:walk": "tsx scripts/vernissage-walk.ts --target=test",
     "vernissage:scaffold": "tsx scripts/vernissage-scaffold.ts",
     "cost:smoke:cesare": "tsx scripts/cost-smoke-cesare.ts",
+    "cost:smoke:narrative-grounding": "tsx scripts/cost-smoke-narrative-grounding.ts",
     "cost:smoke:location-normalise": "tsx scripts/cost-smoke-location-normalise.ts",
     "cost:smoke:location-rank": "tsx scripts/cost-smoke-location-rank.ts",
     "cost:smoke:scene-summary": "tsx scripts/cost-smoke-scene-summary.ts",
