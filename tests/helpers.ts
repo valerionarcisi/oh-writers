@@ -1,6 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
-export const BASE_URL = process.env["BASE_URL"] ?? "http://localhost:3002";
+// Mirror the port resolution in `playwright.config.ts` / `fixtures.ts`: the
+// browser must navigate to the same server Playwright started, even when
+// `WEB_PORT` is overridden. See the note in `fixtures.ts`.
+const WEB_PORT = process.env["WEB_PORT"] ?? "3002";
+export const BASE_URL =
+  process.env["BASE_URL"] ?? `http://localhost:${WEB_PORT}`;
 
 export async function waitForEditor(page: Page) {
   const editor = page.locator(".ProseMirror").first();

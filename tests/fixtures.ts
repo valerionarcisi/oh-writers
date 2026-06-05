@@ -5,7 +5,15 @@ import {
   type Browser,
 } from "@playwright/test";
 
-export const BASE_URL = process.env["BASE_URL"] ?? "http://localhost:3002";
+// Mirror the port resolution in `playwright.config.ts` so the browser always
+// navigates to the same server Playwright started. The config derives the
+// server port from `WEB_PORT` (default 3002); the fixture MUST use the same
+// source, otherwise an overridden `WEB_PORT` boots the server on one port
+// while the browser drives a different one (e.g. a stale local dev server) —
+// the cause of the Spec 55 suite silently running against pre-Spec-55 code.
+const WEB_PORT = process.env["WEB_PORT"] ?? "3002";
+export const BASE_URL =
+  process.env["BASE_URL"] ?? `http://localhost:${WEB_PORT}`;
 
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
