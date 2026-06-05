@@ -135,6 +135,38 @@ const traceStepForEvent = (event: CesareStreamEvent): TraceStep | null =>
     .with({ _tag: "error" }, () => null)
     .exhaustive();
 
+/**
+ * Two trace steps describe the SAME phase when they share a kind and the same
+ * entity domain (reading/writing) — or, for entity-less steps (reasoning/tool),
+ * the same text. The server emits one step per completed tool call, but a single
+ * agentic edit can run the same writing tool across several model iterations (or
+ * stream the same phase in chunks), which would otherwise stack many identical
+ * `writing{logline}` rows. N-26 collapses those into one clean step per phase.
+ */
+const isSamePhase = (a: TraceStep, b: TraceStep): boolean => {
+  if (a.kind !== b.kind) return false;
+  if (a.entity || b.entity) {
+    return a.entity?.domain === b.entity?.domain;
+  }
+  return a.text === b.text;
+};
+
+/**
+ * Append a trace step, collapsing a consecutive duplicate of the SAME phase so
+ * the live trace shows ONE clear step per phase (N-26). The step is never
+ * dropped from the trace as a whole — only a back-to-back repeat of the phase
+ * already at the tail is folded — so the tracer invariant (reading → reasoning →
+ * writing → tool → done) is preserved; the duplication is what goes away.
+ */
+const appendTraceStep = (
+  trace: ReadonlyArray<TraceStep>,
+  step: TraceStep,
+): ReadonlyArray<TraceStep> => {
+  const last = trace[trace.length - 1];
+  if (last && isSamePhase(last, step)) return trace;
+  return [...trace, step];
+};
+
 // ─── Reducer ───────────────────────────────────────────────────────────────────
 
 export const chatReducer = (state: ChatState, action: ChatAction): ChatState =>
@@ -179,7 +211,7 @@ export const chatReducer = (state: ChatState, action: ChatAction): ChatState =>
         a.sessionId,
         mapMessage(thread, a.assistantMessageId, (m) => ({
           ...m,
-          trace: [...m.trace, step],
+          trace: appendTraceStep(m.trace, step),
         })),
       );
     })

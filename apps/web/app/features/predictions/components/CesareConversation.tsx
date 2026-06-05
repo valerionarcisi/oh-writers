@@ -277,20 +277,40 @@ function stripToolCalls(content: string): string {
     .trim();
 }
 
+// Inline markdown: bold (`**`), italic (`*`), and inline code (`` ` ``). N-10
+// adds inline code, which AI replies use for tool / entity names and the model
+// previously rendered as literal backticks. Code is matched FIRST so a backtick
+// span is never split by an emphasis marker inside it.
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  const pattern = /(`([^`]+)`|\*\*(.+?)\*\*|\*(.+?)\*)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
-    if (m[0].startsWith("**"))
-      parts.push(<strong key={m.index}>{m[2]}</strong>);
-    else parts.push(<em key={m.index}>{m[3]}</em>);
+    if (m[2] !== undefined) {
+      parts.push(
+        <code key={m.index} className={styles.mdCode}>
+          {m[2]}
+        </code>,
+      );
+    } else if (m[3] !== undefined) {
+      parts.push(<strong key={m.index}>{m[3]}</strong>);
+    } else {
+      parts.push(<em key={m.index}>{m[4]}</em>);
+    }
     last = m.index + m[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
   return parts;
+}
+
+// A pending list being accumulated across consecutive lines. `ordered`
+// distinguishes `1.`/`2.` from `-`/`*` so N-10 numbered lists render as a real
+// `<ol>` instead of a run of plain paragraphs.
+interface PendingList {
+  ordered: boolean;
+  items: string[];
 }
 
 function renderMarkdown(content: string): React.ReactNode {
@@ -298,33 +318,51 @@ function renderMarkdown(content: string): React.ReactNode {
   if (clean.length === 0) return null;
   const lines = clean.split("\n");
   const nodes: React.ReactNode[] = [];
-  let bullets: string[] | null = null;
+  let list: PendingList | null = null;
   let key = 0;
-  const flushBullets = () => {
-    if (!bullets || bullets.length === 0) {
-      bullets = null;
+  const flushList = () => {
+    if (!list || list.items.length === 0) {
+      list = null;
       return;
     }
+    const items = list.items.map((b, i) => (
+      <li key={i} className={styles.mdListItem}>
+        {renderInline(b)}
+      </li>
+    ));
     nodes.push(
-      <ul key={key++} className={styles.mdList}>
-        {bullets.map((b, i) => (
-          <li key={i} className={styles.mdListItem}>
-            {renderInline(b)}
-          </li>
-        ))}
-      </ul>,
+      list.ordered ? (
+        <ol key={key++} className={styles.mdList}>
+          {items}
+        </ol>
+      ) : (
+        <ul key={key++} className={styles.mdList}>
+          {items}
+        </ul>
+      ),
     );
-    bullets = null;
+    list = null;
+  };
+  const pushItem = (ordered: boolean, text: string) => {
+    if (!list || list.ordered !== ordered) {
+      flushList();
+      list = { ordered, items: [] };
+    }
+    list.items.push(text);
   };
   for (const raw of lines) {
     const line = raw;
-    const bullet = line.match(/^[-*]\s+(.+)/);
+    const bullet = line.match(/^\s*[-*]\s+(.+)/);
     if (bullet) {
-      if (!bullets) bullets = [];
-      bullets.push(bullet[1]!);
+      pushItem(false, bullet[1]!);
       continue;
     }
-    flushBullets();
+    const numbered = line.match(/^\s*\d+[.)]\s+(.+)/);
+    if (numbered) {
+      pushItem(true, numbered[1]!);
+      continue;
+    }
+    flushList();
     if (line.trim() === "") {
       nodes.push(<div key={key++} className={styles.mdSpacer} />);
     } else if (/^#+\s+/.test(line)) {
@@ -342,7 +380,7 @@ function renderMarkdown(content: string): React.ReactNode {
       );
     }
   }
-  flushBullets();
+  flushList();
   return nodes;
 }
 

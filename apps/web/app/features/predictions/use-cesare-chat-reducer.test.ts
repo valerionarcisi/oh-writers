@@ -156,6 +156,78 @@ describe("chatReducer — live trace (A2)", () => {
     });
   });
 
+  it("collapses repeated writing steps for the same entity into ONE (N-26)", () => {
+    let state = send(
+      initialChatState(SESSION_A),
+      SESSION_A,
+      "mi scrivi la logline?",
+      { user: "u1", assistant: "a1" },
+    );
+    // The server emits `writing{logline}` once per stream chunk / model
+    // iteration; here it arrives three times back-to-back for the same entity.
+    for (let i = 0; i < 3; i++) {
+      state = chatReducer(state, {
+        type: "stream/step",
+        sessionId: SESSION_A,
+        assistantMessageId: "a1",
+        event: {
+          _tag: "writing",
+          entity: { domain: "logline", label: "Logline" },
+        },
+      });
+    }
+    const assistant = activeThread(state)[1];
+    // One clean step per phase — the step itself is preserved (tracer invariant),
+    // the duplication is gone.
+    expect(assistant?.trace).toHaveLength(1);
+    expect(assistant?.trace[0]).toMatchObject({
+      kind: "writing",
+      entity: { domain: "logline" },
+    });
+  });
+
+  it("keeps distinct phases even when adjacent (reading → writing → tool)", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "x", {
+      user: "u1",
+      assistant: "a1",
+    });
+    const events: ReadonlyArray<
+      Extract<
+        Parameters<typeof chatReducer>[1],
+        { type: "stream/step" }
+      >["event"]
+    > = [
+      { _tag: "reading", entity: { domain: "soggetto", label: "Soggetto" } },
+      { _tag: "writing", entity: { domain: "logline", label: "Logline" } },
+      { _tag: "tool", name: "write_logline" },
+    ];
+    for (const event of events) {
+      state = chatReducer(state, {
+        type: "stream/step",
+        sessionId: SESSION_A,
+        assistantMessageId: "a1",
+        event,
+      });
+    }
+    expect(activeThread(state)[1]?.trace).toHaveLength(3);
+  });
+
+  it("collapses repeated reasoning steps with identical text (N-26)", () => {
+    let state = send(initialChatState(SESSION_A), SESSION_A, "x", {
+      user: "u1",
+      assistant: "a1",
+    });
+    for (let i = 0; i < 2; i++) {
+      state = chatReducer(state, {
+        type: "stream/step",
+        sessionId: SESSION_A,
+        assistantMessageId: "a1",
+        event: { _tag: "reasoning", text: "Sto pensando" },
+      });
+    }
+    expect(activeThread(state)[1]?.trace).toHaveLength(1);
+  });
+
   it("ignores terminal done/error events in the trace reducer", () => {
     let state = send(initialChatState(SESSION_A), SESSION_A, "x", {
       user: "u1",
