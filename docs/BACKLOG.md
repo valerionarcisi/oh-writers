@@ -29,6 +29,19 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   contract = `docs/BUGS.md` `Done =` lines + Spec 55. Scope = **narrative only**;
   production rollout deferred (N-28). N-15/N-25 are decisions, not lanes.
 
+  **RESUME NEXT SESSION → A5 screenplay chrome (N-18/N-19), Spec 55a.** Last open fleet
+  front. WIP in worktree `agent/a5-screenplay-chrome` (base `adc9be2`, 6 behind main;
+  32 uncommitted files). Steps: (1) rebase/replay the WIP onto current `main` — GOOD NEWS:
+  `context-actions.ts` is UNCHANGED since A5's base, so its action registrations apply
+  cleanly; the likely-real conflicts are the shared test files (`fixtures.ts`/`helpers.ts`,
+  versions/editor specs) that moved on main. (2) Finish N-18 (borderless page: drop the
+  `ScreenplayEditorShell.editorSlot` card + the `.pageShell` box-shadow) + N-19 (TopBar
+  actions via A1 registry incl. import/export; react-aria toolbar semantics on the
+  element-type tabs). Spec 55a (`docs/specs/55a-screenplay-chrome.md`, in the worktree)
+  has the full plan. (3) Live UI validation per `ui-ux-research.md` (measure + screenshot +
+  the worktree's `tests/screenplay-editor/screenplay-chrome.spec.ts`). (4) code-review,
+  merge, then this fleet entry is DONE.
+
   **Fleet status (2026-06-05):** MERGED to `main` — A1 (`82202c6`), A2 (`98a513a`),
   A4 (sessions, files in `features/predictions/`), A6 (`dd35ff2`), **A3/N-27 grounding
   (`08ef8bc` — real-AI verified via new `pnpm cost:smoke:narrative-grounding`)**. OPEN —
