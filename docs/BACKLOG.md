@@ -20,44 +20,16 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## NOW (max 1)
 
-- **Narrative Walk fleet (agent-fleet)** — fixing the walk findings via wave orchestration
-  with the 3-judge gate (Design→QA→Lead, bounce-back). Structure: **Wave 0 = A1** (Spec 55
-  shell backbone + narrative-page actions: N-01..N-05, N-21, N-22) merged to `main`; then
-  **Wave 1 = 5 parallel** lanes off updated `main` — A2 Cesare chat UX (N-06..N-11, N-26),
-  A3 Cesare grounding real-AI (N-27), A4 Sessions (N-12..N-14), A5 Screenplay chrome
-  (N-18, N-19), A6 Settings (N-23, N-24); then **Wave 2 = i18n sweep** (N-20). Shared
-  contract = `docs/BUGS.md` `Done =` lines + Spec 55. Scope = **narrative only**;
-  production rollout deferred (N-28). N-15/N-25 are decisions, not lanes.
+- _(empty — pull the top NEXT item)_
 
-  **RESUME NEXT SESSION → A5 screenplay chrome (N-18/N-19), Spec 55a.** Last open fleet
-  front. WIP in worktree `agent/a5-screenplay-chrome` (base `adc9be2`, 6 behind main;
-  32 uncommitted files). Steps: (1) rebase/replay the WIP onto current `main` — GOOD NEWS:
-  `context-actions.ts` is UNCHANGED since A5's base, so its action registrations apply
-  cleanly; the likely-real conflicts are the shared test files (`fixtures.ts`/`helpers.ts`,
-  versions/editor specs) that moved on main. (2) Finish N-18 (borderless page: drop the
-  `ScreenplayEditorShell.editorSlot` card + the `.pageShell` box-shadow) + N-19 (TopBar
-  actions via A1 registry incl. import/export; react-aria toolbar semantics on the
-  element-type tabs). Spec 55a (`docs/specs/55a-screenplay-chrome.md`, in the worktree)
-  has the full plan. (3) Live UI validation per `ui-ux-research.md` (measure + screenshot +
-  the worktree's `tests/screenplay-editor/screenplay-chrome.spec.ts`). (4) code-review,
-  merge, then this fleet entry is DONE.
-
-  **Fleet status (2026-06-05):** MERGED to `main` — A1 (`82202c6`), A2 (`98a513a`),
-  A4 (sessions, files in `features/predictions/`), A6 (`dd35ff2`), **A3/N-27 grounding
-  (`08ef8bc` — real-AI verified via new `pnpm cost:smoke:narrative-grounding`)**. OPEN —
-  **N-20 i18n sweep** (audit A-05 ~50 `it-IT` formatters + A-06 hardcoded IT in `packages/ui`)
-  → **doing next**; **A5 screenplay chrome** (N-18/N-19, Spec 55a) — uncommitted WIP in a
-  stale-based worktree, needs rebase onto current main + live UI validation → its own session.
-
-  **Superseded resume notes (kept for context):** picking findings one-by-one is now
-  replaced by the fleet above.
-  **Resume order:** (1) ✅ **logline N-16 + Soggetto-in-nav N-17** — done (Spec 57),
-  then (2) **Topic 1 / TopBar (Spec 55)** — planned: `docs/superpowers/plans/2026-06-03-spec55-topbar-action-standard.md`
-  decomposes it into slices **A** (registry + TopBar zone, backbone) → **B** (migrate dock pages) →
-  **C** (bell+account→TopBar, retire rail footer/docks) → **D** (Spec 56 enforcement). Each slice is a
-  WIP=1 front; **pull Slice A next** (plan on `main`; start Slice A on a fresh branch).
-  Also queued from the 2026-06-03 Cesare walk: **N-26** (trace repeats "sta scrivendo") +
-  **N-09** confirmed (Mostra/Nascondi modifiche no-op) — Topic 2, see `docs/BUGS.md`.
+  **Narrative Walk fleet — DONE (2026-06-05).** All lanes merged to `main`:
+  A1 (`82202c6`), A2 (`98a513a`), A3/N-27 (`08ef8bc`), A4 sessions, A6 (`dd35ff2`),
+  N-20 i18n (`dad1c1e`), and **A5 screenplay chrome (`31c0c87` — N-18 borderless page +
+  N-19 TopBar action menu, Spec 55a)**. Follow-ups filed during the A5 gate:
+  **N-31** (editor/screenplay-editor E2E suites not in CI + rotted locators/assertions +
+  DB-truncation races) and **N-32** (touch focus-enter affordance + localise "Exit Focus").
+  Also merged this session outside the fleet: **N-30 / Spec 60** route error boundary
+  (`dfe58f3`).
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
