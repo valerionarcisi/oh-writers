@@ -1096,9 +1096,9 @@ export const ScreenplayEditor = forwardRef<
             className={styles.focusExitBtn}
             onClick={() => setFocusMode(false)}
             type="button"
-            title="Exit focus mode"
+            title={t("screenplay.shell.exitFocus")}
           >
-            Exit Focus
+            {t("screenplay.shell.exitFocus")}
           </button>
         </div>
       )}

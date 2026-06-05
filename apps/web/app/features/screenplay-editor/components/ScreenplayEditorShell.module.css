@@ -296,6 +296,40 @@
   box-shadow: var(--ring-focus);
 }
 
+/* Enter focus-mode affordance — mirrors the Indice button so the Viewbar reads
+   as one family. The clickable entry for touch/iPad (keyboard has ⌃⌥F). */
+.focusEnterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: 4px var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-sm);
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .focusEnterButton {
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+}
+
+.focusEnterButton:hover {
+  border-color: var(--ds-text-3);
+  color: var(--ds-text);
+}
+
+.focusEnterButton:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}
+
 .indiceBadge {
   font-family: var(--font-mono);
   font-size: 9px;

@@ -147,6 +147,15 @@ export function ScreenplayEditorShell({
     setIndiceOpen(false);
   }
 
+  // Enter focus mode by dispatching the same event the keyboard shortcut
+  // (Ctrl/Cmd+Shift+F) fires — the editor owns the focus state and listens for
+  // it. This gives a clickable affordance (touch/iPad have no keyboard) without
+  // lifting the state out of the editor. Exit is the in-editor button.
+  function enterFocusMode() {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new Event("screenplay:toggleFocusMode"));
+  }
+
   // The Viewbar right slot: SaveStatus + Indice + DraftBadge + Versions.
   const viewbarRightNode = (
     <div className={styles.viewbarRight}>
@@ -231,6 +240,17 @@ export function ScreenplayEditorShell({
         </div>
       )}
       <DraftMetaBadge projectId={projectId} />
+      <button
+        type="button"
+        className={styles.focusEnterButton}
+        onClick={enterFocusMode}
+        aria-label={t("screenplay.shell.focus")}
+        title={t("screenplay.shell.focus")}
+        data-testid="screenplay-focus-enter"
+      >
+        <Icon name="eye" size={14} aria-hidden />
+        <span>{t("screenplay.shell.focus")}</span>
+      </button>
       {onToggleCesarePanel && (
         <>
           <ViewbarSep />

@@ -104,10 +104,14 @@ test.describe("[Spec 55a] screenplay chrome", () => {
 
     await openScreenplayActions(page);
     await expect(page.getByTestId("screenplay-export-pdf")).toBeVisible();
-    await expect(page.getByTestId("menu-item-export-fountain")).toBeVisible();
     await expect(page.getByTestId("menu-item-import-pdf")).toBeVisible();
     await expect(page.getByTestId("menu-item-import-fountain")).toBeVisible();
     await expect(page.getByTestId("menu-item-versions")).toBeVisible();
+    // NOTE: `menu-item-export-fountain` is gated on `hasContent` (the live PM
+    // doc), and the clean seed leaves the screenplay's live doc empty (the 9
+    // scenes sit in a version, not the active content — N-31 seed gap), so it is
+    // intentionally NOT asserted here. Export-Fountain's own behaviour is covered
+    // by `screenplay-export.spec.ts` on a content-bearing fixture.
   });
 
   test("N-19 — Versioni from the TopBar opens the versions drawer", async ({
@@ -122,5 +126,34 @@ test.describe("[Spec 55a] screenplay chrome", () => {
     await expect(page.getByTestId("versions-drawer")).toBeVisible({
       timeout: 5_000,
     });
+  });
+
+  test("N-32 — a clickable 'Focus' affordance enters focus mode (no keyboard) and exit is localised", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SCREENPLAY_PATH(testProjectId));
+    await waitForEditor(page);
+
+    // The enter affordance lives in the Viewbar (touch/iPad have no keyboard).
+    const enter = page.getByTestId("screenplay-focus-enter");
+    await expect(enter).toBeVisible();
+    await enter.click();
+
+    // Focus mode is a full-screen overlay with a LOCALISED exit button (the bug
+    // was a hardcoded English "Exit Focus").
+    const exit = page.getByRole("button", { name: "Esci da Focus" });
+    await expect(exit).toBeVisible();
+    await expect(page.getByText("Exit Focus")).toHaveCount(0);
+
+    // Exiting restores the normal chrome (the Viewbar Focus button is usable
+    // again — proving the overlay was dismissed, not just hidden behind it).
+    await exit.click();
+    await expect(exit).toHaveCount(0);
+    await expect(enter).toBeVisible();
+    await enter.click();
+    await expect(
+      page.getByRole("button", { name: "Esci da Focus" }),
+    ).toBeVisible();
   });
 });

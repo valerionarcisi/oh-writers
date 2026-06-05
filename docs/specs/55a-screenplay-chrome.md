@@ -95,10 +95,9 @@ active accent) unchanged.
 
 - Redesigning the export modals or the versions drawer (placement only).
 - The production pages (N-28).
-- **A clickable "enter focus mode" affordance + localising the in-editor "Exit
-  Focus" button.** Per the decision above, focus is intentionally NOT a TopBar
-  action: entering is keyboard-only (`Ctrl/Cmd+Shift+F`) and exiting uses the
-  in-editor button. That button's "Exit Focus" label is hardcoded English
-  (pre-existing on `main`, predates this change). On a touch/iPad PWA there is no
-  way to ENTER focus mode without a keyboard. Tracked as a follow-up (N-32) — out
-  of A5's chrome scope, not a regression.
+- ~~A clickable "enter focus mode" affordance + localising the in-editor "Exit
+  Focus" button.~~ **DONE in N-32** (`fix/n32-focus-toggle`): a Viewbar **Focus**
+  button dispatches `screenplay:toggleFocusMode` (touch/iPad can enter focus
+  without a keyboard); the exit button reads `screenplay.shell.exitFocus`. Focus
+  stays editor-local (not a TopBar action) — the button lives in the Viewbar, the
+  editor keeps owning the state.
