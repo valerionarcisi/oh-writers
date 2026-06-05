@@ -1,10 +1,35 @@
 .page {
-  max-width: 640px;
+  /* A definite inline-size is required so the `inline-size` container
+   * establishes a width when this page is a flex item in the shell's column
+   * `.main`; without it the container collapses to its content min-width. */
+  inline-size: 100%;
+  container-type: inline-size;
+  max-inline-size: var(--max-width-wide);
   margin-inline: auto;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-8) var(--space-8) var(--space-10);
   display: flex;
   flex-direction: column;
-  gap: var(--space-10);
+  gap: var(--space-8);
+}
+
+/* Sections lay out two-up at comfortable container widths and collapse to a
+ * single column on narrow containers (a peek/split lane or a phone). Driven by
+ * the container, not the viewport, per the CSS convention. */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@container (min-width: 880px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page {
+    padding-inline: var(--space-10);
+  }
 }
 
 .title {
@@ -25,6 +50,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  /* Keep form line-lengths comfortable even inside a wide column. */
+  max-inline-size: var(--max-width-content);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .sectionTitle {
@@ -52,7 +83,7 @@
   height: 56px;
   border-radius: 50%;
   object-fit: cover;
-  background: var(--color-surface-raised);
+  background: var(--color-surface-inset);
   flex-shrink: 0;
   margin-block-start: var(--space-6);
 }
@@ -61,7 +92,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--color-surface-raised);
+  background: var(--color-surface-inset);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -105,12 +136,12 @@
 
 .successMsg {
   font-size: var(--text-sm);
-  color: var(--color-success, #38a169);
+  color: var(--color-success);
 }
 
 .apiError {
   font-size: var(--text-sm);
-  color: var(--color-error, #e53e3e);
+  color: var(--color-error);
 }
 
 /* ── Teams ───────────────────────────────────────────────────────────────── */
@@ -126,7 +157,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-inset);
   border-radius: var(--radius-md);
 }
 
@@ -163,8 +194,8 @@
 .roleBadge {
   font-size: var(--text-xs);
   font-weight: 500;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm, 4px);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-muted);
   text-transform: capitalize;

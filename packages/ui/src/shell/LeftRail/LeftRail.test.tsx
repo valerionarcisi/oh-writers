@@ -261,6 +261,32 @@ describe("LeftRail", () => {
     expect(onProject).toHaveBeenCalledTimes(1);
   });
 
+  it("opens a project menu and fires the chosen item (N-24)", () => {
+    const onSettings = vi.fn();
+    const { getByTestId, getByText } = render(
+      <LeftRail
+        brand={{ label: "Oh Writers", onPress: vi.fn() }}
+        project={{
+          title: "Non fa ridere",
+          onPress: vi.fn(),
+          menuItems: [
+            {
+              label: "Impostazioni progetto",
+              onClick: onSettings,
+              testId: "project-menu-settings",
+            },
+          ],
+        }}
+        sections={SECTIONS}
+        onNavigate={vi.fn()}
+      />,
+    );
+    // The header is now a menu trigger (chevron-down promises a menu).
+    fireEvent.click(getByTestId("rail-project-menu-trigger"));
+    fireEvent.click(getByText("Impostazioni progetto"));
+    expect(onSettings).toHaveBeenCalledTimes(1);
+  });
+
   it("uses the ariaLabel override on the rail landmark", () => {
     const { getByLabelText } = render(
       <LeftRail

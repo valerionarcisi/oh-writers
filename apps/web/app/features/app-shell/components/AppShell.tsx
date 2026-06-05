@@ -823,6 +823,35 @@ function AppShellInner({
     }
   }, [projectId, router]);
 
+  // N-24 — the rail project header carries a chevron-down (the universal
+  // "opens a menu" affordance), so it opens a project menu rather than a bare
+  // link. Open project / project settings / switch project — each a clear
+  // destination. Built only inside a project context (the header itself only
+  // renders when `projectName` is set).
+  const projectMenuItems = useMemo<DropdownMenuItem[]>(
+    () => [
+      {
+        label: t("shell.projectMenu.open"),
+        icon: "📄",
+        onClick: handleProjectHeaderClick,
+        testId: "project-menu-open",
+      },
+      {
+        label: t("shell.projectMenu.settings"),
+        icon: "⚙",
+        onClick: handleProjectSettings,
+        testId: "project-menu-settings",
+      },
+      {
+        label: t("shell.projectMenu.switch"),
+        icon: "⇄",
+        onClick: handleBrandClick,
+        testId: "project-menu-switch",
+      },
+    ],
+    [t, handleProjectHeaderClick, handleProjectSettings, handleBrandClick],
+  );
+
   const paletteItems = useMemo<CommandPaletteItem[]>(() => {
     const items: CommandPaletteItem[] = [
       {
@@ -1042,6 +1071,7 @@ function AppShellInner({
                   ? {
                       title: projectName,
                       onPress: handleProjectHeaderClick,
+                      menuItems: projectMenuItems,
                     }
                   : undefined
               }
