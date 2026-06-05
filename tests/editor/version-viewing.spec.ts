@@ -7,7 +7,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { BASE_URL, waitForEditor } from "../helpers";
+import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
 
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
@@ -47,7 +47,7 @@ async function openScreenplay(page: Page, pid: string) {
 }
 
 async function openVersionsPanel(page: Page) {
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   await page.getByTestId("menu-item-versions").click();
   await expect(page.getByTestId("versions-drawer")).toBeVisible();
 }
@@ -104,9 +104,11 @@ test.beforeAll(async ({ browser }) => {
   await page.goto(`${BASE_URL}/projects/new`);
   await page.waitForURL(/\/projects\/new/, { timeout: 30_000 });
   await page.waitForLoadState("networkidle");
-  await page.getByLabel(/title/i).fill("Version Viewing Test");
-  await page.getByLabel(/format/i).selectOption("feature");
-  await page.getByRole("button", { name: /create/i }).click();
+  await page.getByLabel(/titolo|title/i).fill("Version Viewing Test");
+  await page.getByLabel(/formato|format/i).selectOption("feature");
+  await page
+    .getByRole("button", { name: /crea progetto|create project|create/i })
+    .click();
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 30_000 });
   projectId = page.url().split("/projects/")[1]?.split("/")[0] ?? "";
   await page.close();

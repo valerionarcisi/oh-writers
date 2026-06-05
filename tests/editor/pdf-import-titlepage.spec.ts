@@ -19,7 +19,12 @@
  */
 import path from "path";
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
-import { BASE_URL, waitForEditor, getEditorContent } from "../helpers";
+import {
+  BASE_URL,
+  waitForEditor,
+  getEditorContent,
+  openScreenplayActionsMenu,
+} from "../helpers";
 
 const TEST_EMAIL = "test@ohwriters.dev";
 const TEST_PASSWORD = "testpassword123";
@@ -71,9 +76,11 @@ async function createFreshProject(
   const page = await context.newPage();
   await page.goto(`${BASE_URL}/projects/new`);
   await page.waitForLoadState("networkidle");
-  await page.getByLabel(/title/i).fill(title);
-  await page.getByLabel(/format/i).selectOption("feature");
-  await page.getByRole("button", { name: /create/i }).click();
+  await page.getByLabel(/titolo|title/i).fill(title);
+  await page.getByLabel(/formato|format/i).selectOption("feature");
+  await page
+    .getByRole("button", { name: /crea progetto|create project|create/i })
+    .click();
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 30_000 });
   const id = page.url().split("/projects/")[1]?.split("/")[0] ?? "";
   await page.close();
@@ -87,7 +94,7 @@ async function openScreenplay(page: Page, projectId: string) {
 }
 
 async function importPdf(page: Page, filePath: string) {
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-pdf").click();
   const fileChooser = await fileChooserPromise;

@@ -34,3 +34,15 @@ export async function getEditorContent(page: Page): Promise<string> {
     return (window as any).__ohWritersFountain?.() ?? "";
   });
 }
+
+// Open the screenplay's TopBar "Altre azioni" menu (Spec 55a). Export, import,
+// Versioni, renumber and title-page actions all live here — the single home
+// that replaced the in-editor ⋯ ToolbarMenu.
+export async function openScreenplayActionsMenu(page: Page): Promise<void> {
+  const trigger = page.getByLabel("Altre azioni");
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.click();
+  await expect(page.getByTestId("screenplay-actions-menu")).toBeVisible({
+    timeout: 5_000,
+  });
+}

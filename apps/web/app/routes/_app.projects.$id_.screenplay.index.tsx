@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import {
@@ -6,12 +6,10 @@ import {
   ScreenplayEditorShell,
   ScreenplayElementChips,
   useScreenplay,
-  useVersions,
   type ScreenplayEditorHandle,
   type ElementType,
 } from "~/features/screenplay-editor";
 import { ResultErrorView } from "~/components/ResultErrorView";
-import { useVersionsDrawer } from "~/features/versions";
 import { Skeleton } from "@oh-writers/ui";
 import styles from "./_app.projects.$id_.editor.module.css";
 
@@ -22,8 +20,6 @@ export const Route = createFileRoute("/_app/projects/$id_/screenplay/")({
 function ScreenplayEditorPage() {
   const { id } = Route.useParams();
   const { data: result, isLoading } = useScreenplay(id);
-  const screenplayId = result && result.isOk ? result.value.id : "";
-  const { data: versionsResult } = useVersions(screenplayId || "");
   const [isCesareOn, setIsCesareOn] = useState(true);
   const [currentElement, setCurrentElement] = useState<ElementType>("action");
   const [metrics, setMetrics] = useState({
@@ -36,17 +32,9 @@ function ScreenplayEditorPage() {
     Array<{ number: string; title: string }>
   >([]);
   const editorRef = useRef<ScreenplayEditorHandle>(null);
-  const { open: openVersionsDrawer } = useVersionsDrawer();
 
-  // Stable handler so the shell's TopBar "actions" slot publisher (a memoised
-  // ReactNode that depends on this callback) keeps a stable reference across
-  // renders. An inline arrow here produced a NEW node every render → the slot
-  // publisher's effect re-fired → setState → re-render → "Maximum update depth
-  // exceeded" loop on /screenplay.
-  const handleOpenVersions = useCallback(() => {
-    if (!screenplayId) return;
-    openVersionsDrawer({ kind: "screenplay", screenplayId });
-  }, [openVersionsDrawer, screenplayId]);
+  // Versioni + export/import are published into the TopBar actions menu by the
+  // editor itself (Spec 55a) — the route no longer wires a versions drawer.
 
   // Build the acts array for the Indice popover. Fountain has no explicit act
   // structure, so all scenes live under a single "Sceneggiatura" act.
@@ -98,16 +86,6 @@ function ScreenplayEditorPage() {
           projectId={id}
           acts={acts}
           viewbarCenter={legendNode}
-          onOpenVersions={handleOpenVersions}
-          versions={
-            versionsResult && versionsResult.isOk
-              ? versionsResult.value.map((v, idx) => ({
-                  id: v.id,
-                  label: v.label ?? `Versione ${idx + 1}`,
-                  isCurrent: v.id === value.currentVersionId,
-                }))
-              : []
-          }
         >
           <ScreenplayEditor
             ref={editorRef}

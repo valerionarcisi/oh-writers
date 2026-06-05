@@ -12,16 +12,18 @@
  */
 
 import { test, expect } from "../fixtures";
-import { BASE_URL, waitForEditor, goToNewLine } from "../helpers";
+import {
+  BASE_URL,
+  waitForEditor,
+  goToNewLine,
+  openScreenplayActionsMenu,
+} from "../helpers";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Open the versions drawer from the screenplay toolbar menu */
+/** Open the versions drawer from the TopBar actions menu (Spec 55a) */
 async function openVersionsDrawer(page: import("@playwright/test").Page) {
-  // The versions toggle lives inside the toolbar ⋯ menu
-  const menuTrigger = page.getByTestId("toolbar-menu-trigger");
-  await expect(menuTrigger).toBeVisible({ timeout: 10_000 });
-  await menuTrigger.click();
+  await openScreenplayActionsMenu(page);
   const versionsItem = page.getByTestId("menu-item-versions");
   await expect(versionsItem).toBeVisible({ timeout: 5_000 });
   await versionsItem.click();

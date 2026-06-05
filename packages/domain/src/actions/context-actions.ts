@@ -107,6 +107,38 @@ export const CONTEXT_ACTIONS: Readonly<
       order: 90,
     },
   ],
+  // The screenplay surface (A5 / N-19). One pattern, page-specific tools:
+  // export (PDF/production formats + Fountain), import (PDF + Fountain), and
+  // Versioni all flow through the TopBar `ActionsMenu` like every other page.
+  // The page wires runtime handlers per id; the editor owns the underlying
+  // export/import machinery (PM content, file pickers, modals).
+  screenplay: [
+    {
+      id: ContextActionIds.EXPORT_PDF,
+      labelKey: "screenplay.action.exportPdf",
+      order: 10,
+    },
+    {
+      id: ContextActionIds.EXPORT_FOUNTAIN,
+      labelKey: "screenplay.action.exportFountain",
+      order: 20,
+    },
+    {
+      id: ContextActionIds.IMPORT_PDF,
+      labelKey: "screenplay.action.importPdf",
+      order: 30,
+    },
+    {
+      id: ContextActionIds.IMPORT_FOUNTAIN,
+      labelKey: "screenplay.action.importFountain",
+      order: 40,
+    },
+    {
+      id: ContextActionIds.VERSIONS,
+      labelKey: "screenplay.action.versions",
+      order: 90,
+    },
+  ],
 } as const;
 
 /**

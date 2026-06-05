@@ -1,25 +1,35 @@
 /**
  * Audit ALTO #5 + #6 — Export + Import reachability.
  *
- * Regression guard for the consolidated audit (2026-05-31):
- *   #5 Screenplay PDF export was unreachable from the UI (onExport never wired,
- *      setExportFormat never called with a non-null value).
- *   #6 All imports were unreachable (dashboard "Importa Fountain" hardcoded
- *      disabled; ToolbarMenu imported but never rendered).
+ * Regression guard for the consolidated audit (2026-05-31) and Spec 55a:
+ *   #5 Screenplay PDF export must be reachable from the UI.
+ *   #6 All imports must be reachable.
  *
- * [OHW-audit-export] Editor exposes an Esporta entry that opens the export
- *   modal, with all 5 production formats selectable.
- * [OHW-audit-import] The import menu is reachable: dashboard "Importa Fountain"
- *   is enabled and the editor ToolbarMenu renders the import entries.
+ * Spec 55a moved export/import/Versioni into the single TopBar actions menu
+ * (`screenplay-actions-menu`), one home for every page action.
+ *
+ * [OHW-audit-export] The TopBar "Esporta PDF" entry opens the export modal,
+ *   with all 5 production formats selectable inside it.
+ * [OHW-audit-import] The TopBar import entries are reachable and open a picker.
  */
 
+import type { Page } from "@playwright/test";
 import { test, expect } from "../fixtures";
 import { BASE_URL, waitForEditor } from "../helpers";
 
 const SCREENPLAY_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/screenplay`;
 
-test.describe("Audit ALTO #5/#6 — Export & Import reachable", () => {
+const openScreenplayActions = async (page: Page): Promise<void> => {
+  const trigger = page.getByLabel("Altre azioni");
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.click();
+  await expect(page.getByTestId("screenplay-actions-menu")).toBeVisible({
+    timeout: 5_000,
+  });
+};
+
+test.describe("Audit ALTO #5/#6 — Export & Import reachable (TopBar)", () => {
   test("[OHW-audit-export] Esporta opens the export modal with all 5 formats", async ({
     authenticatedPage: page,
     testProjectId,
@@ -27,47 +37,41 @@ test.describe("Audit ALTO #5/#6 — Export & Import reachable", () => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    const trigger = page.getByTestId("screenplay-export-pdf");
-    await expect(trigger).toBeVisible({ timeout: 10_000 });
-    await expect(trigger).toBeEnabled();
-    await trigger.click();
+    await openScreenplayActions(page);
+    const exportItem = page.getByTestId("screenplay-export-pdf");
+    await expect(exportItem).toBeVisible({ timeout: 5_000 });
+    await exportItem.click();
 
-    const menu = page.getByTestId("screenplay-export-menu");
-    await expect(menu).toBeVisible({ timeout: 5_000 });
-    for (const name of [
-      /^Standard/,
-      /^Sides/,
-      /^AD copy/,
-      /^Reading copy/,
-      /Una scena per pagina/,
+    const modal = page.getByTestId("screenplay-export-modal");
+    await expect(modal).toBeVisible({ timeout: 5_000 });
+    // The format picker lives inside the modal now.
+    for (const id of [
+      "standard",
+      "sides",
+      "ad_copy",
+      "reading_copy",
+      "one_scene_per_page",
     ]) {
-      await expect(menu.getByRole("menuitem", { name })).toBeVisible();
+      await expect(
+        modal.getByTestId(`screenplay-export-format-${id}`),
+      ).toBeVisible();
     }
-
-    // Selecting a format actually opens the modal (the dead path before the fix).
-    await menu.getByRole("menuitem", { name: /^Standard/ }).click();
-    await expect(page.getByTestId("screenplay-export-modal")).toBeVisible({
-      timeout: 5_000,
-    });
     await expect(page.getByTestId("screenplay-export-generate")).toBeEnabled();
   });
 
-  test("[OHW-audit-import] editor ToolbarMenu exposes the import entries", async ({
+  test("[OHW-audit-import] TopBar exposes the import entries", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    await page.getByTestId("toolbar-menu-trigger").click();
-    await expect(page.getByTestId("toolbar-menu-panel")).toBeVisible();
+    await openScreenplayActions(page);
 
     const importPdf = page.getByTestId("menu-item-import-pdf");
     const importFountain = page.getByTestId("menu-item-import-fountain");
     await expect(importPdf).toBeVisible();
-    await expect(importPdf).toBeEnabled();
     await expect(importFountain).toBeVisible();
-    await expect(importFountain).toBeEnabled();
 
     // The Fountain entry opens a file picker — the import UI is reachable.
     const fileChooserPromise = page.waitForEvent("filechooser");

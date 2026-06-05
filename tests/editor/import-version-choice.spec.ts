@@ -16,7 +16,7 @@
 
 import path from "path";
 import { test, expect } from "../fixtures";
-import { BASE_URL, waitForEditor } from "../helpers";
+import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
 
 const PDF_FIXTURE = path.resolve(
   __dirname,
@@ -30,7 +30,7 @@ const PDF_FIXTURE = path.resolve(
 async function startImport(
   page: Parameters<Parameters<typeof test>[1]>[0]["authenticatedPage"],
 ) {
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const [fileChooser] = await Promise.all([
     page.waitForEvent("filechooser"),
     page.getByTestId("menu-item-import-pdf").click(),
@@ -44,7 +44,7 @@ test.describe("Import PDF — version choice dialog", () => {
     await waitForEditor(page);
 
     // Ensure at least one version exists by creating one via the drawer
-    await page.getByTestId("toolbar-menu-trigger").click();
+    await openScreenplayActionsMenu(page);
     await page.getByTestId("menu-item-versions").click();
     const drawer = page.getByTestId("versions-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
@@ -95,7 +95,7 @@ test.describe("Import PDF — version choice dialog", () => {
     testProjectId,
   }) => {
     // Count versions before import
-    await page.getByTestId("toolbar-menu-trigger").click();
+    await openScreenplayActionsMenu(page);
     await page.getByTestId("menu-item-versions").click();
     const drawer = page.getByTestId("versions-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
@@ -113,7 +113,7 @@ test.describe("Import PDF — version choice dialog", () => {
     await expect(confirmDialog).not.toBeVisible({ timeout: 3_000 });
 
     // Version count must remain unchanged
-    await page.getByTestId("toolbar-menu-trigger").click();
+    await openScreenplayActionsMenu(page);
     await page.getByTestId("menu-item-versions").click();
     await expect(drawer).toBeVisible({ timeout: 5_000 });
     const rowsAfter = await drawer

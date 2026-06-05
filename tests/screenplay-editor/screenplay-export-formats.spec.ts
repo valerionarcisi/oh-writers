@@ -17,22 +17,38 @@ import type { Page, Response } from "@playwright/test";
 const SCREENPLAY_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/screenplay`;
 
-const openExportMenu = async (page: Page) => {
-  const trigger = page.getByTestId("screenplay-export-pdf");
-  await expect(trigger).toBeVisible({ timeout: 10_000 });
-  await expect(trigger).toBeEnabled();
+// Spec 55a — "Esporta PDF" lives in the TopBar actions menu; the format choice
+// (radio group) now lives inside the export modal.
+const openExportModal = async (page: Page) => {
+  const trigger = page.getByLabel("Altre azioni");
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
   await trigger.click();
-  const menu = page.getByTestId("screenplay-export-menu");
-  await expect(menu).toBeVisible({ timeout: 5_000 });
-  return menu;
+  const exportItem = page.getByTestId("screenplay-export-pdf");
+  await expect(exportItem).toBeVisible({ timeout: 5_000 });
+  await expect(exportItem).toBeEnabled();
+  await exportItem.click();
+  const modal = page.getByTestId("screenplay-export-modal");
+  await expect(modal).toBeVisible({ timeout: 5_000 });
+  return modal;
+};
+
+type FormatId =
+  | "standard"
+  | "sides"
+  | "ad_copy"
+  | "reading_copy"
+  | "one_scene_per_page";
+
+const selectFormat = async (page: Page, id: FormatId) => {
+  await page.getByTestId(`screenplay-export-format-${id}`).check();
 };
 
 const generateAndCapture = async (
   page: Page,
 ): Promise<{ response: Response; popup: Page }> => {
-  const generate = page
-    .getByTestId("screenplay-export-modal")
-    .getByTestId("screenplay-export-generate");
+  // Generate lives in the Modal footer (sibling of the testid'd body), so
+  // scope it to the page.
+  const generate = page.getByTestId("screenplay-export-generate");
   await expect(generate).toBeEnabled();
   const [response, popup] = await Promise.all([
     page.waitForResponse(
@@ -48,26 +64,24 @@ const generateAndCapture = async (
 };
 
 test.describe("Screenplay Export Formats — Spec 05k", () => {
-  test("[OHW-310] Export menu shows all 5 production formats", async ({
+  test("[OHW-310] Export modal shows all 5 production formats", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const menu = await openExportMenu(page);
-    await expect(
-      menu.getByRole("menuitem", { name: /^Standard/ }),
-    ).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: /^Sides/ })).toBeVisible();
-    await expect(
-      menu.getByRole("menuitem", { name: /^AD copy/ }),
-    ).toBeVisible();
-    await expect(
-      menu.getByRole("menuitem", { name: /^Reading copy/ }),
-    ).toBeVisible();
-    await expect(
-      menu.getByRole("menuitem", { name: /Una scena per pagina/ }),
-    ).toBeVisible();
+    const modal = await openExportModal(page);
+    for (const id of [
+      "standard",
+      "sides",
+      "ad_copy",
+      "reading_copy",
+      "one_scene_per_page",
+    ] as const) {
+      await expect(
+        modal.getByTestId(`screenplay-export-format-${id}`),
+      ).toBeVisible();
+    }
   });
 
   test("[OHW-311] Sides modal: Genera disabled until at least one scene is picked", async ({
@@ -76,11 +90,9 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const menu = await openExportMenu(page);
-    await menu.getByRole("menuitem", { name: /^Sides/ }).click();
-    const modal = page.getByTestId("screenplay-export-modal");
-    await expect(modal).toBeVisible();
-    const generate = modal.getByTestId("screenplay-export-generate");
+    const modal = await openExportModal(page);
+    await selectFormat(page, "sides");
+    const generate = page.getByTestId("screenplay-export-generate");
     await expect(generate).toBeDisabled();
     await expect(
       modal.getByTestId("screenplay-export-scene-list"),
@@ -99,9 +111,8 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const menu = await openExportMenu(page);
-    await menu.getByRole("menuitem", { name: /^Sides/ }).click();
-    const modal = page.getByTestId("screenplay-export-modal");
+    const modal = await openExportModal(page);
+    await selectFormat(page, "sides");
     const checkboxes = modal.locator(
       'input[data-testid^="screenplay-export-scene-"]',
     );
@@ -124,8 +135,8 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const menu = await openExportMenu(page);
-    await menu.getByRole("menuitem", { name: /^AD copy/ }).click();
+    await openExportModal(page);
+    await selectFormat(page, "ad_copy");
     const { response, popup } = await generateAndCapture(page);
     if (!popup.isClosed()) await popup.close();
     const body = await response.json();
@@ -141,8 +152,8 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const menu = await openExportMenu(page);
-    await menu.getByRole("menuitem", { name: /^Reading copy/ }).click();
+    await openExportModal(page);
+    await selectFormat(page, "reading_copy");
     const { response, popup } = await generateAndCapture(page);
     if (!popup.isClosed()) await popup.close();
     const body = await response.json();
@@ -158,8 +169,8 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
-    const menu = await openExportMenu(page);
-    await menu.getByRole("menuitem", { name: /Una scena per pagina/ }).click();
+    await openExportModal(page);
+    await selectFormat(page, "one_scene_per_page");
     const { response, popup } = await generateAndCapture(page);
     if (!popup.isClosed()) await popup.close();
     const body = await response.json();

@@ -11,7 +11,7 @@
  */
 
 import { test, expect } from "../fixtures";
-import { BASE_URL, waitForEditor } from "../helpers";
+import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ import { BASE_URL, waitForEditor } from "../helpers";
 async function openVersionsDrawer(
   page: Parameters<Parameters<typeof test>[1]>[0]["authenticatedPage"],
 ) {
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   await page.getByTestId("menu-item-versions").click();
   const drawer = page.getByTestId("versions-drawer");
   await expect(drawer).toBeVisible({ timeout: 5_000 });

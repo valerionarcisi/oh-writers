@@ -5,50 +5,52 @@
   overflow: hidden;
 }
 
-/* ─── Editor actions bar ─────────────────────────────────── */
-/* Hosts the production-export dropdown and the ⋯ ToolbarMenu (import,
-   resequence, frontespizio, export Fountain). Sits above the page canvas
-   so the writer always has Esporta / Importa within reach. */
-.actionsBar {
+/* Import file inputs are driven from the TopBar actions menu (Spec 55a). */
+.hiddenInput {
+  display: none;
+}
+
+/* ─── Presence strip ─────────────────────────────────────── */
+/* A quiet, centered live-collaboration indicator above the page. Borderless
+   (N-18): it never frames the page, and only renders when peers are present. */
+.presenceStrip {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  border-block-end: var(--border);
-  background: var(--ds-surface);
+  justify-content: center;
+  padding-block: var(--space-2);
   flex-shrink: 0;
 }
 
-.exportTrigger {
-  display: inline-flex;
+/* ─── Import error banner ────────────────────────────────── */
+.importError {
+  position: fixed;
+  inset-block-end: var(--space-6);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--ds-text-2);
-  background: transparent;
-  border: var(--border);
+  gap: var(--space-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-danger);
   border-radius: var(--radius-md);
-  padding: var(--space-1) var(--space-3);
-  line-height: 1;
+  color: var(--ds-danger);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  z-index: var(--z-toast);
+  box-shadow: var(--shadow-lg);
+}
+
+.importErrorDismiss {
+  background: none;
+  border: none;
+  color: inherit;
   cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0;
+  line-height: 1;
 
-  &:hover:not(:disabled) {
+  &:hover {
     color: var(--ds-text);
-    background: var(--ds-surface-deep);
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: var(--ring-focus);
-  }
-
-  &:disabled {
-    color: var(--ds-text-mute);
-    cursor: not-allowed;
-    opacity: 0.6;
   }
 }
 
@@ -158,13 +160,19 @@
  * white card with a single soft shadow. Avoid layered heavy shadows that
  * suggest "multiple stacked pages" — we want one continuous page feel.
  */
+/*
+ * N-18: the screenplay page is the only surface allowed `--radius-none`
+ * (CLAUDE.md). It is a flat centered text column on the canvas — no card
+ * frame, no shadow, no border. The shell renders it directly (no `.editorSlot`
+ * wrapper), so the page reads as a single continuous sheet.
+ */
 .pageShell {
   inline-size: 100%;
   max-inline-size: 816px;
   background: var(--ds-surface);
   position: relative;
   flex-shrink: 0;
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-none);
 }
 
 .toast {

@@ -2,14 +2,17 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   useCallback,
 } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
-import { DocStats, DropdownMenu } from "@oh-writers/ui";
+import { ActionsMenu, Button, Dialog, DocStats } from "@oh-writers/ui";
+import type { DropdownMenuItem } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
 import {
@@ -52,20 +55,22 @@ import {
   usePromoteDraftToActive,
   useDiscardDraftVersion,
 } from "../hooks/useProposals";
-import { ToolbarMenu } from "./ToolbarMenu";
+import { useImportPdf } from "../hooks/useImportPdf";
+import { useImportFountain } from "../hooks/useImportFountain";
 import { ExportScreenplayPdfModal } from "./ExportScreenplayPdfModal";
 import { useExportScreenplayPdf } from "../hooks/useExportScreenplayPdf";
-import {
-  EXPORT_FORMATS,
-  EXPORT_FORMAT_META,
-  type ExportFormat,
-} from "@oh-writers/domain";
+import { ContextActionIds, type ExportFormat } from "@oh-writers/domain";
 import { buildFountainFilename } from "../lib/export-pipeline";
 import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
-import { SceneStaleBadge } from "./SceneStaleBadge";
 import { useVersionsDrawer } from "~/features/versions";
-import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
+import {
+  useCesareOpen,
+  useContextActions,
+  useSetActiveScene,
+  useTopBarSlotPublisher,
+} from "~/features/app-shell";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import { useSaveScreenplay } from "../hooks/useScreenplay";
 import {
@@ -347,10 +352,6 @@ export const ScreenplayEditor = forwardRef<
 
   const { data: versionsResult } = useVersions(screenplay.id);
   const versionsCount = versionsResult?.isOk ? versionsResult.value.length : 0;
-  const latestVersion =
-    versionsResult?.isOk && versionsResult.value.length > 0
-      ? versionsResult.value[0]
-      : null;
   const nextVersionLabel =
     versionsCount > 0
       ? `${t("screenplay.editor.versionFallbackPrefix")} ${versionsCount + 1}`
@@ -370,9 +371,7 @@ export const ScreenplayEditor = forwardRef<
           .with({ _tag: "ForbiddenError" }, () =>
             t("screenplay.editor.error.forbidden"),
           )
-          .with({ _tag: "DbError" }, () =>
-            t("screenplay.editor.error.db"),
-          )
+          .with({ _tag: "DbError" }, () => t("screenplay.editor.error.db"))
           .exhaustive()
       : null;
 
@@ -757,28 +756,31 @@ export const ScreenplayEditor = forwardRef<
   }, []);
 
   const exportPdf = useExportScreenplayPdf();
-  const [exportFormat, setExportFormat] = useState<ExportFormat | null>(null);
+  // The export modal (Spec 55a) now owns the production-format choice; the
+  // editor only tracks whether it is open. Opened from the TopBar action.
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const handleExportFountain = useCallback(() => {
     const filename = buildFountainFilename(screenplay.title, screenplay.title);
     downloadTextFile(content, filename);
   }, [content, screenplay.title]);
   const handleGenerateExport = ({
+    format,
     includeCoverPage,
     sceneNumbers,
   }: {
+    format: ExportFormat;
     includeCoverPage: boolean;
     sceneNumbers?: string[];
   }) => {
-    if (!exportFormat) return;
     exportPdf.mutate(
       {
         screenplayId: screenplay.id,
         includeCoverPage,
-        format: exportFormat,
+        format,
         sceneNumbers,
       },
-      { onSuccess: () => setExportFormat(null) },
+      { onSuccess: () => setIsExportOpen(false) },
     );
   };
 
@@ -945,16 +947,146 @@ export const ScreenplayEditor = forwardRef<
   const canEdit = screenplay.canEdit ?? false;
   const isOwner = screenplay.isOwner ?? false;
 
-  // The export trigger surfaces every production format as a dropdown item;
-  // picking one sets `exportFormat` which mounts the format-specific modal.
-  const exportMenuItems = EXPORT_FORMATS.map((format) => {
-    const meta = EXPORT_FORMAT_META[format];
-    return {
-      label: meta.labelIt,
-      description: meta.descriptionIt,
-      onClick: () => setExportFormat(format),
-    };
+  // ─── Import machinery (Spec 55a) ──────────────────────────────────────
+  // Lifted out of the retired in-editor ToolbarMenu into the editor itself,
+  // so the TopBar action items can drive the file pickers while the confirm
+  // dialogs + error banners render here. The PM `content`/version label live
+  // in this component, so this is the right home (deep module).
+  const navigate = useNavigate();
+  const openTitlePage = useCallback(
+    () =>
+      void navigate({
+        to: "/projects/$id/title-page",
+        params: { id: screenplay.projectId },
+      }),
+    [navigate, screenplay.projectId],
+  );
+  const pdfImport = useImportPdf({
+    hasExistingContent: hasContent,
+    onImport: setContent,
+    onCreateVersionThenImport: nextVersionLabel
+      ? handleCreateVersionThenImport
+      : undefined,
+    onTitlePageDetected: handleTitlePageDetected,
   });
+  const fountainImport = useImportFountain({
+    hasExistingContent: hasContent,
+    onImport: setContent,
+    onCreateVersionThenImport: nextVersionLabel
+      ? handleCreateVersionThenImport
+      : undefined,
+  });
+
+  // The import hooks rebuild their `openPicker` closures every render, which
+  // would make `contextActionHandlers` (and the published TopBar node) a new
+  // reference each render → the slot publisher re-fires → "Maximum update depth
+  // exceeded". Route the picker calls through a ref so the handler identities
+  // stay stable, mirroring the existing stable-handler pattern in this file.
+  const importPickersRef = useRef({
+    openPdf: pdfImport.openPicker,
+    openFountain: fountainImport.openPicker,
+  });
+  importPickersRef.current = {
+    openPdf: pdfImport.openPicker,
+    openFountain: fountainImport.openPicker,
+  };
+  const openPdfPicker = useCallback(
+    () => importPickersRef.current.openPdf(),
+    [],
+  );
+  const openFountainPicker = useCallback(
+    () => importPickersRef.current.openFountain(),
+    [],
+  );
+
+  // TopBar context actions (Spec 55a). Export/import/Versioni flow through the
+  // shared registry so the screenplay reuses the same single home as every
+  // narrative page; renumber + title-page are page-specific extras appended to
+  // the same menu. The registry drops any id the page does not wire.
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT_PDF]: {
+        onSelect: () => setIsExportOpen(true),
+        disabled: !hasContent || exportPdf.isPending,
+        labelOverride: exportPdf.isPending
+          ? t("screenplay.editor.exporting")
+          : undefined,
+        testId: "screenplay-export-pdf",
+      },
+      ...(hasContent
+        ? {
+            [ContextActionIds.EXPORT_FOUNTAIN]: {
+              onSelect: handleExportFountain,
+              testId: "menu-item-export-fountain",
+            },
+          }
+        : {}),
+      // Import OVERWRITES the screenplay content, so it is an edit op — only
+      // surface it to editors. A read-only viewer would otherwise pick a file
+      // and confirm an overwrite only to be rejected server-side.
+      ...(canEdit
+        ? {
+            [ContextActionIds.IMPORT_PDF]: {
+              onSelect: openPdfPicker,
+              disabled: pdfImport.isLoading,
+              testId: "menu-item-import-pdf",
+            },
+            [ContextActionIds.IMPORT_FOUNTAIN]: {
+              onSelect: openFountainPicker,
+              testId: "menu-item-import-fountain",
+            },
+          }
+        : {}),
+      [ContextActionIds.VERSIONS]: {
+        onSelect: toggleVersionsDrawer,
+        testId: "menu-item-versions",
+      },
+    }),
+    [
+      canEdit,
+      hasContent,
+      exportPdf.isPending,
+      handleExportFountain,
+      openPdfPicker,
+      pdfImport.isLoading,
+      openFountainPicker,
+      toggleVersionsDrawer,
+      t,
+    ],
+  );
+  const registryItems = useContextActions("screenplay", contextActionHandlers);
+  const actionItems = useMemo<DropdownMenuItem[]>(() => {
+    const extras: DropdownMenuItem[] = [];
+    if (canEdit) {
+      extras.push({
+        label: t("screenplay.menu.recalcSceneNumbers"),
+        onClick: onResequenceAll,
+        testId: "menu-item-renumber",
+      });
+    }
+    if (isOwner) {
+      extras.push({
+        label: t("screenplay.menu.titlePage"),
+        onClick: openTitlePage,
+        testId: "menu-item-title-page",
+      });
+    }
+    return [...registryItems, ...extras];
+  }, [registryItems, canEdit, isOwner, onResequenceAll, openTitlePage, t]);
+
+  // Publish the single screenplay actions menu into the TopBar `actions` slot
+  // (the one home). Memoised so the slot publisher does not re-fire each render.
+  const topBarActionsNode = useMemo(
+    () =>
+      isFocusMode ? null : (
+        <ActionsMenu
+          data-testid="screenplay-actions-menu"
+          items={actionItems}
+        />
+      ),
+    [actionItems, isFocusMode],
+  );
+  useTopBarSlotPublisher("actions", topBarActionsNode);
 
   return (
     <div className={`${styles.page} ${isFocusMode ? styles.focusMode : ""}`}>
@@ -1046,49 +1178,23 @@ export const ScreenplayEditor = forwardRef<
         />
       )}
 
-      {!isFocusMode && (
-        <div className={styles.actionsBar} data-testid="screenplay-actions-bar">
+      {/* Import file pickers + dialogs (Spec 55a) — the triggers live in the
+          TopBar actions menu; these stay mounted (invisible) to host the
+          native inputs and the confirm/error UI. */}
+      <input
+        {...pdfImport.fileInputProps}
+        className={styles.hiddenInput}
+        data-testid="pdf-file-input"
+      />
+      <input
+        {...fountainImport.fileInputProps}
+        className={styles.hiddenInput}
+        data-testid="fountain-file-input"
+      />
+
+      {!isFocusMode && realtimePeers.length > 0 && (
+        <div className={styles.presenceStrip}>
           <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
-          {hasContent && !exportPdf.isPending ? (
-            <DropdownMenu
-              align="start"
-              data-testid="screenplay-export-menu"
-              triggerClassName={styles.exportTrigger}
-              items={exportMenuItems}
-              trigger={
-                <span data-testid="screenplay-export-pdf">
-                  {t("screenplay.editor.exportPdf")}
-                </span>
-              }
-            />
-          ) : (
-            <button
-              type="button"
-              className={styles.exportTrigger}
-              data-testid="screenplay-export-pdf"
-              disabled
-            >
-              {exportPdf.isPending
-                ? t("screenplay.editor.exporting")
-                : t("screenplay.editor.exportPdf")}
-            </button>
-          )}
-          <ToolbarMenu
-            projectId={screenplay.projectId}
-            hasContent={hasContent}
-            onImport={setContent}
-            nextVersionLabel={nextVersionLabel}
-            onCreateVersionThenImport={
-              nextVersionLabel ? handleCreateVersionThenImport : undefined
-            }
-            onToggleVersions={toggleVersionsDrawer}
-            isVersionsPanelOpen={isVersionsPanelOpen}
-            currentVersionLabel={latestVersion?.label ?? null}
-            onResequenceAll={canEdit ? onResequenceAll : undefined}
-            isOwner={isOwner}
-            onTitlePageDetected={handleTitlePageDetected}
-            onExportFountain={hasContent ? handleExportFountain : undefined}
-          />
         </div>
       )}
 
@@ -1143,14 +1249,161 @@ export const ScreenplayEditor = forwardRef<
           />
         </div>
       )}
-      {exportFormat && (
+      {isExportOpen && (
         <ExportScreenplayPdfModal
           isPending={exportPdf.isPending}
-          format={exportFormat}
           screenplayId={screenplay.id}
-          onClose={() => setExportFormat(null)}
+          onClose={() => setIsExportOpen(false)}
           onGenerate={handleGenerateExport}
         />
+      )}
+
+      {pdfImport.status.type === "error" && (
+        <div
+          className={styles.importError}
+          role="alert"
+          data-testid="import-error"
+        >
+          {pdfImport.status.message}
+          <button
+            type="button"
+            className={styles.importErrorDismiss}
+            onClick={pdfImport.cancel}
+            aria-label={t("screenplay.menu.cancel")}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {pdfImport.status.type === "confirm" && (
+        <Dialog
+          isOpen
+          onClose={pdfImport.cancel}
+          title={t("screenplay.menu.importPdfTitle")}
+          isDismissable={false}
+          data-testid="import-confirm"
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                onClick={pdfImport.cancel}
+                data-testid="import-confirm-cancel"
+              >
+                {t("screenplay.menu.cancel")}
+              </Button>
+              {nextVersionLabel ? (
+                <>
+                  <Button
+                    variant="danger"
+                    onClick={pdfImport.confirm}
+                    data-testid="import-confirm-overwrite"
+                  >
+                    {t("screenplay.menu.overwrite")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={pdfImport.confirmWithVersion}
+                    data-testid="import-confirm-new-version"
+                    autoFocus
+                  >
+                    {t("screenplay.menu.saveAsPrefix")}
+                    {nextVersionLabel}
+                    {t("screenplay.menu.saveAsSuffix")}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={pdfImport.confirm}
+                  data-testid="import-confirm-ok"
+                  autoFocus
+                >
+                  {t("screenplay.menu.replace")}
+                </Button>
+              )}
+            </>
+          }
+        >
+          <p>
+            {nextVersionLabel
+              ? t("screenplay.menu.confirmWithVersionBody")
+              : t("screenplay.menu.confirmReplaceBody")}
+          </p>
+        </Dialog>
+      )}
+
+      {fountainImport.status.type === "error" && (
+        <div
+          className={styles.importError}
+          role="alert"
+          data-testid="import-fountain-error"
+        >
+          {fountainImport.status.message}
+          <button
+            type="button"
+            className={styles.importErrorDismiss}
+            onClick={fountainImport.cancel}
+            aria-label={t("screenplay.menu.cancel")}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {fountainImport.status.type === "confirm" && (
+        <Dialog
+          isOpen
+          onClose={fountainImport.cancel}
+          title={t("screenplay.menu.importFountainTitle")}
+          isDismissable={false}
+          data-testid="import-fountain-confirm"
+          actions={
+            <>
+              <Button
+                variant="ghost"
+                onClick={fountainImport.cancel}
+                data-testid="import-fountain-confirm-cancel"
+              >
+                {t("screenplay.menu.cancel")}
+              </Button>
+              {nextVersionLabel ? (
+                <>
+                  <Button
+                    variant="danger"
+                    onClick={fountainImport.confirm}
+                    data-testid="import-fountain-confirm-overwrite"
+                  >
+                    {t("screenplay.menu.overwrite")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={fountainImport.confirmWithVersion}
+                    data-testid="import-fountain-confirm-new-version"
+                    autoFocus
+                  >
+                    {t("screenplay.menu.saveAsPrefix")}
+                    {nextVersionLabel}
+                    {t("screenplay.menu.saveAsSuffix")}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={fountainImport.confirm}
+                  data-testid="import-fountain-confirm-ok"
+                  autoFocus
+                >
+                  {t("screenplay.menu.replace")}
+                </Button>
+              )}
+            </>
+          }
+        >
+          <p>
+            {nextVersionLabel
+              ? t("screenplay.menu.confirmWithVersionBody")
+              : t("screenplay.menu.confirmReplaceBody")}
+          </p>
+        </Dialog>
       )}
       {conflict ? (
         <SceneNumberConflictModal

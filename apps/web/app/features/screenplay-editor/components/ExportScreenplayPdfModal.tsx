@@ -1,16 +1,22 @@
 import { useMemo, useState } from "react";
 import { DsButton, Modal, Skeleton } from "@oh-writers/ui";
-import { EXPORT_FORMAT_META, type ExportFormat } from "@oh-writers/domain";
+import {
+  EXPORT_FORMATS,
+  EXPORT_FORMAT_META,
+  type ExportFormat,
+} from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
 import { useListScreenplayScenes } from "../hooks/useListScreenplayScenes";
 import styles from "./ExportScreenplayPdfModal.module.css";
 
 interface ExportScreenplayPdfModalProps {
   isPending: boolean;
-  format: ExportFormat;
+  /** Initial production format; the modal lets the user switch it inline. */
+  initialFormat?: ExportFormat;
   screenplayId: string;
   onClose: () => void;
   onGenerate: (opts: {
+    format: ExportFormat;
     includeCoverPage: boolean;
     sceneNumbers?: string[];
   }) => void;
@@ -18,17 +24,27 @@ interface ExportScreenplayPdfModalProps {
 
 export function ExportScreenplayPdfModal({
   isPending,
-  format,
+  initialFormat = "standard",
   screenplayId,
   onClose,
   onGenerate,
 }: ExportScreenplayPdfModalProps) {
   const { t } = useTranslation();
+  // The format chooser now lives inside the modal (Spec 55a): the single
+  // TopBar "Esporta PDF" action opens this modal, where the user picks the
+  // production format and per-format options in one place.
+  const [format, setFormat] = useState<ExportFormat>(initialFormat);
   const meta = EXPORT_FORMAT_META[format];
   const [includeCoverPage, setIncludeCoverPage] = useState(
     meta.defaultIncludeCoverPage,
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+
+  const onSelectFormat = (next: ExportFormat) => {
+    setFormat(next);
+    setIncludeCoverPage(EXPORT_FORMAT_META[next].defaultIncludeCoverPage);
+    setSelected(new Set());
+  };
 
   const scenesQuery = useListScreenplayScenes(screenplayId, {
     enabled: meta.requiresSceneSelection,
@@ -52,6 +68,7 @@ export function ExportScreenplayPdfModal({
 
   const handleGenerate = () => {
     onGenerate({
+      format,
       includeCoverPage,
       sceneNumbers: meta.requiresSceneSelection
         ? Array.from(selected)
@@ -84,6 +101,36 @@ export function ExportScreenplayPdfModal({
       }
     >
       <div data-testid="screenplay-export-modal">
+        <fieldset
+          className={styles.formatPicker}
+          data-testid="screenplay-export-format-picker"
+        >
+          <legend className={styles.formatLegend}>
+            {t("screenplay.export.formatLegend")}
+          </legend>
+          <div className={styles.formatGrid} role="radiogroup">
+            {EXPORT_FORMATS.map((id) => {
+              const fm = EXPORT_FORMAT_META[id];
+              const isSelected = id === format;
+              return (
+                <label
+                  key={id}
+                  className={`${styles.formatRow} ${isSelected ? styles.formatRowActive : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="screenplay-export-format"
+                    data-testid={`screenplay-export-format-${id}`}
+                    checked={isSelected}
+                    onChange={() => onSelectFormat(id)}
+                  />
+                  <span className={styles.formatLabel}>{fm.labelIt}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
         <p className={styles.description}>{meta.descriptionIt}</p>
 
         {meta.requiresSceneSelection && (

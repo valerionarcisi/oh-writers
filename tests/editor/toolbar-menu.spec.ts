@@ -1,8 +1,11 @@
 /**
- * Spec 06 — Toolbar popover menu (E2E)
+ * Spec 06 + Spec 55a — Screenplay actions menu (E2E)
  *
- * Validates the new ⋯ menu that consolidates screenplay-level actions.
- * Import PDF has been migrated from a top-level toolbar button to a menu item.
+ * Spec 55a moved the screenplay-level actions out of the in-editor ⋯ ToolbarMenu
+ * into the single TopBar "Altre azioni" menu (the one home for page actions).
+ * The popover mechanics (open/close/focus) are now owned + tested by the shared
+ * `DropdownMenu`/`ActionsMenu` primitives; here we validate that every action
+ * (import PDF/Fountain, renumber, title page) is reachable from that menu.
  */
 
 import { test, expect, type Page } from "@playwright/test";
@@ -40,9 +43,18 @@ async function signInViaApi(email: string, password: string) {
   }[];
 }
 
-async function openScreenplay(page: Page, projectId: string) {
-  await page.goto(`${BASE_URL}/projects/${projectId}/screenplay`);
+async function openScreenplay(page: Page, id: string) {
+  await page.goto(`${BASE_URL}/projects/${id}/screenplay`);
   await waitForEditor(page);
+}
+
+async function openActionsMenu(page: Page) {
+  const trigger = page.getByLabel("Altre azioni");
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.click();
+  await expect(page.getByTestId("screenplay-actions-menu")).toBeVisible({
+    timeout: 5_000,
+  });
 }
 
 let projectId = "";
@@ -61,9 +73,11 @@ test.beforeAll(async ({ browser }) => {
   await page.goto(`${BASE_URL}/projects/new`);
   await page.waitForURL(/\/projects\/new/, { timeout: 30_000 });
   await page.waitForLoadState("networkidle");
-  await page.getByLabel(/title/i).fill("Toolbar Menu Test");
-  await page.getByLabel(/format/i).selectOption("feature");
-  await page.getByRole("button", { name: /create/i }).click();
+  await page.getByLabel(/titolo|title/i).fill("Toolbar Menu Test");
+  await page.getByLabel(/formato|format/i).selectOption("feature");
+  await page
+    .getByRole("button", { name: /crea progetto|create project|create/i })
+    .click();
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 30_000 });
   projectId = page.url().split("/projects/")[1]?.split("/")[0] ?? "";
   await page.close();
@@ -73,45 +87,15 @@ test.beforeEach(async ({ page }) => {
   await page.context().addCookies(authCookies);
 });
 
-// ─── OHW-100  Trigger visible, top-level Import PDF gone ─────────────────────
+// ─── OHW-100  Single TopBar actions menu; no in-editor ⋯ menu ────────────────
 
-test("[OHW-100] toolbar renders a single menu trigger; no top-level Import PDF button", async ({
+test("[OHW-100] the TopBar actions menu is the single home; no in-editor toolbar menu", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
-  await expect(page.getByTestId("toolbar-menu-trigger")).toBeVisible();
-  // The old top-level Import PDF button must no longer exist in the toolbar
+  await expect(page.getByLabel("Altre azioni")).toBeVisible();
+  await expect(page.getByTestId("toolbar-menu-trigger")).toHaveCount(0);
   await expect(page.locator('[data-testid="import-pdf-btn"]')).toHaveCount(0);
-});
-
-// ─── OHW-101  Click opens, Esc closes ────────────────────────────────────────
-
-test("[OHW-101] click opens the popover, Esc closes it", async ({ page }) => {
-  await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
-  await expect(page.getByTestId("toolbar-menu-panel")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("toolbar-menu-panel")).toHaveCount(0);
-});
-
-// ─── OHW-102  Click outside closes ───────────────────────────────────────────
-
-test("[OHW-102] clicking outside the popover closes it", async ({ page }) => {
-  await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
-  await expect(page.getByTestId("toolbar-menu-panel")).toBeVisible();
-  await page.locator(".ProseMirror").first().click();
-  await expect(page.getByTestId("toolbar-menu-panel")).toHaveCount(0);
-});
-
-// ─── OHW-103  Focus moves into the panel on open ─────────────────────────────
-
-test("[OHW-103] opening the menu focuses the first enabled item", async ({
-  page,
-}) => {
-  await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
-  await expect(page.getByTestId("menu-item-import-pdf")).toBeFocused();
 });
 
 // ─── OHW-104  Import PDF item triggers file chooser ──────────────────────────
@@ -120,7 +104,7 @@ test("[OHW-104] Import PDF menu item opens the system file picker", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-pdf").click();
   const chooser = await fileChooserPromise;
@@ -133,7 +117,7 @@ test("[OHW-105] Importa Fountain menu item opens the system file picker", async 
   page,
 }) => {
   await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-fountain").click();
   const chooser = await fileChooserPromise;
@@ -146,7 +130,7 @@ test("[OHW-106] Ricalcola numerazione is rendered and enabled", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openActionsMenu(page);
   const item = page.getByTestId("menu-item-renumber");
   await expect(item).toBeVisible();
   await expect(item).toBeEnabled();
@@ -158,7 +142,7 @@ test("[OHW-FP11] Frontespizio menu item is visible and enabled for project owner
   page,
 }) => {
   await openScreenplay(page, projectId);
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openActionsMenu(page);
   const item = page.getByTestId("menu-item-title-page");
   await expect(item).toBeVisible();
   await expect(item).toBeEnabled();

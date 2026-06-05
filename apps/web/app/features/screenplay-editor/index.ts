@@ -3,11 +3,9 @@ export { ScreenplayEditor } from "./components/ScreenplayEditor";
 export type { ScreenplayEditorHandle } from "./components/ScreenplayEditor";
 export { ScreenplayEditorShell } from "./components/ScreenplayEditorShell";
 export type { ScreenplayEditorShellProps } from "./components/ScreenplayEditorShell";
-export { ScreenplayToolbar } from "./components/ScreenplayToolbar";
 export { ScreenplayElementChips } from "./components/ScreenplayElementChips";
 export { ScreenplayCesarePanel } from "./components/ScreenplayCesarePanel";
 export { MonacoWrapper } from "./components/MonacoWrapper";
-export { ToolbarMenu } from "./components/ToolbarMenu";
 export { SaveIndicator } from "./components/SaveIndicator";
 export { VersionsList } from "./components/VersionsList";
 export { VersionsPanel } from "./components/VersionsPanel";
@@ -34,7 +32,6 @@ export {
   versionsQueryOptions,
   versionQueryOptions,
 } from "./hooks/useVersions";
-export { useMenuPopover } from "./hooks/useMenuPopover";
 export { ensureFirstVersion } from "./server/versions.server";
 
 // Server

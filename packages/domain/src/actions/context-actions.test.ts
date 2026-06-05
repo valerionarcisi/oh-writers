@@ -33,6 +33,18 @@ describe("resolveContextActions", () => {
     }
   });
 
+  it("returns screenplay export/import/versions ordered (Spec 55a, no gate)", () => {
+    expect(
+      resolveContextActions("screenplay", new Set()).map((a) => a.id),
+    ).toEqual([
+      ContextActionIds.EXPORT_PDF,
+      ContextActionIds.EXPORT_FOUNTAIN,
+      ContextActionIds.IMPORT_PDF,
+      ContextActionIds.IMPORT_FOUNTAIN,
+      ContextActionIds.VERSIONS,
+    ]);
+  });
+
   it("returns [] for an unknown segment", () => {
     expect(resolveContextActions("nope", new Set())).toEqual([]);
   });

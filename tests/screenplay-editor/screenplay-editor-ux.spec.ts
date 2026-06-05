@@ -287,10 +287,10 @@ test.describe("Element toolbar — Spec 05e", () => {
   }) => {
     await openScreenplay(page, TEST_PROJECT_ID);
 
-    // ScreenplayToolbar renders a role="toolbar" strip with one button per element.
-    // The ELEMENT_ORDER in ScreenplayToolbar.tsx defines 6 elements.
+    // ScreenplayElementChips renders a react-aria role="toolbar" with one
+    // button per element. The ELEMENT_ORDER defines 6 elements.
     const toolbar = page.getByRole("toolbar", {
-      name: /convert current block/i,
+      name: /converti blocco corrente|convert current block/i,
     });
     await expect(toolbar).toBeVisible({ timeout: 10_000 });
 
@@ -308,7 +308,7 @@ test.describe("Element toolbar — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("action");
 
     const toolbar = page.getByRole("toolbar", {
-      name: /convert current block/i,
+      name: /converti blocco corrente|convert current block/i,
     });
 
     // Exactly one button must be pressed at a time
@@ -331,7 +331,7 @@ test.describe("Element toolbar — Spec 05e", () => {
     expect(await focusedBlockType(page)).toBe("action");
 
     const toolbar = page.getByRole("toolbar", {
-      name: /convert current block/i,
+      name: /converti blocco corrente|convert current block/i,
     });
     const characterButton = toolbar.locator('[data-element="character"]');
     await expect(characterButton).toBeVisible();

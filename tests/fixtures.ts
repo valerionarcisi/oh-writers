@@ -26,6 +26,11 @@ const TEST_VIEWER_PASSWORD = "viewerpassword123";
 // can read but not write.
 export const TEST_TEAM_PROJECT_ID = "00000000-0000-4000-a000-000000000011";
 
+// The seeded personal "Non fa ridere" project (`TEST_PROJECT_ID` in the seed) —
+// the one carrying the NON FA RIDERE screenplay + document versions. The test
+// user owns it. Used by the `testProjectId` fixture.
+export const TEST_PERSONAL_PROJECT_ID = "00000000-0000-4000-a000-000000000010";
+
 type AuthFixtures = {
   authenticatedPage: Page;
   authenticatedViewerPage: Page;
@@ -96,25 +101,14 @@ export const test = base.extend<AuthFixtures>({
     await page.context().close();
   },
 
-  testProjectId: async ({ authenticatedPage: page }, use) => {
-    // We should already be on /dashboard after authenticatedPage
-    if (!page.url().includes("/dashboard")) {
-      await page.goto(`${BASE_URL}/dashboard`);
-    }
-    await page.waitForLoadState("networkidle");
-
-    // Find the "Non fa ridere" project link
-    const projectLink = page.locator('a[href*="/projects/"]').filter({
-      hasText: "Non fa ridere",
-    });
-    await expect(projectLink).toBeVisible({ timeout: 10_000 });
-
-    const href = await projectLink.getAttribute("href");
-    if (!href) throw new Error("Project link has no href");
-    const id = href.split("/projects/")[1]?.split("/")[0];
-    if (!id) throw new Error(`Could not extract project ID from href: ${href}`);
-
-    await use(id);
+  testProjectId: async ({ authenticatedPage: _page }, use) => {
+    // The seeded personal "Non fa ridere" project carrying the NON FA RIDERE
+    // screenplay. The seed creates SEVERAL projects titled "Non fa ridere"
+    // (personal + team), so scraping the dashboard by title is ambiguous
+    // (`.first()` is non-deterministic and flaked). Return the stable seeded id
+    // directly — the test user owns it and every editor spec expects its
+    // screenplay content.
+    await use(TEST_PERSONAL_PROJECT_ID);
   },
 });
 

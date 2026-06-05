@@ -10,7 +10,7 @@
  */
 
 import { test, expect } from "../fixtures";
-import { BASE_URL, waitForEditor } from "../helpers";
+import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
 
 test.describe("Versioning — create", () => {
   test.beforeEach(async ({ authenticatedPage: page, testProjectId }) => {
@@ -21,10 +21,8 @@ test.describe("Versioning — create", () => {
   test("[OHW-087] create a named version from the drawer", async ({
     authenticatedPage: page,
   }) => {
-    // Open the drawer via toolbar ⋯ menu
-    const menuTrigger = page.getByTestId("toolbar-menu-trigger");
-    await expect(menuTrigger).toBeVisible({ timeout: 10_000 });
-    await menuTrigger.click();
+    // Open the drawer via the TopBar actions menu (Spec 55a)
+    await openScreenplayActionsMenu(page);
     await page.getByTestId("menu-item-versions").click();
 
     const drawer = page.getByTestId("versions-drawer");

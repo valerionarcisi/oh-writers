@@ -43,7 +43,6 @@
   margin-inline: auto;
 }
 
-
 .viewbarCenter {
   display: flex;
   align-items: center;
@@ -215,7 +214,6 @@
   color: var(--ds-action);
   border-color: var(--ds-action-soft);
 }
-
 
 /* ─── TopBar action buttons (export / focus) ────────────── */
 
@@ -487,12 +485,13 @@
   color: var(--ds-text-4, var(--ds-text-3));
 }
 
+/*
+ * N-18: the editor slots in directly — no card frame. Dropping the border,
+ * radius and background wrapper leaves only the centered text page that the
+ * editor renders, on the shell's canvas.
+ */
 .editorSlot {
   min-block-size: 600px;
-  border-radius: var(--ds-radius-md);
-  overflow: hidden;
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-line);
 }
 
 /* ─── Margin notes (right) ────────────────────────────── */

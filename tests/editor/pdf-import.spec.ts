@@ -52,7 +52,12 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { test, expect, type Page } from "@playwright/test";
-import { BASE_URL, waitForEditor, getEditorContent } from "../helpers";
+import {
+  BASE_URL,
+  waitForEditor,
+  getEditorContent,
+  openScreenplayActionsMenu,
+} from "../helpers";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -115,7 +120,7 @@ async function signInViaApi(email: string, password: string) {
  * The Import PDF action is now inside the toolbar ⋯ menu.
  */
 async function importPdf(page: Page, filePath: string) {
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-pdf").click();
   const fileChooser = await fileChooserPromise;
@@ -208,9 +213,11 @@ test.beforeAll(async ({ browser }) => {
   await page.goto(`${BASE_URL}/projects/new`);
   await page.waitForURL(/\/projects\/new/, { timeout: 30_000 });
   await page.waitForLoadState("networkidle");
-  await page.getByLabel(/title/i).fill("The Wolf");
-  await page.getByLabel(/format/i).selectOption("feature");
-  await page.getByRole("button", { name: /create/i }).click();
+  // Locale-robust: the ProjectForm is IT-localised ("Titolo"/"Formato"/"Crea
+  // progetto"), so target stable field ids + the submit role instead of EN text.
+  await page.locator("#title").fill("The Wolf");
+  await page.locator("#format").selectOption("feature");
+  await page.locator('button[type="submit"]').click();
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 30_000 });
   projectId = page.url().split("/projects/")[1]?.split("/")[0] ?? "";
   await page.close();
@@ -224,7 +231,7 @@ test("[OHW-070] Import PDF button is visible in toolbar", async ({
   const page = await browser.newPage();
   await page.context().addCookies(authCookies);
   await openScreenplay(page);
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   await expect(page.getByTestId("menu-item-import-pdf")).toBeVisible();
   await page.close();
 });
@@ -237,7 +244,7 @@ test("[OHW-071] Clicking Import PDF opens the system file picker", async ({
   const page = await browser.newPage();
   await page.context().addCookies(authCookies);
   await openScreenplay(page);
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser", {
     timeout: 5_000,
   });
@@ -692,7 +699,7 @@ test("[OHW-093] Importing a PDF larger than 10 MB shows an error message", async
   await page.context().addCookies(authCookies);
   await openScreenplay(page);
 
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-pdf").click();
   const fileChooser = await fileChooserPromise;
@@ -738,7 +745,7 @@ startxref
   await page.context().addCookies(authCookies);
   await openScreenplay(page);
 
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-pdf").click();
   const fileChooser = await fileChooserPromise;
@@ -764,7 +771,7 @@ test("[OHW-095] Uploading a non-PDF file shows 'not a valid PDF' error", async (
   await page.context().addCookies(authCookies);
   await openScreenplay(page);
 
-  await page.getByTestId("toolbar-menu-trigger").click();
+  await openScreenplayActionsMenu(page);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("menu-item-import-pdf").click();
   const fileChooser = await fileChooserPromise;

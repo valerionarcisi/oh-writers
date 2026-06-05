@@ -1,18 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  ActionsMenu,
-  Icon,
-  Popover,
-  VersionTrigger,
-  Viewbar,
-  ViewbarSep,
-} from "@oh-writers/ui";
-import type { DropdownMenuItem } from "@oh-writers/ui";
+import { Icon, Popover, Viewbar, ViewbarSep } from "@oh-writers/ui";
 import { DraftMetaBadge } from "~/features/projects";
-import {
-  SaveStatusIndicator,
-  useTopBarSlotPublisher,
-} from "~/features/app-shell";
+import { SaveStatusIndicator } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import styles from "./ScreenplayEditorShell.module.css";
 
@@ -45,17 +34,8 @@ export type ScreenplayEditorShellProps = {
   children: ReactNode;
   /** Optional override for the TOC content; falls back to a single-scene stub */
   acts?: ActEntry[];
-  /** @deprecated Slot rendered centered in the Viewbar (legacy path). */
+  /** Slot rendered centered in the Viewbar (the element-type chips). */
   viewbarCenter?: ReactNode;
-  /** Opens the Versions drawer. When provided, a `VersionTrigger` pill is
-   *  rendered in the Viewbar right slot. */
-  onOpenVersions?: () => void;
-  /** Optional label shown inside the version pill (e.g. "v3 · 14 mag 2026"). */
-  versionLabel?: string;
-  /** Optional list of versions to surface in the version-trigger dropdown.
-   *  When provided, the menu shows the version history + the "Apri Versioni"
-   *  action. When empty, only the "Apri" action is shown. */
-  versions?: ReadonlyArray<{ id: string; label: string; isCurrent: boolean }>;
   /** Optional Cesare panel rendered in the right margin column. When provided
    *  a ✦ toggle button appears in the Viewbar right. */
   cesarePanel?: ReactNode;
@@ -63,14 +43,6 @@ export type ScreenplayEditorShellProps = {
   isCesarePanelOpen?: boolean;
   /** Called when the user clicks the ✦ toggle button. */
   onToggleCesarePanel?: () => void;
-  /** Called when the user activates the "Esporta PDF" TopBar action. */
-  onExport?: () => void;
-  /** True while the PDF export is in progress — disables the export button. */
-  isExporting?: boolean;
-  /** Called when the user activates the Focus toggle in the TopBar. */
-  onFocusToggle?: () => void;
-  /** Whether focus mode is currently active — used to label the button. */
-  isFocusMode?: boolean;
 };
 
 export function ScreenplayEditorShell({
@@ -79,16 +51,9 @@ export function ScreenplayEditorShell({
   children,
   acts,
   viewbarCenter,
-  onOpenVersions,
-  versionLabel,
-  versions,
   cesarePanel,
   isCesarePanelOpen = false,
   onToggleCesarePanel,
-  onExport,
-  isExporting = false,
-  onFocusToggle,
-  isFocusMode = false,
 }: ScreenplayEditorShellProps) {
   const { t } = useTranslation();
   const [isIndiceOpen, setIndiceOpen] = useState(false);
@@ -171,41 +136,10 @@ export function ScreenplayEditorShell({
       .filter((act) => act.scenes.length > 0);
   }, [actsWithDomIndex, indiceQuery]);
 
-  // Publish the unified "…" actions menu into the TopBar actions slot (first
-  // row, right of the search lens). Esporta PDF + Focus + Versioni live here;
-  // the Indice + chips stay in the Viewbar second row. Only published when at
-  // least one action is wired.
-  const topBarActionsNode = useMemo(() => {
-    if (!onExport && !onFocusToggle && !onOpenVersions) return null;
-    const items: DropdownMenuItem[] = [];
-    if (onExport) {
-      items.push({
-        label: isExporting
-          ? t("screenplay.shell.exporting")
-          : t("screenplay.shell.exportPdf"),
-        description: "⌘E",
-        onClick: onExport,
-        disabled: isExporting,
-      });
-    }
-    if (onFocusToggle) {
-      items.push({
-        label: isFocusMode
-          ? t("screenplay.shell.exitFocus")
-          : t("screenplay.shell.focus"),
-        description: "⌃⌥F",
-        onClick: onFocusToggle,
-      });
-    }
-    if (onOpenVersions) {
-      items.push({
-        label: t("screenplay.shell.versions"),
-        onClick: onOpenVersions,
-      });
-    }
-    return <ActionsMenu data-testid="screenplay-actions-menu" items={items} />;
-  }, [onExport, isExporting, onFocusToggle, isFocusMode, onOpenVersions, t]);
-  useTopBarSlotPublisher("actions", topBarActionsNode);
+  // The TopBar "…" actions menu (Esporta/Importa/Versioni) is owned by the
+  // editor itself (Spec 55a), which publishes it through the shared registry.
+  // The shell keeps only the Viewbar second row (element chips + Indice +
+  // SaveStatus + Cesare toggle).
 
   function scrollToScene(domIndex: number) {
     const headings = document.querySelectorAll<HTMLElement>(".pm-heading");
@@ -297,27 +231,6 @@ export function ScreenplayEditorShell({
         </div>
       )}
       <DraftMetaBadge projectId={projectId} />
-      {onOpenVersions && (
-        <VersionTrigger
-          variant="pill"
-          versionLabel={versionLabel}
-          menuItems={[
-            ...(versions && versions.length > 0
-              ? versions.map((v) => ({
-                  id: `version-${v.id}`,
-                  label: v.isCurrent ? `● ${v.label}` : v.label,
-                  onSelect: onOpenVersions,
-                  tone: v.isCurrent ? ("default" as const) : ("muted" as const),
-                }))
-              : []),
-            {
-              id: "open-drawer",
-              label: t("screenplay.shell.openVersions"),
-              onSelect: onOpenVersions,
-            },
-          ]}
-        />
-      )}
       {onToggleCesarePanel && (
         <>
           <ViewbarSep />

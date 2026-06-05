@@ -17,19 +17,26 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 const SCREENPLAY_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/screenplay`;
 
+const openActionsMenu = async (page: Page): Promise<void> => {
+  const trigger = page.getByLabel("Altre azioni");
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.click();
+  await expect(page.getByTestId("screenplay-actions-menu")).toBeVisible({
+    timeout: 5_000,
+  });
+};
+
 const openScreenplayExportAndGenerate = async (
   page: Page,
   opts: { includeCoverPage?: boolean } = {},
 ): Promise<{ response: Response; popup: Page }> => {
-  const triggerButton = page.getByTestId("screenplay-export-pdf");
-  await expect(triggerButton).toBeVisible({ timeout: 10_000 });
-  await expect(triggerButton).toBeEnabled();
-  await triggerButton.click();
-
-  // Spec 05k — the trigger opens a dropdown of formats; choose Standard.
-  const menu = page.getByTestId("screenplay-export-menu");
-  await expect(menu).toBeVisible({ timeout: 5_000 });
-  await menu.getByRole("menuitem", { name: /^Standard/ }).click();
+  // Spec 55a — "Esporta PDF" lives in the TopBar actions menu and opens the
+  // export modal; the production-format choice (default Standard) now lives
+  // inside the modal.
+  await openActionsMenu(page);
+  const exportItem = page.getByTestId("screenplay-export-pdf");
+  await expect(exportItem).toBeVisible({ timeout: 5_000 });
+  await exportItem.click();
 
   const modal = page.getByTestId("screenplay-export-modal");
   await expect(modal).toBeVisible({ timeout: 5_000 });
@@ -39,7 +46,9 @@ const openScreenplayExportAndGenerate = async (
     await checkbox.check();
   }
 
-  const generateButton = modal.getByTestId("screenplay-export-generate");
+  // The generate button lives in the Modal footer (a sibling of the testid'd
+  // body div), so scope it to the page, not the modal content.
+  const generateButton = page.getByTestId("screenplay-export-generate");
   await expect(generateButton).toBeEnabled();
 
   const [response, popup] = await Promise.all([
@@ -108,7 +117,9 @@ test.describe("Screenplay Export — Spec 05j", () => {
     const body = await response.json();
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     const parsed = await pdfParse(buffer);
-    expect(parsed.text).toContain("Written by");
+    // The cover-page byline is localized — "Scritto da" (IT) or "Written by"
+    // (EN). The seeded project renders IT.
+    expect(parsed.text).toMatch(/Scritto da|Written by/);
   });
 
   test("[OHW-236] Export PDF disabled when screenplay is empty", async ({
@@ -119,8 +130,12 @@ test.describe("Screenplay Export — Spec 05j", () => {
     const titleInput = page.getByRole("textbox", { name: /titolo|title/i });
     await expect(titleInput).toBeVisible({ timeout: 10_000 });
     await titleInput.fill(`Empty Screenplay ${Date.now()}`);
-    await page.getByRole("combobox", { name: /formato|format/i }).selectOption("short");
-    await page.getByRole("button", { name: /crea progetto|create project/i }).click();
+    await page
+      .getByRole("combobox", { name: /formato|format/i })
+      .selectOption("short");
+    await page
+      .getByRole("button", { name: /crea progetto|create project/i })
+      .click();
     await page.waitForURL(
       (url) => /\/projects\/[0-9a-f-]{36}$/.test(url.pathname),
       { timeout: 15_000 },
@@ -130,9 +145,11 @@ test.describe("Screenplay Export — Spec 05j", () => {
     if (!projectId) throw new Error("could not extract new project id");
 
     await page.goto(SCREENPLAY_PATH(projectId));
-    const button = page.getByTestId("screenplay-export-pdf");
-    await expect(button).toBeVisible({ timeout: 15_000 });
-    await expect(button).toBeDisabled();
+    await waitForEditor(page);
+    await openActionsMenu(page);
+    const exportItem = page.getByTestId("screenplay-export-pdf");
+    await expect(exportItem).toBeVisible({ timeout: 5_000 });
+    await expect(exportItem).toBeDisabled();
   });
 
   // [OHW-235] Cover-page checkbox disabled when title page not compiled:

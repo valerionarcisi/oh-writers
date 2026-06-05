@@ -66,6 +66,13 @@ export const screenplayKeys = {
     "screenplay.toolbar.element.transition": "Transition",
     "screenplay.toolbar.convertBlockAria": "Convert current block",
 
+    // TopBar context actions (Spec 55a)
+    "screenplay.action.exportPdf": "Export PDF",
+    "screenplay.action.exportFountain": "Export Fountain",
+    "screenplay.action.importPdf": "Import PDF",
+    "screenplay.action.importFountain": "Import Fountain",
+    "screenplay.action.versions": "Versions",
+
     // ToolbarMenu
     "screenplay.menu.actionsAria": "Screenplay actions",
     "screenplay.menu.importPdf": "Import PDF",
@@ -90,11 +97,13 @@ export const screenplayKeys = {
 
     // VersionsPanel
     "screenplay.versionsPanel.error.versionNotFound": "Version not found.",
-    "screenplay.versionsPanel.error.screenplayNotFound": "Screenplay not found.",
+    "screenplay.versionsPanel.error.screenplayNotFound":
+      "Screenplay not found.",
     "screenplay.versionsPanel.error.projectNotFound": "Project not found.",
     "screenplay.versionsPanel.error.forbidden":
       "You do not have access to these versions.",
-    "screenplay.versionsPanel.error.db": "Unable to load the versions. Try again.",
+    "screenplay.versionsPanel.error.db":
+      "Unable to load the versions. Try again.",
     "screenplay.versionsPanel.title": "Versions",
     "screenplay.versionsPanel.labelPlaceholder": "Version label",
     "screenplay.versionsPanel.save": "Save",
@@ -103,7 +112,8 @@ export const screenplayKeys = {
     "screenplay.versionsPanel.closeAria": "Close versions panel",
     "screenplay.versionsPanel.closeTitle": "Close",
     "screenplay.versionsPanel.loading": "Loading versions",
-    "screenplay.versionsPanel.empty": "No saved version. Create the first snapshot.",
+    "screenplay.versionsPanel.empty":
+      "No saved version. Create the first snapshot.",
     "screenplay.versionsPanel.unnamed": "Unnamed",
     "screenplay.versionsPanel.pageSingular": "page",
     "screenplay.versionsPanel.pagePlural": "pages",
@@ -177,6 +187,7 @@ export const screenplayKeys = {
 
     // ExportScreenplayPdfModal
     "screenplay.export.titlePrefix": "Export — ",
+    "screenplay.export.formatLegend": "Format",
     "screenplay.export.cancel": "Cancel",
     "screenplay.export.generating": "Generating…",
     "screenplay.export.generate": "Generate",
@@ -213,7 +224,8 @@ export const screenplayKeys = {
     "screenplay.save.label.savedRelativePrefix": "Salvato · ",
     // SaveIndicator — tooltips
     "screenplay.save.tip.saving": "Salvataggio in corso…",
-    "screenplay.save.tip.dirty": "Modifiche non salvate — clicca per salvare ora",
+    "screenplay.save.tip.dirty":
+      "Modifiche non salvate — clicca per salvare ora",
     "screenplay.save.tip.error": "Salvataggio fallito — clicca per riprovare",
     "screenplay.save.tip.offline": "Offline — le modifiche sono in coda",
     "screenplay.save.tip.savedRelativePrefix": "Salvato ",
@@ -222,7 +234,8 @@ export const screenplayKeys = {
       "Tutte le modifiche salvate — clicca per salvare ora",
 
     // SceneStaleBadge
-    "screenplay.staleBadge.singularSuffix": "scena con breakdown non aggiornato",
+    "screenplay.staleBadge.singularSuffix":
+      "scena con breakdown non aggiornato",
     "screenplay.staleBadge.pluralSuffix": "scene con breakdown non aggiornato",
     "screenplay.staleBadge.openBreakdown": "Apri breakdown",
 
@@ -268,6 +281,13 @@ export const screenplayKeys = {
     "screenplay.toolbar.element.transition": "Transizione",
     "screenplay.toolbar.convertBlockAria": "Converti blocco corrente",
 
+    // TopBar context actions (Spec 55a)
+    "screenplay.action.exportPdf": "Esporta PDF",
+    "screenplay.action.exportFountain": "Esporta Fountain",
+    "screenplay.action.importPdf": "Importa PDF",
+    "screenplay.action.importFountain": "Importa Fountain",
+    "screenplay.action.versions": "Versioni",
+
     // ToolbarMenu
     "screenplay.menu.actionsAria": "Azioni sceneggiatura",
     "screenplay.menu.importPdf": "Importa PDF",
@@ -295,7 +315,8 @@ export const screenplayKeys = {
     "screenplay.versionsPanel.error.screenplayNotFound":
       "Sceneggiatura non trovata.",
     "screenplay.versionsPanel.error.projectNotFound": "Progetto non trovato.",
-    "screenplay.versionsPanel.error.forbidden": "Non hai accesso a queste versioni.",
+    "screenplay.versionsPanel.error.forbidden":
+      "Non hai accesso a queste versioni.",
     "screenplay.versionsPanel.error.db":
       "Impossibile caricare le versioni. Riprova.",
     "screenplay.versionsPanel.title": "Versioni",
@@ -324,7 +345,8 @@ export const screenplayKeys = {
     "screenplay.versionsList.backToEditor": "← Torna all'editor",
     "screenplay.versionsList.title": "Versioni",
     "screenplay.versionsList.save": "+ Salva versione",
-    "screenplay.versionsList.labelPlaceholder": "Etichetta versione (es. Bozza 1)",
+    "screenplay.versionsList.labelPlaceholder":
+      "Etichetta versione (es. Bozza 1)",
     "screenplay.versionsList.saving": "Salvataggio…",
     "screenplay.versionsList.saveAction": "Salva",
     "screenplay.versionsList.cancel": "Annulla",
@@ -354,7 +376,8 @@ export const screenplayKeys = {
     "screenplay.cesare.noRefinements": "Nessuna rifinitura.",
     "screenplay.cesare.rereadAria": "Rilegge la sceneggiatura",
     "screenplay.cesare.rereadTitle": "Rilegge la sceneggiatura",
-    "screenplay.cesare.textNotFoundTitle": "Testo non trovato nella sceneggiatura",
+    "screenplay.cesare.textNotFoundTitle":
+      "Testo non trovato nella sceneggiatura",
     "screenplay.cesare.textNotFoundTag": "! testo non trovato",
     "screenplay.cesare.apply": "Applica",
     "screenplay.cesare.staleSingular": "scena obsoleta",
@@ -370,7 +393,8 @@ export const screenplayKeys = {
     "screenplay.editor.error.forbidden": "Non hai accesso a queste versioni.",
     "screenplay.editor.error.db": "Impossibile caricare le versioni. Riprova.",
     "screenplay.editor.versionFallbackPrefix": "Versione",
-    "screenplay.editor.draftBannerPrefix": '✦ Cesare ha preparato la versione: "',
+    "screenplay.editor.draftBannerPrefix":
+      '✦ Cesare ha preparato la versione: "',
     "screenplay.editor.draftBannerSuffix": '".',
     "screenplay.editor.openDiff": "Apri il diff →",
     "screenplay.editor.promoteToActive": "Promuovi a attiva",
@@ -380,6 +404,7 @@ export const screenplayKeys = {
 
     // ExportScreenplayPdfModal
     "screenplay.export.titlePrefix": "Esporta — ",
+    "screenplay.export.formatLegend": "Formato",
     "screenplay.export.cancel": "Annulla",
     "screenplay.export.generating": "Generazione…",
     "screenplay.export.generate": "Genera",
