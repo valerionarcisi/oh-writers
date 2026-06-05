@@ -29,6 +29,13 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   contract = `docs/BUGS.md` `Done =` lines + Spec 55. Scope = **narrative only**;
   production rollout deferred (N-28). N-15/N-25 are decisions, not lanes.
 
+  **Fleet status (2026-06-05):** MERGED to `main` — A1 (`82202c6`), A2 (`98a513a`),
+  A4 (sessions, files in `features/predictions/`), A6 (`dd35ff2`), **A3/N-27 grounding
+  (`08ef8bc` — real-AI verified via new `pnpm cost:smoke:narrative-grounding`)**. OPEN —
+  **N-20 i18n sweep** (audit A-05 ~50 `it-IT` formatters + A-06 hardcoded IT in `packages/ui`)
+  → **doing next**; **A5 screenplay chrome** (N-18/N-19, Spec 55a) — uncommitted WIP in a
+  stale-based worktree, needs rebase onto current main + live UI validation → its own session.
+
   **Superseded resume notes (kept for context):** picking findings one-by-one is now
   replaced by the fleet above.
   **Resume order:** (1) ✅ **logline N-16 + Soggetto-in-nav N-17** — done (Spec 57),
