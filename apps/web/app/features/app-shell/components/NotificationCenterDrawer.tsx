@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useButton } from "react-aria";
 import { match } from "ts-pattern";
-import type { TranslationKey } from "@oh-writers/domain";
+import type { TranslationKey, Locale } from "@oh-writers/domain";
+import { formatTime, formatDate } from "@oh-writers/domain";
 import {
   useCesareNotifications,
   type CesareNotification,
@@ -99,7 +100,7 @@ function MarkAllSeenButton({ onPress }: { onPress: () => void }) {
 export function NotificationCenterDrawerContent({
   onActivate,
 }: NotificationCenterDrawerContentProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { notifications, dismissNotification, clearCompleted } =
     useCesareNotifications();
 
@@ -173,6 +174,7 @@ export function NotificationCenterDrawerContent({
                     onClick={() => handleClickItem(n)}
                     onDismiss={() => dismissNotification(n.id)}
                     t={t}
+                    locale={locale}
                   />
                 ))}
               </ul>
@@ -213,11 +215,18 @@ interface RowProps {
   readonly onClick: () => void;
   readonly onDismiss: () => void;
   readonly t: Translate;
+  readonly locale: Locale;
 }
 
-function NotificationRow({ notification, onClick, onDismiss, t }: RowProps) {
+function NotificationRow({
+  notification,
+  onClick,
+  onDismiss,
+  t,
+  locale,
+}: RowProps) {
   const ts = notification.completedAt ?? notification.startedAt;
-  const time = formatTime(ts);
+  const time = formatRelativeTime(ts, locale);
   const dot = match(notification.status)
     .with("in-progress", () => t("shell.notif.statusInProgress"))
     .with("completed", () =>
@@ -281,17 +290,14 @@ function NotificationRow({ notification, onClick, onDismiss, t }: RowProps) {
   );
 }
 
-const formatTime = (ts: number): string => {
+const formatRelativeTime = (ts: number, locale: Locale): string => {
   const d = new Date(ts);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (d.getTime() >= today.getTime()) {
-    return d.toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatTime(d, locale);
   }
-  return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+  return formatDate(d, locale);
 };
 
 const labelForPage = (page: CesarePage, t: Translate): string => {

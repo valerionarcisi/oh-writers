@@ -1,3 +1,4 @@
+import { useTranslation } from "~/features/i18n";
 import type { Peer, RealtimeStatus } from "../hooks/useYjsRoom";
 import styles from "./PresenceIndicator.module.css";
 
@@ -19,18 +20,22 @@ const initials = (name: string): string =>
  * set but disconnected. Nothing renders when realtime is disabled.
  */
 export function PresenceIndicator({ status, peers }: PresenceIndicatorProps) {
+  const { t } = useTranslation();
   if (status === "disabled") return null;
 
   if (status === "offline") {
     return (
-      <span className={styles.offline} title="Connessione in tempo reale assente">
-        offline
+      <span className={styles.offline} title={t("shell.presence.offlineTitle")}>
+        {t("shell.presence.offline")}
       </span>
     );
   }
 
   const online = peers.length + 1;
-  const label = online === 1 ? "1 persona online" : `${online} persone online`;
+  const label =
+    online === 1
+      ? t("shell.presence.labelOne")
+      : t("shell.presence.labelMany").replace("{n}", String(online));
 
   return (
     <div className={styles.root} aria-label={label}>
@@ -47,7 +52,7 @@ export function PresenceIndicator({ status, peers }: PresenceIndicatorProps) {
         ))}
       </div>
       <span className={styles.count} data-testid="presence-count">
-        {online} online
+        {online} {t("shell.presence.online")}
       </span>
     </div>
   );

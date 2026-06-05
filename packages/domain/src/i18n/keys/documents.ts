@@ -177,6 +177,12 @@ export const documentsKeys = {
 
     // Scene drawer (shared close affordance)
     "documents.close": "Close",
+
+    // Save status indicator
+    "documents.saveStatus.saved": "Saved",
+    "documents.saveStatus.saving": "Saving…",
+    "documents.saveStatus.dirty": "Unsaved changes",
+    "documents.saveStatus.error": "Error saving",
   },
   it: {
     "documents.aiPanel.title": "Assistente AI",
@@ -344,5 +350,10 @@ export const documentsKeys = {
     "documents.versionCompare.close": "Chiudi",
 
     "documents.close": "Chiudi",
+
+    "documents.saveStatus.saved": "Salvato",
+    "documents.saveStatus.saving": "Salvataggio…",
+    "documents.saveStatus.dirty": "Modifiche non salvate",
+    "documents.saveStatus.error": "Errore di salvataggio",
   },
 } as const satisfies LocaleDict;

@@ -77,8 +77,11 @@ const triggerManualSave = async (page: import("@playwright/test").Page) => {
   );
 };
 
+// Match the "saved" state by its CSS-module modifier class rather than the
+// label text, so the assertion is locale-independent (the label is now
+// translated — "Saved" / "Salvato" — via documents.saveStatus.*).
 const savedStatus = (page: import("@playwright/test").Page) =>
-  page.locator('[class*="status"]').filter({ hasText: /^Saved$/ });
+  page.locator('[class*="status"][class*="saved"]');
 
 test.describe("Narrative Editor — content caps", () => {
   test("[OHW-204] logline counter warns above 180 characters", async ({

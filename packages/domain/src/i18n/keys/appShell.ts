@@ -204,6 +204,13 @@ export const appShellKeys = {
     "shell.relative.hours": "{n}h",
     "shell.relative.yesterday": "yesterday",
     "shell.relative.days": "{n}d",
+
+    // Realtime presence indicator
+    "shell.presence.online": "online",
+    "shell.presence.offline": "offline",
+    "shell.presence.offlineTitle": "Real-time connection unavailable",
+    "shell.presence.labelOne": "1 person online",
+    "shell.presence.labelMany": "{n} people online",
   },
   it: {
     // Cesare success toasts (live-apply markers)
@@ -407,5 +414,12 @@ export const appShellKeys = {
     "shell.relative.hours": "{n}h",
     "shell.relative.yesterday": "ieri",
     "shell.relative.days": "{n}g",
+
+    // Realtime presence indicator
+    "shell.presence.online": "online",
+    "shell.presence.offline": "offline",
+    "shell.presence.offlineTitle": "Connessione in tempo reale assente",
+    "shell.presence.labelOne": "1 persona online",
+    "shell.presence.labelMany": "{n} persone online",
   },
 } as const satisfies LocaleDict;

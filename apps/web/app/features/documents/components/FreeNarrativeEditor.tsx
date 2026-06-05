@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { DocumentType } from "@oh-writers/domain";
+import { formatInteger, type DocumentType } from "@oh-writers/domain";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
 import { toCartelle } from "../lib/cartelle-counter";
 import { useTranslation } from "~/features/i18n";
@@ -45,7 +45,7 @@ export function FreeNarrativeEditor({
   diffDocumentType,
   documentId,
 }: FreeNarrativeEditorProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { cartelle, chars } = useMemo(() => {
     const plain = stripHtmlTags(content);
     const c = plain.length;
@@ -90,7 +90,7 @@ export function FreeNarrativeEditor({
           {cartelle === 1
             ? t("documents.freeNarrative.cartellaOne")
             : t("documents.freeNarrative.cartellaOther")}{" "}
-          · {chars.toLocaleString("it-IT")}{" "}
+          · {formatInteger(chars, locale)}{" "}
           {t("documents.freeNarrative.characters")}
         </div>
       )}

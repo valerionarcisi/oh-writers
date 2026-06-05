@@ -1,6 +1,10 @@
 import { type FC, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
+import {
+  DocumentTypes,
+  formatTime,
+  type DocumentType,
+} from "@oh-writers/domain";
 import {
   narrativePolishQueryOptions,
   type NarrativePolishSuggestion,
@@ -20,7 +24,9 @@ interface NarrativeCesarePanelProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const isNarrativeDocType = (type: DocumentType): type is NarrativePolishSuggestionDoc =>
+const isNarrativeDocType = (
+  type: DocumentType,
+): type is NarrativePolishSuggestionDoc =>
   type === DocumentTypes.SOGGETTO ||
   type === DocumentTypes.SYNOPSIS ||
   type === DocumentTypes.OUTLINE ||
@@ -28,7 +34,10 @@ const isNarrativeDocType = (type: DocumentType): type is NarrativePolishSuggesti
 
 const groupByGroup = (
   memos: readonly NarrativePolishSuggestion[],
-): ReadonlyArray<{ group: string; items: readonly NarrativePolishSuggestion[] }> => {
+): ReadonlyArray<{
+  group: string;
+  items: readonly NarrativePolishSuggestion[];
+}> => {
   const order: string[] = [];
   const buckets = new Map<string, NarrativePolishSuggestion[]>();
   for (const memo of memos) {
@@ -48,9 +57,27 @@ const groupByGroup = (
 function SkeletonMemo() {
   return (
     <li className={styles.item} aria-hidden="true">
-      <p className={[styles.itemCat, styles.skeletonLine, styles.skeletonShort].join(" ")} />
-      <p className={[styles.itemText, styles.skeletonLine, styles.skeletonLong].join(" ")} />
-      <p className={[styles.itemText, styles.skeletonLine, styles.skeletonMedium].join(" ")} />
+      <p
+        className={[
+          styles.itemCat,
+          styles.skeletonLine,
+          styles.skeletonShort,
+        ].join(" ")}
+      />
+      <p
+        className={[
+          styles.itemText,
+          styles.skeletonLine,
+          styles.skeletonLong,
+        ].join(" ")}
+      />
+      <p
+        className={[
+          styles.itemText,
+          styles.skeletonLine,
+          styles.skeletonMedium,
+        ].join(" ")}
+      />
     </li>
   );
 }
@@ -59,14 +86,28 @@ function LoadingSkeleton({ loadingLabel }: { loadingLabel: string }) {
   return (
     <div className={styles.body} aria-busy="true" aria-label={loadingLabel}>
       <section className={styles.group}>
-        <p className={[styles.groupLabel, styles.skeletonLine, styles.skeletonShort].join(" ")} aria-hidden="true" />
+        <p
+          className={[
+            styles.groupLabel,
+            styles.skeletonLine,
+            styles.skeletonShort,
+          ].join(" ")}
+          aria-hidden="true"
+        />
         <ul className={styles.list}>
           <SkeletonMemo />
           <SkeletonMemo />
         </ul>
       </section>
       <section className={styles.group}>
-        <p className={[styles.groupLabel, styles.skeletonLine, styles.skeletonShort].join(" ")} aria-hidden="true" />
+        <p
+          className={[
+            styles.groupLabel,
+            styles.skeletonLine,
+            styles.skeletonShort,
+          ].join(" ")}
+          aria-hidden="true"
+        />
         <ul className={styles.list}>
           <SkeletonMemo />
         </ul>
@@ -103,10 +144,12 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
   if (!isNarrativeDocType(docType)) return null;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const query = useQuery(narrativePolishQueryOptions(projectId, docType, content));
+  const query = useQuery(
+    narrativePolishQueryOptions(projectId, docType, content),
+  );
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const suggestions = useMemo<readonly NarrativePolishSuggestion[]>(() => {
@@ -134,11 +177,10 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
           ? t("documents.cesarePanel.statusNoNotes")
           : t("documents.cesarePanel.statusNone");
 
-  const lastUpdated = query.dataUpdatedAt > 0
-    ? new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(
-        new Date(query.dataUpdatedAt),
-      )
-    : null;
+  const lastUpdated =
+    query.dataUpdatedAt > 0
+      ? formatTime(new Date(query.dataUpdatedAt), locale)
+      : null;
 
   return (
     <aside
@@ -153,9 +195,7 @@ export const NarrativeCesarePanel: FC<NarrativeCesarePanelProps> = ({
       {!hasContent ? (
         <EmptyContentState />
       ) : isLoading && suggestions.length === 0 ? (
-        <LoadingSkeleton
-          loadingLabel={t("documents.loading.suggestions")}
-        />
+        <LoadingSkeleton loadingLabel={t("documents.loading.suggestions")} />
       ) : isError ? (
         <ErrorState />
       ) : (

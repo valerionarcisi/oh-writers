@@ -22,7 +22,8 @@ import { match } from "ts-pattern";
 import { buildSideBySideDiff } from "@oh-writers/utils";
 import type { DiffRow, DiffSegment } from "@oh-writers/utils";
 import { Skeleton, SegmentedControl } from "@oh-writers/ui";
-import type { TranslationKey } from "@oh-writers/domain";
+import type { TranslationKey, Locale } from "@oh-writers/domain";
+import { formatDateTime } from "@oh-writers/domain";
 import type { VersionsCompare } from "~/features/app-shell";
 import { useDocumentVersions } from "~/features/documents";
 import { useTranslation } from "~/features/i18n";
@@ -60,13 +61,8 @@ interface VersionRow {
 
 type CompareMode = "current" | "compare";
 
-const formatCreatedAt = (iso: string): string =>
-  new Date(iso).toLocaleString("it-IT", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const formatCreatedAt = (iso: string, locale: Locale): string =>
+  formatDateTime(new Date(iso), locale);
 
 const versionTitle = (v: VersionRow, t: Translate): string =>
   v.label && v.label.length > 0
@@ -90,7 +86,7 @@ export function VersionsSplitDrawer({
   compare = null,
   onCompareChange,
 }: VersionsSplitDrawerProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data: result, isLoading } = useDocumentVersions(documentId);
   const modeOptions: ReadonlyArray<{ id: CompareMode; label: string }> = [
     { id: "current", label: t("versions.split.modeCurrent") },
@@ -103,9 +99,7 @@ export function VersionsSplitDrawer({
           .with({ _tag: "DocumentNotFoundError" }, () =>
             t("versions.split.docNotFound"),
           )
-          .with({ _tag: "ForbiddenError" }, () =>
-            t("versions.split.forbidden"),
-          )
+          .with({ _tag: "ForbiddenError" }, () => t("versions.split.forbidden"))
           .with({ _tag: "DbError" }, () => t("versions.split.loadFailed"))
           .exhaustive()
       : null;
@@ -328,7 +322,7 @@ export function VersionsSplitDrawer({
                       </span>
                     )}
                     <span className={styles.versionMeta}>
-                      {formatCreatedAt(v.createdAt)}
+                      {formatCreatedAt(v.createdAt, locale)}
                     </span>
                   </button>
                 </li>

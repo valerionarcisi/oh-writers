@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button, Dialog, Skeleton } from "@oh-writers/ui";
 import {
   DRAFT_REVISION_COLORS,
+  formatDateTime,
   type DraftRevisionColor,
 } from "@oh-writers/domain";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
@@ -67,7 +68,7 @@ export function VersionsList({
   onUpdateDate,
   onCompare,
 }: VersionsListProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [creating, setCreating] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -405,12 +406,7 @@ export function VersionsList({
                     )}
                     <div className={styles.sub}>
                       <span>
-                        {new Date(item.createdAt).toLocaleString("it-IT", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatDateTime(new Date(item.createdAt), locale)}
                         {item.sub ? ` · ${item.sub}` : ""}
                         {item.draftDate
                           ? ` · ${t("versions.list.draftPrefix")} ${item.draftDate}`
@@ -440,7 +436,10 @@ export function VersionsList({
                         className={styles.btnGhost}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDuplicate(item.id, item.label ?? t("versions.unnamed"));
+                          onDuplicate(
+                            item.id,
+                            item.label ?? t("versions.unnamed"),
+                          );
                         }}
                         disabled={isDuplicating}
                         data-testid={`version-duplicate-${item.id}`}
