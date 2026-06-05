@@ -61,6 +61,11 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
+0. **[Spec 59] App recap HTML (with live screenshots)** — single self-contained HTML:
+   showcase tour of the whole app + a compact Narrative-Walk changelog (dual voice,
+   separated). Needs the stack up for real screenshots → fresh session. `docs/specs/59-app-recap-html.md`.
+   _(Comes AFTER A5 so the screenplay screenshots show the finished chrome — or run earlier
+   and flag the screenplay page "in lavorazione".)_
 1. **[Topic 1 / Spec 55] TopBar standard** — exports + versions + notifications + save, all "near the lens"; per-page tool pattern; drawers always SplitDrawer; kill old drawers. `docs/specs/55-shell-action-standard.md` + BUGS N-01..N-04. **Backbone — unblocks Topics 5, parts of others.**
 2. ~~**[Topic 4] Logline + nav** (N-16, N-17)~~ — ✅ done, Spec 57.
 3. **[Topic 2] Cesare drawer & chat UX** — starts closed, split-view input missing, Claude-style fixed chat, bubbles, show/hide, markdown, suggestions (N-05..N-11).
