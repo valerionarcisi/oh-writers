@@ -1,6 +1,8 @@
 # Spec 59 — App recap (HTML, with screenshots)
 
-Status: APPROVED — to be executed in a fresh session (stack must be up for live screenshots).
+Status: DONE (2026-06-05). Output: `docs/recap/2026-06-05-app-recap.html` (self-contained,
+base64 screenshots) built by `docs/recap/build-recap.mjs` from live captures in
+`docs/recap/assets/`. 13-slide showcase tour + 8-strip Narrative-Walk changelog.
 Owner: Valerio. Requested 2026-06-05.
 
 ## Goal
@@ -15,6 +17,7 @@ combining two things the user asked for together:
    Cesare/sessions → settings), each with a live screenshot and a short caption.
 
 **Tone — dual, used with judgement (per the request "entrambi in maniera oculata"):**
+
 - **Showcase** voice for the feature tour (presentable to a third party — investor or
   collaborator): narrative, clean, large screenshots, NO git jargon.
 - **Technical** voice in a clearly separated "Cosa è cambiato" strip per Narrative Walk
@@ -62,6 +65,7 @@ fabricate a before.
 ## Sections (proposed running order)
 
 **Part 1 — Showcase tour** (product voice):
+
 1. Cover — product name, one-line positioning, date.
 2. Entrata: login → dashboard progetti.
 3. Progetto: overview / KPI strip.
@@ -75,6 +79,7 @@ fabricate a before.
 8. Impostazioni: account + progetto.
 
 **Part 2 — Narrative Walk changelog** (technical voice, compact strips):
+
 - One strip per merged topic: A1 (Spec 55 shell backbone), A2 (Cesare chat UX),
   A3/N-27 (grounding), A4 (sessions), A6 (settings), N-20 (i18n). Each: 1-line what,
   before→after thumbnail pair, spec/bug id. Pull the "Done =" lines from `docs/BUGS.md`.

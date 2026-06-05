@@ -33,11 +33,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
-0. **[Spec 59] App recap HTML (with live screenshots)** — single self-contained HTML:
-   showcase tour of the whole app + a compact Narrative-Walk changelog (dual voice,
-   separated). Needs the stack up for real screenshots → fresh session. `docs/specs/59-app-recap-html.md`.
-   _(Comes AFTER A5 so the screenplay screenshots show the finished chrome — or run earlier
-   and flag the screenplay page "in lavorazione".)_
+0. ~~**[Spec 59] App recap HTML**~~ — ✅ done (`docs/recap/2026-06-05-app-recap.html`, 13-slide showcase tour + 8-strip Narrative-Walk changelog, dual voice; live captures on the dev stack with the finished A5 chrome). See DONE.
 1. **[Topic 1 / Spec 55] TopBar standard** — exports + versions + notifications + save, all "near the lens"; per-page tool pattern; drawers always SplitDrawer; kill old drawers. `docs/specs/55-shell-action-standard.md` + BUGS N-01..N-04. **Backbone — unblocks Topics 5, parts of others.**
 2. ~~**[Topic 4] Logline + nav** (N-16, N-17)~~ — ✅ done, Spec 57.
 3. **[Topic 2] Cesare drawer & chat UX** — starts closed, split-view input missing, Claude-style fixed chat, bubbles, show/hide, markdown, suggestions (N-05..N-11).
@@ -67,6 +63,9 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## DONE (recent — trim periodically)
 
+- [Spec 59] App recap HTML — `docs/recap/2026-06-05-app-recap.html` (self-contained, base64 screenshots): 13-slide showcase tour (login→dashboard→overview→narrativa→sceneggiatura→breakdown→budget→schedule→locations→Cesare→settings) + 8-strip Narrative-Walk changelog (technical voice, separated). On-brand palette/fonts. Generator: `docs/recap/build-recap.mjs`. Live captures on the dev stack (reseeded) at 1440px.
+- [Spec 55a / A5 / N-18+N-19] Screenplay borderless page + TopBar action menu (`31c0c87`).
+- [Spec 60 / N-30] App-wide route error boundary (`dfe58f3`).
 - [Topic 4 / N-16+N-17] Collision-aware `Popover` primitive + correct "Soggetto" EN label — `docs/specs/57-popover-collision-and-soggetto-label.md`.
 - [M-12] Rail single footer (tools → top, Notion-style) — superseded by Spec 55 TopBar later.
 - Audit AI reale 2026-06-03 — 5 auditors + Lead gate — `docs/audits/2026-06-03/CONSOLIDATED.md`.
