@@ -1,1 +1,6 @@
-export { LocaleProvider, useLocale, useTranslation } from "./locale-context";
+export {
+  LocaleProvider,
+  useLocale,
+  useTranslation,
+  useOptionalTranslation,
+} from "./locale-context";

@@ -1,0 +1,116 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 60vh;
+  padding: var(--space-6);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  max-inline-size: 30rem;
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  border: var(--border-width) solid var(--ds-line);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-family: var(--font-sans);
+}
+
+.glyph {
+  font-size: var(--text-2xl);
+  line-height: 1;
+  color: var(--ds-danger);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.body {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ds-text-2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-block-start: var(--space-2);
+}
+
+.retry {
+  background: var(--ds-action);
+  color: var(--ds-text-on-dark);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ds-action);
+    outline-offset: 2px;
+  }
+}
+
+.home :global(a),
+.home {
+  color: var(--ds-text-2);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}
+
+.detailsBlock {
+  inline-size: 100%;
+  margin-block-start: var(--space-2);
+}
+
+.detailsToggle {
+  background: none;
+  border: 0;
+  padding: var(--space-1);
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--ds-text-2);
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ds-text);
+  }
+}
+
+.detailsPre {
+  margin-block-start: var(--space-2);
+  max-block-size: 14rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--ds-surface-deep);
+  color: var(--ds-text-2);
+  font-family: var(--ds-font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  text-align: start;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

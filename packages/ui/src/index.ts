@@ -62,6 +62,11 @@ export { Progress } from "./components/Progress";
 export type { ProgressProps } from "./components/Progress";
 export { StreamingProgressBanner } from "./components/StreamingProgressBanner";
 export type { StreamingProgressBannerProps } from "./components/StreamingProgressBanner";
+export { RouteErrorFallback } from "./components/RouteErrorFallback";
+export type {
+  RouteErrorFallbackProps,
+  RouteErrorFallbackLabels,
+} from "./components/RouteErrorFallback";
 export { InlineGenerateButton } from "./components/InlineGenerateButton";
 export type { InlineGenerateButtonProps } from "./components/InlineGenerateButton";
 export { SubjectFooter } from "./components/SubjectFooter";

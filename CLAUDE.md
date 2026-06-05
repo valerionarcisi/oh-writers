@@ -126,6 +126,7 @@ Hard stops. If you are about to do any of these, stop and ask.
 - **Never anchor a per-page action bar at bottom-right.** The shell-level `BottomDock` lives there. Use `<FloatingDock/>` (bottom-left by default) or migrate the CTAs into a TopBar action slot.
 - **Never park a Cesare edit in a side draft tray as the primary flow.** Every Cesare edit applies LIVE to the open entity. See [Agentic Edit Pattern](#agentic-edit-pattern-canonical) below — it is mandatory for all features.
 - **Never conflate `CesareDrawer` with `SplitDrawer`.** `CesareDrawer` is the floating bottom-right chat (no routing). `SplitDrawer` is the routed side-peek that injects a real page beside the current one via the `?peek=` search param and compresses the main lane. Cesare sessions open as a real central route (`/projects/:id/sessions/:sessionId`), not a peek. See [Spec 46](docs/specs/46-split-drawer.md).
+- **Never let a render throw blank the app.** Every routed surface is covered by the app-wide `defaultErrorComponent` (`RouteErrorBoundary` → `@oh-writers/ui` `RouteErrorFallback`): a render throw shows a branded fallback (shell chrome survives, retry + back-to-dashboard, collapsible stack) and logs a structured `route.error.boundary` client event — never the framework's bare unstyled page. Do not remove `defaultErrorComponent` from `router.tsx`. See [Spec 60](docs/specs/60-route-error-boundary.md).
 
 ---
 

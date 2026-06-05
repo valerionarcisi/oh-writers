@@ -19,6 +19,7 @@ import { Route as InviteTokenImport } from "./routes/invite.$token";
 import { Route as DevTokensImport } from "./routes/dev/tokens";
 import { Route as AppSettingsImport } from "./routes/_app.settings";
 import { Route as AppDashboardImport } from "./routes/_app.dashboard";
+import { Route as AppCrashTestImport } from "./routes/_app.crash-test";
 import { Route as AppTeamsIndexImport } from "./routes/_app.teams.index";
 import { Route as AppTeamsNewImport } from "./routes/_app.teams.new";
 import { Route as AppTeamsSlugImport } from "./routes/_app.teams.$slug";
@@ -96,6 +97,12 @@ const AppSettingsRoute = AppSettingsImport.update({
 const AppDashboardRoute = AppDashboardImport.update({
   id: "/dashboard",
   path: "/dashboard",
+  getParentRoute: () => AppRoute,
+} as any);
+
+const AppCrashTestRoute = AppCrashTestImport.update({
+  id: "/crash-test",
+  path: "/crash-test",
   getParentRoute: () => AppRoute,
 } as any);
 
@@ -320,6 +327,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/register";
       preLoaderRoute: typeof RegisterImport;
       parentRoute: typeof rootRoute;
+    };
+    "/_app/crash-test": {
+      id: "/_app/crash-test";
+      path: "/crash-test";
+      fullPath: "/crash-test";
+      preLoaderRoute: typeof AppCrashTestImport;
+      parentRoute: typeof AppImport;
     };
     "/_app/dashboard": {
       id: "/_app/dashboard";
@@ -616,6 +630,7 @@ const AppProjectsIdSessionsRouteWithChildren =
   );
 
 interface AppRouteChildren {
+  AppCrashTestRoute: typeof AppCrashTestRoute;
   AppDashboardRoute: typeof AppDashboardRoute;
   AppSettingsRoute: typeof AppSettingsRoute;
   AppProjectsIdRoute: typeof AppProjectsIdRoute;
@@ -644,6 +659,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCrashTestRoute: AppCrashTestRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppProjectsIdRoute: AppProjectsIdRoute,
@@ -679,6 +695,7 @@ export interface FileRoutesByFullPath {
   "": typeof AppRouteWithChildren;
   "/login": typeof LoginRoute;
   "/register": typeof RegisterRoute;
+  "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
   "/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
@@ -720,6 +737,7 @@ export interface FileRoutesByTo {
   "": typeof AppRouteWithChildren;
   "/login": typeof LoginRoute;
   "/register": typeof RegisterRoute;
+  "/crash-test": typeof AppCrashTestRoute;
   "/dashboard": typeof AppDashboardRoute;
   "/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
@@ -760,6 +778,7 @@ export interface FileRoutesById {
   "/_app": typeof AppRouteWithChildren;
   "/login": typeof LoginRoute;
   "/register": typeof RegisterRoute;
+  "/_app/crash-test": typeof AppCrashTestRoute;
   "/_app/dashboard": typeof AppDashboardRoute;
   "/_app/settings": typeof AppSettingsRoute;
   "/dev/tokens": typeof DevTokensRoute;
@@ -803,6 +822,7 @@ export interface FileRouteTypes {
     | ""
     | "/login"
     | "/register"
+    | "/crash-test"
     | "/dashboard"
     | "/settings"
     | "/dev/tokens"
@@ -843,6 +863,7 @@ export interface FileRouteTypes {
     | ""
     | "/login"
     | "/register"
+    | "/crash-test"
     | "/dashboard"
     | "/settings"
     | "/dev/tokens"
@@ -881,6 +902,7 @@ export interface FileRouteTypes {
     | "/_app"
     | "/login"
     | "/register"
+    | "/_app/crash-test"
     | "/_app/dashboard"
     | "/_app/settings"
     | "/dev/tokens"
@@ -960,6 +982,7 @@ export const routeTree = rootRoute
     "/_app": {
       "filePath": "_app.tsx",
       "children": [
+        "/_app/crash-test",
         "/_app/dashboard",
         "/_app/settings",
         "/_app/projects/$id",
@@ -992,6 +1015,10 @@ export const routeTree = rootRoute
     },
     "/register": {
       "filePath": "register.tsx"
+    },
+    "/_app/crash-test": {
+      "filePath": "_app.crash-test.tsx",
+      "parent": "/_app"
     },
     "/_app/dashboard": {
       "filePath": "_app.dashboard.tsx",

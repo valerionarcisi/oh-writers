@@ -1,5 +1,9 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { translate, type Locale, type TranslationKey } from "@oh-writers/domain";
+import {
+  translate,
+  type Locale,
+  type TranslationKey,
+} from "@oh-writers/domain";
 
 interface LocaleContextValue {
   locale: Locale;
@@ -40,3 +44,13 @@ export const useLocale = (): Locale => useLocaleContext().locale;
 
 /** `const { t, locale } = useTranslation()`. */
 export const useTranslation = (): LocaleContextValue => useLocaleContext();
+
+/**
+ * Non-throwing variant: returns `null` when no `LocaleProvider` is mounted
+ * instead of throwing. For surfaces that can render OUTSIDE the provider tree —
+ * notably the router's `defaultErrorComponent`, which also catches throws in the
+ * root route (above `LocaleProvider`). Callers must supply their own fallback
+ * copy when this returns null.
+ */
+export const useOptionalTranslation = (): LocaleContextValue | null =>
+  useContext(LocaleContext);

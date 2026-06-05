@@ -117,6 +117,10 @@ The recurring "everything near the lens" pattern. Confirms + enriches `docs/spec
 
 - **N-29** BASSO (test debt) — **Two E2E specs hardcode `http://localhost:3002`** in `page.goto` instead of using `BASE_URL`: `tests/schedule/schedule-export.spec.ts:140` and `tests/shooting-plan/shooting-plan-export.spec.ts:105`. They pass on the default port but misfire under a `WEB_PORT`/`BASE_URL` override (the exact confound that broke the A1 gate before `fixtures.ts`/`helpers.ts` were fixed in `82202c6`). Fix: route both through `BASE_URL`. Found during the A1 gate; out of scope there.
 
+### Topic 10 — Resilience
+
+- **N-30** FIXED (`fix/route-error-boundary`, Spec 60) — **`Cannot use 'in' operator to search for 'IP_DIFF' in null` rendered as a bare, unstyled full-page crash** on a session/event detail during the walk. The _specific_ throw was **not reproducible on current `main`** (every session/conversation/edit/diff/version/event-detail path verified live with real AI — likely already fixed by a post-walk merge, or a rare data condition). The real bug class fixed here: **a render throw had no app-owned boundary**, so it escaped to TanStack's bare default page (whole app blanked, real stack lost). Fix = one app-wide `defaultErrorComponent` (`RouteErrorBoundary` → `RouteErrorFallback` in `packages/ui`): branded fallback, shell chrome survives, "Riprova"/"Torna alla dashboard", collapsible stack, and the real error logged as a structured `route.error.boundary` client event. Tests: `RouteErrorFallback.test.tsx` (4), E2E `route-error-boundary.spec.ts` (3, forced via dev/test-only `/crash-test`).
+
 ### Topic 8 — Feature idea (ICEBOX, needs spec)
 
 - **N-25** FEATURE — **Live-draft via Cesare**: ask Cesare to write the soggetto → opens a SplitDrawer with a blank sheet → user dictates, Cesare writes & applies live → "ok, caricalo" commits it. Cesare can also **upload/attach a document**. (img #8) → own spec, not now.

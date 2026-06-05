@@ -211,6 +211,15 @@ export const appShellKeys = {
     "shell.presence.offlineTitle": "Real-time connection unavailable",
     "shell.presence.labelOne": "1 person online",
     "shell.presence.labelMany": "{n} people online",
+
+    // Route error boundary (Spec 60) — branded fallback for any render throw
+    "errorBoundary.title": "Something went wrong",
+    "errorBoundary.body":
+      "This view ran into an unexpected error. You can retry, or go back to your dashboard.",
+    "errorBoundary.retry": "Retry",
+    "errorBoundary.home": "Back to dashboard",
+    "errorBoundary.showDetails": "Show details",
+    "errorBoundary.hideDetails": "Hide details",
   },
   it: {
     // Cesare success toasts (live-apply markers)
@@ -421,5 +430,14 @@ export const appShellKeys = {
     "shell.presence.offlineTitle": "Connessione in tempo reale assente",
     "shell.presence.labelOne": "1 persona online",
     "shell.presence.labelMany": "{n} persone online",
+
+    // Route error boundary (Spec 60) — branded fallback for any render throw
+    "errorBoundary.title": "Qualcosa è andato storto",
+    "errorBoundary.body":
+      "Questa schermata ha incontrato un errore imprevisto. Puoi riprovare o tornare alla dashboard.",
+    "errorBoundary.retry": "Riprova",
+    "errorBoundary.home": "Torna alla dashboard",
+    "errorBoundary.showDetails": "Mostra dettagli",
+    "errorBoundary.hideDetails": "Nascondi dettagli",
   },
 } as const satisfies LocaleDict;
