@@ -13,7 +13,23 @@
 
   grid-column: 3;
   min-inline-size: 0;
-  block-size: 100%;
+  /* N-06 — pin the lane to the viewport. The shell grid is `min-block-size:
+     100vh` and GROWS with the main document, so a tall soggetto stretched the
+     grid (and this lane, when sized at `block-size: 100%`) far past the
+     viewport, pushing the composer footer hundreds of px below the fold —
+     "the text input to talk to Cesare is missing". `position: sticky` keeps the
+     lane anchored to the top of the viewport while the page scrolls beside it,
+     and the `100dvh` cap bounds it to the visible height so the footer
+     (composer) is always in view — the Notion side-peek model. */
+  position: sticky;
+  inset-block-start: 0;
+  /* `align-self: start` so the grid track's `stretch` default does not override
+     the explicit viewport-bounded height (which sticky positioning needs). */
+  align-self: start;
+  block-size: 100vh;
+  block-size: 100dvh;
+  max-block-size: 100vh;
+  max-block-size: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--ds-surface);

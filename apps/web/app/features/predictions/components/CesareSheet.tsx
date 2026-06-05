@@ -512,15 +512,12 @@ export function CesareSheet({
   );
 
   // ── Body composition (shared conversation renderer) ──────────────────────
+  // N-11 — the forward-looking "next step" suggestion belongs AFTER the last
+  // reply (a contextual nudge near where the user is reading + the composer),
+  // not pinned above stale history. The empty-state keeps the quick prompts +
+  // suggestion together as the cold-start menu.
   const conversationBody: ReactNode = (
     <>
-      {showInlineNextStep && nextStep && (
-        <NextStepChip
-          suggestion={nextStep}
-          onPick={handleNextStep}
-          isDisabled={isLoading}
-        />
-      )}
       <CesareConversation
         messages={messages}
         page={page}
@@ -540,6 +537,13 @@ export function CesareSheet({
           </>
         }
       />
+      {showInlineNextStep && nextStep && (
+        <NextStepChip
+          suggestion={nextStep}
+          onPick={handleNextStep}
+          isDisabled={isLoading}
+        />
+      )}
     </>
   );
 
@@ -633,7 +637,10 @@ function QuickPrompts({
 }) {
   const { t } = useTranslation();
   return (
-    <div className={styles.quickPrompts} aria-label={t("cesare.quickPrompts.aria")}>
+    <div
+      className={styles.quickPrompts}
+      aria-label={t("cesare.quickPrompts.aria")}
+    >
       {QUICK_PROMPT_KEYS[page].map((key) => {
         const prompt = t(key);
         return (
@@ -692,9 +699,7 @@ function SessionsPopover({
     >
       <ul className={styles.sessionsList} role="listbox">
         {sessions.length === 0 && (
-          <li className={styles.sessionsEmpty}>
-            {t("cesare.sessions.empty")}
-          </li>
+          <li className={styles.sessionsEmpty}>{t("cesare.sessions.empty")}</li>
         )}
         {sessions.map((s) => (
           <li key={s.id}>

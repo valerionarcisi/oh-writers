@@ -22,25 +22,25 @@
   gap: var(--ds-space-3);
 }
 
-/* ─── Bubbles (Notion-style: user bubble right, assistant flat left) ────── */
+/* ─── Bubbles (Notion-style: user bubble right, assistant card left) ────── */
 
 .bubbleUser {
   align-self: flex-end;
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-1);
-  max-inline-size: 92%;
+  max-inline-size: 88%;
   padding-inline: var(--ds-space-3);
   padding-block: var(--ds-space-2);
   background: var(--ds-action-soft);
   color: var(--ds-text);
-  border-radius: var(--ds-radius-md);
-  border-end-inline-end-radius: 2px;
+  border-radius: var(--ds-radius-lg);
+  border-end-inline-end-radius: var(--ds-radius-sm);
 }
 
 .bubbleAssistant {
   align-self: flex-start;
-  max-inline-size: 92%;
+  max-inline-size: 94%;
 }
 
 .bubbleText {
@@ -52,7 +52,12 @@
   word-break: break-word;
 }
 
+/* N-08 — the assistant reply reads as a soft left-aligned card with a ✦ agent
+   marker, so the model's turn is visually distinct from the user's right-aligned
+   bubble. Used in both the plain-reply and edit-applied (with ChangeTrace)
+   layouts so the treatment is consistent. */
 .bubbleMarkdown {
+  position: relative;
   font-family: var(--ds-font-sans);
   font-size: 0.875rem;
   line-height: 1.55;
@@ -60,6 +65,29 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  padding-inline: var(--ds-space-3);
+  padding-block-start: var(--ds-space-3);
+  padding-block-end: var(--ds-space-2);
+  background: var(--ds-surface-alt, var(--ds-surface));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  border-start-inline-start-radius: var(--ds-radius-sm);
+}
+
+/* ✦ agent marker above the reply body. */
+.bubbleMarkdown::before {
+  content: "✦";
+  position: absolute;
+  inset-block-start: calc(-1 * var(--ds-space-2));
+  inset-inline-start: var(--ds-space-3);
+  inline-size: 18px;
+  block-size: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  color: var(--ds-text-on-dark, var(--ds-surface));
+  background: var(--ds-agent);
+  border-radius: var(--ds-radius-pill);
 }
 
 .mdH3 {
@@ -82,18 +110,46 @@
   block-size: var(--ds-space-2);
 }
 
+/* Real list markers: `ul` shows discs, `ol` shows numbers (N-10). A flex list
+   would suppress the markers, so we keep list-item display and use margin for
+   the inter-item gap. */
 .mdList {
   margin: 0;
-  padding-inline-start: var(--ds-space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-space-1);
+  padding-inline-start: var(--ds-space-5);
+  display: block;
+}
+
+.mdList :is(li) + li {
+  margin-block-start: var(--ds-space-1);
+}
+
+ul.mdList {
+  list-style: disc;
+}
+
+ol.mdList {
+  list-style: decimal;
 }
 
 .mdListItem {
   font-size: 0.875rem;
   line-height: 1.55;
   color: var(--ds-text);
+  display: list-item;
+}
+
+/* Inline code in Cesare replies (N-10). */
+.mdCode {
+  font-family: var(--ds-font-mono, monospace);
+  font-size: 0.8125rem;
+  padding-inline: var(--ds-space-1);
+  padding-block: 1px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface-alt, var(--ds-surface));
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* ─── Step Block (timeline + action affordances) ────────────────────────── */
