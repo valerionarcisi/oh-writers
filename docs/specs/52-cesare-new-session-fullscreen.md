@@ -41,10 +41,10 @@ big centred prompt.
 
 ## The experience
 
-- Click "Nuova sessione" in the rail → navigate to a full-screen Cesare landing
+- Click "Nuova sessione" in the rail → navigate to the Cesare landing
   (`/projects/:id/sessions/new`, or `/sessions/:id` in its empty state).
-- The page is a focused, full-screen Cesare surface (rail/topbar minimised à la focus mode), centred
-  vertically, with:
+- The page renders inside the AppShell (rail + TopBar present — N-13), centring the Cesare prompt
+  vertically within the main lane, with:
   - the Cesare sparkle mark,
   - a heading ("Cosa scriviamo oggi?" / "Come posso aiutarti?" — Italian),
   - a **large, centred input** with the Notion-style **glow** (soft animated focus ring / gradient
@@ -60,8 +60,8 @@ big centred prompt.
   `--ds-duration` for the pulse). `prefers-reduced-motion` → static ring, no animation. Reuse the
   existing composer/input primitive; this is a larger, centred variant, not a new input.
 - **Inside the shell (N-13, revised)**: the landing renders inside the AppShell main lane — the rail
-  - TopBar stay present — and centres the Cesare prompt within that lane. It is NOT a focus-mode /
-    full-screen takeover. Routed + deep-linkable (consistent with spec 49 "everything routed").
+  and TopBar stay present — and centres the Cesare prompt within that lane. It is NOT a focus-mode /
+  full-screen takeover. Routed + deep-linkable (consistent with spec 49 "everything routed").
 - **react-aria** for the input + quick-prompt buttons (mandatory). CSS Modules + tokens.
 - **One chat container**: the landing input and the session conversation are the same Cesare chat
   surface in two layouts (empty centred → docked-with-history). Reuse `useCesareChat` /
@@ -73,12 +73,13 @@ big centred prompt.
   adds the **empty-state full-screen glowy landing** as the entry, and wires "+ Nuova" to it.
 - The "write-from-zero with Cesare" next-step suggestions (spec 50) live naturally on this landing as
   the quick-prompts.
-- Routed/deep-linkable per spec 49; focus mode per spec 44.
+- Routed/deep-linkable per spec 49. (N-13: no longer uses spec 44 focus mode — the landing stays
+  inside the shell.)
 
 ## Tests (OHW-052)
 
-- Click rail "Nuova sessione" → full-screen Cesare landing with the centred glowing input + heading +
-  quick prompts; rail/topbar receded.
+- Click rail "Nuova sessione" → Cesare landing inside the shell (rail present) with the centred
+  glowing input + heading + quick prompts.
 - Type + submit → session created, page transitions to the conversation (input docks, history grows),
   single chat container (no duplicate).
 - Deep-link to the landing works; `prefers-reduced-motion` → no glow animation.
