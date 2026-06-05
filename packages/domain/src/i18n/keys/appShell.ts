@@ -157,6 +157,10 @@ export const appShellKeys = {
     "shell.projectSwitcher.switch": "Switch project",
     "shell.projectSwitcher.empty": "No project",
     "shell.projectSwitcher.current": "Current project",
+    // Rail project header menu (N-24)
+    "shell.projectMenu.open": "Open project",
+    "shell.projectMenu.settings": "Project settings",
+    "shell.projectMenu.switch": "Switch project",
     // Command palette listbox
     "shell.palette.empty": "No results",
     "shell.palette.results": "Results",
@@ -356,6 +360,10 @@ export const appShellKeys = {
     "shell.projectSwitcher.switch": "Cambia progetto",
     "shell.projectSwitcher.empty": "Nessun progetto",
     "shell.projectSwitcher.current": "Progetto corrente",
+    // Rail project header menu (N-24)
+    "shell.projectMenu.open": "Apri progetto",
+    "shell.projectMenu.settings": "Impostazioni progetto",
+    "shell.projectMenu.switch": "Cambia progetto",
     // Command palette listbox
     "shell.palette.empty": "Nessun risultato",
     "shell.palette.results": "Risultati",

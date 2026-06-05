@@ -34,23 +34,25 @@ export function UserSettingsPage({
   const avatarUrl = profile?.avatarUrl ?? null;
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-testid="user-settings-page">
       <div>
         <h1 className={styles.title}>{t("settings.title")}</h1>
         <p className={styles.subtitle}>{email}</p>
       </div>
 
-      <ProfileSection
-        initialName={name}
-        email={email}
-        initialAvatarUrl={avatarUrl}
-      />
+      <div className={styles.grid} data-testid="user-settings-grid">
+        <ProfileSection
+          initialName={name}
+          email={email}
+          initialAvatarUrl={avatarUrl}
+        />
 
-      <LanguageSection />
+        <LanguageSection />
 
-      <PasswordSection />
+        <PasswordSection />
 
-      <TeamsSection />
+        <TeamsSection />
+      </div>
     </div>
   );
 }

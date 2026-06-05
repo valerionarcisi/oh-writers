@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Icon } from "../../icons/Icon";
 import type { IconName } from "../../icons/icon-names";
 import { DropdownMenu } from "../../components/DropdownMenu";
+import type { DropdownMenuItem } from "../../components/DropdownMenu";
 import { GearGlyph } from "../TopBar/GearGlyph";
 import styles from "./LeftRail.module.css";
 
@@ -95,11 +96,16 @@ export type LeftRailProps = {
      *  redundant when no project is selected). Defaults to true. */
     showLabel?: boolean;
   };
-  /** Active project header. Clicking opens the project switcher (handled by
-   *  the caller via the onProjectClick handler). */
+  /** Active project header. The chevron-down glyph promises a menu, so when
+   *  `menuItems` is supplied the header renders as a `DropdownMenu` trigger
+   *  (open project / project settings / switch project — N-24). When only
+   *  `onPress` is supplied the header is a single-action button (legacy). */
   project?: {
     title: string;
     onPress?: () => void;
+    /** Project actions surfaced in the header dropdown. When non-empty the
+     *  header opens this menu instead of firing `onPress`. */
+    menuItems?: ReadonlyArray<DropdownMenuItem>;
   };
   /** Sviluppo / Produzione / Recenti — each rendered as a labelled section.
    *  Section ordering is preserved. */
@@ -735,19 +741,42 @@ export function LeftRail({
         )}
       </div>
 
-      {project && (
-        <button
-          ref={projectRef}
-          {...projectBtnProps}
-          className={styles.project}
-          data-rail-project=""
-        >
-          <span className={styles.projectTitle}>{project.title}</span>
-          <span className={styles.projectChev} aria-hidden="true">
-            <Icon name="chevron-down" size={12} aria-hidden={true} />
-          </span>
-        </button>
-      )}
+      {project &&
+        (() => {
+          // The header content (title + chevron) is identical whether the
+          // header is a menu trigger or a single-action button — keep it DRY.
+          const headerContent = (
+            <>
+              <span className={styles.projectTitle}>{project.title}</span>
+              <span className={styles.projectChev} aria-hidden="true">
+                <Icon name="chevron-down" size={12} aria-hidden={true} />
+              </span>
+            </>
+          );
+          // N-24 — the chevron-down promises a menu, so when actions are
+          // supplied the header opens a DropdownMenu rather than firing a
+          // single navigation.
+          return project.menuItems && project.menuItems.length > 0 ? (
+            <DropdownMenu
+              items={[...project.menuItems]}
+              align="start"
+              triggerClassName={styles.project}
+              triggerLabel={`Progetto: ${project.title}`}
+              triggerTestId="rail-project-menu-trigger"
+              data-testid="rail-project-menu"
+              trigger={headerContent}
+            />
+          ) : (
+            <button
+              ref={projectRef}
+              {...projectBtnProps}
+              className={styles.project}
+              data-rail-project=""
+            >
+              {headerContent}
+            </button>
+          );
+        })()}
 
       {tools && tools.length > 0 && (
         <div className={styles.tools} role="toolbar" aria-label={toolsLabel}>
