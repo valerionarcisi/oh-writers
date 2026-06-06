@@ -92,8 +92,7 @@ import {
 import { SplitToggleProvider, useSplitToggle } from "../split-toggle-context";
 import { publishLiveEdits } from "../cesare-live-edit-store";
 import { isCesarePeek } from "../cesare-peek";
-import { parseVersionsPeek, parseVersionsCompare } from "../versions-peek";
-import type { VersionsCompare } from "../versions-peek";
+import { parseVersionsPeek } from "../versions-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
 import { SplitDrawerPreviewBody } from "./SplitDrawerPreviewBody";
 import { VersionsSplitLane } from "./VersionsSplitLane";
@@ -184,13 +183,8 @@ interface AppShellProps {
   versionsParam?: string | null;
   /** Raw `?vstate` companion — `"full"` promotes the lane to a full route. */
   versionsStateParam?: string | null;
-  /** Raw `?vcur` companion — the "vs current" baseline version id. */
+  /** Raw `?vcur` companion — the current (active) baseline version id. */
   versionsCurrentParam?: string | null;
-  /** Raw `?compare` companion — the `<a>,<b>` 2-version compare pair (W3). */
-  versionsCompareParam?: string | null;
-  /** Patch `?compare` (null drops it — back to "vs current"). Replace, no
-   *  history entry, so the compare toggle doesn't pollute browser history. */
-  onVersionsCompareChange?: (next: VersionsCompare | null) => void;
   /** Clear `?versions` (× / ESC / browser-back). */
   onCloseVersions?: () => void;
   /** `↗` expand the Versions lane to the full-screen route. */
@@ -272,8 +266,6 @@ function AppShellInner({
   versionsParam = null,
   versionsStateParam = null,
   versionsCurrentParam = null,
-  versionsCompareParam = null,
-  onVersionsCompareChange,
   onCloseVersions,
   onExpandVersions,
   onStepBackVersions,
@@ -458,13 +450,6 @@ function AppShellInner({
   );
   const versionsPeek = versionsPeekResult.isOk()
     ? versionsPeekResult.value
-    : null;
-  // The `?compare=` pair (Spec 49 W3). Validated to a distinct UUID pair (fail
-  // closed — a malformed pair falls back to "vs current"); the same-document
-  // guard is applied inside VersionsSplitDrawer against the loaded list.
-  const versionsCompareResult = parseVersionsCompare(versionsCompareParam);
-  const versionsCompare = versionsCompareResult.isOk()
-    ? versionsCompareResult.value
     : null;
   const isVersionsSplitActive =
     versionsPeek !== null && versionsPeek.state === "split";
@@ -1329,8 +1314,6 @@ function AppShellInner({
           {versionsPeek !== null && (
             <VersionsSplitLane
               peek={versionsPeek}
-              compare={versionsCompare}
-              onCompareChange={(next) => onVersionsCompareChange?.(next)}
               width={versionsLaneWidth}
               onWidthChange={setVersionsLaneWidth}
               onExpand={() => onExpandVersions?.()}

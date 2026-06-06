@@ -24,15 +24,11 @@ export type { CesarePeek, PeekSearch } from "./cesare-peek";
 export {
   versionsSearchSchema,
   parseVersionsPeek,
-  parseVersionsCompare,
-  serializeVersionsCompare,
   InvalidVersionsPeekError,
-  InvalidVersionsCompareError,
   VERSIONS_SURFACE_STATES,
 } from "./versions-peek";
 export type {
   VersionsPeek,
-  VersionsCompare,
   VersionsSearch,
   VersionsSurfaceState,
 } from "./versions-peek";

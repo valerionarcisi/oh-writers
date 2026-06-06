@@ -31,6 +31,23 @@
   text-overflow: ellipsis;
 }
 
+/* Read-only narrative version body rendered in the detail pane. Inherits the
+ * editor's prose look so a version reads like the document. */
+.narrativeBody {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed, 1.6);
+  color: var(--ds-text);
+}
+
+.narrativeBody :is(h1, h2, h3) {
+  margin-block: var(--space-3) var(--space-2);
+  font-family: var(--ds-font-display);
+}
+
+.narrativeBody p {
+  margin-block: var(--space-2);
+}
+
 @keyframes versions-lane-slide-in {
   from {
     opacity: 0;

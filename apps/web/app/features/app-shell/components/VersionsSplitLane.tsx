@@ -1,41 +1,46 @@
 // apps/web/app/features/app-shell/components/VersionsSplitLane.tsx
 //
-// The routed Versions SplitDrawer lane (Spec 49 W1 + W2). Mounted at the shell
-// level as the third grid column when `?versions=<documentId>` is set on the
-// host route. The host page stays mounted and COMPRESSES (the main lane reflows
-// narrower) — the Notion side-peek model, NOT a floating overlay. This is the
-// SplitDrawer twin of `CesarePeekLane`, but for the version list + vs-current
-// diff instead of the Cesare chat.
+// The routed Versions SplitDrawer lane (Spec 49 routing + Spec 66 master→detail).
+// Mounted at the shell level as the third grid column when `?versions=<documentId>`
+// is set on the host route. The host page stays mounted and COMPRESSES (the main
+// lane reflows narrower) — the Notion side-peek model, NOT a floating overlay.
 //
-// State is driven entirely by the URL (the routed-surface single source of
-// truth, Spec 49):
-//   - `?versions=<id>`              → SplitDrawer `open` (split, host compresses)
-//   - `?versions=<id>&vstate=full`  → SplitDrawer `full` (`↗` expanded to a real
-//                                     full-screen route; browser-back / `↙`
-//                                     returns to the split)
-//   - param dropped (`×` / ESC / browser-back) → closed, host returns to full
+// The routed Versions surface is opened only for NARRATIVE documents today (the
+// screenplay keeps its own inline VersionsPanel). So this lane binds the
+// narrative version hooks + a narrative (HTML) read-only renderer and feeds the
+// editor-agnostic master→detail `VersionsSplitDrawer`. When the screenplay starts
+// opening the routed surface (Spec 66 phase 5/6) a kind branch is added here.
 //
-// `↗` is implemented as a REAL navigation (`navigateState`, a new history
-// entry), so the URL becomes shareable and browser-back returns to the host +
-// split. The SplitDrawer primitive owns the chrome + react-aria dismiss
-// (`useDialog`/`useOverlay` inside the lane wrapper).
+// State is driven entirely by the URL (the routed-surface single source of truth,
+// Spec 49): `?versions=<id>` → open (split); `?vstate=full` → full; param dropped
+// → closed. `↗` is a REAL navigation so the URL stays shareable.
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useDialog, useOverlay, FocusScope } from "react-aria";
+import { match } from "ts-pattern";
 import { SplitDrawer } from "@oh-writers/ui";
 import type { SplitDrawerState } from "@oh-writers/ui";
-import { VersionsSplitDrawer } from "~/features/versions";
+import type { DraftRevisionColor } from "@oh-writers/domain";
+import {
+  VersionsSplitDrawer,
+  narrativeToVersionView,
+} from "~/features/versions";
+import type { VersionView } from "~/features/versions";
+import {
+  useDocumentVersions,
+  useSwitchToVersion,
+  useDuplicateDocumentVersion,
+  useRenameDocumentVersion,
+  useUpdateDocumentVersionMeta,
+  useCreateDocumentVersionFromScratch,
+} from "~/features/documents";
 import { useTranslation } from "~/features/i18n";
-import type { VersionsPeek, VersionsCompare } from "../versions-peek";
+import type { VersionsPeek } from "../versions-peek";
 import styles from "./VersionsSplitLane.module.css";
 
 export interface VersionsSplitLaneProps {
   /** The validated routed Versions target (document + state + baseline). */
   readonly peek: VersionsPeek;
-  /** The validated `?compare=` pair (Spec 49 W3) or `null` for "vs current". */
-  readonly compare: VersionsCompare | null;
-  /** Patch the `?compare=` companion (null drops it). */
-  readonly onCompareChange: (next: VersionsCompare | null) => void;
   /** Width (px) of the split lane; persisted by AppShell. */
   readonly width: number;
   readonly onWidthChange: (next: number) => void;
@@ -49,8 +54,6 @@ export interface VersionsSplitLaneProps {
 
 export function VersionsSplitLane({
   peek,
-  compare,
-  onCompareChange,
   width,
   onWidthChange,
   onExpand,
@@ -59,10 +62,44 @@ export function VersionsSplitLane({
 }: VersionsSplitLaneProps) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
+  const documentId = peek.documentId;
 
-  // react-aria owns dismiss + focus (mandatory). ESC clears `?versions`.
-  // Outside-interaction dismiss is disabled so the compressed host page beside
-  // the lane stays clickable — same contract as the Cesare peek lane.
+  const { data: result, isLoading } = useDocumentVersions(documentId);
+  const activate = useSwitchToVersion(documentId);
+  const duplicate = useDuplicateDocumentVersion(documentId);
+  const rename = useRenameDocumentVersion(documentId);
+  const updateMeta = useUpdateDocumentVersionMeta(documentId);
+  const createNew = useCreateDocumentVersionFromScratch(documentId);
+
+  const versions: VersionView[] = useMemo(
+    () =>
+      result?.isOk
+        ? result.value.map((row) => narrativeToVersionView(row))
+        : [],
+    [result],
+  );
+
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "DocumentNotFoundError" }, () =>
+            t("versions.split.docNotFound"),
+          )
+          .with({ _tag: "ForbiddenError" }, () => t("versions.split.forbidden"))
+          .otherwise(() => t("versions.split.loadFailed"))
+      : null;
+
+  // The read-only detail body: the version's canonical narrative HTML rendered
+  // like the editor. (Screenplay would branch to ReadOnlyScreenplayView here.)
+  const renderContent = (version: VersionView) => (
+    <div
+      className={styles.narrativeBody}
+      // The content is the editor's own canonical, sanitised narrative HTML
+      // (server-owned, never user-pasted raw), rendered read-only.
+      dangerouslySetInnerHTML={{ __html: version.content }}
+    />
+  );
+
   const { overlayProps } = useOverlay(
     {
       onClose,
@@ -77,9 +114,6 @@ export function VersionsSplitLane({
     ref,
   );
 
-  // The SplitDrawer's visible state mirrors the routed surface: `full` when the
-  // user expanded (`?vstate=full`), `open` (split) otherwise. The primitive's
-  // controls dispatch back into URL navigations.
   const state: SplitDrawerState = peek.state === "full" ? "full" : "open";
 
   return (
@@ -96,8 +130,6 @@ export function VersionsSplitLane({
           state={state}
           placement="lane"
           onStateChange={(next) => {
-            // Reflect a primitive-driven state change as a URL navigation so the
-            // URL stays authoritative.
             if (next === "closed") onClose();
             else if (next === "full") onExpand();
             else onStepBack();
@@ -117,10 +149,19 @@ export function VersionsSplitLane({
           testId="versions-split-drawer-frame"
         >
           <VersionsSplitDrawer
-            documentId={peek.documentId}
+            versions={versions}
             currentVersionId={peek.currentVersionId}
-            compare={compare}
-            onCompareChange={onCompareChange}
+            isLoading={isLoading}
+            loadError={loadError}
+            renderContent={renderContent}
+            canEdit
+            onActivate={(id) => activate.mutate(id)}
+            onDuplicate={(id) => duplicate.mutate(id)}
+            onRename={(id, label) => rename.mutate({ versionId: id, label })}
+            onSetColor={(id, color: DraftRevisionColor | null) =>
+              updateMeta.mutate({ versionId: id, draftColor: color })
+            }
+            onCreateNew={() => createNew.mutate()}
           />
         </SplitDrawer>
       </div>

@@ -61,26 +61,6 @@ export class InvalidVersionsPeekError {
   }
 }
 
-/**
- * Validated `?compare=` pair (Spec 49 W3): two DISTINCT version ids to render
- * side-by-side. `a` is the left/old column, `b` is the right/new column.
- */
-export interface VersionsCompare {
-  readonly a: string;
-  readonly b: string;
-}
-
-/** Why a raw `?compare=` param was rejected. Tagged for ts-pattern. */
-export class InvalidVersionsCompareError {
-  readonly _tag = "InvalidVersionsCompareError" as const;
-  readonly message: string;
-  constructor(
-    readonly reason: "empty" | "not-a-pair" | "not-a-uuid" | "same-version",
-  ) {
-    this.message = `Invalid compare param: ${reason}`;
-  }
-}
-
 // ─── Search-param schema ───────────────────────────────────────────────────────
 
 /**
@@ -98,7 +78,6 @@ export const versionsSearchSchema = z.object({
   versions: z.string().optional(),
   vstate: z.enum(VERSIONS_SURFACE_STATES).optional(),
   vcur: z.string().optional(),
-  compare: z.string().optional(),
 });
 
 export type VersionsSearch = z.infer<typeof versionsSearchSchema>;
@@ -144,48 +123,3 @@ export function parseVersionsPeek(
       : null;
   return ok({ documentId, state, currentVersionId });
 }
-
-/**
- * Parse + validate the raw `?compare=<a>,<b>` companion (Spec 49 W3). Returns a
- * typed `Result`:
- *   - `ok(VersionsCompare)` when the value is exactly two well-formed, DISTINCT
- *     version UUIDs.
- *   - `err(InvalidVersionsCompareError)` otherwise. Callers fail closed: any
- *     error means the surface stays in "vs current" (the compare is dropped),
- *     never an open compare on junk.
- *
- * The same-DOCUMENT guard is intentionally NOT applied here: the param carries
- * no document segment. A pair of shape-valid ids that belong to a different
- * document is dropped client-side (an id absent from the loaded version list
- * cannot resolve to content), so cross-document compare never leaks — exactly
- * how `parseVersionsPeek` defers the cross-project guard to the data layer.
- */
-export function parseVersionsCompare(
-  rawCompare: string | null | undefined,
-): Result<VersionsCompare, InvalidVersionsCompareError> {
-  if (rawCompare == null || rawCompare.trim().length === 0) {
-    return err(new InvalidVersionsCompareError("empty"));
-  }
-
-  const parts = rawCompare
-    .trim()
-    .split(",")
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
-  if (parts.length !== 2) {
-    return err(new InvalidVersionsCompareError("not-a-pair"));
-  }
-
-  const [a, b] = parts as [string, string];
-  if (!UUID_RE.test(a) || !UUID_RE.test(b)) {
-    return err(new InvalidVersionsCompareError("not-a-uuid"));
-  }
-  if (a === b) {
-    return err(new InvalidVersionsCompareError("same-version"));
-  }
-  return ok({ a, b });
-}
-
-/** Serialize a `?compare=` pair back to its `<a>,<b>` string form. */
-export const serializeVersionsCompare = (pair: VersionsCompare): string =>
-  `${pair.a},${pair.b}`;
