@@ -55,7 +55,18 @@ side-by-side diff table are removed.
   two live tables is a heavy, hard-to-undo migration, and `pageCount` would leak the
   screenplay's concept into narrative rows. A shared _interface_ delivers the
   unification the user can see; shared _storage_ was judged unnecessary cost.
-- Lost: the deep-linkable two-version compare. If a genuine "compare two" need
-  resurfaces it returns as a deliberate, separate affordance — not the default.
-- ADR-0003's no-diff-in-editor principle and this no-diff-in-versions decision now
-  align: there is no word-level diff anywhere in the product.
+- Lost on the routed surface: the deep-linkable two-version compare. If a genuine
+  "compare two" need resurfaces it returns as a deliberate, separate affordance —
+  not the default.
+- **Scope of the retirement is partial.** The master→detail surface + the no-diff
+  decision apply to the **narrative documents and the screenplay editor** (which now
+  open the routed `?versions=` surface). The **production pages** (budget, breakdown,
+  schedule) still open the legacy floating `VersionsDrawer` — which still hosts the
+  `VersionCompareModal` (a two-version compare). So a word-level compare is gone from
+  the _routed Versions surface_ but still reachable on those three production pages.
+  Migrating them to the routed surface (and deleting `VersionsDrawer` /
+  `VersionCompareModal` / the legacy `VersionsList`) is a tracked follow-up
+  (BACKLOG ICEBOX N-28), not part of Spec 66.
+- ADR-0003's no-diff-in-editor principle and this no-diff-in-versions decision align
+  for the surfaces in scope: there is no word-level diff in the narrative editors or
+  the routed Versions surface.

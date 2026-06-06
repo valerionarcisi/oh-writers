@@ -70,6 +70,9 @@
   block-size: var(--space-3);
   border-radius: 50%;
   border: 1px solid var(--ds-line);
+  /* No-colour default: an empty ring on the surface (the inline style adds the
+   * draft colour when set). */
+  background: var(--ds-surface-2);
 }
 
 .versionLabel {
@@ -115,6 +118,26 @@
   gap: var(--space-2);
 }
 
+/* In the LIST, keep rows calm (Notion-style): the action cluster is revealed on
+ * row hover / keyboard focus only. In the detail pane the actions always show
+ * (there is only one version there). */
+.versionItem .actions {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.versionItem:hover .actions,
+.versionItem:focus-within .actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  /* Touch devices have no hover — keep the actions visible. */
+  .versionItem .actions {
+    opacity: 1;
+  }
+}
+
 .primaryBtn,
 .activateBtn {
   font-size: var(--text-xs);
@@ -123,18 +146,20 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--ds-agent);
   background: var(--ds-agent);
-  color: var(--ds-surface-2);
+  color: var(--ds-text-on-dark);
   cursor: pointer;
 }
 
+/* Secondary actions are solid with white text too (not ghost), so the labels
+ * read clearly against the surface. */
 .ghostBtn,
 .backBtn {
   font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--ds-line);
-  background: transparent;
-  color: var(--ds-text-2);
+  border: 1px solid transparent;
+  background: var(--ds-text-2);
+  color: var(--ds-text-on-dark);
   cursor: pointer;
 }
 
@@ -162,11 +187,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.swatchEmpty {
-  font-size: var(--text-xs);
-  color: var(--ds-text-mute);
 }
 
 .colorPicker {

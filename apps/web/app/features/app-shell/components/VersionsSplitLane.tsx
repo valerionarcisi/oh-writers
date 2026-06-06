@@ -25,6 +25,7 @@ import type { DraftRevisionColor } from "@oh-writers/domain";
 import {
   VersionsSplitDrawer,
   narrativeToVersionView,
+  screenplayToVersionView,
 } from "~/features/versions";
 import type { VersionView } from "~/features/versions";
 import {
@@ -149,22 +150,7 @@ function ScreenplayVersionsContent({
   const createNew = useCreateManualVersion();
 
   const versions: VersionView[] = useMemo(
-    () =>
-      result?.isOk
-        ? result.value.map((v) => ({
-            id: v.id,
-            number: v.number,
-            label: v.label,
-            createdAt:
-              typeof v.createdAt === "string"
-                ? v.createdAt
-                : new Date(v.createdAt).toISOString(),
-            content: v.content,
-            draftColor: (v.draftColor ?? null) as DraftRevisionColor | null,
-            draftDate: v.draftDate ?? null,
-            pageCount: v.pageCount,
-          }))
-        : [],
+    () => (result?.isOk ? result.value.map(screenplayToVersionView) : []),
     [result],
   );
 

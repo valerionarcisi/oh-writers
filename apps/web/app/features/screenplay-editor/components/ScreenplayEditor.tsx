@@ -63,7 +63,6 @@ import { ContextActionIds, type ExportFormat } from "@oh-writers/domain";
 import { buildFountainFilename } from "../lib/export-pipeline";
 import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
-import { useVersionsDrawer } from "~/features/versions";
 import {
   useCesareOpen,
   useContextActions,
@@ -215,15 +214,6 @@ export const ScreenplayEditor = forwardRef<
     screenplay.pmDoc ?? null,
   );
   const [isFocusMode, setFocusMode] = useState(false);
-  const {
-    state: drawerState,
-    open: openDrawer,
-    close: closeDrawer,
-  } = useVersionsDrawer();
-  const isVersionsPanelOpen =
-    drawerState.isOpen &&
-    drawerState.scope?.kind === "screenplay" &&
-    drawerState.scope.screenplayId === screenplay.id;
   const [viewing, setViewing] = useState<ViewingState>({ kind: "live" });
   const [pendingView, setPendingView] = useState<{ id: string } | null>(null);
   const [awaitingRestoreConfirm, setAwaitingRestoreConfirm] = useState(false);

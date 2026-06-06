@@ -342,13 +342,28 @@ function AppShellInner({
     setCesareOpen(cesarePersist === "expanded");
   }, []);
 
+  // The Versions surface opens at ~half the page (master→detail preview), so the
+  // central lane needs room: while it is open in split mode we COLLAPSE the rail
+  // (Spec 66). The user's persisted `shellState` is untouched — closing the
+  // surface restores their prior density automatically.
+  const versionsSplitOpen = parseVersionsPeek(
+    versionsParam,
+    versionsStateParam,
+    versionsCurrentParam,
+    versionsKindParam,
+  )
+    .map((p) => p.state === "split")
+    .unwrapOr(false);
+
   // Spec 52 — a routed surface (the full-screen new-session landing) can force
   // focus mode for its lifetime. The user's persisted density (`shellState`) is
   // never overwritten while the request is active; releasing it restores their
   // prior layout automatically because we broadcast `shellState` again.
   const effectiveShellState: ShellState = isFocusRequested
     ? "focus"
-    : shellState;
+    : versionsSplitOpen && shellState === "full"
+      ? "collapsed"
+      : shellState;
 
   // Broadcast UI state to <body> so the rail/dock/cesare CSS modules can
   // react via :global([data-*]) selectors without prop-drilling.
@@ -457,7 +472,14 @@ function AppShellInner({
     : null;
   const isVersionsSplitActive =
     versionsPeek !== null && versionsPeek.state === "split";
-  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number>(480);
+  // The Versions surface shows a whole document's formatted content (master→detail
+  // read-only preview), so it opens at ~half the page rather than a narrow rail —
+  // a too-thin lane crushes the preview. Clamped so it stays readable on small and
+  // huge viewports; the user can still drag-resize from here.
+  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 560;
+    return Math.round(Math.min(760, Math.max(480, window.innerWidth * 0.5)));
+  });
 
   useEffect(() => {
     if (typeof document === "undefined") return;

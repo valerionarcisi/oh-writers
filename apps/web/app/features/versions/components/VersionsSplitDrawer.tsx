@@ -5,7 +5,7 @@
 //
 //   list (left)  →  click a version  →  detail (right): the version's full
 //   content, formatted and READ-ONLY, with Attiva / Indietro + per-version
-//   actions (rename · duplicate · colour · draft-date · delete).
+//   actions (rename · duplicate · draft-colour dot).
 //
 // There is NO diff and NO "compare two" mode (ADR-0004): the writer reads an old
 // version and brings it back with Attiva. The actions are available from BOTH the
@@ -17,7 +17,7 @@
 // vs. screenplay PM). This keeps the component free of any cross-feature editor
 // import (CLAUDE.md) and reusable for every document type.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { DRAFT_REVISION_COLORS } from "@oh-writers/domain";
 import type {
@@ -26,13 +26,95 @@ import type {
   Locale,
 } from "@oh-writers/domain";
 import { formatDateTime } from "@oh-writers/domain";
-import { Skeleton } from "@oh-writers/ui";
+import { Skeleton, Popover } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
 import type { VersionView } from "../version-view";
 import styles from "./VersionsSplitDrawer.module.css";
 
 type Translate = (key: TranslationKey) => string;
+
+// The draft-colour swatch + its palette. The palette lives in the collision-aware
+// `Popover` primitive (react-aria dismiss) anchored to the swatch, so opening it
+// never reflows the action row (Notion-style).
+function ColorSwatchPicker({
+  version,
+  canEdit,
+  onSetColor,
+  t,
+}: {
+  version: VersionView;
+  canEdit: boolean;
+  onSetColor: (versionId: string, color: DraftRevisionColor | null) => void;
+  t: Translate;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const choose = (color: DraftRevisionColor | null) => {
+    onSetColor(version.id, color);
+    setIsOpen(false);
+  };
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={styles.swatchBtn}
+        style={
+          version.draftColor
+            ? { background: DRAFT_COLOR_HEX[version.draftColor] }
+            : undefined
+        }
+        onClick={() => setIsOpen((o) => !o)}
+        disabled={!canEdit}
+        title={
+          version.draftColor
+            ? DRAFT_COLOR_LABEL[version.draftColor]
+            : t("versions.split.setColor")
+        }
+        aria-label={t("versions.split.colorPicker")}
+        aria-expanded={isOpen}
+        data-testid={`version-color-trigger-${version.id}`}
+      />
+      <Popover
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        triggerRef={triggerRef}
+        placement="bottom-start"
+      >
+        <div
+          className={styles.colorPicker}
+          role="group"
+          aria-label={t("versions.split.colorPicker")}
+          data-testid={`version-color-picker-${version.id}`}
+        >
+          {DRAFT_REVISION_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={styles.swatch}
+              style={{ background: DRAFT_COLOR_HEX[color] }}
+              aria-label={DRAFT_COLOR_LABEL[color]}
+              aria-pressed={version.draftColor === color}
+              title={DRAFT_COLOR_LABEL[color]}
+              data-testid={`version-color-${version.id}-${color}`}
+              onClick={() => choose(color)}
+            />
+          ))}
+          <button
+            type="button"
+            className={`${styles.swatch} ${styles.swatchClear}`}
+            aria-label={t("versions.split.clearColor")}
+            data-testid={`version-color-${version.id}-clear`}
+            onClick={() => choose(null)}
+          >
+            ×
+          </button>
+        </div>
+      </Popover>
+    </>
+  );
+}
 
 export interface VersionsSplitDrawerProps {
   /** The loaded versions, newest first. */
@@ -86,7 +168,6 @@ export function VersionsSplitDrawer({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
-  const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
 
   // Drop a selection that no longer exists (deleted version) back to the list.
   useEffect(() => {
@@ -141,65 +222,12 @@ export function VersionsSplitDrawer({
         >
           {t("versions.split.duplicate")}
         </button>
-        <button
-          type="button"
-          className={styles.swatchBtn}
-          style={{
-            background: v.draftColor
-              ? DRAFT_COLOR_HEX[v.draftColor]
-              : "transparent",
-          }}
-          onClick={() =>
-            setColorPickerFor(colorPickerFor === v.id ? null : v.id)
-          }
-          disabled={!canEdit}
-          title={
-            v.draftColor
-              ? DRAFT_COLOR_LABEL[v.draftColor]
-              : t("versions.split.setColor")
-          }
-          aria-label={t("versions.split.colorPicker")}
-          data-testid={`version-color-trigger-${v.id}`}
-        >
-          {!v.draftColor && <span className={styles.swatchEmpty}>?</span>}
-        </button>
-        {colorPickerFor === v.id && (
-          <div
-            className={styles.colorPicker}
-            role="group"
-            aria-label={t("versions.split.colorPicker")}
-            data-testid={`version-color-picker-${v.id}`}
-          >
-            {DRAFT_REVISION_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                className={styles.swatch}
-                style={{ background: DRAFT_COLOR_HEX[color] }}
-                aria-label={DRAFT_COLOR_LABEL[color]}
-                aria-pressed={v.draftColor === color}
-                title={DRAFT_COLOR_LABEL[color]}
-                data-testid={`version-color-${v.id}-${color}`}
-                onClick={() => {
-                  onSetColor(v.id, color);
-                  setColorPickerFor(null);
-                }}
-              />
-            ))}
-            <button
-              type="button"
-              className={`${styles.swatch} ${styles.swatchClear}`}
-              aria-label={t("versions.split.clearColor")}
-              data-testid={`version-color-${v.id}-clear`}
-              onClick={() => {
-                onSetColor(v.id, null);
-                setColorPickerFor(null);
-              }}
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <ColorSwatchPicker
+          version={v}
+          canEdit={canEdit}
+          onSetColor={onSetColor}
+          t={t}
+        />
       </div>
     );
   };
@@ -252,11 +280,11 @@ export function VersionsSplitDrawer({
                     >
                       <span
                         className={styles.dot}
-                        style={{
-                          background: v.draftColor
-                            ? DRAFT_COLOR_HEX[v.draftColor]
-                            : "var(--color-border, #ccc)",
-                        }}
+                        style={
+                          v.draftColor
+                            ? { background: DRAFT_COLOR_HEX[v.draftColor] }
+                            : undefined
+                        }
                         data-testid={`version-dot-${v.id}`}
                         aria-hidden
                       />
