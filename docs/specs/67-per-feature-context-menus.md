@@ -54,21 +54,21 @@ import server fn, and inventing one — e.g. breakdown-from-CSV — is its own f
    call its export hook, and publishes the result as `topBarActions` — exactly the
    Soggetto/NarrativeEditor pattern. The ad-hoc per-page export buttons are removed
    in favour of the `⋯` menu.
-3. **Versions**: production pages open the **Spec 66 routed surface**
-   (`?versions=<id>&vkind=…`) instead of `useVersionsDrawer`. Breakdown/budget/
-   schedule/locations version a screenplay-derived artefact, so they use
-   `vkind=screenplay` against the screenplay id (their versions are the screenplay's),
-   OR — if a page has its own versioned entity — its own id. (Confirm per page
-   during implementation; flag if a page's "versions" don't map to an existing
-   routed kind — that page keeps Versions out of the menu rather than shipping a
-   broken entry.)
-4. **Retire the legacy floating drawer**: once no page calls `useVersionsDrawer`,
-   delete `VersionsDrawer`, `VersionCompareModal`, the legacy `VersionsList`, and
-   the `VersionsDrawerProvider` from the shell — completing the Spec 66/ADR-0004
-   retirement (N-28). Update ADR-0004 to drop the "partial" caveat.
-5. **logline**: `⋯` shows **Versioni** only (it has no dedicated export; it is a
-   field surfaced on the Soggetto). If logline has no routed versioned entity,
-   it gets no `⋯` (decide during impl — don't ship a dead entry).
+3. **Production pages have NO versions.** Decided 2026-06-06 with Valerio: versions
+   are a NARRATIVE (+ screenplay) concept. From the breakdown onward (breakdown,
+   budget, schedule, locations) everything works against the **active** screenplay
+   version — "versions" is not a per-page concept there. So these pages get
+   **Export only** in the `⋯`, and their existing version affordances
+   (`VersionTrigger` viewbar pills + `useVersionsDrawer`) are **removed entirely**.
+4. **Retire the legacy floating drawer**: removing the production pages' version
+   affordances leaves no caller of `useVersionsDrawer`, so delete `VersionsDrawer`,
+   `VersionCompareModal`, the legacy `VersionsList`, and the `VersionsDrawerProvider`
+   from the shell — completing the Spec 66/ADR-0004 retirement (N-28). Update
+   ADR-0004 to drop the "partial" caveat.
+5. **logline**: no `⋯`. The `/projects/:id/logline` route only **redirects to
+   Soggetto** (the logline is authored inside the Soggetto, Spec 04f) — there is no
+   standalone logline page to host a menu, so logline gets no registry segment.
+   Its versions are reachable from the Soggetto.
 
 ## Out of scope / follow-ups
 

@@ -180,15 +180,8 @@ export const CONTEXT_ACTIONS: Readonly<
       order: 10,
     },
   ],
-  // logline is a field surfaced on the Soggetto, not its own document export —
-  // its ⋯ offers Versioni only (its own narrative version stack).
-  logline: [
-    {
-      id: ContextActionIds.VERSIONS,
-      labelKey: "documents.editor.versions",
-      order: 90,
-    },
-  ],
+  // NB: `logline` has no segment — it has no standalone page (the route redirects
+  // to Soggetto, where the logline is authored), so it surfaces no `⋯` of its own.
 } as const;
 
 /**
