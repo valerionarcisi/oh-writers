@@ -58,15 +58,11 @@ side-by-side diff table are removed.
 - Lost on the routed surface: the deep-linkable two-version compare. If a genuine
   "compare two" need resurfaces it returns as a deliberate, separate affordance —
   not the default.
-- **Scope of the retirement is partial.** The master→detail surface + the no-diff
-  decision apply to the **narrative documents and the screenplay editor** (which now
-  open the routed `?versions=` surface). The **production pages** (budget, breakdown,
-  schedule) still open the legacy floating `VersionsDrawer` — which still hosts the
-  `VersionCompareModal` (a two-version compare). So a word-level compare is gone from
-  the _routed Versions surface_ but still reachable on those three production pages.
-  Migrating them to the routed surface (and deleting `VersionsDrawer` /
-  `VersionCompareModal` / the legacy `VersionsList`) is a tracked follow-up
-  (BACKLOG ICEBOX N-28), not part of Spec 66.
-- ADR-0003's no-diff-in-editor principle and this no-diff-in-versions decision align
-  for the surfaces in scope: there is no word-level diff in the narrative editors or
-  the routed Versions surface.
+- **The retirement is complete (Spec 67).** The legacy floating `VersionsDrawer`,
+  its `VersionCompareModal` (the two-version diff), the old `VersionsList`, the
+  `VersionsDrawerProvider`, and the `vs-current-baseline` diff helper are deleted.
+  The production pages (breakdown, budget, schedule, locations) no longer surface
+  versions at all — from the breakdown onward everything works against the **active**
+  screenplay version, so "versions" is a narrative/screenplay concept only.
+- ADR-0003's no-diff-in-editor principle and this no-diff-in-versions decision now
+  hold product-wide: there is no word-level diff anywhere.
