@@ -13,8 +13,6 @@ export const budgetKeys = {
     // Viewbar setting chips + version trigger
     "budget.viewbar.daysLabel": "Days",
     "budget.viewbar.contingencyLabel": "Cont.",
-    "budget.viewbar.versionFallback": "Version",
-    "budget.viewbar.openVersions": "Open Versions →",
 
     // Section headers / metadata (category, day, weekly)
     "budget.section.allLines": "All lines",
@@ -353,8 +351,6 @@ export const budgetKeys = {
     // Viewbar setting chips + version trigger
     "budget.viewbar.daysLabel": "Giorni",
     "budget.viewbar.contingencyLabel": "Cont.",
-    "budget.viewbar.versionFallback": "Versione",
-    "budget.viewbar.openVersions": "Apri Versioni →",
 
     // Section headers / metadata (category, day, weekly)
     "budget.section.allLines": "Tutte le voci",

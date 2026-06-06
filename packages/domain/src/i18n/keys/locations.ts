@@ -120,7 +120,6 @@ export const locationsKeys = {
     "locations.dock.syncStaleAria":
       "Locations out of sync with the active version",
     "locations.dock.syncAria": "Sync from breakdown",
-    "locations.dock.exporting": "Exporting…",
     "locations.dock.export": "Export",
   },
   it: {
@@ -233,7 +232,6 @@ export const locationsKeys = {
     "locations.dock.syncStaleAria":
       "Location non sincronizzate con la versione attiva",
     "locations.dock.syncAria": "Sincronizza da breakdown",
-    "locations.dock.exporting": "Esportazione…",
     "locations.dock.export": "Esporta",
   },
 } as const satisfies LocaleDict;

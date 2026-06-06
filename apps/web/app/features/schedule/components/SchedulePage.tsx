@@ -375,7 +375,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           onSelect={setTab}
           ariaLabel={t("schedule.page.viewAria")}
         />
-        <span className={styles.viewbarRight} />
       </Viewbar>
 
       <main className={styles.main} id="main">

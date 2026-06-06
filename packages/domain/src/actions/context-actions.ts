@@ -26,9 +26,10 @@ export const ContextActionIds = {
   IMPORT_FOUNTAIN: "import-fountain",
   IMPORT_PDF: "import-pdf",
   VERSIONS: "versions",
-  // Production pages open a single "Esporta" action that launches the page's own
-  // export modal (which then picks the format) — they don't list per-format items
-  // in the ⋯ menu. (Spec 67)
+  // A page-level "Esporta" action that launches the page's own export modal
+  // (which then picks the format). Used by budget + breakdown; pages with direct
+  // per-format exports (schedule, locations) list EXPORT_CSV/EXPORT_PDF instead.
+  // (Spec 67)
   EXPORT: "export",
 } as const;
 
