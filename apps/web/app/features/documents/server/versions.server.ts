@@ -144,6 +144,38 @@ export const versionsQueryOptions = (documentId: string) =>
     queryFn: () => listVersions({ data: { documentId } }),
   });
 
+// The document's LIVE current (active) version id. The Versions surface reads
+// this (not the static `?vcur=` URL hint) so the "current" badge moves the
+// instant Attiva switches it. Shares the `["documents", ...]` key family so a
+// switch invalidation refreshes it.
+export const getCurrentVersionId = createServerFn({ method: "GET" })
+  .validator(ListVersionsInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        string | null,
+        DocumentNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      return toShape(
+        await findDocument(db, data.documentId)
+          .andThen((doc) => assertCanRead(db, doc, user.id).map(() => doc))
+          .map((doc) => doc.currentVersionId),
+      );
+    },
+  );
+
+export const currentVersionQueryOptions = (documentId: string) =>
+  queryOptions({
+    queryKey: ["documents", "current-version", documentId] as const,
+    queryFn: () => getCurrentVersionId({ data: { documentId } }),
+  });
+
 // ─── createVersionFromScratch ─────────────────────────────────────────────────
 
 export const CreateVersionInput = z.object({

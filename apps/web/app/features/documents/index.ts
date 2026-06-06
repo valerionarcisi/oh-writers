@@ -63,6 +63,7 @@ export type { VersionCompareItem } from "./components/VersionCompareModal";
 export {
   versionsQueryOptions as documentVersionsQueryOptions,
   useVersions as useDocumentVersions,
+  useCurrentVersionId as useDocumentCurrentVersionId,
   useCreateVersionFromScratch as useCreateDocumentVersionFromScratch,
   useDuplicateVersion as useDuplicateDocumentVersion,
   useRenameVersion as useRenameDocumentVersion,

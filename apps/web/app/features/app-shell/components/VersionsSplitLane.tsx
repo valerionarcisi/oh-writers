@@ -29,6 +29,7 @@ import {
 import type { VersionView } from "~/features/versions";
 import {
   useDocumentVersions,
+  useDocumentCurrentVersionId,
   useSwitchToVersion,
   useDuplicateDocumentVersion,
   useRenameDocumentVersion,
@@ -73,6 +74,13 @@ function NarrativeVersionsContent({
 }) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useDocumentVersions(documentId);
+  // Read the LIVE current version (not the static URL hint) so the badge tracks
+  // Attiva. Falls back to the URL hint while the query is loading.
+  const { data: currentResult } = useDocumentCurrentVersionId(documentId);
+  const liveCurrentId =
+    currentResult?.isOk && currentResult.value
+      ? currentResult.value
+      : currentVersionId;
   const activate = useSwitchToVersion(documentId);
   const duplicate = useDuplicateDocumentVersion(documentId);
   const rename = useRenameDocumentVersion(documentId);
@@ -105,7 +113,7 @@ function NarrativeVersionsContent({
   return (
     <VersionsSplitDrawer
       versions={versions}
-      currentVersionId={currentVersionId}
+      currentVersionId={liveCurrentId}
       isLoading={isLoading}
       loadError={loadError}
       renderContent={renderContent}

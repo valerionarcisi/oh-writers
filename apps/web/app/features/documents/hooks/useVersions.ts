@@ -10,6 +10,7 @@ import {
   saveVersionContent,
   updateVersionMeta,
   versionsQueryOptions,
+  currentVersionQueryOptions,
 } from "../server/versions.server";
 import type { DraftRevisionColor } from "@oh-writers/domain";
 
@@ -19,6 +20,11 @@ export { versionsQueryOptions };
 
 export const useVersions = (documentId: string) =>
   useQuery(versionsQueryOptions(documentId));
+
+// The document's LIVE current version id — drives the Versions surface "current"
+// badge so it tracks Attiva instead of the static URL hint.
+export const useCurrentVersionId = (documentId: string) =>
+  useQuery(currentVersionQueryOptions(documentId));
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 

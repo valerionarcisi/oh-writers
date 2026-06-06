@@ -19,14 +19,25 @@ const OTHER_DOC = "11111111-1111-4111-b111-111111111111";
 const CUR = "22222222-2222-4222-a222-222222222222";
 
 describe("parseVersionsPeek — happy paths", () => {
-  it("accepts a well-formed document UUID, defaulting to the split state", () => {
+  it("accepts a well-formed document UUID, defaulting to split + narrative", () => {
     const r = parseVersionsPeek(DOC, null);
     expect(r.isOk()).toBe(true);
     expect(r._unsafeUnwrap()).toEqual({
       documentId: DOC,
       state: "split",
       currentVersionId: null,
+      kind: "narrative",
     });
+  });
+
+  it("honours the `screenplay` kind companion", () => {
+    const r = parseVersionsPeek(DOC, null, null, "screenplay");
+    expect(r._unsafeUnwrap().kind).toBe("screenplay");
+  });
+
+  it("falls back to narrative for an unknown kind", () => {
+    const r = parseVersionsPeek(DOC, null, null, "weird");
+    expect(r._unsafeUnwrap().kind).toBe("narrative");
   });
 
   it("honours the `full` state companion", () => {
