@@ -1,8 +1,12 @@
 /**
- * Spec 09 — Save indicator + manual save (E2E)
+ * Spec 09 / 55 — Save indicator (E2E)
  *
- * The toolbar shows a single pill that reflects the save state and can be
- * clicked (or Cmd/Ctrl+S) to force an immediate save.
+ * The screenplay now reports its save state through the shell-level
+ * `SaveStatusIndicator` (`data-testid="save-status-indicator"` +
+ * `data-state` of saved|saving|offline), not the retired in-toolbar
+ * `save-indicator` pill (which had a clickable data-status of saved|dirty).
+ * The pill self-hides until the first edit, and there is no clickable
+ * flush on the pill — Cmd/Ctrl+S still force-saves from the editor.
  */
 
 import { test, expect, type Page } from "@playwright/test";
@@ -60,9 +64,16 @@ test.beforeAll(async ({ browser }) => {
   await page.goto(`${BASE_URL}/projects/new`);
   await page.waitForURL(/\/projects\/new/, { timeout: 30_000 });
   await page.waitForLoadState("networkidle");
-  await page.getByLabel(/title/i).fill("Save Indicator Test");
-  await page.getByLabel(/format/i).selectOption("feature");
-  await page.getByRole("button", { name: /create/i }).click();
+  // The create-project form is localised (IT default): Titolo / Formato / Crea.
+  await page
+    .getByRole("textbox", { name: /titolo|title/i })
+    .fill("Save Indicator Test");
+  await page
+    .getByRole("combobox", { name: /formato|format/i })
+    .selectOption("feature");
+  await page
+    .getByRole("button", { name: /crea progetto|create project/i })
+    .click();
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 30_000 });
   projectId = page.url().split("/projects/")[1]?.split("/")[0] ?? "";
   await page.close();
@@ -72,75 +83,84 @@ test.beforeEach(async ({ page }) => {
   await page.context().addCookies(authCookies);
 });
 
-// ─── OHW-140  Default state is saved/green ───────────────────────────────────
+const indicator = (page: Page) => page.getByTestId("save-status-indicator");
+const savedPill = (page: Page) =>
+  page.locator('[data-testid="save-status-indicator"][data-state="saved"]');
 
-test("[OHW-140] fresh editor shows indicator in 'saved' state", async ({
+const forceSave = (page: Page) =>
+  page.evaluate(() =>
+    (
+      window as unknown as { __ohWritersForceSave?: () => void }
+    ).__ohWritersForceSave?.(),
+  );
+
+// ─── OHW-140  Pill self-hides on a fresh, untouched editor ───────────────────
+
+test("[OHW-140] the indicator is hidden on a fresh, untouched editor", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
-  await expect(page.getByTestId("save-indicator")).toHaveAttribute(
-    "data-status",
-    "saved",
-  );
+  // It must not flash a stale "saved" on a doc the user hasn't edited.
+  await expect(indicator(page)).toHaveCount(0);
 });
 
-// ─── OHW-141  Typing turns it amber/dirty ────────────────────────────────────
+// ─── OHW-141  Typing surfaces the indicator (saving) ─────────────────────────
 
-test("[OHW-141] typing marks the indicator dirty", async ({ page }) => {
+test("[OHW-141] typing surfaces the save indicator", async ({ page }) => {
   await openScreenplay(page, projectId);
   await page.locator(".ProseMirror").first().click();
   await page.keyboard.type("FADE IN:");
-  await expect(page.getByTestId("save-indicator")).toHaveAttribute(
-    "data-status",
-    "dirty",
-  );
+  // The first edit reveals the pill; it is either mid-save ("saving") or has
+  // already settled ("saved") depending on debounce timing.
+  await expect(indicator(page)).toBeVisible({ timeout: 5_000 });
+  await expect(indicator(page)).toHaveAttribute("data-state", /saving|saved/);
 });
 
-// ─── OHW-142  Autosave debounce resolves to saved ────────────────────────────
+// ─── OHW-142  A forced save settles the indicator on 'saved' ─────────────────
 
-test("[OHW-142] after debounce the indicator returns to saved", async ({
+test("[OHW-142] the indicator settles on 'saved' after a save", async ({
   page,
 }) => {
   await openScreenplay(page, projectId);
   await page.locator(".ProseMirror").first().click();
   await page.keyboard.type("EXT. STREET - NIGHT");
-  await expect(page.getByTestId("save-indicator")).toHaveAttribute(
-    "data-status",
-    "saved",
-    { timeout: 10_000 },
-  );
+  await forceSave(page);
+  await expect(savedPill(page)).toBeVisible({ timeout: 10_000 });
 });
 
-// ─── OHW-144  Click on dirty indicator flushes the save ──────────────────────
+// [OHW-144] removed: the shell save-status pill is not clickable (the retired
+// in-toolbar pill exposed a "save now" click). Forced save is covered below.
 
-test("[OHW-144] clicking a dirty indicator flushes the save immediately", async ({
-  page,
-}) => {
-  await openScreenplay(page, projectId);
-  await page.locator(".ProseMirror").first().click();
-  await page.keyboard.type("More text");
-  const indicator = page.getByTestId("save-indicator");
-  await expect(indicator).toHaveAttribute("data-status", "dirty");
-  await indicator.click();
-  await expect(indicator).toHaveAttribute("data-status", "saved", {
-    timeout: 5_000,
-  });
-});
+// ─── OHW-143  Cmd/Ctrl+S forces a save ───────────────────────────────────────
 
-// ─── OHW-143  Cmd/Ctrl+S triggers a save ─────────────────────────────────────
-
-test("[OHW-143] Cmd/Ctrl+S forces a save while dirty", async ({ page }) => {
+test("[OHW-143] Cmd/Ctrl+S forces a save", async ({ page }) => {
   await openScreenplay(page, projectId);
   await page.locator(".ProseMirror").first().click();
   await page.keyboard.type("Another edit");
-  await expect(page.getByTestId("save-indicator")).toHaveAttribute(
-    "data-status",
-    "dirty",
-  );
-  await page.keyboard.press("ControlOrMeta+s");
-  await expect(page.getByTestId("save-indicator")).toHaveAttribute(
-    "data-status",
-    "saved",
-    { timeout: 5_000 },
-  );
+
+  const [resp] = await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        r.url().includes("saveScreenplay") && r.request().method() === "POST",
+      { timeout: 10_000 },
+    ),
+    page.keyboard.press("ControlOrMeta+s"),
+  ]);
+  expect(resp.ok()).toBe(true);
+
+  // After the forced save settles, the pill is no longer mid-save: it either
+  // reads "saved" or self-hides (the screenplay publishes no "saved" state once
+  // the change is flushed via the manual-save path).
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector('[data-testid="save-status-indicator"]')
+              ?.getAttribute("data-state") ?? "absent",
+        ),
+      { timeout: 10_000 },
+    )
+    .not.toBe("saving");
 });

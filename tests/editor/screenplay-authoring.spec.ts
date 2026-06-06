@@ -149,15 +149,20 @@ test.describe("Screenplay Authoring [E2E user story]", () => {
 
     // Wait for React to hydrate before interacting with the controlled form
     await page.waitForLoadState("networkidle");
-    const titleInput = page.getByRole("textbox", { name: /title/i });
+    // The create-project form is localised (IT default): Titolo / Formato / Crea.
+    const titleInput = page.getByRole("textbox", { name: /titolo|title/i });
     await expect(titleInput).toBeVisible({ timeout: 10_000 });
     // Use fill() which fires the full input event chain React needs
     await titleInput.fill("Short Film E2E");
     await expect(titleInput).toHaveValue("Short Film E2E");
     // Format select — pick "short"
-    const formatSelect = page.getByRole("combobox", { name: /format/i });
+    const formatSelect = page.getByRole("combobox", {
+      name: /formato|format/i,
+    });
     await formatSelect.selectOption("short");
-    await page.getByRole("button", { name: /create project/i }).click();
+    await page
+      .getByRole("button", { name: /crea progetto|create project/i })
+      .click();
 
     // Wait for redirect to the project page (UUID in URL, not "new")
     await page.waitForURL(

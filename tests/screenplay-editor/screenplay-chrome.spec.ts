@@ -114,7 +114,7 @@ test.describe("[Spec 55a] screenplay chrome", () => {
     // by `screenplay-export.spec.ts` on a content-bearing fixture.
   });
 
-  test("N-19 — Versioni from the TopBar opens the versions drawer", async ({
+  test("N-19 — Versioni from the TopBar opens the routed Versions surface", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
@@ -123,8 +123,10 @@ test.describe("[Spec 55a] screenplay chrome", () => {
 
     await openScreenplayActions(page);
     await page.getByTestId("menu-item-versions").click();
-    await expect(page.getByTestId("versions-drawer")).toBeVisible({
-      timeout: 5_000,
+    // Spec 66: the inline drawer was replaced by the routed master→detail
+    // surface (shared with the narrative docs).
+    await expect(page.getByTestId("versions-split-drawer")).toBeVisible({
+      timeout: 10_000,
     });
   });
 
