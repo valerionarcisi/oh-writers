@@ -31,10 +31,31 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   Also merged this session outside the fleet: **N-30 / Spec 60** route error boundary
   (`dfe58f3`).
 
+- **[Spec 66] Versions master→detail (unificato) + per-feature action menu** — NOW
+  (grilled & approved 2026-06-06). `docs/specs/66-versions-master-detail-and-per-feature-menu.md`
+  - `docs/adr/0004`. Versions surface = master→detail (lista → versione read-only
+    formattata + Attiva/Indietro), NIENTE diff; meta unificata narrative+screenplay
+    (rename/dup/delete/colour-dot/draft-date/+Nuova versione); `[● v3]` chip in TopBar →
+    apre la surface; menu Notion-style top-right vicino al gear (export/import/tool per
+    pagina) su TUTTE le route narrative. **Assorbe N-34, N-35, N-36.** Supersede i diff
+    mode di Spec 49 (ADR-0004). **Gate finale: Design (Notion-style) → QA (funziona) →
+    Lead (AI reale + qualità codice).** Pulizia STATUS.md completata pre-start.
+
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
+-0. **[N-38 / Spec 63] Entity change feedback — banner + adaptive block highlight** — replace the dead `DraftBanner` with a persistent banner "✦ Cesare ha aggiornato il \<Entity> · [Vedi cosa è cambiato] · [↩ Annulla]". ADAPTIVE in-text feedback: surgical edit (<~40% words) → highlight changed BLOCKS in place (clears per-block when the author edits that block / "Ho visto" / Cmd-Z); large rewrite (>=~40%) → no highlight, only the split bullets. "↩ Annulla" reverts the whole edit via the pre-edit snapshot; NO accept (already applied). Never a timeout. All narrative docs via shared editor. `docs/specs/63-entity-change-feedback-banner.md` + `docs/adr/0003` (+ ADR-0001 reconciliation). _Deferred 2026-06-05 — the inline word-diff removal shipped; this banner+adaptive-highlight is the remaining half._
+
+-0.1 **[N-39] Cesare edit applies as a native editor transaction (Spec 62 #2)** — the still-open core: apply the edit as ONE ProseMirror transaction in the open editor (Cmd-Z undo, no flash-revert) instead of the DB→query→prop resync. `docs/specs/62-cesare-edit-as-transaction.md` + `docs/adr/0001`.
+
+-1. **[N-33] End-of-elaboration notifications** — _fixed 2026-06-05 (owner testing): emitted in `handleCesareAssistantResponse` (runs on every completed turn, streaming-primary) when tools ran; the legacy start/complete pair lived only on the dead non-streaming path._
+-2. **[Spec 61] Cesare soggetto flash-then-revert** — _in review (owner testing on dev)._ Canonical autosave dirty-check so a Cesare apply (plain text) isn't clobbered by the editor's HTML re-serialisation. `docs/specs/61-narrative-autosave-canonical-dirty.md`. ⚠️ Fix covers the editor-has-NEW case only; if the editor stays on OLD (resync miss) the resync path still needs work — pending owner repro on WS-offline dev.
+-3. **[N-37] Cesare ↗ routes to session detail + split ◫ marker removed** — _in review (owner testing)._ Floating ↗ navigates to `/sessions/:id` (no more "full" overlay); split header drops the no-op ◫ marker. E2E `tests/cesare-floating-arrow-routes.spec.ts`.
+
 0. ~~**[Spec 59] App recap HTML**~~ — ✅ done (`docs/recap/2026-06-05-app-recap.html`, 13-slide showcase tour + 8-strip Narrative-Walk changelog, dual voice; live captures on the dev stack with the finished A5 chrome). See DONE.
-1. **[Topic 1 / Spec 55] TopBar standard** — exports + versions + notifications + save, all "near the lens"; per-page tool pattern; drawers always SplitDrawer; kill old drawers. `docs/specs/55-shell-action-standard.md` + BUGS N-01..N-04. **Backbone — unblocks Topics 5, parts of others.**
+1. **[Topic 1 / Spec 55] TopBar standard** — exports + versions + notifications + save, all "near the lens"; per-page tool pattern; drawers always SplitDrawer; kill old drawers. `docs/specs/55-shell-action-standard.md` + BUGS N-01..N-04. **Backbone — unblocks Topics 5, parts of others.** Concrete asks filed this session:
+   - ~~**[N-34]** Versions in Soggetto via SplitDrawer~~ — **moved into Spec 66 (NOW)**. NB: 66 decided master→detail, NOT a VS Code-style diff (ADR-0004 supersedes the diff ask).
+   - ~~**[N-35]** "Mostra/Vedi modifiche" opens Versions SplitDrawer~~ — **moved into Spec 66 (NOW)**. The Versions surface 66 opens is master→detail, no diff.
+   - ~~**[N-36]** Per-feature export/import popover~~ — **moved into Spec 66 (NOW)** as the Notion-style top-right per-feature action menu on all narrative routes.
 2. ~~**[Topic 4] Logline + nav** (N-16, N-17)~~ — ✅ done, Spec 57.
 3. **[Topic 2] Cesare drawer & chat UX** — starts closed, split-view input missing, Claude-style fixed chat, bubbles, show/hide, markdown, suggestions (N-05..N-11).
 4. **[Topic 3] Cesare sessions** — list/landing/conversation UI + session model question (N-12..N-15).
