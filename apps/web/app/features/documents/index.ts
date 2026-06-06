@@ -69,6 +69,7 @@ export {
   useSwitchToVersion,
   useDeleteDocumentVersion,
   useSaveVersionContent,
+  useUpdateVersionMeta as useUpdateDocumentVersionMeta,
 } from "./hooks/useVersions";
 export { base64ToBlob, downloadBlob, downloadTextFile } from "./lib/download";
 export { openPdfPreview } from "./lib/pdf-preview";

@@ -8,8 +8,10 @@ import {
   switchToVersion,
   deleteVersion,
   saveVersionContent,
+  updateVersionMeta,
   versionsQueryOptions,
 } from "../server/versions.server";
+import type { DraftRevisionColor } from "@oh-writers/domain";
 
 export { versionsQueryOptions };
 
@@ -82,6 +84,18 @@ export const useSaveVersionContent = () =>
       unwrapResult(await saveVersionContent({ data: input })),
   });
 
+export const useUpdateVersionMeta = (documentId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      versionId: string;
+      draftColor?: DraftRevisionColor | null;
+      draftDate?: string | null;
+    }) => unwrapResult(await updateVersionMeta({ data: input })),
+    onSuccess: () => invalidateVersions(qc, documentId),
+  });
+};
+
 export {
   listVersions,
   createVersionFromScratch,
@@ -90,4 +104,5 @@ export {
   switchToVersion,
   deleteVersion,
   saveVersionContent,
+  updateVersionMeta,
 };
