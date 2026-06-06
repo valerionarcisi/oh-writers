@@ -1,8 +1,35 @@
 # Spec 66 — Versions master→detail (unified) + per-feature action menu
 
-Status: **Planned** (grilled & approved 2026-06-06). Supersedes the diff modes of
-Spec 49. See ADR-0004, ADR-0002, ADR-0003. Glossary: CONTEXT.md _Version_,
-_Versions surface_, _Per-feature action menu_.
+Status: **Built** (2026-06-06). Supersedes the diff modes of Spec 49. See
+ADR-0004, ADR-0002, ADR-0003. Glossary: CONTEXT.md _Version_, _Versions surface_,
+_Per-feature action menu_.
+
+## What shipped (vs the plan below)
+
+- **Phase 1** migration `0037` adds `draft_color`/`draft_date` to `document_versions`.
+- **Phase 2/3**: shared `VersionView` + mappers; the canonical narrative versions
+  server already had switch/duplicate/rename/delete/save — only `updateVersionMeta`
+  (colour/date) was new. The duplicate `features/versions` {hook,server,schema,errors}
+  was retired (one live importer repointed).
+- **Phase 4**: master→detail `VersionsSplitDrawer` (editor-agnostic via a
+  `renderContent` render-prop); `?compare=` removed end-to-end (drawer, lane,
+  AppShell, `_app.tsx`, versions-peek).
+- **Phase 5**: the screenplay joined the unified surface via a `?vkind=screenplay`
+  companion + per-kind lane branch (`ReadOnlyScreenplayView`); **Attiva = restore**;
+  old `/screenplay/versions/$vId` route redirects.
+- **Phase 6**: a TopBar `[● Versioni]` chip in a dedicated `versionSelector` slot
+  (stable entry point, independent of the `⋯` menu).
+- **Phase 7**: the chip + `⋯` menu were already universal across narrative routes
+  (NarrativeEditor publishes both); grouped them into one "page actions" cluster
+  left of the account zone (Notion-style, near the gear).
+- **Phase 8**: OHW-066 E2E + a real bug fix — the "current" badge read the static
+  `?vcur=` URL hint and didn't move after Attiva; now it reads the document's LIVE
+  `currentVersionId` (`getCurrentVersionId` server fn).
+
+Known follow-ups: logline has no per-page export menu yet; long version lists
+(67+ on a heavily-edited doc) render in a scroll, no grouping yet; the duplicate
+`features/versions` server's old route file removal; screenplay "current" semantics
+(restore copies content, no pointer) keep the URL hint.
 
 ## Why
 

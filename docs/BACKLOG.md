@@ -31,15 +31,17 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
   Also merged this session outside the fleet: **N-30 / Spec 60** route error boundary
   (`dfe58f3`).
 
-- **[Spec 66] Versions master→detail (unificato) + per-feature action menu** — NOW
-  (grilled & approved 2026-06-06). `docs/specs/66-versions-master-detail-and-per-feature-menu.md`
-  - `docs/adr/0004`. Versions surface = master→detail (lista → versione read-only
-    formattata + Attiva/Indietro), NIENTE diff; meta unificata narrative+screenplay
-    (rename/dup/delete/colour-dot/draft-date/+Nuova versione); `[● v3]` chip in TopBar →
-    apre la surface; menu Notion-style top-right vicino al gear (export/import/tool per
-    pagina) su TUTTE le route narrative. **Assorbe N-34, N-35, N-36.** Supersede i diff
-    mode di Spec 49 (ADR-0004). **Gate finale: Design (Notion-style) → QA (funziona) →
-    Lead (AI reale + qualità codice).** Pulizia STATUS.md completata pre-start.
+- **[Spec 66] Versions master→detail (unificato) + per-feature action menu** —
+  **BUILT 2026-06-06** on `feat/spec-66-versions-master-detail` (8 fasi, commit
+  `797b18b`..`b1b5163e`). Master→detail (lista → versione read-only + Attiva/Indietro),
+  NIENTE diff; narrative+screenplay unificati nella stessa surface (Attiva=restore per
+  screenplay, `?vkind=`); `[● Versioni]` chip in TopBar; cluster azioni-pagina
+  Notion-style vicino all'account zone; migration 0037; OHW-066 E2E (5/5) +
+  splitdrawer (5/5) + unit 1763. **Bug di prodotto trovato+fixato dagli E2E**: badge
+  "Attuale" non si spostava dopo Attiva (leggeva l'URL hint statico) → ora legge il
+  current live. Assorbe N-34/N-35/N-36. **Resta**: gate Design/QA/Lead + merge.
+  Follow-up: logline export menu, liste lunghe (67+ versioni), rimozione file rotta
+  screenplay legacy. Verificato live sul progetto reale (Chrome).
 
 ## NEXT (prioritised — narrative walk topics, then the rest)
 
