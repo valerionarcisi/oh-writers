@@ -63,15 +63,40 @@ export {
   useRequestShellFocus,
 } from "./shell-focus-request-context";
 export {
+  CesareSurfaceProvider,
+  useCesareSurface,
+  useRegisterCesareSurface,
+} from "./cesare-surface-context";
+export {
   SplitDrawerProvider,
   useSplitDrawer,
   useBellOpener,
 } from "./split-drawer-context";
 export type {
   SplitDrawerPayload,
-  SplitDrawerTracePayload,
+  SplitDrawerPreviewPayload,
+  SplitDrawerPreviewDiff,
   SplitDrawerNotificationsPayload,
 } from "./split-drawer-context";
+export {
+  SplitToggleProvider,
+  useSplitToggle,
+  useRegisterSplitOpener,
+} from "./split-toggle-context";
+export {
+  getLiveEditState,
+  getLiveEditsFor,
+  publishLiveEdits,
+  dismissLiveEdit,
+  clearLiveEdits,
+  subscribeLiveEdit,
+  reportCurrentVersion,
+} from "./cesare-live-edit-store";
+export type {
+  LiveEdit,
+  LiveEditState,
+  LiveEditSegment,
+} from "./cesare-live-edit-store";
 export {
   ActiveSceneProvider,
   useActiveScene,

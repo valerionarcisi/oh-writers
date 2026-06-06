@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-064 — "Avvia sessione" from a margin suggestion triggers a stray re-render (2026-06-06)
+
+- Severity: MEDIO
+- Status: open
+- Repro: Soggetto → open a margin suggestion card → "✦ Avvia sessione" → a new session is created and the prompt sends, BUT a strange re-render flicker still happens around the open (Spec 64).
+- Proof: reported live by Valerio on :3000 (real AI). The infinite-loop variant was fixed (effect now deps only on `[seedNonce, isOpen]`, chat/createSession read from a ref) — but a residual rerender remains.
+- Notes / suspected cause: likely the `onActiveSessionChange` → AppShell `setFocusedSessionId` → re-render chain, or `setActiveSessionId` inside the seed effect racing the session-adopt effect. Investigate the seed-session open path in `CesareSheet.tsx` (seedPrompt effect) + the focused-session mirror in `AppShell.tsx`. Defer per Valerio — fix in a later pass.
+
 Narrative UI/UX manual walk — 2026-06-03 (Valerio). Grouped by topic; image refs are
 the walk screenshots. Severity is provisional (to confirm during one-by-one analysis).
 

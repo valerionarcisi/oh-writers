@@ -1,15 +1,15 @@
 import { useEffect, useRef } from "react";
 import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import type { DocumentType } from "@oh-writers/domain";
-import { CesareLiveDiff } from "~/features/app-shell";
 import { getNarrativeSchema } from "../lib/narrative-schema";
 import {
   buildNarrativePlugins,
   type NarrativeRealtime,
 } from "../lib/narrative-plugins";
 import { docToHtml, htmlToDoc } from "../lib/narrative-html";
+import { cesareHighlightPlugin } from "../lib/cesare-highlight-plugin";
 import "~/features/realtime/lib/cursor-styles.css";
+import "../lib/cesare-highlight.css";
 import styles from "./NarrativeProseMirrorView.module.css";
 
 interface NarrativeProseMirrorViewProps {
@@ -21,13 +21,11 @@ interface NarrativeProseMirrorViewProps {
   enableHeadings?: boolean;
   readOnly?: boolean;
   extraPlugins?: ReadonlyArray<Plugin>;
-  /** When set, mounts the Cesare inline live-diff highlight for this document
-   *  type over the prose (Spec 47d) so "Mostra modifiche" paints the green
-   *  word highlight inside the real document. Absent for editors that never
-   *  host a Cesare doc edit. */
-  diffDocumentType?: DocumentType;
   /** Yjs doc + provider for realtime collaboration. Null disables realtime. */
   realtime?: NarrativeRealtime | null;
+  /** The document type this editor renders. Arms the Cesare "Mostra cosa è
+   *  cambiato" underline decoration (Spec 63) for this document. */
+  documentType?: string;
 }
 
 export function NarrativeProseMirrorView({
@@ -39,8 +37,8 @@ export function NarrativeProseMirrorView({
   enableHeadings = false,
   readOnly = false,
   extraPlugins,
-  diffDocumentType,
   realtime = null,
+  documentType,
 }: NarrativeProseMirrorViewProps) {
   const isRealtime = !!realtime;
   const mountRef = useRef<HTMLDivElement>(null);
@@ -61,6 +59,7 @@ export function NarrativeProseMirrorView({
       doc: initialDoc,
       plugins: [
         ...buildNarrativePlugins(schema, { placeholder, realtime }),
+        ...(documentType ? [cesareHighlightPlugin(documentType)] : []),
         ...(extraPlugins ?? []),
       ],
     });
@@ -110,7 +109,14 @@ export function NarrativeProseMirrorView({
     // Re-mount only on the structural toggles. value changes are handled by
     // the second effect below to avoid resetting the caret on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, enableHeadings, placeholder, extraPlugins, isRealtime]);
+  }, [
+    readOnly,
+    enableHeadings,
+    placeholder,
+    extraPlugins,
+    isRealtime,
+    documentType,
+  ]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -152,7 +158,6 @@ export function NarrativeProseMirrorView({
       data-testid="rich-text-editor"
     >
       <div ref={mountRef} className={styles.mount} />
-      {diffDocumentType && <CesareLiveDiff documentType={diffDocumentType} />}
     </div>
   );
 }

@@ -1,15 +1,35 @@
-import { Schema, type NodeSpec } from "prosemirror-model";
+import { Schema, type NodeSpec, type MarkSpec } from "prosemirror-model";
 
 /**
- * Minimal ProseMirror schema for narrative documents (synopsis, treatment).
+ * Minimal ProseMirror schema for narrative documents (soggetto, synopsis,
+ * treatment).
  *
- * No inline marks (bold/italic): the editor is intentionally plain at the
- * inline level — the only structure is at block level. See spec 04e.
+ * Inline marks: bold (`strong`) + italic (`em`) — Spec 65. The structure stays
+ * otherwise lean (block-level + these two marks). Marks round-trip to
+ * `<strong>`/`<em>` so formatting persists on save.
  *
  * Two flavors are exposed via `enableHeadings`:
- *   - false (synopsis): only paragraphs (+ hard breaks)
- *   - true  (treatment): paragraphs + H2/H3 + bullet lists
+ *   - false (soggetto/synopsis): paragraphs (+ hard breaks) + marks
+ *   - true  (treatment): paragraphs + H2/H3 + bullet lists + marks
  */
+
+const marks: Record<string, MarkSpec> = {
+  strong: {
+    parseDOM: [
+      { tag: "strong" },
+      { tag: "b" },
+      {
+        style: "font-weight",
+        getAttrs: (v) => /^(bold(er)?|[5-9]\d\d)$/.test(v as string) && null,
+      },
+    ],
+    toDOM: () => ["strong", 0],
+  },
+  em: {
+    parseDOM: [{ tag: "em" }, { tag: "i" }, { style: "font-style=italic" }],
+    toDOM: () => ["em", 0],
+  },
+};
 
 const baseNodes: Record<string, NodeSpec> = {
   doc: { content: "block+" },
@@ -58,6 +78,7 @@ const listNodes: Record<string, NodeSpec> = {
 
 export const synopsisSchema = new Schema({
   nodes: baseNodes,
+  marks,
 });
 
 export const treatmentSchema = new Schema({
@@ -66,6 +87,7 @@ export const treatmentSchema = new Schema({
     heading: headingNode,
     ...listNodes,
   },
+  marks,
 });
 
 export const getNarrativeSchema = (enableHeadings: boolean): Schema =>

@@ -19,6 +19,7 @@ import { ExportPdfModal } from "./ExportPdfModal";
 import { DraftBanner } from "./DraftBanner";
 import { TextEditor } from "./TextEditor";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
+import { NarrativeFormatToolbar } from "./NarrativeFormatToolbar";
 import { useYjsRoom, PresenceIndicator } from "~/features/realtime";
 import { useSession } from "~/lib/auth-client";
 import { OutlineEditor } from "./OutlineEditor";
@@ -341,92 +342,100 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
           <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
         </div>
       )}
-      {isTreatment && !isReadOnly && (
+      {!isReadOnly && (
         <div className={styles.editorToolbar}>
-          <button
-            type="button"
-            className={`${styles.editorToolbarBtn} ${
-              editorViewRef.current &&
-              isHeadingActive(editorViewRef.current.state, 2)
-                ? styles.editorToolbarBtnActive
-                : ""
-            }`}
-            aria-pressed={
-              editorViewRef.current
-                ? isHeadingActive(editorViewRef.current.state, 2)
-                : false
-            }
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const view = editorViewRef.current;
-              if (!view) return;
-              toggleHeading(
-                getNarrativeSchema(true),
-                2,
-                view.state,
-                view.dispatch,
-              );
-              view.focus();
-            }}
-          >
-            H2
-          </button>
-          <button
-            type="button"
-            className={`${styles.editorToolbarBtn} ${
-              editorViewRef.current &&
-              isHeadingActive(editorViewRef.current.state, 3)
-                ? styles.editorToolbarBtnActive
-                : ""
-            }`}
-            aria-pressed={
-              editorViewRef.current
-                ? isHeadingActive(editorViewRef.current.state, 3)
-                : false
-            }
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const view = editorViewRef.current;
-              if (!view) return;
-              toggleHeading(
-                getNarrativeSchema(true),
-                3,
-                view.state,
-                view.dispatch,
-              );
-              view.focus();
-            }}
-          >
-            H3
-          </button>
-          <button
-            type="button"
-            className={`${styles.editorToolbarBtn} ${
-              editorViewRef.current &&
-              isBulletListActive(editorViewRef.current.state)
-                ? styles.editorToolbarBtnActive
-                : ""
-            }`}
-            aria-pressed={
-              editorViewRef.current
-                ? isBulletListActive(editorViewRef.current.state)
-                : false
-            }
-            aria-label={t("documents.editor.bulletListAria")}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const view = editorViewRef.current;
-              if (!view) return;
-              toggleBulletList(
-                getNarrativeSchema(true),
-                view.state,
-                view.dispatch,
-              );
-              view.focus();
-            }}
-          >
-            • List
-          </button>
+          <NarrativeFormatToolbar
+            view={editorViewRef.current}
+            enableHeadings={isTreatment}
+          />
+          {isTreatment && (
+            <>
+              <button
+                type="button"
+                className={`${styles.editorToolbarBtn} ${
+                  editorViewRef.current &&
+                  isHeadingActive(editorViewRef.current.state, 2)
+                    ? styles.editorToolbarBtnActive
+                    : ""
+                }`}
+                aria-pressed={
+                  editorViewRef.current
+                    ? isHeadingActive(editorViewRef.current.state, 2)
+                    : false
+                }
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const view = editorViewRef.current;
+                  if (!view) return;
+                  toggleHeading(
+                    getNarrativeSchema(true),
+                    2,
+                    view.state,
+                    view.dispatch,
+                  );
+                  view.focus();
+                }}
+              >
+                H2
+              </button>
+              <button
+                type="button"
+                className={`${styles.editorToolbarBtn} ${
+                  editorViewRef.current &&
+                  isHeadingActive(editorViewRef.current.state, 3)
+                    ? styles.editorToolbarBtnActive
+                    : ""
+                }`}
+                aria-pressed={
+                  editorViewRef.current
+                    ? isHeadingActive(editorViewRef.current.state, 3)
+                    : false
+                }
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const view = editorViewRef.current;
+                  if (!view) return;
+                  toggleHeading(
+                    getNarrativeSchema(true),
+                    3,
+                    view.state,
+                    view.dispatch,
+                  );
+                  view.focus();
+                }}
+              >
+                H3
+              </button>
+              <button
+                type="button"
+                className={`${styles.editorToolbarBtn} ${
+                  editorViewRef.current &&
+                  isBulletListActive(editorViewRef.current.state)
+                    ? styles.editorToolbarBtnActive
+                    : ""
+                }`}
+                aria-pressed={
+                  editorViewRef.current
+                    ? isBulletListActive(editorViewRef.current.state)
+                    : false
+                }
+                aria-label={t("documents.editor.bulletListAria")}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const view = editorViewRef.current;
+                  if (!view) return;
+                  toggleBulletList(
+                    getNarrativeSchema(true),
+                    view.state,
+                    view.dispatch,
+                  );
+                  view.focus();
+                }}
+              >
+                • List
+              </button>
+            </>
+          )}
         </div>
       )}
       <NarrativeProseMirrorView
@@ -435,7 +444,6 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
         placeholder={documentPlaceholder}
         readOnly={isReadOnly}
         enableHeadings={isTreatment}
-        diffDocumentType={type}
         realtime={narrativeRealtime}
         onReady={(view) => {
           editorViewRef.current = view;

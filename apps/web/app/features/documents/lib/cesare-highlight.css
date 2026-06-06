@@ -1,0 +1,13 @@
+/* Spec 63 — "Mostra cosa è cambiato" underlines the changed text ON the real
+   document prose. A green underline + faint tint, in the agent/notification
+   colour. No overlay, no modal — the highlight lives in the text the writer
+   reads. */
+.cesare-change-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--ds-agent, #5a7d4f);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  background: color-mix(in srgb, var(--ds-agent, #5a7d4f) 12%, transparent);
+  border-radius: 2px;
+  transition: background 120ms ease;
+}

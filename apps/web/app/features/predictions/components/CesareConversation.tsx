@@ -9,7 +9,7 @@
 // trace while a turn is in flight, and the `ChangeTrace` step block (with
 // Mostra/Nascondi modifiche + Annulla) when an agentic edit happened. All state
 // (threads, send pipeline) lives in the shared `CesareChatStoreProvider`.
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type React from "react";
 import {
   ChangeTrace,
@@ -251,6 +251,29 @@ export function parseLiveDiffMarker(content: string): LiveDiffMarker | null {
 }
 
 // ─── Markdown rendering ─────────────────────────────────────────────────────
+
+/**
+ * Distil the compact "what changed" summary for the split-preview header from a
+ * Cesare reply. We take ONLY the "Cosa cambia"-style bullet list (the useful,
+ * scannable part) and strip markdown emphasis — never the whole reply (it is
+ * already shown in the chat thread, so repeating it is noise). Returns one line
+ * per bullet joined by newlines, or "" when the reply has no bullet list.
+ */
+export function extractChangeSummary(content: string): string {
+  const clean = stripToolCalls(content);
+  const bullets: string[] = [];
+  for (const raw of clean.split("\n")) {
+    const m = raw.match(/^\s*[-*]\s+(.+)/);
+    if (!m || !m[1]) continue;
+    const text = m[1]
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/\*(.+?)\*/g, "$1")
+      .replace(/`([^`]+)`/g, "$1")
+      .trim();
+    if (text.length > 0) bullets.push(text);
+  }
+  return bullets.join("\n");
+}
 
 function stripToolCalls(content: string): string {
   return content
@@ -579,15 +602,34 @@ export interface ConversationHandlers {
   /** Flash the GREEN additions inline on the live document (Spec 47e). The edit
    *  is already applied; this is a transient peek at "what changed". `liveDiffs`
    *  carries one entry per touched document so each open doc flashes its own. */
-  onShowChanges: (args: {
+  /** Omitted in a chat session (no editor in front of the user → no inline
+   *  highlight, so no "Mostra/Nascondi"); present on the entity's own page. */
+  onShowChanges?: (args: {
     traceMarkers: ReadonlyArray<TraceMarker>;
     scope?: string;
     liveDiffs?: ReadonlyArray<LiveDiffMarker>;
+    summary?: string;
   }) => void;
   /** Flash the RED previous text inline (Spec 47e) — a peek at "how it was".
-   *  Never a revert: the document keeps the new version. Same per-document
-   *  `liveDiffs` payload as `onShowChanges`. */
-  onHideChanges: (args: { liveDiffs?: ReadonlyArray<LiveDiffMarker> }) => void;
+   *  Never a revert: the document keeps the new version. Omitted alongside
+   *  `onShowChanges` in a chat session. */
+  onHideChanges?: (args: { liveDiffs?: ReadonlyArray<LiveDiffMarker> }) => void;
+  /** Navigate to the real page of the entity THIS result card edited. A session
+   *  may edit several entities (logline, then soggetto…), so each card carries
+   *  its own "open <entity>" jump. `null`/omitted → no button (e.g. the floating
+   *  drawer where the editor is already behind the chat). */
+  onOpenEntity?: (documentType: string) => void;
+  /** Resolve the localized "Apri <Entity>" label for a documentType, or null to
+   *  hide the button for that entity. */
+  openEntityLabelFor?: (documentType: string) => string | null;
+  /** Open the read-only split-preview of THIS card's edit. Carries the per-card
+   *  liveDiffs + reply so the split shows the final text + bullet summary. */
+  onOpenSplit?: (args: {
+    liveDiffs: ReadonlyArray<LiveDiffMarker>;
+    summary: string;
+  }) => void;
+  /** Label for the open-split button (e.g. "Vedi modifica"). */
+  openSplitLabel?: string;
 }
 
 // ─── Conversation list ─────────────────────────────────────────────────────
@@ -611,12 +653,32 @@ export function CesareConversation({
   testId = "cesare-conversation",
   ...handlers
 }: CesareConversationProps) {
+  const endRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to the bottom when a new message arrives or the in-flight turn
+  // streams more text — so the floating chat always shows the latest exchange
+  // without the user having to scroll. Keyed on the message count and the last
+  // message's content length (streaming grows the tail in place).
+  const lastMessage = messages.at(-1);
+  const lastLen =
+    lastMessage && "content" in lastMessage
+      ? (lastMessage.content?.length ?? 0)
+      : 0;
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+  }, [messages.length, lastLen]);
+
   return (
     <div className={styles.conversation} data-testid={testId}>
       {messages.length === 0 && emptyState}
       {messages.map((m) => (
         <MessageView key={m.id} message={m} {...handlers} />
       ))}
+      <div
+        ref={endRef}
+        data-testid="cesare-conversation-end"
+        aria-hidden="true"
+      />
     </div>
   );
 }
@@ -627,6 +689,10 @@ export function MessageView({
   message,
   onShowChanges,
   onHideChanges,
+  onOpenEntity,
+  openEntityLabelFor,
+  onOpenSplit,
+  openSplitLabel,
 }: { message: ChatMessage } & ConversationHandlers) {
   const { t } = useTranslation();
   const [isShowingDiff, setShowingDiff] = useState(false);
@@ -695,6 +761,16 @@ export function MessageView({
   }));
   const scope = rewrite ? `Sc.${rewrite.scene_number}` : undefined;
 
+  // The entity THIS card edited — drives the per-card "Apri <Entity>" jump.
+  const editedDocType = metadata.liveDiffs.find(
+    (d) => d.documentType,
+  )?.documentType;
+
+  const openEntityLabel =
+    editedDocType && openEntityLabelFor
+      ? openEntityLabelFor(editedDocType)
+      : null;
+
   return (
     <div className={styles.assistantWithSteps}>
       {rendered && <div className={styles.bubbleMarkdown}>{rendered}</div>}
@@ -704,16 +780,41 @@ export function MessageView({
         thoughts={parsed.thoughts}
         updates={parsed.updates}
         isShowingChanges={isShowingDiff}
-        onShowChanges={() => {
-          setShowingDiff(true);
-          onShowChanges({ traceMarkers, scope, liveDiffs: metadata.liveDiffs });
-        }}
-        onHideChanges={() => {
-          setShowingDiff(false);
-          onHideChanges({ liveDiffs: metadata.liveDiffs });
-        }}
+        {...(onShowChanges
+          ? {
+              onShowChanges: () => {
+                setShowingDiff(true);
+                onShowChanges({
+                  traceMarkers,
+                  scope,
+                  liveDiffs: metadata.liveDiffs,
+                  summary: extractChangeSummary(message.content),
+                });
+              },
+              onHideChanges: () => {
+                setShowingDiff(false);
+                onHideChanges?.({ liveDiffs: metadata.liveDiffs });
+              },
+            }
+          : {})}
         showChangesLabel={t("shell.changeTrace.show")}
         hideChangesLabel={t("shell.changeTrace.hide")}
+        {...(onOpenEntity && editedDocType && openEntityLabel
+          ? {
+              onOpenEntity: () => onOpenEntity(editedDocType),
+              openEntityLabel,
+            }
+          : {})}
+        {...(onOpenSplit && openSplitLabel && metadata.liveDiffs.length > 0
+          ? {
+              onOpenSplit: () =>
+                onOpenSplit({
+                  liveDiffs: metadata.liveDiffs,
+                  summary: extractChangeSummary(message.content),
+                }),
+              openSplitLabel,
+            }
+          : {})}
         defaultStepsOpen={false}
         testId="cesare-change-trace"
       />

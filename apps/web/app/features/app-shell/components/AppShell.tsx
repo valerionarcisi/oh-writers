@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import {
   TopBar,
   TopBarAccount,
@@ -18,7 +18,6 @@ import {
   useRailOverlay,
   BottomDock,
   SplitDrawer,
-  TargetPagePreview,
   useToast,
 } from "@oh-writers/ui";
 import type {
@@ -37,6 +36,9 @@ import {
   CesareSheet,
   parseToolsExecuted,
   appliedEntityDomains,
+  parseLiveDiffMarkers,
+  parseDocAppliedMarker,
+  extractChangeSummary,
   CesareChatStoreProvider,
 } from "~/features/predictions";
 import type { CesarePage, AskCesareFn } from "~/features/predictions";
@@ -55,6 +57,10 @@ import {
   useShellFocusRequest,
 } from "../shell-focus-request-context";
 import {
+  CesareSurfaceProvider,
+  useCesareSurface,
+} from "../cesare-surface-context";
+import {
   ActiveSceneProvider,
   useActiveScene,
   useActiveRequirementId,
@@ -69,7 +75,6 @@ import {
 import {
   ACTION_LABEL_KEY_BY_PAGE,
   deriveResultLabel,
-  isAgenticPage,
 } from "../cesare-notification-labels";
 import { useWebPush } from "../hooks/useWebPush";
 import { pulseAffectedEntities } from "../cesare-pulse";
@@ -84,15 +89,15 @@ import {
   useSplitDrawer,
   useBellOpener,
 } from "../split-drawer-context";
-import { ensurePageTraceRegistry } from "../page-trace-registry";
+import { SplitToggleProvider, useSplitToggle } from "../split-toggle-context";
+import { publishLiveEdits } from "../cesare-live-edit-store";
 import { isCesarePeek } from "../cesare-peek";
 import { parseVersionsPeek, parseVersionsCompare } from "../versions-peek";
 import type { VersionsCompare } from "../versions-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
+import { SplitDrawerPreviewBody } from "./SplitDrawerPreviewBody";
 import { VersionsSplitLane } from "./VersionsSplitLane";
 import styles from "./AppShell.module.css";
-
-ensurePageTraceRegistry();
 
 // ─── Shell state model ────────────────────────────────────────
 // Three shell modes drive the body[data-shell] flag (read by CSS in the
@@ -223,18 +228,22 @@ export function AppShell(props: AppShellProps) {
         <ActiveSceneProvider>
           <CesareNotificationProvider>
             <SplitDrawerProvider>
-              <CesareSessionFocusProvider>
-                {/* Spec 47b FIX 2 — the shared chat store wraps both the
+              <SplitToggleProvider>
+                <CesareSessionFocusProvider>
+                  {/* Spec 47b FIX 2 — the shared chat store wraps both the
                     floating sheet and the full-page session route so they
                     render the SAME threads (single chat container). Spec 52 —
                     the focus-request provider lets the full-screen new-session
                     landing ask the shell to recede the rail + topstrip. */}
-                <ShellFocusRequestProvider>
-                  <CesareChatStoreProvider>
-                    <AppShellInner {...props} />
-                  </CesareChatStoreProvider>
-                </ShellFocusRequestProvider>
-              </CesareSessionFocusProvider>
+                  <ShellFocusRequestProvider>
+                    <CesareSurfaceProvider>
+                      <CesareChatStoreProvider>
+                        <AppShellInner {...props} />
+                      </CesareChatStoreProvider>
+                    </CesareSurfaceProvider>
+                  </ShellFocusRequestProvider>
+                </CesareSessionFocusProvider>
+              </SplitToggleProvider>
             </SplitDrawerProvider>
           </CesareNotificationProvider>
         </ActiveSceneProvider>
@@ -292,10 +301,20 @@ function AppShellInner({
   const [cesareRequirementId, setCesareRequirementId] = useState<string | null>(
     null,
   );
+  // A prompt to auto-send when the floating chat opens (margin "start a session"
+  // affordance). Carries a nonce so re-opening with the SAME text still fires.
+  const [cesareSeedPrompt, setCesareSeedPrompt] = useState<{
+    text: string;
+    nonce: number;
+  } | null>(null);
   const splitDrawer = useSplitDrawer();
   const openBellDrawer = useBellOpener();
   const { focusedSessionId, setFocusedSessionId } = useCesareSessionFocus();
   const { isFocusRequested } = useShellFocusRequest();
+  // A central Cesare surface (full-screen session page / new-session landing) is
+  // itself the chat, so the floating drawer + launcher pill must be suppressed
+  // to avoid a duplicate chat container.
+  const { isCesareSurfaceActive } = useCesareSurface();
   const [splitDrawerWidth, setSplitDrawerWidth] = useState<number>(480);
   // Notion-style rail overlay: when shell is `collapsed` the rail is hidden
   // by default and a top-left hamburger toggles it as a sliding overlay.
@@ -310,8 +329,6 @@ function AppShellInner({
     notifications,
     startNotification,
     completeNotification,
-    failNotification,
-    dismissNotification,
     markAllSeen,
     hasUnseen,
   } = useCesareNotifications();
@@ -360,6 +377,25 @@ function AppShellInner({
     }
   }, [cesareState]);
 
+  // A full-screen chat surface (the session conversation route) is a fixed-height
+  // app layout: its thread scrolls internally and its composer stays docked at
+  // the bottom. Flag the body so `.main` is capped to the viewport (not allowed
+  // to grow with the thread) ONLY for that surface — editor routes still scroll
+  // the page normally.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isCesareSurfaceActive) {
+      document.body.setAttribute("data-cesare-surface", "active");
+    } else {
+      document.body.removeAttribute("data-cesare-surface");
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.removeAttribute("data-cesare-surface");
+      }
+    };
+  }, [isCesareSurfaceActive]);
+
   // Broadcast SplitDrawer state and live width on <body> so the Cesare drawer
   // (and any other consumer) can react via CSS without prop-drilling.
   useEffect(() => {
@@ -383,6 +419,17 @@ function AppShellInner({
   // floating Cesare sheet is unmounted while the lane is open so the chat never
   // duplicates.
   const isCesareSplitActive = isCesarePeek(peek, projectId ?? null);
+
+  // When the split lane opens, collapse the rail ONCE to give the lane room.
+  // We only act on the false→true edge so the user can re-open the rail
+  // manually (hamburger) and it stays open while the split is still active.
+  const wasSplitActiveRef = useRef(false);
+  useEffect(() => {
+    if (isCesareSplitActive && !wasSplitActiveRef.current) {
+      setShellState("collapsed");
+    }
+    wasSplitActiveRef.current = isCesareSplitActive;
+  }, [isCesareSplitActive]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -444,6 +491,42 @@ function AppShellInner({
       `${versionsLaneWidth}px`,
     );
   }, [versionsLaneWidth]);
+
+  // Shell SplitDrawer (Cesare preview + notifications) is ALWAYS an in-flow
+  // collapsing lane (CONTEXT.md / ADR-0002), never a fixed overlay. While it has
+  // content open in the `open` state, grow the third grid track so the page
+  // compresses beside it. `full` escalates to its own overlay route, so no track
+  // is reserved then.
+  const isPreviewSplitActive =
+    splitDrawer.payload !== null && splitDrawer.state === "open";
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isPreviewSplitActive) {
+      document.body.setAttribute("data-preview-split", "open");
+    } else {
+      document.body.removeAttribute("data-preview-split");
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.removeAttribute("data-preview-split");
+      }
+    };
+  }, [isPreviewSplitActive]);
+
+  // Destroy the shell SplitDrawer on any route change: its content is tied to the
+  // page it was opened from (e.g. a Logline preview), so navigating away (e.g.
+  // "Apri Soggetto") must close it — a stale preview beside a different page is
+  // wrong (CONTEXT.md: one collapsing surface, tied to where it was opened).
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const closeSplitDrawer = splitDrawer.close;
+  const didMountSplitRef = useRef(false);
+  useEffect(() => {
+    if (!didMountSplitRef.current) {
+      didMountSplitRef.current = true;
+      return;
+    }
+    closeSplitDrawer();
+  }, [pathname, closeSplitDrawer]);
 
   // When the SplitDrawer becomes `full`, Cesare retreats to peek so the
   // user keeps a single command surface visible. When the SplitDrawer is
@@ -546,64 +629,18 @@ function AppShellInner({
   // want to gate UI on the push state; AppShell only needs to fire the
   // notification when the tab is hidden, so we ignore the rest.
   const { fire: firePush } = useWebPush();
-  const pendingNotificationId = useRef<string | null>(null);
   const pendingPulseEntities = useRef<CesareNotification | null>(null);
 
   const wrappedAskCesare = useCallback<AskCesareFn>(
     async (params) => {
-      const page = params.data.pageContext.page as CesarePage;
-      const pid = params.data.projectId;
-      const agentic = isAgenticPage(page);
-
+      // Notifications are now emitted in `handleCesareAssistantResponse`, which
+      // runs on EVERY completed turn (streaming-primary or this fallback). This
+      // wrapper only marks existing notifications seen on a new request so the
+      // bell's unread dot clears when the user starts a turn.
       markAllSeen();
-
-      if (agentic) {
-        const id = startNotification({
-          actionLabel: t(ACTION_LABEL_KEY_BY_PAGE[page]),
-          page,
-          projectId: pid,
-        });
-        pendingNotificationId.current = id;
-      }
-
-      const result = await askCesare(params);
-
-      if (agentic && pendingNotificationId.current) {
-        const id = pendingNotificationId.current;
-        if (result.isOk) {
-          const reply = result.value;
-          const toolsRan = parseToolsExecuted(reply);
-          if (toolsRan > 0) {
-            const resultLabel = deriveResultLabel(page, reply, t);
-            completeNotification(id, { resultLabel });
-            firePush({
-              title: "Cesare",
-              body: resultLabel,
-              onClick: () => {
-                setCesareOpen(true);
-                markAllSeen();
-              },
-            });
-          } else {
-            dismissNotification(id);
-          }
-        } else {
-          failNotification(id, t("shell.notification.failed"));
-        }
-        pendingNotificationId.current = null;
-      }
-
-      return result;
+      return askCesare(params);
     },
-    [
-      startNotification,
-      completeNotification,
-      failNotification,
-      firePush,
-      markAllSeen,
-      dismissNotification,
-      t,
-    ],
+    [markAllSeen],
   );
 
   const handleCesareAssistantResponse = useCallback(
@@ -622,6 +659,51 @@ function AppShellInner({
       // the chat text: a failed/no-op tool whose reply merely SAYS "aggiornato"
       // must not pop a "✦ Cesare ha aggiornato …" toast.
       const applied = appliedEntityDomains(reply);
+
+      // N-33 — drop a Notification Center entry on EVERY completed agentic turn.
+      // The legacy start/complete pair lived only in `wrappedAskCesare` (the
+      // non-streaming path); the streaming path — now primary — never fired it,
+      // so completed runs went unnotified. Emit here, which runs on every
+      // successful turn (streaming or fallback), when the turn actually applied a
+      // change (tools ran).
+      // Publish the live edit(s) so the entity-page banner can surface "Cesare ha
+      // aggiornato il <Entity>" with the change + the pre-edit version for ↩ Annulla
+      // (Spec 63). One entry per touched document; live-only (not persisted).
+      const liveDiffMarkers = parseLiveDiffMarkers(reply);
+      if (liveDiffMarkers.length > 0) {
+        const previousVersionId =
+          parseDocAppliedMarker(reply)?.previousVersionId ?? null;
+        const summary = extractChangeSummary(reply);
+        publishLiveEdits(
+          liveDiffMarkers
+            .filter((m) => m.documentType)
+            .map((m) => ({
+              documentType: m.documentType,
+              label: m.label,
+              segments: m.segments,
+              summary,
+              previousVersionId,
+            })),
+        );
+      }
+
+      if (cesarePage && projectId && parseToolsExecuted(reply) > 0) {
+        const resultLabel = deriveResultLabel(cesarePage, reply, t);
+        const nid = startNotification({
+          actionLabel: t(ACTION_LABEL_KEY_BY_PAGE[cesarePage]),
+          page: cesarePage,
+          projectId,
+        });
+        completeNotification(nid, { resultLabel });
+        firePush({
+          title: "Cesare",
+          body: resultLabel,
+          onClick: () => {
+            setCesareOpen(true);
+            markAllSeen();
+          },
+        });
+      }
 
       if (cesarePage === "locations" && projectId) {
         void queryClient.invalidateQueries({
@@ -722,7 +804,19 @@ function AppShellInner({
         void queryClient.invalidateQueries({ queryKey: ["versions"] });
       }
     },
-    [cesarePage, projectId, queryClient, showToast, activeDocument, t],
+    [
+      cesarePage,
+      projectId,
+      queryClient,
+      showToast,
+      activeDocument,
+      t,
+      startNotification,
+      completeNotification,
+      firePush,
+      markAllSeen,
+      setCesareOpen,
+    ],
   );
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
@@ -731,6 +825,9 @@ function AppShellInner({
   const openCesare = useCallback(
     (opts?: OpenCesareOptions) => {
       setCesareRequirementId(opts?.requirementId ?? null);
+      if (opts?.prompt) {
+        setCesareSeedPrompt({ text: opts.prompt, nonce: Date.now() });
+      }
       setCesareState("expanded");
       setCesareOpen(true);
       markAllSeen();
@@ -939,6 +1036,27 @@ function AppShellInner({
   // Spec 55: the account actions live in the TopBar right zone (the single
   // home), superseding the LeftRail footer AccountRow (Spec 47b). Avatar →
   // user settings, gear → project settings (N-22, distinct destinations).
+  // ⊟ SplitDrawer toggle (Claude-style):
+  //   - open            → hide (keep history)
+  //   - hidden w/history → re-open the last content
+  //   - nothing yet but the active surface has a "latest edit" opener → open it
+  // Disabled only when there is genuinely nothing to show.
+  const { openLatest } = useSplitToggle();
+  const isSplitOpen = splitDrawer.payload !== null;
+  const handleToggleSplit = useCallback(() => {
+    if (isSplitOpen) {
+      splitDrawer.hide();
+      return;
+    }
+    if (splitDrawer.hasContent) {
+      splitDrawer.reopen();
+      return;
+    }
+    openLatest?.();
+  }, [isSplitOpen, splitDrawer, openLatest]);
+  const canToggleSplit =
+    isSplitOpen || splitDrawer.hasContent || openLatest !== null;
+
   const topBarAccount = useMemo<TopBarAccountActions>(
     () => ({
       onBell: openBellDrawer,
@@ -946,6 +1064,16 @@ function AppShellInner({
       onGear: handleProjectSettings,
       hasUnreadNotifications: hasUnseen,
       avatarLabel: deriveInitials(user.name),
+      // The ⊟ split toggle belongs to the chat surface only (the session
+      // conversation) — on an editor page the diff lives inline, so the toggle
+      // is omitted there (no button rendered).
+      ...(isCesareSurfaceActive
+        ? {
+            onToggleSplit: handleToggleSplit,
+            splitOpen: isSplitOpen,
+            canToggleSplit,
+          }
+        : {}),
     }),
     [
       openBellDrawer,
@@ -953,6 +1081,10 @@ function AppShellInner({
       handleProjectSettings,
       hasUnseen,
       user.name,
+      isCesareSurfaceActive,
+      handleToggleSplit,
+      isSplitOpen,
+      canToggleSplit,
     ],
   );
 
@@ -1004,7 +1136,19 @@ function AppShellInner({
           shootingDayNumber={activeShootingDay?.dayNumber ?? null}
           isOpen={isSplit ? true : cesareOpen}
           surface={surface}
+          {...(!isSplit && cesareSeedPrompt
+            ? { seedPrompt: cesareSeedPrompt }
+            : {})}
           onOpenAsSplit={isSplit ? undefined : handleOpenAsSplit}
+          onShrinkToFloat={
+            isSplit
+              ? () => {
+                  onClosePeek?.();
+                  setCesareOpen(true);
+                  setCesareState("expanded");
+                }
+              : undefined
+          }
           onClose={() => {
             if (isSplit) {
               onClosePeek?.();
@@ -1012,9 +1156,24 @@ function AppShellInner({
               setCesareOpen(false);
             }
           }}
-          onOpenFullPage={() => {
-            // Drawer manages full-page state itself; AppShell mirrors via
-            // onCesareStateChange below.
+          onOpenFullPage={(sessionId) => {
+            // ↗ navigates to the full-screen session detail page from BOTH the
+            // split lane and the floating drawer. Prefer the session id passed
+            // by the sheet (it may have flushed before the focused-session
+            // mirror), falling back to the mirror. Clear the peek lane and close
+            // the floating drawer first so the chat is not duplicated.
+            const targetSessionId = sessionId ?? focusedSessionId;
+            if (projectId && targetSessionId) {
+              if (isSplit) {
+                onClosePeek?.();
+              } else {
+                setCesareOpen(false);
+              }
+              void router.navigate({
+                to: "/projects/$id/sessions/$sessionId",
+                params: { id: projectId, sessionId: targetSessionId },
+              });
+            }
           }}
           onCesareStateChange={(next) => {
             // Mirror the drawer's state into AppShell's body[data-cesare]
@@ -1043,12 +1202,14 @@ function AppShellInner({
       activeDocument,
       activeShootingDay,
       cesareOpen,
+      cesareSeedPrompt,
       handleOpenAsSplit,
       onClosePeek,
       wrappedAskCesare,
       handleCesareAssistantResponse,
       focusedSessionId,
       setFocusedSessionId,
+      router,
     ],
   );
 
@@ -1142,6 +1303,7 @@ function AppShellInner({
                     profile: t("shell.rail.profile"),
                     settings: t("shell.rail.settings"),
                     account: t("shell.rail.account"),
+                    toggleSplit: t("shell.topbar.toggleSplit"),
                   }}
                 />
               }
@@ -1186,11 +1348,13 @@ function AppShellInner({
               prose by a per-document <CesareLiveDiff/> (mounted in the document
               bodies). The shell only relays the broadcast. */}
 
-          <BottomDock
-            onCesareToggle={toggleCesare}
-            openCesareLabel={t("shell.dock.openCesare")}
-            actionsLabel={t("shell.dock.actions")}
-          />
+          {!isCesareSplitActive && !isCesareSurfaceActive && (
+            <BottomDock
+              onCesareToggle={toggleCesare}
+              openCesareLabel={t("shell.dock.openCesare")}
+              actionsLabel={t("shell.dock.actions")}
+            />
+          )}
 
           <VersionsDrawer />
           <CommandPalette
@@ -1201,9 +1365,12 @@ function AppShellInner({
             resultsLabel={t("shell.palette.results")}
           />
           {/* Floating Cesare sheet — the default surface. Unmounted while the
-              split lane is open so the chat never duplicates. The helper
-              carries the session-focus props (Spec 47-A5). */}
-          {!isCesareSplitActive && renderCesareSheet("floating")}
+              split lane is open OR a central Cesare surface (full-screen session
+              page) is active, so the chat never duplicates. The helper carries
+              the session-focus props (Spec 47-A5). */}
+          {!isCesareSplitActive &&
+            !isCesareSurfaceActive &&
+            renderCesareSheet("floating")}
           <SplitDrawerHost
             splitDrawer={splitDrawer}
             splitDrawerWidth={splitDrawerWidth}
@@ -1258,6 +1425,19 @@ function SplitDrawerHost({
     }
   };
 
+  // History nav (← →) — the SplitDrawer keeps a stack of contents; a replaced
+  // content is never lost (CONTEXT.md). Shown in every drawer header.
+  const historyNav = (
+    <SplitDrawerHistoryNav
+      canGoBack={splitDrawer.canGoBack}
+      canGoForward={splitDrawer.canGoForward}
+      onBack={splitDrawer.back}
+      onForward={splitDrawer.forward}
+      backLabel={t("shell.splitDrawer.historyBack")}
+      forwardLabel={t("shell.splitDrawer.historyForward")}
+    />
+  );
+
   if (payload.kind === "notifications") {
     return (
       <SplitDrawer
@@ -1266,7 +1446,13 @@ function SplitDrawerHost({
         onCycle={onCycle}
         onStepBack={onStepBack}
         onClose={splitDrawer.close}
-        header={<NotificationCenterDrawerHeader />}
+        placement="lane"
+        header={
+          <div className={styles.splitHeaderRow}>
+            {historyNav}
+            <NotificationCenterDrawerHeader />
+          </div>
+        }
         size={{ width: splitDrawerWidth }}
         onSizeChange={({ width }) => setSplitDrawerWidth(width)}
         ariaLabel={t("shell.splitDrawer.notificationsAria")}
@@ -1280,7 +1466,9 @@ function SplitDrawerHost({
     );
   }
 
-  // payload.kind === "trace"
+  // payload.kind === "preview" — READ-ONLY view of the modified page with the
+  // change highlighted inline. No accept/reject (the edit is already applied;
+  // ADR-0001), so no footer and no "pending" count.
   return (
     <SplitDrawer
       state={splitDrawer.state}
@@ -1288,83 +1476,78 @@ function SplitDrawerHost({
       onCycle={onCycle}
       onStepBack={onStepBack}
       onClose={splitDrawer.close}
+      placement="lane"
       header={
-        <h2
-          style={{
-            margin: 0,
-            fontFamily: "var(--ds-font-display)",
-            fontSize: 14,
-            color: "var(--ds-text)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {payload.title ??
-            payload.pageRef.title ??
-            t("shell.splitDrawer.previewFallback")}
-        </h2>
-      }
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={payload.onAcceptAll}
-            style={{
-              border: "1px solid var(--ds-diff-add-fg)",
-              background: "transparent",
-              color: "var(--ds-agent)",
-              padding: "5px 12px",
-              borderRadius: "var(--ds-radius-sm)",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            {t("shell.splitDrawer.acceptAll")}
-          </button>
-          <button
-            type="button"
-            onClick={payload.onRejectAll}
-            style={{
-              border: "1px solid var(--ds-line)",
-              background: "transparent",
-              color: "var(--ds-text-2)",
-              padding: "5px 12px",
-              borderRadius: "var(--ds-radius-sm)",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            {t("shell.splitDrawer.rejectAll")}
-          </button>
-          <span
-            style={{
-              marginInlineStart: "auto",
-              color: "var(--ds-text-faint)",
-              fontSize: 11.5,
-            }}
-          >
-            {payload.traceMarkers.length}{" "}
-            {payload.traceMarkers.length === 1
-              ? t("shell.splitDrawer.pendingSingular")
-              : t("shell.splitDrawer.pendingPlural")}
-          </span>
-        </>
+        <div className={styles.splitHeaderRow}>
+          {historyNav}
+          <h2 className={styles.splitHeaderTitle}>
+            {payload.title ??
+              payload.pageRef.title ??
+              t("shell.splitDrawer.previewFallback")}
+          </h2>
+        </div>
       }
       size={{ width: splitDrawerWidth }}
       onSizeChange={({ width }) => setSplitDrawerWidth(width)}
       expandLabel={t("shell.splitDrawer.expand")}
       closeLabel={t("shell.splitDrawer.close")}
     >
-      <TargetPagePreview
-        pageRef={payload.pageRef}
-        traceMarkers={payload.traceMarkers}
-        onAccept={payload.onAccept}
-        onReject={payload.onReject}
-        onAcceptAll={payload.onAcceptAll}
-        onRejectAll={payload.onRejectAll}
-        emptyLabel={t("shell.targetPreview.empty")}
-        stubTitle={t("shell.targetPreview.stubTitle")}
+      <SplitDrawerPreviewBody
+        title={payload.pageRef.title ?? payload.title ?? ""}
+        liveDiffs={payload.liveDiffs}
+        summary={payload.summary}
       />
     </SplitDrawer>
+  );
+}
+
+// ─── SplitDrawer history nav (← →) ──────────────────────────────────────────
+// The shell SplitDrawer keeps a navigation history of the contents shown in it
+// (CONTEXT.md): opening a new content pushes it; ←/→ move through the stack so a
+// replaced content is never lost. × (the drawer's own close) clears the history.
+
+function SplitDrawerHistoryNav({
+  canGoBack,
+  canGoForward,
+  onBack,
+  onForward,
+  backLabel,
+  forwardLabel,
+}: {
+  canGoBack: boolean;
+  canGoForward: boolean;
+  onBack: () => void;
+  onForward: () => void;
+  backLabel: string;
+  forwardLabel: string;
+}) {
+  // Hide entirely when there's nowhere to go (single-item history) so the header
+  // stays clean — the controls only appear once a second content has been shown.
+  if (!canGoBack && !canGoForward) return null;
+  return (
+    <div className={styles.splitHistoryNav} data-testid="split-drawer-history">
+      <button
+        type="button"
+        className={styles.splitHistoryBtn}
+        onClick={onBack}
+        disabled={!canGoBack}
+        aria-label={backLabel}
+        title={backLabel}
+        data-testid="split-drawer-back"
+      >
+        ←
+      </button>
+      <button
+        type="button"
+        className={styles.splitHistoryBtn}
+        onClick={onForward}
+        disabled={!canGoForward}
+        aria-label={forwardLabel}
+        title={forwardLabel}
+        data-testid="split-drawer-forward"
+      >
+        →
+      </button>
+    </div>
   );
 }

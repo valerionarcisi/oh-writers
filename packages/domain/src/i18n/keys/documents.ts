@@ -30,6 +30,15 @@ export const documentsKeys = {
     "documents.loading.notes": "Loading notes",
     "documents.loading.suggestions": "Loading suggestions",
 
+    // Cesare-updated banner (entity page)
+    "documents.cesareUpdated.message": "✦ Cesare updated the {entity}",
+    "documents.cesareUpdated.see": "Show what changed",
+    "documents.cesareUpdated.undo": "↩ Back",
+    "documents.cesareUpdated.dismiss": "Dismiss",
+    "documents.cesareUpdated.count": "{n} changes",
+    "documents.cesareUpdated.prev": "Previous change",
+    "documents.cesareUpdated.next": "Next change",
+    "documents.cesareUpdated.collapse": "Collapse",
     // Draft banner
     "documents.draftBanner.ariaLabel": "Cesare drafts",
     "documents.draftBanner.readyOne": "✦ Cesare has 1 draft ready",
@@ -95,12 +104,15 @@ export const documentsKeys = {
     "documents.logline.openAria": "Open logline",
     "documents.logline.loglineAria": "Logline: {logline}",
     "documents.logline.heading": "Logline",
+    "documents.logline.save": "Save",
+    "documents.logline.saving": "Saving…",
 
     // Margin notes column
     "documents.marginNotes.empty": "Start writing to get notes from Cesare.",
     "documents.marginNotes.error": "Could not load notes. Try again later.",
     "documents.marginNotes.none": "No notes right now.",
     "documents.marginNotes.ariaLabel": "Cesare notes",
+    "documents.marginNotes.startSession": "✦ Start a session",
 
     // Narrative Cesare panel
     "documents.cesarePanel.empty":
@@ -125,6 +137,8 @@ export const documentsKeys = {
     "documents.editor.placeholder.synopsis": "Start your synopsis here…",
     "documents.editor.placeholder.treatment": "Start your treatment here…",
     "documents.editor.bulletListAria": "Bullet list",
+    "documents.editor.boldAria": "Bold (⌘B)",
+    "documents.editor.italicAria": "Italic (⌘I)",
     "documents.editor.loglineError": "Logline is limited to {max} characters.",
     "documents.editor.readOnly": "Read only",
     "documents.editor.versionFallback": "Version {number}",
@@ -212,6 +226,14 @@ export const documentsKeys = {
     "documents.loading.notes": "Caricamento note",
     "documents.loading.suggestions": "Caricamento suggerimenti",
 
+    "documents.cesareUpdated.message": "✦ Cesare ha aggiornato il {entity}",
+    "documents.cesareUpdated.see": "Mostra cosa è cambiato",
+    "documents.cesareUpdated.undo": "↩ Indietro",
+    "documents.cesareUpdated.dismiss": "Ho visto",
+    "documents.cesareUpdated.count": "{n} modifiche",
+    "documents.cesareUpdated.prev": "Modifica precedente",
+    "documents.cesareUpdated.next": "Modifica successiva",
+    "documents.cesareUpdated.collapse": "Comprimi",
     "documents.draftBanner.ariaLabel": "Bozze di Cesare",
     "documents.draftBanner.readyOne": "✦ Cesare ha pronto un draft",
     "documents.draftBanner.readyMany": "✦ Cesare ha pronto {count} draft",
@@ -274,6 +296,8 @@ export const documentsKeys = {
     "documents.logline.openAria": "Apri logline",
     "documents.logline.loglineAria": "Logline: {logline}",
     "documents.logline.heading": "Logline",
+    "documents.logline.save": "Salva",
+    "documents.logline.saving": "Salvataggio…",
 
     "documents.marginNotes.empty":
       "Inizia a scrivere per ricevere note da Cesare.",
@@ -281,6 +305,7 @@ export const documentsKeys = {
       "Impossibile caricare le note. Riprova più tardi.",
     "documents.marginNotes.none": "Nessuna nota in questo momento.",
     "documents.marginNotes.ariaLabel": "Note di Cesare",
+    "documents.marginNotes.startSession": "✦ Avvia sessione",
 
     "documents.cesarePanel.empty":
       "Inizia a scrivere per ricevere suggerimenti da Cesare.",
@@ -302,6 +327,8 @@ export const documentsKeys = {
     "documents.editor.placeholder.synopsis": "Inizia la tua sinossi qui…",
     "documents.editor.placeholder.treatment": "Inizia il tuo trattamento qui…",
     "documents.editor.bulletListAria": "Elenco puntato",
+    "documents.editor.boldAria": "Grassetto (⌘B)",
+    "documents.editor.italicAria": "Corsivo (⌘I)",
     "documents.editor.loglineError": "Logline is limited to {max} characters.",
     "documents.editor.readOnly": "Read only",
     "documents.editor.versionFallback": "Versione {number}",

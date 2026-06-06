@@ -47,6 +47,7 @@ const newId = (): string =>
     : `m-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const FAILURE_TEXT = "Mi dispiace, si è verificato un errore. Riprova.";
+const STOPPED_TEXT = "⏹ Interrotto.";
 const PENDING_SESSION = "__pending__";
 
 /** Page context + transport the send pipeline needs. Published by the floating
@@ -76,6 +77,8 @@ export interface CesareChatStore {
   /** Send a message. Optional `sessionId` targets a specific thread (full-page);
    *  defaults to the active session (floating sheet). */
   readonly send: (text: string, sessionId?: string) => Promise<void>;
+  /** Stop the in-flight agent turn for a session (Cmd+C). No-op when idle. */
+  readonly stop: (sessionId?: string) => void;
   /** Floating sheet publishes the live page context + transport here. */
   readonly setSendDeps: (deps: CesareSendDeps) => void;
 }
@@ -98,6 +101,11 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
   // The floating sheet publishes these; the send pipeline reads the latest via
   // a ref so a re-render of the sheet never stales the transport.
   const sendDepsRef = useRef<CesareSendDeps | null>(null);
+
+  // In-flight stream controllers, keyed by session, so `stop(sessionId)` can
+  // abort the agent mid-turn (Cmd+C, like every agent CLI). Cleared when the
+  // turn settles.
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
   // Sessions already hydrated this mount — avoids re-fetching persisted history
   // on every selectSession (the floating sheet + the full-page route both
@@ -198,27 +206,62 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
         conversationHistory: history,
       };
 
+      // Per-turn abort controller so `stop(targetSession)` can cancel the agent
+      // mid-stream (Cmd+C). A previous in-flight turn for the same session is
+      // superseded — abort it before starting the new one.
+      abortControllersRef.current.get(targetSession)?.abort();
+      const controller = new AbortController();
+      abortControllersRef.current.set(targetSession, controller);
+
       let finalReply: string | null = null;
       let streamFailed = false;
+      let aborted = false;
       try {
-        await streamCesare(streamInput, (event) => {
-          if (event._tag === "done") {
-            finalReply = event.result;
-            return;
-          }
-          if (event._tag === "error") {
-            streamFailed = true;
-            return;
-          }
-          dispatch({
-            type: "stream/step",
-            sessionId: targetSession,
-            assistantMessageId,
-            event,
-          });
+        await streamCesare(
+          streamInput,
+          (event) => {
+            if (event._tag === "done") {
+              finalReply = event.result;
+              return;
+            }
+            if (event._tag === "error") {
+              streamFailed = true;
+              return;
+            }
+            dispatch({
+              type: "stream/step",
+              sessionId: targetSession,
+              assistantMessageId,
+              event,
+            });
+          },
+          controller.signal,
+        );
+      } catch (e) {
+        // An abort (Cmd+C) is a user action, not a failure: don't fall back to
+        // the non-streaming retry (that would re-run the agent we just stopped).
+        if (controller.signal.aborted || (e as Error)?.name === "AbortError") {
+          aborted = true;
+        } else {
+          streamFailed = true;
+        }
+      } finally {
+        if (abortControllersRef.current.get(targetSession) === controller) {
+          abortControllersRef.current.delete(targetSession);
+        }
+      }
+
+      // Stopped by the user — settle the turn with whatever was streamed so far
+      // (the partial trace stays) and stop; no retry, no failure bubble.
+      if (aborted) {
+        dispatch({
+          type: "message/delivered",
+          sessionId: targetSession,
+          userMessageId,
+          assistantMessageId,
+          content: STOPPED_TEXT,
         });
-      } catch {
-        streamFailed = true;
+        return;
       }
 
       if (finalReply === null || streamFailed) {
@@ -303,6 +346,11 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
+  const stop = useCallback((sessionId?: string) => {
+    const target = sessionId ?? stateRef.current.activeSessionId;
+    abortControllersRef.current.get(target)?.abort();
+  }, []);
+
   const store = useMemo<CesareChatStore>(
     () => ({
       activeSessionId: state.activeSessionId,
@@ -314,9 +362,10 @@ export function CesareChatStoreProvider({ children }: { children: ReactNode }) {
         isLoadingThread(threadFor(state, sessionId ?? state.activeSessionId)),
       selectSession,
       send,
+      stop,
       setSendDeps,
     }),
-    [state, activePage, selectSession, send, setSendDeps],
+    [state, activePage, selectSession, send, stop, setSendDeps],
   );
 
   return (

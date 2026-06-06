@@ -6,7 +6,9 @@ import { match } from "ts-pattern";
 import { ContextActionIds, DocumentTypes } from "@oh-writers/domain";
 import { ActionsMenu, Skeleton } from "@oh-writers/ui";
 import {
-  DraftBanner,
+  canonicalNarrativeHtml,
+  CesareUpdatedBanner,
+  useSwitchToVersion,
   ExportPdfModal,
   ExportSiaeModal,
   FreeNarrativeEditor,
@@ -26,6 +28,7 @@ import {
   useContextActions,
   useSetActiveDocument,
   useRoutedSurface,
+  reportCurrentVersion,
 } from "~/features/app-shell";
 import type { ContextActionHandlers } from "~/features/app-shell";
 import { useSession } from "~/lib/auth-client";
@@ -146,6 +149,14 @@ function SoggettoPageReady({
     setActiveDocument({ id: soggettoDoc.id, type: DocumentTypes.SOGGETTO });
     return () => setActiveDocument(null);
   }, [soggettoDoc.id, setActiveDocument]);
+
+  // Spec 63 — report the open editor's current version BEFORE a Cesare turn so
+  // the live-edit stack can pair the edit with the pre-turn snapshot (option A),
+  // making ↩ Annulla restore the state before the whole turn regardless of any
+  // intermediate versions Cesare creates mid-turn.
+  useEffect(() => {
+    reportCurrentVersion(DocumentTypes.SOGGETTO, soggettoDoc.currentVersionId);
+  }, [soggettoDoc.currentVersionId]);
   const { t } = useTranslation();
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSiaeOpen, setIsSiaeOpen] = useState(false);
@@ -201,13 +212,29 @@ function SoggettoPageReady({
     soggettoDoc.currentVersionId,
   ]);
 
+  // Spec 61 — compare dirtiness on the CANONICAL serialisation. The free
+  // narrative editor (enableHeadings) emits HTML; a Cesare apply stores plain
+  // text. Without canonical comparison the round-trip looks "dirty" forever and
+  // the autosave clobbers the applied draft back (the flash-then-revert bug).
+  const normalizeSoggetto = useCallback(
+    (s: string) => canonicalNarrativeHtml(s, true),
+    [],
+  );
   useAutoSave(
     saveSoggetto,
     soggettoDoc.id,
     soggettoContent,
     soggettoDoc.content,
+    normalizeSoggetto,
   );
-  useAutoSave(saveLogline, loglineDoc.id, loglineContent, loglineDoc.content);
+  // "↩ Annulla" on the Cesare-updated banner restores the pre-edit version.
+  const switchToPrevVersion = useSwitchToVersion(soggettoDoc.id);
+  const loglineSave = useAutoSave(
+    saveLogline,
+    loglineDoc.id,
+    loglineContent,
+    loglineDoc.content,
+  );
 
   const canEdit = soggettoDoc.canEdit && loglineDoc.canEdit;
 
@@ -290,6 +317,9 @@ function SoggettoPageReady({
         logline={loglineContent}
         canEditLogline={canEdit}
         onLoglineChange={setLoglineContent}
+        onLoglineSave={loglineSave.flush}
+        loglineIsDirty={loglineSave.isDirty}
+        loglineIsSaving={loglineSave.isSaving}
         onOpenVersions={toggleVersions}
         topBarActions={topBarActions}
         rightAside={
@@ -301,12 +331,11 @@ function SoggettoPageReady({
         }
       >
         <div className={styles.pageShell}>
-          <DraftBanner
-            documentId={soggettoDoc.id}
-            projectId={projectId}
-            docType={DocumentTypes.SOGGETTO}
-            currentContent={soggettoContent}
-            canEdit={canEdit}
+          <CesareUpdatedBanner
+            documentType={DocumentTypes.SOGGETTO}
+            onUndo={async (prev) => {
+              await switchToPrevVersion.mutateAsync(prev);
+            }}
           />
           <FreeNarrativeEditor
             content={soggettoContent}
@@ -314,8 +343,8 @@ function SoggettoPageReady({
             canEdit={canEdit}
             embedded
             testId="subject-editor"
-            diffDocumentType={DocumentTypes.SOGGETTO}
             documentId={soggettoDoc.id}
+            documentType={DocumentTypes.SOGGETTO}
           />
         </div>
       </NarrativeDocsShell>

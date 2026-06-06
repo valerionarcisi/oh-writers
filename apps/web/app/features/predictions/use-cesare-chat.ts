@@ -43,7 +43,9 @@ export interface UseCesareChatArgs {
 export interface UseCesareChat {
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly isLoading: boolean;
-  readonly send: (text: string) => Promise<void>;
+  /** Send a message. An explicit `sessionId` targets that session directly
+   *  (used to send into a just-created session without a render round-trip). */
+  readonly send: (text: string, sessionId?: string) => Promise<void>;
   readonly selectSession: (sessionId: string) => void;
 }
 
@@ -69,8 +71,8 @@ export const useCesareChat = (args: UseCesareChatArgs): UseCesareChat => {
   }, [store, desiredSession]);
 
   const storeSend = useCallback(
-    async (text: string) => {
-      await store?.send(text);
+    async (text: string, sessionId?: string) => {
+      await store?.send(text, sessionId);
     },
     [store],
   );
@@ -116,12 +118,13 @@ const useLocalCesareChat = (
   }, []);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, sessionIdOverride?: string) => {
       if (inert) return;
       const trimmed = text.trim();
       if (trimmed.length === 0) return;
 
-      const targetSession = stateRef.current.activeSessionId;
+      const targetSession =
+        sessionIdOverride ?? stateRef.current.activeSessionId;
       const userMessageId = newId();
       const assistantMessageId = newId();
 

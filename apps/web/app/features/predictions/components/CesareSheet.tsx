@@ -26,7 +26,10 @@ import {
   type TargetPageRef,
   type TraceMarker,
 } from "@oh-writers/ui";
-import { useSplitDrawer, flashLiveDiff } from "~/features/app-shell";
+import {
+  useSplitDrawer,
+  type SplitDrawerPreviewDiff,
+} from "~/features/app-shell";
 import {
   useSessions,
   useCreateSession,
@@ -34,6 +37,10 @@ import {
 } from "~/features/predictions/sessions";
 import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
+import {
+  setHighlight,
+  clearHighlight,
+} from "~/features/documents/lib/cesare-highlight-store";
 import { useCesareChat } from "../use-cesare-chat";
 import {
   CesareConversation,
@@ -44,8 +51,9 @@ import {
   type LiveDiffMarker,
 } from "./CesareConversation";
 import {
-  decideShowChangesSurface,
   buildTargetPageRef,
+  buildTargetPageRefForDocument,
+  documentTypeMatchesPage,
 } from "../cesare-show-changes";
 import { useNarrativeNextStep } from "../use-narrative-next-step";
 import { NextStepChip } from "./NextStepChip";
@@ -54,26 +62,24 @@ import styles from "./CesareSheet.module.css";
 type Translate = (key: TranslationKey) => string;
 
 /**
- * Cross-component flow (Spec 44): consumers invoke the returned function to
- * surface the affected page inside the SplitDrawer with a trace overlay.
+ * Cross-component flow (ADR-0001): from inside a chat session, surface the
+ * affected page inside the SplitDrawer as a READ-ONLY preview with the change
+ * highlighted inline. No accept/reject — the edit is already applied live.
  */
-export interface TraceForToolRunArgs {
+export interface PreviewForToolRunArgs {
   pageRef: TargetPageRef;
-  traceMarkers: ReadonlyArray<TraceMarker>;
-  onAccept: (markerId: string) => void;
-  onReject: (markerId: string) => void;
-  onAcceptAll: () => void;
-  onRejectAll: () => void;
+  liveDiffs: ReadonlyArray<SplitDrawerPreviewDiff>;
   title?: string;
+  summary?: string;
 }
 
 export function useShowChangesInSplitDrawer(): (
-  args: TraceForToolRunArgs,
+  args: PreviewForToolRunArgs,
 ) => void {
   const splitDrawer = useSplitDrawer();
   return useCallback(
-    (args: TraceForToolRunArgs) => {
-      splitDrawer.open({ kind: "trace", ...args });
+    (args: PreviewForToolRunArgs) => {
+      splitDrawer.open({ kind: "preview", ...args });
     },
     [splitDrawer],
   );
@@ -85,6 +91,9 @@ export {
   parseToolsExecuted,
   parseRewriteSceneMarker,
   appliedEntityDomains,
+  parseLiveDiffMarkers,
+  parseDocAppliedMarker,
+  extractChangeSummary,
 } from "./CesareConversation";
 
 // ─── Server-side surface ───────────────────────────────────────────────────
@@ -201,8 +210,10 @@ export interface CesareSheetProps {
   shootingDayNumber?: number | null;
   isOpen: boolean;
   onClose: () => void;
-  /** Invoked when the user clicks the drawer's "↗ full" affordance. */
-  onOpenFullPage: () => void;
+  /** Invoked when the user clicks the drawer's "↗ full" affordance. In split
+   *  this carries the active session id so the shell can route to its detail
+   *  page without waiting for the focused-session round-trip. */
+  onOpenFullPage: (sessionId?: string | null) => void;
   onCesareStateChange?: (next: CesareDrawerState) => void;
   /** Server function for chat. Pass null until the server fn is implemented. */
   askCesare?: AskCesareFn | null;
@@ -216,6 +227,11 @@ export interface CesareSheetProps {
   surface?: "floating" | "split";
   /** "Open as split column" affordance — shown only on the floating surface. */
   onOpenAsSplit?: () => void;
+  /** Split surface only: close the peek lane and re-open the floating drawer. */
+  onShrinkToFloat?: () => void;
+  /** A prompt to auto-send once when the sheet opens (margin "start a session"
+   *  affordance). The nonce makes re-sends of the same text distinct. */
+  seedPrompt?: { text: string; nonce: number } | null;
 }
 
 export function CesareSheet({
@@ -237,6 +253,8 @@ export function CesareSheet({
   onActiveSessionChange,
   surface = "floating",
   onOpenAsSplit,
+  onShrinkToFloat,
+  seedPrompt = null,
 }: CesareSheetProps) {
   const { t } = useTranslation();
   // ── Drawer state machine ────────────────────────────────────────────────
@@ -250,7 +268,6 @@ export function CesareSheet({
         document.body.setAttribute("data-cesare", normalised);
       }
       if (next === "closed") onClose();
-      if (next === "full") onOpenFullPage();
     },
   });
 
@@ -336,6 +353,37 @@ export function CesareSheet({
     setInput("");
   }, [focusedSessionId, activeSessionId, chat]);
 
+  // Auto-send a seeded prompt (margin "start a session on this suggestion") once
+  // per nonce, when the floating sheet is open. It always starts a FRESH session
+  // (a suggestion is a new line of work — it must NOT append to the open thread):
+  // create a session, select it, then send into it.
+  //
+  // The effect depends ONLY on the nonce + isOpen. `chat` and `createSession`
+  // change identity on every render, so depending on them would re-run the
+  // effect in a loop (each send triggers a re-render). We read the latest of
+  // both from refs and guard with `sentSeedNonceRef` so each nonce fires once.
+  const seedDepsRef = useRef({ chat, createSession });
+  seedDepsRef.current = { chat, createSession };
+  const sentSeedNonceRef = useRef<number | null>(null);
+  const seedNonce = seedPrompt?.nonce ?? null;
+  useEffect(() => {
+    if (seedNonce == null || !isOpen) return;
+    if (sentSeedNonceRef.current === seedNonce) return;
+    sentSeedNonceRef.current = seedNonce;
+    const text = seedPrompt?.text ?? "";
+    if (!text) return;
+    void (async () => {
+      const { chat: c, createSession: cs } = seedDepsRef.current;
+      const session = await cs.mutateAsync(undefined);
+      setActiveSessionId(session.id);
+      c.selectSession(session.id);
+      // Target the new session explicitly so the send doesn't race the state
+      // update (the suggestion must land in the fresh session, not the old one).
+      await c.send(text, session.id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedNonce, isOpen]);
+
   useEffect(() => {
     onActiveSessionChange?.(activeSessionId);
   }, [activeSessionId, onActiveSessionChange]);
@@ -396,31 +444,6 @@ export function CesareSheet({
   // ── Diff surface handlers (Spec 47e) ─────────────────────────────────────
   const showChangesInSplit = useShowChangesInSplitDrawer();
 
-  // Live-doc inline flash (Spec 47e). Cesare edits already landed on the touched
-  // documents; the document always holds the new version. "Mostra modifiche"
-  // flashes the GREEN additions, "Nascondi modifiche" flashes the RED previous
-  // text (a peek at "how it was") — both transient, fading out, neither a
-  // revert. We arm the live-diff store with one flash per touched document
-  // keyed by documentType; each per-document <CesareLiveDiff/> reads its own
-  // entry (with last-value replay), so opening any touched doc — even after the
-  // click — flashes its own diff.
-  const flashLiveDiffFor = useCallback(
-    (
-      mode: "mostra" | "nascondi",
-      liveDiffs?: ReadonlyArray<LiveDiffMarker>,
-    ) => {
-      const inputs = (liveDiffs ?? [])
-        .filter((d) => d.documentType)
-        .map((d) => ({
-          documentType: d.documentType,
-          label: d.label,
-          segments: d.segments,
-        }));
-      flashLiveDiff(mode, inputs);
-    },
-    [],
-  );
-
   const splitDrawerCtx = useSplitDrawer();
 
   const handleShowChanges = useCallback(
@@ -428,41 +451,61 @@ export function CesareSheet({
       traceMarkers: ReadonlyArray<TraceMarker>;
       scope?: string;
       liveDiffs?: ReadonlyArray<LiveDiffMarker>;
+      summary?: string;
     }) => {
-      const surfaceChoice = decideShowChangesSurface({
-        surface,
-        drawerState: drawer.state,
-      });
-      if (surfaceChoice._tag === "live-diff") {
-        flashLiveDiffFor("mostra", args.liveDiffs);
+      const diffs = (args.liveDiffs ?? []).filter((d) => d.documentType);
+      if (diffs.length === 0) return;
+      const firstDocType = diffs[0]?.documentType;
+      // When the edited entity is the one whose editor is open behind the
+      // floating chat, "Mostra modifiche" UNDERLINES the change INSIDE the
+      // document prose (Spec 63) — same as the in-editor banner, never the split
+      // (which would duplicate the document the writer is already reading).
+      if (firstDocType && documentTypeMatchesPage(firstDocType, page)) {
+        const added = diffs
+          .filter((d) => d.documentType === firstDocType)
+          .flatMap((d) =>
+            d.segments.filter((s) => s.op === "add").map((s) => s.text),
+          );
+        setHighlight(firstDocType, added);
         return;
       }
-      const pageRef = buildTargetPageRef(page, args.scope);
-      if (!pageRef) {
-        flashLiveDiffFor("mostra", args.liveDiffs);
-        return;
-      }
+      // Otherwise (a cross-domain edit on a DIFFERENT page, or a chat session
+      // where no editor is in front) the read-only split-preview is correct.
+      const pageRef =
+        (firstDocType
+          ? buildTargetPageRefForDocument(firstDocType, args.scope)
+          : null) ?? buildTargetPageRef(page, args.scope);
+      if (!pageRef) return;
       showChangesInSplit({
         pageRef,
-        traceMarkers: args.traceMarkers,
-        onAccept: () => undefined,
-        onReject: () => undefined,
-        onAcceptAll: () => undefined,
-        onRejectAll: () => undefined,
+        liveDiffs: diffs.map((d) => ({
+          documentType: d.documentType,
+          label: d.label,
+          segments: d.segments,
+        })),
         title: pageRef.scope
           ? `${pageRef.title} · ${pageRef.scope}`
           : pageRef.title,
+        ...(args.summary ? { summary: args.summary } : {}),
       });
     },
-    [surface, drawer.state, page, flashLiveDiffFor, showChangesInSplit],
+    [page, showChangesInSplit],
   );
 
   const handleHideChanges = useCallback(
     (args: { liveDiffs?: ReadonlyArray<LiveDiffMarker> }) => {
-      flashLiveDiffFor("nascondi", args.liveDiffs);
+      // "Nascondi" on the entity's own page clears the in-document underline;
+      // elsewhere it closes the read-only split.
+      const firstDocType = (args.liveDiffs ?? []).find(
+        (d) => d.documentType,
+      )?.documentType;
+      if (firstDocType && documentTypeMatchesPage(firstDocType, page)) {
+        clearHighlight(firstDocType);
+        return;
+      }
       splitDrawerCtx.close();
     },
-    [flashLiveDiffFor, splitDrawerCtx],
+    [page, splitDrawerCtx],
   );
 
   const handleSubmit = useCallback(() => {
@@ -548,16 +591,20 @@ export function CesareSheet({
   );
 
   const handleCycle = useCallback(() => {
-    if (drawer.state === "expanded") {
-      drawer.setState("full");
+    // From the minimised peek row, ↗ just restores the drawer to its expanded
+    // size — it does NOT route away (the user is only un-minimising).
+    if (surface !== "split" && drawer.state === "peek") {
+      drawer.setState("expanded");
       return;
     }
-    if (drawer.state === "expanded-split") {
-      drawer.setState("full");
-      return;
-    }
-    drawer.cycle();
-  }, [drawer]);
+    // Otherwise ↗ navigates to the full-screen session detail route — on both
+    // the split lane (where the chat IS the central route) and the expanded
+    // floating drawer. The floating overlay "full" state is no longer reachable
+    // from ↗; the chat detail lives at /projects/:id/sessions/:sessionId. Pass
+    // the active session id directly — the shell-side focused-session mirror may
+    // not have flushed yet on first open.
+    onOpenFullPage(activeSessionId);
+  }, [drawer, surface, onOpenFullPage, activeSessionId]);
 
   const handleStepBack = useCallback(() => {
     if (drawer.state === "full") {
@@ -577,6 +624,7 @@ export function CesareSheet({
       onClose={drawer.close}
       surface={surface}
       onOpenAsSplit={onOpenAsSplit}
+      onShrinkToFloat={onShrinkToFloat}
       sessions={drawerSessions}
       activeSessionId={activeSessionId ?? undefined}
       onSessionSelectorClick={handleSessionSelectorClick}

@@ -1,6 +1,8 @@
-import { useMemo } from "react";
-import { formatInteger, type DocumentType } from "@oh-writers/domain";
+import { useMemo, useState } from "react";
+import type { EditorView } from "prosemirror-view";
+import { formatInteger } from "@oh-writers/domain";
 import { NarrativeProseMirrorView } from "./NarrativeProseMirrorView";
+import { NarrativeFormatToolbar } from "./NarrativeFormatToolbar";
 import { toCartelle } from "../lib/cartelle-counter";
 import { useTranslation } from "~/features/i18n";
 import {
@@ -21,12 +23,13 @@ export interface FreeNarrativeEditorProps {
   /** When true, suppresses the internal cartelle/chars counter. Caller is
    *  expected to render a DocStats at page level instead. */
   readonly hideCounter?: boolean;
-  /** Document type for the Cesare inline live-diff highlight (Spec 47d). */
-  readonly diffDocumentType?: DocumentType;
   /** Document id for the realtime collab room (`document:<id>`). When provided
    *  and the user can edit, opens a Yjs room so edits sync between clients.
    *  Omitted/empty → HTTP-only autosave (Phase 1 behaviour). */
   readonly documentId?: string;
+  /** Document type (soggetto/synopsis/…). Arms the Cesare "Mostra cosa è
+   *  cambiato" in-document underline (Spec 63) for this editor. */
+  readonly documentType?: string;
 }
 
 const stripHtmlTags = (html: string): string =>
@@ -42,8 +45,8 @@ export function FreeNarrativeEditor({
   testId,
   embedded = false,
   hideCounter = false,
-  diffDocumentType,
   documentId,
+  documentType,
 }: FreeNarrativeEditorProps) {
   const { t, locale } = useTranslation();
   const { cartelle, chars } = useMemo(() => {
@@ -68,11 +71,18 @@ export function FreeNarrativeEditor({
   const { status: realtimeStatus, peers: realtimePeers } = room;
   const realtime = buildConnectedRealtime(room);
 
+  const [editorView, setEditorView] = useState<EditorView | null>(null);
+
   const inner = (
     <>
       {realtimeStatus !== "disabled" && (
         <div className={styles.presenceRow}>
           <PresenceIndicator status={realtimeStatus} peers={realtimePeers} />
+        </div>
+      )}
+      {canEdit && (
+        <div className={styles.formatToolbar}>
+          <NarrativeFormatToolbar view={editorView} enableHeadings={true} />
         </div>
       )}
       <NarrativeProseMirrorView
@@ -81,8 +91,9 @@ export function FreeNarrativeEditor({
         enableHeadings={true}
         readOnly={!canEdit}
         placeholder={t("documents.freeNarrative.placeholder")}
-        diffDocumentType={diffDocumentType}
         realtime={realtime}
+        onReady={setEditorView}
+        {...(documentType ? { documentType } : {})}
       />
       {!hideCounter && (
         <div className={styles.counter} aria-live="polite">

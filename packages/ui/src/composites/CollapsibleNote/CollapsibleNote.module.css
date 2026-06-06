@@ -1,6 +1,7 @@
 /* packages/ui/src/composites/CollapsibleNote/CollapsibleNote.module.css */
 
 .note {
+  position: relative;
   background: var(--ds-surface);
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-md);
@@ -105,6 +106,33 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+/* Header action: revealed on hover/focus of the note (a quick "start a session
+   on this" affordance). Present in the DOM but visually hidden until hover. */
+.headerAction {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    opacity var(--ds-duration-1) var(--ds-ease),
+    transform var(--ds-duration-1) var(--ds-ease);
+  pointer-events: none;
+}
+
+.note:hover .headerAction,
+.note:focus-within .headerAction {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .headerAction {
+    transition: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

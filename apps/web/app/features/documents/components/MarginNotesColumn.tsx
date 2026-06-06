@@ -1,14 +1,20 @@
 import { type FC, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DocumentTypes, type DocumentType } from "@oh-writers/domain";
-import { CollapsibleNote } from "@oh-writers/ui";
+import { Button, CollapsibleNote } from "@oh-writers/ui";
 import {
   narrativePolishQueryOptions,
   type NarrativePolishSuggestion,
   type NarrativePolishSuggestionDoc,
 } from "../server/narrative-polish.server";
+import { useCesareOpen } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import styles from "./MarginNotesColumn.module.css";
+
+/** Build the prompt that seeds a Cesare session from a margin suggestion. */
+export function suggestionPrompt(memo: NarrativePolishSuggestion): string {
+  return `${memo.category}: ${memo.message}`;
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,6 +107,9 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
   const { t } = useTranslation();
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
+  const openCesare = useCesareOpen();
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const query = useQuery(
     narrativePolishQueryOptions(projectId, docType, content),
   );
@@ -148,9 +157,7 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
         aria-label={t("documents.marginNotes.ariaLabel")}
       >
         <div className={styles.emptyState}>
-          <p className={styles.emptyText}>
-            {t("documents.marginNotes.none")}
-          </p>
+          <p className={styles.emptyText}>{t("documents.marginNotes.none")}</p>
         </div>
       </aside>
     );
@@ -171,6 +178,17 @@ export const MarginNotesColumn: FC<MarginNotesColumnProps> = ({
           body={memo.message}
           defaultOpen={idx === 0}
           testId={`margin-note-${memo.id}`}
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => openCesare({ prompt: suggestionPrompt(memo) })}
+              data-testid={`margin-note-session-${memo.id}`}
+              aria-label={t("documents.marginNotes.startSession")}
+            >
+              {t("documents.marginNotes.startSession")}
+            </Button>
+          }
         />
       ))}
     </aside>

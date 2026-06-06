@@ -11,7 +11,9 @@ import {
   newlineInCode,
   selectAll,
   splitBlock,
+  toggleMark,
 } from "prosemirror-commands";
+import type { MarkType } from "prosemirror-model";
 import {
   liftListItem,
   sinkListItem,
@@ -124,6 +126,16 @@ export const buildNarrativePlugins = (
     }),
   );
 
+  // Inline formatting (Spec 65): ⌘/Ctrl+B bold, ⌘/Ctrl+I italic.
+  const strong = schema.marks["strong"];
+  const em = schema.marks["em"];
+  const markBindings: Record<string, ReturnType<typeof toggleMark>> = {};
+  if (strong) markBindings["Mod-b"] = toggleMark(strong);
+  if (em) markBindings["Mod-i"] = toggleMark(em);
+  if (Object.keys(markBindings).length > 0) {
+    plugins.push(keymap(markBindings));
+  }
+
   if (options.placeholder !== undefined) {
     plugins.push(buildPlaceholderPlugin(options.placeholder));
   }
@@ -194,4 +206,41 @@ export const toggleBulletList = (
     return liftListItem(listItem)(state, dispatch);
   }
   return wrapInList(bulletList)(state, dispatch);
+};
+
+// ─── Inline marks (Spec 65) ─────────────────────────────────────────────────
+
+/** True when the given mark covers the caret/selection (drives button state). */
+export const isMarkActive = (state: EditorState, mark: MarkType): boolean => {
+  const { from, $from, to, empty } = state.selection;
+  if (empty) return !!mark.isInSet(state.storedMarks ?? $from.marks());
+  return state.doc.rangeHasMark(from, to, mark);
+};
+
+export const isStrongActive = (state: EditorState): boolean => {
+  const mark = state.schema.marks["strong"];
+  return mark ? isMarkActive(state, mark) : false;
+};
+
+export const isEmActive = (state: EditorState): boolean => {
+  const mark = state.schema.marks["em"];
+  return mark ? isMarkActive(state, mark) : false;
+};
+
+export const toggleStrong = (
+  schema: Schema,
+  state: EditorState,
+  dispatch: ((tr: Transaction) => void) | undefined,
+): boolean => {
+  const mark = schema.marks["strong"];
+  return mark ? toggleMark(mark)(state, dispatch) : false;
+};
+
+export const toggleEm = (
+  schema: Schema,
+  state: EditorState,
+  dispatch: ((tr: Transaction) => void) | undefined,
+): boolean => {
+  const mark = schema.marks["em"];
+  return mark ? toggleMark(mark)(state, dispatch) : false;
 };

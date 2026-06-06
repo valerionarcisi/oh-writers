@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect } from "vitest";
-import { docToHtml, htmlToDoc } from "./narrative-html";
+import { canonicalNarrativeHtml, docToHtml, htmlToDoc } from "./narrative-html";
 import { getNarrativeSchema } from "./narrative-schema";
 
 describe("narrative-html", () => {
@@ -37,6 +37,26 @@ describe("narrative-html", () => {
       expect(out).not.toContain("<ul>");
       expect(out).toContain("body");
     });
+
+    // Spec 65 — bold/italic marks round-trip so formatting persists on save.
+    it("round-trips <strong> (bold)", () => {
+      const html = "<p>un <strong>grassetto</strong> qui</p>";
+      expect(docToHtml(htmlToDoc(html, schema), schema)).toBe(html);
+    });
+
+    it("round-trips <em> (italic)", () => {
+      const html = "<p>un <em>corsivo</em> qui</p>";
+      expect(docToHtml(htmlToDoc(html, schema), schema)).toBe(html);
+    });
+
+    it("normalises legacy <b>/<i> to <strong>/<em>", () => {
+      const out = docToHtml(
+        htmlToDoc("<p><b>x</b> <i>y</i></p>", schema),
+        schema,
+      );
+      expect(out).toContain("<strong>x</strong>");
+      expect(out).toContain("<em>y</em>");
+    });
   });
 
   describe("treatment schema (headings + lists)", () => {
@@ -56,6 +76,34 @@ describe("narrative-html", () => {
       const out = docToHtml(htmlToDoc(html, schema), schema);
       expect(out).toContain("<ul>");
       expect(out).toContain("flat");
+    });
+  });
+
+  // Spec 61 — the autosave dirty-check canonicalises so a Cesare apply (plain
+  // text in the DB) and its editor re-serialisation (HTML) are NOT dirty.
+  describe("canonicalNarrativeHtml", () => {
+    it("plain text and its <p> wrapping canonicalise to the same string", () => {
+      expect(canonicalNarrativeHtml("Filippo", true)).toBe(
+        canonicalNarrativeHtml("<p>Filippo</p>", true),
+      );
+    });
+
+    it("multi-paragraph plain text equals its HTML form", () => {
+      expect(canonicalNarrativeHtml("uno\n\ndue", true)).toBe(
+        canonicalNarrativeHtml("<p>uno</p><p>due</p>", true),
+      );
+    });
+
+    it("genuinely different text canonicalises differently", () => {
+      expect(canonicalNarrativeHtml("Filippo", true)).not.toBe(
+        canonicalNarrativeHtml("Marta", true),
+      );
+    });
+
+    it("empty and whitespace canonicalise equal (both empty doc)", () => {
+      expect(canonicalNarrativeHtml("", true)).toBe(
+        canonicalNarrativeHtml("   ", true),
+      );
     });
   });
 });

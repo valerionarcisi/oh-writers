@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 
 export type OpenCesareOptions = {
   requirementId?: string;
+  /** A prompt to send IMMEDIATELY once the floating chat opens — e.g. a margin
+   *  suggestion "start a session on this". Sent once on open. */
+  prompt?: string;
 };
 
 type CesareContextValue = {
@@ -19,7 +22,9 @@ export function CesareProvider({
   openCesare: (opts?: OpenCesareOptions) => void;
 }) {
   const value = useMemo(() => ({ openCesare }), [openCesare]);
-  return <CesareContext.Provider value={value}>{children}</CesareContext.Provider>;
+  return (
+    <CesareContext.Provider value={value}>{children}</CesareContext.Provider>
+  );
 }
 
 /**

@@ -26,6 +26,10 @@ export interface CollapsibleNoteProps {
   readonly body?: ReactNode;
   /** Optional action row rendered after the body when the note is open. */
   readonly actions?: ReactNode;
+  /** Optional control rendered on the header row, revealed on hover/focus of the
+   *  note (always present in the DOM, visually hidden until hover). Used for a
+   *  quick "start a session on this note" affordance. */
+  readonly headerAction?: ReactNode;
   /** Start in the expanded state. Defaults to false. */
   readonly defaultOpen?: boolean;
   /** Optional extra className passed to the outer element. */
@@ -45,6 +49,7 @@ export function CollapsibleNote({
   eyebrow,
   body,
   actions,
+  headerAction,
   defaultOpen = false,
   className,
   testId,
@@ -103,6 +108,9 @@ export function CollapsibleNote({
         </span>
         <span className={styles.title}>{title}</span>
       </button>
+      {headerAction !== undefined && (
+        <div className={styles.headerAction}>{headerAction}</div>
+      )}
       {hasDisclosedContent && isOpen && (
         <div id={bodyId} className={styles.disclosed}>
           {body !== undefined && <div className={styles.body}>{body}</div>}

@@ -1,5 +1,6 @@
 export { NarrativeEditor } from "./components/NarrativeEditor";
 export { DraftBanner } from "./components/DraftBanner";
+export { CesareUpdatedBanner } from "./components/CesareUpdatedBanner";
 export {
   useDocumentDrafts,
   usePromoteDocumentDraft,
@@ -14,6 +15,13 @@ export {
 export { switchToVersion } from "./server/versions.server";
 export { DocumentRoutePage } from "./components/DocumentRoutePage";
 export { emptyNarrativeDocument } from "./lib/empty-narrative-document";
+export { canonicalNarrativeHtml } from "./lib/narrative-html";
+export {
+  setHighlight,
+  clearHighlight,
+  getHighlightFragments,
+  subscribeHighlight,
+} from "./lib/cesare-highlight-store";
 export { FreeNarrativeEditor } from "./components/FreeNarrativeEditor";
 export type { FreeNarrativeEditorProps } from "./components/FreeNarrativeEditor";
 export { TextEditor } from "./components/TextEditor";
