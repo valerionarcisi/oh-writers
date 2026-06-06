@@ -1,15 +1,16 @@
 // apps/web/app/features/app-shell/components/VersionsSplitLane.tsx
 //
 // The routed Versions SplitDrawer lane (Spec 49 routing + Spec 66 master→detail).
-// Mounted at the shell level as the third grid column when `?versions=<documentId>`
-// is set on the host route. The host page stays mounted and COMPRESSES (the main
-// lane reflows narrower) — the Notion side-peek model, NOT a floating overlay.
+// Mounted at the shell level as the third grid column when `?versions=<id>` is set
+// on the host route. The host page stays mounted and COMPRESSES (the main lane
+// reflows narrower) — the Notion side-peek model, NOT a floating overlay.
 //
-// The routed Versions surface is opened only for NARRATIVE documents today (the
-// screenplay keeps its own inline VersionsPanel). So this lane binds the
-// narrative version hooks + a narrative (HTML) read-only renderer and feeds the
-// editor-agnostic master→detail `VersionsSplitDrawer`. When the screenplay starts
-// opening the routed surface (Spec 66 phase 5/6) a kind branch is added here.
+// The surface is unified across document kinds (Spec 66): the SplitDrawer frame +
+// the master→detail `VersionsSplitDrawer` are shared, while a per-kind inner
+// component (`NarrativeVersionsContent` / `ScreenplayVersionsContent`) binds the
+// right hooks + read-only renderer. The kind comes from `peek.kind` (`?vkind=`).
+// `Attiva` is the single verb: switch the active version (narrative) or restore it
+// (screenplay).
 //
 // State is driven entirely by the URL (the routed-surface single source of truth,
 // Spec 49): `?versions=<id>` → open (split); `?vstate=full` → full; param dropped
@@ -34,12 +35,21 @@ import {
   useUpdateDocumentVersionMeta,
   useCreateDocumentVersionFromScratch,
 } from "~/features/documents";
+import {
+  useVersions as useScreenplayVersions,
+  useRestoreVersion,
+  useDuplicateVersion as useDuplicateScreenplayVersion,
+  useRenameVersion as useRenameScreenplayVersion,
+  useUpdateVersionMeta as useUpdateScreenplayVersionMeta,
+  useCreateManualVersion,
+  ReadOnlyScreenplayView,
+} from "~/features/screenplay-editor";
 import { useTranslation } from "~/features/i18n";
 import type { VersionsPeek } from "../versions-peek";
 import styles from "./VersionsSplitLane.module.css";
 
 export interface VersionsSplitLaneProps {
-  /** The validated routed Versions target (document + state + baseline). */
+  /** The validated routed Versions target (entity + state + baseline + kind). */
   readonly peek: VersionsPeek;
   /** Width (px) of the split lane; persisted by AppShell. */
   readonly width: number;
@@ -52,18 +62,16 @@ export interface VersionsSplitLaneProps {
   readonly onClose: () => void;
 }
 
-export function VersionsSplitLane({
-  peek,
-  width,
-  onWidthChange,
-  onExpand,
-  onStepBack,
-  onClose,
-}: VersionsSplitLaneProps) {
-  const { t } = useTranslation();
-  const ref = useRef<HTMLDivElement>(null);
-  const documentId = peek.documentId;
+// ─── Narrative ────────────────────────────────────────────────────────────────
 
+function NarrativeVersionsContent({
+  documentId,
+  currentVersionId,
+}: {
+  documentId: string;
+  currentVersionId: string | null;
+}) {
+  const { t } = useTranslation();
   const { data: result, isLoading } = useDocumentVersions(documentId);
   const activate = useSwitchToVersion(documentId);
   const duplicate = useDuplicateDocumentVersion(documentId);
@@ -72,10 +80,7 @@ export function VersionsSplitLane({
   const createNew = useCreateDocumentVersionFromScratch(documentId);
 
   const versions: VersionView[] = useMemo(
-    () =>
-      result?.isOk
-        ? result.value.map((row) => narrativeToVersionView(row))
-        : [],
+    () => (result?.isOk ? result.value.map(narrativeToVersionView) : []),
     [result],
   );
 
@@ -89,16 +94,132 @@ export function VersionsSplitLane({
           .otherwise(() => t("versions.split.loadFailed"))
       : null;
 
-  // The read-only detail body: the version's canonical narrative HTML rendered
-  // like the editor. (Screenplay would branch to ReadOnlyScreenplayView here.)
+  // The version's canonical narrative HTML (server-owned, sanitised), read-only.
   const renderContent = (version: VersionView) => (
     <div
       className={styles.narrativeBody}
-      // The content is the editor's own canonical, sanitised narrative HTML
-      // (server-owned, never user-pasted raw), rendered read-only.
       dangerouslySetInnerHTML={{ __html: version.content }}
     />
   );
+
+  return (
+    <VersionsSplitDrawer
+      versions={versions}
+      currentVersionId={currentVersionId}
+      isLoading={isLoading}
+      loadError={loadError}
+      renderContent={renderContent}
+      canEdit
+      onActivate={(id) => activate.mutate(id)}
+      onDuplicate={(id) => duplicate.mutate(id)}
+      onRename={(id, label) => rename.mutate({ versionId: id, label })}
+      onSetColor={(id, color: DraftRevisionColor | null) =>
+        updateMeta.mutate({ versionId: id, draftColor: color })
+      }
+      onCreateNew={() => createNew.mutate()}
+    />
+  );
+}
+
+// ─── Screenplay ───────────────────────────────────────────────────────────────
+
+function ScreenplayVersionsContent({
+  screenplayId,
+  currentVersionId,
+}: {
+  screenplayId: string;
+  currentVersionId: string | null;
+}) {
+  const { t } = useTranslation();
+  const { data: result, isLoading } = useScreenplayVersions(screenplayId);
+  // Attiva = restore for the screenplay: copy the version's content back onto the
+  // live screenplay (the old dedicated restore route is superseded, Spec 66).
+  const restore = useRestoreVersion();
+  const duplicate = useDuplicateScreenplayVersion(screenplayId);
+  const rename = useRenameScreenplayVersion(screenplayId);
+  const updateMeta = useUpdateScreenplayVersionMeta(screenplayId);
+  const createNew = useCreateManualVersion();
+
+  const versions: VersionView[] = useMemo(
+    () =>
+      result?.isOk
+        ? result.value.map((v) => ({
+            id: v.id,
+            number: v.number,
+            label: v.label,
+            createdAt:
+              typeof v.createdAt === "string"
+                ? v.createdAt
+                : new Date(v.createdAt).toISOString(),
+            content: v.content,
+            draftColor: (v.draftColor ?? null) as DraftRevisionColor | null,
+            draftDate: v.draftDate ?? null,
+            pageCount: v.pageCount,
+          }))
+        : [],
+    [result],
+  );
+
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "ScreenplayNotFoundError" }, () =>
+            t("versions.split.docNotFound"),
+          )
+          .with({ _tag: "ForbiddenError" }, () => t("versions.split.forbidden"))
+          .otherwise(() => t("versions.split.loadFailed"))
+      : null;
+
+  // The version's content is a Fountain/PM string — render it read-only with the
+  // screenplay editor's own view so the detail reads like the script.
+  const renderContent = (version: VersionView) => (
+    <div className={styles.screenplayBody}>
+      <ReadOnlyScreenplayView content={version.content} />
+    </div>
+  );
+
+  return (
+    <VersionsSplitDrawer
+      versions={versions}
+      currentVersionId={currentVersionId}
+      isLoading={isLoading}
+      loadError={loadError}
+      renderContent={renderContent}
+      canEdit
+      onActivate={(id) => restore.mutate({ versionId: id })}
+      onDuplicate={(id) => {
+        const v = versions.find((x) => x.id === id);
+        duplicate.mutate({
+          versionId: id,
+          label: `${v?.label ?? t("versions.split.versionPrefix")} ${t("versions.copySuffix")}`,
+        });
+      }}
+      onRename={(id, label) => rename.mutate({ versionId: id, label })}
+      onSetColor={(id, color: DraftRevisionColor | null) =>
+        updateMeta.mutate({ versionId: id, draftColor: color })
+      }
+      onCreateNew={() =>
+        createNew.mutate({
+          screenplayId,
+          label: `${t("versions.split.versionPrefix")} ${versions.length + 1}`,
+        })
+      }
+    />
+  );
+}
+
+// ─── Lane frame ───────────────────────────────────────────────────────────────
+
+export function VersionsSplitLane({
+  peek,
+  width,
+  onWidthChange,
+  onExpand,
+  onStepBack,
+  onClose,
+}: VersionsSplitLaneProps) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDivElement>(null);
 
   const { overlayProps } = useOverlay(
     {
@@ -148,21 +269,17 @@ export function VersionsSplitLane({
           reduceLabel={t("shell.splitDrawer.reduce")}
           testId="versions-split-drawer-frame"
         >
-          <VersionsSplitDrawer
-            versions={versions}
-            currentVersionId={peek.currentVersionId}
-            isLoading={isLoading}
-            loadError={loadError}
-            renderContent={renderContent}
-            canEdit
-            onActivate={(id) => activate.mutate(id)}
-            onDuplicate={(id) => duplicate.mutate(id)}
-            onRename={(id, label) => rename.mutate({ versionId: id, label })}
-            onSetColor={(id, color: DraftRevisionColor | null) =>
-              updateMeta.mutate({ versionId: id, draftColor: color })
-            }
-            onCreateNew={() => createNew.mutate()}
-          />
+          {peek.kind === "screenplay" ? (
+            <ScreenplayVersionsContent
+              screenplayId={peek.documentId}
+              currentVersionId={peek.currentVersionId}
+            />
+          ) : (
+            <NarrativeVersionsContent
+              documentId={peek.documentId}
+              currentVersionId={peek.currentVersionId}
+            />
+          )}
         </SplitDrawer>
       </div>
     </FocusScope>

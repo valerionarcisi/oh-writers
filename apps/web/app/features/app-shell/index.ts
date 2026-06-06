@@ -26,11 +26,13 @@ export {
   parseVersionsPeek,
   InvalidVersionsPeekError,
   VERSIONS_SURFACE_STATES,
+  VERSION_KINDS,
 } from "./versions-peek";
 export type {
   VersionsPeek,
   VersionsSearch,
   VersionsSurfaceState,
+  VersionKind,
 } from "./versions-peek";
 export { useRoutedSurface } from "./use-routed-surface";
 export type {

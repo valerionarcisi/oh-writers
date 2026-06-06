@@ -1,26 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { match } from "ts-pattern";
-import { VersionViewer, useVersion } from "~/features/screenplay-editor";
-import { ResultErrorView } from "~/components/ResultErrorView";
-import styles from "./_app.projects.$id_.editor.module.css";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// Spec 66: the dedicated screenplay version-viewer route is superseded by the
+// unified master→detail Versions surface. Any deep-link to it now redirects to
+// the screenplay editor; the writer reopens Versions from there (the `Versioni`
+// action knows the screenplay id, which this route does not carry — it only has
+// the project id + a version id). Removal of this route file is a follow-up.
 export const Route = createFileRoute(
   "/_app/projects/$id_/screenplay/versions/$vId",
 )({
-  component: VersionViewerPage,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/projects/$id/screenplay",
+      params: { id: params.id },
+    });
+  },
 });
-
-function VersionViewerPage() {
-  const { id, vId } = Route.useParams();
-  const { data: result, isLoading } = useVersion(vId);
-
-  if (isLoading) return <div className={styles.status}>Loading version…</div>;
-  if (!result) return null;
-
-  return match(result)
-    .with({ isOk: true }, ({ value }) => (
-      <VersionViewer projectId={id} version={value} />
-    ))
-    .with({ isOk: false }, ({ error }) => <ResultErrorView error={error} />)
-    .exhaustive();
-}

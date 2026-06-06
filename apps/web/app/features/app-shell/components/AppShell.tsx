@@ -185,6 +185,8 @@ interface AppShellProps {
   versionsStateParam?: string | null;
   /** Raw `?vcur` companion — the current (active) baseline version id. */
   versionsCurrentParam?: string | null;
+  /** Raw `?vkind` companion — `"screenplay"` versions a screenplay, else narrative. */
+  versionsKindParam?: string | null;
   /** Clear `?versions` (× / ESC / browser-back). */
   onCloseVersions?: () => void;
   /** `↗` expand the Versions lane to the full-screen route. */
@@ -266,6 +268,7 @@ function AppShellInner({
   versionsParam = null,
   versionsStateParam = null,
   versionsCurrentParam = null,
+  versionsKindParam = null,
   onCloseVersions,
   onExpandVersions,
   onStepBackVersions,
@@ -447,6 +450,7 @@ function AppShellInner({
     versionsParam,
     versionsStateParam,
     versionsCurrentParam,
+    versionsKindParam,
   );
   const versionsPeek = versionsPeekResult.isOk()
     ? versionsPeekResult.value

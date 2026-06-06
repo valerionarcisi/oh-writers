@@ -207,7 +207,7 @@ function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const { peek, versions, vstate, vcur } = search;
+  const { peek, versions, vstate, vcur, vkind } = search;
 
   const projectMatch = matches.find((m) => m.routeId.includes("/projects/$id"));
   const projectId = (projectMatch?.params as { id?: string } | undefined)?.id;
@@ -233,25 +233,27 @@ function AppLayout() {
   // together with `versions` on close.
   const versionsSurface = useRoutedSurface({
     param: "versions",
-    companions: ["vstate", "vcur"],
+    companions: ["vstate", "vcur", "vkind"],
   });
   const closeVersions = versionsSurface.close;
   // `↗` expand → real navigation to the full-screen versions route (new history
-  // entry; browser-back / `↙` returns to the split). The doc + baseline are
+  // entry; browser-back / `↙` returns to the split). The doc + baseline + kind are
   // preserved so the full route stays deep-linkable.
   const expandVersions = useCallback(() => {
     if (versions == null) return;
     const companions: Record<string, string> = { vstate: "full" };
     if (vcur != null) companions["vcur"] = vcur;
+    if (vkind != null) companions["vkind"] = vkind;
     versionsSurface.navigateState(versions, companions);
-  }, [versionsSurface, versions, vcur]);
+  }, [versionsSurface, versions, vcur, vkind]);
   // `↙` step-back → drop `vstate` (back to the split) as a real navigation.
   const stepBackVersions = useCallback(() => {
     if (versions == null) return;
     const companions: Record<string, string> = {};
     if (vcur != null) companions["vcur"] = vcur;
+    if (vkind != null) companions["vkind"] = vkind;
     versionsSurface.navigateState(versions, companions);
-  }, [versionsSurface, versions, vcur]);
+  }, [versionsSurface, versions, vcur, vkind]);
 
   const lastMatch = matches[matches.length - 1];
   const sectionName = lastMatch
@@ -423,6 +425,7 @@ function AppLayout() {
         versionsParam={versions ?? null}
         versionsStateParam={vstate ?? null}
         versionsCurrentParam={vcur ?? null}
+        versionsKindParam={vkind ?? null}
         onCloseVersions={closeVersions}
         onExpandVersions={expandVersions}
         onStepBackVersions={stepBackVersions}

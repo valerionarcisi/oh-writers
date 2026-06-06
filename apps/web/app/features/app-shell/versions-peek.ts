@@ -40,16 +40,26 @@ export const VERSIONS_SURFACE_STATES = ["split", "full"] as const;
 export type VersionsSurfaceState = (typeof VERSIONS_SURFACE_STATES)[number];
 
 /**
+ * The kind of entity the routed surface versions. `narrative` (default) targets a
+ * `documents` row; `screenplay` targets a `screenplays` row. The lane branches on
+ * this to pick the right adapter (server + read-only renderer) — both feed the
+ * one master→detail drawer (Spec 66).
+ */
+export const VERSION_KINDS = ["narrative", "screenplay"] as const;
+export type VersionKind = (typeof VERSION_KINDS)[number];
+
+/**
  * Validated Versions surface target. `documentId` is the versioned entity; the
  * `state` reflects the optional `?vstate=` companion (default `split`).
- * `currentVersionId` is the optional `?vcur=` companion — the "vs current"
- * baseline carried so the surface stays deep-linkable without a second fetch.
- * When absent or malformed it falls back to the most recent version client-side.
+ * `currentVersionId` is the optional `?vcur=` companion — the current baseline
+ * carried so the surface stays deep-linkable without a second fetch. `kind`
+ * reflects the optional `?vkind=` companion (default `narrative`).
  */
 export interface VersionsPeek {
   readonly documentId: string;
   readonly state: VersionsSurfaceState;
   readonly currentVersionId: string | null;
+  readonly kind: VersionKind;
 }
 
 /** Why a raw `?versions=` param was rejected. Tagged for ts-pattern. */
@@ -78,6 +88,7 @@ export const versionsSearchSchema = z.object({
   versions: z.string().optional(),
   vstate: z.enum(VERSIONS_SURFACE_STATES).optional(),
   vcur: z.string().optional(),
+  vkind: z.enum(VERSION_KINDS).optional(),
 });
 
 export type VersionsSearch = z.infer<typeof versionsSearchSchema>;
@@ -103,6 +114,7 @@ export function parseVersionsPeek(
   rawDocumentId: string | null | undefined,
   rawState: string | null | undefined,
   rawCurrentVersionId?: string | null | undefined,
+  rawKind?: string | null | undefined,
 ): Result<VersionsPeek, InvalidVersionsPeekError> {
   if (rawDocumentId == null || rawDocumentId.trim().length === 0) {
     return err(new InvalidVersionsPeekError("empty"));
@@ -116,10 +128,14 @@ export function parseVersionsPeek(
   const state: VersionsSurfaceState = rawState === "full" ? "full" : "split";
   // The baseline is advisory: a malformed `vcur` is ignored (fall back to the
   // most recent version client-side), never a hard reject — it only changes
-  // which diff renders, not whether the surface is trusted.
+  // which version is pre-selected, not whether the surface is trusted.
   const currentVersionId =
     rawCurrentVersionId != null && UUID_RE.test(rawCurrentVersionId.trim())
       ? rawCurrentVersionId.trim()
       : null;
-  return ok({ documentId, state, currentVersionId });
+  // `vkind` is advisory too: anything other than the known "screenplay" falls
+  // back to the narrative default.
+  const kind: VersionKind =
+    rawKind === "screenplay" ? "screenplay" : "narrative";
+  return ok({ documentId, state, currentVersionId, kind });
 }
