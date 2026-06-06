@@ -177,12 +177,19 @@ test.describe("[Spec 41] Cesare Inline Edits", () => {
       authenticatedPage.locator("[data-testid='cesare-pending-edit']"),
     ).toBeVisible({ timeout: 20_000 });
 
-    // Sheet is closed: the sheet container reports data-open="false".
-    // (The sheet uses CSS transform to slide out, not display:none, so we
-    // check the data attribute rather than CSS visibility.)
-    await expect(
-      authenticatedPage.locator('[aria-label="Cesare — assistente AI"]'),
-    ).toHaveAttribute("data-open", "false", { timeout: 5_000 });
+    // The sheet gets out of the way during streaming: the floating drawer
+    // minimises to the inline "peek" row so it cannot intercept the editor. The
+    // shell mirrors that runtime state onto `body[data-cesare]` ("peek"), which
+    // is the canonical "drawer is no longer the expanded panel" signal (it slides
+    // via CSS transform rather than unmounting, so we read the attribute, not CSS
+    // visibility).
+    await expect
+      .poll(
+        async () =>
+          authenticatedPage.evaluate(() => document.body.dataset.cesare),
+        { timeout: 5_000 },
+      )
+      .not.toBe("expanded");
 
     // The Cesare button in the FloatingDock must enter the "thinking" state
     // while streaming (cesareIsThinking=true → aria-busy=true).

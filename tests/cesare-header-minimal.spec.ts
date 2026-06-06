@@ -4,7 +4,8 @@
 // zone home.
 //
 // Spec 55 supersedes Spec 47b FIX 1: the Cesare drawer header is truly minimal —
-// agent name + session selector + `↗ Espandi`, `− Minimizza`, `× Chiudi`. There
+// agent name + session selector + `↗ Apri dettaglio sessione`, `− Minimizza`,
+// `× Chiudi`. There
 // is NO `…` overflow. Bell / avatar / gear are NOT in the header and NOT in the
 // BottomDock; they now live in the TOPBAR account zone (the single home).
 import { test, expect } from "./fixtures";

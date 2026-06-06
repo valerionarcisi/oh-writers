@@ -282,6 +282,28 @@ describe("CesareDrawer", () => {
     expect(queryByLabelText("Impostazioni")).toBeNull();
   });
 
+  // [OHW-046] On the split surface the header is ↗ session detail · ↙ floating
+  // · × — there is NO ◫ "open as column" marker (the lane already IS the split,
+  // so a no-op marker is pure noise and was removed).
+  it("split surface omits the ◫ open-as-column marker", () => {
+    const { getByLabelText, queryByLabelText } = render(
+      <CesareDrawer
+        {...baseProps}
+        surface="split"
+        onOpenAsSplit={() => undefined}
+        onShrinkToFloat={() => undefined}
+      />,
+    );
+    // ↗ and ↙ and × are present on the split surface.
+    expect(getByLabelText("Espandi")).toBeTruthy();
+    expect(getByLabelText("Riduci a floating")).toBeTruthy();
+    expect(getByLabelText("Chiudi")).toBeTruthy();
+    // The ◫ open-as-column marker is gone (it had this label when present).
+    expect(queryByLabelText("Apri come colonna")).toBeNull();
+    // The − minimise control is floating-only and never shows in split.
+    expect(queryByLabelText("Minimizza")).toBeNull();
+  });
+
   it("never renders the `…` overflow trigger, even with onNewChat wired", () => {
     const { queryByLabelText } = render(
       <CesareDrawer {...baseProps} onNewChat={() => undefined} />,

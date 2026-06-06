@@ -41,11 +41,12 @@ test.describe("[OHW-044-D] Per-page chrome", () => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/screenplay`);
     await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
-    // Element Legend exposes the canonical six tags as text. We assert at
-    // least three of them are visible — they're rendered as compact pills
-    // in the strip and may be hidden behind container queries at narrow
+    // Element Legend exposes the canonical six element tags as text. The chips
+    // now render localised, title-case labels (IT is the default locale), not
+    // the old uppercase English tokens. We assert a few of them are visible —
+    // they're compact pills and may be hidden behind container queries at narrow
     // viewports.
-    const expected = ["SCENE", "ACTION", "CHARACTER"];
+    const expected = ["Scena", "Azione", "Personaggio"];
     for (const token of expected) {
       const matches = await page.getByText(token, { exact: false }).count();
       expect(

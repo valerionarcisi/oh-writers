@@ -190,8 +190,14 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       .toBe("open");
 
     // The list has ≥2 versions, exactly one flagged as current ("Attuale").
+    // (The exact count is not asserted: the shared test DB may already hold
+    // extra soggetto versions created by sibling specs in the same run — the
+    // meaningful invariants are "at least the seed + the one we just added" and
+    // "exactly one current".)
     const rows = page.locator('[data-testid^="versions-split-row-"]');
-    await expect(rows).toHaveCount(2, { timeout: 10_000 });
+    await expect
+      .poll(async () => rows.count(), { timeout: 10_000 })
+      .toBeGreaterThanOrEqual(2);
     await expect(
       page.locator('[data-testid^="versions-split-current-"]'),
     ).toHaveCount(1);
@@ -260,7 +266,9 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       timeout: 15_000,
     });
     await expect
-      .poll(() => page.evaluate(() => document.body.dataset.versionsSplit ?? ""))
+      .poll(() =>
+        page.evaluate(() => document.body.dataset.versionsSplit ?? ""),
+      )
       .toBe("");
   });
 });

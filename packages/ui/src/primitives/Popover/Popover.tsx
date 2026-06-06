@@ -43,11 +43,12 @@ export function Popover({
     null,
   );
 
-  // useOverlay provides Esc, outside-click, and blur dismissal for this
-  // non-modal popover. shouldCloseOnBlur closes it when focus leaves the
-  // overlay (e.g. tabbing past the last item).
+  // useOverlay provides Esc and outside-click dismissal. shouldCloseOnBlur is
+  // intentionally false: popovers with editable content (e.g. the logline
+  // textarea) would close the moment the user clicks into an input, because the
+  // focus move triggers a blur on the overlay div before landing on the input.
   const { overlayProps } = useOverlay(
-    { isOpen, onClose, isDismissable: true, shouldCloseOnBlur: true },
+    { isOpen, onClose, isDismissable: true, shouldCloseOnBlur: false },
     ref,
   );
 
@@ -86,12 +87,13 @@ export function Popover({
 
   if (!isOpen || typeof document === "undefined") return null;
 
-  // autoFocus moves focus into the popover on open so react-aria's keyboard
-  // dismiss (Esc, bound to the overlay element via overlayProps.onKeyDown)
-  // fires even when the trigger lives outside the overlay; restoreFocus then
-  // returns focus to the trigger on close.
+  // restoreFocus returns focus to the trigger on close. autoFocus is
+  // intentionally omitted: it would steal focus from editable children (e.g.
+  // the logline textarea) on every re-render triggered by controlled input.
+  // Esc still works because overlayProps.onKeyDown is on the overlay div and
+  // bubbles up from any focused child inside it.
   return createPortal(
-    <FocusScope restoreFocus autoFocus>
+    <FocusScope restoreFocus>
       <div
         {...overlayProps}
         ref={ref}

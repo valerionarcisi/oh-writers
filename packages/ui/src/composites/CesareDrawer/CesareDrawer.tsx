@@ -111,6 +111,12 @@ export interface CesareDrawerProps {
    */
   onOpenAsSplit?: () => void;
 
+  /**
+   * Split surface only: "shrink back to floating" — closes the peek lane and
+   * re-opens the floating drawer. Opposite of `onOpenAsSplit`.
+   */
+  onShrinkToFloat?: () => void;
+
   /** Sessions metadata for the dropdown trigger in the header. */
   sessions?: ReadonlyArray<CesareDrawerSession>;
   activeSessionId?: string;
@@ -162,6 +168,8 @@ export type CesareDrawerLabels = {
   minimize?: string;
   /** Header aria-label + title for close (defaults to IT "Chiudi"). */
   close?: string;
+  /** Split surface only: aria-label + title for "shrink to floating" (◫). */
+  shrinkToFloat?: string;
 };
 
 // ─── Internal building blocks ───────────────────────────────────────────────
@@ -278,6 +286,7 @@ export function CesareDrawer({
   onClose,
   surface = "floating",
   onOpenAsSplit,
+  onShrinkToFloat,
   sessions,
   activeSessionId,
   onSessionSelectorClick,
@@ -298,6 +307,7 @@ export function CesareDrawer({
   const openAsColumnLabel = labels?.openAsColumn ?? "Apri come colonna";
   const minimizeLabel = labels?.minimize ?? "Minimizza";
   const closeLabel = labels?.close ?? "Chiudi";
+  const shrinkToFloatLabel = labels?.shrinkToFloat ?? "Riduci a floating";
   // ─── Resize state ────────────────────────────────────────────────────────
   const isExpanded = state === "expanded";
   const isSplit = state === "expanded-split";
@@ -377,6 +387,30 @@ export function CesareDrawer({
     });
     return () => cancelAnimationFrame(id);
   }, [state]);
+
+  // Auto-scroll to the bottom whenever the conversation content grows (the user
+  // sends a message or the assistant reply streams in) — UNLESS the user has
+  // scrolled up to read older messages (anchor released). A MutationObserver
+  // keeps this decoupled from the chat data: the drawer just watches its body.
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const observer = new MutationObserver(() => {
+      const distanceFromBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight;
+      // Only follow when the user is already near the bottom (within ~120px),
+      // so we never yank them away from something they scrolled up to read.
+      if (distanceFromBottom < 120) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+    observer.observe(el, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const handleBodyScroll = useCallback(() => {
     const el = bodyRef.current;
@@ -497,25 +531,33 @@ export function CesareDrawer({
             ))}
           </div>
 
-          {/* Notion-minimal primary set: ↗ open-as-page · − minimise ·
-              × close. No `…` overflow — secondary actions live in the sessions
-              popover (new chat) and the LeftRail footer (bell/avatar/gear). */}
+          {/* Notion-minimal primary set.
+              Floating: ↗ session detail · ◫ open-as-split · − minimise · × close.
+              Split:    ↗ session detail · ↙ floating · × close. */}
           <div className={styles.headerRight}>
-            {!isSplitSurface && (
-              <HeaderButton
-                onPress={onCycle}
-                label={expandLabel}
-                icon={<span aria-hidden="true">↗</span>}
-                testId="cesare-expand-btn"
-              />
-            )}
-            {/* "Open as split column" — promotes the floating chat into the
-                page-collapsing side-peek (Spec 46 ?peek=). Only in floating. */}
+            <HeaderButton
+              onPress={onCycle}
+              label={expandLabel}
+              icon={<span aria-hidden="true">↗</span>}
+              testId="cesare-expand-btn"
+            />
+            {/* "Open as split column" — floating only, promotes to the split
+                lane. On the split surface there is no marker button: the lane
+                IS the split, so a no-op ◫ marker only adds noise. */}
             {!isSplitSurface && onOpenAsSplit && (
               <HeaderButton
                 onPress={onOpenAsSplit}
                 label={openAsColumnLabel}
                 icon={<span aria-hidden="true">◫</span>}
+              />
+            )}
+            {/* "Shrink to floating" (↙) — split only, opposite of open-as-split. */}
+            {isSplitSurface && onShrinkToFloat && (
+              <HeaderButton
+                onPress={onShrinkToFloat}
+                label={shrinkToFloatLabel}
+                icon={<span aria-hidden="true">↙</span>}
+                testId="cesare-shrink-to-float-btn"
               />
             )}
             {!isSplitSurface && (

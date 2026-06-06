@@ -23,6 +23,31 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-067 — TopBar status shows "online" then flips to "offline" (2026-06-06)
+
+- Severity: MEDIO
+- Status: open
+- Repro: any narrative page (Soggetto seen) → top-right presence indicator briefly shows "online" then switches to "offline" and stays there.
+- Proof: reported live by Valerio on :3000 (visible in every recent screenshot — the "offline" label top-right of the editor card).
+- Notes / suspected cause: the realtime/presence indicator (`PresenceIndicator`, Yjs room `document:<id>`) reports connected then drops to disconnected. Likely the y-websocket provider never connects (no/wrong `VITE_WS_URL` in dev) so it falls back to "offline", or a connect→disconnect race on mount. Investigate `useYjsRoom` status transitions + the dev ws-server. Decide: is "offline" expected in single-instance dev (no ws-server running) — if so, hide/soften the label — or is the ws-server meant to be up?
+
+### BUG-066 — Cesare bell: missing "go to document" link + duplicated start/done notifications (2026-06-06)
+
+- Severity: MEDIO
+- Status: open
+- Repro: trigger several Cesare turns that touch a document → open the bell (NotificationCenter) → (a) NO explicit "Vai al <documento>" link on applied-change notifications; (b) the list fills with repeated "Cesare sta lavorando…/ha risposto" rows (≈8 seen) instead of one entry per turn.
+- Proof: img #6 (NotificationCenter full of repeated "CESARE STA LAVORANDO SUL SOGGETTO…" rows).
+- Desired (decided 2026-06-06): one notification PER TURN (collapse start→done into a single row that goes "sta lavorando" → "ha aggiornato il <doc>"); an explicit "Vai al <documento>" link ONLY on applied-change notifications (not on "sta lavorando"). The Mostra/Nascondi underline stays in the document with Cesare open on the right page — NOT in the bell. Scenario: on Location, a change lands on Soggetto via floating Cesare → the float/bell shows the link to Soggetto → click navigates there → in the doc with Cesare open, Mostra/Nascondi is available.
+- Notes / suspected cause: the bell likely emits separate start + complete notifications (or re-emits on the streaming + fallback paths) instead of updating one id. Investigate `handleCesareAssistantResponse` + `startNotification`/`completeNotification` emission in `AppShell.tsx`, and the render in `NotificationCenterDrawer.tsx` (add the link off `affectedEntities`/`page`).
+
+### BUG-065 — Cesare needs a presence "glow" effect (closed pill + open chat header) (2026-06-06)
+
+- Severity: BASSO (polish)
+- Status: open
+- Repro: n/a — enhancement. The Cesare floating pill (closed) and the chat header (open) have no presence/activity glow.
+- Desired: a subtle glow effect on the Cesare pill when closed AND on the chat header when open. Decorative, signals presence/activity.
+- Notes: pure CSS on the floating pill + `CesareDrawer` header. Respect `prefers-reduced-motion`.
+
 ### BUG-064 — "Avvia sessione" from a margin suggestion triggers a stray re-render (2026-06-06)
 
 - Severity: MEDIO

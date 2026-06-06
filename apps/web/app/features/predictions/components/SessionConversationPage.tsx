@@ -11,18 +11,29 @@
 //
 // Access control lives entirely server-side: `useSession` calls a `getSession`
 // server fn that fails closed (foreign / unknown id → not-found error).
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
+import { useRouter } from "@tanstack/react-router";
 import { Skeleton } from "@oh-writers/ui";
-import type { TraceMarker } from "@oh-writers/ui";
 import { useButton } from "react-aria";
-import { useCesareSessionFocus } from "~/features/app-shell";
+import {
+  useCesareSessionFocus,
+  useRegisterCesareSurface,
+  useRegisterSplitOpener,
+} from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import { useSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
-import { CesareConversation, type LiveDiffMarker } from "./CesareConversation";
+import {
+  CesareConversation,
+  extractStepBlockMetadata,
+  extractChangeSummary,
+} from "./CesareConversation";
 import { useShowChangesInSplitDrawer } from "./CesareSheet";
-import { buildTargetPageRef } from "../cesare-show-changes";
+import {
+  buildTargetPageRefForDocument,
+  documentRouteFor,
+} from "../cesare-show-changes";
 import styles from "./SessionConversationPage.module.css";
 
 const SessionIdParam = z.string().uuid();
@@ -45,7 +56,8 @@ export function SessionConversationPage({
   );
   const { setFocusedSessionId } = useCesareSessionFocus();
   const store = useCesareChatStore();
-  const showChangesInSplit = useShowChangesInSplitDrawer();
+  // This page IS the chat — suppress the shell's floating Cesare drawer + pill.
+  useRegisterCesareSurface();
 
   const session = sessionQuery.data;
   const confirmedSessionId = session?.id ?? null;
@@ -70,9 +82,74 @@ export function SessionConversationPage({
     return () => setFocusedSessionId(null);
   }, [setFocusedSessionId]);
 
+  // ── Scroll-to-bottom affordance ────────────────────────────────────────────
+  // Shown when the thread is scrolled away from the bottom; clicking it jumps to
+  // the latest message. Same pattern as the floating drawer's scroll nudge so
+  // every chat surface has it.
+  const threadRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const handleThreadScroll = useCallback(() => {
+    const el = threadRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setIsAtBottom(distanceFromBottom < 80);
+  }, []);
+  const scrollToBottom = useCallback(() => {
+    const el = threadRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, []);
+
   // ── Composer ──────────────────────────────────────────────────────────────
   const [input, setInput] = useState("");
   const isLoading = store?.isLoadingFor(confirmedSessionId) ?? false;
+
+  // Opening a session jumps straight to the latest message (instant, no smooth
+  // animation): a writer wants the newest content, not the top of a long thread.
+  // Runs once the session is confirmed AND its messages have hydrated.
+  const messageCount = store?.messagesFor(confirmedSessionId).length ?? 0;
+  const jumpedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const el = threadRef.current;
+    if (!el || !confirmedSessionId || messageCount === 0) return;
+    if (jumpedRef.current === confirmedSessionId) return;
+    jumpedRef.current = confirmedSessionId;
+    el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+  }, [confirmedSessionId, messageCount]);
+
+  // Auto-scroll to the latest message whenever a new bubble is added (the user
+  // sends, or the assistant turn lands) — so the conversation always shows the
+  // newest content. Keyed on the message count so it fires once per new message,
+  // not on every stream tick.
+  useEffect(() => {
+    const el = threadRef.current;
+    if (!el) return;
+    // Defer to after the new bubble has laid out, else scrollHeight is the OLD
+    // height and we stop short of the bottom.
+    const raf = requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [messageCount]);
+
+  // Cmd/Ctrl+C stops the agent mid-turn (like every agent CLI), but ONLY while a
+  // turn is in flight AND nothing is selected — otherwise Cmd+C must keep copying
+  // selected text.
+  useEffect(() => {
+    if (!isLoading) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "c" || e.key === "C")) {
+        const hasSelection =
+          (window.getSelection()?.toString() ?? "").length > 0;
+        if (hasSelection) return;
+        e.preventDefault();
+        store?.stop(confirmedSessionId ?? undefined);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isLoading, store, confirmedSessionId]);
+
   const handleSubmit = useCallback(() => {
     if (!store || !confirmedSessionId) return;
     const text = input.trim();
@@ -81,33 +158,107 @@ export function SessionConversationPage({
     void store.send(text, confirmedSessionId);
   }, [store, confirmedSessionId, input, isLoading]);
 
-  // ── Diff handlers — full page hides the doc, so Mostra modifiche opens the
-  //    routed SplitDrawer with the affected page (A6 full-page branch). Undo
-  //    emits the same DOM events the floating drawer uses. ────────────────────
+  // Per-result-card "Apri <Entity>" navigation: a session can edit several
+  // entities (logline, then soggetto…), so each card jumps to ITS entity's real
+  // page via the router (the SplitDrawer has no router; this is the way out to a
+  // full page).
+  const router = useRouter();
+  const handleOpenEntity = useCallback(
+    (documentType: string) => {
+      const route = documentRouteFor(documentType);
+      if (!route) return;
+      void router.navigate({
+        to: `/projects/$id/${route}`,
+        params: { id: projectId },
+      });
+    },
+    [router, projectId],
+  );
+  const openEntityLabelFor = useCallback(
+    (documentType: string) => {
+      const ref = buildTargetPageRefForDocument(documentType);
+      if (!ref) return null;
+      return `${t("cesare.openEntity")} ${ref.title}`;
+    },
+    [t],
+  );
+
+  // ── Result cards show only "Apri <Entity>" here (no "Mostra/Nascondi" — no
+  //    editor in front of the user; CONTEXT.md). The TopBar ⊟ toggle, instead,
+  //    OPENS the read-only split-preview for the MOST RECENT edit in this
+  //    session — so the user can peek at what Cesare last changed without leaving
+  //    the chat. We publish that opener to the shell; it is null when the session
+  //    has no edit yet (→ the ⊟ stays disabled). ────────────────────────────────
   const page = store?.activePage ?? "soggetto";
-  const handleShowChanges = useCallback(
+  const showChangesInSplit = useShowChangesInSplitDrawer();
+
+  const latestEdit = useMemo(() => {
+    const thread = store?.messagesFor(confirmedSessionId) ?? [];
+    for (let i = thread.length - 1; i >= 0; i -= 1) {
+      const m = thread[i];
+      if (!m || m.role !== "assistant") continue;
+      const meta = extractStepBlockMetadata(m.content);
+      const diffs = meta.liveDiffs.filter((d) => d.documentType);
+      if (diffs.length > 0) return { content: m.content, diffs };
+    }
+    return null;
+  }, [store, confirmedSessionId]);
+
+  const openLatestSplit = useCallback(() => {
+    if (!latestEdit) return;
+    const firstDocType = latestEdit.diffs[0]?.documentType;
+    const pageRef = firstDocType
+      ? buildTargetPageRefForDocument(firstDocType)
+      : null;
+    if (!pageRef) return;
+    showChangesInSplit({
+      pageRef,
+      liveDiffs: latestEdit.diffs.map((d) => ({
+        documentType: d.documentType,
+        label: d.label,
+        segments: d.segments,
+      })),
+      title: pageRef.title,
+      summary: extractChangeSummary(latestEdit.content),
+    });
+  }, [latestEdit, showChangesInSplit]);
+
+  useRegisterSplitOpener(latestEdit ? openLatestSplit : null);
+
+  // Per-card "Vedi modifica" — open the read-only split-preview for THAT card's
+  // edit (the final document text + bullet summary, no highlight).
+  const handleOpenSplit = useCallback(
     (args: {
-      traceMarkers: ReadonlyArray<TraceMarker>;
-      scope?: string;
-      liveDiffs?: ReadonlyArray<LiveDiffMarker>;
+      liveDiffs: ReadonlyArray<{
+        documentType: string;
+        label: string;
+        segments: ReadonlyArray<{ op: "eq" | "add" | "del"; text: string }>;
+      }>;
+      summary: string;
     }) => {
-      const pageRef = buildTargetPageRef(page, args.scope);
+      const diffs = args.liveDiffs.filter((d) => d.documentType);
+      const firstDocType = diffs[0]?.documentType;
+      const pageRef = firstDocType
+        ? buildTargetPageRefForDocument(firstDocType)
+        : null;
       if (!pageRef) return;
       showChangesInSplit({
         pageRef,
-        traceMarkers: args.traceMarkers,
-        onAccept: () => undefined,
-        onReject: () => undefined,
-        onAcceptAll: () => undefined,
-        onRejectAll: () => undefined,
-        title: pageRef.scope
-          ? `${pageRef.title} · ${pageRef.scope}`
-          : pageRef.title,
+        liveDiffs: diffs.map((d) => ({
+          documentType: d.documentType,
+          label: d.label,
+          segments: d.segments,
+        })),
+        title: pageRef.title,
+        summary: args.summary,
       });
     },
-    [page, showChangesInSplit],
+    [showChangesInSplit],
   );
-  const handleHideChanges = useCallback(() => undefined, []);
+
+  // The split does NOT auto-open at the end of an elaboration — the user opens it
+  // deliberately via "Vedi modifica" on the card or the ⊟ toggle. (Auto-opening
+  // was intrusive: it stole focus from the reply the user is reading.)
 
   if (!isValidParam || sessionQuery.isError) {
     return (
@@ -142,26 +293,33 @@ export function SessionConversationPage({
       data-testid="session-conversation"
       data-session-id={session.id}
     >
-      <header className={styles.header}>
-        <span className={styles.brandGlyph} aria-hidden="true">
-          ✦
-        </span>
-        <div>
-          <h1 className={styles.title} data-testid="session-title">
-            {session.title}
-          </h1>
-          <p className={styles.subtitle}>{t("cesare.session.subtitle")}</p>
-        </div>
-      </header>
-
-      <div className={styles.thread}>
+      <div
+        className={styles.thread}
+        ref={threadRef}
+        onScroll={handleThreadScroll}
+      >
         <div className={styles.threadInner}>
+          {/* The header scrolls WITH the thread (not pinned) — it's a one-off
+              title at the top of the conversation, not chrome. */}
+          <header className={styles.header}>
+            <span className={styles.brandGlyph} aria-hidden="true">
+              ✦
+            </span>
+            <div>
+              <h1 className={styles.title} data-testid="session-title">
+                {session.title}
+              </h1>
+              <p className={styles.subtitle}>{t("cesare.session.subtitle")}</p>
+            </div>
+          </header>
           <CesareConversation
             messages={messages}
             page={page}
             testId="session-conversation-thread"
-            onShowChanges={handleShowChanges}
-            onHideChanges={handleHideChanges}
+            onOpenEntity={handleOpenEntity}
+            openEntityLabelFor={openEntityLabelFor}
+            onOpenSplit={handleOpenSplit}
+            openSplitLabel={t("cesare.openSplit")}
             emptyState={
               <p className={styles.lede} data-testid="session-empty">
                 {t("cesare.session.empty")}
@@ -172,6 +330,18 @@ export function SessionConversationPage({
       </div>
 
       <div className={styles.composerDock}>
+        {!isAtBottom && (
+          <button
+            type="button"
+            className={styles.scrollToBottom}
+            onClick={scrollToBottom}
+            aria-label={t("cesare.session.scrollToBottom")}
+            title={t("cesare.session.scrollToBottom")}
+            data-testid="session-scroll-to-bottom"
+          >
+            ↓
+          </button>
+        )}
         <SessionComposer
           value={input}
           onChange={setInput}
@@ -198,6 +368,7 @@ function SessionComposer({
 }) {
   const { t } = useTranslation();
   const sendRef = useRef<HTMLButtonElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { buttonProps } = useButton(
     {
       onPress: onSubmit,
@@ -206,9 +377,20 @@ function SessionComposer({
     },
     sendRef,
   );
+
+  // Auto-grow the textarea with its content (slim → grows a little), capped so a
+  // long draft scrolls inside rather than pushing the thread off-screen.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [value]);
+
   return (
     <div className={styles.composer} data-testid="session-composer">
       <textarea
+        ref={textareaRef}
         className={styles.composerInput}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -224,15 +406,17 @@ function SessionComposer({
         aria-label={t("cesare.session.composerAria")}
         data-testid="cesare-composer-input"
       />
-      <button
-        ref={sendRef}
-        {...buttonProps}
-        type="button"
-        className={styles.composerSend}
-        data-testid="cesare-send-btn"
-      >
-        ↑
-      </button>
+      <div className={styles.composerToolbar}>
+        <button
+          ref={sendRef}
+          {...buttonProps}
+          type="button"
+          className={styles.composerSend}
+          data-testid="cesare-send-btn"
+        >
+          ↑
+        </button>
+      </div>
     </div>
   );
 }

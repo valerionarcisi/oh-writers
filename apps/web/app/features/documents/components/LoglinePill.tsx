@@ -1,35 +1,20 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Popover } from "@oh-writers/ui";
-import { DocumentTypes } from "@oh-writers/domain";
-import {
-  CesareLiveDiff,
-  getLiveDiffState,
-  subscribeLiveDiff,
-} from "~/features/app-shell";
+import { useRef, useState } from "react";
+import { Button, Popover } from "@oh-writers/ui";
 import { LOGLINE_MAX } from "../documents.schema";
 import { useTranslation } from "~/features/i18n";
 import styles from "./LoglinePill.module.css";
-
-/**
- * The latest live-diff flash nonce for the logline (N-09). The logline lives in
- * a collapsed pill, so unlike the prose documents there is no always-mounted
- * surface to paint the "Mostra modifiche" flash onto. We watch the store here so
- * the pill can auto-open its popover and render the diff when Cesare edits the
- * logline. Returns `null` until the first flash. */
-function useLoglineFlashNonce(): number | null {
-  const state = useSyncExternalStore(
-    subscribeLiveDiff,
-    getLiveDiffState,
-    getLiveDiffState,
-  );
-  return state.flashes[DocumentTypes.LOGLINE]?.nonce ?? null;
-}
 
 export interface LoglinePillProps {
   readonly projectId: string;
   readonly logline: string;
   readonly canEdit: boolean;
   readonly onChange?: (next: string) => void;
+  /** Persist the current logline immediately (manual save). */
+  readonly onSave?: () => void;
+  /** Unsaved edits pending. Enables the Save button. */
+  readonly isDirty?: boolean;
+  /** A save is in flight — disables the Save button and shows progress. */
+  readonly isSaving?: boolean;
 }
 
 export function LoglinePill({
@@ -37,6 +22,9 @@ export function LoglinePill({
   logline,
   canEdit,
   onChange,
+  onSave,
+  isDirty = false,
+  isSaving = false,
 }: LoglinePillProps) {
   const { t } = useTranslation();
   const placeholder = t("documents.logline.placeholder");
@@ -47,19 +35,6 @@ export function LoglinePill({
   // The unused projectId argument keeps the API consistent for a future
   // editor that may need to issue mutations referencing the project.
   void _projectId;
-
-  // N-09 — when Cesare flashes "Mostra modifiche" for the logline, auto-open the
-  // pill popover so the inline diff (`<CesareLiveDiff documentType="logline"/>`)
-  // is actually visible. Keyed ONLY on the nonce (a primitive that changes only
-  // on a flash request), so this never re-runs per render.
-  const flashNonce = useLoglineFlashNonce();
-  const shownNonceRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (flashNonce == null) return;
-    if (shownNonceRef.current === flashNonce) return;
-    shownNonceRef.current = flashNonce;
-    setOpen(true);
-  }, [flashNonce]);
 
   const display = hasLogline
     ? trimmed.length > 90
@@ -109,18 +84,30 @@ export function LoglinePill({
               rows={4}
               data-testid="narrative-logline-editor"
             />
-            <p className={styles.counter}>
-              {logline.length} / {LOGLINE_MAX}
-            </p>
+            <div className={styles.footer}>
+              <span className={styles.counter}>
+                {logline.length} / {LOGLINE_MAX}
+              </span>
+              {onSave !== undefined && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onPress={onSave}
+                  disabled={!isDirty || isSaving}
+                  data-testid="narrative-logline-save"
+                >
+                  {isSaving
+                    ? t("documents.logline.saving")
+                    : t("documents.logline.save")}
+                </Button>
+              )}
+            </div>
           </>
         ) : (
           <p className={styles.readonly}>
             {hasLogline ? trimmed : placeholder}
           </p>
         )}
-        {/* Logline diff flash surface (N-09). The pill has no persistent prose
-            body, so the flash paints here inside the popover. */}
-        <CesareLiveDiff documentType={DocumentTypes.LOGLINE} />
       </Popover>
     </div>
   );

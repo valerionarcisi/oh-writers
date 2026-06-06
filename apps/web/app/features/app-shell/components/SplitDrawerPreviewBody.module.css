@@ -1,0 +1,76 @@
+/* apps/web/app/features/app-shell/components/SplitDrawerPreviewBody.module.css
+   Read-only Cesare "Mostra modifiche" preview body (ADR-0001). Claude-Desktop-style
+   artifact: the FINAL modified text shown clean and readable, with only the added
+   words highlighted in soft green (no struck-through removals — that diff-soup was
+   unreadable). A short summary header sits on top. Persistent read-only view shown
+   beside the conversation in the SplitDrawer. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+}
+
+.summary {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summaryItem {
+  position: relative;
+  padding-inline-start: var(--ds-space-4);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ds-text-faint);
+}
+
+.summaryItem::before {
+  content: "·";
+  position: absolute;
+  inset-inline-start: var(--ds-space-2);
+  color: var(--ds-text-faint);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sectionLabel {
+  margin: 0;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-faint);
+}
+
+.body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ds-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.equal {
+  color: var(--ds-text);
+}
+
+.added {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+  border-radius: var(--ds-radius-sm);
+  padding-inline: 2px;
+}
+
+.empty {
+  padding: var(--ds-space-5);
+  color: var(--ds-text-faint);
+  font-size: 13px;
+  text-align: center;
+}

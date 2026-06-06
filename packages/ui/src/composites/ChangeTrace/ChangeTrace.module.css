@@ -204,6 +204,40 @@
   color: var(--ds-text-on-dark);
 }
 
+/* Secondary action — "Apri <Entity>" (go to the entity's real page). Quieter
+   than the primary "Mostra modifiche": outline-only, neutral. */
+.actionSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin: 0;
+  border-radius: var(--ds-radius-md);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text-2);
+  transition:
+    background var(--ds-duration-1) var(--ds-ease),
+    color var(--ds-duration-1) var(--ds-ease),
+    border-color var(--ds-duration-1) var(--ds-ease);
+}
+
+.actionSecondary:hover {
+  background: var(--ds-surface-2, var(--ds-surface));
+  color: var(--ds-text);
+  border-color: var(--ds-text-faint);
+}
+
+.actionSecondary:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 2px;
+}
+
 /* ── Reduced motion fallback ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

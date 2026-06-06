@@ -49,10 +49,17 @@ test.describe("[Spec 44 F1] Sessioni Cesare always visible in LeftRail", () => {
     await openCesareSheet(authenticatedPage);
     await expect(sessionsSection).toBeVisible();
 
-    // Close Cesare via the dock pill toggle and re-assert.
+    // Close Cesare via the drawer's own × control (the dock pill is hidden while
+    // Cesare is open) and re-assert the rail sessions section stays visible.
     await authenticatedPage
-      .getByRole("button", { name: /^Cesare(\s—.*)?$/ })
+      .getByTestId("cesare-drawer")
+      .getByTestId("cesare-close-btn")
       .click();
+    await expect
+      .poll(async () =>
+        authenticatedPage.evaluate(() => document.body.dataset.cesare),
+      )
+      .toBe("closed");
     await expect(sessionsSection).toBeVisible({ timeout: 5_000 });
   });
 });

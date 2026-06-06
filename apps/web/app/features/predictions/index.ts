@@ -3,13 +3,17 @@ export {
   parseToolsExecuted,
   parseRewriteSceneMarker,
   appliedEntityDomains,
+  parseLiveDiffMarkers,
+  parseDocAppliedMarker,
+  extractChangeSummary,
   useShowChangesInSplitDrawer,
 } from "./components/CesareSheet";
 export type {
   CesarePage,
   AskCesareFn,
-  TraceForToolRunArgs,
+  PreviewForToolRunArgs,
 } from "./components/CesareSheet";
+export { buildTargetPageRefForDocument } from "./cesare-show-changes";
 export {
   CesareChatStoreProvider,
   useCesareChatStore,

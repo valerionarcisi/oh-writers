@@ -1,23 +1,40 @@
 // tests/shell-cesare-states.spec.ts
 //
-// [OHW-044-A] Cesare 4-state transitions + editor pixel-stability.
+// [OHW-044-A] Cesare floating-drawer state transitions + editor pixel-stability.
 //
-// The Cesare drawer cycles closed -> expanded -> peek -> full -> closed.
-// The editor's bounding rect width MUST remain identical at every transition.
-// If it changes the drawer is reflowing the layout instead of floating, which
-// breaks the Notion-style invariant locked in Spec 44.
+// The floating Cesare drawer cycles closed → expanded → peek (→ expanded) →
+// closed. The editor's bounding rect width MUST remain identical at every
+// transition — if it changes, the drawer is reflowing the layout instead of
+// floating, which breaks the Notion-style invariant (Spec 44).
+//
+// The in-place "full" overlay state was RETIRED: the header ↗ (`cesare-expand-
+// btn`) now NAVIGATES to the full-screen session detail route
+// (`/projects/:id/sessions/:sessionId`) instead of escalating the floating
+// drawer to a "full" overlay. That routing is asserted here in place of the old
+// "expanded → full" cycle.
 import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
+import { openCesareSheet } from "./helpers/cesare";
 
-test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
-  test("transitions through every state without reflowing the editor", async ({
+test.describe("[OHW-044-A] Cesare floating-drawer state transitions", () => {
+  test("transitions through every state without reflowing the editor; ↗ routes to the session detail", async ({
     authenticatedPage: page,
   }) => {
     await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/breakdown`);
     await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
       timeout: 15_000,
     });
+    // Gate the baseline measurement on shell hydration: the rail column only
+    // settles once the hydration effect has written `body[data-shell]`. Reading
+    // the editor width before that captures the pre-hydration (rail-less) layout
+    // and yields a false "editor reflowed" failure once the rail mounts.
+    await expect
+      .poll(() => page.evaluate(() => document.body.dataset.shell ?? ""), {
+        timeout: 10_000,
+      })
+      .not.toBe("");
+    await page.waitForLoadState("networkidle");
 
     // Capture the editor's bounding width BEFORE Cesare is opened. This is
     // our reference value — every subsequent state must match it.
@@ -33,13 +50,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     expect(baselineWidth).toBeGreaterThan(0);
 
     // ── closed → expanded ─────────────────────────────────────────────────
-    const dock = page.getByTestId("bottom-dock");
-    await expect(dock).toBeVisible({ timeout: 5_000 });
-    const cesareTrigger = dock.getByTestId("cesare-open-btn");
-    await cesareTrigger.click();
-
-    // Cesare opens via the AppShell legacy `cesareOpen` pathway. Body should
-    // reflect the new state.
+    await openCesareSheet(page);
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
@@ -72,51 +83,31 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
 
-    // ── expanded → full (cycle button "↗") ────────────────────────────────
-    // The drawer cycles expanded → expanded-split → full. AppShell mirrors
-    // expanded-split onto body[data-cesare]="expanded", so we click "↗" until
-    // the drawer's own data-state reaches "full".
+    // The editor stayed pixel-stable across the whole floating cycle — the
+    // drawer is position:fixed and never reflows the layout.
+    const widthBackToExpanded = await readEditorWidth();
+    expect(
+      widthBackToExpanded,
+      `Editor width changed cycling back to "expanded" (${baselineWidth} → ${widthBackToExpanded})`,
+    ).toBe(baselineWidth);
+
+    // ── expanded → session detail (header ↗) ──────────────────────────────
+    // The ↗ control no longer escalates to an in-place "full" overlay: it
+    // navigates to the full-screen session conversation route. The floating
+    // drawer unmounts and `body[data-cesare-surface]` flips to "active".
     await drawer.getByTestId("cesare-expand-btn").first().click();
-    await drawer.getByTestId("cesare-expand-btn").first().click();
+    await page.waitForURL(
+      new RegExp(`/projects/${TEAM_PROJECT_ID}/sessions/[0-9a-f-]+$`),
+      { timeout: 10_000 },
+    );
+    await expect(page.getByTestId("session-conversation")).toBeVisible({
+      timeout: 10_000,
+    });
     await expect
       .poll(async () =>
-        page.evaluate(
-          () =>
-            document
-              .querySelector('[data-testid="cesare-drawer"]')
-              ?.getAttribute("data-state") ?? "",
-        ),
+        page.evaluate(() => document.body.dataset.cesareSurface ?? ""),
       )
-      .toBe("full");
-
-    // Notion model: `full` is a larger floating drawer, NOT a fullscreen
-    // takeover. The editor must stay visible and keep its bounding width —
-    // the drawer is position:fixed and never reflows the layout.
-    await expect(page.getByTestId("breakdown-page-v2")).toBeVisible();
-    const widthFull = await readEditorWidth();
-    expect(
-      widthFull,
-      `Editor width changed when Cesare moved to "full" (${baselineWidth} → ${widthFull}); full must stay a floating drawer.`,
-    ).toBe(baselineWidth);
-    // The editor's left portion must remain on-screen (drawer is right-anchored
-    // and width-capped), so the editor's left edge stays at the viewport left.
-    const editorLeft = await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="breakdown-page-v2"]');
-      return el ? Math.round(el.getBoundingClientRect().left) : -1;
-    });
-    expect(editorLeft).toBeGreaterThanOrEqual(0);
-
-    // ── full → closed (×) ─────────────────────────────────────────────────
-    await drawer.getByTestId("cesare-close-btn").click();
-    await expect
-      .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
-      .toBe("closed");
-
-    const widthAfterClose = await readEditorWidth();
-    expect(
-      widthAfterClose,
-      `Editor width changed after Cesare closed (${baselineWidth} → ${widthAfterClose})`,
-    ).toBe(baselineWidth);
+      .toBe("active");
   });
 
   test("shows the BottomDock only when Cesare is closed", async ({
@@ -130,7 +121,7 @@ test.describe("[OHW-044-A] Cesare 4-state transitions", () => {
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible();
 
-    await dock.getByTestId("cesare-open-btn").click();
+    await openCesareSheet(page);
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");

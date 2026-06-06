@@ -37,10 +37,7 @@ import {
 } from "~/features/predictions/sessions";
 import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
-import {
-  setHighlight,
-  clearHighlight,
-} from "~/features/documents/lib/cesare-highlight-store";
+import { setHighlight, clearHighlight } from "~/features/documents";
 import { useCesareChat } from "../use-cesare-chat";
 import {
   CesareConversation,

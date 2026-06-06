@@ -28,6 +28,13 @@ export type TopBarAccountActions = {
   hasUnreadNotifications: boolean;
   /** 1–2 letter initials shown in the avatar circle. */
   avatarLabel: string;
+  /** Toggle the SplitDrawer (⊟, Claude-style). Omitted → the toggle is hidden.
+   *  When `canToggleSplit` is false the button renders disabled. */
+  onToggleSplit?: () => void;
+  /** Whether the SplitDrawer is currently open (drives the toggle's pressed state). */
+  splitOpen?: boolean;
+  /** Whether there is split content to toggle (drives the button's enabled state). */
+  canToggleSplit?: boolean;
 };
 
 export type TopBarAccountLabels = {
@@ -36,6 +43,7 @@ export type TopBarAccountLabels = {
   profile: string;
   settings: string;
   account: string;
+  toggleSplit: string;
 };
 
 export interface TopBarAccountProps {
@@ -65,6 +73,15 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
     { onPress: account.onGear, "aria-label": labels.settings },
     gearRef,
   );
+  const splitRef = useRef<HTMLButtonElement>(null);
+  const { buttonProps: splitProps } = useButton(
+    {
+      onPress: account.onToggleSplit ?? (() => undefined),
+      "aria-label": labels.toggleSplit,
+      isDisabled: !account.canToggleSplit,
+    },
+    splitRef,
+  );
 
   return (
     <div
@@ -73,6 +90,19 @@ export function TopBarAccount({ account, labels }: TopBarAccountProps) {
       aria-label={labels.account}
       data-testid="topbar-account"
     >
+      {account.onToggleSplit && (
+        <button
+          ref={splitRef}
+          {...splitProps}
+          className={styles.accountBtn}
+          title={labels.toggleSplit}
+          aria-pressed={account.splitOpen ?? false}
+          data-topbar-account="split"
+          data-testid="topbar-split-toggle"
+        >
+          <span aria-hidden="true">◫</span>
+        </button>
+      )}
       <button
         ref={bellRef}
         {...bellProps}

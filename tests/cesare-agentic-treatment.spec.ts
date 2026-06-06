@@ -115,13 +115,12 @@ test.describe("[Audit F-A2] write the treatment from the scaletta", () => {
 
     await suggestion.click();
 
-    // The honest card renders for the REAL apply: the canonical trace with the
-    // transient "Mostra modifiche" flash, labelled by the edited entity.
+    // The honest card renders for the REAL apply: the canonical trace, labelled
+    // by the edited entity. Spec 63: on the Trattamento page the card hides
+    // "Mostra modifiche" (the in-editor banner owns the highlight — no duplicate).
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 90_000 });
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
     await expect(trace).toContainText(/trattamento/i);
 
     // DB-level proof (F-A2 core): the treatment now actually has content — no

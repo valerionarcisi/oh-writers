@@ -9,6 +9,7 @@
 import { test, expect } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
+import { openCesareSheet } from "./helpers/cesare";
 
 test.describe("[OHW-044-C] Cesare sessions", () => {
   test("opens the session selector inside the drawer header", async ({
@@ -20,7 +21,7 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     });
 
     // Open Cesare from the dock
-    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
+    await openCesareSheet(page);
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
@@ -39,7 +40,7 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
+    await openCesareSheet(page);
     await expect(page.getByTestId("cesare-drawer")).toBeVisible();
 
     // Snapshot the active session title (from the drawer's session selector)
@@ -49,9 +50,13 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     const initialTitle = (await selector.textContent()) ?? "";
     expect(initialTitle.length).toBeGreaterThan(0);
 
-    // Navigate to Sceneggiatura — Cesare state should persist via localStorage
-    await page.goto(`${BASE_URL}/projects/${TEAM_PROJECT_ID}/screenplay`);
-    await page.waitForLoadState("networkidle");
+    // Navigate to Sceneggiatura via the in-app rail link (client-side SPA nav,
+    // exactly as a user would). The Cesare drawer state lives in the AppShell —
+    // which sits above the routed Outlet and does NOT remount on navigation — so
+    // the open drawer survives the page change. (A full `page.goto` reload is not
+    // representative: it tears down the in-memory shell.)
+    await page.getByRole("button", { name: "Sceneggiatura" }).first().click();
+    await page.waitForURL(/\/screenplay$/, { timeout: 10_000 });
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
@@ -73,13 +78,12 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
     await expect(page.getByTestId("breakdown-page-v2")).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
+    await openCesareSheet(page);
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
     const initialTitle =
-      (await drawer.getByTestId("cesare-session-selector").textContent()) ??
-      "";
+      (await drawer.getByTestId("cesare-session-selector").textContent()) ?? "";
 
     // Close
     await drawer.getByTestId("cesare-close-btn").click();
@@ -88,7 +92,7 @@ test.describe("[OHW-044-C] Cesare sessions", () => {
       .toBe("closed");
 
     // Reopen
-    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
+    await openCesareSheet(page);
     await expect(page.getByTestId("cesare-drawer")).toBeVisible({
       timeout: 5_000,
     });

@@ -14,9 +14,9 @@ import {
  *     AND inside the viewport, even when the page beside it is a tall document.
  *   - N-07 — Claude-style chat layout: a fixed header and a fixed footer
  *     (composer) with a scrollable body in between, in the split surface.
- *   - N-09 — "Mostra modifiche" on a LOGLINE edit must actually render a diff.
- *     The logline lives in a collapsed pill, so the flash had no consumer; the
- *     fix auto-opens the pill popover and paints the inline diff there.
+ *   - N-09 — "Mostra modifiche" on a LOGLINE edit must NOT paint an inline
+ *     word-level diff in the editor (ADR-0003 removed the in-editor diff; change
+ *     feedback is human, not a code diff). The change stays applied, clean.
  *   - N-26 — the streamed `writing{logline}` step must be ONE clear step per
  *     entity, not one per stream chunk (asserted at the transport level: the
  *     server emits exactly one writing event for the touched entity).
@@ -114,7 +114,7 @@ test.describe("[cesare-agentic-chat-ux] Cesare chat UX (N-06/07/09/26)", () => {
     await expect(composer).toHaveValue("Ciao Cesare");
   });
 
-  test("[N-09] Mostra modifiche on a logline edit renders a visible diff", async ({
+  test("[N-09 / ADR-0003] Mostra modifiche on a logline edit never paints an inline editor diff", async ({
     authenticatedPage: page,
   }) => {
     test.setTimeout(150_000);
@@ -127,36 +127,22 @@ test.describe("[cesare-agentic-chat-ux] Cesare chat UX (N-06/07/09/26)", () => {
       "Scrivimi una logline su un detective insonne che insegue un killer.",
     );
 
-    // The agentic edit produced a change-trace card with a show-changes toggle.
+    // The agentic edit produced a change-trace card.
     const trace = page.getByTestId("cesare-change-trace").last();
     await expect(trace).toBeVisible({ timeout: 90_000 });
-    const showBtn = trace.getByTestId("cesare-show-changes-btn");
-    await expect(showBtn).toBeVisible({ timeout: 10_000 });
 
-    // Click "Mostra modifiche" → the logline diff flash must actually render.
-    // Before the fix nothing appeared: the logline pill had no diff consumer.
-    await showBtn.click();
+    // Spec 63: on the entity's OWN page the floating card hides "Mostra
+    // modifiche" — the in-editor banner owns the highlight (no duplicate).
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
 
-    const flash = page
-      .getByTestId("cesare-live-diff-inline")
-      .filter({ has: page.locator('[data-diff-op="add"]') })
-      .first();
-    // Fall back to any logline-keyed flash if the add filter is too strict.
-    const loglineFlash = page.locator(
-      '[data-testid="cesare-live-diff-inline"][data-document-type="logline"]',
+    // ADR-0003: no word-level inline-diff overlay is ever painted in the prose,
+    // and no split-preview is opened on the entity page.
+    await expect(page.getByTestId("cesare-live-diff-inline")).toHaveCount(0);
+    await expect(page.locator(".cesare-change-underline")).toHaveCount(0);
+    await expect(page.locator("body")).not.toHaveAttribute(
+      "data-preview-split",
+      "open",
     );
-
-    await expect(async () => {
-      const a = await flash.count();
-      const b = await loglineFlash.count();
-      expect(a + b).toBeGreaterThan(0);
-    }).toPass({ timeout: 6_000 });
-
-    // It carries the "mostra" (green additions) mode and at least one added word.
-    const visible =
-      (await loglineFlash.count()) > 0 ? loglineFlash.first() : flash;
-    await expect(visible).toHaveAttribute("data-flash-mode", "mostra");
-    await expect(visible.locator('[data-diff-op="add"]').first()).toBeVisible();
   });
 
   test("[N-26] the stream emits ONE writing step for the touched entity", async ({

@@ -85,6 +85,13 @@ export const useAutoSave = (
   documentId: string,
   content: string,
   savedContent: string,
+  // Optional content normaliser used ONLY for the dirty comparison. Two contents
+  // that normalise equal are not dirty, so a pure re-serialisation (a Cesare
+  // agentic edit stored as plain text that re-enters the rich editor as HTML) is
+  // not treated as a local edit and the autosave never clobbers the applied draft
+  // (Spec 61). Omitted → identity, so the single-line logline autosave is
+  // unchanged. The content we actually persist is always the raw `content`.
+  normalize: (s: string) => string = (s) => s,
 ): {
   isDirty: boolean;
   isSaving: boolean;
@@ -92,7 +99,7 @@ export const useAutoSave = (
   lastSavedAt: number | null;
   flush: () => void;
 } => {
-  const isDirty = content !== savedContent;
+  const isDirty = normalize(content) !== normalize(savedContent);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   useEffect(() => {

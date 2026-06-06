@@ -29,7 +29,10 @@ const readMainWidth = async (page: import("@playwright/test").Page) =>
 const openSplitViaDrawer = async (page: import("@playwright/test").Page) => {
   const drawer = page.getByTestId("cesare-drawer");
   await expect(async () => {
-    await page.getByTestId("bottom-dock").getByTestId("cesare-open-btn").click();
+    await page
+      .getByTestId("bottom-dock")
+      .getByTestId("cesare-open-btn")
+      .click();
     await expect(drawer).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
   await page.getByLabel("Apri come colonna").click();
@@ -80,7 +83,12 @@ test.describe("[OHW-047-A4] Cesare split drawer", () => {
     // It must still be visible (a real reflow, not a hidden/overlaid page).
     expect(widthSplit).toBeGreaterThan(0);
 
-    // ── × closes it and restores the main width ──────────────────────────────
+    // Opening the peek collapses the rail ONCE to give the lane room, and the
+    // rail then stays collapsed (the user can re-open it manually). So after the
+    // peek closes the main lane grows back WIDER than the split width — but not
+    // necessarily back to the original rail-full width. The invariant we assert
+    // is: closing the peek removes the lane and widens the main lane again.
+    // ── × closes it and restores (widens) the main lane ──────────────────────
     await page.getByTestId("cesare-peek-lane").getByLabel("Chiudi").click();
     await expect(page.getByTestId("cesare-peek-lane")).toBeHidden({
       timeout: 5_000,
@@ -88,27 +96,35 @@ test.describe("[OHW-047-A4] Cesare split drawer", () => {
     await expect
       .poll(async () => new URL(page.url()).searchParams.get("peek"))
       .toBeNull();
-    await expect.poll(async () => readMainWidth(page)).toBe(widthBefore);
+    await expect
+      .poll(async () => readMainWidth(page))
+      .toBeGreaterThan(widthSplit);
 
     // ── ESC closes it ────────────────────────────────────────────────────────
+    const widthBeforeEsc = await readMainWidth(page);
     await openSplitViaDrawer(page);
-    expect(await readMainWidth(page)).toBeLessThan(widthBefore);
+    await expect
+      .poll(async () => readMainWidth(page))
+      .toBeLessThan(widthBeforeEsc);
 
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("cesare-peek-lane")).toBeHidden({
       timeout: 5_000,
     });
-    await expect.poll(async () => readMainWidth(page)).toBe(widthBefore);
+    await expect.poll(async () => readMainWidth(page)).toBe(widthBeforeEsc);
 
     // ── Browser-back closes it (the search param pops) ───────────────────────
+    const widthBeforeBack = await readMainWidth(page);
     await openSplitViaDrawer(page);
-    expect(await readMainWidth(page)).toBeLessThan(widthBefore);
+    await expect
+      .poll(async () => readMainWidth(page))
+      .toBeLessThan(widthBeforeBack);
 
     await page.goBack();
     await expect(page.getByTestId("cesare-peek-lane")).toBeHidden({
       timeout: 5_000,
     });
-    await expect.poll(async () => readMainWidth(page)).toBe(widthBefore);
+    await expect.poll(async () => readMainWidth(page)).toBe(widthBeforeBack);
   });
 
   test("deep-link with ?peek=cesare opens already-split", async ({

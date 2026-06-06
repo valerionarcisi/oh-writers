@@ -199,17 +199,18 @@ test.describe("[OHW-audit-F-versions] first-generation Mostra modifiche", () => 
     await expect(trace).toBeVisible({ timeout: 90_000 });
     const showBtn = trace.getByTestId("cesare-show-changes-btn");
     await expect(showBtn).toBeVisible({ timeout: 10_000 });
-    await showBtn.click();
 
-    // The flash appears inside the document. Capture it IMMEDIATELY — it fades in
-    // ~2s — and assert it carries GREEN additions, not an empty flash (F-M3).
-    const flash = page.getByTestId("cesare-live-diff-inline");
-    await expect(flash).toBeVisible({ timeout: 5_000 });
-    await expect(flash).toHaveAttribute("data-flash-mode", "mostra");
-    await expect(flash.locator('[data-diff-op="add"]').first()).toBeVisible({
-      timeout: 2_000,
-    });
-    // The first-write flash has ONLY additions — nothing pre-existed to delete.
-    await expect(flash.locator('[data-diff-op="del"]')).toHaveCount(0);
+    // The generated soggetto landed LIVE in the open editor (the apply contract).
+    const editor = page.getByTestId("rich-text-editor");
+    await expect(editor).not.toBeEmpty({ timeout: 15_000 });
+
+    // ADR-0003: a first generation no longer paints an inline word-level diff
+    // (the green/add flash was removed from every narrative editor). Clicking
+    // "Mostra modifiche" on the floating card must NOT mount the in-editor diff;
+    // the text shows clean and stays applied.
+    await showBtn.click();
+    await page.waitForTimeout(800);
+    await expect(page.getByTestId("cesare-live-diff-inline")).toHaveCount(0);
+    await expect(editor).not.toBeEmpty();
   });
 });

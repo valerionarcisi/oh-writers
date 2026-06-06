@@ -91,9 +91,15 @@
   }
 }
 
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+
 .counter {
   margin: 0;
-  align-self: flex-end;
   font-family: var(--ds-font-mono);
   font-size: 10px;
   color: var(--ds-text-3);

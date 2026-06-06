@@ -1,4 +1,5 @@
 import { getWebRequest } from "@tanstack/start/server";
+import { ResultAsync } from "neverthrow";
 import type { Locale, UserId } from "@oh-writers/domain";
 
 export type AppUser = {
@@ -20,7 +21,19 @@ export const getUserFromHeaders = async (
   // references Node-only globals (Buffer, net). Keeping this dynamic
   // ensures the browser bundle never loads the postgres driver.
   const { auth } = await import("./auth");
-  const session = await auth.api.getSession({ headers });
+
+  // A stale or unverifiable session cookie (DB reset, rotated
+  // BETTER_AUTH_SECRET, expired/forged token) makes Better Auth throw
+  // `APIError: Failed to get session`. That is an EXPECTED unauthenticated
+  // state, not a server fault — treat it as "no user" so the route loader
+  // redirects to /login instead of blanking the whole app in the error
+  // boundary. A genuine DB outage surfaces later on the locale query below.
+  const sessionResult = await ResultAsync.fromPromise(
+    auth.api.getSession({ headers }),
+    (error) => error,
+  );
+  if (sessionResult.isErr()) return null;
+  const session = sessionResult.value;
   if (!session?.user) return null;
 
   // The Better Auth session user does not carry `locale`; read it from the

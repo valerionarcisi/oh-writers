@@ -68,8 +68,10 @@ export interface ChangeTraceProps {
   /** Affected entities — surfaced under the steps + diff target list. */
   readonly updates: ReadonlyArray<ChangeUpdate>;
   /** Fires when the user clicks `Mostra modifiche`. The consumer is expected
-   *  to open whatever surface shows the diff (SplitDrawer, overlay, …). */
-  readonly onShowChanges: () => void;
+   *  to open whatever surface shows the diff (in-editor highlight). Omitted →
+   *  the "Mostra/Nascondi" button is NOT rendered (e.g. in a chat session, where
+   *  the editor is not in front of the user — only "Apri <Entity>" makes sense). */
+  readonly onShowChanges?: () => void;
   /** Fires when the user clicks `Nascondi modifiche`. Optional — defaults to
    *  the same callback as `onShowChanges` (toggle). */
   readonly onHideChanges?: () => void;
@@ -81,6 +83,17 @@ export interface ChangeTraceProps {
   readonly showChangesLabel?: string;
   /** Label for the "hide diff" toggle (defaults to IT "Nascondi modifiche"). */
   readonly hideChangesLabel?: string;
+  /** Fires when the user clicks the "open this entity's page" button. Omitted →
+   *  the button is not rendered. Lets a chat-session result card jump to the
+   *  real page of the entity THIS card edited (a session may edit several). */
+  readonly onOpenEntity?: () => void;
+  /** Label for the open-entity button (e.g. "Apri Logline"). */
+  readonly openEntityLabel?: string;
+  /** Fires when the user clicks the "see the change in the split" button.
+   *  Omitted → not rendered. Opens the read-only split-preview of the edit. */
+  readonly onOpenSplit?: () => void;
+  /** Label for the open-split button (e.g. "Vedi modifica"). */
+  readonly openSplitLabel?: string;
   /** Defaults to false: the steps list opens collapsed; `true` opens expanded. */
   readonly defaultStepsOpen?: boolean;
   /** Optional className passed to the outer `<article/>`. */
@@ -111,6 +124,10 @@ export function ChangeTrace({
   isShowingChanges,
   showChangesLabel = "Mostra modifiche",
   hideChangesLabel = "Nascondi modifiche",
+  onOpenEntity,
+  openEntityLabel,
+  onOpenSplit,
+  openSplitLabel,
   defaultStepsOpen = false,
   className,
   testId,
@@ -130,6 +147,7 @@ export function ChangeTrace({
   }, []);
 
   const handleShowChangesPress = useCallback(() => {
+    if (!onShowChanges) return;
     if (showing) {
       setInternalShowing(false);
       (onHideChanges ?? onShowChanges)();
@@ -231,16 +249,38 @@ export function ChangeTrace({
           </span>
         </div>
         <div className={styles.summaryActions}>
-          <button
-            {...showBtnProps}
-            ref={showBtnRef}
-            type="button"
-            className={styles.actionPrimary}
-            data-state={showing ? "active" : "idle"}
-            data-testid="cesare-show-changes-btn"
-          >
-            {showLabel}
-          </button>
+          {onShowChanges && (
+            <button
+              {...showBtnProps}
+              ref={showBtnRef}
+              type="button"
+              className={styles.actionPrimary}
+              data-state={showing ? "active" : "idle"}
+              data-testid="cesare-show-changes-btn"
+            >
+              {showLabel}
+            </button>
+          )}
+          {onOpenSplit && openSplitLabel && (
+            <button
+              type="button"
+              className={styles.actionPrimary}
+              onClick={onOpenSplit}
+              data-testid="cesare-open-split-btn"
+            >
+              {openSplitLabel}
+            </button>
+          )}
+          {onOpenEntity && openEntityLabel && (
+            <button
+              type="button"
+              className={styles.actionSecondary}
+              onClick={onOpenEntity}
+              data-testid="cesare-open-entity-btn"
+            >
+              {openEntityLabel}
+            </button>
+          )}
         </div>
       </div>
     </article>

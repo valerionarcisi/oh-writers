@@ -110,9 +110,7 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
     // …and crucially the success card is ABSENT — no "Aggiornato X", no
     // "Mostra modifiche" over a tool that did nothing.
     await expect(page.getByTestId("cesare-change-trace")).toHaveCount(0);
-    await expect(
-      page.getByTestId("cesare-show-changes-btn"),
-    ).toHaveCount(0);
+    await expect(page.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
 
     // DB-level proof: nothing was written.
     expect(
@@ -136,12 +134,12 @@ test.describe("[Audit F-A3] honest result card — no fabricated success", () =>
 
     await sendCesareMessage(page, "Rendi la logline più corta e tesa");
 
-    // The real apply renders the canonical trace with "Mostra modifiche".
+    // The real apply renders the canonical trace. Spec 63: on the Soggetto page
+    // the logline card hides "Mostra modifiche" (the in-editor banner owns the
+    // highlight — no duplicate).
     const trace = page.getByTestId("cesare-change-trace");
     await expect(trace).toBeVisible({ timeout: 60_000 });
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
 
     // F-M1: the card titles the actually-edited entity. It must say "Logline"
     // and never mislabel it as "Soggetto" just because that's the open page.

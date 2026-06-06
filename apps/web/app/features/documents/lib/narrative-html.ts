@@ -4,6 +4,7 @@ import {
   Node as PMNode,
   Schema,
 } from "prosemirror-model";
+import { getNarrativeSchema } from "./narrative-schema";
 
 const isBrowser =
   typeof window !== "undefined" && typeof document !== "undefined";
@@ -69,4 +70,26 @@ export const docToHtml = (doc: PMNode, schema: Schema): string => {
   const wrapper = document.createElement("div");
   wrapper.appendChild(fragment);
   return wrapper.innerHTML;
+};
+
+/**
+ * Canonical HTML for a narrative document: the string the editor would serialise
+ * for `content`, whatever its input form. Plain text ("Filippo…") and its
+ * paragraph-wrapped HTML ("<p>Filippo…</p>") both round-trip to the SAME string.
+ *
+ * Used by the autosave dirty-check so a pure re-serialisation (e.g. a Cesare
+ * agentic edit that stores plain text, then re-enters the editor as HTML) is NOT
+ * treated as a local edit — without this the autosave clobbers the applied draft
+ * back to the editor's prior state (Spec 61, the Cesare "flash-then-revert" bug).
+ *
+ * SSR returns the input unchanged: the converters need the DOM, and the dirty
+ * comparison only runs in the browser where the editor lives.
+ */
+export const canonicalNarrativeHtml = (
+  content: string,
+  enableHeadings: boolean,
+): string => {
+  if (!isBrowser) return content;
+  const schema = getNarrativeSchema(enableHeadings);
+  return docToHtml(htmlToDoc(content, schema), schema);
 };

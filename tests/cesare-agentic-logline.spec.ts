@@ -50,17 +50,17 @@ async function readLoglineFromPill(page: Page): Promise<string> {
   return label.replace(/^Logline:\s*/i, "").trim();
 }
 
-// Assert the step trace card is visible and exposes "Mostra modifiche" (the
-// transient show-changes control) but NOT an inline "Annulla" button (Spec 47e).
+// Assert the step trace card is visible. On the entity's OWN page (Soggetto, with
+// the logline pill) the card hides "Mostra modifiche" — the in-editor banner owns
+// the highlight (Spec 63). There is also no inline "Annulla" (Spec 47e).
 async function assertTraceCard(page: Page, minCount = 1): Promise<void> {
   const traces = page.getByTestId("cesare-change-trace");
   await expect
     .poll(() => traces.count(), { timeout: 90_000 })
     .toBeGreaterThanOrEqual(minCount);
   const last = traces.last();
-  await expect(last.getByTestId("cesare-show-changes-btn")).toBeVisible({
-    timeout: 5_000,
-  });
+  // Spec 63: no duplicate show-changes on the entity page.
+  await expect(last.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
   // Spec 47e: no inline undo; rollback is in the Versions SplitDrawer only.
   await expect(last.getByRole("button", { name: "Annulla" })).toHaveCount(0);
 }

@@ -16,6 +16,7 @@ import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
 import { BASE_URL } from "./fixtures";
+import { openCesareSheet } from "./helpers/cesare";
 
 // The shell grid (rail beside main) and the dock/Cesare CSS states only apply
 // once the hydration effect sets `body[data-shell]`. Interacting before that
@@ -42,7 +43,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
     const dock = page.getByTestId("bottom-dock");
     await expect(dock).toBeVisible({ timeout: 5_000 });
 
-    await dock.getByTestId("cesare-open-btn").click();
+    await openCesareSheet(page);
     await expect
       .poll(async () => await page.evaluate(() => document.body.dataset.cesare))
       .toBe("expanded");
@@ -86,10 +87,7 @@ test.describe("[OHW-044-E] BottomDock + single notification source", () => {
 
     // Open Cesare — the drawer header is minimal (no bell), and the bell still
     // lives in the TopBar account zone (single source).
-    await page
-      .getByTestId("bottom-dock")
-      .getByTestId("cesare-open-btn")
-      .click();
+    await openCesareSheet(page);
     const drawer = page.getByTestId("cesare-drawer");
     await expect(drawer).toBeVisible({ timeout: 5_000 });
     await expect(

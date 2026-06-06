@@ -174,6 +174,8 @@ export const appShellKeys = {
     "shell.splitDrawer.expand": "Expand",
     "shell.splitDrawer.close": "Close",
     "shell.splitDrawer.reduce": "Reduce",
+    "shell.splitDrawer.historyBack": "Previous content",
+    "shell.splitDrawer.historyForward": "Next content",
     // MarginNote suggestion actions
     "shell.marginNote.accept": "Accept Cesare's suggestion",
     "shell.marginNote.ignore": "Dismiss Cesare's suggestion",
@@ -183,7 +185,7 @@ export const appShellKeys = {
     // CesareDrawer window controls
     "shell.cesareDrawer.peekExpand": "Expand Cesare",
     "shell.cesareDrawer.peekClose": "Close Cesare",
-    "shell.cesareDrawer.expand": "Expand",
+    "shell.cesareDrawer.expand": "Open session detail",
     "shell.cesareDrawer.openAsColumn": "Open as column",
     "shell.cesareDrawer.minimize": "Minimise",
     "shell.cesareDrawer.close": "Close",
@@ -196,6 +198,7 @@ export const appShellKeys = {
     "shell.rail.newSessionShort": "+ New",
     "shell.rail.profile": "Profile",
     "shell.rail.account": "Account",
+    "shell.topbar.toggleSplit": "Toggle side panel",
     "shell.rail.tools": "Tools",
     "shell.skipLink": "Skip to content",
     // Relative time buckets for the session list ({n} = number)
@@ -393,6 +396,8 @@ export const appShellKeys = {
     "shell.splitDrawer.expand": "Espandi",
     "shell.splitDrawer.close": "Chiudi",
     "shell.splitDrawer.reduce": "Riduci",
+    "shell.splitDrawer.historyBack": "Contenuto precedente",
+    "shell.splitDrawer.historyForward": "Contenuto successivo",
     // MarginNote suggestion actions
     "shell.marginNote.accept": "Accetta suggerimento di Cesare",
     "shell.marginNote.ignore": "Ignora suggerimento di Cesare",
@@ -402,7 +407,7 @@ export const appShellKeys = {
     // CesareDrawer window controls
     "shell.cesareDrawer.peekExpand": "Espandi Cesare",
     "shell.cesareDrawer.peekClose": "Chiudi Cesare",
-    "shell.cesareDrawer.expand": "Espandi",
+    "shell.cesareDrawer.expand": "Apri dettaglio sessione",
     "shell.cesareDrawer.openAsColumn": "Apri come colonna",
     "shell.cesareDrawer.minimize": "Minimizza",
     "shell.cesareDrawer.close": "Chiudi",
@@ -415,6 +420,7 @@ export const appShellKeys = {
     "shell.rail.newSessionShort": "+ Nuova",
     "shell.rail.profile": "Profilo",
     "shell.rail.account": "Account",
+    "shell.topbar.toggleSplit": "Mostra/nascondi pannello",
     "shell.rail.tools": "Strumenti",
     "shell.skipLink": "Salta al contenuto",
     // Relative time buckets for the session list ({n} = number)

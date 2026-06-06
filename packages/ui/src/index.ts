@@ -106,9 +106,6 @@ export type {
   PopoverPlacement,
 } from "./primitives/Popover/Popover";
 
-export { Drawer } from "./primitives/Drawer/Drawer";
-export type { DrawerProps, DrawerSide } from "./primitives/Drawer/Drawer";
-
 export { SavePill } from "./primitives/SavePill/SavePill";
 export type { SavePillProps, SaveState } from "./primitives/SavePill/SavePill";
 

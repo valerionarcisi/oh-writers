@@ -203,11 +203,9 @@ test.describe("[OHW-049] Versions SplitDrawer — W3 Confronta", () => {
     });
 
     // The Confronta segment is active and the 2-up diff renders from the URL
-    // alone (no manual picks).
-    await expect(page.getByTestId("segmented-compare")).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    // alone (no manual picks). The SegmentedControl is a react-aria radio group,
+    // so the active option carries `checked` / `aria-checked`, not aria-selected.
+    await expect(page.getByTestId("segmented-compare")).toBeChecked();
     await expect(
       page.locator('[data-testid^="versions-split-pick-"]'),
     ).toHaveCount(2, { timeout: 5_000 });
@@ -234,10 +232,7 @@ test.describe("[OHW-049] Versions SplitDrawer — W3 Confronta", () => {
     await expect(page.getByTestId("versions-split-lane")).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByTestId("segmented-current")).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expect(page.getByTestId("segmented-current")).toBeChecked();
     await expect(
       page.locator('[data-testid^="versions-split-pick-"]'),
     ).toHaveCount(0);

@@ -145,9 +145,9 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
     // Spec 47e: the inline "Annulla" affordance is gone. The edit is kept; the
     // pill keeps the new logline (rollback lives in the Versions SplitDrawer).
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 5_000 });
+    // Spec 63: on the Soggetto page the logline card hides "Mostra modifiche"
+    // (the in-editor banner owns the highlight — no duplicate).
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
     await expect
       .poll(async () => readLoglineFromPill(page), { timeout: 5_000 })
       .not.toBe(before);
@@ -175,10 +175,9 @@ test.describe("[Spec 47c] Cesare logline — unify + write/edit", () => {
       .not.toBe(before);
 
     // A version was auto-created (rollback lives in the Versions SplitDrawer);
-    // the inline trace offers the transient "Mostra modifiche" flash, no Annulla.
-    await expect(
-      trace.getByTestId("cesare-show-changes-btn"),
-    ).toBeVisible({ timeout: 5_000 });
+    // Spec 63: on the Soggetto page the card hides "Mostra modifiche" (the banner
+    // owns the highlight), and there is no inline Annulla.
+    await expect(trace.getByTestId("cesare-show-changes-btn")).toHaveCount(0);
     await expect(trace.getByRole("button", { name: "Annulla" })).toHaveCount(0);
   });
 

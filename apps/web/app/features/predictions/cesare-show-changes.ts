@@ -116,3 +116,90 @@ export function buildTargetPageRef(
     ...(scope ? { scope } : {}),
   };
 }
+
+// ─── Document-type mapping (the entity Cesare actually modified) ─────────────
+//
+// "Mostra modifiche" must follow the ENTITY Cesare edited, not the page the chat
+// runs on (ADR-0001): a logline edit made from the Soggetto/session page must
+// preview the LOGLINE, not the Soggetto. The live-diff marker carries the real
+// `documentType` (e.g. "logline"); we map it to the preview kind + title.
+
+const DOC_TYPE_TO_TARGET_KIND: Record<string, TargetPageKind> = {
+  logline: "soggetto",
+  soggetto: "soggetto",
+  synopsis: "sinossi",
+  outline: "scaletta",
+  treatment: "trattamento",
+};
+
+const DOC_TYPE_TO_TARGET_TITLE: Record<string, string> = {
+  logline: "Logline",
+  soggetto: "Soggetto",
+  synopsis: "Sinossi",
+  outline: "Scaletta",
+  treatment: "Trattamento",
+};
+
+/**
+ * Build the `TargetPageRef` for the entity a live-diff marker touched. Returns
+ * `null` for an unknown / empty document type so the caller can fall back to the
+ * page-based ref. Logline maps onto the Soggetto preview kind (it lives there)
+ * but keeps its own "Logline" title.
+ */
+export function buildTargetPageRefForDocument(
+  documentType: string,
+  scope?: string,
+): TargetPageRef | null {
+  const kind = DOC_TYPE_TO_TARGET_KIND[documentType];
+  if (!kind) return null;
+  return {
+    kind,
+    title: DOC_TYPE_TO_TARGET_TITLE[documentType] ?? kind,
+    ...(scope ? { scope } : {}),
+  };
+}
+
+// The router path (relative to `/projects/:id/`) for the page that hosts each
+// edited entity's editor. Drives the result card's "Apri <Entity>" navigation.
+// Covers the narrative documents AND the cross-domain entities Cesare can edit
+// (locations, breakdown, budget, schedule, screenplay) so EVERY edit can jump to
+// its page — new editable entities must be added here. Logline lives on its own
+// route.
+const ENTITY_TO_ROUTE: Record<string, string> = {
+  logline: "logline",
+  soggetto: "soggetto",
+  synopsis: "synopsis",
+  outline: "outline",
+  treatment: "treatment",
+  screenplay: "screenplay",
+  breakdown: "breakdown",
+  budget: "budget",
+  schedule: "schedule",
+  locations: "locations",
+};
+
+/** The `/projects/:id/<path>` route segment for an edited entity, or null when
+ *  the entity has no dedicated page. */
+export function documentRouteFor(documentType: string): string | null {
+  return ENTITY_TO_ROUTE[documentType] ?? null;
+}
+
+// Which document type each Cesare page edits IN PLACE (the editor on that page).
+// Logline lives on the Soggetto page (the logline pill), so a logline edit while
+// on Soggetto is also "the open entity" — its feedback is the in-editor banner,
+// not a split that duplicates it.
+const PAGE_OPEN_DOC_TYPES: Partial<Record<CesarePage, readonly string[]>> = {
+  soggetto: ["soggetto", "logline"],
+  synopsis: ["synopsis"],
+  outline: ["outline"],
+  treatment: ["treatment"],
+};
+
+/** True when `documentType` is edited in place on `page` (so the split-preview
+ *  would duplicate the open editor and should be skipped — Spec 63). */
+export function documentTypeMatchesPage(
+  documentType: string,
+  page: CesarePage,
+): boolean {
+  return (PAGE_OPEN_DOC_TYPES[page] ?? []).includes(documentType);
+}

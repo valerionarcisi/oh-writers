@@ -21,6 +21,7 @@ import { useButton } from "react-aria";
 import { useNavigate } from "@tanstack/react-router";
 import type { TranslationKey } from "@oh-writers/domain";
 import { useTranslation } from "~/features/i18n";
+import { useRegisterCesareSurface } from "~/features/app-shell";
 import { useCreateSession } from "../sessions";
 import { useCesareChatStore } from "../cesare-chat-store";
 import { useNarrativeNextStep } from "../use-narrative-next-step";
@@ -56,6 +57,8 @@ export function NewSessionLandingPage({ projectId }: { projectId: string }) {
   const store = useCesareChatStore();
   const createSession = useCreateSession(projectId);
   const { suggestion: nextStep } = useNarrativeNextStep(projectId);
+  // This landing IS the chat — suppress the shell's floating Cesare drawer + pill.
+  useRegisterCesareSurface();
 
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);

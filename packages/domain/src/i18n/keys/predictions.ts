@@ -115,6 +115,9 @@ export const predictionsKeys = {
     "cesare.session.sendMessage": "Send message",
     "cesare.session.composerPlaceholder": "Ask Cesare…",
     "cesare.session.composerAria": "Cesare composer",
+    "cesare.session.scrollToBottom": "Scroll to latest",
+    "cesare.openEntity": "Open",
+    "cesare.openSplit": "See change",
     // Sessions landing page
     "cesare.landing.openPrefix": "Open",
     "cesare.landing.newSessionAria": "New Cesare session",
@@ -240,6 +243,9 @@ export const predictionsKeys = {
     "cesare.session.sendMessage": "Invia messaggio",
     "cesare.session.composerPlaceholder": "Chiedi a Cesare…",
     "cesare.session.composerAria": "Composer Cesare",
+    "cesare.session.scrollToBottom": "Vai all'ultimo",
+    "cesare.openEntity": "Apri",
+    "cesare.openSplit": "Vedi modifica",
     // Sessions landing page
     "cesare.landing.openPrefix": "Apri",
     "cesare.landing.newSessionAria": "Nuova sessione Cesare",

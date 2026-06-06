@@ -12,7 +12,19 @@ export async function openCesareSheet(page: Page): Promise<void> {
     .getByTestId("bottom-dock")
     .getByTestId("cesare-open-btn");
   await expect(trigger).toBeVisible({ timeout: 15_000 });
-  await trigger.click();
+  // The dock pill drives Cesare's open via react-aria `usePress` (onPress). On
+  // heavy authoring routes (breakdown / screenplay) the page is still settling
+  // its layout when the click lands, so the press can be CANCELLED (the pointer
+  // appears to leave the moving button between pointerdown and pointerup) and
+  // the drawer never opens. Retry the click until the shell actually reports the
+  // drawer open (`body[data-cesare]="expanded"`) — this is the canonical
+  // "drawer is open" signal, immune to the press-cancel race.
+  await expect(async () => {
+    await trigger.click();
+    expect(await page.evaluate(() => document.body.dataset.cesare)).toBe(
+      "expanded",
+    );
+  }).toPass({ timeout: 15_000 });
   const input = page.getByPlaceholder("Chiedi a Cesare…");
   await expect(input).toBeVisible({ timeout: 5_000 });
   // The sheet animates up via `transform` with --ds-duration-3 (250ms).

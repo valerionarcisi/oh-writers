@@ -18,6 +18,12 @@ export interface NarrativeDocsShellProps {
   readonly logline: string;
   readonly canEditLogline: boolean;
   readonly onLoglineChange?: (next: string) => void;
+  /** Persist the logline immediately (manual save button in the pill). */
+  readonly onLoglineSave?: () => void;
+  /** Logline has unsaved edits. */
+  readonly loglineIsDirty?: boolean;
+  /** A logline save is in flight. */
+  readonly loglineIsSaving?: boolean;
   readonly versionLabel?: string;
   readonly versionMenuItems?: ReadonlyArray<{
     id: string;
@@ -42,6 +48,9 @@ export function NarrativeDocsShell({
   logline,
   canEditLogline,
   onLoglineChange,
+  onLoglineSave,
+  loglineIsDirty,
+  loglineIsSaving,
   versionLabel,
   versionMenuItems,
   onOpenVersions,
@@ -68,10 +77,22 @@ export function NarrativeDocsShell({
           logline={logline}
           canEdit={canEditLogline && onLoglineChange !== undefined}
           onChange={onLoglineChange}
+          onSave={onLoglineSave}
+          isDirty={loglineIsDirty}
+          isSaving={loglineIsSaving}
         />
       ) : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [projectId, logline, canEditLogline, !!onLoglineChange, !!topBarActions],
+    [
+      projectId,
+      logline,
+      canEditLogline,
+      !!onLoglineChange,
+      !!topBarActions,
+      !!onLoglineSave,
+      loglineIsDirty,
+      loglineIsSaving,
+    ],
   );
 
   useTopBarSlotPublisher("center", loglinePill);
@@ -90,6 +111,9 @@ export function NarrativeDocsShell({
                 logline={logline}
                 canEdit={canEditLogline && onLoglineChange !== undefined}
                 onChange={onLoglineChange}
+                onSave={onLoglineSave}
+                isDirty={loglineIsDirty}
+                isSaving={loglineIsSaving}
               />
               <div className={styles.viewbarRight}>
                 <SaveStatusIndicator />

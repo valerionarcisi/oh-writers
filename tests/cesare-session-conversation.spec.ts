@@ -18,7 +18,14 @@ async function openCesare(page: Page): Promise<void> {
     .getByTestId("bottom-dock")
     .getByTestId("cesare-open-btn");
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
-  await trigger.click();
+  // Retry the click until the shell reports the drawer open: the dock pill's
+  // react-aria press can be cancelled by layout settling on heavy routes.
+  await expect(async () => {
+    await trigger.click();
+    expect(await page.evaluate(() => document.body.dataset.cesare)).toBe(
+      "expanded",
+    );
+  }).toPass({ timeout: 15_000 });
   await page
     .getByPlaceholder("Chiedi a Cesare…")
     .waitFor({ state: "visible", timeout: 5_000 });

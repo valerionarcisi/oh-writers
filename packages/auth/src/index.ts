@@ -35,28 +35,60 @@ const devOrigins = ["3000", "3001", "3002", "3003", "3004", "3005"].map(
 );
 
 /**
- * Redis-backed fast session lookup. The Drizzle/Postgres adapter stays the
- * primary store; secondaryStorage is the cache the realtime ws-server reads
- * on every WebSocket upgrade. When REDIS_URL is unset (e.g. a plain dev run
- * without Redis) we omit it entirely so the process never fails at import and
- * Better Auth falls back to the primary store.
+ * Redis-backed secondary session store, OPT-IN via `AUTH_USE_REDIS=true`.
+ *
+ * Better Auth treats `secondaryStorage`, when present, as the AUTHORITATIVE
+ * session store — it writes AND reads sessions there, not in the Postgres
+ * `session` table. So a half-working Redis (e.g. a write that silently fails)
+ * leaves getSession reading null and bounces the user back to /login even
+ * though sign-in returned 200. That fragility is not worth it for a single-
+ * instance dev/prod run, where the Drizzle/Postgres primary store is robust.
+ *
+ * Therefore secondaryStorage is DISABLED by default (returns undefined → Better
+ * Auth persists sessions in Postgres). Enable it explicitly with
+ * `AUTH_USE_REDIS=true` only when the realtime ws-server runs multi-instance
+ * and needs the shared fast lookup. Requires `REDIS_URL` to also be set.
+ *
+ * When enabled, Redis being DOWN must still never crash the host: ioredis
+ * defaults to 20 retries then rejecting (MaxRetriesPerRequestError, which once
+ * bubbled out of `set` during sign-in → 500). We cap retries and swallow
+ * get/set/delete errors.
  */
 const buildSecondaryStorage = (): BetterAuthOptions["secondaryStorage"] => {
+  if (process.env["AUTH_USE_REDIS"] !== "true") return undefined;
   const url = process.env["REDIS_URL"];
   if (!url) return undefined;
 
-  const redis = new Redis(url, { lazyConnect: true });
+  const redis = new Redis(url, {
+    // Fail a command fast instead of retrying 20× and rejecting with
+    // MaxRetriesPerRequestError. The caller degrades to the primary store.
+    maxRetriesPerRequest: 1,
+  });
   // Never let a transient Redis failure crash the host process.
   redis.on("error", () => undefined);
 
   return {
-    get: async (key) => (await redis.get(key)) ?? null,
+    get: async (key) => {
+      try {
+        return (await redis.get(key)) ?? null;
+      } catch {
+        return null;
+      }
+    },
     set: async (key, value, ttl) => {
-      if (ttl) await redis.set(key, value, "EX", ttl);
-      else await redis.set(key, value);
+      try {
+        if (ttl) await redis.set(key, value, "EX", ttl);
+        else await redis.set(key, value);
+      } catch {
+        // Best-effort cache write; the Postgres primary store is authoritative.
+      }
     },
     delete: async (key) => {
-      await redis.del(key);
+      try {
+        await redis.del(key);
+      } catch {
+        // Best-effort cache eviction; ignore if Redis is unreachable.
+      }
     },
   };
 };

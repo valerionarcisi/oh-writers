@@ -6,23 +6,20 @@
  * The shell mounts the actual `<SplitDrawer>` once and renders the active
  * payload's title/body/footer based on the payload `kind`:
  *
- *   - `trace` — Cesare's `[Mostra modifiche]` flow, hosts a
- *     `<TargetPagePreview>` of the affected page.
+ *   - `preview` — Cesare's `[Mostra modifiche]` flow from inside a chat session,
+ *     hosts a READ-ONLY view of the affected page with the change highlighted
+ *     inline (no accept/reject — the edit is already applied; ADR-0001).
  *   - `notifications` — Bell drawer, hosts the Cesare notification list.
  *
  * Typical callers:
  *
  * ```ts
- * // Cesare Step Block: open the trace flow.
+ * // Cesare Step Block (in a chat session): open the read-only preview.
  * const { open } = useSplitDrawer();
  * open({
- *   kind: 'trace',
+ *   kind: 'preview',
  *   pageRef: { kind: 'soggetto', scope: 'Atto II' },
- *   traceMarkers,
- *   onAccept,
- *   onReject,
- *   onAcceptAll,
- *   onRejectAll,
+ *   liveDiffs,
  *   title: 'Soggetto · Atto II',
  * });
  *
@@ -39,32 +36,43 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type {
-  TargetPageRef,
-  TraceMarker,
-  SplitDrawerState,
-} from "@oh-writers/ui";
+import type { TargetPageRef, SplitDrawerState } from "@oh-writers/ui";
+import type { LiveDiffSegment } from "./cesare-live-diff-store";
 
 /**
- * Payload describing Cesare's `[Mostra modifiche]` trace flow — the
- * SplitDrawer body renders a `<TargetPagePreview>` of the affected page.
+ * Read-only diff to render per touched document inside the preview body.
+ * Mirrors a `LiveDiffMarker` — the same `diff_segments` the in-editor highlight
+ * uses, so the preview and the inline flash paint the same change.
  */
-export interface SplitDrawerTracePayload {
-  kind: "trace";
-  /** Reference to the target page rendered in the drawer body. */
+export interface SplitDrawerPreviewDiff {
+  readonly documentType: string;
+  readonly label: string;
+  readonly segments: ReadonlyArray<LiveDiffSegment>;
+}
+
+/**
+ * Payload describing Cesare's `[Mostra modifiche]` preview flow — the
+ * SplitDrawer body renders a **read-only** view of the affected page with the
+ * change highlighted inline. There is NO accept/reject: a Cesare edit is always
+ * applied live (CONTEXT.md / ADR-0001); the preview only lets the writer look at
+ * the modified page beside the conversation. Used only from inside a chat
+ * session.
+ */
+export interface SplitDrawerPreviewPayload {
+  kind: "preview";
+  /** Reference to the target page rendered (read-only) in the drawer body. */
   pageRef: TargetPageRef;
-  /** Trace markers to overlay on the embedded page. */
-  traceMarkers: ReadonlyArray<TraceMarker>;
-  /** Accept a single marker. */
-  onAccept: (markerId: string) => void;
-  /** Reject a single marker. */
-  onReject: (markerId: string) => void;
-  /** Accept every pending marker. */
-  onAcceptAll: () => void;
-  /** Reject every pending marker. */
-  onRejectAll: () => void;
+  /** Per-document diffs to highlight in the preview body. */
+  liveDiffs: ReadonlyArray<SplitDrawerPreviewDiff>;
   /** Optional header title; defaults to `pageRef.title` or kind label. */
   title?: string;
+  /** Short human summary of what changed (Cesare's "Cosa cambia" reply prose),
+   *  shown at the top of the preview only — Claude-Desktop-style artifact header. */
+  summary?: string;
+  /** Stable identity for history dedupe (re-opening the same content brings the
+   *  existing entry forward instead of duplicating it). Defaults to
+   *  kind+pageRef. */
+  dedupeKey?: string;
 }
 
 /**
@@ -76,6 +84,8 @@ export interface SplitDrawerNotificationsPayload {
   kind: "notifications";
   /** Optional override; defaults to "Notifiche". */
   title?: string;
+  /** Stable identity for history dedupe. Defaults to the kind. */
+  dedupeKey?: string;
 }
 
 /**
@@ -83,40 +93,115 @@ export interface SplitDrawerNotificationsPayload {
  * host. New kinds (versions, document browser) get added here.
  */
 export type SplitDrawerPayload =
-  | SplitDrawerTracePayload
+  | SplitDrawerPreviewPayload
   | SplitDrawerNotificationsPayload;
 
 interface SplitDrawerContextValue {
-  /** Open the drawer with a new payload. Resets state to `open`. */
+  /** Open the drawer with a new content — pushes it onto the history and shows
+   *  it. A content identical (by `dedupeKey`) to one already in the history is
+   *  brought forward instead of duplicated. */
   open: (payload: SplitDrawerPayload, target?: SplitDrawerState) => void;
-  /** Close the drawer and clear the payload. */
+  /** Close the drawer and clear the whole history. */
   close: () => void;
   /** Current state. */
   state: SplitDrawerState;
   /** Imperatively set state (cycle / stepBack). */
   setState: (next: SplitDrawerState) => void;
-  /** Current payload, or `null` when closed. */
+  /** Currently-shown content, or `null` when closed/hidden. */
   payload: SplitDrawerPayload | null;
+  /** Go to the previous content in the history (no-op at the start). */
+  back: () => void;
+  /** Go to the next content in the history (no-op at the end). */
+  forward: () => void;
+  /** Whether a previous / next content exists (drives ←/→ enabled state). */
+  canGoBack: boolean;
+  canGoForward: boolean;
+  /** Collapse the lane but KEEP the history, so the ⊟ toggle can re-open the last
+   *  content. (vs `close`, which destroys the history.) */
+  hide: () => void;
+  /** Re-open the most-recent content after a `hide`. No-op when there is none. */
+  reopen: () => void;
+  /** True when there is history to re-open (drives the ⊟ toggle's enabled state). */
+  hasContent: boolean;
 }
 
 const SplitDrawerContext = createContext<SplitDrawerContextValue | null>(null);
 
+/**
+ * Stable identity for a payload so re-opening the SAME content brings the
+ * existing history entry forward instead of pushing a duplicate. Callers may
+ * provide an explicit `dedupeKey`; otherwise we derive one from the kind + the
+ * distinguishing fields.
+ */
+function payloadKey(p: SplitDrawerPayload): string {
+  if (p.dedupeKey) return p.dedupeKey;
+  if (p.kind === "preview") {
+    return `preview:${p.pageRef.kind}:${p.pageRef.scope ?? ""}`;
+  }
+  return p.kind;
+}
+
 export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SplitDrawerState>("closed");
-  const [payload, setPayload] = useState<SplitDrawerPayload | null>(null);
+  // History stack of contents shown in the drawer + the cursor into it. Only one
+  // content is visible at a time (history[cursor]); ←/→ move the cursor.
+  const [history, setHistory] = useState<ReadonlyArray<SplitDrawerPayload>>([]);
+  const [cursor, setCursor] = useState(-1);
 
   const open = useCallback(
     (next: SplitDrawerPayload, target: SplitDrawerState = "open") => {
-      setPayload(next);
+      setHistory((prev) => {
+        const key = payloadKey(next);
+        const existingIdx = prev.findIndex((p) => payloadKey(p) === key);
+        if (existingIdx !== -1) {
+          // Same content already in history — refresh it in place and jump to it
+          // (bring it forward) rather than pushing a duplicate.
+          const updated = prev.slice();
+          updated[existingIdx] = next;
+          setCursor(existingIdx);
+          return updated;
+        }
+        // New content: drop any "forward" entries past the cursor, then push.
+        const base = prev.slice(0, cursor + 1);
+        const pushed = [...base, next];
+        setCursor(pushed.length - 1);
+        return pushed;
+      });
       setState(target);
     },
-    [],
+    [cursor],
   );
 
   const close = useCallback(() => {
     setState("closed");
-    setPayload(null);
+    setHistory([]);
+    setCursor(-1);
   }, []);
+
+  const hide = useCallback(() => {
+    // Collapse the lane but keep the history so the ⊟ toggle can re-open it.
+    setState("closed");
+  }, []);
+
+  const reopen = useCallback(() => {
+    setState((s) => (s === "closed" ? "open" : s));
+  }, []);
+
+  const back = useCallback(() => {
+    setCursor((c) => (c > 0 ? c - 1 : c));
+  }, []);
+
+  const forward = useCallback(() => {
+    setCursor((c) => c + 1);
+  }, []);
+
+  // Content shows only when the lane is open AND the cursor points at an entry.
+  // While hidden (`state === "closed"`) the history survives but `payload` is
+  // null, so the lane unmounts and the page un-compresses.
+  const hasContent = cursor >= 0 && cursor < history.length;
+  const payload = hasContent && state !== "closed" ? history[cursor]! : null;
+  const canGoBack = cursor > 0;
+  const canGoForward = cursor >= 0 && cursor < history.length - 1;
 
   const value = useMemo<SplitDrawerContextValue>(
     () => ({
@@ -125,8 +210,28 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
       state,
       setState,
       payload,
+      back,
+      forward,
+      canGoBack,
+      canGoForward,
+      hide,
+      reopen,
+      hasContent,
     }),
-    [open, close, state, payload],
+    [
+      open,
+      close,
+      state,
+      setState,
+      payload,
+      back,
+      forward,
+      canGoBack,
+      canGoForward,
+      hide,
+      reopen,
+      hasContent,
+    ],
   );
 
   return (
@@ -136,21 +241,28 @@ export function SplitDrawerProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const INERT_SPLIT_DRAWER: SplitDrawerContextValue = {
+  open: () => undefined,
+  close: () => undefined,
+  state: "closed",
+  setState: () => undefined,
+  payload: null,
+  back: () => undefined,
+  forward: () => undefined,
+  canGoBack: false,
+  canGoForward: false,
+  hide: () => undefined,
+  reopen: () => undefined,
+  hasContent: false,
+};
+
 /**
  * Read the SplitDrawerContext. Returns a stable `noop`-flavoured value
  * when no provider is mounted so isolated callers stay safe.
  */
 export function useSplitDrawer(): SplitDrawerContextValue {
   const ctx = useContext(SplitDrawerContext);
-  if (ctx) return ctx;
-  // SSR / isolated callers — return inert handlers.
-  return {
-    open: () => undefined,
-    close: () => undefined,
-    state: "closed",
-    setState: () => undefined,
-    payload: null,
-  };
+  return ctx ?? INERT_SPLIT_DRAWER;
 }
 
 /**
