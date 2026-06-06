@@ -295,6 +295,13 @@
       "when": 1779000000007,
       "tag": "0036_add_users_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779000000008,
+      "tag": "0037_document_versions_draft_meta",
+      "breakpoints": true
     }
   ]
 }
