@@ -3,7 +3,10 @@ import {
   useCesareOpen,
   useSetActiveScene,
   useSetActiveShootingDay,
+  useContextActions,
+  useTopBarSlotPublisher,
 } from "~/features/app-shell";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import {
   useLocationAnchors,
   pickPrimaryExteriorLocation,
@@ -19,17 +22,16 @@ import { match } from "ts-pattern";
 import {
   Viewbar,
   FloatingDock,
-  VersionTrigger,
+  ActionsMenu,
   SegmentedControl,
 } from "@oh-writers/ui";
 import { unwrapResult } from "@oh-writers/utils";
 import {
   formatDayHours,
   analyzeSchedule,
+  ContextActionIds,
   type Suggestion,
 } from "@oh-writers/domain";
-import { useVersionsDrawer } from "~/features/versions";
-import { useVersions } from "~/features/screenplay-editor";
 import { useExportSchedule } from "../hooks/useExportSchedule";
 import {
   scheduleQueryOptions,
@@ -80,7 +82,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
   const setActiveShootingDay = useSetActiveShootingDay();
   const { data } = useSuspenseQuery(scheduleQueryOptions(projectId));
   const schedule = data?.isOk ? data.value : null;
-  const versionsDrawer = useVersionsDrawer();
   const locationAnchors = useLocationAnchors(projectId);
 
   const getWeatherAnchor = useCallback(
@@ -94,12 +95,38 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     [locationAnchors],
   );
 
-  const { data: versionsResult } = useVersions(schedule?.screenplayId ?? "");
-  const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
-  const currentVersionId = schedule?.screenplayVersionId ?? null;
-
   const { exportCsv, exportPdf, isCsvPending, isPdfPending } =
     useExportSchedule(projectId);
+
+  // Spec 67 — the page's two exports (CSV + Print/PDF) live in the standard
+  // TopBar `⋯` menu. No versions on production pages.
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT_CSV]: {
+        onSelect: () => void exportCsv(),
+        disabled: isCsvPending,
+      },
+      [ContextActionIds.EXPORT_PDF]: {
+        onSelect: () => void exportPdf(),
+        disabled: isPdfPending,
+      },
+    }),
+    [exportCsv, exportPdf, isCsvPending, isPdfPending],
+  );
+  const contextActionItems = useContextActions(
+    "schedule",
+    contextActionHandlers,
+  );
+  const scheduleActionsMenu = useMemo(
+    () => (
+      <ActionsMenu
+        data-testid="schedule-actions-menu"
+        items={contextActionItems}
+      />
+    ),
+    [contextActionItems],
+  );
+  useTopBarSlotPublisher("actions", scheduleActionsMenu);
 
   const [tab, setTab] = useState<ViewTab>("strip");
   const [isStuck, setIsStuck] = useState(false);
@@ -317,16 +344,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
     console.warn("[cesare] suggestion not yet applicable", s);
   };
 
-  const handleOpenVersions = () => {
-    if (!schedule?.screenplayId) return;
-    // TODO Spec 12d: dedicated schedule version scope. For now we surface the
-    // screenplay history because the schedule is bound to a screenplay snapshot.
-    versionsDrawer.open({
-      kind: "screenplay",
-      screenplayId: schedule.screenplayId,
-    });
-  };
-
   const sceneCount = schedule
     ? schedule.shootingDays.reduce((s, d) => s + d.strips.length, 0) +
       schedule.unscheduledStrips.length
@@ -346,11 +363,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
       )
     : 0;
 
-  const currentVersion = screenplayVersions.find(
-    (v) => v.id === currentVersionId,
-  );
-  const versionLabel = currentVersion?.label ?? undefined;
-
   return (
     <div className={styles.page} data-testid="schedule-page-v2">
       <Viewbar
@@ -362,36 +374,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           activeId={tab}
           onSelect={setTab}
           ariaLabel={t("schedule.page.viewAria")}
-        />
-        <span className={styles.viewbarRight} />
-        <VersionTrigger
-          variant="pill"
-          versionLabel={versionLabel}
-          menuItems={[
-            ...screenplayVersions.map((v, idx) => {
-              const fallback = t("schedule.page.versionFallback").replace(
-                "{number}",
-                String(idx + 1),
-              );
-              return {
-                id: `version-${v.id}`,
-                label:
-                  v.id === currentVersionId
-                    ? `● ${v.label ?? fallback}`
-                    : (v.label ?? fallback),
-                onSelect: handleOpenVersions,
-                tone:
-                  v.id === currentVersionId
-                    ? ("default" as const)
-                    : ("muted" as const),
-              };
-            }),
-            {
-              id: "open-drawer",
-              label: t("schedule.page.openVersions"),
-              onSelect: handleOpenVersions,
-            },
-          ]}
         />
       </Viewbar>
 
@@ -424,9 +406,7 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
 
         {scheduleIsEmpty ? (
           <div className={styles.empty}>
-            <p className={styles.emptyHint}>
-              {t("schedule.page.emptyHint")}
-            </p>
+            <p className={styles.emptyHint}>{t("schedule.page.emptyHint")}</p>
             <button
               type="button"
               className={styles.generateBtn}
@@ -523,6 +503,8 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
 
       {/* Spec 44 TKT-LEAD-01: page-scoped CTAs only, bottom-left. The
        * shell-level BottomDock owns bottom-right + the universal ✦ Cesare. */}
+      {/* Export (CSV + Print) moved to the TopBar `⋯` menu (Spec 67) — the dock
+          keeps only the page's primary CTA (regenerate). */}
       <FloatingDock
         label={t("schedule.page.dockLabel")}
         primaryAction={{
@@ -532,22 +514,6 @@ export function SchedulePage({ projectId }: SchedulePageProps) {
           hotkey: "⌘⇧P",
           onClick: () => generateMutation.mutate(),
         }}
-        secondaryActions={[
-          {
-            label: isCsvPending
-              ? t("schedule.page.exporting")
-              : t("schedule.page.export"),
-            hotkey: "⌘E",
-            onClick: exportCsv,
-          },
-          {
-            label: isPdfPending
-              ? t("schedule.page.generating")
-              : t("schedule.page.print"),
-            hotkey: "⌘P",
-            onClick: exportPdf,
-          },
-        ]}
       />
     </div>
   );

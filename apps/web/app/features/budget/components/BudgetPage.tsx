@@ -10,16 +10,21 @@ import {
   Viewbar,
   FloatingDock,
   SegmentedControl,
-  VersionTrigger,
+  ActionsMenu,
 } from "@oh-writers/ui";
 import { ExportBudgetModal } from "./ExportBudgetModal";
 import { useTranslation } from "~/features/i18n";
-import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
+import {
+  useCesareOpen,
+  useSetActiveScene,
+  useContextActions,
+  useTopBarSlotPublisher,
+} from "~/features/app-shell";
+import { ContextActionIds } from "@oh-writers/domain";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import { resourceTotal } from "@oh-writers/domain";
 import type { Budget, FiscalRegime } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
-import { useVersionsDrawer } from "~/features/versions";
-import { useScreenplay, useVersions } from "~/features/screenplay-editor";
 import {
   getBudget,
   generateBudget,
@@ -106,29 +111,12 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const _openCesare = useCesareOpen();
   void _openCesare;
   const setActiveScene = useSetActiveScene();
-  const { open: openVersionsDrawer } = useVersionsDrawer();
   const { data: budget } = useSuspenseQuery(budgetQueryOptions(projectId));
   const { data: castCrew } = useSuspenseQuery(castCrewQueryOptions(projectId));
   const { data: allScenes } = useSuspenseQuery(scenesQueryOptions(projectId));
   const { data: rateCard } = useSuspenseQuery(rateCardQueryOptions(projectId));
   const { data: dayCosts } = useQuery(dayCostsQueryOptions(projectId));
   const { data: overview } = useQuery(overviewQueryOptions(projectId));
-
-  const { data: screenplayResult } = useScreenplay(projectId);
-  const screenplay = screenplayResult?.isOk ? screenplayResult.value : null;
-  const screenplayId = screenplay?.id ?? "";
-  const { data: versionsResult } = useVersions(screenplayId);
-  const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
-  const currentVersionId = screenplay?.currentVersionId ?? null;
-  const currentVersion = screenplayVersions.find(
-    (v) => v.id === currentVersionId,
-  );
-  const versionLabel = currentVersion?.label ?? undefined;
-
-  const handleOpenVersionsDrawer = () => {
-    if (!screenplayId) return;
-    openVersionsDrawer({ kind: "screenplay", screenplayId });
-  };
 
   const [view, setView] = useState<ViewMode>("overview");
   const [drillCategory, setDrillCategory] = useState<BudgetCategoryKey | null>(
@@ -140,6 +128,27 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
   const [detailSection, setDetailSection] = useState<SectionId | null>(null);
   const [categoryTotal, setCategoryTotal] = useState<number | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
+
+  // Spec 67 — the page's actions live in the standard TopBar `⋯` menu. Budget
+  // has no versions (everything works against the active screenplay version), so
+  // the menu is Export-only; the handler opens the existing export modal.
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT]: { onSelect: () => setIsExportOpen(true) },
+    }),
+    [],
+  );
+  const contextActionItems = useContextActions("budget", contextActionHandlers);
+  const budgetActionsMenu = useMemo(
+    () => (
+      <ActionsMenu
+        data-testid="budget-actions-menu"
+        items={contextActionItems}
+      />
+    ),
+    [contextActionItems],
+  );
+  useTopBarSlotPublisher("actions", budgetActionsMenu);
 
   useEffect(() => {
     const onScroll = () => setIsStuck(window.scrollY > 48);
@@ -315,32 +324,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
               testId="contingency-percent"
             />
           )}
-        <VersionTrigger
-          variant="pill"
-          versionLabel={versionLabel}
-          menuItems={[
-            ...screenplayVersions.map((v, idx) => {
-              const fallbackLabel = `${t("budget.viewbar.versionFallback")} ${idx + 1}`;
-              return {
-                id: `version-${v.id}`,
-                label:
-                  v.id === currentVersionId
-                    ? `● ${v.label ?? fallbackLabel}`
-                    : (v.label ?? fallbackLabel),
-                onSelect: handleOpenVersionsDrawer,
-                tone:
-                  v.id === currentVersionId
-                    ? ("default" as const)
-                    : ("muted" as const),
-              };
-            }),
-            {
-              id: "open-drawer",
-              label: t("budget.viewbar.openVersions"),
-              onSelect: handleOpenVersionsDrawer,
-            },
-          ]}
-        />
       </Viewbar>
 
       <main className={styles.main} id="main">
@@ -460,6 +443,8 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
       </main>
 
       {/* Spec 44 TKT-LEAD-01: page CTAs bottom-left only; Cesare → BottomDock. */}
+      {/* Export moved to the TopBar `⋯` menu (Spec 67) — the dock keeps only the
+          page's primary CTA (regenerate). */}
       <FloatingDock
         primaryAction={{
           label: generateMutation.isPending
@@ -468,13 +453,6 @@ export function BudgetPage({ projectId }: BudgetPageProps) {
           hotkey: "⌘R",
           onClick: () => generateMutation.mutate(),
         }}
-        secondaryActions={[
-          {
-            label: t("budget.action.export"),
-            hotkey: "⌘E",
-            onClick: () => setIsExportOpen(true),
-          },
-        ]}
       />
 
       {view === "category" && categoryTotal !== null && (

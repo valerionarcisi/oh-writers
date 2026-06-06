@@ -58,8 +58,6 @@ export {
   NarrativePresenceSchema,
 } from "./server/narrative-progress.server";
 export type { NarrativePresenceShape } from "./server/narrative-progress.server";
-export { VersionCompareModal } from "./components/VersionCompareModal";
-export type { VersionCompareItem } from "./components/VersionCompareModal";
 export {
   versionsQueryOptions as documentVersionsQueryOptions,
   useVersions as useDocumentVersions,

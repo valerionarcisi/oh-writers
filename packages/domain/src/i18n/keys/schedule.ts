@@ -110,8 +110,7 @@ export const scheduleKeys = {
     "schedule.timeline.dayAria": "Day {number}",
     "schedule.timeline.day": "Day",
     "schedule.timeline.scenesShort": "sc",
-    "schedule.timeline.blockTitle":
-      "D{day} · {scenes} scenes · {hours}",
+    "schedule.timeline.blockTitle": "D{day} · {scenes} scenes · {hours}",
 
     // Page (SchedulePage)
     "schedule.page.tabStrip": "Strip board",
@@ -119,8 +118,6 @@ export const scheduleKeys = {
     "schedule.page.tabDays": "Days",
     "schedule.page.tabWeeks": "Weeks",
     "schedule.page.viewAria": "Shooting plan view",
-    "schedule.page.versionFallback": "Version {number}",
-    "schedule.page.openVersions": "Open Versions →",
     "schedule.page.eyebrowPrefix": "SHOOTING PLAN ·",
     "schedule.page.eyebrowScenes": "{scenes} SCENES",
     "schedule.page.dayOne": "DAY",
@@ -132,14 +129,11 @@ export const scheduleKeys = {
     "schedule.page.dockLabel": "SHOOTING PLAN",
     "schedule.page.regenerate": "Regenerate",
     "schedule.page.generate": "Generate",
-    "schedule.page.exporting": "Exporting…",
     "schedule.page.export": "Export",
-    "schedule.page.generating": "Generating…",
     "schedule.page.print": "Print",
 
     // Scene drawer
-    "schedule.sceneDrawer.noBreakdown":
-      "No breakdown element for this scene.",
+    "schedule.sceneDrawer.noBreakdown": "No breakdown element for this scene.",
 
     // Shooting day column
     "schedule.dayColumn.dayType.travel": "travel",
@@ -300,8 +294,6 @@ export const scheduleKeys = {
     "schedule.page.tabDays": "Giorni",
     "schedule.page.tabWeeks": "Settimane",
     "schedule.page.viewAria": "Vista piano di lavorazione",
-    "schedule.page.versionFallback": "Versione {number}",
-    "schedule.page.openVersions": "Apri Versioni →",
     "schedule.page.eyebrowPrefix": "PIANO DI RIPRESA ·",
     "schedule.page.eyebrowScenes": "{scenes} SCENE",
     "schedule.page.dayOne": "GIORNATA",
@@ -313,9 +305,7 @@ export const scheduleKeys = {
     "schedule.page.dockLabel": "PIANO DI RIPRESA",
     "schedule.page.regenerate": "Rigenera",
     "schedule.page.generate": "Genera",
-    "schedule.page.exporting": "Esportando…",
     "schedule.page.export": "Esporta",
-    "schedule.page.generating": "Generando…",
     "schedule.page.print": "Stampa",
 
     "schedule.sceneDrawer.noBreakdown":

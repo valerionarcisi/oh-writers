@@ -2,7 +2,7 @@
 /**
  * SplitDrawer — right-anchored auxiliary panel (Spec 44).
  *
- * Notion `»` chevron pattern. Used for `VersionsDrawer`, the
+ * Notion `»` chevron pattern. Used for the routed `VersionsSplitDrawer`, the
  * `NotificationCenterDrawer` cronologia, the trace flow from Cesare's
  * full-page chat, and any future "open this thing alongside the page"
  * surface. It is COMPLETELY SEPARATE from the Cesare drawer: do not

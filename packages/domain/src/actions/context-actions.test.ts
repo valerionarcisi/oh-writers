@@ -45,7 +45,36 @@ describe("resolveContextActions", () => {
     ]);
   });
 
-  it("returns [] for an unknown segment", () => {
+  it("returns export-only for the production pages (no versions) — Spec 67", () => {
+    // breakdown + budget open their export modal via a single EXPORT action.
+    for (const segment of ["breakdown", "budget"] as const) {
+      expect(
+        resolveContextActions(segment, new Set()).map((a) => a.id),
+      ).toEqual([ContextActionIds.EXPORT]);
+    }
+    // schedule lists its two direct exports (CSV + PDF/Print).
+    expect(
+      resolveContextActions("schedule", new Set()).map((a) => a.id),
+    ).toEqual([ContextActionIds.EXPORT_CSV, ContextActionIds.EXPORT_PDF]);
+    // locations exports CSV only.
+    expect(
+      resolveContextActions("locations", new Set()).map((a) => a.id),
+    ).toEqual([ContextActionIds.EXPORT_CSV]);
+    // None of the production pages surface VERSIONS.
+    for (const segment of [
+      "breakdown",
+      "budget",
+      "schedule",
+      "locations",
+    ] as const) {
+      expect(
+        resolveContextActions(segment, new Set()).map((a) => a.id),
+      ).not.toContain(ContextActionIds.VERSIONS);
+    }
+  });
+
+  it("returns [] for logline (no standalone page) and unknown segments", () => {
+    expect(resolveContextActions("logline", new Set())).toEqual([]);
     expect(resolveContextActions("nope", new Set())).toEqual([]);
   });
 

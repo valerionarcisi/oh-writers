@@ -5,9 +5,16 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { FloatingDock } from "@oh-writers/ui";
+import { FloatingDock, ActionsMenu } from "@oh-writers/ui";
+import { ContextActionIds } from "@oh-writers/domain";
 import { unwrapResult } from "@oh-writers/utils";
-import { useCesareOpen, useSetActiveRequirementId } from "~/features/app-shell";
+import {
+  useCesareOpen,
+  useSetActiveRequirementId,
+  useContextActions,
+  useTopBarSlotPublisher,
+} from "~/features/app-shell";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import type {
   LocationRequirement,
@@ -374,6 +381,31 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
   ).length;
   const exportMutation = useExportLocations(projectId);
 
+  // Spec 67 — the page's CSV export lives in the standard TopBar `⋯` menu.
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT_CSV]: {
+        onSelect: () => exportMutation.mutate(),
+        disabled: exportMutation.isPending,
+      },
+    }),
+    [exportMutation],
+  );
+  const contextActionItems = useContextActions(
+    "locations",
+    contextActionHandlers,
+  );
+  const locationsActionsMenu = useMemo(
+    () => (
+      <ActionsMenu
+        data-testid="locations-actions-menu"
+        items={contextActionItems}
+      />
+    ),
+    [contextActionItems],
+  );
+  useTopBarSlotPublisher("actions", locationsActionsMenu);
+
   return (
     <div className={styles.page} data-testid="locations-page">
       <div className={styles.layout}>
@@ -517,13 +549,6 @@ export function LocationsPage({ projectId }: LocationsPageProps) {
             ariaLabel: syncState?.locationsStale
               ? t("locations.dock.syncStaleAria")
               : t("locations.dock.syncAria"),
-          },
-          {
-            label: exportMutation.isPending
-              ? t("locations.dock.exporting")
-              : t("locations.dock.export"),
-            hotkey: "⌘E",
-            onClick: () => exportMutation.mutate(),
           },
         ]}
       />

@@ -12,8 +12,7 @@ export const breakdownKeys = {
     "breakdown.staleBanner":
       "The active screenplay version changed — regenerate the breakdown to realign it.",
     "breakdown.autoSpoglioBanner": "Auto-breakdown in progress…",
-    "breakdown.noVersionAvailable":
-      "No version available for this screenplay.",
+    "breakdown.noVersionAvailable": "No version available for this screenplay.",
 
     // Viewbar
     "breakdown.tab.perScene": "Per scene",
@@ -26,8 +25,6 @@ export const breakdownKeys = {
     "breakdown.searchScenePlaceholder": "Search scene or location…",
     "breakdown.searchSceneAria": "Search scene",
     "breakdown.noSceneFound": "No scene found.",
-    "breakdown.openVersions": "Open versions →",
-    "breakdown.versionFallbackPrefix": "Version",
 
     // Underline chip labels
     "breakdown.chip.cast": "Cast",
@@ -313,8 +310,6 @@ export const breakdownKeys = {
     "breakdown.searchScenePlaceholder": "Cerca scena o luogo…",
     "breakdown.searchSceneAria": "Cerca scena",
     "breakdown.noSceneFound": "Nessuna scena trovata.",
-    "breakdown.openVersions": "Apri Versioni →",
-    "breakdown.versionFallbackPrefix": "Versione",
 
     // Underline chip labels
     "breakdown.chip.cast": "Cast",

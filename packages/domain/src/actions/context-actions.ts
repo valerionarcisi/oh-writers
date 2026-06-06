@@ -26,6 +26,11 @@ export const ContextActionIds = {
   IMPORT_FOUNTAIN: "import-fountain",
   IMPORT_PDF: "import-pdf",
   VERSIONS: "versions",
+  // A page-level "Esporta" action that launches the page's own export modal
+  // (which then picks the format). Used by budget + breakdown; pages with direct
+  // per-format exports (schedule, locations) list EXPORT_CSV/EXPORT_PDF instead.
+  // (Spec 67)
+  EXPORT: "export",
 } as const;
 
 export type ContextActionId =
@@ -139,6 +144,45 @@ export const CONTEXT_ACTIONS: Readonly<
       order: 90,
     },
   ],
+  // ── Production pages (Spec 67 / closes N-28). EXPORT only — these pages have
+  // NO versions: from the breakdown onward everything works against the ACTIVE
+  // screenplay version, so "versions" is not a per-page concept here. The `⋯`
+  // opens the page's existing export modal. ──
+  breakdown: [
+    {
+      id: ContextActionIds.EXPORT,
+      labelKey: "breakdown.exportCsvPlain",
+      order: 10,
+    },
+  ],
+  budget: [
+    {
+      id: ContextActionIds.EXPORT,
+      labelKey: "budget.action.export",
+      order: 10,
+    },
+  ],
+  schedule: [
+    {
+      id: ContextActionIds.EXPORT_CSV,
+      labelKey: "schedule.page.export",
+      order: 10,
+    },
+    {
+      id: ContextActionIds.EXPORT_PDF,
+      labelKey: "schedule.page.print",
+      order: 20,
+    },
+  ],
+  locations: [
+    {
+      id: ContextActionIds.EXPORT_CSV,
+      labelKey: "locations.dock.export",
+      order: 10,
+    },
+  ],
+  // NB: `logline` has no segment — it has no standalone page (the route redirects
+  // to Soggetto, where the logline is authored), so it surfaces no `⋯` of its own.
 } as const;
 
 /**

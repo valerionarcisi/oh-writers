@@ -31,7 +31,6 @@ import type {
   TopBarAccountActions,
   CesareSessionItem,
 } from "@oh-writers/ui";
-import { VersionsDrawerProvider, VersionsDrawer } from "~/features/versions";
 import {
   CesareSheet,
   parseToolsExecuted,
@@ -1232,174 +1231,171 @@ function AppShellInner({
   );
 
   return (
-    <VersionsDrawerProvider>
-      <CesareProvider openCesare={openCesare}>
-        <div className={styles.shell}>
-          <SkipLink targetId="main-content" label={t("shell.skipLink")} />
-          <div className={styles.rail}>
-            <LeftRail
-              brand={{
-                label: "Oh Writers",
-                onPress: handleBrandClick,
-                // N-21 — hide the redundant wordmark when no project is open;
-                // the "O" mark stands alone (Notion-style minimal header).
-                showLabel: Boolean(projectName),
-              }}
-              project={
-                projectName
-                  ? {
-                      title: projectName,
-                      onPress: handleProjectHeaderClick,
-                      menuItems: projectMenuItems,
-                    }
-                  : undefined
-              }
-              sections={fullSections}
-              sessions={cesareSessions}
-              onSessionSelect={onCesareSessionSelect}
-              onSessionRename={onCesareSessionRename}
-              onSessionDelete={onCesareSessionDelete}
-              onSessionNew={onCesareSessionNew}
-              onSessionsOpen={onCesareSessionsOpen}
-              tools={railTools}
-              labels={{
-                sessionsTitle: t("shell.rail.sessionsTitle"),
-                sessionsOpen: t("shell.rail.sessionsOpen"),
-                notifications: t("shell.rail.notifications"),
-                notificationsUnread: t("shell.rail.notificationsUnread"),
-                settings: t("shell.rail.settings"),
-                projectFallback: t("shell.rail.projectFallback"),
-                newSession: t("shell.rail.newSession"),
-                nav: t("shell.rail.nav"),
-                newSessionShort: t("shell.rail.newSessionShort"),
-                profile: t("shell.rail.profile"),
-                account: t("shell.rail.account"),
-                tools: t("shell.rail.tools"),
-              }}
-              onNavigate={handleNavigate}
-              onCollapse={
-                shellState === "full"
-                  ? () => setShellState("collapsed")
-                  : undefined
-              }
-              overlay={
-                shellState === "collapsed"
-                  ? {
-                      isOpen: railOverlay.isOpen,
-                      onDismiss: railOverlay.close,
-                      onLockOpen: lockRailOpen,
-                      onHoverEnter: railOverlay.cancelScheduledClose,
-                      onHoverLeave: railOverlay.scheduleClose,
-                    }
-                  : undefined
-              }
-            />
-          </div>
+    <CesareProvider openCesare={openCesare}>
+      <div className={styles.shell}>
+        <SkipLink targetId="main-content" label={t("shell.skipLink")} />
+        <div className={styles.rail}>
+          <LeftRail
+            brand={{
+              label: "Oh Writers",
+              onPress: handleBrandClick,
+              // N-21 — hide the redundant wordmark when no project is open;
+              // the "O" mark stands alone (Notion-style minimal header).
+              showLabel: Boolean(projectName),
+            }}
+            project={
+              projectName
+                ? {
+                    title: projectName,
+                    onPress: handleProjectHeaderClick,
+                    menuItems: projectMenuItems,
+                  }
+                : undefined
+            }
+            sections={fullSections}
+            sessions={cesareSessions}
+            onSessionSelect={onCesareSessionSelect}
+            onSessionRename={onCesareSessionRename}
+            onSessionDelete={onCesareSessionDelete}
+            onSessionNew={onCesareSessionNew}
+            onSessionsOpen={onCesareSessionsOpen}
+            tools={railTools}
+            labels={{
+              sessionsTitle: t("shell.rail.sessionsTitle"),
+              sessionsOpen: t("shell.rail.sessionsOpen"),
+              notifications: t("shell.rail.notifications"),
+              notificationsUnread: t("shell.rail.notificationsUnread"),
+              settings: t("shell.rail.settings"),
+              projectFallback: t("shell.rail.projectFallback"),
+              newSession: t("shell.rail.newSession"),
+              nav: t("shell.rail.nav"),
+              newSessionShort: t("shell.rail.newSessionShort"),
+              profile: t("shell.rail.profile"),
+              account: t("shell.rail.account"),
+              tools: t("shell.rail.tools"),
+            }}
+            onNavigate={handleNavigate}
+            onCollapse={
+              shellState === "full"
+                ? () => setShellState("collapsed")
+                : undefined
+            }
+            overlay={
+              shellState === "collapsed"
+                ? {
+                    isOpen: railOverlay.isOpen,
+                    onDismiss: railOverlay.close,
+                    onLockOpen: lockRailOpen,
+                    onHoverEnter: railOverlay.cancelScheduledClose,
+                    onHoverLeave: railOverlay.scheduleClose,
+                  }
+                : undefined
+            }
+          />
+        </div>
 
-          <main id="main-content" className={styles.main}>
-            <TopBar
-              start={
-                <RailHamburger
-                  onPress={railOverlay.toggle}
-                  onHoverStart={railOverlay.open}
-                  onHoverEnd={railOverlay.scheduleClose}
-                  isOverlayOpen={railOverlay.isOpen}
-                  openLabel={t("shell.rail.openSidebar")}
-                />
-              }
-              sectionName={sectionName}
-              center={topBarSlots.center ?? undefined}
-              actions={topBarSlots.actions ?? undefined}
-              versionSelector={topBarSlots.versionSelector ?? undefined}
-              onSearch={openPalette}
-              elementLegend={topBarSlots.elementLegend ?? undefined}
-              accountZone={
-                <TopBarAccount
-                  account={topBarAccount}
-                  labels={{
-                    notifications: t("shell.rail.notifications"),
-                    notificationsUnread: t("shell.rail.notificationsUnread"),
-                    profile: t("shell.rail.profile"),
-                    settings: t("shell.rail.settings"),
-                    account: t("shell.rail.account"),
-                    toggleSplit: t("shell.topbar.toggleSplit"),
-                  }}
-                />
-              }
-            />
-            {children}
-          </main>
+        <main id="main-content" className={styles.main}>
+          <TopBar
+            start={
+              <RailHamburger
+                onPress={railOverlay.toggle}
+                onHoverStart={railOverlay.open}
+                onHoverEnd={railOverlay.scheduleClose}
+                isOverlayOpen={railOverlay.isOpen}
+                openLabel={t("shell.rail.openSidebar")}
+              />
+            }
+            sectionName={sectionName}
+            center={topBarSlots.center ?? undefined}
+            actions={topBarSlots.actions ?? undefined}
+            versionSelector={topBarSlots.versionSelector ?? undefined}
+            onSearch={openPalette}
+            elementLegend={topBarSlots.elementLegend ?? undefined}
+            accountZone={
+              <TopBarAccount
+                account={topBarAccount}
+                labels={{
+                  notifications: t("shell.rail.notifications"),
+                  notificationsUnread: t("shell.rail.notificationsUnread"),
+                  profile: t("shell.rail.profile"),
+                  settings: t("shell.rail.settings"),
+                  account: t("shell.rail.account"),
+                  toggleSplit: t("shell.topbar.toggleSplit"),
+                }}
+              />
+            }
+          />
+          {children}
+        </main>
 
-          {/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). A REAL third
+        {/* Cesare split column (Spec 46 ?peek=, Spec 47 A4). A REAL third
               grid column — the main lane reflows narrower beside it (the page
               collapses). Hosts the single split CesareSheet; closing it clears
               `?peek`. */}
-          {isCesareSplitActive && (
-            <CesarePeekLane onClose={() => onClosePeek?.()}>
-              {renderCesareSheet("split")}
-            </CesarePeekLane>
-          )}
+        {isCesareSplitActive && (
+          <CesarePeekLane onClose={() => onClosePeek?.()}>
+            {renderCesareSheet("split")}
+          </CesarePeekLane>
+        )}
 
-          {/* Versions split column (Spec 49 W1 + W2). A REAL third grid column
+        {/* Versions split column (Spec 49 W1 + W2). A REAL third grid column
               for the split state — the main lane reflows narrower beside it. In
               `full` the lane renders its own overlay (the `↗` expanded route),
               so no grid track is reserved. The single source of truth is the
               `?versions` URL param; the lane's controls dispatch URL navs. */}
-          {versionsPeek !== null && (
-            <VersionsSplitLane
-              peek={versionsPeek}
-              width={effectiveVersionsWidth}
-              onWidthChange={setVersionsLaneWidth}
-              onExpand={() => onExpandVersions?.()}
-              onStepBack={() => onStepBackVersions?.()}
-              onClose={() => onCloseVersions?.()}
-            />
-          )}
+        {versionsPeek !== null && (
+          <VersionsSplitLane
+            peek={versionsPeek}
+            width={effectiveVersionsWidth}
+            onWidthChange={setVersionsLaneWidth}
+            onExpand={() => onExpandVersions?.()}
+            onStepBack={() => onStepBackVersions?.()}
+            onClose={() => onCloseVersions?.()}
+          />
+        )}
 
-          {/* Collapse affordance now lives inside the LeftRail brand row
+        {/* Collapse affordance now lives inside the LeftRail brand row
               (hover-revealed `«`). ⌘\ still drives the full↔collapsed cycle
               from the keydown handler above. */}
 
-          {/* Spec 47d — the "Mostra modifiche" diff is no longer a shell-level
+        {/* Spec 47d — the "Mostra modifiche" diff is no longer a shell-level
               floating overlay; it is painted INSIDE each touched document's
               prose by a per-document <CesareLiveDiff/> (mounted in the document
               bodies). The shell only relays the broadcast. */}
 
-          {!isCesareSplitActive && !isCesareSurfaceActive && (
-            <BottomDock
-              onCesareToggle={toggleCesare}
-              openCesareLabel={t("shell.dock.openCesare")}
-              actionsLabel={t("shell.dock.actions")}
-            />
-          )}
-
-          <VersionsDrawer />
-          <CommandPalette
-            isOpen={isPaletteOpen}
-            onClose={closePalette}
-            items={paletteItems}
-            emptyLabel={t("shell.palette.empty")}
-            resultsLabel={t("shell.palette.results")}
+        {!isCesareSplitActive && !isCesareSurfaceActive && (
+          <BottomDock
+            onCesareToggle={toggleCesare}
+            openCesareLabel={t("shell.dock.openCesare")}
+            actionsLabel={t("shell.dock.actions")}
           />
-          {/* Floating Cesare sheet — the default surface. Unmounted while the
+        )}
+
+        <CommandPalette
+          isOpen={isPaletteOpen}
+          onClose={closePalette}
+          items={paletteItems}
+          emptyLabel={t("shell.palette.empty")}
+          resultsLabel={t("shell.palette.results")}
+        />
+        {/* Floating Cesare sheet — the default surface. Unmounted while the
               split lane is open OR a central Cesare surface (full-screen session
               page) is active, so the chat never duplicates. The helper carries
               the session-focus props (Spec 47-A5). */}
-          {!isCesareSplitActive &&
-            !isCesareSurfaceActive &&
-            renderCesareSheet("floating")}
-          <SplitDrawerHost
-            splitDrawer={splitDrawer}
-            splitDrawerWidth={splitDrawerWidth}
-            setSplitDrawerWidth={setSplitDrawerWidth}
-            onNotificationActivate={(notification) => {
-              handleActivateNotification(notification);
-              splitDrawer.close();
-            }}
-          />
-        </div>
-      </CesareProvider>
-    </VersionsDrawerProvider>
+        {!isCesareSplitActive &&
+          !isCesareSurfaceActive &&
+          renderCesareSheet("floating")}
+        <SplitDrawerHost
+          splitDrawer={splitDrawer}
+          splitDrawerWidth={splitDrawerWidth}
+          setSplitDrawerWidth={setSplitDrawerWidth}
+          onNotificationActivate={(notification) => {
+            handleActivateNotification(notification);
+            splitDrawer.close();
+          }}
+        />
+      </div>
+    </CesareProvider>
   );
 }
 
