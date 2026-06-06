@@ -187,6 +187,53 @@ test.describe("[OHW-066] Versions master→detail", () => {
       .toBe("rgb(168, 200, 255)");
   });
 
+  // Ported from the retired documents/versioning.spec (old narrative drawer):
+  // duplicate + rename now live on the routed master→detail surface.
+  test("duplicate creates a new version (row count grows)", async ({
+    authenticatedPage: page,
+  }) => {
+    await page.goto(SOGGETTO_PATH);
+    const docId = await openVersionsViaChip(page);
+    await createBlankVersion(page, docId);
+    await page.reload();
+    await openVersionsViaChip(page);
+
+    const rows = page.locator('[data-testid^="versions-split-row-"]');
+    const before = await rows.count();
+    const firstId = (await rows.first().getAttribute("data-testid"))!.replace(
+      "versions-split-row-",
+      "",
+    );
+    await page.getByTestId(`version-duplicate-${firstId}`).click();
+    await expect
+      .poll(async () => rows.count(), { timeout: 8_000 })
+      .toBe(before + 1);
+  });
+
+  test("inline rename persists", async ({ authenticatedPage: page }) => {
+    await page.goto(SOGGETTO_PATH);
+    await openVersionsViaChip(page);
+
+    // Rename the seed's single version in place. (Creating an extra version
+    // first introduces a list refetch/reorder race against the captured row id,
+    // so rename the row that's already there.)
+    const firstId = (await page
+      .locator('[data-testid^="versions-split-row-"]')
+      .first()
+      .getAttribute("data-testid"))!.replace("versions-split-row-", "");
+
+    await page.getByTestId(`version-rename-${firstId}`).click();
+    const label = `bozza-${Date.now()}`;
+    const input = page.getByTestId(`version-rename-input-${firstId}`);
+    await input.fill(label);
+    await input.press("Enter");
+
+    // The renamed row reflects the new label.
+    await expect(
+      page.getByTestId(`versions-split-row-${firstId}`),
+    ).toContainText(label, { timeout: 8_000 });
+  });
+
   test("sad path: a malformed ?versions is ignored (fail closed, no drawer)", async ({
     authenticatedPage: page,
   }) => {

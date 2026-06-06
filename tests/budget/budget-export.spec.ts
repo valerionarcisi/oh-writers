@@ -1,18 +1,28 @@
 import { expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { test } from "../fixtures";
 import { BUDGET_PROJECT_ID, navigateToBudget, generateBudget } from "./helpers";
+
+// Spec 67: Export moved off the FloatingDock into the TopBar `⋯` ("Altre azioni")
+// menu. Open the menu and click "Esporta" to launch the export modal.
+const openExportModal = async (page: Page) => {
+  await page.getByLabel("Altre azioni").click();
+  await page.getByRole("menuitem", { name: "Esporta" }).click();
+};
 
 test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
   // ─── OHW-390 ─────────────────────────────────────────────────────────────────
 
-  test("[OHW-390] Budget page has an 'Esporta' button visible in the dock", async ({
+  test("[OHW-390] Budget exposes Esporta in the TopBar ⋯ menu", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
-    const esportaBtn = page.getByRole("button", { name: "Esporta" });
-    await expect(esportaBtn).toBeVisible({ timeout: 10_000 });
+    await page.getByLabel("Altre azioni").click();
+    await expect(page.getByRole("menuitem", { name: "Esporta" })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   // ─── OHW-391 ─────────────────────────────────────────────────────────────────
@@ -23,7 +33,7 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     const page = authenticatedPage;
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
-    await page.getByRole("button", { name: "Esporta" }).click();
+    await openExportModal(page);
 
     // Modal title must be present
     await expect(
@@ -46,7 +56,7 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     await navigateToBudget(page, BUDGET_PROJECT_ID);
     await generateBudget(page);
 
-    await page.getByRole("button", { name: "Esporta" }).click();
+    await openExportModal(page);
 
     const formatSelect = page.getByTestId("budget-export-format");
     await formatSelect.selectOption("pdf");
@@ -67,8 +77,13 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     await page.getByTestId("budget-export-generate").click();
 
     // Wait for the mutation to complete and window.open to be called.
-    await page.waitForFunction(() => !!(window as Window & { __openedUrl?: string }).__openedUrl, { timeout: 10_000 });
-    const openedUrl = await page.evaluate(() => (window as Window & { __openedUrl?: string }).__openedUrl ?? "");
+    await page.waitForFunction(
+      () => !!(window as Window & { __openedUrl?: string }).__openedUrl,
+      { timeout: 10_000 },
+    );
+    const openedUrl = await page.evaluate(
+      () => (window as Window & { __openedUrl?: string }).__openedUrl ?? "",
+    );
     expect(openedUrl).toMatch(/blob:/);
   });
 
@@ -81,7 +96,7 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     await navigateToBudget(page, BUDGET_PROJECT_ID);
     await generateBudget(page);
 
-    await page.getByRole("button", { name: "Esporta" }).click();
+    await openExportModal(page);
 
     const formatSelect = page.getByTestId("budget-export-format");
     await formatSelect.selectOption("csv");
@@ -103,7 +118,7 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     await navigateToBudget(page, BUDGET_PROJECT_ID);
     await generateBudget(page);
 
-    await page.getByRole("button", { name: "Esporta" }).click();
+    await openExportModal(page);
 
     const formatSelect = page.getByTestId("budget-export-format");
     await formatSelect.selectOption("csv");
@@ -138,7 +153,7 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     // throw an error and the Genera button must not be disabled.
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
-    await page.getByRole("button", { name: "Esporta" }).click();
+    await openExportModal(page);
 
     await expect(
       page.getByRole("heading", { name: "Esporta budget" }),
@@ -177,11 +192,11 @@ test.describe("[Spec 11b] Budget — export (PDF + CSV)", () => {
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
     // Viewer has view-only access; Esporta is a read action and must be available
-    const esportaBtn = page.getByRole("button", { name: "Esporta" });
-    await expect(esportaBtn).toBeVisible({ timeout: 10_000 });
-    await expect(esportaBtn).toBeEnabled();
-
-    await esportaBtn.click();
+    // in the ⋯ menu.
+    await page.getByLabel("Altre azioni").click();
+    const esportaItem = page.getByRole("menuitem", { name: "Esporta" });
+    await expect(esportaItem).toBeVisible({ timeout: 10_000 });
+    await esportaItem.click();
     await expect(
       page.getByRole("heading", { name: "Esporta budget" }),
     ).toBeVisible({ timeout: 8_000 });
