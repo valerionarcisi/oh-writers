@@ -142,8 +142,11 @@ test.describe("Shooting Plan Export", () => {
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body).toMatchObject({ result: { isOk: true } });
-    // CSV should at minimum contain the header row even with no scenes.
-    expect(body.result.value.csv).toContain("Scene,Heading,Shot #");
+    // CSV should at minimum contain the (localised IT) header row even with no
+    // scenes: "Scena,Intestazione,Inquadratura #,…".
+    expect(body.result.value.csv).toContain(
+      "Scena,Intestazione,Inquadratura #",
+    );
     expect(body.result.value.filename).toMatch(/shot-list.*\.csv$/);
   });
 
@@ -168,6 +171,8 @@ test.describe("Shooting Plan Export", () => {
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body).toMatchObject({ result: { isOk: true } });
-    expect(body.result.value.csv).toContain("Scene,Heading,Shot #");
+    expect(body.result.value.csv).toContain(
+      "Scena,Intestazione,Inquadratura #",
+    );
   });
 });
