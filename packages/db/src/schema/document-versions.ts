@@ -6,6 +6,7 @@ import {
   timestamp,
   unique,
   boolean,
+  date,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { documents } from "./documents";
@@ -20,6 +21,8 @@ export const documentVersions = pgTable(
     number: integer("number").notNull(),
     label: text("label"),
     content: text("content").notNull().default(""),
+    draftColor: text("draft_color"),
+    draftDate: date("draft_date"),
     isDraft: boolean("is_draft").notNull().default(false),
     createdBy: uuid("created_by")
       .notNull()

@@ -63,7 +63,6 @@ import { ContextActionIds, type ExportFormat } from "@oh-writers/domain";
 import { buildFountainFilename } from "../lib/export-pipeline";
 import { downloadTextFile } from "~/features/documents";
 import { VersionViewingBanner } from "./VersionViewingBanner";
-import { useVersionsDrawer } from "~/features/versions";
 import {
   useCesareOpen,
   useContextActions,
@@ -215,15 +214,6 @@ export const ScreenplayEditor = forwardRef<
     screenplay.pmDoc ?? null,
   );
   const [isFocusMode, setFocusMode] = useState(false);
-  const {
-    state: drawerState,
-    open: openDrawer,
-    close: closeDrawer,
-  } = useVersionsDrawer();
-  const isVersionsPanelOpen =
-    drawerState.isOpen &&
-    drawerState.scope?.kind === "screenplay" &&
-    drawerState.scope.screenplayId === screenplay.id;
   const [viewing, setViewing] = useState<ViewingState>({ kind: "live" });
   const [pendingView, setPendingView] = useState<{ id: string } | null>(null);
   const [awaitingRestoreConfirm, setAwaitingRestoreConfirm] = useState(false);
@@ -926,22 +916,20 @@ export const ScreenplayEditor = forwardRef<
     };
   }, []);
 
+  const navigate = useNavigate();
+  // Spec 66: the screenplay opens the unified routed master→detail Versions
+  // surface (`?versions=<id>&vkind=screenplay`) instead of the old inline drawer,
+  // so narrative and screenplay share one versions UI. `Attiva` restores.
   const toggleVersionsDrawer = useCallback(() => {
-    if (isVersionsPanelOpen) {
-      closeDrawer();
-    } else {
-      openDrawer(
-        { kind: "screenplay", screenplayId: screenplay.id },
-        { onSelectVersion: (versionId) => requestView(versionId) },
-      );
-    }
-  }, [
-    isVersionsPanelOpen,
-    closeDrawer,
-    openDrawer,
-    screenplay.id,
-    requestView,
-  ]);
+    void navigate({
+      to: ".",
+      search: (prev) => ({
+        ...prev,
+        versions: screenplay.id,
+        vkind: "screenplay" as const,
+      }),
+    });
+  }, [navigate, screenplay.id]);
 
   const hasContent = content.trim().length > 0;
   const canEdit = screenplay.canEdit ?? false;
@@ -952,7 +940,6 @@ export const ScreenplayEditor = forwardRef<
   // so the TopBar action items can drive the file pickers while the confirm
   // dialogs + error banners render here. The PM `content`/version label live
   // in this component, so this is the right home (deep module).
-  const navigate = useNavigate();
   const openTitlePage = useCallback(
     () =>
       void navigate({

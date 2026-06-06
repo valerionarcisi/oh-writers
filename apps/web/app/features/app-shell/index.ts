@@ -24,17 +24,15 @@ export type { CesarePeek, PeekSearch } from "./cesare-peek";
 export {
   versionsSearchSchema,
   parseVersionsPeek,
-  parseVersionsCompare,
-  serializeVersionsCompare,
   InvalidVersionsPeekError,
-  InvalidVersionsCompareError,
   VERSIONS_SURFACE_STATES,
+  VERSION_KINDS,
 } from "./versions-peek";
 export type {
   VersionsPeek,
-  VersionsCompare,
   VersionsSearch,
   VersionsSurfaceState,
+  VersionKind,
 } from "./versions-peek";
 export { useRoutedSurface } from "./use-routed-surface";
 export type {
@@ -56,6 +54,11 @@ export {
   useTopBarSlots,
   useTopBarSlotPublisher,
 } from "./top-bar-slots-context";
+export {
+  VersionsDetailProvider,
+  useVersionsDetailOpen,
+  usePublishVersionsDetail,
+} from "./versions-detail-context";
 export { useCesareOpen } from "./cesare-context";
 export { useCesareSessionFocus } from "./cesare-session-focus-context";
 export {

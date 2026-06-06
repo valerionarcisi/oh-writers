@@ -33,7 +33,7 @@ import {
   toggleBulletList,
   toggleHeading,
 } from "../lib/narrative-plugins";
-import { useDocumentVersions } from "~/features/versions";
+import { useDocumentVersions } from "~/features/documents";
 import {
   useSaveStatePublisher,
   useCesareOpen,

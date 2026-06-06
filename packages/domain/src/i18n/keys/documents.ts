@@ -129,6 +129,7 @@ export const documentsKeys = {
 
     // Narrative docs shell
     "documents.shell.openVersions": "Open Versions →",
+    "documents.shell.versions": "Versions",
 
     // Narrative editor
     "documents.editor.placeholder.logline":
@@ -320,6 +321,7 @@ export const documentsKeys = {
     "documents.cesarePanel.footerAnalysis": "Analisi AI",
 
     "documents.shell.openVersions": "Apri Versioni →",
+    "documents.shell.versions": "Versioni",
 
     "documents.editor.placeholder.logline":
       "Un protagonista che vuole un obiettivo, ostacolato da un antagonista.",

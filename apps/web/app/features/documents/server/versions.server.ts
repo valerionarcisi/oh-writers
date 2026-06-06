@@ -5,6 +5,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { documents, documentVersions, projects } from "@oh-writers/db/schema";
 import type { DocumentVersion } from "@oh-writers/db/schema";
+import { DRAFT_REVISION_COLORS } from "@oh-writers/domain";
 import { toShape } from "@oh-writers/utils";
 import type { ResultShape } from "@oh-writers/utils";
 import { requireUser } from "~/server/context";
@@ -141,6 +142,38 @@ export const versionsQueryOptions = (documentId: string) =>
   queryOptions({
     queryKey: ["document-versions", documentId] as const,
     queryFn: () => listVersions({ data: { documentId } }),
+  });
+
+// The document's LIVE current (active) version id. The Versions surface reads
+// this (not the static `?vcur=` URL hint) so the "current" badge moves the
+// instant Attiva switches it. Shares the `["documents", ...]` key family so a
+// switch invalidation refreshes it.
+export const getCurrentVersionId = createServerFn({ method: "GET" })
+  .validator(ListVersionsInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        string | null,
+        DocumentNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      return toShape(
+        await findDocument(db, data.documentId)
+          .andThen((doc) => assertCanRead(db, doc, user.id).map(() => doc))
+          .map((doc) => doc.currentVersionId),
+      );
+    },
+  );
+
+export const currentVersionQueryOptions = (documentId: string) =>
+  queryOptions({
+    queryKey: ["documents", "current-version", documentId] as const,
+    queryFn: () => getCurrentVersionId({ data: { documentId } }),
   });
 
 // ─── createVersionFromScratch ─────────────────────────────────────────────────
@@ -425,6 +458,71 @@ export const deleteVersion = createServerFn({ method: "POST" })
                 .where(eq(documentVersions.id, version.id))
                 .then(() => ({ id: version.id })),
               (e) => new DbError("versions.delete", e),
+            ),
+          ),
+      );
+    },
+  );
+
+// ─── updateVersionMeta ────────────────────────────────────────────────────────
+// Set the per-version draft colour dot and/or draft date (Spec 66). Both fields
+// are optional patches: an absent field is left untouched; `null` clears it.
+
+const DraftColorEnum = z.enum(
+  DRAFT_REVISION_COLORS as unknown as [string, ...string[]],
+);
+
+export const UpdateVersionMetaInput = z.object({
+  versionId: z.string().uuid(),
+  draftColor: DraftColorEnum.nullable().optional(),
+  draftDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+    .nullable()
+    .optional(),
+});
+
+export const updateVersionMeta = createServerFn({ method: "POST" })
+  .validator(UpdateVersionMetaInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<
+      ResultShape<
+        DocumentVersion,
+        DocumentNotFoundError | ForbiddenError | DbError
+      >
+    > => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const patch: Partial<Pick<DocumentVersion, "draftColor" | "draftDate">> =
+        {};
+      if (data.draftColor !== undefined) patch.draftColor = data.draftColor;
+      if (data.draftDate !== undefined) patch.draftDate = data.draftDate;
+
+      return toShape(
+        await findVersion(db, data.versionId)
+          .andThen((version) =>
+            findDocument(db, version.documentId).map((doc) => ({
+              version,
+              doc,
+            })),
+          )
+          .andThen(({ version, doc }) =>
+            assertCanEdit(db, doc, user.id).map(() => version),
+          )
+          .andThen((version) =>
+            ResultAsync.fromPromise(
+              db
+                .update(documentVersions)
+                .set({ ...patch, updatedAt: new Date() })
+                .where(eq(documentVersions.id, version.id))
+                .returning()
+                .then((rows) => rows[0] ?? null),
+              (e) => new DbError("versions.updateMeta", e),
+            ).andThen((row) =>
+              row ? ok(row) : err(new DocumentNotFoundError(version.id)),
             ),
           ),
       );

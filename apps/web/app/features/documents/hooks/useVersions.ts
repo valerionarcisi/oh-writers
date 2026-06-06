@@ -8,8 +8,11 @@ import {
   switchToVersion,
   deleteVersion,
   saveVersionContent,
+  updateVersionMeta,
   versionsQueryOptions,
+  currentVersionQueryOptions,
 } from "../server/versions.server";
+import type { DraftRevisionColor } from "@oh-writers/domain";
 
 export { versionsQueryOptions };
 
@@ -17,6 +20,11 @@ export { versionsQueryOptions };
 
 export const useVersions = (documentId: string) =>
   useQuery(versionsQueryOptions(documentId));
+
+// The document's LIVE current version id — drives the Versions surface "current"
+// badge so it tracks Attiva instead of the static URL hint.
+export const useCurrentVersionId = (documentId: string) =>
+  useQuery(currentVersionQueryOptions(documentId));
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
@@ -82,6 +90,18 @@ export const useSaveVersionContent = () =>
       unwrapResult(await saveVersionContent({ data: input })),
   });
 
+export const useUpdateVersionMeta = (documentId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      versionId: string;
+      draftColor?: DraftRevisionColor | null;
+      draftDate?: string | null;
+    }) => unwrapResult(await updateVersionMeta({ data: input })),
+    onSuccess: () => invalidateVersions(qc, documentId),
+  });
+};
+
 export {
   listVersions,
   createVersionFromScratch,
@@ -90,4 +110,5 @@ export {
   switchToVersion,
   deleteVersion,
   saveVersionContent,
+  updateVersionMeta,
 };

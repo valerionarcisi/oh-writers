@@ -8,6 +8,10 @@ export {
   VersionsDrawerProvider,
   useVersionsDrawer,
 } from "./context/VersionsDrawerContext";
-export { useDocumentVersions } from "./hooks/useDocumentVersions";
 export { resolveCurrentVersionId } from "./vs-current-baseline";
 export type { VersionRef } from "./vs-current-baseline";
+export type { VersionView } from "./version-view";
+export {
+  narrativeToVersionView,
+  screenplayToVersionView,
+} from "./version-view";

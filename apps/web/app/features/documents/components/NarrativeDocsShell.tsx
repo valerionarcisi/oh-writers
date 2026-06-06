@@ -25,6 +25,8 @@ export interface NarrativeDocsShellProps {
   /** A logline save is in flight. */
   readonly loglineIsSaving?: boolean;
   readonly versionLabel?: string;
+  /** The current version's draft colour (hex/CSS), shown as the chip's dot. */
+  readonly versionDotColor?: string;
   readonly versionMenuItems?: ReadonlyArray<{
     id: string;
     label: string;
@@ -52,6 +54,7 @@ export function NarrativeDocsShell({
   loglineIsDirty,
   loglineIsSaving,
   versionLabel,
+  versionDotColor,
   versionMenuItems,
   onOpenVersions,
   topBarActions,
@@ -95,8 +98,29 @@ export function NarrativeDocsShell({
     ],
   );
 
+  // The version chip — a dedicated, stable TopBar entry point to the Versions
+  // surface (Spec 66). Published whenever the page wires `onOpenVersions`, so it
+  // never depends on the per-page actions menu rendering. Shows the current
+  // version label (fallback "Versioni") + the draft-colour dot.
+  const versionChip = useMemo(
+    () =>
+      onOpenVersions !== undefined ? (
+        <VersionTrigger
+          variant="pill"
+          label={t("documents.shell.openVersions")}
+          versionLabel={versionLabel ?? t("documents.shell.versions")}
+          dotColor={versionDotColor}
+          onClick={onOpenVersions}
+          data-testid="topbar-version-chip"
+        />
+      ) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [!!onOpenVersions, versionLabel, versionDotColor, onOpenVersions],
+  );
+
   useTopBarSlotPublisher("center", loglinePill);
   useTopBarSlotPublisher("actions", topBarActions ?? null);
+  useTopBarSlotPublisher("versionSelector", versionChip);
 
   const showViewbar = topBarActions === undefined;
 

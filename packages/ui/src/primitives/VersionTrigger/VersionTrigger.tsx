@@ -19,6 +19,10 @@ export type VersionTriggerProps = {
   variant?: VersionTriggerVariant;
   label?: string;
   versionLabel?: string;
+  /** Optional leading colour dot (the current version's draft colour). Renders a
+   *  small filled circle before the label — the Notion-style stable identifier
+   *  (Spec 66 TopBar chip). A hex/CSS colour; omit for no dot. */
+  dotColor?: string;
   /** When provided, click opens a popover menu with these items instead of
    *  invoking onClick directly. Useful for the pill variant in the viewbar
    *  where multiple quick actions are useful (open drawer, compare, etc). */
@@ -26,6 +30,7 @@ export type VersionTriggerProps = {
   /** Optional direct click handler. Used when `menuItems` is NOT provided, or
    *  as the default action when both are present (kept for back-compat). */
   onClick?: () => void;
+  "data-testid"?: string;
 };
 
 // ─── MenuItemInternal ────────────────────────────────────────────────────────
@@ -147,8 +152,10 @@ export function VersionTrigger({
   variant = "ghost",
   label = "Versioni",
   versionLabel,
+  dotColor,
   menuItems,
   onClick,
+  "data-testid": testId,
 }: VersionTriggerProps) {
   const hasMenu = !!menuItems && menuItems.length > 0;
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -180,9 +187,17 @@ export function VersionTrigger({
         type="button"
         className={styles.trigger}
         data-variant={variant}
+        data-testid={testId}
         aria-haspopup={hasMenu ? "menu" : "dialog"}
         aria-expanded={hasMenu ? triggerState.isOpen : undefined}
       >
+        {dotColor !== undefined && (
+          <span
+            className={styles.dot}
+            style={{ background: dotColor }}
+            aria-hidden={true}
+          />
+        )}
         <span className={styles.label}>{displayLabel}</span>
         {variant === "pill" ? (
           <Icon name="chevron-down" className={styles.chevron} />

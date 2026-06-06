@@ -89,6 +89,17 @@
   flex-shrink: 0;
 }
 
+/* Per-page actions cluster (version chip + ⋯ menu), grouped just left of the
+ * account zone with a subtle divider so it reads as one Notion-style group. */
+.pageActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline-end: 10px;
+  margin-inline-end: 2px;
+  border-inline-end: 1px solid var(--ds-line);
+}
+
 .iconBtn {
   display: flex;
   align-items: center;

@@ -14,7 +14,9 @@
   letter-spacing: 0.04em;
   cursor: pointer;
   padding: 4px var(--space-3);
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 
   &:hover {
     background: var(--ds-surface-alt);
@@ -38,6 +40,14 @@
 
 .label {
   font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--ds-line);
 }
 
 .chevron {

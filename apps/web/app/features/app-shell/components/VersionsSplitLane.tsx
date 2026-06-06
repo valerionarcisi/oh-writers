@@ -1,41 +1,59 @@
 // apps/web/app/features/app-shell/components/VersionsSplitLane.tsx
 //
-// The routed Versions SplitDrawer lane (Spec 49 W1 + W2). Mounted at the shell
-// level as the third grid column when `?versions=<documentId>` is set on the
-// host route. The host page stays mounted and COMPRESSES (the main lane reflows
-// narrower) — the Notion side-peek model, NOT a floating overlay. This is the
-// SplitDrawer twin of `CesarePeekLane`, but for the version list + vs-current
-// diff instead of the Cesare chat.
+// The routed Versions SplitDrawer lane (Spec 49 routing + Spec 66 master→detail).
+// Mounted at the shell level as the third grid column when `?versions=<id>` is set
+// on the host route. The host page stays mounted and COMPRESSES (the main lane
+// reflows narrower) — the Notion side-peek model, NOT a floating overlay.
 //
-// State is driven entirely by the URL (the routed-surface single source of
-// truth, Spec 49):
-//   - `?versions=<id>`              → SplitDrawer `open` (split, host compresses)
-//   - `?versions=<id>&vstate=full`  → SplitDrawer `full` (`↗` expanded to a real
-//                                     full-screen route; browser-back / `↙`
-//                                     returns to the split)
-//   - param dropped (`×` / ESC / browser-back) → closed, host returns to full
+// The surface is unified across document kinds (Spec 66): the SplitDrawer frame +
+// the master→detail `VersionsSplitDrawer` are shared, while a per-kind inner
+// component (`NarrativeVersionsContent` / `ScreenplayVersionsContent`) binds the
+// right hooks + read-only renderer. The kind comes from `peek.kind` (`?vkind=`).
+// `Attiva` is the single verb: switch the active version (narrative) or restore it
+// (screenplay).
 //
-// `↗` is implemented as a REAL navigation (`navigateState`, a new history
-// entry), so the URL becomes shareable and browser-back returns to the host +
-// split. The SplitDrawer primitive owns the chrome + react-aria dismiss
-// (`useDialog`/`useOverlay` inside the lane wrapper).
+// State is driven entirely by the URL (the routed-surface single source of truth,
+// Spec 49): `?versions=<id>` → open (split); `?vstate=full` → full; param dropped
+// → closed. `↗` is a REAL navigation so the URL stays shareable.
 
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDialog, useOverlay, FocusScope } from "react-aria";
+import { match } from "ts-pattern";
 import { SplitDrawer } from "@oh-writers/ui";
 import type { SplitDrawerState } from "@oh-writers/ui";
-import { VersionsSplitDrawer } from "~/features/versions";
+import type { DraftRevisionColor } from "@oh-writers/domain";
+import {
+  VersionsSplitDrawer,
+  narrativeToVersionView,
+  screenplayToVersionView,
+} from "~/features/versions";
+import type { VersionView } from "~/features/versions";
+import {
+  useDocumentVersions,
+  useDocumentCurrentVersionId,
+  useSwitchToVersion,
+  useDuplicateDocumentVersion,
+  useRenameDocumentVersion,
+  useUpdateDocumentVersionMeta,
+  useCreateDocumentVersionFromScratch,
+} from "~/features/documents";
+import {
+  useVersions as useScreenplayVersions,
+  useRestoreVersion,
+  useDuplicateVersion as useDuplicateScreenplayVersion,
+  useRenameVersion as useRenameScreenplayVersion,
+  useUpdateVersionMeta as useUpdateScreenplayVersionMeta,
+  useCreateManualVersion,
+  ReadOnlyScreenplayView,
+} from "~/features/screenplay-editor";
 import { useTranslation } from "~/features/i18n";
-import type { VersionsPeek, VersionsCompare } from "../versions-peek";
+import { usePublishVersionsDetail } from "../versions-detail-context";
+import type { VersionsPeek } from "../versions-peek";
 import styles from "./VersionsSplitLane.module.css";
 
 export interface VersionsSplitLaneProps {
-  /** The validated routed Versions target (document + state + baseline). */
+  /** The validated routed Versions target (entity + state + baseline + kind). */
   readonly peek: VersionsPeek;
-  /** The validated `?compare=` pair (Spec 49 W3) or `null` for "vs current". */
-  readonly compare: VersionsCompare | null;
-  /** Patch the `?compare=` companion (null drops it). */
-  readonly onCompareChange: (next: VersionsCompare | null) => void;
   /** Width (px) of the split lane; persisted by AppShell. */
   readonly width: number;
   readonly onWidthChange: (next: number) => void;
@@ -47,10 +65,154 @@ export interface VersionsSplitLaneProps {
   readonly onClose: () => void;
 }
 
+// ─── Narrative ────────────────────────────────────────────────────────────────
+
+function NarrativeVersionsContent({
+  documentId,
+  currentVersionId,
+  onDetailChange,
+}: {
+  documentId: string;
+  currentVersionId: string | null;
+  onDetailChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const { data: result, isLoading } = useDocumentVersions(documentId);
+  // Read the LIVE current version (not the static URL hint) so the badge tracks
+  // Attiva. Falls back to the URL hint while the query is loading.
+  const { data: currentResult } = useDocumentCurrentVersionId(documentId);
+  const liveCurrentId =
+    currentResult?.isOk && currentResult.value
+      ? currentResult.value
+      : currentVersionId;
+  const activate = useSwitchToVersion(documentId);
+  const duplicate = useDuplicateDocumentVersion(documentId);
+  const rename = useRenameDocumentVersion(documentId);
+  const updateMeta = useUpdateDocumentVersionMeta(documentId);
+  const createNew = useCreateDocumentVersionFromScratch(documentId);
+
+  const versions: VersionView[] = useMemo(
+    () => (result?.isOk ? result.value.map(narrativeToVersionView) : []),
+    [result],
+  );
+
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "DocumentNotFoundError" }, () =>
+            t("versions.split.docNotFound"),
+          )
+          .with({ _tag: "ForbiddenError" }, () => t("versions.split.forbidden"))
+          .otherwise(() => t("versions.split.loadFailed"))
+      : null;
+
+  // The version's canonical narrative HTML (server-owned, sanitised), read-only.
+  const renderContent = (version: VersionView) => (
+    <div
+      className={styles.narrativeBody}
+      dangerouslySetInnerHTML={{ __html: version.content }}
+    />
+  );
+
+  return (
+    <VersionsSplitDrawer
+      versions={versions}
+      currentVersionId={liveCurrentId}
+      isLoading={isLoading}
+      loadError={loadError}
+      renderContent={renderContent}
+      canEdit
+      onActivate={(id) => activate.mutate(id)}
+      onDuplicate={(id) => duplicate.mutate(id)}
+      onRename={(id, label) => rename.mutate({ versionId: id, label })}
+      onSetColor={(id, color: DraftRevisionColor | null) =>
+        updateMeta.mutate({ versionId: id, draftColor: color })
+      }
+      onCreateNew={() => createNew.mutate()}
+      onDetailChange={onDetailChange}
+    />
+  );
+}
+
+// ─── Screenplay ───────────────────────────────────────────────────────────────
+
+function ScreenplayVersionsContent({
+  screenplayId,
+  currentVersionId,
+  onDetailChange,
+}: {
+  screenplayId: string;
+  currentVersionId: string | null;
+  onDetailChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const { data: result, isLoading } = useScreenplayVersions(screenplayId);
+  // Attiva = restore for the screenplay: copy the version's content back onto the
+  // live screenplay (the old dedicated restore route is superseded, Spec 66).
+  const restore = useRestoreVersion();
+  const duplicate = useDuplicateScreenplayVersion(screenplayId);
+  const rename = useRenameScreenplayVersion(screenplayId);
+  const updateMeta = useUpdateScreenplayVersionMeta(screenplayId);
+  const createNew = useCreateManualVersion();
+
+  const versions: VersionView[] = useMemo(
+    () => (result?.isOk ? result.value.map(screenplayToVersionView) : []),
+    [result],
+  );
+
+  const loadError: string | null =
+    result && !result.isOk
+      ? match(result.error)
+          .with({ _tag: "ScreenplayNotFoundError" }, () =>
+            t("versions.split.docNotFound"),
+          )
+          .with({ _tag: "ForbiddenError" }, () => t("versions.split.forbidden"))
+          .otherwise(() => t("versions.split.loadFailed"))
+      : null;
+
+  // The version's content is a Fountain/PM string — render it read-only with the
+  // screenplay editor's own view so the detail reads like the script.
+  const renderContent = (version: VersionView) => (
+    <div className={styles.screenplayBody}>
+      <ReadOnlyScreenplayView content={version.content} />
+    </div>
+  );
+
+  return (
+    <VersionsSplitDrawer
+      versions={versions}
+      currentVersionId={currentVersionId}
+      isLoading={isLoading}
+      loadError={loadError}
+      renderContent={renderContent}
+      canEdit
+      onActivate={(id) => restore.mutate({ versionId: id })}
+      onDuplicate={(id) => {
+        const v = versions.find((x) => x.id === id);
+        duplicate.mutate({
+          versionId: id,
+          label: `${v?.label ?? t("versions.split.versionPrefix")} ${t("versions.copySuffix")}`,
+        });
+      }}
+      onRename={(id, label) => rename.mutate({ versionId: id, label })}
+      onSetColor={(id, color: DraftRevisionColor | null) =>
+        updateMeta.mutate({ versionId: id, draftColor: color })
+      }
+      onCreateNew={() =>
+        createNew.mutate({
+          screenplayId,
+          label: `${t("versions.split.versionPrefix")} ${versions.length + 1}`,
+        })
+      }
+      onDetailChange={onDetailChange}
+    />
+  );
+}
+
+// ─── Lane frame ───────────────────────────────────────────────────────────────
+
 export function VersionsSplitLane({
   peek,
-  compare,
-  onCompareChange,
   width,
   onWidthChange,
   onExpand,
@@ -60,9 +222,12 @@ export function VersionsSplitLane({
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
-  // react-aria owns dismiss + focus (mandatory). ESC clears `?versions`.
-  // Outside-interaction dismiss is disabled so the compressed host page beside
-  // the lane stays clickable — same contract as the Cesare peek lane.
+  // The detail-open flag drives the lane width + rail collapse (Spec 66): the
+  // list stays narrow, the detail widens to ~half the page. Published to the
+  // shell via the context; reset on `full` (the expanded route is its own thing).
+  const [detailOpen, setDetailOpen] = useState(false);
+  usePublishVersionsDetail(detailOpen && peek.state !== "full");
+
   const { overlayProps } = useOverlay(
     {
       onClose,
@@ -77,9 +242,6 @@ export function VersionsSplitLane({
     ref,
   );
 
-  // The SplitDrawer's visible state mirrors the routed surface: `full` when the
-  // user expanded (`?vstate=full`), `open` (split) otherwise. The primitive's
-  // controls dispatch back into URL navigations.
   const state: SplitDrawerState = peek.state === "full" ? "full" : "open";
 
   return (
@@ -96,8 +258,6 @@ export function VersionsSplitLane({
           state={state}
           placement="lane"
           onStateChange={(next) => {
-            // Reflect a primitive-driven state change as a URL navigation so the
-            // URL stays authoritative.
             if (next === "closed") onClose();
             else if (next === "full") onExpand();
             else onStepBack();
@@ -116,12 +276,19 @@ export function VersionsSplitLane({
           reduceLabel={t("shell.splitDrawer.reduce")}
           testId="versions-split-drawer-frame"
         >
-          <VersionsSplitDrawer
-            documentId={peek.documentId}
-            currentVersionId={peek.currentVersionId}
-            compare={compare}
-            onCompareChange={onCompareChange}
-          />
+          {peek.kind === "screenplay" ? (
+            <ScreenplayVersionsContent
+              screenplayId={peek.documentId}
+              currentVersionId={peek.currentVersionId}
+              onDetailChange={setDetailOpen}
+            />
+          ) : (
+            <NarrativeVersionsContent
+              documentId={peek.documentId}
+              currentVersionId={peek.currentVersionId}
+              onDetailChange={setDetailOpen}
+            />
+          )}
         </SplitDrawer>
       </div>
     </FocusScope>

@@ -1,18 +1,20 @@
 // tests/versions-splitdrawer.spec.ts
 //
-// [OHW-049] Versions in the routed SplitDrawer (Spec 49 W1 + W2).
+// [OHW-049] Versions in the routed SplitDrawer — routing + compress (Spec 49
+// W1 + W2). The diff/compare behaviour these specs once covered was removed in
+// Spec 66 (master→detail, ADR-0004); the flow itself is covered by
+// versions-master-detail.spec.ts. What remains here is the routing contract.
 //
 // The Versions surface opens via the ROUTER (`?versions=<documentId>`) on the
 // soggetto page: the host page stays mounted and COMPRESSES (the main lane
-// reflows narrower) while a real third grid column hosts the version list +
-// the "vs current" diff. ×, ESC and browser-back clear `?versions` and restore
-// the host width. A deep-link with the param opens already-split. The sad path
-// — a malformed `?versions` — is ignored (fail closed): no lane, host alone.
+// reflows narrower) while a real third grid column hosts the version list. ×,
+// ESC and browser-back clear `?versions` and restore the host width. A deep-link
+// with the param opens already-split. The sad path — a malformed `?versions` —
+// is ignored (fail closed): no lane, host alone.
 //
-// The seed ships a single soggetto version, so the diff test first creates a
-// second version through the document `createVersionFromScratch` server fn
-// (the only deterministic, URL-stable way to add a version in-test) before
-// asserting the vs-current diff renders.
+// The seed ships a single soggetto version, so tests first create a second via
+// the document `createVersionFromScratch` server fn (the deterministic,
+// URL-stable way to add a version in-test).
 import { test, expect, TEST_TEAM_PROJECT_ID } from "./fixtures";
 import { BASE_URL } from "./fixtures";
 import type { Page } from "@playwright/test";
@@ -159,11 +161,11 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
     await expect.poll(() => readMainWidth(page)).toBe(widthBefore);
   });
 
-  test("deep-link with ?versions= opens already-split + shows the vs-current diff", async ({
+  test("deep-link with ?versions= opens already-split (master→detail list)", async ({
     authenticatedPage: page,
   }) => {
     // First learn the soggetto document id via the routed open, then add a
-    // second version so the diff is non-trivial.
+    // second version so the list is non-trivial.
     await page.goto(SOGGETTO_PATH);
     await expect(page.getByTestId("soggetto-page")).toBeVisible({
       timeout: 15_000,
@@ -172,8 +174,8 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
     const newCurrentId = await createBlankVersion(page, documentId);
 
     // Deep-link straight to the split surface (param already present at load).
-    // `vcur` carries the new current-version baseline so the "vs current" diff
-    // and the "Attuale" flag resolve from the URL alone (deep-linkable).
+    // `vcur` carries the current-version baseline so the "Attuale" flag resolves
+    // from the URL alone (deep-linkable).
     await page.goto(
       `${SOGGETTO_PATH}?versions=${documentId}&vcur=${newCurrentId}`,
     );
@@ -189,11 +191,9 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       )
       .toBe("open");
 
-    // The list has ≥2 versions, exactly one flagged as current ("Attuale").
+    // The master→detail list has ≥2 versions, exactly one flagged as current.
     // (The exact count is not asserted: the shared test DB may already hold
-    // extra soggetto versions created by sibling specs in the same run — the
-    // meaningful invariants are "at least the seed + the one we just added" and
-    // "exactly one current".)
+    // extra soggetto versions created by sibling specs in the same run.)
     const rows = page.locator('[data-testid^="versions-split-row-"]');
     await expect
       .poll(async () => rows.count(), { timeout: 10_000 })
@@ -202,12 +202,8 @@ test.describe("[OHW-049] Versions SplitDrawer (routed)", () => {
       page.locator('[data-testid^="versions-split-current-"]'),
     ).toHaveCount(1);
 
-    // The "vs current" diff renders with intra-line change highlights.
-    const diff = page.getByTestId("versions-split-diff");
-    await expect(diff).toBeVisible();
-    await expect(diff.locator("[data-diff-changed]").first()).toBeVisible({
-      timeout: 5_000,
-    });
+    // ADR-0004: no diff table on this surface.
+    await expect(page.getByTestId("versions-split-diff")).toHaveCount(0);
   });
 
   test("sad path: a malformed ?versions is ignored (fail closed, no compress)", async ({

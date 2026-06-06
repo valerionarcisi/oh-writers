@@ -33,7 +33,18 @@ interface TopBarSlots {
   center: ReactNode | null;
   /** Extra actions injected into the TopBar right slot (e.g. export button). */
   actions: ReactNode | null;
+  /** Version chip slot — the current-version pill that opens the Versions
+   *  surface (Spec 66). A dedicated, stable home so the version entry point
+   *  never depends on the per-page actions menu being published. */
+  versionSelector: ReactNode | null;
 }
+
+const EMPTY_SLOTS: TopBarSlots = {
+  elementLegend: null,
+  center: null,
+  actions: null,
+  versionSelector: null,
+};
 
 interface TopBarSlotsContextValue {
   slots: TopBarSlots;
@@ -46,11 +57,7 @@ interface TopBarSlotsContextValue {
 const TopBarSlotsContext = createContext<TopBarSlotsContextValue | null>(null);
 
 export function TopBarSlotsProvider({ children }: { children: ReactNode }) {
-  const [slots, setSlots] = useState<TopBarSlots>({
-    elementLegend: null,
-    center: null,
-    actions: null,
-  });
+  const [slots, setSlots] = useState<TopBarSlots>(EMPTY_SLOTS);
 
   const setSlot = useCallback<TopBarSlotsContextValue["setSlot"]>(
     (key, value) => {
@@ -75,7 +82,7 @@ export function TopBarSlotsProvider({ children }: { children: ReactNode }) {
 
 export function useTopBarSlots(): TopBarSlots {
   const ctx = useContext(TopBarSlotsContext);
-  if (!ctx) return { elementLegend: null, center: null, actions: null };
+  if (!ctx) return EMPTY_SLOTS;
   return ctx.slots;
 }
 

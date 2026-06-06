@@ -47,6 +47,10 @@ import { narrativeProgressQueryKey } from "~/features/documents";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
+import {
+  VersionsDetailProvider,
+  useVersionsDetailOpen,
+} from "../versions-detail-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
 import {
   CesareSessionFocusProvider,
@@ -92,8 +96,7 @@ import {
 import { SplitToggleProvider, useSplitToggle } from "../split-toggle-context";
 import { publishLiveEdits } from "../cesare-live-edit-store";
 import { isCesarePeek } from "../cesare-peek";
-import { parseVersionsPeek, parseVersionsCompare } from "../versions-peek";
-import type { VersionsCompare } from "../versions-peek";
+import { parseVersionsPeek } from "../versions-peek";
 import { CesarePeekLane } from "./CesarePeekLane";
 import { SplitDrawerPreviewBody } from "./SplitDrawerPreviewBody";
 import { VersionsSplitLane } from "./VersionsSplitLane";
@@ -184,13 +187,10 @@ interface AppShellProps {
   versionsParam?: string | null;
   /** Raw `?vstate` companion — `"full"` promotes the lane to a full route. */
   versionsStateParam?: string | null;
-  /** Raw `?vcur` companion — the "vs current" baseline version id. */
+  /** Raw `?vcur` companion — the current (active) baseline version id. */
   versionsCurrentParam?: string | null;
-  /** Raw `?compare` companion — the `<a>,<b>` 2-version compare pair (W3). */
-  versionsCompareParam?: string | null;
-  /** Patch `?compare` (null drops it — back to "vs current"). Replace, no
-   *  history entry, so the compare toggle doesn't pollute browser history. */
-  onVersionsCompareChange?: (next: VersionsCompare | null) => void;
+  /** Raw `?vkind` companion — `"screenplay"` versions a screenplay, else narrative. */
+  versionsKindParam?: string | null;
   /** Clear `?versions` (× / ESC / browser-back). */
   onCloseVersions?: () => void;
   /** `↗` expand the Versions lane to the full-screen route. */
@@ -225,28 +225,30 @@ export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
       <TopBarSlotsProvider>
-        <ActiveSceneProvider>
-          <CesareNotificationProvider>
-            <SplitDrawerProvider>
-              <SplitToggleProvider>
-                <CesareSessionFocusProvider>
-                  {/* Spec 47b FIX 2 — the shared chat store wraps both the
+        <VersionsDetailProvider>
+          <ActiveSceneProvider>
+            <CesareNotificationProvider>
+              <SplitDrawerProvider>
+                <SplitToggleProvider>
+                  <CesareSessionFocusProvider>
+                    {/* Spec 47b FIX 2 — the shared chat store wraps both the
                     floating sheet and the full-page session route so they
                     render the SAME threads (single chat container). Spec 52 —
                     the focus-request provider lets the full-screen new-session
                     landing ask the shell to recede the rail + topstrip. */}
-                  <ShellFocusRequestProvider>
-                    <CesareSurfaceProvider>
-                      <CesareChatStoreProvider>
-                        <AppShellInner {...props} />
-                      </CesareChatStoreProvider>
-                    </CesareSurfaceProvider>
-                  </ShellFocusRequestProvider>
-                </CesareSessionFocusProvider>
-              </SplitToggleProvider>
-            </SplitDrawerProvider>
-          </CesareNotificationProvider>
-        </ActiveSceneProvider>
+                    <ShellFocusRequestProvider>
+                      <CesareSurfaceProvider>
+                        <CesareChatStoreProvider>
+                          <AppShellInner {...props} />
+                        </CesareChatStoreProvider>
+                      </CesareSurfaceProvider>
+                    </ShellFocusRequestProvider>
+                  </CesareSessionFocusProvider>
+                </SplitToggleProvider>
+              </SplitDrawerProvider>
+            </CesareNotificationProvider>
+          </ActiveSceneProvider>
+        </VersionsDetailProvider>
       </TopBarSlotsProvider>
     </SaveStateProvider>
   );
@@ -272,8 +274,7 @@ function AppShellInner({
   versionsParam = null,
   versionsStateParam = null,
   versionsCurrentParam = null,
-  versionsCompareParam = null,
-  onVersionsCompareChange,
+  versionsKindParam = null,
   onCloseVersions,
   onExpandVersions,
   onStepBackVersions,
@@ -347,13 +348,22 @@ function AppShellInner({
     setCesareOpen(cesarePersist === "expanded");
   }, []);
 
+  // The Versions surface is master→detail: the LIST stays narrow (the host keeps
+  // its space), but opening a version's DETAIL shows a whole document's formatted
+  // preview, so the rail collapses for room (Spec 66). Only the detail collapses
+  // — published by the lane. The persisted `shellState` is untouched; closing the
+  // detail restores it.
+  const versionsDetailOpen = useVersionsDetailOpen();
+
   // Spec 52 — a routed surface (the full-screen new-session landing) can force
   // focus mode for its lifetime. The user's persisted density (`shellState`) is
   // never overwritten while the request is active; releasing it restores their
   // prior layout automatically because we broadcast `shellState` again.
   const effectiveShellState: ShellState = isFocusRequested
     ? "focus"
-    : shellState;
+    : versionsDetailOpen && shellState === "full"
+      ? "collapsed"
+      : shellState;
 
   // Broadcast UI state to <body> so the rail/dock/cesare CSS modules can
   // react via :global([data-*]) selectors without prop-drilling.
@@ -455,20 +465,28 @@ function AppShellInner({
     versionsParam,
     versionsStateParam,
     versionsCurrentParam,
+    versionsKindParam,
   );
   const versionsPeek = versionsPeekResult.isOk()
     ? versionsPeekResult.value
     : null;
-  // The `?compare=` pair (Spec 49 W3). Validated to a distinct UUID pair (fail
-  // closed — a malformed pair falls back to "vs current"); the same-document
-  // guard is applied inside VersionsSplitDrawer against the loaded list.
-  const versionsCompareResult = parseVersionsCompare(versionsCompareParam);
-  const versionsCompare = versionsCompareResult.isOk()
-    ? versionsCompareResult.value
-    : null;
   const isVersionsSplitActive =
     versionsPeek !== null && versionsPeek.state === "split";
-  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number>(480);
+  // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL
+  // widens the lane to ~half the page (the read-only preview needs room). The
+  // user's drag-resize is kept per-view in `versionsLaneWidth`; the effective
+  // width below flips the BASE between narrow + half when there's no manual size.
+  const NARROW_VERSIONS_WIDTH = 420;
+  const halfPageWidth =
+    typeof window === "undefined"
+      ? 720
+      : Math.round(Math.min(820, Math.max(560, window.innerWidth * 0.5)));
+  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number | null>(
+    null,
+  );
+  const effectiveVersionsWidth =
+    versionsLaneWidth ??
+    (versionsDetailOpen ? halfPageWidth : NARROW_VERSIONS_WIDTH);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -488,9 +506,9 @@ function AppShellInner({
     if (typeof document === "undefined") return;
     document.body.style.setProperty(
       "--versions-split-size",
-      `${versionsLaneWidth}px`,
+      `${effectiveVersionsWidth}px`,
     );
-  }, [versionsLaneWidth]);
+  }, [effectiveVersionsWidth]);
 
   // Shell SplitDrawer (Cesare preview + notifications) is ALWAYS an in-flow
   // collapsing lane (CONTEXT.md / ADR-0002), never a fixed overlay. While it has
@@ -1292,6 +1310,7 @@ function AppShellInner({
               sectionName={sectionName}
               center={topBarSlots.center ?? undefined}
               actions={topBarSlots.actions ?? undefined}
+              versionSelector={topBarSlots.versionSelector ?? undefined}
               onSearch={openPalette}
               elementLegend={topBarSlots.elementLegend ?? undefined}
               accountZone={
@@ -1329,9 +1348,7 @@ function AppShellInner({
           {versionsPeek !== null && (
             <VersionsSplitLane
               peek={versionsPeek}
-              compare={versionsCompare}
-              onCompareChange={(next) => onVersionsCompareChange?.(next)}
-              width={versionsLaneWidth}
+              width={effectiveVersionsWidth}
               onWidthChange={setVersionsLaneWidth}
               onExpand={() => onExpandVersions?.()}
               onStepBack={() => onStepBackVersions?.()}

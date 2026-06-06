@@ -63,12 +63,14 @@ export type { VersionCompareItem } from "./components/VersionCompareModal";
 export {
   versionsQueryOptions as documentVersionsQueryOptions,
   useVersions as useDocumentVersions,
+  useCurrentVersionId as useDocumentCurrentVersionId,
   useCreateVersionFromScratch as useCreateDocumentVersionFromScratch,
   useDuplicateVersion as useDuplicateDocumentVersion,
   useRenameVersion as useRenameDocumentVersion,
   useSwitchToVersion,
   useDeleteDocumentVersion,
   useSaveVersionContent,
+  useUpdateVersionMeta as useUpdateDocumentVersionMeta,
 } from "./hooks/useVersions";
 export { base64ToBlob, downloadBlob, downloadTextFile } from "./lib/download";
 export { openPdfPreview } from "./lib/pdf-preview";

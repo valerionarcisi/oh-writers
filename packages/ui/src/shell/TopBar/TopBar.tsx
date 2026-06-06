@@ -157,7 +157,6 @@ export function TopBar({
         {center && <div className={styles.center}>{center}</div>}
 
         <div className={styles.right}>
-          {actions}
           {onSearch && (
             <button
               type="button"
@@ -172,8 +171,18 @@ export function TopBar({
           {saveStateSlot && (
             <span className={styles.saveState}>{saveStateSlot}</span>
           )}
-          {versionSelector && (
-            <span className={styles.versionSlot}>{versionSelector}</span>
+          {/* Per-page actions cluster (Spec 66): the version chip + the `⋯`
+              actions menu sit together as one coherent group, immediately left
+              of the account zone — "near the gear", Notion-style — without
+              entering the account zone (bell/avatar/gear stay the single home,
+              Spec 55). */}
+          {(versionSelector || actions) && (
+            <span className={styles.pageActions}>
+              {versionSelector && (
+                <span className={styles.versionSlot}>{versionSelector}</span>
+              )}
+              {actions}
+            </span>
           )}
           {accountZone}
         </div>
