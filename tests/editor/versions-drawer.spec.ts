@@ -1,241 +1,175 @@
 /**
- * Spec 12 — Unified Versions Drawer (E2E)
+ * Spec 66 — Screenplay Versions (master→detail, routed) E2E.
  *
- * [OHW-170] Versions drawer opens from screenplay toolbar and shows list
- * [OHW-171] First auto-save version appears with placeholder label
- * [OHW-172] Duplicate creates a new version that becomes the live draft
- * [OHW-173] Inline rename (pencil icon) updates label optimistically
- * [OHW-174] Editor changes on duplicated version are saved
- * [OHW-175] Second duplicate creates a third version in the list
- * [OHW-176] Delete removes a version from the list
- * [OHW-177] Drawer closes on Escape and on ✕ button
+ * The screenplay shares the unified Versions surface with the narrative docs
+ * (Spec 66 / ADR-0004): a routed master→detail SplitDrawer, NO diff, NO
+ * segmented "Attuale/Confronta". The screenplay opens it from the TopBar ⋯
+ * ("Altre azioni") menu → "Versioni" item, which routes to
+ * `?versions=<screenplayId>&vkind=screenplay`. `Attiva` restores the version
+ * onto the live screenplay. The detail pane renders the script read-only via
+ * ReadOnlyScreenplayView.
+ *
+ * The retired inline VersionsDrawer (drawer-close / version-row-* / delete +
+ * "(copia)" label / view-mode banner) is gone — its capabilities map onto the
+ * shared surface here (no delete on the new surface). The shared surface's
+ * generic behaviour is also covered for the soggetto doc in
+ * tests/versions-master-detail.spec.ts (OHW-066); this file is the
+ * screenplay-flavoured coverage.
+ *
+ * Note: unlike the narrative docs, the screenplay surface has no "active
+ * version" pointer — it opens with `?versions&vkind=screenplay` (no `?vcur`),
+ * so there is no "current" badge and `Attiva` is a *restore* (copies the
+ * version's content back onto the live screenplay), not a pointer switch.
+ *
+ * [OHW-170] ⋯ → Versioni opens the routed surface; list + "+ Nuova versione";
+ *           NO diff/segmented control.
+ * [OHW-171] Click a version → read-only detail (script renders) + Indietro.
+ * [OHW-172] Duplicate grows the list.
+ * [OHW-173] Inline rename persists.
+ * [OHW-175] "+ Nuova versione" grows the list.
+ * [OHW-176] Attiva (restore) succeeds without error and the surface survives.
  */
 
 import { test, expect } from "../fixtures";
-import {
-  BASE_URL,
-  waitForEditor,
-  goToNewLine,
-  openScreenplayActionsMenu,
-} from "../helpers";
+import type { Page } from "@playwright/test";
+import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Open the versions drawer from the TopBar actions menu (Spec 55a) */
-async function openVersionsDrawer(page: import("@playwright/test").Page) {
+// Open the routed Versions surface from the ⋯ menu and wait for the shared
+// master→detail drawer to mount.
+async function openVersions(page: Page) {
   await openScreenplayActionsMenu(page);
-  const versionsItem = page.getByTestId("menu-item-versions");
-  await expect(versionsItem).toBeVisible({ timeout: 5_000 });
-  await versionsItem.click();
-  const drawer = page.getByTestId("versions-drawer");
-  await expect(drawer).toBeVisible({ timeout: 5_000 });
-  return drawer;
+  const item = page.getByTestId("menu-item-versions");
+  await expect(item).toBeVisible({ timeout: 5_000 });
+  await item.click();
+  await expect(page.getByTestId("versions-split-drawer")).toBeVisible({
+    timeout: 10_000,
+  });
+  // The screenplay opened the surface with vkind=screenplay.
+  expect(
+    await page.evaluate(() => new URL(location.href).searchParams.get("vkind")),
+  ).toBe("screenplay");
 }
 
-/** Wait for the save indicator to settle (not dirty, not saving) */
-async function waitForSaved(page: import("@playwright/test").Page) {
-  // The save indicator disappears or shows "Salvato" when not dirty
-  await page.waitForFunction(
-    () => {
-      const indicator = document.querySelector(
-        "[data-testid='save-indicator']",
-      );
-      if (!indicator) return true; // hidden = not dirty
-      return indicator.textContent?.includes("Salvato") ?? false;
-    },
-    { timeout: 15_000 },
-  );
-}
+const rows = (page: Page) =>
+  page.locator('[data-testid^="versions-split-row-"]');
 
-// ─── Suite ────────────────────────────────────────────────────────────────────
-
-test.describe("Versions drawer", () => {
+test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
   test.beforeEach(async ({ authenticatedPage: page, testProjectId }) => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForEditor(page);
   });
 
-  test("[OHW-170] drawer opens from toolbar and shows the versions list", async ({
+  test("[OHW-170] ⋯ → Versioni opens the surface; list + new affordance; NO diff/segmented", async ({
     authenticatedPage: page,
   }) => {
-    const drawer = await openVersionsDrawer(page);
-    await expect(drawer).toBeVisible();
-    // The drawer title should mention versioni
-    await expect(drawer.getByText(/versioni/i)).toBeVisible();
+    await openVersions(page);
+
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
+    // "+ Nuova versione" affordance present.
+    await expect(page.getByTestId("version-new")).toBeVisible();
+
+    // Regression (ADR-0004): no segmented control, no diff table.
+    await expect(page.getByRole("radiogroup")).toHaveCount(0);
+    await expect(page.getByTestId("versions-split-diff")).toHaveCount(0);
+    expect(
+      await page.evaluate(() =>
+        new URL(location.href).searchParams.has("compare"),
+      ),
+    ).toBe(false);
   });
 
-  test("[OHW-171] first auto-save version is visible with Auto-save label", async ({
+  test("[OHW-171] click a version → read-only detail renders the script + Indietro returns", async ({
     authenticatedPage: page,
   }) => {
-    // Write something so autosave fires, then open drawer
-    const editor = await waitForEditor(page);
-    await goToNewLine(page);
-    await editor.pressSequentially("INT. TEST ROOM - DAY", { delay: 30 });
-    await waitForSaved(page);
+    await openVersions(page);
+    await rows(page).first().click();
 
-    const drawer = await openVersionsDrawer(page);
-    // At least one row should exist (seeded data has versions)
-    const rows = drawer.locator("[data-testid^='version-row-']");
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("versions-split-detail")).toBeVisible();
+    await expect(page.getByTestId("versions-split-content")).toBeVisible();
+
+    await page.getByTestId("versions-split-back").click();
+    await expect(page.getByTestId("versions-split-list")).toBeVisible();
   });
 
-  test("[OHW-172] duplicate creates a new version that becomes the live draft", async ({
+  test("[OHW-172] duplicate creates a new version (row count grows)", async ({
     authenticatedPage: page,
-    testProjectId,
   }) => {
-    const drawer = await openVersionsDrawer(page);
-    const rows = drawer.locator("[data-testid^='version-row-']");
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await openVersions(page);
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
+    const before = await rows(page).count();
 
-    const initialCount = await rows.count();
+    const firstId = (await rows(page)
+      .first()
+      .getAttribute("data-testid"))!.replace("versions-split-row-", "");
+    await page.getByTestId(`version-duplicate-${firstId}`).click();
 
-    // Click Duplica on the first row
-    const firstDuplicateBtn = rows.first().getByTestId(/version-duplicate-/);
-    await expect(firstDuplicateBtn).toBeVisible();
-    await firstDuplicateBtn.click();
-
-    // A new row should appear
-    await expect(rows).toHaveCount(initialCount + 1, { timeout: 10_000 });
-
-    // The new version's label should contain "copia"
-    const firstRowLabel = rows.first().locator("[class*='label']").first();
-    await expect(firstRowLabel).toContainText(/copia/i, { timeout: 5_000 });
+    await expect
+      .poll(async () => rows(page).count(), { timeout: 10_000 })
+      .toBe(before + 1);
   });
 
-  test("[OHW-173] pencil icon renames a version inline", async ({
+  test("[OHW-173] inline rename persists", async ({
     authenticatedPage: page,
   }) => {
-    const drawer = await openVersionsDrawer(page);
-    const rows = drawer.locator("[data-testid^='version-row-']");
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await openVersions(page);
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
 
-    // Get the first row's version id from data-testid
-    const firstRow = rows.first();
-    const testId = await firstRow.getAttribute("data-testid");
-    const versionId = testId?.replace("version-row-", "") ?? "";
-    expect(versionId).toBeTruthy();
+    const firstId = (await rows(page)
+      .first()
+      .getAttribute("data-testid"))!.replace("versions-split-row-", "");
+    await page.getByTestId(`version-rename-${firstId}`).click();
+    const label = `bozza-${Date.now()}`;
+    const input = page.getByTestId(`version-rename-input-${firstId}`);
+    await input.fill(label);
+    await input.press("Enter");
 
-    // Click the pencil icon
-    const pencilBtn = page.getByTestId(`version-rename-${versionId}`);
-    await pencilBtn.click();
-
-    // Rename input should appear
-    const renameInput = page.getByTestId(`version-rename-input-${versionId}`);
-    await expect(renameInput).toBeVisible();
-    await renameInput.fill("Bozza finale");
-    await renameInput.press("Enter");
-
-    // Label should update
-    await expect(firstRow).toContainText("Bozza finale", { timeout: 5_000 });
+    await expect(
+      page.getByTestId(`versions-split-row-${firstId}`),
+    ).toContainText(label, { timeout: 8_000 });
   });
 
-  test("[OHW-174] editor changes on live draft are saved after duplicate", async ({
+  test("[OHW-175] '+ Nuova versione' creates a version (row count grows)", async ({
     authenticatedPage: page,
   }) => {
-    const drawer = await openVersionsDrawer(page);
-    const rows = drawer.locator("[data-testid^='version-row-']");
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    await openVersions(page);
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
+    const before = await rows(page).count();
 
-    // Duplicate first version
-    const firstDuplicateBtn = rows.first().getByTestId(/version-duplicate-/);
-    await firstDuplicateBtn.click();
-    await expect(rows).toHaveCount(
-      (await rows.count()) + 0, // wait for mutation to settle
-      { timeout: 5_000 },
+    await page.getByTestId("version-new").click();
+
+    await expect
+      .poll(async () => rows(page).count(), { timeout: 10_000 })
+      .toBe(before + 1);
+  });
+
+  test("[OHW-176] Attiva (restore) succeeds and the surface survives", async ({
+    authenticatedPage: page,
+  }) => {
+    await openVersions(page);
+    await expect(rows(page).first()).toBeVisible({ timeout: 10_000 });
+
+    // Restore the first version onto the live screenplay. There is no current
+    // pointer to move — the contract is that the restore mutation lands and the
+    // surface stays usable (no error, list still rendered).
+    const activate = page.locator('[data-testid^="version-activate-"]').first();
+    await expect(activate).toBeVisible({ timeout: 10_000 });
+    const targetId = (await activate.getAttribute("data-testid"))!.replace(
+      "version-activate-",
+      "",
     );
 
-    // Close drawer and edit
-    await page.keyboard.press("Escape");
-    const editor = await waitForEditor(page);
-    await goToNewLine(page);
-    await editor.pressSequentially("EXT. DUPLICATED SCENE - NIGHT", {
-      delay: 30,
-    });
+    const [resp] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("restoreVersion") && r.request().method() === "POST",
+        { timeout: 10_000 },
+      ),
+      page.getByTestId(`version-activate-${targetId}`).click(),
+    ]);
+    expect(resp.ok()).toBe(true);
 
-    // Wait for autosave
-    await waitForSaved(page);
-
-    // Reopen drawer — at least 2 rows present
-    const drawer2 = await openVersionsDrawer(page);
-    const rows2 = drawer2.locator("[data-testid^='version-row-']");
-    await expect(rows2).toHaveCount(await rows2.count(), { timeout: 5_000 });
-    // Saved — no error visible
-    await expect(drawer2.locator("[class*='error']")).not.toBeVisible();
-  });
-
-  test("[OHW-175] second duplicate creates a third version", async ({
-    authenticatedPage: page,
-  }) => {
-    const drawer = await openVersionsDrawer(page);
-    const rows = drawer.locator("[data-testid^='version-row-']");
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
-
-    const beforeCount = await rows.count();
-
-    // First duplicate
-    await rows
-      .first()
-      .getByTestId(/version-duplicate-/)
-      .click();
-    await expect(rows).toHaveCount(beforeCount + 1, { timeout: 10_000 });
-
-    // Second duplicate on the (now) first row
-    await rows
-      .first()
-      .getByTestId(/version-duplicate-/)
-      .click();
-    await expect(rows).toHaveCount(beforeCount + 2, { timeout: 10_000 });
-  });
-
-  test("[OHW-176] delete removes a version from the list", async ({
-    authenticatedPage: page,
-  }) => {
-    const drawer = await openVersionsDrawer(page);
-    const rows = drawer.locator("[data-testid^='version-row-']");
-    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
-
-    const beforeCount = await rows.count();
-    // Need at least 2 rows to safely delete one
-    // (seed data should have enough; skip if only 1)
-    if (beforeCount < 2) {
-      // create one first
-      const newBtn = page.getByTestId("versions-new-trigger");
-      await newBtn.click();
-      const input = page.getByTestId("versions-new-label-input");
-      await input.fill("Da eliminare");
-      await page.getByTestId("versions-new-save").click();
-      await expect(rows).toHaveCount(beforeCount + 1, { timeout: 10_000 });
-    }
-
-    const countBeforeDelete = await rows.count();
-    const firstRow = rows.first();
-    const testId = await firstRow.getAttribute("data-testid");
-    const versionId = testId?.replace("version-row-", "") ?? "";
-
-    await page.getByTestId(`version-delete-${versionId}`).click();
-
-    // Confirm deletion in the dialog
-    await expect(page.getByTestId("version-delete-confirm")).toBeVisible({
-      timeout: 3_000,
-    });
-    await page.getByTestId("version-delete-confirm-ok").click();
-
-    await expect(rows).toHaveCount(countBeforeDelete - 1, { timeout: 10_000 });
-  });
-
-  test("[OHW-177] drawer closes on Escape and on ✕ button", async ({
-    authenticatedPage: page,
-  }) => {
-    // Open and close with Escape
-    const drawer = await openVersionsDrawer(page);
-    await expect(drawer).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(drawer).not.toBeVisible({ timeout: 3_000 });
-
-    // Open and close with ✕ button
-    const drawer2 = await openVersionsDrawer(page);
-    await expect(drawer2).toBeVisible();
-    await page.getByTestId("drawer-close").click();
-    await expect(drawer2).not.toBeVisible({ timeout: 3_000 });
+    // The surface is still mounted and the list still shows the versions.
+    await expect(page.getByTestId("versions-split-drawer")).toBeVisible();
+    await expect(rows(page).first()).toBeVisible();
   });
 });

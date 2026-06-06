@@ -16,9 +16,20 @@
  */
 
 import { test, expect } from "../fixtures";
-import { BASE_URL } from "../helpers";
+import { BASE_URL, openScreenplayActionsMenu } from "../helpers";
 
 type TestPage = Parameters<typeof test>[2]["page"];
+
+// Spec 67: "Resequence scenes" moved off the toolbar into the TopBar ⋯
+// ("Altre azioni") menu as the "menu-item-renumber" item and now runs
+// immediately — there is no confirm modal. This helper opens the menu and
+// triggers the whole-document renumber.
+async function renumberAll(page: TestPage) {
+  await openScreenplayActionsMenu(page);
+  const item = page.getByTestId("menu-item-renumber");
+  await expect(item).toBeVisible({ timeout: 5_000 });
+  await item.click();
+}
 
 async function waitForPmEditor(page: TestPage) {
   const editor = page.locator(".ProseMirror").first();
@@ -44,8 +55,7 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     await expect(page.locator("h2.pm-heading").first()).toBeVisible({
       timeout: 10_000,
     });
-    await page.locator('[data-testid="resequence-all-trigger"]').click();
-    await page.locator('[data-testid="resequence-confirm-apply"]').click();
+    await renumberAll(page);
     await expect(
       page.locator("h2.pm-heading .scene-number-left").first(),
     ).toBeVisible({ timeout: 10_000 });
@@ -266,7 +276,7 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
 
   // ─── OHW-246 ──────────────────────────────────────────────────────────────
 
-  test("[OHW-246] toolbar Resequence scenes → confirm renumbers", async ({
+  test("[OHW-246] ⋯ → Resequence scenes renumbers around a locked number", async ({
     authenticatedPage: page,
   }) => {
     // Lock heading 0 to a number that isn't already used so no conflict
@@ -283,15 +293,8 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
       "true",
     );
 
-    // Open toolbar confirm and apply.
-    await page.locator('[data-testid="resequence-all-trigger"]').click();
-    await expect(
-      page.locator('[data-testid="resequence-confirm-modal"]'),
-    ).toBeVisible();
-    await page.locator('[data-testid="resequence-confirm-apply"]').click();
-    await expect(
-      page.locator('[data-testid="resequence-confirm-modal"]'),
-    ).toBeHidden();
+    // Renumber the whole document (immediate, no confirm modal — Spec 67).
+    await renumberAll(page);
 
     // Locked "99" on heading 0 stays; the rest are renumbered around it.
     await expect(page.locator("h2.pm-heading").nth(0)).toHaveAttribute(
@@ -300,28 +303,7 @@ test.describe("Inline Scene Number Edit [OHW-23x / 24x]", () => {
     );
   });
 
-  // ─── OHW-247 ──────────────────────────────────────────────────────────────
-
-  test("[OHW-247] toolbar Resequence cancel leaves doc untouched", async ({
-    authenticatedPage: page,
-  }) => {
-    const numbersBefore = await page
-      .locator("h2.pm-heading")
-      .evaluateAll((els) =>
-        els.map((e) => (e as HTMLElement).dataset["number"] ?? ""),
-      );
-
-    await page.locator('[data-testid="resequence-all-trigger"]').click();
-    await page.locator('[data-testid="resequence-confirm-cancel"]').click();
-    await expect(
-      page.locator('[data-testid="resequence-confirm-modal"]'),
-    ).toBeHidden();
-
-    const numbersAfter = await page
-      .locator("h2.pm-heading")
-      .evaluateAll((els) =>
-        els.map((e) => (e as HTMLElement).dataset["number"] ?? ""),
-      );
-    expect(numbersAfter).toEqual(numbersBefore);
-  });
+  // [OHW-247] removed: the toolbar resequence-confirm modal (with a Cancel
+  // button) no longer exists — "Resequence scenes" lives in the ⋯ menu and runs
+  // immediately, so there is no cancel-leaves-doc-untouched path to assert.
 });

@@ -16,7 +16,33 @@
 
 import path from "path";
 import { test, expect } from "../fixtures";
+import type { Page } from "@playwright/test";
 import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
+
+// Open the routed Versions surface (Spec 66) from the ⋯ menu and wait for the
+// shared master→detail drawer.
+async function openVersions(page: Page) {
+  await openScreenplayActionsMenu(page);
+  await page.getByTestId("menu-item-versions").click();
+  await expect(page.getByTestId("versions-split-drawer")).toBeVisible({
+    timeout: 10_000,
+  });
+}
+
+// Close the routed Versions surface by clearing the search param, so the ⋯
+// import actions are reachable again (the lane compresses the editor lane).
+async function closeVersions(page: Page) {
+  await page.evaluate(() => {
+    const url = new URL(location.href);
+    url.searchParams.delete("versions");
+    url.searchParams.delete("vkind");
+    url.searchParams.delete("vcur");
+    url.searchParams.delete("vstate");
+    history.replaceState(null, "", url.toString());
+  });
+  await page.reload();
+  await waitForEditor(page);
+}
 
 const PDF_FIXTURE = path.resolve(
   __dirname,
@@ -43,25 +69,16 @@ test.describe("Import PDF — version choice dialog", () => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForEditor(page);
 
-    // Ensure at least one version exists by creating one via the drawer
-    await openScreenplayActionsMenu(page);
-    await page.getByTestId("menu-item-versions").click();
-    const drawer = page.getByTestId("versions-drawer");
-    await expect(drawer).toBeVisible({ timeout: 5_000 });
-
-    const newTrigger = page.getByTestId("versions-new-trigger");
-    await expect(newTrigger).toBeVisible();
-    await newTrigger.click();
-    const input = page.getByTestId("versions-new-label-input");
-    await input.fill("Versione base");
-    await page.getByTestId("versions-new-save").click();
-    await expect(drawer.getByText("Versione base")).toBeVisible({
-      timeout: 10_000,
-    });
-
-    // Close the drawer
-    await page.keyboard.press("Escape");
-    await expect(drawer).not.toBeVisible({ timeout: 3_000 });
+    // Ensure at least one version exists by creating one on the routed surface,
+    // then close it so the ⋯ import actions are reachable.
+    await openVersions(page);
+    const rows = page.locator('[data-testid^="versions-split-row-"]');
+    const before = await rows.count();
+    await page.getByTestId("version-new").click();
+    await expect
+      .poll(async () => rows.count(), { timeout: 10_000 })
+      .toBe(before + 1);
+    await closeVersions(page);
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -92,17 +109,12 @@ test.describe("Import PDF — version choice dialog", () => {
 
   test("[OHW-179] 'Sovrascrivi' replaces content without creating a new version", async ({
     authenticatedPage: page,
-    testProjectId,
   }) => {
-    // Count versions before import
-    await openScreenplayActionsMenu(page);
-    await page.getByTestId("menu-item-versions").click();
-    const drawer = page.getByTestId("versions-drawer");
-    await expect(drawer).toBeVisible({ timeout: 5_000 });
-    const rowsBefore = await drawer
-      .locator('[data-testid^="version-row-"]')
-      .count();
-    await page.keyboard.press("Escape");
+    // Count versions before import (on the routed surface), then close it.
+    const rowSel = '[data-testid^="versions-split-row-"]';
+    await openVersions(page);
+    const rowsBefore = await page.locator(rowSel).count();
+    await closeVersions(page);
 
     await startImport(page);
     const confirmDialog = page.getByTestId("import-confirm");
@@ -113,12 +125,8 @@ test.describe("Import PDF — version choice dialog", () => {
     await expect(confirmDialog).not.toBeVisible({ timeout: 3_000 });
 
     // Version count must remain unchanged
-    await openScreenplayActionsMenu(page);
-    await page.getByTestId("menu-item-versions").click();
-    await expect(drawer).toBeVisible({ timeout: 5_000 });
-    const rowsAfter = await drawer
-      .locator('[data-testid^="version-row-"]')
-      .count();
+    await openVersions(page);
+    const rowsAfter = await page.locator(rowSel).count();
     expect(rowsAfter).toBe(rowsBefore);
   });
 });
