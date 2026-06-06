@@ -1277,6 +1277,7 @@ function AppShellInner({
               sectionName={sectionName}
               center={topBarSlots.center ?? undefined}
               actions={topBarSlots.actions ?? undefined}
+              versionSelector={topBarSlots.versionSelector ?? undefined}
               onSearch={openPalette}
               elementLegend={topBarSlots.elementLegend ?? undefined}
               accountZone={
