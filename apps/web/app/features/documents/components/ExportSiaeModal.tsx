@@ -151,8 +151,13 @@ export function ExportSiaeModal({
     return true;
   }, [state]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // Accepts an optional form event. The submit button renders in the Modal
+  // footer (outside the <form>) and react-aria's useButton drops the `form`
+  // association attribute, so the button cannot submit the form by itself —
+  // it also calls this handler via onClick. Keeping the form's onSubmit covers
+  // the Enter-key path for inputs inside the form.
+  const handleSubmit = (e?: FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
     setSubmitError(null);
     const candidate = toSiaeExportInput(projectId, state);
     const parsed = SiaeExportInputSchema.safeParse(candidate);
@@ -207,6 +212,7 @@ export function ExportSiaeModal({
             form="siae-export-form"
             variant="primary"
             disabled={isPending || !isFormMinimallyValid}
+            onClick={() => handleSubmit()}
             data-testid="siae-export-submit"
           >
             {isPending ? l.submitting : l.submit}

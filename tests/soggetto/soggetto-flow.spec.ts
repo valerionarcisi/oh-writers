@@ -28,7 +28,9 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
 
-    await expect(page.getByTestId("logline-block")).toBeVisible();
+    // The logline is authored in the TopBar pill (Spec 55), not a standalone
+    // logline-block in the page body.
+    await expect(page.getByTestId("narrative-logline-pill")).toBeVisible();
     await expect(page.getByTestId("subject-editor")).toBeVisible();
 
     const editor = page.getByTestId("subject-editor").locator(".ProseMirror");
@@ -44,8 +46,14 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
     await expect(counter).toBeVisible();
     await expect(counter).toContainText(/cartel/);
 
-    await expect(page.getByTestId("soggetto-export")).toBeVisible();
-    await expect(page.getByTestId("soggetto-export-siae")).toBeVisible();
+    // Exports live in the TopBar ⋯ ("Altre azioni") menu (Spec 67): DOCX + SIAE.
+    await page.getByLabel("Altre azioni").click();
+    await expect(
+      page.getByRole("menuitem", { name: /Esporta DOCX/ }),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("action-export-siae")).toBeVisible();
+    // Close the menu so it doesn't block the dashboard navigation below.
+    await page.keyboard.press("Escape");
 
     // Reachable from project dashboard
     await navigateToProjectDashboard(page, TEAM_PROJECT_ID);
@@ -130,8 +138,14 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
 
     const uniqueGenre = `test-genre-${Date.now()}`;
 
+    // Exports moved into the TopBar ⋯ menu (Spec 67).
+    const openSiae = async () => {
+      await page.getByLabel("Altre azioni").click();
+      await page.getByTestId("action-export-siae").click();
+    };
+
     // First open: ensure first author name is filled, set a unique genre, submit
-    await page.getByTestId("soggetto-export-siae").click();
+    await openSiae();
     const form = page.getByTestId("siae-export-form");
     await expect(form).toBeVisible({ timeout: 5_000 });
 
@@ -142,6 +156,9 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
     }
 
     await page.getByTestId("siae-genre-input").fill(uniqueGenre);
+    // Ensure a valid duration + compilation date so the export passes Zod.
+    await page.getByTestId("siae-duration-input").fill("90");
+    await page.getByTestId("siae-date-input").fill("2026-04-24");
     const submit = page.getByTestId("siae-export-submit");
     await expect(submit).toBeEnabled({ timeout: 10_000 });
 
@@ -153,7 +170,7 @@ test.describe("[Spec 21] Soggetto free editor — page flow", () => {
 
     // Modal closes after export — wait for it to become hidden
     await expect(form).not.toBeVisible({ timeout: 5_000 });
-    await page.getByTestId("soggetto-export-siae").click();
+    await openSiae();
     await expect(form).toBeVisible({ timeout: 5_000 });
 
     // The genre field should be pre-populated from the saved metadata

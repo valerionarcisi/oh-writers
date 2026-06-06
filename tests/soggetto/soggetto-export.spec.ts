@@ -1,38 +1,46 @@
 import { expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { test } from "../fixtures";
 import { navigateToSoggetto, TEAM_PROJECT_ID } from "./helpers";
 
 /**
- * Spec 04f — Soggetto (Phase 10 E2E)
+ * Spec 04f / 67 — Soggetto export flows (E2E)
  *
- * Covers:
- *   [OHW-SOG-004] Normal export: clicking "Export" opens the shared
- *                 ExportPdfModal wired for DOCX output. Clicking Generate
- *                 triggers a file download (the soggetto route currently
- *                 exposes only the DOCX format).
- *   [OHW-SOG-005] SIAE export: clicking "Export SIAE" opens ExportSiaeModal.
- *                 Required fields validate (empty fullName → error shown).
- *                 Filling the form and submitting triggers a PDF download.
+ * Spec 67 moved the soggetto exports off dedicated buttons into the TopBar `⋯`
+ * ("Altre azioni") menu: "Esporta DOCX" (shared ExportPdfModal, DOCX format)
+ * and "Esporta SIAE" (ExportSiaeModal). The modal/form field testids are
+ * unchanged; only the launch path moved.
+ *
+ *   [OHW-SOG-004] ⋯ → Esporta DOCX → modal → Genera → .docx download.
+ *   [OHW-SOG-005] ⋯ → Esporta SIAE → form validates (empty author → submit
+ *                 disabled) → fill + submit → .pdf download.
  *
  * Requires the dev server to run with MOCK_AI=true.
  */
 
+// Open the soggetto ⋯ menu and click a menu item by accessible name / testid.
+const openSoggettoMenu = async (page: Page) => {
+  await page.getByLabel("Altre azioni").click();
+};
+
 test.describe("[Spec 04f] Soggetto — export flows", () => {
-  test("[OHW-SOG-004] Export button opens modal and downloads DOCX on Generate", async ({
+  test("[OHW-SOG-004] ⋯ → Esporta DOCX opens the modal and downloads DOCX", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
 
-    await page.getByTestId("soggetto-export").click();
+    await openSoggettoMenu(page);
+    await page.getByRole("menuitem", { name: /Esporta DOCX/ }).click();
 
     const modal = page.getByTestId("narrative-export-modal");
     await expect(modal).toBeVisible({ timeout: 5_000 });
 
-    // The soggetto route passes availableFormats={["docx"]} so the radio
-    // group is hidden; the single DOCX format is used implicitly.
-    await expect(modal).toContainText(/Word|\.docx/i);
+    // The soggetto route passes availableFormats={["docx"]} so the format radio
+    // group is hidden; the single DOCX format is used implicitly. The download
+    // filename below is the real proof of the format.
 
-    const generate = modal.getByTestId("narrative-export-generate");
+    // Genera lives in the Modal footer (sibling of the body testid) — page-level.
+    const generate = page.getByTestId("narrative-export-generate");
     await expect(generate).toBeEnabled();
 
     const [download] = await Promise.all([
@@ -44,43 +52,39 @@ test.describe("[Spec 04f] Soggetto — export flows", () => {
     expect(name.toLowerCase()).toMatch(/\.docx$/);
   });
 
-  test("[OHW-SOG-005] Export SIAE validates required fields and downloads a PDF", async ({
+  test("[OHW-SOG-005] ⋯ → Esporta SIAE validates required fields and downloads a PDF", async ({
     authenticatedPage: page,
   }) => {
     await navigateToSoggetto(page, TEAM_PROJECT_ID);
 
-    await page.getByTestId("soggetto-export-siae").click();
+    await openSoggettoMenu(page);
+    await page.getByTestId("action-export-siae").click();
 
     const form = page.getByTestId("siae-export-form");
     await expect(form).toBeVisible({ timeout: 5_000 });
 
     const submit = page.getByTestId("siae-export-submit");
 
-    // Empty state: no authors entered → submit button disabled by the form's
-    // minimal-validity gate (at least one author with a non-empty full name).
-    await expect(submit).toBeDisabled();
-
-    // Fill the first author's full name. AuthorListField renders inputs
-    // under the shared test id "siae-authors".
+    // The first author may be prefilled from the project/user. Clear it to
+    // exercise the minimal-validity gate: with no author full name, submit is
+    // disabled.
     const authorsField = page.getByTestId("siae-authors");
     await expect(authorsField).toBeVisible();
     const firstFullName = page.getByTestId("siae-authors-fullName-0");
+    await firstFullName.fill("");
+    await expect(submit).toBeDisabled();
+
+    // Fill the first author's full name → the gate opens.
     await firstFullName.fill("Mario Rossi");
 
-    // Ensure other required fields are populated (title and date are
-    // prefilled from defaults; duration defaults to a valid number).
+    // Ensure all required fields satisfy SiaeExportInputSchema: a non-empty
+    // title, a duration in [1,600], and a valid YYYY-MM-DD compilation date
+    // (z.string().date()). Set them unconditionally so a stale/locale-formatted
+    // default can't fail Zod silently.
     const title = page.getByTestId("siae-title-input");
-    await expect(title).toHaveValue(/.+/);
-    const duration = page.getByTestId("siae-duration-input");
-    const durationValue = await duration.inputValue();
-    if (!durationValue || Number(durationValue) < 1) {
-      await duration.fill("90");
-    }
-    const date = page.getByTestId("siae-date-input");
-    const dateValue = await date.inputValue();
-    if (!dateValue) {
-      await date.fill("2026-04-24");
-    }
+    if (!(await title.inputValue())) await title.fill("Soggetto E2E");
+    await page.getByTestId("siae-duration-input").fill("90");
+    await page.getByTestId("siae-date-input").fill("2026-04-24");
 
     await expect(submit).toBeEnabled();
 
