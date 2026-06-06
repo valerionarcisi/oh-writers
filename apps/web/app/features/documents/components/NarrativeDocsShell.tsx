@@ -102,18 +102,29 @@ export function NarrativeDocsShell({
   // surface (Spec 66). Published whenever the page wires `onOpenVersions`, so it
   // never depends on the per-page actions menu rendering. Shows the current
   // version label (fallback "Versioni") + the draft-colour dot.
+  // The version chip is paired with the save-status pill in the TopBar
+  // versionSelector slot. When the page hides the Viewbar (it does whenever
+  // `topBarActions` is provided — i.e. every narrative page since Spec 67), the
+  // SaveStatusIndicator would otherwise be unmounted and the save state would
+  // vanish from the chrome. Promoting it here keeps the save pill always visible
+  // next to the version chip. The indicator self-hides until the first edit.
   const versionChip = useMemo(
     () =>
       onOpenVersions !== undefined ? (
-        <VersionTrigger
-          variant="pill"
-          label={t("documents.shell.openVersions")}
-          versionLabel={versionLabel ?? t("documents.shell.versions")}
-          dotColor={versionDotColor}
-          onClick={onOpenVersions}
-          data-testid="topbar-version-chip"
-        />
-      ) : null,
+        <div className={styles.topBarVersionGroup}>
+          <SaveStatusIndicator />
+          <VersionTrigger
+            variant="pill"
+            label={t("documents.shell.openVersions")}
+            versionLabel={versionLabel ?? t("documents.shell.versions")}
+            dotColor={versionDotColor}
+            onClick={onOpenVersions}
+            data-testid="topbar-version-chip"
+          />
+        </div>
+      ) : (
+        <SaveStatusIndicator />
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [!!onOpenVersions, versionLabel, versionDotColor, onOpenVersions],
   );

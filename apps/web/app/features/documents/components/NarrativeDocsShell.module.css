@@ -33,6 +33,13 @@
   gap: var(--ds-space-2);
 }
 
+/* TopBar pairing of the save-status pill + version chip (Viewbar-hidden mode). */
+.topBarVersionGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
 .layout {
   display: grid;
   gap: var(--ds-space-8);

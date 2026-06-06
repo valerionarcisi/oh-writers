@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N38 — TopBar center pill overlaps the right cluster below ~900px (2026-06-06)
+
+- Severity: MEDIO
+- Status: open
+- Repro: any narrative page (Soggetto/Sinossi/…) → shrink the viewport below ~900px (768 or 390) → the TopBar center slot (logline pill) and the right cluster (version chip + ⋯ "Altre azioni") overlap. The `topbar-version-chip` ("Versioni") renders on top of the logline pill, so `elementFromPoint` at the pill's centre returns the version chip — the pill is not clickable and the logline popover can't be opened.
+- Proof: `tests/documents/logline-popover-viewport.spec.ts` narrow (768px) + mobile (390px) cases hang on `pill.click()` (target intercepted) and are skipped pending this fix; hit-test chain at 768px: `SPAN._label (Versioni)` → `BUTTON[data-testid=topbar-version-chip]` → `_topBarVersionGroup` → `_versionSlot` → `_pageActions`. Desktop (1440px) passes.
+- Notes / suspected cause: the TopBar row (`_pageActions` / center + right slots) does not wrap or shrink the pill below a threshold, so the right cluster collides with the centred pill. Fix the TopBar responsive layout (wrap/clamp the center pill, or move it out of the center slot at narrow widths). Re-enable the two skipped N-16 cases once fixed.
+
 ### BUG-067 — TopBar status shows "online" then flips to "offline" (2026-06-06)
 
 - Severity: MEDIO

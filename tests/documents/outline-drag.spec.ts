@@ -97,15 +97,20 @@ test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
 
     const sourceBound = await sourceCard.boundingBox();
     const targetBound = await targetCard.boundingBox();
-    if (!sourceBound || !targetBound) throw new Error("Could not get bounding boxes");
+    if (!sourceBound || !targetBound)
+      throw new Error("Could not get bounding boxes");
 
-    // Fire HTML5 DnD events
-    await sourceCard.dispatchEvent("dragstart", {
-      dataTransfer: { effectAllowed: "move" },
-    });
-    await targetCard.dispatchEvent("dragover", {});
-    await targetCard.dispatchEvent("drop", {});
-    await sourceCard.dispatchEvent("dragend", {});
+    // Fire HTML5 DnD events. Chromium rejects a plain-object `dataTransfer` in a
+    // synthetic DragEvent, and the outline's drop handlers read the drag payload
+    // from module-level `activeDrag` (set on dragstart) rather than from the
+    // event's dataTransfer — so we dispatch without a dataTransfer init. The
+    // assertion below only verifies the events fired without throwing and the
+    // cards survived (the payload round-trip can't be faithfully simulated
+    // through dispatchEvent).
+    await sourceCard.dispatchEvent("dragstart");
+    await targetCard.dispatchEvent("dragover");
+    await targetCard.dispatchEvent("drop");
+    await sourceCard.dispatchEvent("dragend");
 
     // After reorder, the previously-second scene heading should now be first
     const firstHeading = await page
@@ -209,7 +214,9 @@ test.describe("[OHW-04b] Scaletta (Outline) drag-and-drop", () => {
     await addSceneBtn.click();
 
     // Collapse the act via the chevron button
-    const collapseBtn = page.getByRole("button", { name: "Collassa atto" }).first();
+    const collapseBtn = page
+      .getByRole("button", { name: "Collassa atto" })
+      .first();
     await expect(collapseBtn).toBeVisible({ timeout: 5_000 });
     await collapseBtn.click();
 

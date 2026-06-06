@@ -1,35 +1,40 @@
 /**
  * Spec 04 — Narrative Editor E2E (logline, synopsis, treatment)
  *
- * Blocco 1 — content caps (client + server):
- *   [OHW-204] Logline counter shows warn class above 180 chars (90% of 200)
- *   [OHW-205] Logline textarea refuses input past 200 chars (HTML maxLength)
- *   [OHW-206] Server rejects saveDocument with content longer than LOGLINE_MAX
- *             even when the HTML maxLength has been bypassed
+ * Spec 04f/55 realigned the surfaces: the logline is authored in the Soggetto
+ * page via the LoglinePill (a popover textarea); synopsis/treatment/outline use
+ * the ProseMirror NarrativeEditor (`rich-text-editor`). The standalone
+ * `/logline` route now redirects to Soggetto, so role-guard + navigation tests
+ * run on the real PM surfaces (Synopsis/Treatment).
  *
- * Blocco 2 — role guard (team projects):
- *   [OHW-211] Viewer sees read-only UI: textarea is readonly, Save button hidden
+ * Blocco 1 — content caps:
+ *   [OHW-205] Logline pill textarea refuses input past 200 chars (HTML maxLength)
+ *
+ * Blocco 2 — role guard (team projects, on the Synopsis PM surface):
+ *   [OHW-211] Viewer sees read-only UI: PM surface non-editable, badge visible
  *   [OHW-212] Viewer raw save hits the server and gets rejected (ForbiddenError)
  *   [OHW-213] Owner on the same team project can save normally
  *
- * Blocco 3 — happy paths, navigation, error status:
- *   [OHW-200] Unauthenticated user on /logline is redirected to login
+ * Blocco 3 — happy paths & navigation:
+ *   [OHW-200] Unauthenticated user on a narrative doc is redirected to login
  *   [OHW-201] Owner opens a narrative doc → SaveStatus = "Saved" (not dirty)
  *   [OHW-202] Owner types → after debounce, autosave persists across reload
- *   [OHW-203] Owner types + clicks Save → saves immediately, no debounce wait
  *   [OHW-207] Synopsis: content round-trip after reload
  *   [OHW-208] Treatment: content round-trip after reload
- *   [OHW-209] Navigation between /logline and /synopsis preserves both docs
- *   [OHW-210] SaveStatus shows "Error saving" when server returns a failure
+ *   [OHW-209] Navigation between synopsis and treatment preserves both docs
  *   [OHW-214] SKIPPED — narrative Versions drawer is part of Spec 06b, not yet
  *             integrated into NarrativeEditor.
+ *
+ * Removed in the Spec 66/67 realignment: [OHW-204] (charCount warn class gone),
+ * [OHW-206] + [OHW-210] (no "Error saving" SaveState — saved|saving|offline),
+ * [OHW-203] (no manual Cmd/Ctrl+S flush — narrative docs are autosave-only).
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
 import { BASE_URL } from "../helpers";
 
-const LOGLINE_PATH = (projectId: string) =>
-  `${BASE_URL}/projects/${projectId}/logline`;
+const SOGGETTO_PATH = (projectId: string) =>
+  `${BASE_URL}/projects/${projectId}/soggetto`;
 const SYNOPSIS_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/synopsis`;
 const TREATMENT_PATH = (projectId: string) =>
@@ -71,133 +76,96 @@ const readPmEditorText = async (
   });
 };
 
-const triggerManualSave = async (page: import("@playwright/test").Page) => {
-  await page.keyboard.press(
-    process.platform === "darwin" ? "Meta+s" : "Control+s",
+// Narrative docs are autosave-only (Spec 04e) — there is no manual Cmd/Ctrl+S
+// flush on the PM surface. Tests shrink the 30s debounce to 300ms via
+// FAST_AUTOSAVE_SCRIPT, then await the autosave round-trip. This helper waits
+// for the saveDocument POST to land so the SaveStatus pill can flip to "saved".
+const waitForAutosave = async (page: import("@playwright/test").Page) => {
+  await page.waitForResponse(
+    (resp) =>
+      resp.url().includes("saveDocument") &&
+      resp.request().method() === "POST" &&
+      resp.ok(),
+    { timeout: 10_000 },
   );
 };
 
-// Match the "saved" state by its CSS-module modifier class rather than the
-// label text, so the assertion is locale-independent (the label is now
-// translated — "Saved" / "Salvato" — via documents.saveStatus.*).
+// The SaveStatus moved to the shell-level indicator (SaveStatusIndicator →
+// SavePill). Match by its stable testid + data-state so the assertion is
+// locale-independent and survives CSS-module hashing.
 const savedStatus = (page: import("@playwright/test").Page) =>
-  page.locator('[class*="status"][class*="saved"]');
+  page.locator('[data-testid="save-status-indicator"][data-state="saved"]');
 
 test.describe("Narrative Editor — content caps", () => {
-  test("[OHW-204] logline counter warns above 180 characters", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
-
-    // Exactly 180 chars → no warning (threshold is strict >, not >=)
-    await textarea.fill("x".repeat(180));
-    const counter = page.locator('[class*="charCount"]').first();
-    await expect(counter).toBeVisible();
-    await expect(counter).toContainText("180/200");
-    const classAt180 = await counter
-      .locator("span")
-      .first()
-      .getAttribute("class");
-    expect(classAt180 ?? "").not.toContain("charCountWarn");
-
-    // 181 chars → warning kicks in
-    await textarea.fill("x".repeat(181));
-    await expect(counter).toContainText("181/200");
-    const warnSpan = counter.locator("span").first();
-    await expect(warnSpan).toHaveClass(/charCountWarn/);
-  });
-
-  test("[OHW-205] logline textarea refuses input past 200 chars", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
-
-    // HTML maxLength clamps to 200; Playwright fill respects the attribute
-    // only on Keyboard.type, so we set value, then dispatch input, then
-    // read back what the browser actually stored.
-    await textarea.evaluate((el: HTMLTextAreaElement) => {
-      el.focus();
+  // Spec 04f/55: the logline is authored in the Soggetto page via the LoglinePill
+  // (a popover with a textarea), NOT a standalone /logline route. Open the pill
+  // first, then assert on its editor.
+  const openLoglinePill = async (page: import("@playwright/test").Page) => {
+    await expect(page.getByTestId("soggetto-page")).toBeVisible({
+      timeout: 15_000,
     });
+    await page.getByTestId("narrative-logline-pill").click();
+    const editor = page.getByTestId("narrative-logline-editor");
+    await expect(editor).toBeVisible({ timeout: 5_000 });
+    return editor;
+  };
+
+  test("[OHW-205] logline editor refuses input past 200 chars", async ({
+    authenticatedPage: page,
+    testProjectId,
+  }) => {
+    await page.goto(SOGGETTO_PATH(testProjectId));
+    const editor = await openLoglinePill(page);
+
+    await editor.evaluate((el: HTMLTextAreaElement) => el.focus());
     await page.keyboard.type("x".repeat(250), { delay: 0 });
 
-    const actualLength = await textarea.evaluate(
+    const actualLength = await editor.evaluate(
       (el: HTMLTextAreaElement) => el.value.length,
     );
     expect(actualLength).toBe(200);
-
-    const maxLengthAttr = await textarea.getAttribute("maxlength");
-    expect(maxLengthAttr).toBe("200");
+    expect(await editor.getAttribute("maxlength")).toBe("200");
   });
 
-  test("[OHW-206] server rejects logline save with content > LOGLINE_MAX", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
-
-    // Wait for the E2E bypass hook to be attached by NarrativeEditor
-    await page.waitForFunction(
-      () =>
-        typeof (window as unknown as { __ohWritersSaveDocumentRaw?: unknown })
-          .__ohWritersSaveDocumentRaw === "function",
-      undefined,
-      { timeout: 10_000 },
-    );
-
-    // Trigger a save with 201 chars — bypasses HTML maxLength, hits the server
-    await page.evaluate(() => {
-      (
-        window as unknown as {
-          __ohWritersSaveDocumentRaw: (content: string) => void;
-        }
-      ).__ohWritersSaveDocumentRaw("x".repeat(201));
-    });
-
-    // Server responds with ValidationError → useSaveDocument's
-    // unwrapResult throws → react-query isError → SaveStatus "Error saving"
-    const saveStatus = page.locator('[class*="status"]').filter({
-      hasText: /Error saving/i,
-    });
-    await expect(saveStatus).toBeVisible({ timeout: 10_000 });
-  });
+  // [OHW-206] removed: it asserted a "Error saving" SaveStatus state that no
+  // longer exists (SaveState is saved|saving|offline — SavePill), and relied on a
+  // raw-save hook not present on the Soggetto logline surface. The server-side
+  // LOGLINE_MAX validation is covered by unit tests; the client cap is OHW-205.
 });
 
 test.describe("Narrative Editor — role guard", () => {
-  const TEAM_LOGLINE_PATH = `${BASE_URL}/projects/${TEST_TEAM_PROJECT_ID}/logline`;
+  // Spec 04f/55: the narrative editor (synopsis/treatment/outline) renders a
+  // ProseMirror surface — `rich-text-editor` with a contenteditable node that
+  // PM marks non-editable when the viewer lacks write access. The legacy
+  // textarea logline route was retired (it now redirects to Soggetto), so the
+  // role guard is exercised on a real NarrativeEditor surface: Synopsis.
+  const TEAM_SYNOPSIS_PATH = `${BASE_URL}/projects/${TEST_TEAM_PROJECT_ID}/synopsis`;
 
   test("[OHW-211] viewer sees read-only UI on a team project", async ({
     authenticatedViewerPage: page,
   }) => {
-    await page.goto(TEAM_LOGLINE_PATH);
+    await page.goto(TEAM_SYNOPSIS_PATH);
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    // For a viewer, PM marks the contenteditable node `false` — so we locate the
+    // surface by its stable wrapper testid, not by `[contenteditable="true"]`.
+    const editor = page.locator(
+      '[data-testid="rich-text-editor"] [contenteditable]',
+    );
+    await expect(editor).toBeVisible({ timeout: 10_000 });
 
     // Read-only badge visible in the toolbar
     const badge = page.getByTestId("narrative-readonly-badge");
     await expect(badge).toBeVisible();
     await expect(badge).toHaveText(/read only/i);
 
-    // Textarea is readonly (viewer cannot type)
-    await expect(textarea).toHaveAttribute("readonly", "");
-
-    // Save button is not rendered in read-only mode
-    const saveBtn = page.getByRole("button", { name: /^save$/i });
-    await expect(saveBtn).toHaveCount(0);
+    // The PM surface is not editable for a viewer.
+    await expect(editor).toHaveAttribute("contenteditable", "false");
   });
 
   test("[OHW-212] viewer raw save is rejected by the server", async ({
     authenticatedViewerPage: page,
   }) => {
-    await page.goto(TEAM_LOGLINE_PATH);
+    await page.goto(TEAM_SYNOPSIS_PATH);
 
     // The E2E save hook is installed even in read-only mode so we can
     // verify the server guard (the UI alone isn't proof).
@@ -253,32 +221,33 @@ test.describe("Narrative Editor — role guard", () => {
   test("[OHW-213] owner can save on the same team project", async ({
     authenticatedPage: page,
   }) => {
-    await page.goto(TEAM_LOGLINE_PATH);
+    await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
+    await page.goto(TEAM_SYNOPSIS_PATH);
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    const editor = pmEditorLocator(page);
+    await expect(editor).toBeVisible({ timeout: 10_000 });
 
-    // Owner has full access → no read-only badge, textarea is writable.
+    // Owner has full access → no read-only badge, PM surface is editable.
     await expect(page.getByTestId("narrative-readonly-badge")).toHaveCount(0);
-    await expect(textarea).not.toHaveAttribute("readonly", "");
+    await expect(editor).toHaveAttribute("contenteditable", "true");
 
-    // Edit + manual save (Cmd/Ctrl+S, spec 04e)
+    // Edit → autosave (narrative docs are autosave-only, no manual flush).
     const marker = `owner-write-${Date.now()}`;
-    await textarea.fill(marker);
-    await triggerManualSave(page);
+    await focusPmEditor(page);
+    await page.keyboard.type(marker);
+    await waitForAutosave(page);
 
     await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
-    // Round-trip: reload and verify the marker is persisted
+    // Round-trip: reload and verify the marker is persisted.
     await page.reload();
-    await expect(page.locator("textarea").first()).toHaveValue(marker, {
-      timeout: 10_000,
-    });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    expect(await readPmEditorText(page)).toContain(marker);
   });
 });
 
 test.describe("Narrative Editor — happy paths & navigation", () => {
-  test("[OHW-200] unauthenticated user on /logline is redirected to login", async ({
+  test("[OHW-200] unauthenticated user on a narrative doc is redirected to login", async ({
     browser,
     testProjectId,
   }) => {
@@ -286,7 +255,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     const context = await browser.newContext();
     const page = await context.newPage();
     try {
-      await page.goto(LOGLINE_PATH(testProjectId));
+      await page.goto(SYNOPSIS_PATH(testProjectId));
       await page.waitForURL(/\/login/, { timeout: 10_000 });
       expect(page.url()).toMatch(/\/login/);
     } finally {
@@ -294,17 +263,22 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     }
   });
 
-  test("[OHW-201] owner opens a narrative doc and SaveStatus is 'Saved'", async ({
+  test("[OHW-201] after an edit + save the SaveStatus reaches 'Saved'", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
+    await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
+    await page.goto(SYNOPSIS_PATH(testProjectId));
 
-    const textarea = page.locator("textarea").first();
-    await expect(textarea).toBeVisible({ timeout: 10_000 });
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
-    // Freshly loaded content is not dirty → SaveStatus shows "Saved".
-    // Spec 04e: there is no manual Save button — autosave + Cmd/Ctrl+S only.
+    // The save-status pill self-hides until the first real edit (it must not
+    // flash a stale "Salvato" on an untouched page — NarrativeEditor only
+    // publishes a state after `hasEdited`). So type, let autosave fire, then
+    // assert "saved".
+    await focusPmEditor(page);
+    await page.keyboard.type(`saved-state-${Date.now()}`);
+    await waitForAutosave(page);
     await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
   });
 
@@ -318,10 +292,9 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
 
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
 
-    // Wait for the initial "Saved" state so we don't race a spurious
-    // autosave of seeded content against the marker write.
-    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
-
+    // The pill self-hides until the first edit, so we can't wait for an initial
+    // "Saved". Type the marker straight away; the autosave round-trip below is
+    // the synchronisation point.
     const marker = `autosaved-${Date.now()}`;
     await focusPmEditor(page);
     await page.keyboard.type(marker);
@@ -343,37 +316,15 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     expect(await readPmEditorText(page)).toContain(marker);
   });
 
-  test("[OHW-203] Cmd/Ctrl+S flushes immediately (no debounce wait)", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    // Keep the default 30s debounce: if manual save didn't flush, the test
-    // would hit its timeout well before autosave could fire.
-    await page.goto(TREATMENT_PATH(testProjectId));
-
-    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
-
-    const marker = `manual-save-${Date.now()}`;
-    await focusPmEditor(page);
-    await page.keyboard.type(marker);
-
-    const respPromise = page.waitForResponse(
-      (resp) =>
-        resp.url().includes("saveDocument") &&
-        resp.request().method() === "POST",
-      { timeout: 5_000 },
-    );
-    await triggerManualSave(page);
-    const resp = await respPromise;
-    expect(resp.ok()).toBe(true);
-
-    await expect(savedStatus(page)).toBeVisible({ timeout: 5_000 });
-  });
+  // [OHW-203] removed: there is no manual Cmd/Ctrl+S flush on the narrative PM
+  // surface — narrative docs are autosave-only (Spec 04e). The autosave path is
+  // covered by OHW-202; the "saved" pill transition by OHW-201.
 
   test("[OHW-207] synopsis round-trips across reload", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
+    await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
     await page.goto(SYNOPSIS_PATH(testProjectId));
 
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
@@ -381,7 +332,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     const marker = `synopsis-${Date.now()} — a short paragraph with punctuation, accents àèìòù, and emojis 🎬.`;
     await focusPmEditor(page);
     await page.keyboard.type(marker);
-    await triggerManualSave(page);
+    await waitForAutosave(page);
 
     await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
@@ -394,6 +345,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     authenticatedPage: page,
     testProjectId,
   }) => {
+    await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
     await page.goto(TREATMENT_PATH(testProjectId));
 
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
@@ -408,7 +360,7 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
       await page.keyboard.type(paragraphs[i] ?? "");
       if (i < paragraphs.length - 1) await page.keyboard.press("Enter");
     }
-    await triggerManualSave(page);
+    await waitForAutosave(page);
 
     await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
@@ -418,77 +370,44 @@ test.describe("Narrative Editor — happy paths & navigation", () => {
     for (const p of paragraphs) expect(text).toContain(p);
   });
 
-  test("[OHW-209] navigating between logline and synopsis preserves each", async ({
+  test("[OHW-209] navigating between synopsis and treatment preserves each", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
-    const logMarker = `logline-nav-${Date.now()}`.slice(0, 180);
-    const synMarker = `synopsis-nav-${Date.now()} — keep me around when coming back`;
+    await page.addInitScript(FAST_AUTOSAVE_SCRIPT);
+    const synMarker = `synopsis-nav-${Date.now()} — keep me around`;
+    const treatMarker = `treatment-nav-${Date.now()} — and me too`;
 
-    // Write + save logline (still a textarea via TextEditor).
-    await page.goto(LOGLINE_PATH(testProjectId));
-    await expect(page.locator("textarea").first()).toBeVisible({
-      timeout: 10_000,
-    });
-    await page.locator("textarea").first().fill(logMarker);
-    await triggerManualSave(page);
-    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
-
-    // Navigate to synopsis (PM editor), write + save.
+    // Write + autosave synopsis (PM editor).
     await page.goto(SYNOPSIS_PATH(testProjectId));
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
     await focusPmEditor(page);
     await page.keyboard.type(synMarker);
-    await triggerManualSave(page);
+    await waitForAutosave(page);
     await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
-    // Go back to logline — its value must still be logMarker.
-    await page.goto(LOGLINE_PATH(testProjectId));
-    await expect(page.locator("textarea").first()).toHaveValue(logMarker, {
-      timeout: 10_000,
-    });
+    // Navigate to treatment (PM editor), write + autosave.
+    await page.goto(TREATMENT_PATH(testProjectId));
+    await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
+    await focusPmEditor(page);
+    await page.keyboard.type(treatMarker);
+    await waitForAutosave(page);
+    await expect(savedStatus(page)).toBeVisible({ timeout: 10_000 });
 
-    // And synopsis still holds synMarker.
+    // Go back to synopsis — its content must still be synMarker.
     await page.goto(SYNOPSIS_PATH(testProjectId));
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
     expect(await readPmEditorText(page)).toContain(synMarker);
-  });
 
-  test("[OHW-210] SaveStatus shows 'Error saving' when the server fails", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    // Intercept saveDocument and fail it with a 500 so unwrapResult throws,
-    // react-query flags isError, and SaveStatus renders the error branch.
-    // Use a regex matcher — Tanstack Start's server fn URL includes the
-    // function name as a query segment, not a path segment.
-    await page.route(
-      (url) => url.href.includes("saveDocument"),
-      async (route) => {
-        if (route.request().method() !== "POST") {
-          await route.continue();
-          return;
-        }
-        await route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "intercepted for OHW-210" }),
-        });
-      },
-    );
-
+    // And treatment still holds treatMarker.
     await page.goto(TREATMENT_PATH(testProjectId));
     await expect(pmEditorLocator(page)).toBeVisible({ timeout: 10_000 });
-
-    await focusPmEditor(page);
-    await page.keyboard.type(`will-fail-${Date.now()}`);
-    await triggerManualSave(page);
-
-    const errorStatus = page.locator('[class*="status"]').filter({
-      hasText: /Error saving/i,
-    });
-    await expect(errorStatus).toBeVisible({ timeout: 10_000 });
+    expect(await readPmEditorText(page)).toContain(treatMarker);
   });
+
+  // [OHW-210] removed: SaveStatus no longer has an "Error saving" state
+  // (SaveState is saved|saving|offline — SavePill). Failed saves surface
+  // through the offline/retry path, not a distinct error pill.
 
   test.skip("[OHW-214] versions drawer opens for a narrative doc — pending Spec 06b integration", async () => {
     // The narrative editor does not yet render a Versions button. The

@@ -6,9 +6,8 @@
  *                caret moves into it. Reproduces BUG-001.
  *   [OHW-EDR-02] Toolbar "• List" toggles the current block into a bullet
  *                list and back. Reproduces BUG-003.
- *   [OHW-EDR-03] Char + page counters are visible in the viewport (not
- *                pushed below the fold by the scrollable editor area).
- *                Reproduces BUG-002.
+ *   [OHW-EDR-03] removed — the doc-stats char/page counter footer was dropped
+ *                from the narrative PM surfaces (see body for detail).
  *
  * These tests must FAIL on HEAD prior to spec 04e implementation, and pass
  * after the new NarrativeProseMirrorView lands.
@@ -19,8 +18,6 @@ import { BASE_URL } from "../helpers";
 
 const TREATMENT_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/treatment`;
-const SYNOPSIS_PATH = (projectId: string) =>
-  `${BASE_URL}/projects/${projectId}/synopsis`;
 
 const editorLocator = (page: import("@playwright/test").Page) =>
   page.locator('[data-testid="rich-text-editor"] [contenteditable="true"]');
@@ -122,33 +119,9 @@ test.describe("Narrative editor — spec 04e regressions", () => {
     await expect(editor.locator("p").first()).toHaveText("voce di lista");
   });
 
-  test("[OHW-EDR-03] char + page counters are visible in the viewport", async ({
-    authenticatedPage: page,
-    testProjectId,
-  }) => {
-    for (const path of [
-      SYNOPSIS_PATH(testProjectId),
-      TREATMENT_PATH(testProjectId),
-    ]) {
-      await page.goto(path);
-      await expect(editorLocator(page)).toBeVisible({ timeout: 10_000 });
-
-      const docStats = page.getByTestId("doc-stats");
-      const charCounter = docStats.locator('[data-stat="chars"]');
-      const pageCounter = docStats.locator('[data-stat="pages"]');
-
-      await expect(charCounter).toBeVisible();
-      await expect(pageCounter).toBeVisible();
-
-      const viewportHeight = page.viewportSize()?.height ?? 0;
-      expect(viewportHeight).toBeGreaterThan(0);
-
-      for (const counter of [charCounter, pageCounter]) {
-        const box = await counter.boundingBox();
-        expect(box, `bounding box for counter on ${path}`).not.toBeNull();
-        expect(box!.y + box!.height).toBeLessThanOrEqual(viewportHeight);
-        expect(box!.y).toBeGreaterThanOrEqual(0);
-      }
-    }
-  });
+  // [OHW-EDR-03] removed: the narrative editor no longer renders a `doc-stats`
+  // char/page counter footer on the synopsis/treatment PM surfaces (the
+  // shell-level chrome dropped it). The only remaining counter is the logline
+  // pill char count (covered by narrative-editor OHW-205). There is no longer a
+  // counter element to assert "in the viewport" for these surfaces.
 });

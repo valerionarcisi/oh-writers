@@ -1,14 +1,19 @@
 /**
- * Spec 04c — Narrative Export (logline + synopsis + treatment → PDF)
+ * Spec 04c / 67 — Narrative Export (logline + synopsis + treatment → PDF)
  *
- * [OHW-225] Owner clicks Export PDF → modal opens → click Genera →
- *           PDF response is delivered and a preview tab is opened
+ * Spec 67 moved the export trigger off the FloatingDock into the TopBar `⋯`
+ * ("Altre azioni") menu. The PDF export lives on the narrative PM surfaces
+ * (synopsis/treatment/outline) — the logline route redirects to Soggetto and
+ * has no PDF export, so these tests open Synopsis and launch export from the
+ * ⋯ menu's "Esporta PDF" item. The export modal itself is unchanged
+ * (narrative-export-modal / -generate / -include-title-page).
+ *
+ * [OHW-225] Owner ⋯ → Esporta PDF → Genera → PDF delivered + preview tab opens
  * [OHW-226] PDF contains LOGLINE / SYNOPSIS / TREATMENT headers + bodies
- * [OHW-227] When all three docs are empty, Export PDF is disabled
- * [OHW-228] Viewer on team project sees Export PDF and can download (read-op)
+ * [OHW-227] Export PDF item is disabled on the outline (non-narrative) surface
+ * [OHW-228] Viewer on team project can export (read-op)
  * [OHW-229] Server rejects exportNarrativePdf for non-member → ForbiddenError (skipped)
  * [OHW-231] Default (includeTitlePage=false) → PDF has no cover page
- *           ("Written by" must not appear in the rendered text)
  */
 
 import { test, expect, TEST_TEAM_PROJECT_ID } from "../fixtures";
@@ -17,17 +22,28 @@ import type { Page, Response } from "@playwright/test";
 // @ts-expect-error — pdf-parse has no types for its internal entry
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
-const LOGLINE_PATH = (projectId: string) =>
-  `${BASE_URL}/projects/${projectId}/logline`;
 const SYNOPSIS_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/synopsis`;
 const TREATMENT_PATH = (projectId: string) =>
   `${BASE_URL}/projects/${projectId}/treatment`;
+const OUTLINE_PATH = (projectId: string) =>
+  `${BASE_URL}/projects/${projectId}/outline`;
 
 const FAKE_PROJECT_ID = "00000000-0000-4000-a000-00000000dead";
 
+// Open the ⋯ menu and click "Esporta PDF" to launch the export modal.
+const openExportModal = async (page: Page): Promise<void> => {
+  await page.getByLabel("Altre azioni").click();
+  const item = page.getByRole("menuitem", { name: /Esporta PDF/ });
+  await expect(item).toBeVisible({ timeout: 8_000 });
+  await item.click();
+  await expect(page.getByTestId("narrative-export-modal")).toBeVisible({
+    timeout: 5_000,
+  });
+};
+
 /**
- * Drives the new modal flow: opens the dialog, optionally toggles the
+ * Drives the modal: opens it via the ⋯ menu, optionally toggles the
  * `Includi title page` checkbox, clicks Genera, and returns the export
  * response together with the popup page that opens for the PDF preview.
  */
@@ -35,20 +51,16 @@ const openExportModalAndGenerate = async (
   page: Page,
   opts: { includeTitlePage?: boolean } = {},
 ): Promise<{ response: Response; popup: Page }> => {
-  const triggerButton = page.getByTestId("narrative-export-pdf");
-  await expect(triggerButton).toBeVisible({ timeout: 10_000 });
-  await expect(triggerButton).toBeEnabled();
-  await triggerButton.click();
-
-  const modal = page.getByTestId("narrative-export-modal");
-  await expect(modal).toBeVisible({ timeout: 5_000 });
+  await openExportModal(page);
 
   if (opts.includeTitlePage) {
-    const checkbox = modal.getByTestId("narrative-export-include-title-page");
-    await checkbox.check();
+    // The checkbox lives in the modal body; Genera/Annulla render in the
+    // Modal footer (a sibling of the body), so they aren't scoped under the
+    // `narrative-export-modal` body testid — address them at page level.
+    await page.getByTestId("narrative-export-include-title-page").check();
   }
 
-  const generateButton = modal.getByTestId("narrative-export-generate");
+  const generateButton = page.getByTestId("narrative-export-generate");
   await expect(generateButton).toBeEnabled();
 
   const [response, popup] = await Promise.all([
@@ -70,7 +82,7 @@ test.describe("Narrative Export — Spec 04c", () => {
     authenticatedPage: page,
     testProjectId,
   }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
+    await page.goto(SYNOPSIS_PATH(testProjectId));
 
     const { response, popup } = await openExportModalAndGenerate(page);
 
@@ -93,7 +105,7 @@ test.describe("Narrative Export — Spec 04c", () => {
     authenticatedPage: page,
     testProjectId,
   }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
+    await page.goto(SYNOPSIS_PATH(testProjectId));
 
     const { response, popup } = await openExportModalAndGenerate(page);
     await popup.close();
@@ -106,28 +118,18 @@ test.describe("Narrative Export — Spec 04c", () => {
     expect(parsed.text).toContain("TREATMENT");
   });
 
-  test("[OHW-227] Export PDF disabled when all three narrative docs are empty", async ({
+  test("[OHW-227] Esporta PDF is disabled on the outline (non-narrative) surface", async ({
     authenticatedPage: page,
+    testProjectId,
   }) => {
-    await page.goto(`${BASE_URL}/projects/new`);
-    await page.waitForLoadState("networkidle");
-    const titleInput = page.getByRole("textbox", { name: /titolo|title/i });
-    await expect(titleInput).toBeVisible({ timeout: 10_000 });
-    await titleInput.fill(`Empty Export ${Date.now()}`);
-    await page.getByRole("combobox", { name: /formato|format/i }).selectOption("short");
-    await page.getByRole("button", { name: /crea progetto|create project/i }).click();
-    await page.waitForURL(
-      (url) => /\/projects\/[0-9a-f-]{36}$/.test(url.pathname),
-      { timeout: 15_000 },
-    );
-    const match = page.url().match(/\/projects\/([0-9a-f-]{36})$/);
-    const projectId = match?.[1];
-    if (!projectId) throw new Error("could not extract new project id");
-
-    await page.goto(LOGLINE_PATH(projectId));
-    const button = page.getByTestId("narrative-export-pdf");
-    await expect(button).toBeVisible({ timeout: 10_000 });
-    await expect(button).toBeDisabled();
+    // The outline exposes the ⋯ menu for chrome parity, but PDF export is a
+    // narrative-only route — the item is present and disabled (Spec 67), not
+    // hidden. (Emptiness no longer gates the action.)
+    await page.goto(OUTLINE_PATH(testProjectId));
+    await page.getByLabel("Altre azioni").click();
+    const item = page.getByRole("menuitem", { name: /Esporta PDF/ });
+    await expect(item).toBeVisible({ timeout: 8_000 });
+    await expect(item).toBeDisabled();
   });
 
   test("[OHW-228] viewer on team project exports via modal successfully", async ({
@@ -154,11 +156,15 @@ test.describe("Narrative Export — Spec 04c", () => {
     authenticatedPage: page,
     testProjectId,
   }) => {
-    await page.goto(LOGLINE_PATH(testProjectId));
+    await page.goto(SYNOPSIS_PATH(testProjectId));
 
     const { response, popup } = await openExportModalAndGenerate(page);
-    await popup.close();
+    if (!popup.isClosed()) await popup.close();
     const body = await response.json();
+    expect(body, `export body: ${JSON.stringify(body)}`).toMatchObject({
+      result: { isOk: true },
+    });
+    expect(typeof body.result.value.pdfBase64).toBe("string");
     const buffer = Buffer.from(body.result.value.pdfBase64, "base64");
     const parsed = await pdfParse(buffer);
     // Cover page is opt-in: when not requested, the "Written by" credit
@@ -166,16 +172,14 @@ test.describe("Narrative Export — Spec 04c", () => {
     expect(parsed.text).not.toContain("Written by");
   });
 
-  test("export button is hidden on the outline page", async ({
+  test("Esporta PDF is exposed on the treatment surface too", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
-    await page.goto(`${BASE_URL}/projects/${testProjectId}/outline`);
-    await page.waitForLoadState("networkidle");
-    await expect(page.getByTestId("narrative-export-pdf")).toHaveCount(0);
     await page.goto(TREATMENT_PATH(testProjectId));
-    await expect(page.getByTestId("narrative-export-pdf")).toBeVisible({
-      timeout: 10_000,
-    });
+    await page.getByLabel("Altre azioni").click();
+    const item = page.getByRole("menuitem", { name: /Esporta PDF/ });
+    await expect(item).toBeVisible({ timeout: 8_000 });
+    await expect(item).toBeEnabled();
   });
 });
