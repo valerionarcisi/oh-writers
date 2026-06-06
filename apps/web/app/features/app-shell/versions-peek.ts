@@ -20,15 +20,14 @@
 // the compressed split to a full-screen route (the `↗` expand). Absent → the
 // default split. It is only meaningful while `?versions=` is set.
 //
-// `?compare=<versionA>,<versionB>` — optional companion (Spec 49 W3): switches
-// the surface from the default "vs current" mode to a 2-version side-by-side
-// compare. The value is a comma-separated pair of DISTINCT version UUIDs. Shape
-// is validated here (two well-formed, distinct ids); the same-DOCUMENT guard is
-// enforced client-side against the loaded version list (an id that is not one of
-// the document's versions is dropped, falling back to "vs current") — the param
-// carries no document segment, so it cannot guard cross-document here, exactly
-// as `?versions=` cannot guard cross-project. Fail closed: any malformed pair is
-// ignored and the surface stays in "vs current".
+// `?vcur=<versionId>` — optional companion: the current (active) baseline version
+// id, carried so the surface deep-links without a second fetch.
+//
+// `?vkind=screenplay` — optional companion: versions a screenplay instead of a
+// narrative document (default). The lane branches on it to pick the adapter +
+// read-only renderer; both feed the one master→detail drawer (Spec 66 / ADR-0004).
+// The surface is master→detail (no side-by-side diff): the old `?compare=` mode
+// was removed in Spec 66.
 
 import { z } from "zod";
 import { ok, err, type Result } from "neverthrow";
