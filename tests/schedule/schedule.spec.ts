@@ -147,13 +147,35 @@ test.describe("[Spec 12b] Schedule — strip board", () => {
     await navigateToSchedule(page, SCHEDULE_PROJECT_ID);
     await generateSchedule(page);
 
+    // The date input is hidden until edit mode. An UNdated day shows an
+    // "Imposta data" button (day-date-set-N); a DATED day shows a "Modifica
+    // data" display button. Either opens the date picker (reveals the input).
+    const enterDateEdit = async () => {
+      const setBtn = page.getByTestId("day-date-set-1");
+      if (await setBtn.isVisible().catch(() => false)) {
+        await setBtn.click();
+        return;
+      }
+      const editBtn = page.getByRole("button", { name: "Modifica data" });
+      if (
+        await editBtn
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        await editBtn.first().click();
+      }
+    };
+
+    await enterDateEdit();
     const dateInput = page.getByTestId("day-date-1");
     await expect(dateInput).toBeVisible({ timeout: 8_000 });
-
     await dateInput.fill("2026-09-01");
     await page.keyboard.press("Tab");
 
-    // Re-navigate to confirm persistence
+    // Re-navigate to confirm persistence. The input carries the persisted value
+    // even while hidden (a date-bearing day collapses to the display button), so
+    // assert on the value directly — toHaveValue reads hidden inputs too.
     await navigateToSchedule(page, SCHEDULE_PROJECT_ID);
     await expect(page.getByTestId("day-date-1")).toHaveValue("2026-09-01", {
       timeout: 8_000,

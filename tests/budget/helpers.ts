@@ -12,11 +12,22 @@ export const navigateToBudget = async (page: Page, projectId: string) => {
   });
 };
 
+// Spec 44/67: budget generation is the FloatingDock primary CTA ("Rigenera",
+// bottom-left), not a `generate-budget-btn`. It populates Cast/Troupe from the
+// breakdown. Click it and wait for the regenerate round-trip to settle.
 export const generateBudget = async (page: Page) => {
-  const btn = page.getByTestId("generate-budget-btn");
-  const btnVisible = await btn.isVisible().catch(() => false);
-  if (!btnVisible) return; // budget already generated (seed pre-populates)
-  await btn.click();
-  // Button text changes to "Rigenera" after a successful generation
-  await expect(btn).toHaveText("Rigenera", { timeout: 20_000 });
+  const btn = page.getByRole("button", { name: /Rigenera|Regenerate/ });
+  await expect(btn).toBeVisible({ timeout: 15_000 });
+  await Promise.all([
+    page
+      .waitForResponse(
+        (r) =>
+          r.url().includes("generateBudget") && r.request().method() === "POST",
+        { timeout: 20_000 },
+      )
+      .catch(() => undefined),
+    btn.click(),
+  ]);
+  // After generation the dock button returns to the "Rigenera" idle label.
+  await expect(btn).toHaveText(/Rigenera|Regenerate/, { timeout: 20_000 });
 };
