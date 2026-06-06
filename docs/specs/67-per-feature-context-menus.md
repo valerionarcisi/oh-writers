@@ -1,8 +1,19 @@
 # Spec 67 — Per-feature contextual `⋯` menus (export/import/versions everywhere)
 
-Status: **Planned** (2026-06-06). Builds on Spec 55 (action registry) + Spec 66
+Status: **Built** (2026-06-06). Builds on Spec 55 (action registry) + Spec 66
 (routed Versions surface). Closes BACKLOG ICEBOX **N-28**. Glossary: CONTEXT.md
 _Per-feature action menu_.
+
+Shipped: registry entries for breakdown/budget/schedule/locations (export-only —
+no versions on production pages); the `⋯` menu published on all four via
+`useContextActions` + the existing export modals/hooks; the DS trigger made a
+visible pill + the DropdownMenu popover restyled (elevated shadow, lg radius,
+open animation); the legacy floating `VersionsDrawer` + `VersionCompareModal` +
+`vs-current-baseline` deleted (retirement now complete, ADR-0004 updated); logline
+correctly has no `⋯` (it has no standalone page). Tests OHW-067 (E2E 5/5) +
+registry unit (7/7). Gate Design/QA/Lead passed — no blockers; 12 orphaned i18n
+keys + a dead spacer swept. Pre-existing follow-up: ActionsMenu's IT trigger label
+should come from i18n.
 
 ## Why
 

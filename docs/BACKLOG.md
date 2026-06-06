@@ -79,7 +79,7 @@ Item format: `[id] short title — link (spec NN / audit A-0x / learning)`
 
 ## ICEBOX (not now)
 
-- **[N-28] Spec 55 rollout to production pages** (budget/breakdown/schedule/locations) — TopBar action-registry backbone lands app-wide via the fleet's A1, but per-page export/versions registration for production pages is deferred. Valerio to analyse those zones and file specific bugs. Spec 56 CI may flag those routes as non-compliant until then (expected). See `docs/BUGS.md` Topic 9.
+- ~~**[N-28] Spec 55 rollout to production pages**~~ — **DONE 2026-06-06 (Spec 67).** budget/breakdown/schedule/locations now publish the standard `⋯` menu with their exports; versions intentionally NOT surfaced on production pages (work on the active version). Legacy floating VersionsDrawer + compare modal retired. Branch `feat/spec-67-context-menus`.
 - The deferred "Ma an…" shell example (user dropped it).
 - Timeline Scaletta verticale (spec 15) · Moodboard/Storyboard (spec 19) · Billing & multi-tenancy (16-core) · AI auto-gen from screenplay (14/14b).
 - BYOK encrypted user key + model choice (noted in spec 48).
