@@ -13,21 +13,24 @@ import {
   Popover,
   SegmentedControl,
   Skeleton,
-  VersionTrigger,
+  ActionsMenu,
   Viewbar,
   ViewbarSep,
   useConfirmDialog,
 } from "@oh-writers/ui";
-import { useVersionsDrawer } from "~/features/versions";
-import {
-  useVersions,
-  syncStateQueryOptions,
-} from "~/features/screenplay-editor";
+import { syncStateQueryOptions } from "~/features/screenplay-editor";
 import { DraftMetaBadge } from "~/features/projects";
-import { useCesareOpen, useSetActiveScene } from "~/features/app-shell";
+import {
+  useCesareOpen,
+  useSetActiveScene,
+  useContextActions,
+  useTopBarSlotPublisher,
+} from "~/features/app-shell";
+import type { ContextActionHandlers } from "~/features/app-shell";
 import {
   BREAKDOWN_CATEGORIES,
   CATEGORY_META,
+  ContextActionIds,
   type BreakdownCategory,
   type TranslationKey,
 } from "@oh-writers/domain";
@@ -161,22 +164,18 @@ export function BreakdownPage({ projectId }: Props) {
 function BreakdownPageContent({ projectId }: Props) {
   const { t } = useTranslation();
   const { data: ctx } = useSuspenseQuery(breakdownContextOptions(projectId));
+  // The breakdown is always computed against the project's ACTIVE screenplay
+  // version (Spec 67 — versions are not a per-page concept here).
   const versionId = ctx.screenplayVersionId;
   const { data: syncState } = useQuery(syncStateQueryOptions(projectId));
   const canEdit = ctx.canEdit;
   const scenes = ctx.scenes;
-  const { open: openVersionsDrawer } = useVersionsDrawer();
   // Cesare is now driven exclusively by the shell-level BottomDock — the
   // local pill was removed (TKT-LEAD-01). Hook stays mounted so future
   // page-scoped Cesare entry points (RecapStrip, inline affordances) can
   // continue to call it without re-introducing the import.
   const _openCesare = useCesareOpen();
   void _openCesare;
-
-  const { data: versionsResult } = useVersions(ctx.screenplayId ?? "");
-  const screenplayVersions = versionsResult?.isOk ? versionsResult.value : [];
-  const currentVersion = screenplayVersions.find((v) => v.id === versionId);
-  const screenplayVersionLabel = currentVersion?.label ?? null;
 
   const [activeSceneId, setActiveSceneId] = useState<string | null>(
     scenes[0]?.id ?? null,
@@ -211,6 +210,29 @@ function BreakdownPageContent({ projectId }: Props) {
   const [exportOpen, setExportOpen] = useState(false);
   const [indiceOpen, setIndiceOpen] = useState(false);
   const indiceTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Spec 67 — the page's Export lives in the standard TopBar `⋯` menu (no
+  // versions on production pages). The handler opens the existing export modal.
+  const contextActionHandlers = useMemo<ContextActionHandlers>(
+    () => ({
+      [ContextActionIds.EXPORT]: { onSelect: () => setExportOpen(true) },
+    }),
+    [],
+  );
+  const contextActionItems = useContextActions(
+    "breakdown",
+    contextActionHandlers,
+  );
+  const breakdownActionsMenu = useMemo(
+    () => (
+      <ActionsMenu
+        data-testid="breakdown-actions-menu"
+        items={contextActionItems}
+      />
+    ),
+    [contextActionItems],
+  );
+  useTopBarSlotPublisher("actions", breakdownActionsMenu);
   const [indiceQuery, setIndiceQuery] = useState("");
   const indiceSearchRef = useRef<HTMLInputElement>(null);
   const indiceWrapRef = useRef<HTMLDivElement>(null);
@@ -824,44 +846,6 @@ function BreakdownPageContent({ projectId }: Props) {
             )}
 
             <DraftMetaBadge projectId={projectId} />
-            <VersionTrigger
-              variant="pill"
-              versionLabel={screenplayVersionLabel ?? undefined}
-              menuItems={[
-                ...screenplayVersions.map((v, idx) => ({
-                  id: `version-${v.id}`,
-                  label:
-                    v.id === versionId
-                      ? `● ${v.label ?? `${t("breakdown.versionFallbackPrefix")} ${idx + 1}`}`
-                      : (v.label ??
-                        `${t("breakdown.versionFallbackPrefix")} ${idx + 1}`),
-                  onSelect: () => {
-                    if (ctx.screenplayId) {
-                      openVersionsDrawer({
-                        kind: "screenplay",
-                        screenplayId: ctx.screenplayId,
-                      });
-                    }
-                  },
-                  tone:
-                    v.id === versionId
-                      ? ("default" as const)
-                      : ("muted" as const),
-                })),
-                {
-                  id: "open-drawer",
-                  label: t("breakdown.openVersions"),
-                  onSelect: () => {
-                    if (ctx.screenplayId) {
-                      openVersionsDrawer({
-                        kind: "screenplay",
-                        screenplayId: ctx.screenplayId,
-                      });
-                    }
-                  },
-                },
-              ]}
-            />
           </div>
         </Viewbar>
       </div>
@@ -1140,19 +1124,14 @@ function BreakdownPageContent({ projectId }: Props) {
        * + the universal ✦ Cesare button. The per-page FloatingDock anchors
        * bottom-LEFT (default) and no longer renders its own Cesare pill —
        * one Cesare surface, one command centre. */}
+      {/* Export moved to the TopBar `⋯` menu (Spec 67) — the dock keeps only the
+          page's primary CTA (re-spoglio). */}
       <FloatingDock
         primaryAction={{
           label: t("breakdown.respoglioWithAi"),
           hotkey: "⌘R",
           onClick: handleRespoglio,
         }}
-        secondaryActions={[
-          {
-            label: t("breakdown.export"),
-            hotkey: "⌘E",
-            onClick: () => setExportOpen(true),
-          },
-        ]}
       />
 
       <ExportBreakdownModal

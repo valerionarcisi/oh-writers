@@ -163,14 +163,19 @@ export const CONTEXT_ACTIONS: Readonly<
   ],
   schedule: [
     {
-      id: ContextActionIds.EXPORT,
+      id: ContextActionIds.EXPORT_CSV,
       labelKey: "schedule.page.export",
       order: 10,
+    },
+    {
+      id: ContextActionIds.EXPORT_PDF,
+      labelKey: "schedule.page.print",
+      order: 20,
     },
   ],
   locations: [
     {
-      id: ContextActionIds.EXPORT,
+      id: ContextActionIds.EXPORT_CSV,
       labelKey: "locations.dock.export",
       order: 10,
     },
