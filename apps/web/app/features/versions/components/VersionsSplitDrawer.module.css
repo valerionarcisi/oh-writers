@@ -138,43 +138,79 @@
   }
 }
 
+/* Button hierarchy:
+ *  - primary / Attiva  → solid agent green, white label (the call to action)
+ *  - secondary / ghost → soft surface fill, dark label (Rinomina/Duplica)
+ *  - back              → bare, delicate; just an arrow + muted label
+ * Shared base: same size, radius, weight, focus ring. */
 .primaryBtn,
-.activateBtn {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--ds-agent);
-  background: var(--ds-agent);
-  color: var(--ds-text-on-dark);
-  cursor: pointer;
-}
-
-/* Secondary actions are solid with white text too (not ghost), so the labels
- * read clearly against the surface. */
+.activateBtn,
 .ghostBtn,
 .backBtn {
   font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  background: var(--ds-text-2);
-  color: var(--ds-text-on-dark);
   cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
-.ghostBtn:hover,
-.backBtn:hover,
-.activateBtn:hover,
-.primaryBtn:hover {
-  filter: brightness(0.97);
+.primaryBtn:focus-visible,
+.activateBtn:focus-visible,
+.ghostBtn:focus-visible,
+.backBtn:focus-visible {
+  outline: var(--ring-focus);
+  outline-offset: 1px;
+}
+
+.primaryBtn,
+.activateBtn {
+  font-weight: 600;
+  background: var(--ds-agent);
+  border-color: var(--ds-agent);
+  color: var(--ds-text-on-dark);
+}
+
+.primaryBtn:hover,
+.activateBtn:hover {
+  background: var(--ds-agent-hover, var(--ds-agent));
+  filter: brightness(0.96);
+}
+
+.ghostBtn {
+  background: var(--ds-surface-alt);
+  border-color: var(--ds-line);
+  color: var(--ds-text-2);
+}
+
+.ghostBtn:hover {
+  background: var(--ds-surface-deep);
+  border-color: var(--ds-text-3);
+}
+
+/* Back is the most delicate: no fill, no border, muted — a quiet way out. */
+.backBtn {
+  padding-inline: var(--space-2);
+  background: transparent;
+  color: var(--ds-text-mute);
+}
+
+.backBtn:hover {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
 }
 
 .primaryBtn:disabled,
 .activateBtn:disabled,
 .ghostBtn:disabled,
+.backBtn:disabled,
 .swatchBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 

@@ -47,6 +47,10 @@ import { narrativeProgressQueryKey } from "~/features/documents";
 import type { AppUser } from "~/server/context";
 import { SaveStateProvider, useSaveStateValue } from "../save-state-context";
 import { TopBarSlotsProvider, useTopBarSlots } from "../top-bar-slots-context";
+import {
+  VersionsDetailProvider,
+  useVersionsDetailOpen,
+} from "../versions-detail-context";
 import { CesareProvider, type OpenCesareOptions } from "../cesare-context";
 import {
   CesareSessionFocusProvider,
@@ -221,28 +225,30 @@ export function AppShell(props: AppShellProps) {
   return (
     <SaveStateProvider>
       <TopBarSlotsProvider>
-        <ActiveSceneProvider>
-          <CesareNotificationProvider>
-            <SplitDrawerProvider>
-              <SplitToggleProvider>
-                <CesareSessionFocusProvider>
-                  {/* Spec 47b FIX 2 — the shared chat store wraps both the
+        <VersionsDetailProvider>
+          <ActiveSceneProvider>
+            <CesareNotificationProvider>
+              <SplitDrawerProvider>
+                <SplitToggleProvider>
+                  <CesareSessionFocusProvider>
+                    {/* Spec 47b FIX 2 — the shared chat store wraps both the
                     floating sheet and the full-page session route so they
                     render the SAME threads (single chat container). Spec 52 —
                     the focus-request provider lets the full-screen new-session
                     landing ask the shell to recede the rail + topstrip. */}
-                  <ShellFocusRequestProvider>
-                    <CesareSurfaceProvider>
-                      <CesareChatStoreProvider>
-                        <AppShellInner {...props} />
-                      </CesareChatStoreProvider>
-                    </CesareSurfaceProvider>
-                  </ShellFocusRequestProvider>
-                </CesareSessionFocusProvider>
-              </SplitToggleProvider>
-            </SplitDrawerProvider>
-          </CesareNotificationProvider>
-        </ActiveSceneProvider>
+                    <ShellFocusRequestProvider>
+                      <CesareSurfaceProvider>
+                        <CesareChatStoreProvider>
+                          <AppShellInner {...props} />
+                        </CesareChatStoreProvider>
+                      </CesareSurfaceProvider>
+                    </ShellFocusRequestProvider>
+                  </CesareSessionFocusProvider>
+                </SplitToggleProvider>
+              </SplitDrawerProvider>
+            </CesareNotificationProvider>
+          </ActiveSceneProvider>
+        </VersionsDetailProvider>
       </TopBarSlotsProvider>
     </SaveStateProvider>
   );
@@ -342,18 +348,12 @@ function AppShellInner({
     setCesareOpen(cesarePersist === "expanded");
   }, []);
 
-  // The Versions surface opens at ~half the page (master→detail preview), so the
-  // central lane needs room: while it is open in split mode we COLLAPSE the rail
-  // (Spec 66). The user's persisted `shellState` is untouched — closing the
-  // surface restores their prior density automatically.
-  const versionsSplitOpen = parseVersionsPeek(
-    versionsParam,
-    versionsStateParam,
-    versionsCurrentParam,
-    versionsKindParam,
-  )
-    .map((p) => p.state === "split")
-    .unwrapOr(false);
+  // The Versions surface is master→detail: the LIST stays narrow (the host keeps
+  // its space), but opening a version's DETAIL shows a whole document's formatted
+  // preview, so the rail collapses for room (Spec 66). Only the detail collapses
+  // — published by the lane. The persisted `shellState` is untouched; closing the
+  // detail restores it.
+  const versionsDetailOpen = useVersionsDetailOpen();
 
   // Spec 52 — a routed surface (the full-screen new-session landing) can force
   // focus mode for its lifetime. The user's persisted density (`shellState`) is
@@ -361,7 +361,7 @@ function AppShellInner({
   // prior layout automatically because we broadcast `shellState` again.
   const effectiveShellState: ShellState = isFocusRequested
     ? "focus"
-    : versionsSplitOpen && shellState === "full"
+    : versionsDetailOpen && shellState === "full"
       ? "collapsed"
       : shellState;
 
@@ -472,14 +472,21 @@ function AppShellInner({
     : null;
   const isVersionsSplitActive =
     versionsPeek !== null && versionsPeek.state === "split";
-  // The Versions surface shows a whole document's formatted content (master→detail
-  // read-only preview), so it opens at ~half the page rather than a narrow rail —
-  // a too-thin lane crushes the preview. Clamped so it stays readable on small and
-  // huge viewports; the user can still drag-resize from here.
-  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number>(() => {
-    if (typeof window === "undefined") return 560;
-    return Math.round(Math.min(760, Math.max(480, window.innerWidth * 0.5)));
-  });
+  // Master→detail width: the LIST is a narrow rail; opening a version's DETAIL
+  // widens the lane to ~half the page (the read-only preview needs room). The
+  // user's drag-resize is kept per-view in `versionsLaneWidth`; the effective
+  // width below flips the BASE between narrow + half when there's no manual size.
+  const NARROW_VERSIONS_WIDTH = 420;
+  const halfPageWidth =
+    typeof window === "undefined"
+      ? 720
+      : Math.round(Math.min(820, Math.max(560, window.innerWidth * 0.5)));
+  const [versionsLaneWidth, setVersionsLaneWidth] = useState<number | null>(
+    null,
+  );
+  const effectiveVersionsWidth =
+    versionsLaneWidth ??
+    (versionsDetailOpen ? halfPageWidth : NARROW_VERSIONS_WIDTH);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -499,9 +506,9 @@ function AppShellInner({
     if (typeof document === "undefined") return;
     document.body.style.setProperty(
       "--versions-split-size",
-      `${versionsLaneWidth}px`,
+      `${effectiveVersionsWidth}px`,
     );
-  }, [versionsLaneWidth]);
+  }, [effectiveVersionsWidth]);
 
   // Shell SplitDrawer (Cesare preview + notifications) is ALWAYS an in-flow
   // collapsing lane (CONTEXT.md / ADR-0002), never a fixed overlay. While it has
@@ -1341,7 +1348,7 @@ function AppShellInner({
           {versionsPeek !== null && (
             <VersionsSplitLane
               peek={versionsPeek}
-              width={versionsLaneWidth}
+              width={effectiveVersionsWidth}
               onWidthChange={setVersionsLaneWidth}
               onExpand={() => onExpandVersions?.()}
               onStepBack={() => onStepBackVersions?.()}

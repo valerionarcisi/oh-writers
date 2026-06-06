@@ -16,7 +16,7 @@
 // Spec 49): `?versions=<id>` → open (split); `?vstate=full` → full; param dropped
 // → closed. `↗` is a REAL navigation so the URL stays shareable.
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDialog, useOverlay, FocusScope } from "react-aria";
 import { match } from "ts-pattern";
 import { SplitDrawer } from "@oh-writers/ui";
@@ -47,6 +47,7 @@ import {
   ReadOnlyScreenplayView,
 } from "~/features/screenplay-editor";
 import { useTranslation } from "~/features/i18n";
+import { usePublishVersionsDetail } from "../versions-detail-context";
 import type { VersionsPeek } from "../versions-peek";
 import styles from "./VersionsSplitLane.module.css";
 
@@ -69,9 +70,11 @@ export interface VersionsSplitLaneProps {
 function NarrativeVersionsContent({
   documentId,
   currentVersionId,
+  onDetailChange,
 }: {
   documentId: string;
   currentVersionId: string | null;
+  onDetailChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useDocumentVersions(documentId);
@@ -126,6 +129,7 @@ function NarrativeVersionsContent({
         updateMeta.mutate({ versionId: id, draftColor: color })
       }
       onCreateNew={() => createNew.mutate()}
+      onDetailChange={onDetailChange}
     />
   );
 }
@@ -135,9 +139,11 @@ function NarrativeVersionsContent({
 function ScreenplayVersionsContent({
   screenplayId,
   currentVersionId,
+  onDetailChange,
 }: {
   screenplayId: string;
   currentVersionId: string | null;
+  onDetailChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useScreenplayVersions(screenplayId);
@@ -198,6 +204,7 @@ function ScreenplayVersionsContent({
           label: `${t("versions.split.versionPrefix")} ${versions.length + 1}`,
         })
       }
+      onDetailChange={onDetailChange}
     />
   );
 }
@@ -214,6 +221,12 @@ export function VersionsSplitLane({
 }: VersionsSplitLaneProps) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
+
+  // The detail-open flag drives the lane width + rail collapse (Spec 66): the
+  // list stays narrow, the detail widens to ~half the page. Published to the
+  // shell via the context; reset on `full` (the expanded route is its own thing).
+  const [detailOpen, setDetailOpen] = useState(false);
+  usePublishVersionsDetail(detailOpen && peek.state !== "full");
 
   const { overlayProps } = useOverlay(
     {
@@ -267,11 +280,13 @@ export function VersionsSplitLane({
             <ScreenplayVersionsContent
               screenplayId={peek.documentId}
               currentVersionId={peek.currentVersionId}
+              onDetailChange={setDetailOpen}
             />
           ) : (
             <NarrativeVersionsContent
               documentId={peek.documentId}
               currentVersionId={peek.currentVersionId}
+              onDetailChange={setDetailOpen}
             />
           )}
         </SplitDrawer>

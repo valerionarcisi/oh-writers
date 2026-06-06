@@ -54,6 +54,11 @@ export {
   useTopBarSlots,
   useTopBarSlotPublisher,
 } from "./top-bar-slots-context";
+export {
+  VersionsDetailProvider,
+  useVersionsDetailOpen,
+  usePublishVersionsDetail,
+} from "./versions-detail-context";
 export { useCesareOpen } from "./cesare-context";
 export { useCesareSessionFocus } from "./cesare-session-focus-context";
 export {

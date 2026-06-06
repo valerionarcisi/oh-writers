@@ -137,6 +137,9 @@ export interface VersionsSplitDrawerProps {
   readonly onCreateNew: () => void;
   /** Whether the active user can mutate (false → read-only surface). */
   readonly canEdit: boolean;
+  /** Notifies the host when the view switches between list and a version detail,
+   *  so the host can widen the lane + collapse the rail only for the detail. */
+  readonly onDetailChange?: (isDetailOpen: boolean) => void;
 }
 
 const formatCreatedAt = (iso: string, locale: Locale): string =>
@@ -159,6 +162,7 @@ export function VersionsSplitDrawer({
   onSetColor,
   onCreateNew,
   canEdit,
+  onDetailChange,
 }: VersionsSplitDrawerProps) {
   const { t, locale } = useTranslation();
 
@@ -168,6 +172,12 @@ export function VersionsSplitDrawer({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
+
+  // Tell the host whenever we cross between list and detail so it can size the
+  // lane + collapse the rail only for the detail view.
+  useEffect(() => {
+    onDetailChange?.(selectedId !== null);
+  }, [selectedId, onDetailChange]);
 
   // Drop a selection that no longer exists (deleted version) back to the list.
   useEffect(() => {
