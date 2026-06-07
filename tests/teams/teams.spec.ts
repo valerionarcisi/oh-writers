@@ -23,8 +23,15 @@ test.describe("[Spec 02] Teams — creation and dashboard", () => {
     ).toBeVisible();
 
     const uniqueName = `Test Team ${Date.now()}`;
-    await page.getByLabel("Nome del team").fill(uniqueName);
-    await page.getByRole("button", { name: "Crea team" }).click();
+    // The name input's controlled onChange doesn't pick up Playwright's fill()
+    // synthetic input event (the submit stays disabled on !name.trim()); type it
+    // character-by-character so React state updates and the button enables.
+    const nameInput = page.getByLabel("Nome del team");
+    await nameInput.click();
+    await nameInput.pressSequentially(uniqueName, { delay: 20 });
+    const createBtn = page.getByRole("button", { name: "Crea team" });
+    await expect(createBtn).toBeEnabled({ timeout: 5_000 });
+    await createBtn.click();
 
     // After creation, should redirect to the new team dashboard
     await page.waitForURL(/\/teams\/[a-z0-9-]+$/, { timeout: 10_000 });
