@@ -101,35 +101,36 @@ export function ExportScreenplayPdfModal({
       }
     >
       <div data-testid="screenplay-export-modal">
-        <fieldset
+        <div
           className={styles.formatPicker}
           data-testid="screenplay-export-format-picker"
         >
-          <legend className={styles.formatLegend}>
+          <label
+            className={styles.formatLegend}
+            htmlFor="screenplay-export-format"
+          >
             {t("screenplay.export.formatLegend")}
-          </legend>
-          <div className={styles.formatGrid} role="radiogroup">
-            {EXPORT_FORMATS.map((id) => {
-              const fm = EXPORT_FORMAT_META[id];
-              const isSelected = id === format;
-              return (
-                <label
-                  key={id}
-                  className={`${styles.formatRow} ${isSelected ? styles.formatRowActive : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="screenplay-export-format"
-                    data-testid={`screenplay-export-format-${id}`}
-                    checked={isSelected}
-                    onChange={() => onSelectFormat(id)}
-                  />
-                  <span className={styles.formatLabel}>{fm.labelIt}</span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
+          </label>
+          <select
+            id="screenplay-export-format"
+            className={styles.formatSelect}
+            value={format}
+            onChange={(e) =>
+              onSelectFormat(e.target.value as (typeof EXPORT_FORMATS)[number])
+            }
+            data-testid="screenplay-export-format"
+          >
+            {EXPORT_FORMATS.map((id) => (
+              <option
+                key={id}
+                value={id}
+                data-testid={`screenplay-export-format-${id}`}
+              >
+                {EXPORT_FORMAT_META[id].labelIt}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <p className={styles.description}>{meta.descriptionIt}</p>
 

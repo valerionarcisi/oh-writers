@@ -11,12 +11,29 @@
 }
 
 .formatLegend {
+  display: block;
   padding: 0;
   margin-block-end: var(--space-2);
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ds-text-2);
+}
+
+.formatSelect {
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.formatSelect:focus-visible {
+  outline: 2px solid var(--ds-action);
+  outline-offset: 1px;
 }
 
 .formatGrid {

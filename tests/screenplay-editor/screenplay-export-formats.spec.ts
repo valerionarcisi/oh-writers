@@ -40,7 +40,8 @@ type FormatId =
   | "one_scene_per_page";
 
 const selectFormat = async (page: Page, id: FormatId) => {
-  await page.getByTestId(`screenplay-export-format-${id}`).check();
+  // The format picker is a <select> dropdown (was a radiogroup) — pick the option.
+  await page.getByTestId("screenplay-export-format").selectOption(id);
 };
 
 const generateAndCapture = async (
@@ -71,6 +72,9 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
     const modal = await openExportModal(page);
+    // The picker is a <select>; assert each format option is present in it.
+    const select = modal.getByTestId("screenplay-export-format");
+    await expect(select).toBeVisible();
     for (const id of [
       "standard",
       "sides",
@@ -78,9 +82,7 @@ test.describe("Screenplay Export Formats — Spec 05k", () => {
       "reading_copy",
       "one_scene_per_page",
     ] as const) {
-      await expect(
-        modal.getByTestId(`screenplay-export-format-${id}`),
-      ).toBeVisible();
+      await expect(select.locator(`option[value="${id}"]`)).toHaveCount(1);
     }
   });
 
