@@ -122,6 +122,74 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  e2e-chromium:
+    name: E2E (Full, Playwright chromium)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: oh-writers
+          POSTGRES_PASSWORD: oh-writers
+          POSTGRES_DB: oh-writers_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test
+      DATABASE_URL_TEST: postgresql://oh-writers:oh-writers@localhost:5432/oh-writers_test
+      MOCK_AI: 'true'
+      LLM_FIRST_BREAKDOWN: 'false'
+      BETTER_AUTH_SECRET: ci-test-secret-min-32-chars-padding
+      BETTER_AUTH_URL: http://localhost:3002
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build workspace packages (db needs its dist for runtime imports)
+        run: pnpm --filter './packages/*' build
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Migrate test DB
+        run: pnpm db:migrate
+      - name: Seed test DB
+        run: pnpm db:seed:reset
+      # The full chromium project (every non-mock-ui spec). CI applies
+      # retries=2 (playwright.config.ts) so the handful of state/timing-flaky
+      # specs that pass on retry don't fail the run.
+      - name: Full E2E (--project=chromium)
+        run: pnpm exec playwright test --project=chromium
+      - name: Dump failing-test details on failure
+        if: failure()
+        run: |
+          set -e
+          echo "=== playwright-report/index.html (first 2000 lines) ==="
+          if [ -f playwright-report/index.html ]; then
+            head -2000 playwright-report/index.html
+          else
+            echo "(no html report)"
+          fi
+          echo "=== test-results/ (if any) ==="
+          ls -la test-results/ 2>/dev/null || echo "(no test-results)"
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-chromium
+          path: playwright-report/
+          retention-days: 7
+
   build:
     name: Production build
     runs-on: ubuntu-latest
