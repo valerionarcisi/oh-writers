@@ -10,9 +10,17 @@ export async function navigateToSettings(page: Page): Promise<void> {
 }
 
 export async function waitForProfileSection(page: Page): Promise<void> {
-  await expect(page.getByTestId("profile-name-input")).toBeVisible({
-    timeout: 10_000,
-  });
+  const nameInput = page.getByTestId("profile-name-input");
+  await expect(nameInput).toBeVisible({ timeout: 10_000 });
+  // The profile loads async (getUserProfile) and repopulates the controlled
+  // `name`/`avatarUrl` state after mount. Filling before that lands would have
+  // the refetch clobber the typed value (and the save then validates the stale
+  // state). Wait for the name field to be populated AND for the loading query to
+  // settle (networkidle) so a late repopulation can't race a subsequent fill.
+  await expect(nameInput).not.toHaveValue("", { timeout: 10_000 });
+  await page
+    .waitForLoadState("networkidle", { timeout: 10_000 })
+    .catch(() => {});
 }
 
 export async function waitForPasswordSection(page: Page): Promise<void> {

@@ -46,21 +46,36 @@ test("[OHW-501] Updating name saves successfully", async ({
   const nameInput = page.getByTestId("profile-name-input");
   await nameInput.fill("Test User Updated");
 
-  await page.getByTestId("save-profile-btn").click();
-
-  await expect(page.getByTestId("profile-success-msg")).toBeVisible({
-    timeout: 10_000,
-  });
+  // The success pill auto-hides after 3s, so race the save round-trip against
+  // the click and assert the (still ok) response — then catch the pill.
+  const [resp] = await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        r.url().includes("updateUserProfile") &&
+        r.request().method() === "POST" &&
+        r.ok(),
+      { timeout: 10_000 },
+    ),
+    page.getByTestId("save-profile-btn").click(),
+  ]);
+  expect(resp.ok()).toBe(true);
   await expect(page.getByTestId("profile-success-msg")).toContainText(
     "Salvato!",
+    { timeout: 5_000 },
   );
 
-  // Restore original name so other tests are not affected
+  // Restore original name so other tests are not affected.
   await nameInput.fill("Test User");
-  await page.getByTestId("save-profile-btn").click();
-  await expect(page.getByTestId("profile-success-msg")).toBeVisible({
-    timeout: 10_000,
-  });
+  await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        r.url().includes("updateUserProfile") &&
+        r.request().method() === "POST" &&
+        r.ok(),
+      { timeout: 10_000 },
+    ),
+    page.getByTestId("save-profile-btn").click(),
+  ]);
 });
 
 test("[OHW-502] Invalid avatar URL shows validation error", async ({
