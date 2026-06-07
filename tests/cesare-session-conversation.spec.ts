@@ -12,6 +12,7 @@ import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 import { BASE_URL } from "./fixtures";
 import { TEAM_PROJECT_ID } from "./breakdown/helpers";
+import { resetCesareState } from "./helpers/cesare";
 
 async function openCesare(page: Page): Promise<void> {
   const trigger = page
@@ -43,6 +44,13 @@ async function sendCesare(page: Page, text: string): Promise<void> {
 }
 
 test.describe("[OHW-047-A5-session] Full-page session renders the real conversation", () => {
+  // Reset the shared Cesare chat store between tests so a thread left by a prior
+  // turn (or a prior spec in the same run) can't bleed in and make the bubble
+  // assertions flaky.
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await resetCesareState(authenticatedPage, TEAM_PROJECT_ID);
+  });
+
   test("a turn sent in the floating drawer appears as bubbles on the session page", async ({
     authenticatedPage: page,
   }) => {
