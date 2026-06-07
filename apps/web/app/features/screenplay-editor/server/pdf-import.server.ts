@@ -20,6 +20,21 @@ import {
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB — real screenplays with
 // embedded fonts/images routinely exceed 10 MB.
 
+// Count U+FFFD replacement chars in a string (lower = better decoding).
+const replacementCount = (s: string): number => (s.match(/�/g) ?? []).length;
+
+/**
+ * Pick the cleaner of two decodings of pdf-parse's output: the text as-is
+ * (already Unicode for most PDFs) vs. a latin1→utf8 re-encode (needed only when
+ * pdf-parse hands back raw latin-1 code-units / mojibake). Choose by fewest
+ * replacement chars; on a tie, prefer the raw text (the re-encode is the lossy
+ * one when it isn't needed).
+ */
+export function bestDecoding(raw: string): string {
+  const recoded = Buffer.from(raw, "latin1").toString("utf8");
+  return replacementCount(recoded) < replacementCount(raw) ? recoded : raw;
+}
+
 const ImportPdfInput = z.object({
   fileName: z.string().max(255),
   // No Zod max on the base64 string: a too-large file is caught by the
@@ -60,11 +75,13 @@ export const importPdf = createServerFn({ method: "POST" })
       let rawText: string;
       try {
         const parsed = await pdfParse(buffer, { max: 0 });
-        // pdf-parse / pdfjs returns a string where each character is a raw byte
-        // (latin-1 code-unit). Re-encode as a Buffer using latin-1 then decode
-        // as UTF-8 to recover multi-byte Italian characters (è, à, ù, —, …).
         const raw = parsed.text ?? "";
-        rawText = Buffer.from(raw, "latin1").toString("utf8").trim();
+        // Most PDFs come back already-decoded Unicode (accents intact). Some,
+        // however, return latin-1 code-units where multi-byte chars look like
+        // mojibake (è → "Ã¨"). A blanket latin1→utf8 re-encode FIXES the second
+        // case but CORRUPTS the first (turning a clean "È" into U+FFFD). So pick
+        // whichever variant has fewer replacement chars + intact accents.
+        rawText = bestDecoding(raw).trim();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";
         if (msg.toLowerCase().includes("encrypt")) {
