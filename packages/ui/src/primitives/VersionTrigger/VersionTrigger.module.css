@@ -40,6 +40,12 @@
 
 .label {
   font-variant-numeric: tabular-nums;
+  /* Keep the chip compact: a long custom version name must ellipsis, never push
+   * the chip wide enough to overlap the centred logline pill. */
+  max-inline-size: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dot {

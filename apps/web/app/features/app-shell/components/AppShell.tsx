@@ -1018,35 +1018,19 @@ function AppShellInner({
     return items;
   }, [router, projectId, activeSegment, openCesare, onCesareSessionNew, t]);
 
-  // ── Rail tools (search + new + switch + more) ────────────────
+  // ── Rail tools — only "New project" (the rest moved out per UX review).
+  // Search lives in the TopBar (⌘K palette), project-switch is the brand
+  // dropdown, and help/more was noise; the rail keeps just the "+".
   const railTools = useMemo<RailToolItem[]>(
     () => [
-      {
-        id: "search",
-        label: t("shell.rail.search"),
-        icon: "search",
-        onPress: openPalette,
-      },
       {
         id: "new",
         label: t("shell.rail.new"),
         icon: "plus",
         onPress: () => router.navigate({ to: "/projects/new" }),
       },
-      {
-        id: "switch",
-        label: t("shell.rail.switchProject"),
-        icon: "arrows-lr",
-        onPress: handleBrandClick,
-      },
-      {
-        id: "more",
-        label: t("shell.rail.more"),
-        icon: "help",
-        onPress: openPalette,
-      },
     ],
-    [openPalette, router, handleBrandClick, t],
+    [router, t],
   );
 
   // ── TopBar account zone (bell / avatar / gear) ───────────────

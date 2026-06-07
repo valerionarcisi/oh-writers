@@ -34,6 +34,7 @@ import {
   useSwitchToVersion,
   useDuplicateDocumentVersion,
   useRenameDocumentVersion,
+  useDeleteDocumentVersion,
   useUpdateDocumentVersionMeta,
   useCreateDocumentVersionFromScratch,
 } from "~/features/documents";
@@ -42,6 +43,7 @@ import {
   useRestoreVersion,
   useDuplicateVersion as useDuplicateScreenplayVersion,
   useRenameVersion as useRenameScreenplayVersion,
+  useDeleteVersion as useDeleteScreenplayVersion,
   useUpdateVersionMeta as useUpdateScreenplayVersionMeta,
   useCreateManualVersion,
   ReadOnlyScreenplayView,
@@ -88,6 +90,7 @@ function NarrativeVersionsContent({
   const activate = useSwitchToVersion(documentId);
   const duplicate = useDuplicateDocumentVersion(documentId);
   const rename = useRenameDocumentVersion(documentId);
+  const remove = useDeleteDocumentVersion(documentId);
   const updateMeta = useUpdateDocumentVersionMeta(documentId);
   const createNew = useCreateDocumentVersionFromScratch(documentId);
 
@@ -125,6 +128,7 @@ function NarrativeVersionsContent({
       onActivate={(id) => activate.mutate(id)}
       onDuplicate={(id) => duplicate.mutate(id)}
       onRename={(id, label) => rename.mutate({ versionId: id, label })}
+      onDelete={(id) => remove.mutate(id)}
       onSetColor={(id, color: DraftRevisionColor | null) =>
         updateMeta.mutate({ versionId: id, draftColor: color })
       }
@@ -152,6 +156,7 @@ function ScreenplayVersionsContent({
   const restore = useRestoreVersion();
   const duplicate = useDuplicateScreenplayVersion(screenplayId);
   const rename = useRenameScreenplayVersion(screenplayId);
+  const remove = useDeleteScreenplayVersion(screenplayId);
   const updateMeta = useUpdateScreenplayVersionMeta(screenplayId);
   const createNew = useCreateManualVersion();
 
@@ -195,6 +200,7 @@ function ScreenplayVersionsContent({
         });
       }}
       onRename={(id, label) => rename.mutate({ versionId: id, label })}
+      onDelete={(id) => remove.mutate({ versionId: id })}
       onSetColor={(id, color: DraftRevisionColor | null) =>
         updateMeta.mutate({ versionId: id, draftColor: color })
       }
@@ -262,7 +268,10 @@ export function VersionsSplitLane({
             else if (next === "full") onExpand();
             else onStepBack();
           }}
-          onCycle={state === "full" ? onStepBack : onExpand}
+          // The Versions panel has no "expand to full-screen" affordance — the
+          // master→detail panes already give it room. Only offer the reduce
+          // (↙) control when already in the full state; never the ↗ expand.
+          onCycle={state === "full" ? onStepBack : undefined}
           onStepBack={onStepBack}
           onClose={onClose}
           header={

@@ -146,6 +146,7 @@
 .primaryBtn,
 .activateBtn,
 .ghostBtn,
+.dangerBtn,
 .backBtn {
   font-size: var(--text-xs);
   font-weight: 500;
@@ -193,6 +194,25 @@
   border-color: var(--ds-text-3);
 }
 
+/* Delete — quiet by default, danger-tinted on hover so it doesn't shout in the
+ * row but reads clearly as destructive. */
+.dangerBtn {
+  background: var(--ds-surface-alt);
+  border-color: var(--ds-line);
+  color: var(--ds-danger-fg, var(--ds-text-2));
+}
+
+.dangerBtn:hover {
+  background: var(--ds-danger-bg, var(--ds-surface-deep));
+  border-color: var(--ds-danger-fg, var(--ds-text-3));
+  color: var(--ds-danger-fg, var(--ds-text));
+}
+
+.dangerBtn:focus-visible {
+  outline: var(--ring-focus);
+  outline-offset: 1px;
+}
+
 /* Back is the most delicate: no fill, no border, muted — a quiet way out. */
 .backBtn {
   padding-inline: var(--space-2);
@@ -208,6 +228,7 @@
 .primaryBtn:disabled,
 .activateBtn:disabled,
 .ghostBtn:disabled,
+.dangerBtn:disabled,
 .backBtn:disabled,
 .swatchBtn:disabled {
   opacity: 0.45;

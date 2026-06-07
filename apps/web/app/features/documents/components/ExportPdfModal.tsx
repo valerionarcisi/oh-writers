@@ -66,11 +66,7 @@ export function ExportPdfModal({
       title={resolvedTitle}
       footer={
         <>
-          <DsButton
-            variant="ghost"
-            onClick={onClose}
-            disabled={isPending}
-          >
+          <DsButton variant="ghost" onClick={onClose} disabled={isPending}>
             {t("documents.exportPdf.cancel")}
           </DsButton>
           <DsButton
@@ -91,10 +87,7 @@ export function ExportPdfModal({
         </>
       }
     >
-      <div
-        className={styles.body}
-        data-testid="narrative-export-modal"
-      >
+      <div className={styles.body} data-testid="narrative-export-modal">
         {showFormatPicker && (
           <fieldset
             className={styles.fieldset}
@@ -122,13 +115,12 @@ export function ExportPdfModal({
           <input
             type="checkbox"
             data-testid="narrative-export-include-title-page"
-            checked={includeTitlePage && canIncludeTitlePage}
-            disabled={!canIncludeTitlePage}
+            checked={includeTitlePage}
             onChange={(e) => setIncludeTitlePage(e.target.checked)}
           />
           <span>{t("documents.exportPdf.includeTitlePage")}</span>
         </label>
-        {!canIncludeTitlePage && (
+        {includeTitlePage && !canIncludeTitlePage && (
           <p className={styles.hint}>
             {t("documents.exportPdf.titlePageHint")}
           </p>

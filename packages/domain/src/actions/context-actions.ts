@@ -70,22 +70,12 @@ export const CONTEXT_ACTIONS: Readonly<
       feature: "siaeExport",
       order: 20,
     },
-    {
-      id: ContextActionIds.VERSIONS,
-      labelKey: "documents.editor.versions",
-      order: 90,
-    },
   ],
   synopsis: [
     {
       id: ContextActionIds.EXPORT_PDF,
       labelKey: "documents.editor.exportPdf",
       order: 10,
-    },
-    {
-      id: ContextActionIds.VERSIONS,
-      labelKey: "documents.editor.versions",
-      order: 90,
     },
   ],
   outline: [
@@ -94,22 +84,12 @@ export const CONTEXT_ACTIONS: Readonly<
       labelKey: "documents.editor.exportPdf",
       order: 10,
     },
-    {
-      id: ContextActionIds.VERSIONS,
-      labelKey: "documents.editor.versions",
-      order: 90,
-    },
   ],
   treatment: [
     {
       id: ContextActionIds.EXPORT_PDF,
       labelKey: "documents.editor.exportPdf",
       order: 10,
-    },
-    {
-      id: ContextActionIds.VERSIONS,
-      labelKey: "documents.editor.versions",
-      order: 90,
     },
   ],
   // The screenplay surface (A5 / N-19). One pattern, page-specific tools:
@@ -137,11 +117,6 @@ export const CONTEXT_ACTIONS: Readonly<
       id: ContextActionIds.IMPORT_FOUNTAIN,
       labelKey: "screenplay.action.importFountain",
       order: 40,
-    },
-    {
-      id: ContextActionIds.VERSIONS,
-      labelKey: "screenplay.action.versions",
-      order: 90,
     },
   ],
   // ── Production pages (Spec 67 / closes N-28). EXPORT only — these pages have

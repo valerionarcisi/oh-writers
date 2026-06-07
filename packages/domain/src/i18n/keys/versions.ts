@@ -87,6 +87,9 @@ export const versionsKeys = {
     "versions.split.rename": "Rename",
     "versions.split.duplicate": "Duplicate",
     "versions.split.delete": "Delete",
+    "versions.split.deleteTitle": "Delete this version",
+    "versions.split.deleteConfirm":
+      "Delete this version? This cannot be undone.",
     "versions.split.save": "Save",
     "versions.split.cancel": "Cancel",
     "versions.split.setColor": "Set draft color",
@@ -182,6 +185,9 @@ export const versionsKeys = {
     "versions.split.rename": "Rinomina",
     "versions.split.duplicate": "Duplica",
     "versions.split.delete": "Elimina",
+    "versions.split.deleteTitle": "Elimina questa versione",
+    "versions.split.deleteConfirm":
+      "Eliminare questa versione? L'operazione non è reversibile.",
     "versions.split.save": "Salva",
     "versions.split.cancel": "Annulla",
     "versions.split.setColor": "Imposta colore bozza",

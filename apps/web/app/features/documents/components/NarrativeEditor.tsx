@@ -76,7 +76,9 @@ const DOCUMENT_PLACEHOLDER_KEYS: Record<DocumentType, TranslationKey | null> = {
 // TREATMENT → TOC + editor + Cesare panel.
 const layoutForType = (type: DocumentType): "single" | "two" | "three" => {
   if (type === DocumentTypes.SYNOPSIS) return "single";
-  if (type === DocumentTypes.TREATMENT) return "three";
+  // Treatment keeps a single right aside (TOC + margin notes stacked) so the
+  // document column gets the full remaining width — the TOC moved out of the
+  // left column per UX review.
   return "two";
 };
 
@@ -518,16 +520,20 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
   }
 
   const layout = layoutForType(type);
+  // Treatment shows the chapter index (H2/H3 TOC) stacked above the margin notes
+  // in the SAME right aside, so the document column isn't squeezed by a separate
+  // left column.
   const rightAside = (
-    <MarginNotesColumn
-      projectId={document.projectId}
-      docType={type}
-      content={plainContent}
-    />
+    <>
+      {isTreatment && <TreatmentToc content={content} />}
+      <MarginNotesColumn
+        projectId={document.projectId}
+        docType={type}
+        content={plainContent}
+      />
+    </>
   );
-  const leftAside = isTreatment ? (
-    <TreatmentToc content={content} />
-  ) : undefined;
+  const leftAside = undefined;
 
   // Unified "…" actions menu for narrative doc pages (Soggetto-style), now built
   // from the shared context-action registry (Spec 55) so every narrative page

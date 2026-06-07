@@ -130,6 +130,9 @@ export interface VersionsSplitDrawerProps {
   readonly onActivate: (versionId: string) => void;
   readonly onDuplicate: (versionId: string) => void;
   readonly onRename: (versionId: string, label: string) => void;
+  /** Delete a version (host-bound). Omitted → no delete affordance. The current
+   *  version can never be deleted. */
+  readonly onDelete?: (versionId: string) => void;
   readonly onSetColor: (
     versionId: string,
     color: DraftRevisionColor | null,
@@ -159,6 +162,7 @@ export function VersionsSplitDrawer({
   onActivate,
   onDuplicate,
   onRename,
+  onDelete,
   onSetColor,
   onCreateNew,
   canEdit,
@@ -232,6 +236,23 @@ export function VersionsSplitDrawer({
         >
           {t("versions.split.duplicate")}
         </button>
+        {onDelete && !isCurrent && (
+          <button
+            type="button"
+            className={styles.dangerBtn}
+            onClick={() => {
+              if (window.confirm(t("versions.split.deleteConfirm"))) {
+                onDelete(v.id);
+                if (selectedId === v.id) setSelectedId(null);
+              }
+            }}
+            disabled={!canEdit}
+            title={t("versions.split.deleteTitle")}
+            data-testid={`version-delete-${v.id}`}
+          >
+            {t("versions.split.delete")}
+          </button>
+        )}
         <ColorSwatchPicker
           version={v}
           canEdit={canEdit}
