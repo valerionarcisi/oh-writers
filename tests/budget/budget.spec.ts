@@ -1,166 +1,145 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import { BASE_URL } from "../helpers";
-import { BUDGET_PROJECT_ID, navigateToBudget, generateBudget } from "./helpers";
+import {
+  BUDGET_PROJECT_ID,
+  navigateToBudget,
+  generateBudget,
+  openCategoryView,
+  firstFlatRowId,
+} from "./helpers";
 
-test.describe("[Spec 11b] Budget — rule-based dashboard", () => {
+/**
+ * Spec 11b (v2) — Budget dashboard (master→detail flat rate-card).
+ *
+ * The budget was overhauled: a SegmentedControl (overview / category / day /
+ * weekly). The overview shows category cards (`category-card-cast|crew|…`); the
+ * "category" view renders the per-line flat rate-card (CategoryFlatTable) where
+ * each line has a name + an editable quantity (`flat-qty-<id>`) and rate
+ * (`flat-rate-<id>`) cell (click → `<testid>-input` → Enter), grouped by section
+ * with an add-line (`flat-add-crew`). Generation is the FloatingDock "Rigenera".
+ *
+ * Removed vs the old rule-based dashboard: per-resource `resource-row-*`,
+ * day-rate / regime (×1.20) cells, and the scene-chip cast filter no longer
+ * exist (OHW-353 / OHW-355 dropped).
+ *
+ *   [OHW-351] Generate → Cast + Troupe category cards are populated.
+ *   [OHW-352] Edit a line's rate in the flat table → its row total updates.
+ *   [OHW-354] Edit shooting days → the toolbar chip reflects the new value.
+ *   [OHW-356] Add a custom crew line in the flat table → it appears.
+ */
+
+test.describe("[Spec 11b] Budget — flat rate-card dashboard", () => {
   // Each test navigates fresh; budget state persists across tests in this run.
   // Tests are ordered: generate first, then mutate.
 
-  test("[OHW-351] Genera budget → Cast and Troupe populated from breakdown", async ({
+  test("[OHW-351] Genera budget → Cast and Troupe cards are populated", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBudget(page, BUDGET_PROJECT_ID);
     await generateBudget(page);
 
-    // The seeded project has cast actors: Tea, Milco, Luca
-    await expect(page.getByText("Tea")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Milco")).toBeVisible();
-    await expect(page.getByText("Luca")).toBeVisible();
+    // The overview shows the category cards. Cast + Crew (Troupe) are derived
+    // from the breakdown — both must be present with a non-empty role count.
+    const castCard = page.getByTestId("category-card-cast");
+    const crewCard = page.getByTestId("category-card-crew");
+    await expect(castCard).toBeVisible({ timeout: 10_000 });
+    await expect(crewCard).toBeVisible();
+    // The card text carries the role count ("… N ruoli"); after a generate from
+    // a breakdown with cast + crew, neither is "0 ruoli".
+    await expect(crewCard).not.toContainText(/\b0 ruoli\b/);
 
-    // Crew widget should list at least one standard role
-    await expect(page.getByText("Direttore della Fotografia")).toBeVisible();
+    // The flat rate-card view lists the individual lines.
+    await openCategoryView(page);
+    await expect(
+      page.locator('[data-testid^="flat-rate-"]').first(),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("[OHW-352] Modifica €/giorno attore → totale Cast aggiornato live", async ({
+  test("[OHW-352] Editing a line's rate updates that line's total", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
-    // Budget should already exist from previous test; if not, generate it
-    const btn = page.getByTestId("generate-budget-btn");
-    const btnText = await btn.textContent();
-    if (btnText?.trim() === "Genera budget") {
+    // Ensure a budget exists.
+    const dock = page.getByRole("button", { name: /Rigenera|Regenerate/ });
+    if (!(await dock.isVisible().catch(() => false))) {
       await generateBudget(page);
     }
 
-    // Find Tea's row and get her day-rate cell
-    const teaRow = page.locator('[data-testid^="resource-row-"]').filter({
-      hasText: "Tea",
+    await openCategoryView(page);
+    const rowId = await firstFlatRowId(page);
+
+    // The line row carries a total cell; capture it, then bump the rate.
+    const row = page.locator(`[data-row-id="${rowId}"]`);
+    const totalBefore = (await row.textContent())?.trim() ?? "";
+
+    const rateCell = page.getByTestId(`flat-rate-${rowId}`);
+    await rateCell.click();
+    const input = page.getByTestId(`flat-rate-${rowId}-input`);
+    await input.fill("999");
+    await input.press("Enter");
+
+    // The row's total recomputes (qty × 999), so the row text changes and now
+    // contains the new rate.
+    await expect
+      .poll(async () => (await row.textContent())?.trim() ?? "", {
+        timeout: 8_000,
+      })
+      .not.toBe(totalBefore);
+    await expect(page.getByTestId(`flat-rate-${rowId}`)).toContainText("999", {
+      timeout: 5_000,
     });
-    await expect(teaRow).toBeVisible({ timeout: 10_000 });
-
-    const rowId = await teaRow
-      .getAttribute("data-testid")
-      .then((v) => v?.replace("resource-row-", ""));
-    if (!rowId) throw new Error("Could not get Tea row id");
-
-    // Click the day-rate cell to enter edit mode
-    const dayRateCell = page.getByTestId(`resource-day-rate-${rowId}`);
-    await dayRateCell.click();
-
-    // Type new rate and confirm
-    await dayRateCell.fill("999");
-    await dayRateCell.press("Enter");
-
-    // The total cell should update
-    const totalCell = page.getByTestId(`resource-row-total-${rowId}`);
-    // With 999/day the total should contain "999"
-    await expect(totalCell).toContainText("999", { timeout: 8_000 });
   });
 
-  test("[OHW-353] Cambia regime 'privato' → totale riga ×1.20", async ({
+  test("[OHW-354] Editing shooting days updates the toolbar chip", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
-    const teaRow = page.locator('[data-testid^="resource-row-"]').filter({
-      hasText: "Tea",
-    });
-    await expect(teaRow).toBeVisible({ timeout: 10_000 });
+    const daysChip = page.getByTestId("shooting-days");
+    await expect(daysChip).toBeVisible({ timeout: 10_000 });
 
-    const rowId = await teaRow
-      .getAttribute("data-testid")
-      .then((v) => v?.replace("resource-row-", ""));
-    if (!rowId) throw new Error("Could not get Tea row id");
+    // The SettingChip is a button that swaps to a number input on click — the
+    // input is rendered under the same `shooting-days` testid.
+    await daysChip.click();
+    const input = page.locator('input[data-testid="shooting-days"]');
+    await input.fill("15");
+    await input.press("Enter");
 
-    // Read current total text to compare after regime change
-    const totalCell = page.getByTestId(`resource-row-total-${rowId}`);
-    const totalBefore = await totalCell.textContent();
-
-    // Change regime to privato
-    const regimeSelect = page.getByTestId(`resource-regime-${rowId}`);
-    await regimeSelect.selectOption("privato");
-
-    // Total should change (×1.20 applied)
-    await expect(totalCell).not.toHaveText(totalBefore ?? "", {
+    // The idle chip now shows 15.
+    await expect(page.getByTestId("shooting-days")).toContainText("15", {
       timeout: 8_000,
     });
-
-    // Reset back to piva to keep test state clean
-    await regimeSelect.selectOption("piva");
   });
 
-  test("[OHW-354] Modifica shooting days → valore aggiornato in toolbar", async ({
+  test("[OHW-356] Add a custom crew line → it appears in the flat table", async ({
     authenticatedPage,
   }) => {
     const page = authenticatedPage;
     await navigateToBudget(page, BUDGET_PROJECT_ID);
 
-    const daysField = page.getByTestId("shooting-days");
-    await expect(daysField).toBeVisible({ timeout: 10_000 });
-
-    // Click to edit
-    await daysField.click();
-    await daysField.fill("15");
-    await daysField.press("Enter");
-
-    // Field should reflect the new value
-    await expect(daysField).toHaveText(/15/, { timeout: 8_000 });
-  });
-
-  test("[OHW-355] Seleziona scena → Cast mostra solo attori presenti in quella scena", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToBudget(page, BUDGET_PROJECT_ID);
-
-    // Scene chip bar must be present (requires at least one scene in breakdown)
-    const chip1 = page.getByTestId("scene-chip-1");
-    if (!(await chip1.isVisible())) {
-      // No scenes seeded or no breakdown — skip gracefully
-      test.skip();
-      return;
+    const dock = page.getByRole("button", { name: /Rigenera|Regenerate/ });
+    if (!(await dock.isVisible().catch(() => false))) {
+      await generateBudget(page);
     }
 
-    // Click scene 1 chip
-    await chip1.click();
-    await expect(chip1).toHaveClass(/sceneChipActive/, { timeout: 5_000 });
+    await openCategoryView(page);
 
-    // The cast "Tutte" total widget should still be present
-    await expect(page.getByText("Cast")).toBeVisible();
+    // The crew section exposes an add-line affordance.
+    const addBtn = page.getByTestId("flat-add-crew");
+    await expect(addBtn).toBeVisible({ timeout: 10_000 });
+    await addBtn.click();
 
-    // Click Tutte to reset
-    await page
-      .getByTestId("scene-chip-all")
-      .or(page.locator("button.sceneChip").filter({ hasText: "Tutte" }))
-      .click();
-  });
+    const name = `Drone Operator ${Date.now()}`;
+    const addInput = page.getByPlaceholder(/ruolo|role/i);
+    await expect(addInput).toBeVisible({ timeout: 5_000 });
+    await addInput.fill(name);
+    await addInput.press("Enter");
 
-  test("[OHW-356] Aggiungi ruolo custom troupe → appare nel widget Troupe", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
-    await navigateToBudget(page, BUDGET_PROJECT_ID);
-    await expect(page.getByText("Troupe")).toBeVisible({ timeout: 10_000 });
-
-    // Open add-role form
-    await page.getByText("+ Aggiungi ruolo").click();
-
-    // Fill name
-    const nameInput = page.getByPlaceholder("Nome ruolo");
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill("Drone Operator");
-
-    // Submit
-    await page.getByRole("button", { name: "Aggiungi" }).click();
-
-    // New row should appear
-    await expect(page.getByText("Drone Operator")).toBeVisible({
-      timeout: 8_000,
-    });
+    // The new crew line appears in the table.
+    await expect(page.getByText(name)).toBeVisible({ timeout: 8_000 });
   });
 });

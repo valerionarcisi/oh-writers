@@ -31,3 +31,30 @@ export const generateBudget = async (page: Page) => {
   // After generation the dock button returns to the "Rigenera" idle label.
   await expect(btn).toHaveText(/Rigenera|Regenerate/, { timeout: 20_000 });
 };
+
+// Spec 11b v2: the budget is a SegmentedControl (overview / category / day /
+// weekly). The per-line flat rate-card (CategoryFlatTable: name + editable
+// quantity/rate cells, grouped by section) lives in the "category" view.
+export const openCategoryView = async (page: Page) => {
+  // Wait for the budget to finish loading (overview cards present) before
+  // switching views — clicking the segmented tab mid-load shows an empty table.
+  await expect(
+    page.locator('[data-testid^="category-card-"]').first(),
+  ).toBeVisible({ timeout: 15_000 });
+  // Switch to the flat rate-card view and retry until its line cells render
+  // (the tab + table can lag a beat behind the click after a reload).
+  await expect(async () => {
+    await page.getByTestId("segmented-category").click();
+    await expect(
+      page.locator('[data-testid^="flat-rate-"]').first(),
+    ).toBeVisible({ timeout: 4_000 });
+  }).toPass({ timeout: 20_000 });
+};
+
+// Return the row id of the first editable rate line in the flat table.
+export const firstFlatRowId = async (page: Page): Promise<string> => {
+  const cell = page.locator('[data-testid^="flat-rate-"]').first();
+  await expect(cell).toBeVisible({ timeout: 15_000 });
+  const testId = await cell.getAttribute("data-testid");
+  return testId!.replace("flat-rate-", "");
+};
