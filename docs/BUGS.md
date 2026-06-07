@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N41 — narrative realtime editor double-seeds the CRDT → unbounded growth → "Invalid string length" freeze (2026-06-07)
+
+- Severity: ALTO (freezes the whole page; Attiva / Nuova versione appear broken because the page is already frozen when clicked)
+- Status: fixed (`NarrativeProseMirrorView` seed guard + corrupted-CRDT data cleanup)
+- Repro: open a narrative doc with realtime ON (ws-server up) whose `documents.yjs_state` already holds content — e.g. project `…012` Soggetto (doc `5903948d`). The editor loaded clean (3735 chars) then ballooned to ~112 MB within ~5s, the save pill stuck on "Salvataggio…", and `RangeError: Invalid string length` froze the tab. With ws-server DOWN the same doc loaded clean and stayed stable — isolating the cause to the realtime CRDT, not the HTML converter (which unit-tests as perfectly idempotent on the real content).
+- Proof: `documents.yjs_state` for `5903948d` measured **129 MB** while its text was 3.7 KB (project `…013`'s healthy Soggetto was 2.6 KB). After the fix + cleanup, a single fresh client loads at exactly the content length (4556), 1 online, stable across repeated samples; Attiva + Nuova versione both work with no freeze. Regression test: `apps/web/app/features/documents/components/narrative-realtime-seed.test.ts`.
+- Notes / cause: `NarrativeProseMirrorView` created the `EditorState` with `doc: initialDoc` unconditionally while `ySyncPlugin` was bound to the shared fragment. When the fragment was already populated (a reconnecting client), y-prosemirror merged the initial doc ON TOP of the existing content, growing the CRDT every connect; `flushRoom` persisted the bloat, compounding across sessions. The screenplay editor already guards this (`ProseMirrorView` `seedFromInitial = !isRealtime || isFragmentEmpty(ydoc)`); the narrative view was missing the same guard. Fix mirrors it: seed from `initialDoc` only when `isFragmentEmpty(realtime.ydoc)`, else build the state empty (`{ schema }`) and let the CRDT populate. Data fix: nulled the bloated `documents.yjs_state` so the room reseeds clean (ws-server restart required — it caches the room in memory).
+
 ### BUG-N40 — /api/test/fundraising-seed returns 503 in dev (route module won't load) (2026-06-07)
 
 - Severity: BASSO (test-only endpoint; blocks the Spec 35 fundraising E2E)

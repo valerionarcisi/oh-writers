@@ -7,6 +7,7 @@ import {
   type NarrativeRealtime,
 } from "../lib/narrative-plugins";
 import { docToHtml, htmlToDoc } from "../lib/narrative-html";
+import { isFragmentEmpty } from "~/features/realtime";
 import { cesareHighlightPlugin } from "../lib/cesare-highlight-plugin";
 import "~/features/realtime/lib/cursor-styles.css";
 import "../lib/cesare-highlight.css";
@@ -55,8 +56,18 @@ export function NarrativeProseMirrorView({
     const schema = getNarrativeSchema(enableHeadings);
     const initialDoc = htmlToDoc(lastValueRef.current, schema);
 
+    // Realtime mode: only seed the editor from `initialDoc` when the shared Yjs
+    // fragment is still empty (this client is the first to open the room).
+    // Otherwise the doc loads from the CRDT and we MUST start empty — passing a
+    // non-empty `doc` while `ySyncPlugin` is bound to a populated fragment makes
+    // y-prosemirror merge the initial doc ON TOP of the existing content on every
+    // connect, growing the CRDT unboundedly until it serialises past V8's max
+    // string length (the narrative "Invalid string length" freeze). Mirrors the
+    // screenplay editor's seed guard.
+    const seedFromInitial = !realtime || isFragmentEmpty(realtime.ydoc);
+
     const state = EditorState.create({
-      doc: initialDoc,
+      ...(seedFromInitial ? { doc: initialDoc } : { schema }),
       plugins: [
         ...buildNarrativePlugins(schema, { placeholder, realtime }),
         ...(documentType ? [cesareHighlightPlugin(documentType)] : []),
