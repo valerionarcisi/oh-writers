@@ -17,12 +17,16 @@ import {
   type TitlePageDocJSON,
 } from "../lib/title-page-from-pdf";
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_BASE64_LENGTH = Math.ceil(MAX_FILE_BYTES * 1.4);
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB — real screenplays with
+// embedded fonts/images routinely exceed 10 MB.
 
 const ImportPdfInput = z.object({
   fileName: z.string().max(255),
-  base64: z.string().max(MAX_BASE64_LENGTH),
+  // No Zod max on the base64 string: a too-large file is caught by the
+  // decoded-byte-length guard in the handler, which returns a clean
+  // FileTooLargeError the client renders — a Zod `.max()` here instead throws a
+  // raw 500 (unhandled in the client). The byte guard is the real gate.
+  base64: z.string(),
 });
 
 export interface ImportPdfResult {

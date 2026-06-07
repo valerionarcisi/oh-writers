@@ -4,6 +4,7 @@ import { importPdf } from "../server/pdf-import.server";
 import type { ImportPdfError } from "../pdf-import.errors";
 import type { TitlePageDocJSON } from "../lib/title-page-from-pdf";
 import { dispatchSceneNumberToast } from "../lib/plugins/scene-number-commands";
+import { useTranslation } from "~/features/i18n";
 
 // Count the `#...#` forced-scene-number markers in the imported Fountain.
 // Each one becomes a locked heading in the PM doc — we surface the total
@@ -56,12 +57,22 @@ interface UseImportPdfResult {
   cancel: () => void;
 }
 
-const errorMessage = (error: ImportPdfError): string =>
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+// Map the typed import error to a localised (IT/EN) banner message via i18n —
+// the server returns only the `_tag`, the client owns the copy.
+const errorMessage = (error: ImportPdfError, t: Translate): string =>
   match(error)
-    .with({ _tag: "InvalidPdfError" }, (e) => e.message)
-    .with({ _tag: "EncryptedPdfError" }, (e) => e.message)
-    .with({ _tag: "EmptyPdfError" }, (e) => e.message)
-    .with({ _tag: "FileTooLargeError" }, (e) => e.message)
+    .with({ _tag: "InvalidPdfError" }, () =>
+      t("screenplay.import.error.invalid"),
+    )
+    .with({ _tag: "EncryptedPdfError" }, () =>
+      t("screenplay.import.error.encrypted"),
+    )
+    .with({ _tag: "EmptyPdfError" }, () => t("screenplay.import.error.empty"))
+    .with({ _tag: "FileTooLargeError" }, () =>
+      t("screenplay.import.error.tooLarge"),
+    )
     .exhaustive();
 
 /** Reads a File as a base64-encoded string (without the data-URL prefix). */
@@ -87,6 +98,7 @@ export function useImportPdf({
   onCreateVersionThenImport,
   onTitlePageDetected,
 }: UseImportPdfOptions): UseImportPdfResult {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState<Status>({ type: "idle" });
 
@@ -110,11 +122,23 @@ export function useImportPdf({
       return;
     }
 
-    const result = await importPdf({ data: { fileName: file.name, base64 } });
+    // The server fn can also THROW (a validator rejection, a network/500 error)
+    // — not just return an error ResultShape. Catch it so an import never fails
+    // silently with an uncaught promise: always surface a visible error banner.
+    let result: Awaited<ReturnType<typeof importPdf>>;
+    try {
+      result = await importPdf({ data: { fileName: file.name, base64 } });
+    } catch {
+      setStatus({
+        type: "error",
+        message: t("screenplay.import.error.generic"),
+      });
+      return;
+    }
 
     match(result)
       .with({ isOk: false }, ({ error }) => {
-        setStatus({ type: "error", message: errorMessage(error) });
+        setStatus({ type: "error", message: errorMessage(error, t) });
       })
       .with({ isOk: true }, ({ value }) => {
         const { fountain, titlePageDoc } = value;

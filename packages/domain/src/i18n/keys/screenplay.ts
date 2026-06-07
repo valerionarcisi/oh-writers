@@ -73,6 +73,16 @@ export const screenplayKeys = {
     "screenplay.action.importFountain": "Import Fountain",
     "screenplay.action.versions": "Versions",
 
+    // Import errors (PDF)
+    "screenplay.import.error.invalid": "Not a valid PDF file.",
+    "screenplay.import.error.encrypted":
+      "This PDF is password-protected and cannot be imported.",
+    "screenplay.import.error.empty":
+      "No text could be extracted from this PDF — it may be a scan (image).",
+    "screenplay.import.error.tooLarge": "The PDF must be under 25 MB.",
+    "screenplay.import.error.generic":
+      "Import failed. Please try again with another file.",
+
     // ToolbarMenu
     "screenplay.menu.actionsAria": "Screenplay actions",
     "screenplay.menu.importPdf": "Import PDF",
@@ -287,6 +297,16 @@ export const screenplayKeys = {
     "screenplay.action.importPdf": "Importa PDF",
     "screenplay.action.importFountain": "Importa Fountain",
     "screenplay.action.versions": "Versioni",
+
+    // Import errors (PDF)
+    "screenplay.import.error.invalid": "File PDF non valido.",
+    "screenplay.import.error.encrypted":
+      "Questo PDF è protetto da password e non può essere importato.",
+    "screenplay.import.error.empty":
+      "Nessun testo estraibile da questo PDF — potrebbe essere una scansione (immagine).",
+    "screenplay.import.error.tooLarge": "Il PDF deve essere inferiore a 25 MB.",
+    "screenplay.import.error.generic":
+      "Importazione non riuscita. Riprova con un altro file.",
 
     // ToolbarMenu
     "screenplay.menu.actionsAria": "Azioni sceneggiatura",

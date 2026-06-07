@@ -1,7 +1,8 @@
 /* ActionsMenu — the "…" (more) trigger in the TopBar right slot. */
 
-/* A visible, tappable pill (not a bare ghost icon) so the page-actions menu reads
- * as an affordance — subtle surface + hairline border, darkens on hover/open. */
+/* Minimal ghost icon — transparent at rest like the sibling bell / Focus
+ * controls (the filled-dots icon carries the affordance), with a subtle surface
+ * only on hover / when open. */
 .trigger {
   display: inline-flex;
   align-items: center;
@@ -9,9 +10,9 @@
   inline-size: var(--space-7, 28px);
   block-size: var(--space-7, 28px);
   padding: 0;
-  border: 1px solid var(--ds-line);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background: var(--ds-surface-alt);
+  background: transparent;
   color: var(--ds-text-2);
   cursor: pointer;
   transition:
@@ -22,8 +23,7 @@
 
 .trigger:hover,
 .trigger[aria-expanded="true"] {
-  background: var(--ds-surface-deep);
-  border-color: var(--ds-text-3);
+  background: var(--ds-surface-alt);
   color: var(--ds-text);
 }
 

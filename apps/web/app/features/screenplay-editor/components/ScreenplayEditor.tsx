@@ -11,7 +11,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { match } from "ts-pattern";
 import type { EditorView } from "prosemirror-view";
 import type { Plugin } from "prosemirror-state";
-import { ActionsMenu, Button, Dialog, DocStats } from "@oh-writers/ui";
+import {
+  ActionsMenu,
+  Button,
+  Dialog,
+  DocStats,
+  VersionTrigger,
+} from "@oh-writers/ui";
 import type { DropdownMenuItem } from "@oh-writers/ui";
 import type { ScreenplayView } from "../server/screenplay.server";
 import { useAutoSave } from "../hooks/useScreenplay";
@@ -1074,6 +1080,24 @@ export const ScreenplayEditor = forwardRef<
     [actionItems, isFocusMode],
   );
   useTopBarSlotPublisher("actions", topBarActionsNode);
+
+  // Unified TopBar version chip (same "VERSIONI ⌄" pill as the narrative docs),
+  // so versions are reachable the same way everywhere — not only from the ⋯
+  // menu. Hidden in focus mode.
+  const versionChipNode = useMemo(
+    () =>
+      isFocusMode ? null : (
+        <VersionTrigger
+          variant="pill"
+          label={t("screenplay.action.versions")}
+          versionLabel={t("documents.shell.versions")}
+          onClick={toggleVersionsDrawer}
+          data-testid="topbar-version-chip"
+        />
+      ),
+    [isFocusMode, toggleVersionsDrawer, t],
+  );
+  useTopBarSlotPublisher("versionSelector", versionChipNode);
 
   return (
     <div className={`${styles.page} ${isFocusMode ? styles.focusMode : ""}`}>
