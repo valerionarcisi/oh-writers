@@ -23,6 +23,14 @@ E2E first; screenshots in a recap; gates green).
 
 ## Open
 
+### BUG-N40 — /api/test/fundraising-seed returns 503 in dev (route module won't load) (2026-06-07)
+
+- Severity: BASSO (test-only endpoint; blocks the Spec 35 fundraising E2E)
+- Status: open
+- Repro: `curl -X POST http://localhost:3002/api/test/fundraising-seed -d '{"title":"T","guid":"g1"}'` against the dev server → generic vinxi `503 Server Unavailable` (HTML), not the handler's 200/400. Persists across many retries (~30s), so it's not just lazy-compile warmup.
+- Proof: the four Spec 35 E2E (`tests/fundraising-classify.spec.ts` OHW-353/354, `tests/fundraising-ui.spec.ts` OHW-355/356) all fail at the seed call (`seed responded 503`). They are `test.fixme` until the endpoint loads. The sibling test routes load fine: `set-locale` / `mock-context` / `reset-cesare-state` / `set-narrative-state` return 400 on an empty body, and `POST /api/cron/fundraising-ingest` returns 200 — only `fundraising-seed` 503s.
+- Notes / suspected cause: the route imports the same `@oh-writers/db/schema` tables as the (working) `set-narrative-state` route and `getDb` like the (working) cron, so it's not an obviously missing export. Something in the `fundraising-seed` route module throws at load under vinxi dev. Investigate with the route module's actual load error (vinxi server log didn't surface one). Un-fixme the four tests once it loads. A `seedFundraising` helper with 503-retry is already in `tests/fundraising-helpers.ts`.
+
 ### BUG-N39 — Tab from a dialogue block goes to Parenthetical, not Action (2026-06-06)
 
 - Severity: BASSO
