@@ -144,9 +144,18 @@ export function NarrativeEditor({ document, type }: NarrativeEditorProps) {
     provider: realtimeProvider,
     status: realtimeStatus,
     peers: realtimePeers,
+    synced: realtimeSynced,
   } = useYjsRoom(`document:${document.id}`, realtimeUser, !isReadOnly);
+  // Mount the realtime editor only AFTER the first sync. Mounting on bare
+  // `connected` (websocket open, server state still in flight) would seed the
+  // CRDT from the local initial doc while the fragment momentarily looks empty,
+  // then merge the arriving server content on top of it — the BUG-N41
+  // double-seed. Waiting for `synced` makes `isFragmentEmpty` authoritative.
   const narrativeRealtime =
-    realtimeStatus === "connected" && realtimeDoc && realtimeProvider
+    realtimeStatus === "connected" &&
+    realtimeSynced &&
+    realtimeDoc &&
+    realtimeProvider
       ? { ydoc: realtimeDoc, provider: realtimeProvider }
       : null;
 

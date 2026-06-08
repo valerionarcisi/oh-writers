@@ -23,6 +23,12 @@ export interface RealtimeRoom {
   provider: WebsocketProvider | null;
   status: RealtimeStatus;
   peers: Peer[];
+  /** True once the provider has received the server's initial state for this
+   *  room (the y-websocket `sync` event). Editors that seed an empty CRDT from
+   *  a local initial doc MUST wait for this before mounting — seeding while the
+   *  fragment still looks empty but the server's content is in flight makes
+   *  y-prosemirror merge the initial doc on top of it (BUG-N41 double-seed). */
+  synced: boolean;
 }
 
 interface LocalUser {
@@ -35,6 +41,7 @@ const DISABLED: RealtimeRoom = {
   provider: null,
   status: "disabled",
   peers: [],
+  synced: false,
 };
 
 /**
@@ -102,14 +109,22 @@ export const useYjsRoom = (
         return peers;
       };
 
+      // Latches on the first `sync`: the server's initial state has landed, so
+      // the fragment now reflects the canonical content and is safe to seed
+      // against. Never flips back — a later reconnect re-syncs onto the same doc.
+      let synced = provider.synced;
+
       const update = (status: RealtimeStatus): void => {
         if (disposed) return;
-        setRoom({ ydoc, provider, status, peers: readPeers() });
+        setRoom({ ydoc, provider, status, peers: readPeers(), synced });
       };
 
       const onStatus = (e: { status: string }): void =>
         update(e.status === "connected" ? "connected" : "offline");
-      const onSync = (): void => update("connected");
+      const onSync = (): void => {
+        synced = true;
+        update("connected");
+      };
       const onAwareness = (): void => update(statusOf(provider));
 
       provider.on("status", onStatus);
