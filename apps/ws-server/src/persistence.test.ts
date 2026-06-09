@@ -18,13 +18,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // `vi.mock` factories below can reference them (a plain top-level const would be
 // uninitialised when the hoisted factory runs).
 const fixture = vi.hoisted(() => {
+  // Rows carry both CRDT columns: `yjsState` (screenplay/document/branch-level)
+  // and `yjsSnapshot` (per screenplay version). The persistence layer reads/
+  // writes whichever matches the room scope.
   interface YjsRow {
-    yjsState: Uint8Array | null;
+    yjsState?: Uint8Array | null;
+    yjsSnapshot?: Uint8Array | null;
   }
 
   // One in-memory table per room kind, keyed by row id.
   const tables = {
     screenplays: new Map<string, YjsRow>(),
+    screenplayVersions: new Map<string, YjsRow>(),
     documents: new Map<string, YjsRow>(),
     screenplayBranches: new Map<string, YjsRow>(),
   };
@@ -37,6 +42,10 @@ const fixture = vi.hoisted(() => {
   const tableMarkers: Record<TableName, { __table: TableName; id: TableName }> =
     {
       screenplays: { __table: "screenplays", id: "screenplays" },
+      screenplayVersions: {
+        __table: "screenplayVersions",
+        id: "screenplayVersions",
+      },
       documents: { __table: "documents", id: "documents" },
       screenplayBranches: {
         __table: "screenplayBranches",
@@ -56,9 +65,10 @@ vi.mock("@oh-writers/db", () => {
       tables[name].get(args.where.id);
 
   const update = (marker: { __table: TableName }) => ({
-    set: (values: { yjsState: Uint8Array }) => ({
+    set: (values: { yjsState?: Uint8Array; yjsSnapshot?: Uint8Array }) => ({
       where: async (where: { id: string }): Promise<void> => {
-        tables[marker.__table].set(where.id, { yjsState: values.yjsState });
+        const prev = tables[marker.__table].get(where.id) ?? {};
+        tables[marker.__table].set(where.id, { ...prev, ...values });
       },
     }),
   });
@@ -67,6 +77,7 @@ vi.mock("@oh-writers/db", () => {
     db: {
       query: {
         screenplays: { findFirst: makeFindFirst("screenplays") },
+        screenplayVersions: { findFirst: makeFindFirst("screenplayVersions") },
         documents: { findFirst: makeFindFirst("documents") },
         screenplayBranches: {
           findFirst: makeFindFirst("screenplayBranches"),
@@ -105,6 +116,7 @@ const seedDoc = (text: string): Doc => {
 
 beforeEach(() => {
   fixture.tables.screenplays.clear();
+  fixture.tables.screenplayVersions.clear();
   fixture.tables.documents.clear();
   fixture.tables.screenplayBranches.clear();
 });
@@ -152,5 +164,56 @@ describe("loadYjsState on a never-synced row", () => {
   it("returns null when the row exists but yjsState is null", async () => {
     fixture.tables.screenplays.set("sp-1", { yjsState: null });
     expect(await loadYjsState({ kind: "screenplay", id: "sp-1" })).toBeNull();
+  });
+});
+
+describe("version-scoped screenplay room (per-version CRDT)", () => {
+  const versionRoom: ParsedRoom = {
+    kind: "screenplay",
+    id: "sp-1",
+    versionId: "ver-1",
+  };
+
+  it("persists into screenplay_versions.yjs_snapshot, not screenplays.yjs_state", async () => {
+    const doc = seedDoc("v1 content");
+    await flushRoom(versionRoom, doc);
+
+    // The version row carries the snapshot; the screenplay-level state is untouched.
+    expect(
+      fixture.tables.screenplayVersions.get("ver-1")?.yjsSnapshot,
+    ).toBeDefined();
+    expect(fixture.tables.screenplays.get("sp-1")).toBeUndefined();
+
+    const loaded = await loadYjsState(versionRoom);
+    const restored = new Doc();
+    applyUpdate(restored, loaded as Uint8Array);
+    expect(restored.getText("content").toString()).toBe("v1 content");
+  });
+
+  it("returns null for a version whose snapshot was never written (blank version)", async () => {
+    expect(await loadYjsState(versionRoom)).toBeNull();
+  });
+
+  it("two versions of the same screenplay have independent CRDTs", async () => {
+    const a: ParsedRoom = {
+      kind: "screenplay",
+      id: "sp-1",
+      versionId: "ver-a",
+    };
+    const b: ParsedRoom = {
+      kind: "screenplay",
+      id: "sp-1",
+      versionId: "ver-b",
+    };
+    await flushRoom(a, seedDoc("alpha"));
+    await flushRoom(b, seedDoc("beta"));
+
+    const la = new Doc();
+    applyUpdate(la, (await loadYjsState(a)) as Uint8Array);
+    const lb = new Doc();
+    applyUpdate(lb, (await loadYjsState(b)) as Uint8Array);
+
+    expect(la.getText("content").toString()).toBe("alpha");
+    expect(lb.getText("content").toString()).toBe("beta");
   });
 });

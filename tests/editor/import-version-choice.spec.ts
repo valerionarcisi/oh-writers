@@ -19,11 +19,10 @@ import { test, expect } from "../fixtures";
 import type { Page } from "@playwright/test";
 import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
 
-// Open the routed Versions surface (Spec 66) from the ⋯ menu and wait for the
-// shared master→detail drawer.
+// Open the routed Versions surface (Spec 66) from the unified TopBar version
+// chip (the single entry point) and wait for the shared master→detail drawer.
 async function openVersions(page: Page) {
-  await openScreenplayActionsMenu(page);
-  await page.getByTestId("menu-item-versions").click();
+  await page.getByTestId("topbar-version-chip").click();
   await expect(page.getByTestId("versions-split-drawer")).toBeVisible({
     timeout: 10_000,
   });
@@ -69,15 +68,14 @@ test.describe("Import PDF — version choice dialog", () => {
     await page.goto(`${BASE_URL}/projects/${testProjectId}/screenplay`);
     await waitForEditor(page);
 
-    // Ensure at least one version exists by creating one on the routed surface,
-    // then close it so the ⋯ import actions are reachable.
+    // The seed already gives this screenplay a version + live content, which is
+    // the precondition for the import version-choice dialog. We must NOT create
+    // a blank version here ("+ Nuova versione" now blanks the editor — Spec 66),
+    // as that would wipe the content the import dialog needs.
     await openVersions(page);
-    const rows = page.locator('[data-testid^="versions-split-row-"]');
-    const before = await rows.count();
-    await page.getByTestId("version-new").click();
-    await expect
-      .poll(async () => rows.count(), { timeout: 10_000 })
-      .toBe(before + 1);
+    await expect(
+      page.locator('[data-testid^="versions-split-row-"]').first(),
+    ).toBeVisible({ timeout: 10_000 });
     await closeVersions(page);
   });
 

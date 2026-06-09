@@ -3,8 +3,9 @@
  *
  * The screenplay shares the unified Versions surface with the narrative docs
  * (Spec 66 / ADR-0004): a routed master→detail SplitDrawer, NO diff, NO
- * segmented "Attuale/Confronta". The screenplay opens it from the TopBar ⋯
- * ("Altre azioni") menu → "Versioni" item, which routes to
+ * segmented "Attuale/Confronta". The screenplay opens it from the unified TopBar
+ * version chip (`topbar-version-chip`) — the single entry point everywhere; the
+ * old ⋯ ("Altre azioni") menu "Versioni" item is retired. The chip routes to
  * `?versions=<screenplayId>&vkind=screenplay`. `Attiva` restores the version
  * onto the live screenplay. The detail pane renders the script read-only via
  * ReadOnlyScreenplayView.
@@ -26,21 +27,24 @@
  * [OHW-171] Click a version → read-only detail (script renders) + Indietro.
  * [OHW-172] Duplicate grows the list.
  * [OHW-173] Inline rename persists.
- * [OHW-175] "+ Nuova versione" grows the list.
- * [OHW-176] Attiva (restore) succeeds without error and the surface survives.
+ * [OHW-175] "+ Nuova versione" grows the list (snapshot-then-blank: a new
+ *           version on non-empty content may add the snapshot + the blank one).
+ * [OHW-176] Attiva sets the current pointer — the "Attuale" badge moves.
+ * [OHW-177] The current version has NO delete button; a non-current one deletes
+ *           (with a confirm) and the surface stays coherent (regression: a
+ *           deleted version must not leave an orphaned detail pane).
  */
 
 import { test, expect } from "../fixtures";
 import type { Page } from "@playwright/test";
-import { BASE_URL, waitForEditor, openScreenplayActionsMenu } from "../helpers";
+import { BASE_URL, waitForEditor } from "../helpers";
 
-// Open the routed Versions surface from the ⋯ menu and wait for the shared
-// master→detail drawer to mount.
+// Open the routed Versions surface from the unified TopBar version chip (the
+// single entry point) and wait for the shared master→detail drawer to mount.
 async function openVersions(page: Page) {
-  await openScreenplayActionsMenu(page);
-  const item = page.getByTestId("menu-item-versions");
-  await expect(item).toBeVisible({ timeout: 5_000 });
-  await item.click();
+  const chip = page.getByTestId("topbar-version-chip");
+  await expect(chip).toBeVisible({ timeout: 15_000 });
+  await chip.click();
   await expect(page.getByTestId("versions-split-drawer")).toBeVisible({
     timeout: 10_000,
   });
@@ -137,9 +141,12 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
 
     await page.getByTestId("version-new").click();
 
+    // snapshot-then-blank: on non-empty content "+ Nuova versione" snapshots the
+    // current draft AND adds the new blank version, so the list can grow by 2.
+    // Assert it grew (≥ +1) rather than an exact count.
     await expect
       .poll(async () => rows(page).count(), { timeout: 10_000 })
-      .toBe(before + 1);
+      .toBeGreaterThan(before);
   });
 
   test("[OHW-176] Attiva (restore) succeeds and the surface survives", async ({
@@ -168,8 +175,66 @@ test.describe("Screenplay Versions — master→detail (Spec 66)", () => {
     ]);
     expect(resp.ok()).toBe(true);
 
-    // The surface is still mounted and the list still shows the versions.
-    await expect(page.getByTestId("versions-split-drawer")).toBeVisible();
-    await expect(rows(page).first()).toBeVisible();
+    // Activating sets the current pointer: the activated version now carries the
+    // "Attuale" badge and exactly one version is current.
+    await expect(
+      page.getByTestId(`versions-split-current-${targetId}`),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-testid^="versions-split-current-"]'),
+    ).toHaveCount(1);
+  });
+
+  test("[OHW-177] the current version has no delete button; a non-current one deletes", async ({
+    authenticatedPage: page,
+  }) => {
+    await openVersions(page);
+    // Ensure ≥2 versions so there's a non-current one to delete.
+    if ((await rows(page).count()) < 2) {
+      await page.getByTestId("version-new").click();
+      await expect
+        .poll(async () => rows(page).count(), { timeout: 10_000 })
+        .toBeGreaterThanOrEqual(2);
+    }
+
+    // The current version (carries the badge) must NOT expose a delete button.
+    const currentBadge = page
+      .locator('[data-testid^="versions-split-current-"]')
+      .first();
+    await expect(currentBadge).toBeVisible({ timeout: 10_000 });
+    const currentId = (await currentBadge.getAttribute("data-testid"))!.replace(
+      "versions-split-current-",
+      "",
+    );
+    await expect(page.getByTestId(`version-delete-${currentId}`)).toHaveCount(
+      0,
+    );
+
+    // A non-current version DOES expose delete. Confirm the dialog and verify the
+    // row disappears AND the surface stays coherent (no dead detail pane).
+    const deleteBtn = page.locator('[data-testid^="version-delete-"]').first();
+    await expect(deleteBtn).toBeVisible({ timeout: 10_000 });
+    const targetId = (await deleteBtn.getAttribute("data-testid"))!.replace(
+      "version-delete-",
+      "",
+    );
+    const before = await rows(page).count();
+    await deleteBtn.click();
+    // Our own confirm modal (not the native window.confirm) — accept the
+    // visible one (the dialog primitive keeps a hidden instance mounted).
+    await page
+      .getByTestId("confirm-dialog-confirm-btn")
+      .filter({ visible: true })
+      .click();
+
+    await expect
+      .poll(async () => rows(page).count(), { timeout: 10_000 })
+      .toBe(before - 1);
+    await expect(
+      page.getByTestId(`versions-split-row-${targetId}`),
+    ).toHaveCount(0);
+    // Regression: the surface stays on the list (no orphaned detail of the
+    // deleted version) and is still usable.
+    await expect(page.getByTestId("versions-split-list")).toBeVisible();
   });
 });

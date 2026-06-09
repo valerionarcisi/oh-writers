@@ -302,6 +302,13 @@
       "when": 1779000000008,
       "tag": "0037_document_versions_draft_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779000000009,
+      "tag": "0038_seed_active_version_yjs_snapshot",
+      "breakpoints": true
     }
   ]
 }

@@ -28,6 +28,7 @@ import {
   ListVersionsInput,
   GetVersionInput,
   CreateManualVersionInput,
+  CreateVersionFromScratchInput,
   RestoreVersionInput,
   DeleteVersionInput,
   RenameVersionInput,
@@ -211,6 +212,30 @@ export const versionsQueryOptions = (screenplayId: string) =>
     enabled: screenplayId.length > 0,
   });
 
+// ─── Current (active) version id ──────────────────────────────────────────────
+// The screenplay's `current_version_id` points at the active version. The
+// Versions surface reads it to show the "Attuale" badge + gate delete on the
+// current version (you can't delete the active one).
+export const getCurrentVersionId = createServerFn({ method: "GET" })
+  .validator(ListVersionsInput)
+  .handler(
+    async ({
+      data,
+    }): Promise<ResultShape<string | null, ScreenplayAccessError>> => {
+      const db = await getDb();
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
+      if (access.isErr()) return toShape(err(access.error));
+      return toShape(ok(access.value.currentVersionId ?? null));
+    },
+  );
+
+export const currentVersionIdQueryOptions = (screenplayId: string) =>
+  queryOptions({
+    queryKey: ["screenplay-current-version", screenplayId] as const,
+    queryFn: () => getCurrentVersionId({ data: { screenplayId } }),
+    enabled: screenplayId.length > 0,
+  });
+
 // ─── Get single version ───────────────────────────────────────────────────────
 
 export const getVersion = createServerFn({ method: "GET" })
@@ -246,6 +271,11 @@ export const createManualVersion = createServerFn({ method: "POST" })
       if (access.isErr()) return toShape(err(access.error));
       const screenplay = access.value;
 
+      // Checkpoint: snapshot the CURRENT live content into a new named version,
+      // carrying the breakdown forward. The live screenplay is left untouched —
+      // the import flow calls this to preserve the pre-import draft before
+      // overwriting the editor. A fresh BLANK version is a different operation
+      // (`createBlankVersion`), do not conflate the two.
       return toShape(
         await ResultAsync.fromPromise(
           db.transaction(async (tx) => {
@@ -260,6 +290,21 @@ export const createManualVersion = createServerFn({ method: "POST" })
               .orderBy(desc(screenplayVersions.number))
               .limit(1);
             const prevVersionId = prevVersion[0]?.id ?? null;
+            // Snapshot the CRDT too: the screenplay content is version-backed
+            // in Yjs, so the checkpoint must carry the live CRDT (the active
+            // version's snapshot, falling back to the screenplay-level state)
+            // or the new version would be an empty husk.
+            const liveSnapshot = screenplay.currentVersionId
+              ? ((
+                  await tx.query.screenplayVersions.findFirst({
+                    where: eq(
+                      screenplayVersions.id,
+                      screenplay.currentVersionId,
+                    ),
+                    columns: { yjsSnapshot: true },
+                  })
+                )?.yjsSnapshot ?? screenplay.yjsState)
+              : screenplay.yjsState;
             const inserted = await tx
               .insert(screenplayVersions)
               .values({
@@ -268,6 +313,7 @@ export const createManualVersion = createServerFn({ method: "POST" })
                 label: data.label,
                 content: screenplay.content,
                 pageCount: screenplay.pageCount,
+                yjsSnapshot: liveSnapshot,
                 draftColor,
                 draftDate: todayIsoDate(),
                 createdBy: user.id,
@@ -284,6 +330,77 @@ export const createManualVersion = createServerFn({ method: "POST" })
             return inserted;
           }),
           (e) => new DbError("createManualVersion", e),
+        ).andThen((v) =>
+          v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
+        ),
+      );
+    },
+  );
+
+// ─── Create blank version ─────────────────────────────────────────────────────
+// "+ Nuova versione": a brand-new EMPTY version that becomes the active one, so
+// the editor reloads to a clean page to write on. Mirrors the narrative
+// `createVersionFromScratch`. Content is version-backed (`getScreenplay` reads
+// the active version row), so blanking the editor is just: insert an empty
+// version + point `current_version_id` at it. The previous draft is preserved
+// automatically — it stays in its own version row. The live `screenplays`
+// mirror is blanked too for legacy readers, and downstream artefacts are marked
+// stale (coherent with `restoreVersion`).
+export const createBlankVersion = createServerFn({ method: "POST" })
+  .validator(CreateVersionFromScratchInput)
+  .handler(
+    async ({ data }): Promise<ResultShape<VersionView, VersionAccessError>> => {
+      const user = await requireUser();
+      const db = await getDb();
+
+      const access = await resolveScreenplayAccess(db, data.screenplayId);
+      if (access.isErr()) return toShape(err(access.error));
+
+      return toShape(
+        await ResultAsync.fromPromise(
+          db.transaction(async (tx) => {
+            const [number, draftColor] = await Promise.all([
+              nextVersionNumber(tx, data.screenplayId),
+              pickNextColorFor(tx, data.screenplayId),
+            ]);
+            const inserted = await tx
+              .insert(screenplayVersions)
+              .values({
+                screenplayId: data.screenplayId,
+                number,
+                label: data.label ?? null,
+                content: "",
+                pageCount: 0,
+                draftColor,
+                draftDate: todayIsoDate(),
+                createdBy: user.id,
+              })
+              .returning()
+              .then((rows) => rows[0]);
+
+            if (inserted) {
+              await tx
+                .update(screenplays)
+                .set({
+                  content: "",
+                  pageCount: 0,
+                  // Clear the screenplay-level CRDT too so a legacy-room
+                  // fallback can't resurrect the previous draft onto the blank
+                  // version. The new version's own yjs_snapshot is NULL → the
+                  // version-scoped room seeds empty.
+                  yjsState: null,
+                  currentVersionId: inserted.id,
+                  updatedAt: new Date(),
+                  breakdownStale: true,
+                  locationsStale: true,
+                  budgetStale: true,
+                  scheduleStale: true,
+                })
+                .where(eq(screenplays.id, data.screenplayId));
+            }
+            return inserted;
+          }),
+          (e) => new DbError("createBlankVersion", e),
         ).andThen((v) =>
           v ? ok(stripYjsSnapshot(v)) : err(new VersionNotFoundError("new")),
         ),
@@ -384,6 +501,10 @@ export const restoreVersion = createServerFn({ method: "POST" })
               .set({
                 content: version.content,
                 pageCount: version.pageCount,
+                // Activating a version makes it the CURRENT one (the chip/badge
+                // + the delete guard read this). Without it "Attiva" only copied
+                // content and left no current pointer, so it looked like a no-op.
+                currentVersionId: version.id,
                 updatedAt: new Date(),
                 breakdownStale: true,
                 locationsStale: true,

@@ -26,8 +26,11 @@ export const GetVersionInput = z.object({
   versionId: z.string().uuid(),
 });
 
+// A brand-new BLANK version (empty content) that becomes the active one — the
+// "+ Nuova versione" button. The optional label titles the new version.
 export const CreateVersionFromScratchInput = z.object({
   screenplayId: z.string().uuid(),
+  label: z.string().min(1).max(100).nullable().optional(),
 });
 
 export const DuplicateVersionInput = z.object({

@@ -88,6 +88,13 @@ function ScreenplayEditorPage() {
           viewbarCenter={legendNode}
         >
           <ScreenplayEditor
+            // Remount when the active version changes (Attiva / + Nuova
+            // versione): the editor seeds its content from `screenplay` once on
+            // mount, so a key tied to the active version forces a fresh seed
+            // from the now-active version's content. Without this the routed
+            // Versions surface would switch the DB pointer but leave the open
+            // editor stuck on the previous version.
+            key={value.currentVersionId ?? "live"}
             ref={editorRef}
             screenplay={value}
             isCesareOn={isCesareOn}

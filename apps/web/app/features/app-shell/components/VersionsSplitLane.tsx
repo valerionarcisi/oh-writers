@@ -45,7 +45,8 @@ import {
   useRenameVersion as useRenameScreenplayVersion,
   useDeleteVersion as useDeleteScreenplayVersion,
   useUpdateVersionMeta as useUpdateScreenplayVersionMeta,
-  useCreateManualVersion,
+  useCreateBlankVersion,
+  useScreenplayCurrentVersionId,
   ReadOnlyScreenplayView,
 } from "~/features/screenplay-editor";
 import { useTranslation } from "~/features/i18n";
@@ -151,6 +152,14 @@ function ScreenplayVersionsContent({
 }) {
   const { t } = useTranslation();
   const { data: result, isLoading } = useScreenplayVersions(screenplayId);
+  // Read the LIVE current-version pointer (not the static `?vcur` URL hint) so
+  // the "Attuale" badge + the delete guard track the real active version — and
+  // so "Attiva" (which now sets current_version_id) visibly moves the badge.
+  const { data: currentResult } = useScreenplayCurrentVersionId(screenplayId);
+  const liveCurrentId =
+    currentResult?.isOk && currentResult.value
+      ? currentResult.value
+      : currentVersionId;
   // Attiva = restore for the screenplay: copy the version's content back onto the
   // live screenplay (the old dedicated restore route is superseded, Spec 66).
   const restore = useRestoreVersion();
@@ -158,7 +167,7 @@ function ScreenplayVersionsContent({
   const rename = useRenameScreenplayVersion(screenplayId);
   const remove = useDeleteScreenplayVersion(screenplayId);
   const updateMeta = useUpdateScreenplayVersionMeta(screenplayId);
-  const createNew = useCreateManualVersion();
+  const createNew = useCreateBlankVersion();
 
   const versions: VersionView[] = useMemo(
     () => (result?.isOk ? result.value.map(screenplayToVersionView) : []),
@@ -186,7 +195,7 @@ function ScreenplayVersionsContent({
   return (
     <VersionsSplitDrawer
       versions={versions}
-      currentVersionId={currentVersionId}
+      currentVersionId={liveCurrentId}
       isLoading={isLoading}
       loadError={loadError}
       renderContent={renderContent}
@@ -210,6 +219,8 @@ function ScreenplayVersionsContent({
           label: `${t("versions.split.versionPrefix")} ${versions.length + 1}`,
         })
       }
+      // NB: createNew here is useCreateBlankVersion — a fresh empty active
+      // version (foglio bianco), distinct from the import-flow checkpoint.
       onDetailChange={onDetailChange}
     />
   );

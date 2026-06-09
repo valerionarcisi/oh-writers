@@ -157,17 +157,6 @@ export function TopBar({
         {center && <div className={styles.center}>{center}</div>}
 
         <div className={styles.right}>
-          {onSearch && (
-            <button
-              type="button"
-              className={styles.iconBtn}
-              onClick={onSearch}
-              aria-label="Cerca ⌘K"
-              title="Cerca (⌘K)"
-            >
-              <Icon name="search" size={14} aria-hidden={true} />
-            </button>
-          )}
           {saveStateSlot && (
             <span className={styles.saveState}>{saveStateSlot}</span>
           )}
@@ -183,6 +172,19 @@ export function TopBar({
               )}
               {actions}
             </span>
+          )}
+          {/* Search sits next to the bell in the account zone (a quiet utility,
+              not a page action). */}
+          {onSearch && (
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={onSearch}
+              aria-label="Cerca ⌘K"
+              title="Cerca (⌘K)"
+            >
+              <Icon name="search" size={14} aria-hidden={true} />
+            </button>
           )}
           {accountZone}
         </div>

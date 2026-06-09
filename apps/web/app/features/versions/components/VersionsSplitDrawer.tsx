@@ -26,7 +26,7 @@ import type {
   Locale,
 } from "@oh-writers/domain";
 import { formatDateTime } from "@oh-writers/domain";
-import { Skeleton, Popover } from "@oh-writers/ui";
+import { Skeleton, Popover, useConfirmDialog } from "@oh-writers/ui";
 import { useTranslation } from "~/features/i18n";
 import { DRAFT_COLOR_HEX, DRAFT_COLOR_LABEL } from "~/features/projects";
 import type { VersionView } from "../version-view";
@@ -169,6 +169,7 @@ export function VersionsSplitDrawer({
   onDetailChange,
 }: VersionsSplitDrawerProps) {
   const { t, locale } = useTranslation();
+  const { confirm } = useConfirmDialog();
 
   // master→detail: `selectedId === null` shows the list; a selection opens the
   // detail. Selecting persists until the user goes back (Indietro) or the
@@ -240,8 +241,14 @@ export function VersionsSplitDrawer({
           <button
             type="button"
             className={styles.dangerBtn}
-            onClick={() => {
-              if (window.confirm(t("versions.split.deleteConfirm"))) {
+            onClick={async () => {
+              const ok = await confirm({
+                title: t("versions.split.deleteTitle"),
+                message: t("versions.split.deleteConfirm"),
+                confirmLabel: t("versions.split.delete"),
+                destructive: true,
+              });
+              if (ok) {
                 onDelete(v.id);
                 if (selectedId === v.id) setSelectedId(null);
               }
@@ -348,6 +355,9 @@ export function VersionsSplitDrawer({
                           className={styles.badgeCurrent}
                           data-testid={`versions-split-current-${v.id}`}
                         >
+                          <span className={styles.badgeCheck} aria-hidden>
+                            ✓
+                          </span>
                           {t("versions.split.badgeCurrent")}
                         </span>
                       )}

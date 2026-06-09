@@ -106,7 +106,9 @@ test.describe("[Spec 55a] screenplay chrome", () => {
     await expect(page.getByTestId("screenplay-export-pdf")).toBeVisible();
     await expect(page.getByTestId("menu-item-import-pdf")).toBeVisible();
     await expect(page.getByTestId("menu-item-import-fountain")).toBeVisible();
-    await expect(page.getByTestId("menu-item-versions")).toBeVisible();
+    // Versioni is no longer a ⋯-menu item — the unified TopBar version chip
+    // (`topbar-version-chip`) is the single entry point (Spec 66).
+    await expect(page.getByTestId("menu-item-versions")).toHaveCount(0);
     // NOTE: `menu-item-export-fountain` is gated on `hasContent` (the live PM
     // doc), and the clean seed leaves the screenplay's live doc empty (the 9
     // scenes sit in a version, not the active content — N-31 seed gap), so it is
@@ -114,17 +116,16 @@ test.describe("[Spec 55a] screenplay chrome", () => {
     // by `screenplay-export.spec.ts` on a content-bearing fixture.
   });
 
-  test("N-19 — Versioni from the TopBar opens the routed Versions surface", async ({
+  test("N-19 — the TopBar version chip opens the routed Versions surface", async ({
     authenticatedPage: page,
     testProjectId,
   }) => {
     await page.goto(SCREENPLAY_PATH(testProjectId));
     await waitForEditor(page);
 
-    await openScreenplayActions(page);
-    await page.getByTestId("menu-item-versions").click();
     // Spec 66: the inline drawer was replaced by the routed master→detail
-    // surface (shared with the narrative docs).
+    // surface, opened from the unified TopBar version chip (single entry point).
+    await page.getByTestId("topbar-version-chip").click();
     await expect(page.getByTestId("versions-split-drawer")).toBeVisible({
       timeout: 10_000,
     });

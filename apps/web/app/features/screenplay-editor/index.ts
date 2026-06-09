@@ -23,7 +23,9 @@ export {
 export {
   useVersions,
   useVersion,
+  useCurrentVersionId as useScreenplayCurrentVersionId,
   useCreateManualVersion,
+  useCreateBlankVersion,
   useRestoreVersion,
   useDeleteVersion,
   useRenameVersion,

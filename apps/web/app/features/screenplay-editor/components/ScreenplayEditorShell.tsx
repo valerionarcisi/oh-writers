@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Icon, Popover, Viewbar, ViewbarSep } from "@oh-writers/ui";
-import { DraftMetaBadge } from "~/features/projects";
 import { SaveStatusIndicator } from "~/features/app-shell";
 import { useTranslation } from "~/features/i18n";
 import styles from "./ScreenplayEditorShell.module.css";
@@ -239,7 +238,8 @@ export function ScreenplayEditorShell({
           </Popover>
         </div>
       )}
-      <DraftMetaBadge projectId={projectId} />
+      {/* DraftMetaBadge ("BIANCO · 1ª STESURA") removed — the unified TopBar
+          VERSIONI chip already shows the active version, so this was redundant. */}
       <button
         type="button"
         className={styles.focusEnterButton}

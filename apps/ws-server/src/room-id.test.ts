@@ -20,11 +20,23 @@ describe("parseRoomId", () => {
     });
   });
 
-  it("keeps colons inside the id", () => {
+  it("keeps colons inside a non-screenplay id", () => {
     expect(parseRoomId("document:a:b")).toEqual({
       kind: "document",
       id: "a:b",
     });
+  });
+
+  it("parses a version-scoped screenplay room (id stays the screenplay id)", () => {
+    expect(parseRoomId("screenplay:sp-1:ver-9")).toEqual({
+      kind: "screenplay",
+      id: "sp-1",
+      versionId: "ver-9",
+    });
+  });
+
+  it("rejects a version-scoped screenplay room with an empty version id", () => {
+    expect(parseRoomId("screenplay:sp-1:")).toBeNull();
   });
 
   it("rejects an unknown kind", () => {

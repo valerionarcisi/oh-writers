@@ -91,12 +91,20 @@
 
 .badgeCurrent {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--ds-agent);
   padding-inline: var(--space-2);
   border: 1px solid var(--ds-agent);
   border-radius: var(--radius-sm);
+}
+
+.badgeCheck {
+  font-size: 0.85em;
+  line-height: 1;
 }
 
 .renameInput {
